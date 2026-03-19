@@ -194,60 +194,6 @@ class PromotionMetadata {
   }
 }
 
-class PromotionPackage {
-  final String id;
-  final PromotionEntityType entityType;
-  final PromotionPlacementMode placementMode;
-  final int durationDays;
-  final double fiatPrice;
-  final double kub8Price;
-  final bool isActive;
-  final String? title;
-  final String? description;
-
-  const PromotionPackage({
-    required this.id,
-    required this.entityType,
-    required this.placementMode,
-    required this.durationDays,
-    required this.fiatPrice,
-    required this.kub8Price,
-    required this.isActive,
-    this.title,
-    this.description,
-  });
-
-  factory PromotionPackage.fromJson(Map<String, dynamic> json) {
-    double parseDouble(dynamic value) {
-      if (value is num) return value.toDouble();
-      return double.tryParse(value?.toString() ?? '') ?? 0.0;
-    }
-
-    int parseInt(dynamic value) {
-      if (value is int) return value;
-      if (value is num) return value.toInt();
-      return int.tryParse(value?.toString() ?? '') ?? 0;
-    }
-
-    return PromotionPackage(
-      id: (json['id'] ?? '').toString(),
-      entityType: PromotionEntityTypeApi.fromApiValue(
-        (json['entityType'] ?? json['entity_type'])?.toString(),
-      ),
-      placementMode: PromotionPlacementModeApi.fromApiValue(
-            (json['placementMode'] ?? json['placement_mode'])?.toString(),
-          ) ??
-          PromotionPlacementMode.rotationPool,
-      durationDays: parseInt(json['durationDays'] ?? json['duration_days']),
-      fiatPrice: parseDouble(json['fiatPrice'] ?? json['fiat_price']),
-      kub8Price: parseDouble(json['kub8Price'] ?? json['kub8_price']),
-      isActive: (json['isActive'] ?? json['is_active']) == true,
-      title: (json['title'] ?? json['name'])?.toString(),
-      description: json['description']?.toString(),
-    );
-  }
-}
-
 // ============================================================================
 // NEW DYNAMIC PRICING SYSTEM
 // ============================================================================
@@ -730,11 +676,19 @@ class PromotionRequest {
   final String id;
   final String targetEntityId;
   final PromotionEntityType entityType;
-  final String packageId;
+  final String rateCardId;
+  final String? rateCardCode;
+  final PromotionPlacementTier placementTier;
+  final int durationDays;
+  final int? selectedSlotIndex;
+  final double calculatedFiatPrice;
+  final double calculatedKub8Price;
+  final double discountAppliedPercent;
   final PromotionPaymentMethod paymentMethod;
   final String paymentStatus;
   final String reviewStatus;
-  final DateTime? requestedStartDate;
+  final DateTime? scheduledStartAt;
+  final DateTime? cancellationDeadlineAt;
   final DateTime? createdAt;
   final String? adminNotes;
 
@@ -742,11 +696,19 @@ class PromotionRequest {
     required this.id,
     required this.targetEntityId,
     required this.entityType,
-    required this.packageId,
+    required this.rateCardId,
+    this.rateCardCode,
+    required this.placementTier,
+    required this.durationDays,
+    this.selectedSlotIndex,
+    required this.calculatedFiatPrice,
+    required this.calculatedKub8Price,
+    required this.discountAppliedPercent,
     required this.paymentMethod,
     required this.paymentStatus,
     required this.reviewStatus,
-    this.requestedStartDate,
+    this.scheduledStartAt,
+    this.cancellationDeadlineAt,
     this.createdAt,
     this.adminNotes,
   });
@@ -756,6 +718,39 @@ class PromotionRequest {
       if (value == null) return null;
       if (value is DateTime) return value;
       return DateTime.tryParse(value.toString());
+    }
+
+    double parseDouble(dynamic value) {
+      if (value is num) return value.toDouble();
+      return double.tryParse(value?.toString() ?? '') ?? 0.0;
+    }
+
+    int parseInt(dynamic value, {int fallback = 0}) {
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      return int.tryParse(value?.toString() ?? '') ?? fallback;
+    }
+
+    PromotionPlacementTier parsePlacementTier(Map<String, dynamic> requestMap) {
+      final explicitTier =
+          requestMap['placementTier'] ?? requestMap['placement_tier'];
+      if (explicitTier != null) {
+        return PromotionPlacementTierApi.fromApiValue(explicitTier.toString());
+      }
+
+      final placementMode =
+          (requestMap['placementMode'] ?? requestMap['placement_mode'])
+              ?.toString()
+              .trim()
+              .toLowerCase();
+      switch (placementMode) {
+        case 'reserved_top':
+          return PromotionPlacementTier.premium;
+        case 'priority_ranked':
+          return PromotionPlacementTier.featured;
+        default:
+          return PromotionPlacementTier.boost;
+      }
     }
 
     final requestMap = json['request'] is Map
@@ -770,9 +765,38 @@ class PromotionRequest {
       entityType: PromotionEntityTypeApi.fromApiValue(
         (requestMap['entityType'] ?? requestMap['entity_type'])?.toString(),
       ),
-      packageId:
-          (requestMap['packageId'] ?? requestMap['promotionPackageId'] ?? '')
+      rateCardId:
+          (requestMap['rateCardId'] ?? requestMap['rate_card_id'] ?? '')
               .toString(),
+      rateCardCode:
+          (requestMap['rateCardCode'] ?? requestMap['rate_card_code'])
+              ?.toString(),
+      placementTier: parsePlacementTier(requestMap),
+      durationDays: parseInt(
+        requestMap['durationDays'] ?? requestMap['duration_days'],
+      ),
+      selectedSlotIndex: () {
+        final value =
+            requestMap['selectedSlotIndex'] ?? requestMap['selected_slot_index'];
+        if (value == null) return null;
+        return parseInt(value, fallback: -1) == -1 ? null : parseInt(value);
+      }(),
+      calculatedFiatPrice: parseDouble(
+        requestMap['calculatedFiatPrice'] ??
+            requestMap['calculated_fiat_price'] ??
+            requestMap['fiatPrice'] ??
+            requestMap['fiat_price'],
+      ),
+      calculatedKub8Price: parseDouble(
+        requestMap['calculatedKub8Price'] ??
+            requestMap['calculated_kub8_price'] ??
+            requestMap['kub8Price'] ??
+            requestMap['kub8_price'],
+      ),
+      discountAppliedPercent: parseDouble(
+        requestMap['discountAppliedPercent'] ??
+            requestMap['discount_applied_percent'],
+      ),
       paymentMethod: PromotionPaymentMethodApi.fromApiValue(
         (requestMap['paymentMethod'] ?? requestMap['payment_method'])
             ?.toString(),
@@ -784,8 +808,15 @@ class PromotionRequest {
       reviewStatus:
           (requestMap['reviewStatus'] ?? requestMap['review_status'] ?? 'draft')
               .toString(),
-      requestedStartDate: parseDate(
-        requestMap['requestedStartDate'] ?? requestMap['requested_start_date'],
+      scheduledStartAt: parseDate(
+        requestMap['scheduledStartAt'] ??
+            requestMap['scheduled_start_at'] ??
+            requestMap['requestedStartDate'] ??
+            requestMap['requested_start_date'],
+      ),
+      cancellationDeadlineAt: parseDate(
+        requestMap['cancellationDeadlineAt'] ??
+            requestMap['cancellation_deadline_at'],
       ),
       createdAt: parseDate(requestMap['createdAt'] ?? requestMap['created_at']),
       adminNotes:

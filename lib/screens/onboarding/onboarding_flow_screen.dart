@@ -2930,7 +2930,7 @@ class _AccountStepState extends State<_AccountStep> {
                           widget.profileDisplayName.trim().isEmpty
                               ? null
                               : widget.profileDisplayName.trim(),
-                      prepareProvisionalProfileBeforeRegister: true,
+                      prepareProvisionalProfileBeforeRegister: false,
                       onEmailRegistrationAttempted: (email) =>
                           unawaited(widget.onEmailRegistrationAttempted(email)),
                       onVerificationRequired: widget.onVerificationRequired,

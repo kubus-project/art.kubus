@@ -176,4 +176,19 @@ void main() {
     );
     expect(requiredAfterBackup, isFalse);
   });
+
+  test('switching to a different wallet address clears the stale signer',
+      () async {
+    final providers = await _createBoundWalletProviders();
+    final walletProvider = providers.walletProvider;
+
+    expect(walletProvider.canTransact, isTrue);
+
+    await walletProvider.connectWalletWithAddress('readonly-wallet-123');
+
+    expect(walletProvider.currentWalletAddress, 'readonly-wallet-123');
+    expect(walletProvider.hasSigner, isFalse);
+    expect(walletProvider.canTransact, isFalse);
+    expect(walletProvider.isReadOnlySession, isTrue);
+  });
 }

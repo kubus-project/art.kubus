@@ -11,11 +11,6 @@ class PromotionProvider extends ChangeNotifier {
   PromotionProvider({BackendApiService? api})
       : _api = api ?? BackendApiService();
 
-  // Legacy package-based state
-  final Map<PromotionEntityType, List<PromotionPackage>> _packagesByType =
-      <PromotionEntityType, List<PromotionPackage>>{};
-
-  // New rate card-based state
   final Map<PromotionEntityType, List<PromotionRateCard>> _rateCardsByType =
       <PromotionEntityType, List<PromotionRateCard>>{};
 
@@ -23,7 +18,6 @@ class PromotionProvider extends ChangeNotifier {
   List<Artwork> _featuredArtworks = <Artwork>[];
   List<FeaturedPromotionItem> _featuredProfiles = <FeaturedPromotionItem>[];
 
-  bool _packagesLoading = false;
   bool _rateCardsLoading = false;
   bool _requestsLoading = false;
   bool _featuredLoading = false;
@@ -32,12 +26,10 @@ class PromotionProvider extends ChangeNotifier {
   String? _error;
   String _lastFeaturedLocale = 'en';
 
-  // Current quote for the promotion builder UI
   PriceQuote? _currentQuote;
   SlotAvailability? _currentSlotAvailability;
   AlternativeDatesResponse? _currentAlternatives;
 
-  bool get packagesLoading => _packagesLoading;
   bool get rateCardsLoading => _rateCardsLoading;
   bool get requestsLoading => _requestsLoading;
   bool get featuredLoading => _featuredLoading;
@@ -50,32 +42,24 @@ class PromotionProvider extends ChangeNotifier {
   SlotAvailability? get currentSlotAvailability => _currentSlotAvailability;
   AlternativeDatesResponse? get currentAlternatives => _currentAlternatives;
 
-  /// Get legacy packages for an entity type (deprecated)
-  List<PromotionPackage> packagesFor(PromotionEntityType entityType) =>
-      List.unmodifiable(
-          _packagesByType[entityType] ?? const <PromotionPackage>[]);
-
-  /// Get rate cards for an entity type (new system)
   List<PromotionRateCard> rateCardsFor(PromotionEntityType entityType) =>
       List.unmodifiable(
-          _rateCardsByType[entityType] ?? const <PromotionRateCard>[]);
+        _rateCardsByType[entityType] ?? const <PromotionRateCard>[],
+      );
 
   List<PromotionRequest> get myRequests => List.unmodifiable(_myRequests);
   List<Artwork> get featuredArtworks => List.unmodifiable(_featuredArtworks);
   List<FeaturedPromotionItem> get featuredProfiles =>
       List.unmodifiable(_featuredProfiles);
 
-  // ===========================================================================
-  // RATE CARDS (New Dynamic Pricing System)
-  // ===========================================================================
-
-  /// Load rate cards for dynamic pricing
   Future<void> loadRateCards(
     PromotionEntityType entityType, {
     bool force = false,
   }) async {
     if (_rateCardsLoading) return;
-    if (!force && (_rateCardsByType[entityType]?.isNotEmpty ?? false)) return;
+    if (!force && (_rateCardsByType[entityType]?.isNotEmpty ?? false)) {
+      return;
+    }
 
     _rateCardsLoading = true;
     _error = null;
@@ -85,64 +69,14 @@ class PromotionProvider extends ChangeNotifier {
           await _api.getPromotionRateCards(entityType: entityType);
       _rateCardsByType[entityType] = rateCards;
     } catch (e) {
-      // Backward compatibility fallback:
-      // Older deployments may not support dynamic pricing endpoints yet.
-      try {
-        await loadPackages(entityType, force: force);
-        final legacy = _packagesByType[entityType] ?? const <PromotionPackage>[];
-        _rateCardsByType[entityType] = _legacyPackagesToRateCards(legacy);
-        _error = null;
-      } catch (_) {
-        _error = e.toString();
-        rethrow;
-      }
+      _error = e.toString();
+      rethrow;
     } finally {
       _rateCardsLoading = false;
       notifyListeners();
     }
   }
 
-  List<PromotionRateCard> _legacyPackagesToRateCards(
-    List<PromotionPackage> packages,
-  ) {
-    PromotionPlacementTier mapTier(PromotionPlacementMode mode) {
-      switch (mode) {
-        case PromotionPlacementMode.reservedTop:
-          return PromotionPlacementTier.premium;
-        case PromotionPlacementMode.priorityRanked:
-          return PromotionPlacementTier.featured;
-        case PromotionPlacementMode.rotationPool:
-          return PromotionPlacementTier.boost;
-      }
-    }
-
-    double perDay(double total, int days) {
-      final safeDays = days <= 0 ? 1 : days;
-      return total / safeDays;
-    }
-
-    return packages
-        .where((p) => p.isActive)
-        .map(
-          (p) => PromotionRateCard(
-            id: p.id,
-            code: p.title ?? p.id,
-            entityType: p.entityType,
-            placementTier: mapTier(p.placementMode),
-            fiatPricePerDay: perDay(p.fiatPrice, p.durationDays),
-            kub8PricePerDay: perDay(p.kub8Price, p.durationDays),
-            minDays: p.durationDays <= 0 ? 1 : p.durationDays,
-            maxDays: p.durationDays <= 0 ? 1 : p.durationDays,
-            slotCount: p.placementMode == PromotionPlacementMode.reservedTop
-                ? 3
-                : null,
-            isActive: p.isActive,
-          ),
-        )
-        .toList(growable: false);
-  }
-
-  /// Check slot availability for a rate card
   Future<SlotAvailability> checkSlotAvailability({
     required String rateCardId,
     DateTime? startDate,
@@ -163,7 +97,6 @@ class PromotionProvider extends ChangeNotifier {
     }
   }
 
-  /// Get alternative dates when a slot is unavailable
   Future<AlternativeDatesResponse> getAlternativeDates({
     required String rateCardId,
     required int slotIndex,
@@ -186,7 +119,6 @@ class PromotionProvider extends ChangeNotifier {
     }
   }
 
-  /// Calculate a price quote
   Future<PriceQuote> calculateQuote({
     required String rateCardId,
     required int durationDays,
@@ -209,7 +141,6 @@ class PromotionProvider extends ChangeNotifier {
     }
   }
 
-  /// Clear the current quote (when user closes the builder)
   void clearQuote() {
     _currentQuote = null;
     _currentSlotAvailability = null;
@@ -217,7 +148,6 @@ class PromotionProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Cancel a promotion request
   Future<CancellationResult> cancelRequest(String requestId) async {
     if (_cancelling) {
       throw Exception('Already processing a cancellation');
@@ -226,9 +156,7 @@ class PromotionProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      final result =
-          await _api.cancelPromotionRequest(requestId: requestId);
-      // Only remove locally when cancellation actually succeeded.
+      final result = await _api.cancelPromotionRequest(requestId: requestId);
       if (result.cancelled) {
         final index = _myRequests.indexWhere((r) => r.id == requestId);
         if (index >= 0) {
@@ -243,78 +171,6 @@ class PromotionProvider extends ChangeNotifier {
       _cancelling = false;
       notifyListeners();
     }
-  }
-
-  // ===========================================================================
-  // LEGACY PACKAGE-BASED SYSTEM (deprecated)
-  // ===========================================================================
-
-  Future<void> loadPackages(
-    PromotionEntityType entityType, {
-    bool force = false,
-  }) async {
-    if (_packagesLoading) return;
-    if (!force && (_packagesByType[entityType]?.isNotEmpty ?? false)) return;
-
-    _packagesLoading = true;
-    _error = null;
-    notifyListeners();
-    try {
-      final packages = await _api.getPromotionPackages(entityType: entityType);
-      _packagesByType[entityType] = packages;
-    } catch (e) {
-      _error = e.toString();
-      rethrow;
-    } finally {
-      _packagesLoading = false;
-      notifyListeners();
-    }
-  }
-
-  /// Resolve the closest legacy package id for a dynamic-rate-card selection.
-  ///
-  /// This keeps request submission compatible with deployments that still
-  /// validate `packageId` against `promotion_packages`.
-  Future<String?> resolveLegacyPackageIdForTier({
-    required PromotionEntityType entityType,
-    required PromotionPlacementTier placementTier,
-    required int durationDays,
-  }) async {
-    await loadPackages(entityType);
-
-    final packages = (_packagesByType[entityType] ?? const <PromotionPackage>[])
-        .where((p) => p.isActive)
-        .toList(growable: false);
-
-    if (packages.isEmpty) return null;
-
-    PromotionPlacementMode preferredMode;
-    switch (placementTier) {
-      case PromotionPlacementTier.premium:
-        preferredMode = PromotionPlacementMode.reservedTop;
-        break;
-      case PromotionPlacementTier.featured:
-        preferredMode = PromotionPlacementMode.priorityRanked;
-        break;
-      case PromotionPlacementTier.boost:
-        preferredMode = PromotionPlacementMode.rotationPool;
-        break;
-    }
-
-    final sameMode = packages
-        .where((p) => p.placementMode == preferredMode)
-        .toList(growable: false);
-    final candidatePool = sameMode.isNotEmpty ? sameMode : packages;
-
-    final sorted = [...candidatePool]
-      ..sort((a, b) {
-        final aDelta = (a.durationDays - durationDays).abs();
-        final bDelta = (b.durationDays - durationDays).abs();
-        if (aDelta != bDelta) return aDelta.compareTo(bDelta);
-        return a.durationDays.compareTo(b.durationDays);
-      });
-
-    return sorted.first.id;
   }
 
   Future<void> loadMyRequests({bool force = false}) async {
@@ -341,38 +197,6 @@ class PromotionProvider extends ChangeNotifier {
   Future<PromotionRequestSubmission?> submitPromotionRequest({
     required String targetEntityId,
     required PromotionEntityType entityType,
-    required String packageId,
-    required PromotionPaymentMethod paymentMethod,
-    DateTime? requestedStartDate,
-  }) async {
-    if (_submitting) return null;
-    _submitting = true;
-    _error = null;
-    notifyListeners();
-    try {
-      final submission = await _api.createPromotionRequest(
-        targetEntityId: targetEntityId,
-        entityType: entityType,
-        packageId: packageId,
-        paymentMethod: paymentMethod,
-        requestedStartDate: requestedStartDate,
-      );
-      _myRequests.removeWhere((r) => r.id == submission.request.id);
-      _myRequests.insert(0, submission.request);
-      return submission;
-    } catch (e) {
-      _error = e.toString();
-      rethrow;
-    } finally {
-      _submitting = false;
-      notifyListeners();
-    }
-  }
-
-  /// Submit a dynamic promotion request using rate cards (new system).
-  Future<PromotionRequestSubmission?> submitDynamicPromotionRequest({
-    required String targetEntityId,
-    required PromotionEntityType entityType,
     required String rateCardId,
     required int durationDays,
     required PromotionPaymentMethod paymentMethod,
@@ -384,7 +208,7 @@ class PromotionProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      final submission = await _api.createDynamicPromotionRequest(
+      final submission = await _api.createPromotionRequest(
         targetEntityId: targetEntityId,
         entityType: entityType,
         rateCardId: rateCardId,
@@ -405,10 +229,6 @@ class PromotionProvider extends ChangeNotifier {
     }
   }
 
-  // ===========================================================================
-  // FEATURED HOME (public promotions)
-  // ===========================================================================
-
   Future<void> loadFeaturedHome({
     String locale = 'en',
     bool force = false,
@@ -426,7 +246,6 @@ class PromotionProvider extends ChangeNotifier {
     notifyListeners();
     String? artworkError;
     String? profileError;
-    var loadedAny = false;
 
     try {
       try {
@@ -438,7 +257,6 @@ class PromotionProvider extends ChangeNotifier {
             .map(_featuredArtworkFromItem)
             .whereType<Artwork>()
             .toList(growable: false);
-        loadedAny = true;
       } catch (e) {
         artworkError = e.toString();
       }
@@ -448,7 +266,6 @@ class PromotionProvider extends ChangeNotifier {
           kind: PromotionEntityType.profile,
           locale: locale,
         );
-        loadedAny = true;
       } catch (e) {
         profileError = e.toString();
       }
@@ -462,9 +279,7 @@ class PromotionProvider extends ChangeNotifier {
           profileError,
       ];
 
-      if (!loadedAny && errors.isNotEmpty) {
-        _error = errors.join(' | ');
-      } else if (errors.isNotEmpty) {
+      if (errors.isNotEmpty) {
         _error = errors.join(' | ');
       }
     } finally {

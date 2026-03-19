@@ -21,6 +21,7 @@ import 'package:art_kubus/utils/auth_password_policy.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/utils/auth_google_wallet.dart';
+import 'package:art_kubus/utils/wallet_utils.dart';
 import 'package:art_kubus/widgets/auth_entry_shell.dart';
 import 'package:art_kubus/widgets/email_registration_form.dart';
 import 'package:art_kubus/widgets/google_sign_in_button.dart';
@@ -28,6 +29,7 @@ import 'package:art_kubus/widgets/google_sign_in_web_button.dart';
 import 'package:art_kubus/widgets/auth_wallet_entry_menu.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/wallet_mnemonic_backup_prompt.dart';
 import 'package:art_kubus/widgets/secure_account_password_prompt.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -196,38 +198,51 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
   Future<void> _handleAuthSuccess(Map<String, dynamic> payload) async {
     final l10n = AppLocalizations.of(context)!;
     final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final gate = Provider.of<SecurityGateProvider>(context, listen: false);
     final data = (payload['data'] as Map<String, dynamic>?) ?? payload;
     final user = (data['user'] as Map<String, dynamic>?) ?? data;
     final isNewAccount =
         AuthOnboardingService.payloadIndicatesNewAccount(payload);
-    String? walletAddress = user['walletAddress'] ?? user['wallet_address'];
+    final expectedWalletAddress =
+        (user['walletAddress'] ?? user['wallet_address'] ?? '')
+            .toString()
+            .trim();
+    String? walletAddress = expectedWalletAddress;
     final usernameFromUser =
         (user['username'] ?? _usernameController.text ?? '').toString();
     final userId = user['id'];
     try {
       AppConfig.debugPrint(
           'AuthMethodsPanel._handleAuthSuccess: ensuring wallet provisioning');
-      walletAddress = await _ensureWalletProvisioned(walletAddress?.toString(),
+      walletAddress = await _ensureWalletProvisioned(walletAddress.toString(),
           desiredUsername: usernameFromUser);
     } catch (e) {
       AppConfig.debugPrint('AuthMethodsPanel: wallet provisioning failed: $e');
     }
     var normalizedWalletAddress = (walletAddress ?? '').toString().trim();
-    final lastSignInMethod = await BackendApiService().getLastSignInMethod();
-    if (isNewAccount &&
-        !walletProvider.hasSigner &&
-        lastSignInMethod == AuthSignInMethod.google) {
-      final reboundWalletAddress = await _bindManagedWalletForNewAccount(
-        currentWalletAddress: normalizedWalletAddress,
-      );
-      normalizedWalletAddress = (reboundWalletAddress ?? '').trim();
-      if (normalizedWalletAddress.isNotEmpty) {
-        walletAddress = normalizedWalletAddress;
+    if (expectedWalletAddress.isNotEmpty && normalizedWalletAddress.isEmpty) {
+      final signerReady = await _requireSignerForWallet(expectedWalletAddress);
+      if (!mounted) return;
+      if (!signerReady) {
+        await BackendApiService().clearAuth();
+        messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.connectWalletImportFailedToast)),
+          tone: KubusSnackBarTone.error,
+        );
+        return;
       }
+      normalizedWalletAddress = expectedWalletAddress;
+      walletAddress = expectedWalletAddress;
     }
-    if (isNewAccount && normalizedWalletAddress.isNotEmpty) {
+    if (isNewAccount &&
+        normalizedWalletAddress.isNotEmpty &&
+        walletProvider.hasSigner &&
+        WalletUtils.equals(
+          walletProvider.currentWalletAddress,
+          normalizedWalletAddress,
+        )) {
       try {
         await walletProvider.setMnemonicBackupRequired(
           required: true,
@@ -361,17 +376,14 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     try {
       AppConfig.debugPrint(
           'AuthMethodsPanel._registerWithEmail: start email registration for $email');
-      String? provisionalWalletAddress;
-      if (widget.prepareProvisionalProfileBeforeRegister) {
-        AppConfig.debugPrint(
-            'AuthMethodsPanel._registerWithEmail: preparing provisional profile');
-        provisionalWalletAddress =
-            await _prepareProvisionalProfileBeforeRegister(
-          desiredUsername: username,
-        ).timeout(const Duration(seconds: 16));
-        AppConfig.debugPrint(
-          'AuthMethodsPanel._registerWithEmail: provisional wallet resolved=${(provisionalWalletAddress ?? '').isNotEmpty}',
-        );
+      AppConfig.debugPrint(
+          'AuthMethodsPanel._registerWithEmail: preparing signer-backed wallet');
+      final provisionalWalletAddress =
+          await _prepareProvisionalProfileBeforeRegister(
+        desiredUsername: username,
+      ).timeout(const Duration(seconds: 20));
+      if ((provisionalWalletAddress ?? '').trim().isEmpty) {
+        throw Exception('Signer-backed wallet provisioning failed');
       }
       final api = BackendApiService();
       await api
@@ -461,21 +473,25 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
   Future<String?> _ensureWalletProvisioned(String? existingWallet,
       {String? desiredUsername}) async {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final sanitizedExisting = existingWallet?.trim();
-    String? address = sanitizedExisting;
-    address ??= walletProvider.currentWalletAddress;
-    bool createdFreshWallet = false;
+    final targetWallet = (existingWallet ?? '').trim();
+    final signerWallet = _signerBackedWalletForGoogleAuth();
 
-    // Keep registration completion offline-friendly.
-    // Web3 sync can be slow on mobile networks; never block UI indefinitely.
+    // Keep auth completion offline-friendly. RPC recovery should never block
+    // the UI indefinitely.
     const walletConnectTimeout = Duration(seconds: 6);
 
-    if (address != null && address.isNotEmpty) {
+    if (targetWallet.isNotEmpty) {
+      if (signerWallet != null &&
+          WalletUtils.equals(signerWallet, targetWallet)) {
+        return targetWallet;
+      }
+
       final currentWallet = (walletProvider.currentWalletAddress ?? '').trim();
-      if (currentWallet.isEmpty || currentWallet != address) {
+      if (currentWallet.isEmpty ||
+          !WalletUtils.equals(currentWallet, targetWallet)) {
         try {
           await walletProvider
-              .connectWalletWithAddress(address)
+              .connectWalletWithAddress(targetWallet)
               .timeout(walletConnectTimeout);
         } catch (e) {
           AppConfig.debugPrint(
@@ -489,7 +505,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
           if (managedEligible) {
             await walletProvider
                 .recoverManagedWalletSession(
-                  walletAddress: address,
+                  walletAddress: targetWallet,
                   refreshBackendSession: false,
                 )
                 .timeout(walletConnectTimeout);
@@ -499,32 +515,69 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
               'AuthMethodsPanel: managed reconnect after auth failed: $e');
         }
       }
-      return address;
+
+      final activeWallet = (walletProvider.currentWalletAddress ?? '').trim();
+      if (walletProvider.hasSigner &&
+          WalletUtils.equals(activeWallet, targetWallet)) {
+        return targetWallet;
+      }
+      return null;
     }
 
+    if (signerWallet != null && signerWallet.isNotEmpty) {
+      return signerWallet;
+    }
+
+    return _createSignerBackedWallet(desiredUsername: desiredUsername);
+  }
+
+  Future<String?> _createSignerBackedWallet({String? desiredUsername}) async {
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     try {
       final result = await walletProvider
           .createWallet()
           .timeout(const Duration(seconds: 12));
-      address = result['address']!;
-      createdFreshWallet = true;
-      try {
-        if (AppConfig.enableDebugIssueToken) {
-          await BackendApiService().issueTokenForWallet(address);
-        }
-      } catch (e) {
-        AppConfig.debugPrint(
-            'AuthMethodsPanel: issueTokenForWallet failed: $e');
+      final address = (result['address'] ?? '').trim();
+      final mnemonic = (result['mnemonic'] ?? '').trim();
+      if (address.isEmpty || mnemonic.isEmpty) {
+        return null;
       }
-    } catch (e) {
-      AppConfig.debugPrint('AuthMethodsPanel: wallet creation failed: $e');
-    }
-
-    if (address != null && address.isNotEmpty && createdFreshWallet) {
+      if (!mounted) return null;
+      final confirmed = await showWalletMnemonicBackupPrompt(
+        context: context,
+        mnemonic: mnemonic,
+        address: address,
+      );
+      if (!mounted || !confirmed) {
+        return null;
+      }
       await _upsertProfileWithUsername(address, desiredUsername);
+      return address;
+    } catch (e) {
+      AppConfig.debugPrint(
+          'AuthMethodsPanel: signer-backed wallet creation failed: $e');
+      return null;
     }
+  }
 
-    return address;
+  Future<bool> _requireSignerForWallet(String walletAddress) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ConnectWallet(
+          initialStep: 1,
+          telemetryAuthFlow: 'signin',
+          requiredWalletAddress: walletAddress,
+        ),
+        settings: const RouteSettings(name: '/connect-wallet/import-required'),
+      ),
+    );
+    if (!mounted) return false;
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    return walletProvider.hasSigner &&
+        WalletUtils.equals(
+          walletProvider.currentWalletAddress,
+          walletAddress,
+        );
   }
 
   Future<String?> _prepareProvisionalProfileBeforeRegister({
@@ -536,7 +589,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     try {
       walletAddress = await _ensureWalletProvisioned(
         null,
-        desiredUsername: null,
+        desiredUsername: desiredUsername,
       );
     } catch (e) {
       AppConfig.debugPrint(
@@ -629,15 +682,33 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         return;
       }
       final api = BackendApiService();
-      // For account merge: only pass email, let backend decide on username/profile preservation
-      final result = await api.loginWithGoogle(
-        idToken: googleResult.idToken,
-        code: googleResult.serverAuthCode,
-        email: googleResult.email,
-        // Don't pass username to let backend preserve existing account data if email matches
-        username: null,
-        walletAddress: _signerBackedWalletForGoogleAuth(),
-      );
+      Map<String, dynamic> result;
+      try {
+        // For account merge: only pass email, let backend decide on
+        // username/profile preservation.
+        result = await api.loginWithGoogle(
+          idToken: googleResult.idToken,
+          code: googleResult.serverAuthCode,
+          email: googleResult.email,
+          username: null,
+          walletAddress: _signerBackedWalletForGoogleAuth(),
+        );
+      } catch (e) {
+        if (!isWalletRequiredForNewGoogleAccount(e)) {
+          rethrow;
+        }
+        final provisionedWallet = await _createSignerBackedWallet();
+        if ((provisionedWallet ?? '').trim().isEmpty) {
+          throw Exception('Signer-backed wallet provisioning failed');
+        }
+        result = await api.loginWithGoogle(
+          idToken: googleResult.idToken,
+          code: googleResult.serverAuthCode,
+          email: googleResult.email,
+          username: null,
+          walletAddress: provisionedWallet,
+        );
+      }
       await _handleAuthSuccess(result);
       unawaited(TelemetryService().trackSignUpSuccess(method: 'google'));
     } catch (e) {
@@ -666,7 +737,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
   }) async {
     final hadAuth =
         (BackendApiService().getAuthToken() ?? '').trim().isNotEmpty;
-    await Navigator.of(context).push(
+    final routeResult = await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ConnectWallet(
           initialStep: initialStep,
@@ -680,6 +751,10 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     final hasAuthNow =
         (BackendApiService().getAuthToken() ?? '').trim().isNotEmpty;
     if (!hadAuth && hasAuthNow) {
+      if (routeResult is Map<String, dynamic>) {
+        await _handleAuthSuccess(routeResult);
+        return;
+      }
       if (widget.embedded) {
         if (widget.onAuthSuccess != null) {
           await widget.onAuthSuccess!();
@@ -696,43 +771,6 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       hasSigner: walletProvider.hasSigner,
       currentWalletAddress: walletProvider.currentWalletAddress,
     );
-  }
-
-  Future<String?> _bindManagedWalletForNewAccount({
-    required String currentWalletAddress,
-  }) async {
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final previousWalletAddress = currentWalletAddress.trim();
-    try {
-      final created =
-          await walletProvider.createWallet().timeout(const Duration(seconds: 14));
-      final managedWalletAddress = (created['address'] ?? '').trim();
-      if (managedWalletAddress.isEmpty) {
-        return previousWalletAddress.isEmpty ? null : previousWalletAddress;
-      }
-      final result =
-          await BackendApiService().bindAuthenticatedWallet(managedWalletAddress);
-      final data = (result['data'] as Map<String, dynamic>?) ?? result;
-      final user = (data['user'] as Map<String, dynamic>?) ?? data;
-      final reboundWalletAddress =
-          (user['walletAddress'] ?? user['wallet_address'] ?? '')
-              .toString()
-              .trim();
-      return reboundWalletAddress.isEmpty
-          ? managedWalletAddress
-          : reboundWalletAddress;
-    } catch (e) {
-      AppConfig.debugPrint(
-          'AuthMethodsPanel: failed to bind managed wallet after auth: $e');
-      if (previousWalletAddress.isNotEmpty) {
-        try {
-          await walletProvider
-              .connectWalletWithAddress(previousWalletAddress)
-              .timeout(const Duration(seconds: 6));
-        } catch (_) {}
-      }
-      return previousWalletAddress.isEmpty ? null : previousWalletAddress;
-    }
   }
 
   Future<void> _showConnectWalletModal() async {

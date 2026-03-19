@@ -657,16 +657,15 @@ class WalletProvider extends ChangeNotifier {
                 walletAddress: targetWallet,
               )
               .timeout(const Duration(seconds: 8));
-          await _apiService
-              .loadAuthToken()
-              .timeout(const Duration(seconds: 4));
+          await _apiService.loadAuthToken().timeout(const Duration(seconds: 4));
         } catch (e) {
           _walletLog('managed reconnect backend refresh failed: $e');
         }
       }
 
       await connectWalletWithAddress(targetWallet);
-      if (WalletUtils.equals(_currentWalletAddress, targetWallet) && canTransact) {
+      if (WalletUtils.equals(_currentWalletAddress, targetWallet) &&
+          canTransact) {
         _clearLastError();
         return ManagedWalletReconnectOutcome.signerRestored;
       }
@@ -699,7 +698,8 @@ class WalletProvider extends ChangeNotifier {
         preDerived: derived,
         markBackedUp: false,
       );
-      if (WalletUtils.equals(_currentWalletAddress, targetWallet) && canTransact) {
+      if (WalletUtils.equals(_currentWalletAddress, targetWallet) &&
+          canTransact) {
         _clearLastError();
         return ManagedWalletReconnectOutcome.signerRestored;
       }
@@ -722,8 +722,7 @@ class WalletProvider extends ChangeNotifier {
     bool required = true,
     String? walletAddress,
   }) async {
-    final targetWallet =
-        (walletAddress ?? _currentWalletAddress ?? '').trim();
+    final targetWallet = (walletAddress ?? _currentWalletAddress ?? '').trim();
     if (targetWallet.isEmpty) return;
 
     final prefs = await SharedPreferences.getInstance();
@@ -743,8 +742,7 @@ class WalletProvider extends ChangeNotifier {
   }
 
   Future<void> markMnemonicBackedUp({String? walletAddress}) async {
-    final targetWallet =
-        (walletAddress ?? _currentWalletAddress ?? '').trim();
+    final targetWallet = (walletAddress ?? _currentWalletAddress ?? '').trim();
     if (targetWallet.isEmpty) return;
 
     final prefs = await SharedPreferences.getInstance();
@@ -761,8 +759,7 @@ class WalletProvider extends ChangeNotifier {
   }
 
   Future<bool> isMnemonicBackupRequired({String? walletAddress}) async {
-    final targetWallet =
-        (walletAddress ?? _currentWalletAddress ?? '').trim();
+    final targetWallet = (walletAddress ?? _currentWalletAddress ?? '').trim();
     if (targetWallet.isEmpty) return false;
     final prefs = await SharedPreferences.getInstance();
     final requiredKey = _walletScopedPreferenceKey(
@@ -1416,6 +1413,13 @@ class WalletProvider extends ChangeNotifier {
     };
   }
 
+  Future<String> deriveWalletAddressFromMnemonic(String mnemonic) async {
+    final normalizedMnemonic = mnemonic.trim().replaceAll(RegExp(r'\s+'), ' ');
+    final derived =
+        await _solanaWalletService.derivePreferredKeyPair(normalizedMnemonic);
+    return derived.address;
+  }
+
   Future<String> importWalletFromMnemonic(
     String mnemonic, {
     DerivedKeyPairResult? preDerived,
@@ -1504,6 +1508,13 @@ class WalletProvider extends ChangeNotifier {
     if (sanitized.isEmpty) {
       _walletLog('connectWalletWithAddress called with empty address');
       return;
+    }
+    final activeSignerAddress =
+        (_solanaWalletService.activePublicKey ?? '').trim();
+    if (activeSignerAddress.isNotEmpty &&
+        !WalletUtils.equals(activeSignerAddress, sanitized)) {
+      _solanaWalletService.clearActiveKeyPair();
+      _cachedDerivedCandidate = null;
     }
 
     _lastError = null;

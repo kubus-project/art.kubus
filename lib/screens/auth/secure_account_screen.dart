@@ -189,6 +189,7 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
           email: email,
           password: password,
           walletAddress: walletAddress,
+          includeAuth: true,
         );
         await api.syncSecureAccountStatusFromResponse(response);
         final payload = response['data'] is Map<String, dynamic>
@@ -459,7 +460,7 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
           emailController: _emailController,
           passwordController: _passwordController,
           confirmPasswordController: _confirmPasswordController,
-            submitLabel: passwordOnly
+          submitLabel: passwordOnly
               ? l10n.authSecureAccountAddPasswordButton
               : l10n.authSecureAccountButton,
           submittingLabel: l10n.commonWorking,

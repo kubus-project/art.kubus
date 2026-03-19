@@ -70,6 +70,10 @@ void main() {
         expect(request.method, 'POST');
         expect(request.url.path, '/api/app/promotion-requests');
         expect(request.headers['Authorization'], 'Bearer test-token');
+        final requestBody = jsonDecode(request.body) as Map<String, dynamic>;
+        expect(requestBody['rateCardId'], 'rate-1');
+        expect(requestBody['durationDays'], 7);
+        expect(requestBody['slotIndex'], 1);
         return http.Response(
           jsonEncode(<String, Object?>{
             'success': true,
@@ -77,7 +81,15 @@ void main() {
               'id': 'req-1',
               'targetEntityId': 'art-1',
               'entityType': 'artwork',
-              'packageId': 'pkg-1',
+              'rateCardId': 'rate-1',
+              'rateCardCode': 'artwork_premium',
+              'placementTier': 'premium',
+              'durationDays': 7,
+              'selectedSlotIndex': 1,
+              'calculatedFiatPrice': 77.0,
+              'calculatedKub8Price': 24.0,
+              'discountAppliedPercent': 0,
+              'scheduledStartAt': '2026-03-20T00:00:00.000Z',
               'paymentMethod': 'fiat_card',
               'paymentStatus': 'pending',
               'reviewStatus': 'pending_review',
@@ -93,11 +105,15 @@ void main() {
     final submission = await api.createPromotionRequest(
       targetEntityId: 'art-1',
       entityType: PromotionEntityType.artwork,
-      packageId: 'pkg-1',
+      rateCardId: 'rate-1',
+      durationDays: 7,
       paymentMethod: PromotionPaymentMethod.fiatCard,
+      slotIndex: 1,
     );
 
     expect(submission.request.id, 'req-1');
+    expect(submission.request.rateCardId, 'rate-1');
+    expect(submission.request.selectedSlotIndex, 1);
     expect(submission.request.paymentMethod, PromotionPaymentMethod.fiatCard);
     expect(
       submission.checkoutUrl,

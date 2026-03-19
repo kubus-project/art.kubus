@@ -187,7 +187,7 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
 
     try {
       // Use the new dynamic rate-card-based submission endpoint
-      final submission = await provider.submitDynamicPromotionRequest(
+      final submission = await provider.submitPromotionRequest(
         targetEntityId: widget.entityId,
         entityType: widget.entityType,
         rateCardId: rateCard.id,
@@ -710,10 +710,10 @@ class _ScheduledPromotionTileState extends State<_ScheduledPromotionTile> {
                   ],
                 ),
                 const SizedBox(height: 4),
-                if (request.requestedStartDate != null)
+                if (request.scheduledStartAt != null)
                   Text(
                     AppLocalizations.of(context)!.promotionBuilderStartsOn(
-                      _formatDate(context, request.requestedStartDate!),
+                      _formatDate(context, request.scheduledStartAt!),
                     ),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: colors.onSurfaceVariant,

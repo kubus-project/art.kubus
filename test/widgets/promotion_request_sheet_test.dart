@@ -97,10 +97,17 @@ void main() {
       id: 'req-1',
       targetEntityId: 'art-1',
       entityType: PromotionEntityType.artwork,
-      packageId: 'rate-1',
+      rateCardId: 'rate-1',
+      rateCardCode: 'artwork_boost',
+      placementTier: PromotionPlacementTier.boost,
+      durationDays: 7,
+      calculatedFiatPrice: 28.98,
+      calculatedKub8Price: 10.01,
+      discountAppliedPercent: 0,
       paymentMethod: paymentMethod,
       paymentStatus: 'pending',
       reviewStatus: 'pending_review',
+      scheduledStartAt: DateTime.utc(2026, 3, 20),
       createdAt: DateTime.utc(2026, 3, 17),
     );
   }
@@ -108,7 +115,7 @@ void main() {
   BackendApiService buildPromotionApi({
     required PromotionRequestSubmission submission,
     required ValueSetter<int> setCreateCalls,
-    required ValueSetter<String?> setSubmittedPackageId,
+    required ValueSetter<String?> setSubmittedRateCardId,
   }) {
     final api = BackendApiService();
     api.setAuthTokenForTesting('test-token');
@@ -133,28 +140,6 @@ void main() {
                   'slotCount': null,
                   'isActive': true,
                   'volumeDiscounts': const <Object?>[],
-                },
-              ],
-            }),
-            200,
-            headers: const <String, String>{'content-type': 'application/json'},
-          );
-        }
-        if (request.method == 'GET' &&
-            request.url.path == '/api/app/promotion-packages') {
-          return http.Response(
-            jsonEncode(<String, Object?>{
-              'success': true,
-              'data': <Object?>[
-                <String, Object?>{
-                  'id': 'pkg-7',
-                  'title': 'Boost 7 days',
-                  'entityType': PromotionEntityType.artwork.apiValue,
-                  'placementMode': PromotionPlacementMode.rotationPool.apiValue,
-                  'durationDays': 7,
-                  'fiatPrice': 28.98,
-                  'kub8Price': 10.01,
-                  'isActive': true,
                 },
               ],
             }),
@@ -210,8 +195,9 @@ void main() {
           createCalls += 1;
           setCreateCalls(createCalls);
           final requestBody = jsonDecode(request.body) as Map<String, dynamic>;
-          final submittedPackageId = requestBody['packageId']?.toString();
-          setSubmittedPackageId(submittedPackageId);
+          final submittedRateCardId = requestBody['rateCardId']?.toString();
+          setSubmittedRateCardId(submittedRateCardId);
+          expect(requestBody['durationDays'], 7);
           return http.Response(
             jsonEncode(<String, Object?>{
               'success': true,
@@ -219,7 +205,19 @@ void main() {
                 'id': submission.request.id,
                 'targetEntityId': submission.request.targetEntityId,
                 'entityType': submission.request.entityType.apiValue,
-                'packageId': submittedPackageId ?? submission.request.packageId,
+                'rateCardId':
+                    submittedRateCardId ?? submission.request.rateCardId,
+                'rateCardCode': submission.request.rateCardCode,
+                'placementTier': submission.request.placementTier.apiValue,
+                'durationDays': submission.request.durationDays,
+                'calculatedFiatPrice':
+                    submission.request.calculatedFiatPrice,
+                'calculatedKub8Price':
+                    submission.request.calculatedKub8Price,
+                'discountAppliedPercent':
+                    submission.request.discountAppliedPercent,
+                'scheduledStartAt':
+                    submission.request.scheduledStartAt?.toIso8601String(),
                 'paymentMethod': submission.request.paymentMethod.apiValue,
                 'paymentStatus': submission.request.paymentStatus,
                 'reviewStatus': submission.request.reviewStatus,
@@ -296,14 +294,14 @@ void main() {
     UrlLauncherPlatform.instance = launcher;
 
     var createCalls = 0;
-    String? submittedPackageId;
+    String? submittedRateCardId;
     final api = buildPromotionApi(
       submission: PromotionRequestSubmission(
         request: buildRequest(PromotionPaymentMethod.fiatCard),
         checkoutUrl: 'https://checkout.example/session-1',
       ),
       setCreateCalls: (value) => createCalls = value,
-      setSubmittedPackageId: (value) => submittedPackageId = value,
+      setSubmittedRateCardId: (value) => submittedRateCardId = value,
     );
     final walletProvider = _FakeWalletProvider(
       <Token>[
@@ -333,7 +331,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(createCalls, 1);
-    expect(submittedPackageId, 'pkg-7');
+    expect(submittedRateCardId, 'rate-1');
     expect(
         launcher.launchedUrls, <String>['https://checkout.example/session-1']);
     expect(find.text('Continue to payment'), findsOneWidget);
@@ -357,13 +355,13 @@ void main() {
     UrlLauncherPlatform.instance = launcher;
 
     var createCalls = 0;
-    String? submittedPackageId;
+    String? submittedRateCardId;
     final api = buildPromotionApi(
       submission: PromotionRequestSubmission(
         request: buildRequest(PromotionPaymentMethod.kub8Balance),
       ),
       setCreateCalls: (value) => createCalls = value,
-      setSubmittedPackageId: (value) => submittedPackageId = value,
+      setSubmittedRateCardId: (value) => submittedRateCardId = value,
     );
     final walletProvider = _FakeWalletProvider(
       <Token>[
@@ -398,7 +396,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(createCalls, 1);
-    expect(submittedPackageId, 'pkg-7');
+    expect(submittedRateCardId, 'rate-1');
     expect(launcher.launchedUrls, isEmpty);
     expect(find.text('Promote Test artwork'), findsNothing);
     expect(find.text('Promotion request submitted!'), findsOneWidget);

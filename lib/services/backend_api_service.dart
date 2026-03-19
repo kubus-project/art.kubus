@@ -330,8 +330,7 @@ class BackendApiService
         await prefs.setString(PreferenceKeys.authLastSignInMethodV1, value);
       }
     } catch (e) {
-      AppConfig.debugPrint(
-          'BackendApiService.setLastSignInMethod failed: $e');
+      AppConfig.debugPrint('BackendApiService.setLastSignInMethod failed: $e');
     }
   }
 
@@ -342,8 +341,7 @@ class BackendApiService
         prefs.getString(PreferenceKeys.authLastSignInMethodV1),
       );
     } catch (e) {
-      AppConfig.debugPrint(
-          'BackendApiService.getLastSignInMethod failed: $e');
+      AppConfig.debugPrint('BackendApiService.getLastSignInMethod failed: $e');
       return AuthSignInMethod.unknown;
     }
   }
@@ -1669,6 +1667,7 @@ class BackendApiService
     String? username,
     String? displayName,
     String? walletAddress,
+    bool includeAuth = false,
   }) async {
     try {
       final uri = Uri.parse('$baseUrl/api/auth/register/email');
@@ -1676,8 +1675,6 @@ class BackendApiService
       if (_isRateLimited(key)) {
         throw Exception(_rateLimitMessage(key));
       }
-      final includeAuth =
-          walletAddress != null && walletAddress.trim().isNotEmpty;
       const profileDisplayNameMaxLength = 100;
       final normalizedDisplayName =
           displayName?.replaceAll(RegExp(r'\s+'), ' ').trim();
@@ -2111,7 +2108,8 @@ class BackendApiService
     }
   }
 
-  Future<Map<String, dynamic>> bindAuthenticatedWallet(String walletAddress) async {
+  Future<Map<String, dynamic>> bindAuthenticatedWallet(
+      String walletAddress) async {
     try {
       final uri = Uri.parse('$baseUrl/api/auth/bind-wallet');
       final response = await _post(
@@ -3072,15 +3070,12 @@ class BackendApiService
       if (data is Map<String, dynamic>) {
         final payload = data['data'] ?? data;
         return SlotAvailability.fromJson(
-          payload is Map<String, dynamic>
-              ? payload
-              : <String, dynamic>{},
+          payload is Map<String, dynamic> ? payload : <String, dynamic>{},
         );
       }
       throw Exception('Invalid slot availability response');
     } catch (e) {
-      AppConfig.debugPrint(
-          'BackendApiService.getSlotAvailability failed: $e');
+      AppConfig.debugPrint('BackendApiService.getSlotAvailability failed: $e');
       rethrow;
     }
   }
@@ -3112,15 +3107,12 @@ class BackendApiService
       if (data is Map<String, dynamic>) {
         final payload = data['data'] ?? data;
         return AlternativeDatesResponse.fromJson(
-          payload is Map<String, dynamic>
-              ? payload
-              : <String, dynamic>{},
+          payload is Map<String, dynamic> ? payload : <String, dynamic>{},
         );
       }
       throw Exception('Invalid alternative dates response');
     } catch (e) {
-      AppConfig.debugPrint(
-          'BackendApiService.getAlternativeDates failed: $e');
+      AppConfig.debugPrint('BackendApiService.getAlternativeDates failed: $e');
       rethrow;
     }
   }
@@ -3163,8 +3155,7 @@ class BackendApiService
       }
       throw Exception('Invalid price quote response');
     } catch (e) {
-      AppConfig.debugPrint(
-          'BackendApiService.calculatePriceQuote failed: $e');
+      AppConfig.debugPrint('BackendApiService.calculatePriceQuote failed: $e');
       rethrow;
     }
   }
@@ -3209,88 +3200,9 @@ class BackendApiService
   // END PROMOTION RATE CARDS
   // ===========================================================================
 
-  /// Get app promotion packages by entity type (DEPRECATED - use getPromotionRateCards).
-  /// GET /api/app/promotion-packages?entityType=artwork|profile
-  Future<List<PromotionPackage>> getPromotionPackages({
-    required PromotionEntityType entityType,
-  }) async {
-    try {
-      await _ensureAuthBeforeRequest();
-      final uri = Uri.parse('$baseUrl/api/app/promotion-packages').replace(
-        queryParameters: <String, String>{
-          'entityType': entityType.apiValue,
-        },
-      );
-      final dynamic data = await _fetchJson(
-        uri,
-        includeAuth: true,
-        allowOrbitFallback: false,
-      );
-      final List<dynamic> list = (() {
-        if (data is List) return data;
-        if (data is Map<String, dynamic>) {
-          final payload = data['data'] ?? data['packages'];
-          if (payload is List) return payload;
-        }
-        return const <dynamic>[];
-      })();
-      return list
-          .whereType<Map>()
-          .map((e) => PromotionPackage.fromJson(Map<String, dynamic>.from(e)))
-          .toList(growable: false);
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.getPromotionPackages failed: $e');
-      rethrow;
-    }
-  }
-
-  /// Create an app promotion request.
+  /// Create an app promotion request using rate cards.
   /// POST /api/app/promotion-requests
   Future<PromotionRequestSubmission> createPromotionRequest({
-    required String targetEntityId,
-    required PromotionEntityType entityType,
-    required String packageId,
-    required PromotionPaymentMethod paymentMethod,
-    DateTime? requestedStartDate,
-  }) async {
-    try {
-      await _ensureAuthBeforeRequest();
-      final uri = Uri.parse('$baseUrl/api/app/promotion-requests');
-      final payload = <String, dynamic>{
-        'targetEntityId': targetEntityId,
-        'entityType': entityType.apiValue,
-        'packageId': packageId,
-        'paymentMethod': paymentMethod.apiValue,
-        if (requestedStartDate != null)
-          'requestedStartDate': requestedStartDate.toIso8601String(),
-      };
-      final response = await _post(
-        uri,
-        headers: _getHeaders(),
-        body: jsonEncode(payload),
-      );
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw BackendApiRequestException(
-          statusCode: response.statusCode,
-          path: uri.path,
-          body: response.body,
-        );
-      }
-      final decoded = jsonDecode(response.body);
-      if (decoded is Map<String, dynamic>) {
-        return PromotionRequestSubmission.fromJson(decoded);
-      }
-      throw Exception('Invalid promotion request response payload');
-    } catch (e) {
-      AppConfig.debugPrint(
-          'BackendApiService.createPromotionRequest failed: $e');
-      rethrow;
-    }
-  }
-
-  /// Create a dynamic promotion request using rate cards.
-  /// POST /api/app/promotion-requests-dynamic
-  Future<PromotionRequestSubmission> createDynamicPromotionRequest({
     required String targetEntityId,
     required PromotionEntityType entityType,
     required String rateCardId,
@@ -3301,7 +3213,7 @@ class BackendApiService
   }) async {
     try {
       await _ensureAuthBeforeRequest();
-      final uri = Uri.parse('$baseUrl/api/app/promotion-requests-dynamic');
+      final uri = Uri.parse('$baseUrl/api/app/promotion-requests');
       final payload = <String, dynamic>{
         'targetEntityId': targetEntityId,
         'entityType': entityType.apiValue,
@@ -3330,7 +3242,7 @@ class BackendApiService
       throw Exception('Invalid promotion request response payload');
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.createDynamicPromotionRequest failed: $e');
+          'BackendApiService.createPromotionRequest failed: $e');
       rethrow;
     }
   }

@@ -1,19 +1,46 @@
 import 'dart:convert';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/providers/profile_provider.dart';
+import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:art_kubus/services/solana_wallet_service.dart';
 import 'package:art_kubus/widgets/auth_methods_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:provider/provider.dart';
 
-Widget _buildTestApp(Widget child) {
-  return MaterialApp(
-    locale: const Locale('en'),
-    supportedLocales: AppLocalizations.supportedLocales,
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    home: Scaffold(body: child),
+Future<WalletProvider> _createSignerBackedWalletProvider() async {
+  const mnemonic =
+      'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+  final solana = SolanaWalletService();
+  final derived = await solana.derivePreferredKeyPair(mnemonic);
+  solana.setActiveKeyPair(derived.hdKeyPair);
+  return WalletProvider(solanaWalletService: solana, deferInit: true)
+    ..setCurrentWalletAddressForTesting(derived.address);
+}
+
+Widget _buildTestApp(
+  Widget child, {
+  required WalletProvider walletProvider,
+  ProfileProvider? profileProvider,
+}) {
+  return MultiProvider(
+    providers: [
+      ChangeNotifierProvider<WalletProvider>.value(value: walletProvider),
+      ChangeNotifierProvider<ProfileProvider>.value(
+        value:
+            profileProvider ?? ProfileProvider(apiService: BackendApiService()),
+      ),
+    ],
+    child: MaterialApp(
+      locale: const Locale('en'),
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      home: Scaffold(body: child),
+    ),
   );
 }
 
@@ -64,6 +91,7 @@ void main() {
       'duplicate email registration shows error, stays on form, and clears loading',
       (tester) async {
     var verificationTriggered = false;
+    final walletProvider = await _createSignerBackedWalletProvider();
 
     await tester.pumpWidget(
       _buildTestApp(
@@ -71,6 +99,7 @@ void main() {
           embedded: true,
           onVerificationRequired: (_) => verificationTriggered = true,
         ),
+        walletProvider: walletProvider,
       ),
     );
     await tester.pumpAndSettle();
@@ -99,7 +128,7 @@ void main() {
     expect(submitLabel, findsWidgets);
     await tester.tap(submitLabel.last);
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle(const Duration(seconds: 1));
 
     expect(
       find.text('An account with this email already exists. Sign in instead.'),
@@ -112,12 +141,14 @@ void main() {
   testWidgets(
       'embedded email registration shows username field when required for onboarding',
       (tester) async {
+    final walletProvider = await _createSignerBackedWalletProvider();
     await tester.pumpWidget(
       _buildTestApp(
         const AuthMethodsPanel(
           embedded: true,
           requireUsernameForEmailRegistration: true,
         ),
+        walletProvider: walletProvider,
       ),
     );
     await tester.pumpAndSettle();
@@ -136,6 +167,7 @@ void main() {
       'embedded email registration blocks submit when required username is missing',
       (tester) async {
     var verificationTriggered = false;
+    final walletProvider = await _createSignerBackedWalletProvider();
 
     await tester.pumpWidget(
       _buildTestApp(
@@ -144,6 +176,7 @@ void main() {
           requireUsernameForEmailRegistration: true,
           onVerificationRequired: (_) => verificationTriggered = true,
         ),
+        walletProvider: walletProvider,
       ),
     );
     await tester.pumpAndSettle();
@@ -181,12 +214,14 @@ void main() {
   testWidgets(
       'embedded email registration blocks submit when username is too short',
       (tester) async {
+    final walletProvider = await _createSignerBackedWalletProvider();
     await tester.pumpWidget(
       _buildTestApp(
         const AuthMethodsPanel(
           embedded: true,
           requireUsernameForEmailRegistration: true,
         ),
+        walletProvider: walletProvider,
       ),
     );
     await tester.pumpAndSettle();
@@ -225,12 +260,14 @@ void main() {
   testWidgets(
       'embedded email registration blocks submit when username is too long',
       (tester) async {
+    final walletProvider = await _createSignerBackedWalletProvider();
     await tester.pumpWidget(
       _buildTestApp(
         const AuthMethodsPanel(
           embedded: true,
           requireUsernameForEmailRegistration: true,
         ),
+        walletProvider: walletProvider,
       ),
     );
     await tester.pumpAndSettle();
@@ -263,7 +300,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
 
-    expect(find.text('Username must be 50 characters or fewer'), findsOneWidget);
+    expect(
+        find.text('Username must be 50 characters or fewer'), findsOneWidget);
   });
 
   testWidgets('duplicate username shows explicit username taken message',
@@ -287,12 +325,14 @@ void main() {
       );
     });
 
+    final walletProvider = await _createSignerBackedWalletProvider();
     await tester.pumpWidget(
       _buildTestApp(
         const AuthMethodsPanel(
           embedded: true,
           requireUsernameForEmailRegistration: true,
         ),
+        walletProvider: walletProvider,
       ),
     );
     await tester.pumpAndSettle();
@@ -324,18 +364,20 @@ void main() {
     final submit = find.text('Continue with email');
     await tester.tap(submit.last);
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle(const Duration(seconds: 1));
 
     expect(find.text('Username already taken'), findsWidgets);
   });
 
   testWidgets('register form exposes show-password icons', (tester) async {
+    final walletProvider = await _createSignerBackedWalletProvider();
     await tester.pumpWidget(
       _buildTestApp(
         const AuthMethodsPanel(
           embedded: true,
           requireUsernameForEmailRegistration: true,
         ),
+        walletProvider: walletProvider,
       ),
     );
     await tester.pumpAndSettle();
@@ -371,7 +413,13 @@ void main() {
       );
     });
 
-    await tester.pumpWidget(_buildTestApp(const AuthMethodsPanel()));
+    final walletProvider = await _createSignerBackedWalletProvider();
+    await tester.pumpWidget(
+      _buildTestApp(
+        const AuthMethodsPanel(),
+        walletProvider: walletProvider,
+      ),
+    );
     await tester.pumpAndSettle();
 
     final expandEmail = find.text('Continue with email');
@@ -400,7 +448,7 @@ void main() {
 
     await tester.tap(find.text('Continue with email').last);
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle(const Duration(seconds: 1));
 
     expect(find.text('Username already taken'), findsWidgets);
   });
