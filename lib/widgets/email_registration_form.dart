@@ -228,6 +228,7 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
     return InputDecoration(
       labelText: labelText,
       errorText: errorText,
+      errorMaxLines: 3,
       suffixIcon: suffixIcon,
       filled: true,
       fillColor: Colors.white.withValues(alpha: 0.06),

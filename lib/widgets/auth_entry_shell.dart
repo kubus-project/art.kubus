@@ -49,8 +49,8 @@ class AuthEntryShell extends StatelessWidget {
 
     final bgStart = gradientStart.withValues(alpha: isDark ? 0.46 : 0.62);
     final bgEnd = gradientEnd.withValues(alpha: isDark ? 0.42 : 0.56);
-    final bgMid =
-        (Color.lerp(bgStart, bgEnd, 0.5) ?? bgEnd).withValues(alpha: isDark ? 0.44 : 0.58);
+    final bgMid = (Color.lerp(bgStart, bgEnd, 0.5) ?? bgEnd)
+        .withValues(alpha: isDark ? 0.44 : 0.58);
 
     return AnimatedGradientBackground(
       duration: const Duration(seconds: 12),
@@ -129,8 +129,8 @@ class AuthEntryShell extends StatelessWidget {
                                     children: [
                                       Text(
                                         subtitle,
-                                        style:
-                                            theme.textTheme.bodyMedium?.copyWith(
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(
                                           color: theme.colorScheme.onSurface
                                               .withValues(alpha: 0.72),
                                           height: 1.45,
@@ -215,8 +215,8 @@ class _ShellTopBar extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const AppLogo(width: 42, height: 42),
-        const Spacer(),
-        Flexible(
+        const SizedBox(width: KubusSpacing.md),
+        Expanded(
           child: Wrap(
             alignment: WrapAlignment.end,
             crossAxisAlignment: WrapCrossAlignment.center,
@@ -262,80 +262,80 @@ class _HeroColumn extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-          Container(
-            width: compact ? 72 : 88,
-            height: compact ? 72 : 88,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(compact ? 24 : 30),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  gradientStart.withValues(alpha: 0.92),
-                  gradientEnd.withValues(alpha: 0.92),
-                ],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: gradientEnd.withValues(alpha: 0.22),
-                  blurRadius: 28,
-                  offset: const Offset(0, 14),
-                ),
+        Container(
+          width: compact ? 72 : 88,
+          height: compact ? 72 : 88,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(compact ? 24 : 30),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                gradientStart.withValues(alpha: 0.92),
+                gradientEnd.withValues(alpha: 0.92),
               ],
             ),
-            child: Icon(
-              heroIcon,
-              size: compact ? 30 : 36,
-              color: Colors.white,
-            ),
-          ),
-          if ((eyebrow ?? '').trim().isNotEmpty) ...[
-            const SizedBox(height: KubusSpacing.lg),
-            Text(
-              eyebrow!,
-              style: theme.textTheme.labelLarge?.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.74),
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.3,
+            boxShadow: [
+              BoxShadow(
+                color: gradientEnd.withValues(alpha: 0.22),
+                blurRadius: 28,
+                offset: const Offset(0, 14),
               ),
-            ),
-          ],
-          SizedBox(height: compact ? KubusSpacing.md : KubusSpacing.xl),
+            ],
+          ),
+          child: Icon(
+            heroIcon,
+            size: compact ? 30 : 36,
+            color: Colors.white,
+          ),
+        ),
+        if ((eyebrow ?? '').trim().isNotEmpty) ...[
+          const SizedBox(height: KubusSpacing.lg),
           Text(
-            title,
-            softWrap: true,
-            style: (compact
-                    ? theme.textTheme.headlineMedium
-                    : theme.textTheme.displaySmall)
-                ?.copyWith(
-              color: scheme.onSurface,
-              fontWeight: FontWeight.w800,
-              height: 1.05,
+            eyebrow!,
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.74),
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.3,
             ),
           ),
-          const SizedBox(height: KubusSpacing.md),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
-            child: Text(
-              subtitle,
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.74),
-                height: 1.5,
-              ),
+        ],
+        SizedBox(height: compact ? KubusSpacing.md : KubusSpacing.xl),
+        Text(
+          title,
+          softWrap: true,
+          style: (compact
+                  ? theme.textTheme.headlineMedium
+                  : theme.textTheme.displaySmall)
+              ?.copyWith(
+            color: scheme.onSurface,
+            fontWeight: FontWeight.w800,
+            height: 1.05,
+          ),
+        ),
+        const SizedBox(height: KubusSpacing.md),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Text(
+            subtitle,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.74),
+              height: 1.5,
             ),
           ),
-          if (highlights.isNotEmpty) ...[
-            SizedBox(height: compact ? KubusSpacing.lg : KubusSpacing.xl),
-            Wrap(
-              spacing: KubusSpacing.sm,
-              runSpacing: KubusSpacing.sm,
-              children: highlights
-                  .map(
-                    (highlight) => _HighlightChip(label: highlight),
-                  )
-                  .toList(growable: false),
-            ),
-          ],
+        ),
+        if (highlights.isNotEmpty) ...[
+          SizedBox(height: compact ? KubusSpacing.lg : KubusSpacing.xl),
+          Wrap(
+            spacing: KubusSpacing.sm,
+            runSpacing: KubusSpacing.sm,
+            children: highlights
+                .map(
+                  (highlight) => _HighlightChip(label: highlight),
+                )
+                .toList(growable: false),
+          ),
+        ],
       ],
     );
   }

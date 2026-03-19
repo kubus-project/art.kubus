@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:solana/solana.dart' show Ed25519HDKeyPair;
 import '../models/wallet.dart';
 import '../models/swap_quote.dart';
+import '../services/encrypted_wallet_backup_service.dart';
 import '../services/solana_wallet_service.dart';
 import '../services/backend_api_service.dart';
 import '../services/stats_api_service.dart';
@@ -16,6 +17,7 @@ import '../services/pin_hashing.dart';
 import '../services/security/pin_auth_service.dart';
 import '../services/solana_walletconnect_service.dart';
 import '../services/user_service.dart';
+import '../services/wallet_backup_passkey_service.dart';
 import '../config/config.dart';
 import '../config/api_keys.dart';
 import '../utils/wallet_utils.dart';
@@ -55,6 +57,8 @@ class WalletProvider extends ChangeNotifier {
   final BackendApiService _apiService = BackendApiService();
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   final LocalAuthentication _localAuth = LocalAuthentication();
+  final EncryptedWalletBackupService _encryptedWalletBackupService =
+      EncryptedWalletBackupService();
   late final PinAuthService _pinAuth = PinAuthService(
     store: SecureStoragePinStore(_secureStorage),
   );
@@ -75,6 +79,10 @@ class WalletProvider extends ChangeNotifier {
   DerivedKeyPairResult? _cachedDerivedCandidate;
   Completer<void>? _initializeCompleter;
   Future<ManagedWalletReconnectOutcome>? _managedReconnectInFlight;
+  EncryptedWalletBackupDefinition? _encryptedWalletBackupDefinition;
+  bool _encryptedWalletBackupLoading = false;
+  bool _walletBackupRecoveryInProgress = false;
+  String? _encryptedWalletBackupError;
 
   // Backend supplemental data
   Map<String, dynamic>? _backendProfile;
@@ -183,7 +191,7 @@ class WalletProvider extends ChangeNotifier {
       );
       return didAuthenticate
           ? BiometricAuthOutcome.success
-          : BiometricAuthOutcome.failed;
+          : BiometricAuthOutcome.cancelled;
     } on PlatformException catch (e) {
       final code = e.code.toLowerCase();
       if (code.contains('notavailable') || code.contains('not_available')) {
@@ -199,13 +207,23 @@ class WalletProvider extends ChangeNotifier {
           code.contains('permanently_locked_out')) {
         return BiometricAuthOutcome.permanentlyLockedOut;
       }
+      if (code.contains('temporarylockout') ||
+          code.contains('temporary_lockout') ||
+          code.contains('biometriclockout')) {
+        return BiometricAuthOutcome.lockedOut;
+      }
       if (code.contains('usercanceled') ||
           code.contains('user_canceled') ||
           code.contains('usercancel') ||
           code.contains('user_cancel') ||
+          code.contains('systemcanceled') ||
+          code.contains('system_canceled') ||
           code.contains('canceled') ||
           code.contains('cancelled')) {
         return BiometricAuthOutcome.cancelled;
+      }
+      if (code.contains('passcode') || code.contains('fallback')) {
+        return BiometricAuthOutcome.failed;
       }
       return BiometricAuthOutcome.error;
     } catch (e) {
@@ -544,6 +562,26 @@ class WalletProvider extends ChangeNotifier {
   bool get isConnected => hasWalletIdentity;
   bool get hasActiveKeyPair => _solanaWalletService.hasActiveKeyPair;
   SolanaWalletService get solanaWalletService => _solanaWalletService;
+  EncryptedWalletBackupDefinition? get encryptedWalletBackupDefinition =>
+      _encryptedWalletBackupDefinition;
+  bool get isEncryptedWalletBackupLoading => _encryptedWalletBackupLoading;
+  bool get isWalletBackupRecoveryInProgress => _walletBackupRecoveryInProgress;
+  String? get encryptedWalletBackupError => _encryptedWalletBackupError;
+  bool get hasEncryptedWalletBackup {
+    final backup = _encryptedWalletBackupDefinition;
+    if (backup == null) return false;
+    final targetWallet = (backup.walletAddress).trim();
+    if (targetWallet.isEmpty) return false;
+    final currentWallet = (_currentWalletAddress ?? '').trim();
+    if (currentWallet.isEmpty) return false;
+    return WalletUtils.equals(currentWallet, targetWallet);
+  }
+
+  DateTime? get encryptedWalletBackupLastVerifiedAt =>
+      _encryptedWalletBackupDefinition?.lastVerifiedAt;
+  List<WalletBackupPasskeyDefinition> get encryptedWalletBackupPasskeys =>
+      _encryptedWalletBackupDefinition?.passkeys ??
+      const <WalletBackupPasskeyDefinition>[];
 
   void _setLastError(Object error) {
     _lastError = error.toString();
@@ -555,6 +593,20 @@ class WalletProvider extends ChangeNotifier {
     if (_sessionPhase != WalletSessionPhase.restoring) {
       _sessionPhase = WalletSessionPhase.ready;
     }
+  }
+
+  void _setEncryptedWalletBackupDefinition(
+    EncryptedWalletBackupDefinition? definition,
+  ) {
+    _encryptedWalletBackupDefinition = definition;
+    _encryptedWalletBackupError = null;
+  }
+
+  void _clearEncryptedWalletBackupState() {
+    _encryptedWalletBackupDefinition = null;
+    _encryptedWalletBackupLoading = false;
+    _walletBackupRecoveryInProgress = false;
+    _encryptedWalletBackupError = null;
   }
 
   Future<void> _persistWalletIdentity(String address) async {
@@ -767,6 +819,340 @@ class WalletProvider extends ChangeNotifier {
       walletAddress: targetWallet,
     );
     return prefs.getBool(requiredKey) ?? false;
+  }
+
+  Future<String?> _resolveBackupWalletAddress({String? walletAddress}) async {
+    final explicitWallet = (walletAddress ?? '').trim();
+    if (explicitWallet.isNotEmpty) return explicitWallet;
+    final currentWallet = (_currentWalletAddress ?? '').trim();
+    if (currentWallet.isNotEmpty) return currentWallet;
+    final authenticatedWallet =
+        (await _resolveAuthenticatedWalletAddress() ?? '').trim();
+    if (authenticatedWallet.isNotEmpty) return authenticatedWallet;
+    return _resolveWalletAddressFromPrefs();
+  }
+
+  Future<EncryptedWalletBackupDefinition?> refreshEncryptedWalletBackupStatus({
+    String? walletAddress,
+    bool notify = true,
+  }) async {
+    if (!AppConfig.isFeatureEnabled('encryptedWalletBackup')) {
+      _clearEncryptedWalletBackupState();
+      if (notify) notifyListeners();
+      return null;
+    }
+
+    final targetWallet = (await _resolveBackupWalletAddress(
+              walletAddress: walletAddress,
+            ) ??
+            '')
+        .trim();
+    if (targetWallet.isEmpty) {
+      _clearEncryptedWalletBackupState();
+      if (notify) notifyListeners();
+      return null;
+    }
+
+    if (notify) {
+      _encryptedWalletBackupLoading = true;
+      _encryptedWalletBackupError = null;
+      notifyListeners();
+    }
+
+    try {
+      final definition = await _apiService.getEncryptedWalletBackup(
+        walletAddress: targetWallet,
+      );
+      _setEncryptedWalletBackupDefinition(definition);
+      return definition;
+    } on BackendApiRequestException catch (e) {
+      if (e.statusCode == 404) {
+        _setEncryptedWalletBackupDefinition(null);
+        return null;
+      }
+      _encryptedWalletBackupError = e.toString();
+      rethrow;
+    } catch (e) {
+      _encryptedWalletBackupError = e.toString();
+      rethrow;
+    } finally {
+      _encryptedWalletBackupLoading = false;
+      if (notify) notifyListeners();
+    }
+  }
+
+  Future<EncryptedWalletBackupDefinition?> getEncryptedWalletBackup({
+    String? walletAddress,
+    bool refresh = false,
+  }) async {
+    final targetWallet = (await _resolveBackupWalletAddress(
+              walletAddress: walletAddress,
+            ) ??
+            '')
+        .trim();
+    if (targetWallet.isEmpty) return null;
+
+    final cached = _encryptedWalletBackupDefinition;
+    if (!refresh &&
+        cached != null &&
+        WalletUtils.equals(cached.walletAddress, targetWallet)) {
+      return cached;
+    }
+
+    return refreshEncryptedWalletBackupStatus(walletAddress: targetWallet);
+  }
+
+  Future<EncryptedWalletBackupDefinition> createEncryptedWalletBackup({
+    required String recoveryPassword,
+    String? walletAddress,
+    String? mnemonic,
+  }) async {
+    final targetWallet = (await _resolveBackupWalletAddress(
+              walletAddress: walletAddress,
+            ) ??
+            '')
+        .trim();
+    if (targetWallet.isEmpty) {
+      throw const EncryptedWalletBackupException(
+        'No wallet is available for backup.',
+      );
+    }
+
+    final effectiveMnemonic =
+        (mnemonic ?? await readCachedMnemonic() ?? '').trim();
+    if (effectiveMnemonic.isEmpty) {
+      throw const EncryptedWalletBackupException(
+        'This device does not have the recovery phrase cached.',
+      );
+    }
+
+    _encryptedWalletBackupLoading = true;
+    _encryptedWalletBackupError = null;
+    notifyListeners();
+    try {
+      final definition =
+          await _encryptedWalletBackupService.buildEncryptedBackupDefinition(
+        walletAddress: targetWallet,
+        mnemonic: effectiveMnemonic,
+        recoveryPassword: recoveryPassword,
+      );
+      final savedDefinition = await _apiService.putEncryptedWalletBackup(
+        definition,
+      );
+      _setEncryptedWalletBackupDefinition(savedDefinition);
+      await markMnemonicBackedUp(walletAddress: targetWallet);
+      return savedDefinition;
+    } catch (e) {
+      _encryptedWalletBackupError = e.toString();
+      rethrow;
+    } finally {
+      _encryptedWalletBackupLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String> verifyEncryptedWalletBackup({
+    required String recoveryPassword,
+    String? walletAddress,
+  }) async {
+    final targetWallet = (await _resolveBackupWalletAddress(
+              walletAddress: walletAddress,
+            ) ??
+            '')
+        .trim();
+    final definition = await getEncryptedWalletBackup(
+      walletAddress: targetWallet,
+      refresh: true,
+    );
+    if (definition == null) {
+      throw const EncryptedWalletBackupException(
+        'No encrypted backup is configured for this wallet.',
+      );
+    }
+
+    _encryptedWalletBackupLoading = true;
+    _encryptedWalletBackupError = null;
+    notifyListeners();
+    try {
+      final mnemonic = await _encryptedWalletBackupService.decryptMnemonic(
+        backupDefinition: definition,
+        recoveryPassword: recoveryPassword,
+        expectedWalletAddress: targetWallet,
+      );
+      _setEncryptedWalletBackupDefinition(
+        definition.copyWith(lastVerifiedAt: DateTime.now()),
+      );
+      return mnemonic;
+    } catch (e) {
+      _encryptedWalletBackupError = e.toString();
+      rethrow;
+    } finally {
+      _encryptedWalletBackupLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteEncryptedWalletBackup({String? walletAddress}) async {
+    final targetWallet = (await _resolveBackupWalletAddress(
+              walletAddress: walletAddress,
+            ) ??
+            '')
+        .trim();
+    if (targetWallet.isEmpty) {
+      throw const EncryptedWalletBackupException(
+        'No wallet is available for backup deletion.',
+      );
+    }
+
+    _encryptedWalletBackupLoading = true;
+    _encryptedWalletBackupError = null;
+    notifyListeners();
+    try {
+      await _apiService.deleteEncryptedWalletBackup(
+          walletAddress: targetWallet);
+      if (_encryptedWalletBackupDefinition != null &&
+          WalletUtils.equals(
+            _encryptedWalletBackupDefinition!.walletAddress,
+            targetWallet,
+          )) {
+        _setEncryptedWalletBackupDefinition(null);
+      }
+      if (WalletUtils.equals(_currentWalletAddress, targetWallet) &&
+          hasSigner) {
+        await setMnemonicBackupRequired(
+          required: true,
+          walletAddress: targetWallet,
+        );
+      }
+    } catch (e) {
+      _encryptedWalletBackupError = e.toString();
+      rethrow;
+    } finally {
+      _encryptedWalletBackupLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> authenticateEncryptedWalletBackupPasskey({
+    String? walletAddress,
+  }) async {
+    if (!AppConfig.isFeatureEnabled('walletBackupPasskeyWeb') || !kIsWeb) {
+      return true;
+    }
+
+    final targetWallet = (await _resolveBackupWalletAddress(
+              walletAddress: walletAddress,
+            ) ??
+            '')
+        .trim();
+    if (targetWallet.isEmpty) return false;
+
+    final definition = await getEncryptedWalletBackup(
+      walletAddress: targetWallet,
+      refresh: true,
+    );
+    if (definition == null) return false;
+    if (definition.passkeys.isEmpty) return true;
+
+    final supported = await isWalletBackupPasskeySupported();
+    if (!supported) {
+      throw const EncryptedWalletBackupException(
+        'Passkeys are not available in this browser.',
+      );
+    }
+
+    final options = await _apiService.getWalletBackupPasskeyAuthOptions(
+      walletAddress: targetWallet,
+    );
+    final assertion = await getWalletBackupPasskeyAssertion(options);
+    await _apiService.verifyWalletBackupPasskeyAuth(
+      walletAddress: targetWallet,
+      responsePayload: assertion,
+    );
+    await refreshEncryptedWalletBackupStatus(walletAddress: targetWallet);
+    return true;
+  }
+
+  Future<WalletBackupPasskeyDefinition> enrollEncryptedWalletBackupPasskey({
+    required String nickname,
+    String? walletAddress,
+  }) async {
+    if (!AppConfig.isFeatureEnabled('walletBackupPasskeyWeb') || !kIsWeb) {
+      throw const EncryptedWalletBackupException(
+        'Passkeys are only available on web.',
+      );
+    }
+
+    final targetWallet = (await _resolveBackupWalletAddress(
+              walletAddress: walletAddress,
+            ) ??
+            '')
+        .trim();
+    if (targetWallet.isEmpty) {
+      throw const EncryptedWalletBackupException(
+        'No wallet is available for passkey enrollment.',
+      );
+    }
+
+    final supported = await isWalletBackupPasskeySupported();
+    if (!supported) {
+      throw const EncryptedWalletBackupException(
+        'Passkeys are not available in this browser.',
+      );
+    }
+
+    final options = await _apiService.getWalletBackupPasskeyRegistrationOptions(
+      walletAddress: targetWallet,
+      nickname: nickname,
+    );
+    final credential = await createWalletBackupPasskeyCredential(options);
+    final verifyResponse =
+        await _apiService.verifyWalletBackupPasskeyRegistration(
+      walletAddress: targetWallet,
+      nickname: nickname,
+      responsePayload: credential,
+    );
+    await refreshEncryptedWalletBackupStatus(walletAddress: targetWallet);
+
+    final passkeyPayload = verifyResponse['passkey'] is Map<String, dynamic>
+        ? verifyResponse['passkey'] as Map<String, dynamic>
+        : verifyResponse;
+    return WalletBackupPasskeyDefinition.fromJson(passkeyPayload);
+  }
+
+  Future<bool> restoreSignerFromEncryptedWalletBackup({
+    required String recoveryPassword,
+    String? walletAddress,
+  }) async {
+    final targetWallet = (await _resolveBackupWalletAddress(
+              walletAddress: walletAddress,
+            ) ??
+            '')
+        .trim();
+    if (targetWallet.isEmpty) return false;
+
+    _walletBackupRecoveryInProgress = true;
+    _encryptedWalletBackupError = null;
+    notifyListeners();
+    try {
+      final mnemonic = await verifyEncryptedWalletBackup(
+        recoveryPassword: recoveryPassword,
+        walletAddress: targetWallet,
+      );
+      await importWalletFromMnemonic(
+        mnemonic,
+        markBackedUp: false,
+      );
+      await refreshEncryptedWalletBackupStatus(walletAddress: targetWallet);
+      return WalletUtils.equals(_currentWalletAddress, targetWallet) &&
+          hasSigner;
+    } catch (e) {
+      _encryptedWalletBackupError = e.toString();
+      rethrow;
+    } finally {
+      _walletBackupRecoveryInProgress = false;
+      notifyListeners();
+    }
   }
 
   Future<void> _clearPersistedWalletIdentity() async {
@@ -1369,6 +1755,7 @@ class WalletProvider extends ChangeNotifier {
     }
 
     _currentWalletAddress = keyPair.publicKey;
+    _setEncryptedWalletBackupDefinition(null);
     SolanaWalletConnectService.instance
         .updateActiveWalletAddress(_currentWalletAddress);
     // Persist address for other providers/screens
@@ -1444,6 +1831,7 @@ class WalletProvider extends ChangeNotifier {
       _walletLog('failed to set active keypair for imported wallet: $e');
     }
     _currentWalletAddress = derived.address;
+    _setEncryptedWalletBackupDefinition(null);
     SolanaWalletConnectService.instance
         .updateActiveWalletAddress(_currentWalletAddress);
     // Wallet address set.
@@ -1516,6 +1904,9 @@ class WalletProvider extends ChangeNotifier {
       _solanaWalletService.clearActiveKeyPair();
       _cachedDerivedCandidate = null;
     }
+    if (!WalletUtils.equals(_currentWalletAddress, sanitized)) {
+      _setEncryptedWalletBackupDefinition(null);
+    }
 
     _lastError = null;
     _sessionPhase = WalletSessionPhase.restoring;
@@ -1554,6 +1945,7 @@ class WalletProvider extends ChangeNotifier {
     _achievementsUnlocked = 0;
     _achievementTokenTotal = 0.0;
     _cachedDerivedCandidate = null;
+    _clearEncryptedWalletBackupState();
     // Clear cached mnemonic on explicit disconnect for security
     try {
       await clearCachedMnemonic();

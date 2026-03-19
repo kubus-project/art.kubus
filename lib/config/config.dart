@@ -7,29 +7,30 @@ class AppConfig {
   // ===========================================
   // ENVIRONMENT CONFIGURATION
   // ===========================================
-  
+
   /// Current environment mode
   static const bool isProduction = bool.fromEnvironment('dart.vm.product');
   static const bool isProfile = bool.fromEnvironment('dart.vm.profile');
   static const bool isDevelopment = !isProduction && !isProfile;
-  
+
   // ===========================================
   // FEATURE FLAGS
   // ===========================================
-  
+
   /// Use backend mock data endpoint (controlled by backend .env)
-  static const bool useBackendMockData = false; // Backend serves mock data when USE_MOCK_DATA=true
-  
+  static const bool useBackendMockData =
+      false; // Backend serves mock data when USE_MOCK_DATA=true
+
   /// Use real blockchain connections by default
   static const bool useRealBlockchain = true;
-  
+
   /// Community features
   static const bool enableLiking = true;
   static const bool enableCommenting = true;
   static const bool enableSharing = true;
   static const bool enableReporting = true;
   static const bool enableSupportTickets = true;
-  
+
   /// Web3 and Marketplace features
   static const bool enableWeb3 = true;
   static const bool enableMarketplace = true;
@@ -43,17 +44,21 @@ class AppConfig {
   static const bool enableWalletConnect = true;
   static const bool enableEmailAuth = true;
   static const bool enableGoogleAuth = true;
+
   /// Web: enable Google One Tap prompt (GIS) when available.
   static const bool enableGoogleOneTapWeb = false;
   static const bool enableMultiAuthEntry = true;
-  static const bool enforceWalletOnboarding = false; // Don't force wallet during onboarding - let users set it up when needed
-  static const bool enableWalletBackupOnboarding = true;
-  
+  static const bool enforceWalletOnboarding =
+      false; // Don't force wallet during onboarding - let users set it up when needed
+  static const bool enableWalletBackupOnboarding = false;
+  static const bool enableEncryptedWalletBackup = true;
+  static const bool enableWalletBackupPasskeyWeb = true;
+
   /// AR and Camera features
   static const bool enableARViewer = true;
   static const bool enableCameraCapture = true;
   static const bool enableLocationServices = true;
-  
+
   /// Social features
   static const bool enableUserProfiles = true;
   static const bool enableFollowing = true;
@@ -110,16 +115,17 @@ class AppConfig {
 
   /// Labs section (advanced Web3 surfaces: marketplace/minting/DAO terminology)
   static const bool enableLabs = true;
-  
+
   /// Analytics and tracking
-  static const bool enableAnalytics = bool.fromEnvironment('ANALYTICS_APP_ENABLED', defaultValue: isProduction);
+  static const bool enableAnalytics =
+      bool.fromEnvironment('ANALYTICS_APP_ENABLED', defaultValue: isProduction);
   static const bool enableCrashReporting = isProduction;
   static const bool enablePerformanceMonitoring = isProduction;
-  
+
   // ===========================================
   // DEBUG AND DEVELOPMENT SETTINGS
   // ===========================================
-  
+
   /// Debug prints and logging
   static const bool enableDebugPrints = isDevelopment;
   static const bool enableVerboseLogging = isDevelopment;
@@ -130,41 +136,43 @@ class AppConfig {
   /// NOTE: /api/profiles/issue-token is API-key/admin gated on the backend.
   /// Production clients should not rely on it.
   static const bool enableDebugIssueToken = isDevelopment;
-  
+
   /// Development helpers
   static const bool showPerformanceOverlay = false;
   static const bool showDebugBanner = isDevelopment;
   static const bool enableInspector = isDevelopment;
-  
+
   // ===========================================
   // USER EXPERIENCE SETTINGS
   // ===========================================
-  
+
   /// Welcome and onboarding
   static const bool showWelcomeScreen = true;
-  static const bool skipOnboardingForReturningUsers = true; 
-  static const bool skipWeb3OnboardingForReturningUsers = true; 
-  static const bool forceWalletOnboarding = true; // Prompt wallet for non-explore features
+  static const bool skipOnboardingForReturningUsers = true;
+  static const bool skipWeb3OnboardingForReturningUsers = true;
+  static const bool forceWalletOnboarding =
+      true; // Prompt wallet for non-explore features
   static const bool enableGuestMode = true; // Allow explore without wallet
-  
+
   /// Audio and haptics
   static const bool enableSoundEffects = true;
   static const bool enableHapticFeedback = true;
   static const bool enableBackgroundMusic = false;
-  
+
   /// Animations and transitions
   static const bool enableAnimations = true;
   static const bool enablePageTransitions = true;
   static const bool reduceMotion = false; // Accessibility setting
-  
+
   // ===========================================
   // NETWORK AND API CONFIGURATION
   // ===========================================
-  
+
   /// API endpoints
   static const String baseApiUrl = String.fromEnvironment(
     'BACKEND_BASE_URL',
-    defaultValue: isDevelopment ? 'https://api.kubus.site' : 'https://api.kubus.site',
+    defaultValue:
+        isDevelopment ? 'https://api.kubus.site' : 'https://api.kubus.site',
   );
 
   /// Canonical app base URL used for share links (web + deep links).
@@ -174,14 +182,14 @@ class AppConfig {
     'APP_BASE_URL',
     defaultValue: 'https://app.kubus.site',
   );
-  
+
   /// Mock data endpoint (when useBackendMockData is true)
   static final String mockDataApiUrl = '$baseApiUrl/api/mock';
-  
+
   /// IPFS configuration (future integration)
   static String get ipfsApiUrl => ApiKeys.ipfsApiUrl;
   static const bool enableIPFS = false; // Future feature
-  
+
   /// Blockchain networks
   static const String defaultNetwork = isDevelopment ? 'goerli' : 'mainnet';
   static const Map<String, String> rpcUrls = {
@@ -189,146 +197,212 @@ class AppConfig {
     'goerli': 'https://goerli.infura.io/v3/',
     'polygon': 'https://polygon-rpc.com/',
   };
-  
+
   // ===========================================
   // CONTENT AND MEDIA SETTINGS
   // ===========================================
-  
+
   /// Image and media limits
   static const int maxImageSizeMB = 10;
   static const int maxVideoSizeMB = 50;
   static const int maxAudioSizeMB = 20;
-  static const List<String> supportedImageFormats = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-  static const List<String> supportedVideoFormats = ['mp4', 'mov', 'avi', 'webm'];
-  static const List<String> supportedAudioFormats = ['mp3', 'wav', 'aac', 'ogg'];
-  
+  static const List<String> supportedImageFormats = [
+    'jpg',
+    'jpeg',
+    'png',
+    'gif',
+    'webp'
+  ];
+  static const List<String> supportedVideoFormats = [
+    'mp4',
+    'mov',
+    'avi',
+    'webm'
+  ];
+  static const List<String> supportedAudioFormats = [
+    'mp3',
+    'wav',
+    'aac',
+    'ogg'
+  ];
+
   /// AR model limits
   static const int maxModelSizeMB = 25;
-  static const List<String> supportedModelFormats = ['glb', 'gltf', 'obj', 'fbx'];
-  
+  static const List<String> supportedModelFormats = [
+    'glb',
+    'gltf',
+    'obj',
+    'fbx'
+  ];
+
   // ===========================================
   // CACHE AND STORAGE SETTINGS
   // ===========================================
-  
+
   /// Cache configuration
   static const int imageCacheMaxSizeMB = 100;
   static const int modelCacheMaxSizeMB = 500;
   static const Duration cacheExpiration = Duration(days: 7);
-  
+
   /// Local storage
   static const int maxLocalStorageMB = 1000;
   static const bool enableOfflineMode = true;
-  
+
   // ===========================================
   // SECURITY AND PRIVACY SETTINGS
   // ===========================================
-  
+
   /// Security features
   static const bool enableBiometricAuth = true;
   static const bool enableEncryption = true;
   static const bool enableSecureStorage = true;
-  
+
   /// Privacy settings
   static const bool enableLocationPrivacy = true;
   static const bool enableDataMinimization = true;
   static const bool enableAnonymousMode = false; // Future feature
-  
+
   // ===========================================
   // PERFORMANCE SETTINGS
   // ===========================================
-  
+
   /// Rendering and graphics
   static const int maxConcurrentDownloads = 3;
   static const int imageCompressionQuality = 85;
   static const bool enableImageOptimization = true;
-  
+
   /// Memory management
   static const int maxCachedImages = 50;
   static const int maxCachedModels = 10;
   static const Duration memoryCleanupInterval = Duration(minutes: 5);
-  
+
   // ===========================================
   // BUSINESS LOGIC SETTINGS
   // ===========================================
-  
+
   /// Marketplace
   static const double platformFeePercentage = 2.5;
   static const double minPriceSOL = 0.001;
   static const double maxPriceSOL = 1000.0;
-  
+
   /// Rewards and gamification
   static const int dailyLoginReward = 10;
   static const int artworkUploadReward = 50;
   static const int artworkDiscoveryReward = 5;
   static const double kub8PerAttendanceReward = 0.5;
-  
+
   // ===========================================
   // UI/UX CONFIGURATION
   // ===========================================
-  
+
   /// Animation durations
   static const Duration shortAnimationDuration = Duration(milliseconds: 200);
   static const Duration mediumAnimationDuration = Duration(milliseconds: 400);
   static const Duration longAnimationDuration = Duration(milliseconds: 600);
-  
+
   /// Loading and retry settings
   static const Duration requestTimeout = Duration(seconds: 30);
   static const int maxRetryAttempts = 3;
   static const Duration retryDelay = Duration(seconds: 2);
-  
+
   // ===========================================
   // HELPER METHODS
   // ===========================================
-  
+
   /// Check if feature is enabled
   static bool isFeatureEnabled(String feature) {
     switch (feature) {
-      case 'backendMockData': return useBackendMockData;
-      case 'liking': return enableLiking;
-      case 'commenting': return enableCommenting;
-      case 'sharing': return enableSharing;
-      case 'messaging': return enableMessaging;
-      case 'web3': return enableWeb3;
-      case 'daoOnchainTreasury': return enableDaoOnchainTreasury;
-      case 'daoReviewDecisions': return enableDaoReviewDecisions;
-      case 'walletConnect': return enableWalletConnect;
-      case 'emailAuth': return enableEmailAuth;
-      case 'googleAuth': return enableGoogleAuth;
-      case 'googleOneTapWeb': return enableGoogleOneTapWeb;
-      case 'multiAuth': return enableMultiAuthEntry;
-      case 'walletBackupOnboarding': return enableWalletBackupOnboarding;
-      case 'marketplace': return enableMarketplace;
-      case 'nftMinting': return enableNFTMinting;
-      case 'events': return enableEvents;
-      case 'exhibitions': return enableExhibitions;
-      case 'collections': return enableCollections;
-      case 'institutions': return enableInstitutions;
-      case 'ar': return enableARViewer;
-      case 'analytics': return enableAnalytics;
-      case 'supportTickets': return enableSupportTickets;
-      case 'debug': return enableDebugPrints;
-      case 'debugIssueToken': return enableDebugIssueToken;
-      case 'sounds': return enableSoundEffects;
-      case 'haptics': return enableHapticFeedback;
-      case 'animations': return enableAnimations;
-      case 'ipfs': return enableIPFS;
-      case 'collabInvites': return enableCollabInvites;
-      case 'collabInviteNotifications': return enableCollabInviteNotifications;
-      case 'season0': return enableSeason0;
-      case 'labs': return enableLabs;
-      case 'presence': return enablePresence;
-      case 'presenceLastVisitedLocation': return enablePresenceLastVisitedLocation;
-      case 'attendance': return enableAttendance;
-      case 'externalImageProxy': return enableExternalImageProxy;
-      case 'rePromptLoginOnExpiry': return enableRePromptLoginOnExpiry;
-      case 'mapTravelMode': return enableMapTravelMode;
-      case 'mapIsometricView': return enableMapIsometricView;
+      case 'backendMockData':
+        return useBackendMockData;
+      case 'liking':
+        return enableLiking;
+      case 'commenting':
+        return enableCommenting;
+      case 'sharing':
+        return enableSharing;
+      case 'messaging':
+        return enableMessaging;
+      case 'web3':
+        return enableWeb3;
+      case 'daoOnchainTreasury':
+        return enableDaoOnchainTreasury;
+      case 'daoReviewDecisions':
+        return enableDaoReviewDecisions;
+      case 'walletConnect':
+        return enableWalletConnect;
+      case 'emailAuth':
+        return enableEmailAuth;
+      case 'googleAuth':
+        return enableGoogleAuth;
+      case 'googleOneTapWeb':
+        return enableGoogleOneTapWeb;
+      case 'multiAuth':
+        return enableMultiAuthEntry;
+      case 'walletBackupOnboarding':
+        return enableWalletBackupOnboarding;
+      case 'encryptedWalletBackup':
+        return enableEncryptedWalletBackup;
+      case 'walletBackupPasskeyWeb':
+        return enableWalletBackupPasskeyWeb;
+      case 'marketplace':
+        return enableMarketplace;
+      case 'nftMinting':
+        return enableNFTMinting;
+      case 'events':
+        return enableEvents;
+      case 'exhibitions':
+        return enableExhibitions;
+      case 'collections':
+        return enableCollections;
+      case 'institutions':
+        return enableInstitutions;
+      case 'ar':
+        return enableARViewer;
+      case 'analytics':
+        return enableAnalytics;
+      case 'supportTickets':
+        return enableSupportTickets;
+      case 'debug':
+        return enableDebugPrints;
+      case 'debugIssueToken':
+        return enableDebugIssueToken;
+      case 'sounds':
+        return enableSoundEffects;
+      case 'haptics':
+        return enableHapticFeedback;
+      case 'animations':
+        return enableAnimations;
+      case 'ipfs':
+        return enableIPFS;
+      case 'collabInvites':
+        return enableCollabInvites;
+      case 'collabInviteNotifications':
+        return enableCollabInviteNotifications;
+      case 'season0':
+        return enableSeason0;
+      case 'labs':
+        return enableLabs;
+      case 'presence':
+        return enablePresence;
+      case 'presenceLastVisitedLocation':
+        return enablePresenceLastVisitedLocation;
+      case 'attendance':
+        return enableAttendance;
+      case 'externalImageProxy':
+        return enableExternalImageProxy;
+      case 'rePromptLoginOnExpiry':
+        return enableRePromptLoginOnExpiry;
+      case 'mapTravelMode':
+        return enableMapTravelMode;
+      case 'mapIsometricView':
+        return enableMapIsometricView;
       case 'mapWebPreserveDrawingBuffer':
         return enableMapWebPreserveDrawingBuffer;
-      default: return false;
+      default:
+        return false;
     }
   }
-  
+
   /// Get current environment string
   static String get environmentName {
     // Structure as a simple chain to avoid patterns that sometimes produce
@@ -341,22 +415,23 @@ class AppConfig {
     }
     return 'development';
   }
-  
+
   /// Debug print helper
   static void debugPrint(String message) {
     if (enableDebugPrints && foundation.kDebugMode) {
       foundation.debugPrint('[art.kubus Debug] $message');
     }
   }
-  
+
   /// Verbose logging helper
   static void verboseLog(String category, String message) {
     if (!enableVerboseLogging) return;
     debugPrint('[$category] $message');
   }
-  
+
   /// Network logging helper
-  static void networkLog(String method, String url, {Map<String, dynamic>? data}) {
+  static void networkLog(String method, String url,
+      {Map<String, dynamic>? data}) {
     if (!enableNetworkLogging) return;
     debugPrint('[$method] $url ${data != null ? '- Data: $data' : ''}');
   }
@@ -365,15 +440,16 @@ class AppConfig {
 /// App version and build information
 class AppInfo {
   static const String appName = 'art.kubus';
-  static const String version = '0.4.1';
-  static const int buildNumber = 33;
-  static const String buildDate = '2026-03-18';
-  
+  static const String version = '0.4.2';
+  static const int buildNumber = 42;
+  static const String buildDate = '2026-03-19';
+
   /// Get full version string
   static String get fullVersion => '$version+$buildNumber';
-  
+
   /// Get app info string
-  static String get appInfo => '$appName v$fullVersion (${AppConfig.environmentName})';
+  static String get appInfo =>
+      '$appName v$fullVersion (${AppConfig.environmentName})';
 }
 
 /// Constants for shared preferences keys
@@ -388,7 +464,7 @@ class PreferenceKeys {
       'secure_account_email_verified_v1';
   static const String secureAccountPromptDismissedV1 =
       'secure_account_prompt_dismissed_v1';
-    static const String secureAccountStatusCacheV1 =
+  static const String secureAccountStatusCacheV1 =
       'secure_account_status_cache_v1';
   static const String secureAccountStatusCacheTsV1 =
       'secure_account_status_cache_ts_v1';
@@ -398,8 +474,10 @@ class PreferenceKeys {
       'wallet_mnemonic_backed_up_v1';
   static const String walletMnemonicBackupRequiredV1Prefix =
       'wallet_mnemonic_backup_required_v1';
+
   /// User persona UX preference (stored per-wallet by ProfileProvider).
   static const String userPersona = 'user_persona';
+
   /// Marks that persona onboarding has been completed (stored per-wallet).
   static const String userPersonaOnboardedV1 = 'user_persona_onboarded_v1';
   static const String selectedNetwork = 'selected_network';
@@ -414,9 +492,12 @@ class PreferenceKeys {
   /// Map UX
   static const String mapTravelModeEnabledV1 = 'map_travel_mode_enabled_v1';
   static const String mapTravelTutorialSeenV1 = 'map_travel_tutorial_seen_v1';
-  static const String mapIsometricViewEnabledV1 = 'map_isometric_view_enabled_v1';
+  static const String mapIsometricViewEnabledV1 =
+      'map_isometric_view_enabled_v1';
 
   /// Interactive map onboarding tutorial (coach marks)
-  static const String mapOnboardingMobileSeenV2 = 'map_onboarding_mobile_seen_v2';
-  static const String mapOnboardingDesktopSeenV2 = 'map_onboarding_desktop_seen_v2';
+  static const String mapOnboardingMobileSeenV2 =
+      'map_onboarding_mobile_seen_v2';
+  static const String mapOnboardingDesktopSeenV2 =
+      'map_onboarding_desktop_seen_v2';
 }

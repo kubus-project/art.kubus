@@ -26,7 +26,7 @@ import '../../widgets/support/support_ticket_dialog.dart';
 import '../../utils/app_animations.dart';
 import 'components/desktop_widgets.dart';
 import '../web3/wallet/wallet_home.dart';
-import '../web3/wallet/mnemonic_reveal_screen.dart';
+import '../web3/wallet/wallet_backup_protection_screen.dart';
 import '../onboarding/onboarding_flow_screen.dart';
 import '../../../config/config.dart';
 import '../../providers/locale_provider.dart';
@@ -1004,7 +1004,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
               Navigator.pop(context);
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const MnemonicRevealScreen()),
+                MaterialPageRoute(
+                  builder: (_) => const WalletBackupProtectionScreen(),
+                ),
               );
             },
             style: ElevatedButton.styleFrom(

@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../providers/navigation_provider.dart';
 import '../../../widgets/app_loading.dart';
-import 'mnemonic_reveal_screen.dart';
+import 'wallet_backup_protection_screen.dart';
 import '../../../models/wallet.dart';
 import 'nft_gallery.dart';
 import 'token_swap.dart';
@@ -178,7 +178,9 @@ class _WalletHomeState extends State<WalletHome> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (context) => const MnemonicRevealScreen()),
+                          builder: (context) =>
+                              const WalletBackupProtectionScreen(),
+                        ),
                       );
                     },
                   ),
@@ -434,8 +436,7 @@ class _WalletHomeState extends State<WalletHome> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                      builder: (context) =>
-                                          const TokenSwap()),
+                                      builder: (context) => const TokenSwap()),
                                 );
                               },
                               isSmallScreen,

@@ -34,7 +34,7 @@ import 'community/profile_edit_screen.dart';
 import '../widgets/avatar_widget.dart';
 import '../widgets/empty_state_card.dart';
 import '../widgets/support/support_ticket_dialog.dart';
-import 'web3/wallet/mnemonic_reveal_screen.dart';
+import 'web3/wallet/wallet_backup_protection_screen.dart';
 import '../utils/app_animations.dart';
 import '../../config/config.dart';
 import '../utils/map_performance_debug.dart';
@@ -1992,8 +1992,9 @@ class _SettingsScreenState extends State<SettingsScreen>
           content: Text(l10n.settingsConnectOrCreateWalletFirstToast)));
       return;
     }
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const MnemonicRevealScreen()));
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const WalletBackupProtectionScreen()),
+    );
   }
 
   void _showAutoLockDialog() {
@@ -2269,8 +2270,11 @@ class _SettingsScreenState extends State<SettingsScreen>
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop();
-              Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => const MnemonicRevealScreen()));
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const WalletBackupProtectionScreen(),
+                ),
+              );
             },
             child: Text(l10n.settingsShowPhraseButton),
           ),

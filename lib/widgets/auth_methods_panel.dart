@@ -29,7 +29,7 @@ import 'package:art_kubus/widgets/google_sign_in_web_button.dart';
 import 'package:art_kubus/widgets/auth_wallet_entry_menu.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
-import 'package:art_kubus/widgets/wallet_mnemonic_backup_prompt.dart';
+import 'package:art_kubus/widgets/wallet_backup_prompts.dart';
 import 'package:art_kubus/widgets/secure_account_password_prompt.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -83,10 +83,36 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
   String? _usernameError;
   bool _showCompactEmailForm = false;
 
-  bool _isUsernameTakenConflict(BackendApiRequestException error) {
+  Map<String, dynamic>? _decodeAuthErrorPayload(Object error) {
+    Map<String, dynamic>? tryDecode(String raw) {
+      final trimmed = raw.trim();
+      if (trimmed.isEmpty) return null;
+
+      try {
+        final decoded = jsonDecode(trimmed);
+        return decoded is Map<String, dynamic> ? decoded : null;
+      } catch (_) {
+        final jsonStart = trimmed.indexOf('{');
+        if (jsonStart < 0) return null;
+        try {
+          final decoded = jsonDecode(trimmed.substring(jsonStart));
+          return decoded is Map<String, dynamic> ? decoded : null;
+        } catch (_) {
+          return null;
+        }
+      }
+    }
+
+    if (error is BackendApiRequestException) {
+      final decoded = tryDecode((error.body ?? '').toString());
+      if (decoded != null) return decoded;
+    }
+    return tryDecode(error.toString());
+  }
+
+  bool _isUsernameTakenConflict(Object error) {
     try {
-      final decoded = jsonDecode((error.body ?? '').toString());
-      final bodyMap = decoded is Map<String, dynamic> ? decoded : null;
+      final bodyMap = _decodeAuthErrorPayload(error);
       final errorCode =
           (bodyMap?['errorCode'] ?? bodyMap?['code'] ?? '').toString().trim();
       if (errorCode.toUpperCase() == 'USERNAME_ALREADY_TAKEN') {
@@ -98,6 +124,33 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     } catch (_) {
       return false;
     }
+  }
+
+  bool _isDuplicateEmailConflict(Object error) {
+    if (error is BackendApiRequestException && error.statusCode != 409) {
+      return false;
+    }
+
+    final bodyMap = _decodeAuthErrorPayload(error);
+    final rawError = (bodyMap?['error'] ?? bodyMap?['message'] ?? '')
+        .toString()
+        .toLowerCase();
+    if (rawError.contains('username') &&
+        (rawError.contains('taken') || rawError.contains('exists'))) {
+      return false;
+    }
+    if (rawError.contains('user already exists') ||
+        rawError.contains('account already has an email') ||
+        rawError.contains('login instead') ||
+        rawError.contains('sign in instead')) {
+      return true;
+    }
+
+    final fallbackMessage = error.toString().toLowerCase();
+    return fallbackMessage.contains('user already exists') ||
+        fallbackMessage.contains('account already has an email') ||
+        fallbackMessage.contains('login instead') ||
+        fallbackMessage.contains('sign in instead');
   }
 
   String? _validateUsername(
@@ -440,29 +493,28 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       unawaited(TelemetryService().trackSignUpFailure(
           method: 'email', errorClass: e.runtimeType.toString()));
       if (!mounted) return;
-      if (e is BackendApiRequestException && e.statusCode == 409) {
-        final usernameTaken = _isUsernameTakenConflict(e);
-        if (usernameTaken) {
-          setState(() {
-            _usernameError = l10n.authUsernameAlreadyTaken;
-          });
-          messenger.showKubusSnackBar(
-            SnackBar(content: Text(l10n.authUsernameAlreadyTaken)),
-            tone: KubusSnackBarTone.error,
-          );
-          return;
-        }
-        messenger.showKubusSnackBar(
-          SnackBar(content: Text(l10n.authAccountAlreadyExistsToast)),
-          tone: KubusSnackBarTone.error,
-        );
+      final usernameTaken = _isUsernameTakenConflict(e);
+      if (usernameTaken) {
+        setState(() {
+          _emailError = null;
+          _usernameError = l10n.authUsernameAlreadyTaken;
+          _showCompactEmailForm = true;
+        });
         return;
-      } else {
-        messenger.showKubusSnackBar(
-          SnackBar(content: Text(l10n.authRegistrationFailed)),
-          tone: KubusSnackBarTone.error,
-        );
       }
+
+      if (_isDuplicateEmailConflict(e)) {
+        setState(() {
+          _emailError = l10n.authAccountAlreadyExistsToast;
+          _showCompactEmailForm = true;
+        });
+        return;
+      }
+
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.authRegistrationFailed)),
+        tone: KubusSnackBarTone.error,
+      );
     } finally {
       AppConfig.debugPrint(
           'AuthMethodsPanel._registerWithEmail: clearing submit loading state');
@@ -521,6 +573,15 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
           WalletUtils.equals(activeWallet, targetWallet)) {
         return targetWallet;
       }
+      final recovered = await _attemptEncryptedBackupRecovery(targetWallet);
+      if (recovered) {
+        final restoredWallet =
+            (walletProvider.currentWalletAddress ?? '').trim();
+        if (walletProvider.hasSigner &&
+            WalletUtils.equals(restoredWallet, targetWallet)) {
+          return targetWallet;
+        }
+      }
       return null;
     }
 
@@ -538,21 +599,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
           .createWallet()
           .timeout(const Duration(seconds: 12));
       final address = (result['address'] ?? '').trim();
-      final mnemonic = (result['mnemonic'] ?? '').trim();
-      if (address.isEmpty || mnemonic.isEmpty) {
-        return null;
-      }
-      if (!mounted) return null;
-      final confirmed = await showWalletMnemonicBackupPrompt(
-        context: context,
-        mnemonic: mnemonic,
-        address: address,
-      );
-      if (!mounted || !confirmed) {
-        return null;
-      }
-      await _upsertProfileWithUsername(address, desiredUsername);
-      return address;
+      return address.isEmpty ? null : address;
     } catch (e) {
       AppConfig.debugPrint(
           'AuthMethodsPanel: signer-backed wallet creation failed: $e');
@@ -583,8 +630,6 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
   Future<String?> _prepareProvisionalProfileBeforeRegister({
     required String desiredUsername,
   }) async {
-    final profileProvider =
-        Provider.of<ProfileProvider>(context, listen: false);
     String? walletAddress;
     try {
       walletAddress = await _ensureWalletProvisioned(
@@ -602,60 +647,68 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       return null;
     }
 
-    try {
-      await profileProvider
-          .createProfileFromWallet(
-            walletAddress: normalizedWallet,
-            username: desiredUsername.isNotEmpty ? desiredUsername : null,
-          )
-          .timeout(const Duration(seconds: 10));
-    } catch (e) {
-      AppConfig.debugPrint(
-        'AuthMethodsPanel._prepareProvisionalProfileBeforeRegister: createProfileFromWallet failed: $e',
-      );
-    }
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('wallet_address', normalizedWallet);
-      await prefs.setString('wallet', normalizedWallet);
-      await prefs.setString('walletAddress', normalizedWallet);
-      await prefs.setBool('has_wallet', true);
-    } catch (e) {
-      AppConfig.debugPrint(
-        'AuthMethodsPanel._prepareProvisionalProfileBeforeRegister: wallet prefs update failed: $e',
-      );
-    }
-
-    // Do not block registration on profile fetch fallback paths (orbit/source
-    // retries can be slow). Provisioning here should stay fast and best-effort.
-
     return normalizedWallet;
   }
 
-  Future<void> _upsertProfileWithUsername(
-      String address, String? desiredUsername) async {
-    final profileProvider =
-        Provider.of<ProfileProvider>(context, listen: false);
-    final effectiveUsername =
-        (desiredUsername ?? '').isNotEmpty ? desiredUsername : null;
-    try {
-      await profileProvider.createProfileFromWallet(
-          walletAddress: address, username: effectiveUsername);
-    } catch (e) {
-      AppConfig.debugPrint(
-          'AuthMethodsPanel: createProfileFromWallet failed: $e');
+  Future<bool> _attemptEncryptedBackupRecovery(String walletAddress) async {
+    if (!AppConfig.isFeatureEnabled('encryptedWalletBackup')) {
+      return false;
     }
-    if (effectiveUsername != null && effectiveUsername.isNotEmpty) {
-      try {
-        await BackendApiService().updateProfile(address, {
-          'username': effectiveUsername,
-          'displayName': effectiveUsername,
-        });
-      } catch (err) {
-        AppConfig.debugPrint(
-            'AuthMethodsPanel: updateProfile username patch failed: $err');
+
+    final l10n = AppLocalizations.of(context)!;
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final messenger = ScaffoldMessenger.of(context);
+    final backup = await walletProvider.getEncryptedWalletBackup(
+      walletAddress: walletAddress,
+      refresh: true,
+    );
+    if (backup == null) {
+      return false;
+    }
+
+    try {
+      if (kIsWeb &&
+          AppConfig.isFeatureEnabled('walletBackupPasskeyWeb') &&
+          backup.passkeys.isNotEmpty) {
+        await walletProvider.authenticateEncryptedWalletBackupPasskey(
+          walletAddress: walletAddress,
+        );
       }
+      if (!mounted) return false;
+
+      final recoveryPassword = await showWalletBackupPasswordPrompt(
+        context: context,
+        title: 'Restore wallet from encrypted backup',
+        description:
+            'Enter the recovery password to restore the real wallet signer for this account on this device.',
+        actionLabel: 'Restore wallet',
+      );
+      if (!mounted || recoveryPassword == null) {
+        return false;
+      }
+
+      final gate = Provider.of<SecurityGateProvider>(context, listen: false);
+      final verified = await gate.requireSensitiveActionVerification();
+      if (!mounted) return false;
+      if (!verified) {
+        messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.lockAuthenticationFailedToast)),
+          tone: KubusSnackBarTone.error,
+        );
+        return false;
+      }
+
+      return await walletProvider.restoreSignerFromEncryptedWalletBackup(
+        walletAddress: walletAddress,
+        recoveryPassword: recoveryPassword,
+      );
+    } catch (e) {
+      if (!mounted) return false;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(e.toString())),
+        tone: KubusSnackBarTone.error,
+      );
+      return false;
     }
   }
 

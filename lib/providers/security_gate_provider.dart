@@ -22,7 +22,8 @@ enum SecurityLockReason {
   sensitiveAction,
 }
 
-class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordinator {
+class SecurityGateProvider extends ChangeNotifier
+    implements AuthSessionCoordinator {
   SecurityGateProvider({
     Duration promptCooldown = const Duration(seconds: 8),
   }) : _promptCooldown = promptCooldown;
@@ -117,7 +118,8 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
   }
 
   void onAppLifecycleChanged(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
       unawaited(_persistInactiveTimestamp());
       return;
     }
@@ -129,7 +131,8 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
   Future<void> _persistInactiveTimestamp() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt('last_inactive_ts', DateTime.now().millisecondsSinceEpoch);
+      await prefs.setInt(
+          'last_inactive_ts', DateTime.now().millisecondsSinceEpoch);
     } catch (_) {
       // Best-effort only.
     }
@@ -144,12 +147,13 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
         if (currentRoute != null) {
           final routeName = currentRoute.settings.name ?? '';
           // Skip auto-lock on auth routes
-          if (routeName.contains('/verify-email') || 
+          if (routeName.contains('/verify-email') ||
               routeName.contains('/sign-in') ||
               routeName.contains('/register') ||
               routeName.contains('/signup')) {
             if (kDebugMode) {
-              debugPrint('SecurityGateProvider._handleResumed: Skipping auto-lock on auth route: $routeName');
+              debugPrint(
+                  'SecurityGateProvider._handleResumed: Skipping auto-lock on auth route: $routeName');
             }
             return;
           }
@@ -165,7 +169,8 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
       if (!_shouldAutoLock()) return;
       if (lastInactiveMs == null) return;
 
-      final elapsed = DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(lastInactiveMs));
+      final elapsed = DateTime.now()
+          .difference(DateTime.fromMillisecondsSinceEpoch(lastInactiveMs));
       if (autoLockSeconds < 0) {
         // Immediate: any backgrounding locks.
         await lock(SecurityLockReason.autoLock);
@@ -193,7 +198,9 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
   void _resetInactivityTimer() {
     _inactivityTimer?.cancel();
     if (!_shouldAutoLock()) return;
-    if (autoLockSeconds <= 0) return; // Never or Immediate handled via lifecycle.
+    if (autoLockSeconds <= 0) {
+      return; // Never or Immediate handled via lifecycle.
+    }
     if (_locked) return;
 
     final deadline = _lastInteractionAt.add(Duration(seconds: autoLockSeconds));
@@ -208,15 +215,25 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
     });
   }
 
-  Future<void> lock(SecurityLockReason reason, {AuthFailureContext? context}) async {
-    if ((reason == SecurityLockReason.autoLock || reason == SecurityLockReason.tokenExpired) && !_hasLocalAccount) {
+  Future<void> lock(SecurityLockReason reason,
+      {AuthFailureContext? context}) async {
+    if ((reason == SecurityLockReason.autoLock ||
+            reason == SecurityLockReason.tokenExpired) &&
+        !_hasLocalAccount) {
       return;
     }
     final wallet = _walletProvider;
     final hasPin = await wallet?.hasPin() ?? false;
-    final canUseBiometrics = biometricsEnabled && (await wallet?.canUseBiometrics() ?? false);
-    if (reason == SecurityLockReason.autoLock && !(hasPin || canUseBiometrics)) return;
-    if (reason == SecurityLockReason.sensitiveAction && !hasPin) return;
+    final canUseBiometrics =
+        biometricsEnabled && (await wallet?.canUseBiometrics() ?? false);
+    if (reason == SecurityLockReason.autoLock &&
+        !(hasPin || canUseBiometrics)) {
+      return;
+    }
+    if (reason == SecurityLockReason.sensitiveAction &&
+        !(hasPin || canUseBiometrics)) {
+      return;
+    }
 
     if (_locked && _inFlight != null) {
       _lockReason ??= reason;
@@ -306,20 +323,21 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
     // These are endpoints that don't require an existing session.
     final path = (context.path).toLowerCase();
     final isAuthEndpoint = path.contains('/auth/') &&
-      (path.contains('/auth/login') ||
-       path.contains('/auth/register') ||
-       path.contains('/auth/verify-email') ||
-       path.contains('/auth/resend-verification') ||
-       path.contains('/auth/forgot-password') ||
-       path.contains('/auth/reset-password') ||
-       path.contains('/auth/signup'));
-    
+        (path.contains('/auth/login') ||
+            path.contains('/auth/register') ||
+            path.contains('/auth/verify-email') ||
+            path.contains('/auth/resend-verification') ||
+            path.contains('/auth/forgot-password') ||
+            path.contains('/auth/reset-password') ||
+            path.contains('/auth/signup'));
+
     // Also skip re-auth on email verification routes (user waiting for verification)
     final isEmailVerificationRoute = path.contains('/verify-email');
-    
+
     if (isAuthEndpoint || isEmailVerificationRoute) {
       _cooldownUntil = DateTime.now().add(_promptCooldown);
-      return const AuthReauthResult(AuthReauthOutcome.notEnabled, message: 'Auth endpoint does not require re-auth');
+      return const AuthReauthResult(AuthReauthOutcome.notEnabled,
+          message: 'Auth endpoint does not require re-auth');
     }
 
     SharedPreferences? prefs;
@@ -330,9 +348,11 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
     } catch (_) {}
 
     if (prefs != null) {
-      final sessionStatus = AuthGatingService.evaluateStoredSession(prefs: prefs);
+      final sessionStatus =
+          AuthGatingService.evaluateStoredSession(prefs: prefs);
       if (sessionStatus == StoredSessionStatus.refreshRequired) {
-        final refreshed = await BackendApiService().refreshAuthTokenFromStorage();
+        final refreshed =
+            await BackendApiService().refreshAuthTokenFromStorage();
         if (refreshed) {
           _cooldownUntil = DateTime.now().add(_promptCooldown);
           return const AuthReauthResult(AuthReauthOutcome.success);
@@ -344,9 +364,10 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
     // 1. Feature is enabled AND
     // 2. User has a local account/session
     // 3. User has app lock configured (PIN or biometrics)
-    final shouldPrompt = await AuthGatingService.shouldPromptReauth(prefs: prefs);
+    final shouldPrompt =
+        await AuthGatingService.shouldPromptReauth(prefs: prefs);
     final hasAppLock = requirePin || biometricsEnabled;
-    
+
     if (!shouldPrompt) {
       if (_hasLocalAccount) {
         _cooldownUntil = DateTime.now().add(_promptCooldown);
@@ -356,7 +377,8 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
         }
       }
       _cooldownUntil = DateTime.now().add(_promptCooldown);
-      return const AuthReauthResult(AuthReauthOutcome.notEnabled, message: 'Re-auth not enabled for non-session users');
+      return const AuthReauthResult(AuthReauthOutcome.notEnabled,
+          message: 'Re-auth not enabled for non-session users');
     }
 
     if (!hasAppLock) {
@@ -366,14 +388,16 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
       if (navigator != null && navigator.mounted) {
         navigator.pushNamedAndRemoveUntil('/sign-in', (_) => false);
       }
-      return const AuthReauthResult(AuthReauthOutcome.notEnabled, message: 'App lock not configured; sign-in required');
+      return const AuthReauthResult(AuthReauthOutcome.notEnabled,
+          message: 'App lock not configured; sign-in required');
     }
 
     await lock(SecurityLockReason.tokenExpired, context: context);
     final inflight = _inFlight;
     if (inflight == null) {
       _cooldownUntil = DateTime.now().add(_promptCooldown);
-      return const AuthReauthResult(AuthReauthOutcome.failed, message: 'Unable to start re-auth flow');
+      return const AuthReauthResult(AuthReauthOutcome.failed,
+          message: 'Unable to start re-auth flow');
     }
     return inflight.future;
   }
@@ -424,7 +448,8 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
 
   static FutureOr<void> _noOpAuthCallback(Map<String, dynamic> _) {}
 
-  Future<BiometricAuthOutcome> unlockWithBiometrics({String? localizedReason}) async {
+  Future<BiometricAuthOutcome> unlockWithBiometrics(
+      {String? localizedReason}) async {
     if (!_locked) return BiometricAuthOutcome.success;
     if (_busy) return BiometricAuthOutcome.failed;
 
@@ -473,9 +498,19 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
     }
   }
 
-  Future<void> requireSensitiveActionVerification() async {
+  Future<bool> requireSensitiveActionVerification() async {
+    final wallet = _walletProvider;
+    final hasPin = await wallet?.hasPin() ?? false;
+    final canUseBiometrics =
+        biometricsEnabled && (await wallet?.canUseBiometrics() ?? false);
+
     await lock(SecurityLockReason.sensitiveAction);
-    await _inFlight?.future;
+    if (!(hasPin || canUseBiometrics)) {
+      return true;
+    }
+
+    final settled = await _inFlight?.future;
+    return settled?.isSuccess ?? false;
   }
 
   Future<bool> _finalizeUnlockAfterLocalVerification() async {
@@ -536,7 +571,8 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
           await BackendApiService().loadAuthToken();
         }
       } else {
-        await BackendApiService().registerWallet(walletAddress: walletAddress.trim());
+        await BackendApiService()
+            .registerWallet(walletAddress: walletAddress.trim());
         await BackendApiService().loadAuthToken();
       }
       return (BackendApiService().getAuthToken() ?? '').trim().isNotEmpty;
@@ -550,7 +586,9 @@ class SecurityGateProvider extends ChangeNotifier implements AuthSessionCoordina
 
   Future<String?> _resolveWalletAddress() async {
     final fromProfile = _profileProvider?.currentUser?.walletAddress;
-    if (fromProfile != null && fromProfile.trim().isNotEmpty) return fromProfile;
+    if (fromProfile != null && fromProfile.trim().isNotEmpty) {
+      return fromProfile;
+    }
     final fromWallet = _walletProvider?.currentWalletAddress;
     if (fromWallet != null && fromWallet.trim().isNotEmpty) return fromWallet;
 

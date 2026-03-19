@@ -33,7 +33,7 @@ import '../web3/wallet/connectwallet_screen.dart';
 import '../desktop/desktop_shell.dart';
 import '../community/profile_edit_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
-import '../../widgets/wallet_mnemonic_backup_prompt.dart';
+import '../../widgets/wallet_backup_prompts.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({
@@ -416,6 +416,15 @@ class _SignInScreenState extends State<SignInScreen> {
           WalletUtils.equals(activeWallet, targetWallet)) {
         return targetWallet;
       }
+      final recovered = await _attemptEncryptedBackupRecovery(targetWallet);
+      if (recovered) {
+        final restoredWallet =
+            (walletProvider.currentWalletAddress ?? '').trim();
+        if (walletProvider.hasSigner &&
+            WalletUtils.equals(restoredWallet, targetWallet)) {
+          return targetWallet;
+        }
+      }
       return null;
     }
 
@@ -431,25 +440,73 @@ class _SignInScreenState extends State<SignInScreen> {
     try {
       final result = await walletProvider.createWallet();
       final address = (result['address'] ?? '').trim();
-      final mnemonic = (result['mnemonic'] ?? '').trim();
-      if (address.isEmpty || mnemonic.isEmpty) {
-        return null;
-      }
-      if (!mounted) return null;
-      final confirmed = await showWalletMnemonicBackupPrompt(
-        context: context,
-        mnemonic: mnemonic,
-        address: address,
-      );
-      if (!mounted || !confirmed) {
-        return null;
-      }
-      await _upsertProfileWithUsername(address, desiredUsername);
-      return address;
+      return address.isEmpty ? null : address;
     } catch (e) {
       AppConfig.debugPrint(
           'SignInScreen: signer-backed wallet creation failed: $e');
       return null;
+    }
+  }
+
+  Future<bool> _attemptEncryptedBackupRecovery(String walletAddress) async {
+    if (!AppConfig.isFeatureEnabled('encryptedWalletBackup')) {
+      return false;
+    }
+
+    final l10n = AppLocalizations.of(context)!;
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final messenger = ScaffoldMessenger.of(context);
+    final backup = await walletProvider.getEncryptedWalletBackup(
+      walletAddress: walletAddress,
+      refresh: true,
+    );
+    if (backup == null) {
+      return false;
+    }
+
+    try {
+      if (kIsWeb &&
+          AppConfig.isFeatureEnabled('walletBackupPasskeyWeb') &&
+          backup.passkeys.isNotEmpty) {
+        await walletProvider.authenticateEncryptedWalletBackupPasskey(
+          walletAddress: walletAddress,
+        );
+      }
+      if (!mounted) return false;
+
+      final recoveryPassword = await showWalletBackupPasswordPrompt(
+        context: context,
+        title: 'Restore wallet from encrypted backup',
+        description:
+            'Enter the recovery password to restore the wallet signer before sign-in completes.',
+        actionLabel: 'Restore wallet',
+      );
+      if (!mounted || recoveryPassword == null) {
+        return false;
+      }
+
+      final gate = Provider.of<SecurityGateProvider>(context, listen: false);
+      final verified = await gate.requireSensitiveActionVerification();
+      if (!mounted) return false;
+      if (!verified) {
+        messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.lockAuthenticationFailedToast)),
+          tone: KubusSnackBarTone.error,
+        );
+        return false;
+      }
+
+      return await walletProvider.restoreSignerFromEncryptedWalletBackup(
+        walletAddress: walletAddress,
+        recoveryPassword: recoveryPassword,
+      );
+    } catch (e) {
+      if (!mounted) return false;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(e.toString())),
+        tone: KubusSnackBarTone.error,
+      );
+      return false;
     }
   }
 
@@ -471,31 +528,6 @@ class _SignInScreenState extends State<SignInScreen> {
           walletProvider.currentWalletAddress,
           walletAddress,
         );
-  }
-
-  Future<void> _upsertProfileWithUsername(
-      String address, String? desiredUsername) async {
-    final profileProvider =
-        Provider.of<ProfileProvider>(context, listen: false);
-    final effectiveUsername =
-        (desiredUsername ?? '').isNotEmpty ? desiredUsername : null;
-    try {
-      await profileProvider.createProfileFromWallet(
-          walletAddress: address, username: effectiveUsername);
-    } catch (e) {
-      AppConfig.debugPrint('SignInScreen: createProfileFromWallet failed: $e');
-    }
-    if (effectiveUsername != null && effectiveUsername.isNotEmpty) {
-      try {
-        await BackendApiService().updateProfile(address, {
-          'username': effectiveUsername,
-          'displayName': effectiveUsername,
-        });
-      } catch (err) {
-        AppConfig.debugPrint(
-            'SignInScreen: updateProfile username patch failed: $err');
-      }
-    }
   }
 
   Future<void> _submitEmail() async {

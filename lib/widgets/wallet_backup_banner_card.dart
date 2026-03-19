@@ -4,8 +4,8 @@ import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
-import 'package:art_kubus/screens/web3/wallet/mnemonic_reveal_screen.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:art_kubus/screens/web3/wallet/wallet_backup_protection_screen.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/widgets/kubus_card.dart';
 import 'package:flutter/material.dart';
@@ -53,13 +53,16 @@ class _WalletBackupBannerCardState extends State<WalletBackupBannerCard> {
   }
 
   Future<String?> _resolveWalletAddress() async {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final fromProfile = (profileProvider.currentUser?.walletAddress ?? '').trim();
+    final fromProfile =
+        (profileProvider.currentUser?.walletAddress ?? '').trim();
     if (fromProfile.isNotEmpty) return fromProfile;
     final fromWallet = (walletProvider.currentWalletAddress ?? '').trim();
     if (fromWallet.isNotEmpty) return fromWallet;
-    final fromSession = (BackendApiService().getCurrentAuthWalletAddress() ?? '').trim();
+    final fromSession =
+        (BackendApiService().getCurrentAuthWalletAddress() ?? '').trim();
     if (fromSession.isNotEmpty) return fromSession;
 
     final prefs = await SharedPreferences.getInstance();
@@ -74,7 +77,8 @@ class _WalletBackupBannerCardState extends State<WalletBackupBannerCard> {
 
   Future<void> _load() async {
     try {
-      final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+      final walletProvider =
+          Provider.of<WalletProvider>(context, listen: false);
       final walletAddress = await _resolveWalletAddress();
       final shouldShow = (walletAddress ?? '').isNotEmpty &&
           await walletProvider.isMnemonicBackupRequired(
@@ -98,7 +102,9 @@ class _WalletBackupBannerCardState extends State<WalletBackupBannerCard> {
 
   Future<void> _openBackupFlow() async {
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const MnemonicRevealScreen()),
+      MaterialPageRoute(
+        builder: (_) => const WalletBackupProtectionScreen(),
+      ),
     );
     if (!mounted) return;
     await _load();
@@ -106,8 +112,7 @@ class _WalletBackupBannerCardState extends State<WalletBackupBannerCard> {
 
   @override
   Widget build(BuildContext context) {
-    final currentWallet =
-        context.select<WalletProvider, String?>((provider) {
+    final currentWallet = context.select<WalletProvider, String?>((provider) {
       final wallet = (provider.currentWalletAddress ?? '').trim();
       return wallet.isEmpty ? null : wallet;
     });
@@ -117,9 +122,8 @@ class _WalletBackupBannerCardState extends State<WalletBackupBannerCard> {
       return wallet.isEmpty ? null : wallet;
     });
     final activeWalletRaw = currentProfileWallet ?? currentWallet;
-    final activeWallet = (activeWalletRaw ?? '').trim().isEmpty
-        ? null
-        : activeWalletRaw!.trim();
+    final activeWallet =
+        (activeWalletRaw ?? '').trim().isEmpty ? null : activeWalletRaw!.trim();
     if (_loaded && _lastObservedProviderWallet != activeWallet) {
       _lastObservedProviderWallet = activeWallet;
       WidgetsBinding.instance.addPostFrameCallback((_) {

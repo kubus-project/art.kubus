@@ -1,7 +1,9 @@
 import 'dart:convert';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/providers/locale_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
+import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/solana_wallet_service.dart';
@@ -11,6 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 Future<WalletProvider> _createSignerBackedWalletProvider() async {
   const mnemonic =
@@ -29,6 +32,12 @@ Widget _buildTestApp(
 }) {
   return MultiProvider(
     providers: [
+      ChangeNotifierProvider<ThemeProvider>(
+        create: (_) => ThemeProvider(),
+      ),
+      ChangeNotifierProvider<LocaleProvider>(
+        create: (_) => LocaleProvider(),
+      ),
       ChangeNotifierProvider<WalletProvider>.value(value: walletProvider),
       ChangeNotifierProvider<ProfileProvider>.value(
         value:
@@ -54,6 +63,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
     _installBackendMock((request) async {
       if (request.url.path == '/api/auth/register/email') {
         return http.Response(
@@ -416,11 +426,14 @@ void main() {
     final walletProvider = await _createSignerBackedWalletProvider();
     await tester.pumpWidget(
       _buildTestApp(
-        const AuthMethodsPanel(),
+        const AuthMethodsPanel(
+          requireUsernameForEmailRegistration: true,
+        ),
         walletProvider: walletProvider,
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
     final expandEmail = find.text('Continue with email');
     if (expandEmail.evaluate().isNotEmpty) {
@@ -442,13 +455,13 @@ void main() {
       'Pass1234A',
     );
     await tester.enterText(
-      find.widgetWithText(TextField, 'Username (optional)'),
+      find.widgetWithText(TextField, 'Enter username'),
       'taken_name',
     );
 
     await tester.tap(find.text('Continue with email').last);
     await tester.pump();
-    await tester.pumpAndSettle(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 1));
 
     expect(find.text('Username already taken'), findsWidgets);
   });
