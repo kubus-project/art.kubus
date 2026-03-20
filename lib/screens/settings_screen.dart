@@ -1077,7 +1077,8 @@ class _SettingsScreenState extends State<SettingsScreen>
             emailPreferencesProvider.preferences.communityNotifications ||
             emailPreferencesProvider.preferences.daoNotifications ||
             emailPreferencesProvider.preferences.artistHubNotifications ||
-            emailPreferencesProvider.preferences.institutionHubNotifications;
+            emailPreferencesProvider.preferences.institutionHubNotifications ||
+            emailPreferencesProvider.preferences.promotionAlerts;
     final emailNotificationsState = emailPreferencesProvider.canManage
         ? (managedEmailEnabled ? l10n.commonOn : l10n.commonOff)
         : (_emailNotifications ? l10n.commonOn : l10n.commonOff);
@@ -4366,6 +4367,19 @@ class _SettingsScreenState extends State<SettingsScreen>
                             !emailPreferences.isUpdating,
                       ),
                       _buildSwitchTile(
+                        'Promotion alerts',
+                        'Emails for promotion approvals, rejections, reminders, and campaign lifecycle updates.',
+                        emailPreferences.preferences.promotionAlerts,
+                        (value) {
+                          final next = emailPreferences.preferences.copyWith(
+                            promotionAlerts: value,
+                          );
+                          unawaited(persistEmailPreferences(next));
+                        },
+                        enabled: emailPreferences.canManage &&
+                            !emailPreferences.isUpdating,
+                      ),
+                      _buildSwitchTile(
                         l10n.settingsEmailPreferencesTransactionalTitle,
                         l10n.settingsEmailPreferencesTransactionalSubtitle,
                         true,
@@ -4466,6 +4480,18 @@ class _SettingsScreenState extends State<SettingsScreen>
                         (value) {
                           final next = notificationPreferences.copyWith(
                             account: value,
+                          );
+                          unawaited(persistNotificationPreferences(next));
+                        },
+                        enabled: notificationPreferences.enabled,
+                      ),
+                      _buildSwitchTile(
+                        'Promotion notifications',
+                        'In-app notifications for promotion outcomes and upcoming campaign milestones.',
+                        notificationPreferences.promotion,
+                        (value) {
+                          final next = notificationPreferences.copyWith(
+                            promotion: value,
                           );
                           unawaited(persistNotificationPreferences(next));
                         },

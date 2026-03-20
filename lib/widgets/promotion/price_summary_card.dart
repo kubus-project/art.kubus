@@ -3,6 +3,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../../models/promotion.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../glass_components.dart';
 
 /// A card showing the price breakdown for a promotion quote
 class PriceSummaryCard extends StatelessWidget {
@@ -42,15 +43,8 @@ class PriceSummaryCard extends StatelessWidget {
       '$currencySymbol${pricePerDay.toStringAsFixed(2)}$currencySuffix',
     );
 
-    return Container(
+    return LiquidGlassCard(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colors.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: colors.outline.withValues(alpha: 0.3),
-        ),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -110,12 +104,8 @@ class PriceSummaryCard extends StatelessWidget {
           // KUB8 balance warning
           if (insufficientKub8) ...[
             const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: colors.errorContainer.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(8),
-              ),
+            FrostedContainer(
+              backgroundColor: colors.errorContainer.withValues(alpha: 0.3),
               child: Row(
                 children: [
                   Icon(Icons.warning_amber, color: colors.error, size: 18),
@@ -143,7 +133,7 @@ class PriceSummaryCard extends StatelessWidget {
                 quote.isRefundable ? Icons.check_circle : Icons.info_outline,
                 size: 16,
                 color: quote.isRefundable
-                  ? roles.positiveAction
+                    ? roles.positiveAction
                     : colors.onSurfaceVariant,
               ),
               const SizedBox(width: 6),

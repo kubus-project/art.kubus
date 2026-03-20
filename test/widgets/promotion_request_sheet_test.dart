@@ -7,6 +7,7 @@ import 'package:art_kubus/models/wallet.dart';
 import 'package:art_kubus/providers/promotion_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/promotion/promotion_builder_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -210,10 +211,8 @@ void main() {
                 'rateCardCode': submission.request.rateCardCode,
                 'placementTier': submission.request.placementTier.apiValue,
                 'durationDays': submission.request.durationDays,
-                'calculatedFiatPrice':
-                    submission.request.calculatedFiatPrice,
-                'calculatedKub8Price':
-                    submission.request.calculatedKub8Price,
+                'calculatedFiatPrice': submission.request.calculatedFiatPrice,
+                'calculatedKub8Price': submission.request.calculatedKub8Price,
                 'discountAppliedPercent':
                     submission.request.discountAppliedPercent,
                 'scheduledStartAt':
@@ -261,6 +260,8 @@ void main() {
     await tester.tap(find.text('Open sheet'));
     await tester.pumpAndSettle();
 
+    expect(find.byType(BackdropGlassSheet), findsOneWidget);
+
     final launchError = tester.takeException();
     if (launchError != null) {
       throw launchError;
@@ -281,10 +282,10 @@ void main() {
   }
 
   Future<void> scrollToSubmitButton(WidgetTester tester) async {
-    await scrollSheetUntilVisible(
-      tester,
-      find.byKey(const Key('promotionBuilderSubmitButton')),
-    );
+    final submitButton = find.byKey(const Key('promotionBuilderSubmitButton'));
+    await scrollSheetUntilVisible(tester, submitButton);
+    await tester.ensureVisible(submitButton);
+    await tester.pumpAndSettle();
   }
 
   testWidgets(

@@ -7,6 +7,7 @@ import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/web3/wallet/mnemonic_reveal_screen.dart';
 import 'package:art_kubus/services/wallet_backup_passkey_service.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/wallet_backup_prompts.dart';
 import 'package:flutter/foundation.dart';
@@ -146,9 +147,9 @@ class _WalletBackupProtectionScreenState
     final walletProvider = context.read<WalletProvider>();
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showKubusDialog<bool>(
           context: context,
-          builder: (dialogContext) => AlertDialog(
+          builder: (dialogContext) => KubusAlertDialog(
             title: const Text('Delete encrypted backup?'),
             content: const Text(
               'This removes the encrypted server backup for the current wallet. Make sure you still have the recovery phrase stored safely offline.',
@@ -254,12 +255,8 @@ class _WalletBackupProtectionScreenState
         child: ListView(
           padding: const EdgeInsets.all(KubusSpacing.lg),
           children: <Widget>[
-            Container(
+            LiquidGlassCard(
               padding: const EdgeInsets.all(KubusSpacing.lg),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                color: scheme.surfaceContainerHigh,
-              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
@@ -341,36 +338,47 @@ class _WalletBackupProtectionScreenState
             ],
             if (passkeysEnabled) ...<Widget>[
               const SizedBox(height: KubusSpacing.lg),
-              Text(
-                'Passkeys',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
+              LiquidGlassCard(
+                padding: const EdgeInsets.all(KubusSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      'Passkeys',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
                     ),
-              ),
-              const SizedBox(height: KubusSpacing.xs),
-              Text(
-                'On web, passkeys can gate access to the encrypted backup before the recovery password prompt is shown.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.78),
-                      height: 1.35,
+                    const SizedBox(height: KubusSpacing.xs),
+                    Text(
+                      'On web, passkeys can gate access to the encrypted backup before the recovery password prompt is shown.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: scheme.onSurface.withValues(alpha: 0.78),
+                            height: 1.35,
+                          ),
                     ),
-              ),
-              const SizedBox(height: KubusSpacing.sm),
-              FilledButton.tonalIcon(
-                onPressed: isBusy ? null : _enrollPasskey,
-                icon: const Icon(Icons.phishing_outlined),
-                label: const Text('Add passkey'),
-              ),
-              const SizedBox(height: KubusSpacing.sm),
-              ...walletProvider.encryptedWalletBackupPasskeys.map(
-                (passkey) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(passkey.nickname ?? passkey.credentialId),
-                  subtitle: Text(
-                    passkey.transports.isEmpty
-                        ? 'Stored passkey'
-                        : 'Transports: ${passkey.transports.join(', ')}',
-                  ),
+                    const SizedBox(height: KubusSpacing.sm),
+                    FilledButton.tonalIcon(
+                      onPressed: isBusy ? null : _enrollPasskey,
+                      icon: const Icon(Icons.phishing_outlined),
+                      label: const Text('Add passkey'),
+                    ),
+                    const SizedBox(height: KubusSpacing.sm),
+                    ...walletProvider.encryptedWalletBackupPasskeys.map(
+                      (passkey) => FrostedContainer(
+                        margin: const EdgeInsets.only(bottom: KubusSpacing.sm),
+                        child: ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(passkey.nickname ?? passkey.credentialId),
+                          subtitle: Text(
+                            passkey.transports.isEmpty
+                                ? 'Stored passkey'
+                                : 'Transports: ${passkey.transports.join(', ')}',
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -379,11 +387,14 @@ class _WalletBackupProtectionScreenState
                     .trim()
                     .isNotEmpty) ...<Widget>[
               const SizedBox(height: KubusSpacing.lg),
-              Text(
-                walletProvider.encryptedWalletBackupError!,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.error,
-                    ),
+              FrostedContainer(
+                backgroundColor: scheme.errorContainer.withValues(alpha: 0.28),
+                child: Text(
+                  walletProvider.encryptedWalletBackupError!,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: scheme.error,
+                      ),
+                ),
               ),
             ],
           ],

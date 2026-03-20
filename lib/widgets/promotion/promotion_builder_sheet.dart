@@ -6,7 +6,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../models/promotion.dart';
 import '../../providers/promotion_provider.dart';
 import '../../providers/wallet_provider.dart';
+import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../glass_components.dart';
 import '../../utils/support_links.dart';
 import 'duration_slider.dart';
 import 'price_summary_card.dart';
@@ -28,22 +30,28 @@ Future<void> showPromotionBuilderSheet({
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    showDragHandle: true,
+    showDragHandle: false,
     useSafeArea: true,
+    backgroundColor: Colors.transparent,
     builder: (sheetContext) {
-      return DraggableScrollableSheet(
-        initialChildSize: 0.9,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        expand: false,
-        builder: (_, scrollController) {
-          return _PromotionBuilderSheet(
-            entityType: entityType,
-            entityId: entityId,
-            entityLabel: entityLabel,
-            scrollController: scrollController,
-          );
-        },
+      final height = MediaQuery.of(sheetContext).size.height * 0.86;
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.sm),
+        child: BackdropGlassSheet(
+          padding: EdgeInsets.zero,
+          backgroundColor: Theme.of(sheetContext)
+              .colorScheme
+              .surfaceContainerHighest
+              .withValues(alpha: 0.18),
+          child: SizedBox(
+            height: height,
+            child: _PromotionBuilderSheet(
+              entityType: entityType,
+              entityId: entityId,
+              entityLabel: entityLabel,
+            ),
+          ),
+        ),
       );
     },
   );
@@ -59,13 +67,13 @@ class _PromotionBuilderSheet extends StatefulWidget {
     required this.entityType,
     required this.entityId,
     required this.entityLabel,
-    required this.scrollController,
+    this.scrollController,
   });
 
   final PromotionEntityType entityType;
   final String entityId;
   final String entityLabel;
-  final ScrollController scrollController;
+  final ScrollController? scrollController;
 
   @override
   State<_PromotionBuilderSheet> createState() => _PromotionBuilderSheetState();
@@ -324,26 +332,34 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
                 (quote.slotAvailable || !_selectedRateCard!.isSlotBased));
 
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.lg),
           child: ListView(
             key: const Key('promotionBuilderListView'),
             controller: widget.scrollController,
             children: [
-              // Header
-              Text(
-                l10n.promotionBuilderPromoteEntityTitle(widget.entityLabel),
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
+              LiquidGlassCard(
+                padding: const EdgeInsets.all(KubusSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.promotionBuilderPromoteEntityTitle(
+                          widget.entityLabel),
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: KubusSpacing.xs),
+                    Text(
+                      l10n.promotionBuilderHeaderSubtitle,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                l10n.promotionBuilderHeaderSubtitle,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: colors.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 24),
+              const SizedBox(height: KubusSpacing.lg),
 
               // Tier selection
               Text(
@@ -478,16 +494,13 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
 
               // Error message
               if (_error != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: colors.errorContainer.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                FrostedContainer(
+                  backgroundColor:
+                      colors.errorContainer.withValues(alpha: 0.26),
                   child: Row(
                     children: [
                       Icon(Icons.error_outline, color: colors.error, size: 20),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: KubusSpacing.sm),
                       Expanded(
                         child: Text(
                           _error!,
@@ -499,41 +512,44 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: KubusSpacing.md),
               ],
 
               // Submit button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  key: const Key('promotionBuilderSubmitButton'),
-                  onPressed: canSubmit
-                      ? (hasPendingFiatCheckout
-                          ? _retryPendingCheckout
-                          : _submit)
-                      : null,
-                  icon: _submitting
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Icon(hasPendingFiatCheckout
-                          ? Icons.open_in_new
-                          : Icons.campaign_outlined),
-                  label: Text(
-                    _submitting
-                        ? l10n.promotionBuilderSubmitting
-                        : (hasPendingFiatCheckout
-                            ? l10n.promotionBuilderContinuePayment
-                            : l10n.promotionBuilderSubmitButton),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+              LiquidGlassCard(
+                padding: const EdgeInsets.all(KubusSpacing.sm),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    key: const Key('promotionBuilderSubmitButton'),
+                    onPressed: canSubmit
+                        ? (hasPendingFiatCheckout
+                            ? _retryPendingCheckout
+                            : _submit)
+                        : null,
+                    icon: _submitting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(hasPendingFiatCheckout
+                            ? Icons.open_in_new
+                            : Icons.campaign_outlined),
+                    label: Text(
+                      _submitting
+                          ? l10n.promotionBuilderSubmitting
+                          : (hasPendingFiatCheckout
+                              ? l10n.promotionBuilderContinuePayment
+                              : l10n.promotionBuilderSubmitButton),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: KubusSpacing.xl),
 
               // Active/scheduled promotions section
               _ScheduledPromotionsSection(
@@ -612,9 +628,9 @@ class _ScheduledPromotionTileState extends State<_ScheduledPromotionTile> {
     final provider = context.read<PromotionProvider>();
     final l10n = AppLocalizations.of(context)!;
 
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showKubusDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => KubusAlertDialog(
         title: Text(l10n.promotionBuilderCancelDialogTitle),
         content: Text(
           l10n.promotionBuilderCancelDialogBody,
@@ -674,14 +690,9 @@ class _ScheduledPromotionTileState extends State<_ScheduledPromotionTile> {
         status == 'pending' ||
         status == 'approved';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: colors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.3)),
-      ),
+    return LiquidGlassCard(
+      margin: const EdgeInsets.only(bottom: KubusSpacing.sm),
+      padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
       child: Row(
         children: [
           Expanded(
@@ -786,81 +797,79 @@ class _StartDatePicker extends StatelessWidget {
         startDate.month == now.month &&
         startDate.day == now.day;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          l10n.promotionBuilderStartDateTitle,
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: _QuickDateChip(
-                label: l10n.promotionBuilderStartImmediately,
-                isSelected: isToday,
-                onTap: () => onChanged(now),
-              ),
+    return LiquidGlassCard(
+      padding: const EdgeInsets.all(KubusSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.promotionBuilderStartDateTitle,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: GestureDetector(
-                onTap: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: startDate,
-                    firstDate: now,
-                    lastDate: now.add(Duration(days: maxDaysAhead)),
-                  );
-                  if (picked != null) {
-                    onChanged(picked);
-                  }
-                },
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: !isToday
-                        ? roles.statBlue.withValues(alpha: 0.16)
-                        : colors.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: !isToday
-                          ? roles.statBlue
-                          : colors.outline.withValues(alpha: 0.3),
+          ),
+          const SizedBox(height: KubusSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: _QuickDateChip(
+                  label: l10n.promotionBuilderStartImmediately,
+                  isSelected: isToday,
+                  onTap: () => onChanged(now),
+                ),
+              ),
+              const SizedBox(width: KubusSpacing.sm),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: startDate,
+                      firstDate: now,
+                      lastDate: now.add(Duration(days: maxDaysAhead)),
+                    );
+                    if (picked != null) {
+                      onChanged(picked);
+                    }
+                  },
+                  child: FrostedContainer(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: KubusSpacing.md,
+                      vertical: KubusSpacing.sm + KubusSpacing.xs,
                     ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.calendar_today,
-                        size: 18,
-                        color:
-                            !isToday ? roles.statBlue : colors.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _formatDate(context, startDate),
-                        style: theme.textTheme.labelLarge?.copyWith(
+                    backgroundColor: !isToday
+                        ? roles.statBlue.withValues(alpha: 0.16)
+                        : colors.surfaceContainerHighest.withValues(alpha: 0.6),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.calendar_today,
+                          size: 18,
                           color: !isToday
                               ? roles.statBlue
                               : colors.onSurfaceVariant,
-                          fontWeight:
-                              !isToday ? FontWeight.w600 : FontWeight.normal,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: KubusSpacing.sm),
+                        Text(
+                          _formatDate(context, startDate),
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: !isToday
+                                ? roles.statBlue
+                                : colors.onSurfaceVariant,
+                            fontWeight:
+                                !isToday ? FontWeight.w600 : FontWeight.normal,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
-      ],
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -886,28 +895,21 @@ class _QuickDateChip extends StatelessWidget {
     final colors = theme.colorScheme;
     final roles = KubusColorRoles.of(context);
 
-    return GestureDetector(
+    return FrostedContainer(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? roles.statBlue.withValues(alpha: 0.16)
-              : colors.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected
-                ? roles.statBlue
-                : colors.outline.withValues(alpha: 0.3),
-          ),
-        ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: theme.textTheme.labelLarge?.copyWith(
-            color: isSelected ? roles.statBlue : colors.onSurfaceVariant,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-          ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: KubusSpacing.md,
+        vertical: KubusSpacing.sm + KubusSpacing.xs,
+      ),
+      backgroundColor: isSelected
+          ? roles.statBlue.withValues(alpha: 0.16)
+          : colors.surfaceContainerHighest.withValues(alpha: 0.6),
+      child: Text(
+        label,
+        textAlign: TextAlign.center,
+        style: theme.textTheme.labelLarge?.copyWith(
+          color: isSelected ? roles.statBlue : colors.onSurfaceVariant,
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
         ),
       ),
     );

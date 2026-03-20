@@ -8,6 +8,7 @@ class EmailPreferences {
   final bool daoNotifications;
   final bool artistHubNotifications;
   final bool institutionHubNotifications;
+  final bool promotionAlerts;
   final bool transactional;
 
   const EmailPreferences({
@@ -20,6 +21,7 @@ class EmailPreferences {
     required this.daoNotifications,
     required this.artistHubNotifications,
     required this.institutionHubNotifications,
+    required this.promotionAlerts,
     required this.transactional,
   });
 
@@ -34,6 +36,7 @@ class EmailPreferences {
       daoNotifications: true,
       artistHubNotifications: true,
       institutionHubNotifications: true,
+      promotionAlerts: true,
       transactional: true,
     );
   }
@@ -48,6 +51,7 @@ class EmailPreferences {
     bool? daoNotifications,
     bool? artistHubNotifications,
     bool? institutionHubNotifications,
+    bool? promotionAlerts,
     bool? transactional,
   }) {
     return EmailPreferences(
@@ -63,6 +67,7 @@ class EmailPreferences {
           artistHubNotifications ?? this.artistHubNotifications,
       institutionHubNotifications:
           institutionHubNotifications ?? this.institutionHubNotifications,
+      promotionAlerts: promotionAlerts ?? this.promotionAlerts,
       transactional: transactional ?? this.transactional,
     );
   }
@@ -87,6 +92,7 @@ class EmailPreferences {
       artistHubNotifications: readBool('artistHubNotifications', true),
       institutionHubNotifications:
           readBool('institutionHubNotifications', true),
+      promotionAlerts: readBool('promotionAlerts', true),
       transactional: true,
     );
   }
@@ -102,6 +108,7 @@ class EmailPreferences {
       'daoNotifications': daoNotifications,
       'artistHubNotifications': artistHubNotifications,
       'institutionHubNotifications': institutionHubNotifications,
+      'promotionAlerts': promotionAlerts,
       'transactional': true,
     };
   }

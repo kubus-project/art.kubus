@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
+import '../glass_components.dart';
 
 /// A slider for selecting promotion duration with quick pick chips
 class DurationSlider extends StatelessWidget {
@@ -28,84 +29,85 @@ class DurationSlider extends StatelessWidget {
     final roles = KubusColorRoles.of(context);
     final l10n = AppLocalizations.of(context)!;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              l10n.promotionBuilderDurationTitle,
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const Spacer(),
-            _DurationBadge(
-              days: value,
-              discountPercent: discountPercent,
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        // Quick pick chips
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: quickPicks.where((d) => d >= min && d <= max).map((days) {
-              final isSelected = value == days;
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: _QuickPickChip(
-                  days: days,
-                  isSelected: isSelected,
-                  onTap: () => onChanged(days),
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-        const SizedBox(height: 16),
-        // Slider
-        SliderTheme(
-          data: SliderTheme.of(context).copyWith(
-            trackHeight: 6,
-            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
-            overlayShape: const RoundSliderOverlayShape(overlayRadius: 20),
-            activeTrackColor: roles.statTeal,
-            inactiveTrackColor: colors.surfaceContainerHighest,
-            thumbColor: roles.statTeal,
-            overlayColor: roles.statTeal.withValues(alpha: 0.2),
-          ),
-          child: Slider(
-            value: value.toDouble(),
-            min: min.toDouble(),
-            max: max.toDouble(),
-            divisions: max > min ? (max - min) : null,
-            onChanged: (v) => onChanged(v.round()),
-          ),
-        ),
-        // Min/Max labels
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return LiquidGlassCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
               Text(
-                l10n.promotionBuilderDurationDays(min),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colors.onSurfaceVariant,
+                l10n.promotionBuilderDurationTitle,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-              Text(
-                l10n.promotionBuilderDurationDays(max),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colors.onSurfaceVariant,
-                ),
+              const Spacer(),
+              _DurationBadge(
+                days: value,
+                discountPercent: discountPercent,
               ),
             ],
           ),
-        ),
-      ],
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children:
+                  quickPicks.where((d) => d >= min && d <= max).map((days) {
+                final isSelected = value == days;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: _QuickPickChip(
+                    days: days,
+                    isSelected: isSelected,
+                    onTap: () => onChanged(days),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 16),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              trackHeight: 6,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 20),
+              activeTrackColor: roles.statTeal,
+              inactiveTrackColor: colors.surfaceContainerHighest,
+              thumbColor: roles.statTeal,
+              overlayColor: roles.statTeal.withValues(alpha: 0.2),
+            ),
+            child: Slider(
+              value: value.toDouble(),
+              min: min.toDouble(),
+              max: max.toDouble(),
+              divisions: max > min ? (max - min) : null,
+              onChanged: (v) => onChanged(v.round()),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  l10n.promotionBuilderDurationDays(min),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+                Text(
+                  l10n.promotionBuilderDurationDays(max),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -206,13 +208,15 @@ class _QuickPickChip extends StatelessWidget {
                     ? l10n.promotionBuilderQuickPick3Days
                     : l10n.promotionBuilderDurationDays(days);
 
-    return GestureDetector(
+    return FrostedContainer(
       onTap: onTap,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      backgroundColor:
+          isSelected ? roles.statTeal : colors.surfaceContainerHighest,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? roles.statTeal : colors.surfaceContainerHighest,
+          color: Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected

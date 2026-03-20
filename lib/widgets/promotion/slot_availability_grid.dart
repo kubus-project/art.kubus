@@ -3,6 +3,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 
 import '../../models/promotion.dart';
+import '../glass_components.dart';
 
 /// A visual grid showing slot availability for premium tier promotions
 class SlotAvailabilityGrid extends StatelessWidget {
@@ -117,8 +118,10 @@ class _SlotCard extends StatelessWidget {
             : colors.surfaceContainerHighest.withValues(alpha: 0.5))
         : colors.errorContainer.withValues(alpha: 0.3);
 
-    return GestureDetector(
+    return FrostedContainer(
       onTap: onTap,
+      padding: EdgeInsets.zero,
+      backgroundColor: backgroundColor,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(12),
@@ -190,12 +193,8 @@ class _AlternativeDatesSection extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
 
     if (alternatives.alternatives.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: colors.errorContainer.withValues(alpha: 0.3),
-          borderRadius: BorderRadius.circular(12),
-        ),
+      return FrostedContainer(
+        backgroundColor: colors.errorContainer.withValues(alpha: 0.3),
         child: Row(
           children: [
             Icon(Icons.info_outline, color: colors.error, size: 20),
@@ -272,36 +271,28 @@ class _AlternativeDateChip extends StatelessWidget {
         ? l10n.promotionBuilderStartImmediately
         : l10n.promotionBuilderDurationDays(alternative.daysUntilStart);
 
-    return GestureDetector(
+    return FrostedContainer(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: colors.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: colors.outline.withValues(alpha: 0.3),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      backgroundColor: colors.surfaceContainerHighest.withValues(alpha: 0.65),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _formatDate(context, alternative.startDate),
+            style: theme.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: roles.statBlue,
+            ),
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              _formatDate(context, alternative.startDate),
-              style: theme.textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: roles.statBlue,
-              ),
+          const SizedBox(height: 2),
+          Text(
+            daysLabel,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: colors.onSurfaceVariant,
             ),
-            const SizedBox(height: 2),
-            Text(
-              daysLabel,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: colors.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

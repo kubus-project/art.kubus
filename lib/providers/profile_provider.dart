@@ -1222,6 +1222,11 @@ class ProfileProvider extends foundation.ChangeNotifier {
                     wallet, 'account')) ??
                 true)
             : true,
+        promotion: wallet.isNotEmpty
+            ? (prefs.getBool(_notificationPreferenceKeyForWallet(
+                    wallet, 'promotion')) ??
+                true)
+            : true,
       );
       return ProfilePreferences(
         privacy: isPrivate ? 'private' : 'public',
@@ -1359,6 +1364,10 @@ class ProfileProvider extends foundation.ChangeNotifier {
         await prefs.setBool(
           _notificationPreferenceKeyForWallet(wallet, 'account'),
           preferences.notificationPreferences.account,
+        );
+        await prefs.setBool(
+          _notificationPreferenceKeyForWallet(wallet, 'promotion'),
+          preferences.notificationPreferences.promotion,
         );
       }
       _cachedPreferences = preferences;

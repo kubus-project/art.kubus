@@ -10,6 +10,7 @@ import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/providers/web3provider.dart';
 import 'package:art_kubus/screens/desktop/desktop_settings_screen.dart';
+import 'package:art_kubus/screens/settings_screen.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/settings_service.dart';
 import 'package:art_kubus/services/solana_wallet_service.dart';
@@ -129,5 +130,62 @@ void main() {
     await pumpFrames(tester, count: 6);
 
     expect(find.text('Push notifications'), findsWidgets);
+    expect(find.text('Promotion alerts'), findsWidgets);
+    expect(find.text('Promotion notifications'), findsWidgets);
+  });
+
+  testWidgets(
+      'mobile account management exposes promotion email and app alerts',
+      (tester) async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    BackendApiService().setAuthTokenForTesting(null);
+    tester.view.devicePixelRatio = 1.0;
+    await tester.binding.setSurfaceSize(const Size(430, 900));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final themeProvider = ThemeProvider();
+    final profileProvider = ProfileProvider();
+    await profileProvider.initialize();
+
+    final solana = SolanaWalletService();
+    final web3Provider = Web3Provider(solanaWalletService: solana);
+    final walletProvider = WalletProvider(
+      solanaWalletService: solana,
+      deferInit: true,
+    );
+    final platformProvider = PlatformProvider();
+    final notificationProvider = NotificationProvider();
+    final navigationProvider = NavigationProvider();
+    final localeProvider = LocaleProvider();
+    final statsProvider = StatsProvider();
+
+    await tester.pumpWidget(
+      _wrapWithApp(
+        home: const SettingsScreen(),
+        themeProvider: themeProvider,
+        profileProvider: profileProvider,
+        web3Provider: web3Provider,
+        walletProvider: walletProvider,
+        platformProvider: platformProvider,
+        notificationProvider: notificationProvider,
+        navigationProvider: navigationProvider,
+        localeProvider: localeProvider,
+        statsProvider: statsProvider,
+      ),
+    );
+    await pumpFrames(tester, count: 8);
+
+    final accountManagementTile =
+        find.byKey(const Key('settings_tile_account_management'));
+    await tester.scrollUntilVisible(accountManagementTile, 400);
+    await tester.ensureVisible(accountManagementTile);
+    await tester.pumpAndSettle();
+    await tester.tap(accountManagementTile);
+    await pumpFrames(tester, count: 6);
+
+    expect(find.text('Account management'), findsWidgets);
+    expect(find.text('Promotion alerts'), findsOneWidget);
+    expect(find.text('Promotion notifications'), findsOneWidget);
   });
 }

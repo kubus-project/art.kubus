@@ -951,9 +951,40 @@ class WalletProvider extends ChangeNotifier {
     }
   }
 
+  @protected
+  Future<String> decryptEncryptedWalletBackupMnemonic({
+    required EncryptedWalletBackupDefinition backupDefinition,
+    required String recoveryPassword,
+    required String expectedWalletAddress,
+  }) {
+    return _encryptedWalletBackupService.decryptMnemonic(
+      backupDefinition: backupDefinition,
+      recoveryPassword: recoveryPassword,
+      expectedWalletAddress: expectedWalletAddress,
+    );
+  }
+
+  @protected
+  Future<void> emitWalletBackupEventBestEffort({
+    required String walletAddress,
+    required String eventType,
+  }) async {
+    try {
+      await _apiService.emitWalletBackupEvent(
+        walletAddress: walletAddress,
+        eventType: eventType,
+      );
+    } catch (e) {
+      _walletLog(
+        'emitWalletBackupEventBestEffort failed for $eventType: $e',
+      );
+    }
+  }
+
   Future<String> verifyEncryptedWalletBackup({
     required String recoveryPassword,
     String? walletAddress,
+    bool emitSecurityEvent = true,
   }) async {
     final targetWallet = (await _resolveBackupWalletAddress(
               walletAddress: walletAddress,
@@ -974,7 +1005,7 @@ class WalletProvider extends ChangeNotifier {
     _encryptedWalletBackupError = null;
     notifyListeners();
     try {
-      final mnemonic = await _encryptedWalletBackupService.decryptMnemonic(
+      final mnemonic = await decryptEncryptedWalletBackupMnemonic(
         backupDefinition: definition,
         recoveryPassword: recoveryPassword,
         expectedWalletAddress: targetWallet,
@@ -982,6 +1013,12 @@ class WalletProvider extends ChangeNotifier {
       _setEncryptedWalletBackupDefinition(
         definition.copyWith(lastVerifiedAt: DateTime.now()),
       );
+      if (emitSecurityEvent) {
+        await emitWalletBackupEventBestEffort(
+          walletAddress: targetWallet,
+          eventType: 'backup_verified',
+        );
+      }
       return mnemonic;
     } catch (e) {
       _encryptedWalletBackupError = e.toString();
@@ -1138,12 +1175,17 @@ class WalletProvider extends ChangeNotifier {
       final mnemonic = await verifyEncryptedWalletBackup(
         recoveryPassword: recoveryPassword,
         walletAddress: targetWallet,
+        emitSecurityEvent: false,
       );
       await importWalletFromMnemonic(
         mnemonic,
         markBackedUp: false,
       );
       await refreshEncryptedWalletBackupStatus(walletAddress: targetWallet);
+      await emitWalletBackupEventBestEffort(
+        walletAddress: targetWallet,
+        eventType: 'backup_restored',
+      );
       return WalletUtils.equals(_currentWalletAddress, targetWallet) &&
           hasSigner;
     } catch (e) {

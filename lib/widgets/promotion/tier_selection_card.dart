@@ -3,6 +3,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../../models/promotion.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../glass_components.dart';
 
 /// A visual card for selecting a promotion tier (Premium, Featured, Boost)
 class TierSelectionCard extends StatelessWidget {
@@ -28,8 +29,13 @@ class TierSelectionCard extends StatelessWidget {
     final tierIcon = _iconForTier(tier);
     final tierColor = _colorForTier(tier, colors, roles);
 
-    return GestureDetector(
+    return LiquidGlassCard(
       onTap: onTap,
+      padding: EdgeInsets.zero,
+      backgroundColor: isSelected
+          ? tierColor.withValues(alpha: 0.16)
+          : colors.surfaceContainerHighest.withValues(alpha: 0.22),
+      showBorder: false,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeInOut,

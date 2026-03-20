@@ -2373,6 +2373,37 @@ class BackendApiService
     }
   }
 
+  Future<void> emitWalletBackupEvent({
+    required String walletAddress,
+    required String eventType,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/wallet-backup/events');
+      final response = await _post(
+        uri,
+        includeAuth: true,
+        headers: _getHeaders(includeAuth: true),
+        body: jsonEncode(<String, dynamic>{
+          'walletAddress': walletAddress.trim(),
+          'eventType': eventType.trim(),
+        }),
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return;
+      }
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: uri.path,
+        body: response.body,
+      );
+    } catch (e) {
+      AppConfig.debugPrint(
+        'BackendApiService.emitWalletBackupEvent failed: $e',
+      );
+      rethrow;
+    }
+  }
+
   /// Get user profile by ID
   /// GET /api/users/:userId
   Future<Map<String, dynamic>> getUserProfile(String userId) async {

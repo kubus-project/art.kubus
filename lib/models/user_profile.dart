@@ -295,6 +295,7 @@ class NotificationPreferenceSettings {
   final bool artistHub;
   final bool institutionHub;
   final bool account;
+  final bool promotion;
 
   const NotificationPreferenceSettings({
     this.enabled = true,
@@ -304,6 +305,7 @@ class NotificationPreferenceSettings {
     this.artistHub = true,
     this.institutionHub = true,
     this.account = true,
+    this.promotion = true,
   });
 
   NotificationPreferenceSettings copyWith({
@@ -314,6 +316,7 @@ class NotificationPreferenceSettings {
     bool? artistHub,
     bool? institutionHub,
     bool? account,
+    bool? promotion,
   }) {
     return NotificationPreferenceSettings(
       enabled: enabled ?? this.enabled,
@@ -323,6 +326,7 @@ class NotificationPreferenceSettings {
       artistHub: artistHub ?? this.artistHub,
       institutionHub: institutionHub ?? this.institutionHub,
       account: account ?? this.account,
+      promotion: promotion ?? this.promotion,
     );
   }
 
@@ -368,6 +372,11 @@ class NotificationPreferenceSettings {
         true,
         ['accountNotifications', 'account_notifications'],
       ),
+      promotion: readBool(
+        'promotion',
+        true,
+        ['promotionNotifications', 'promotion_notifications'],
+      ),
     );
   }
 
@@ -380,6 +389,7 @@ class NotificationPreferenceSettings {
       'artistHub': artistHub,
       'institutionHub': institutionHub,
       'account': account,
+      'promotion': promotion,
     };
   }
 }

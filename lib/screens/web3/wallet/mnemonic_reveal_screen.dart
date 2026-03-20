@@ -1,14 +1,16 @@
-import 'package:art_kubus/utils/design_tokens.dart';
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:flutter/services.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
-import '../../../providers/wallet_provider.dart';
-import '../../../providers/security_gate_provider.dart';
-import '../../../widgets/app_loading.dart';
-import '../../../widgets/kubus_button.dart';
-import '../../../utils/kubus_color_roles.dart';
+import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:art_kubus/utils/kubus_color_roles.dart';
+import 'package:art_kubus/widgets/app_loading.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
+import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+
+import '../../../providers/security_gate_provider.dart';
+import '../../../providers/wallet_provider.dart';
 
 class MnemonicRevealScreen extends StatefulWidget {
   const MnemonicRevealScreen({super.key});
@@ -26,7 +28,10 @@ class _MnemonicRevealScreenState extends State<MnemonicRevealScreen> {
   @override
   void initState() {
     super.initState();
-    _unlockAndLoadMnemonic();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _unlockAndLoadMnemonic();
+    });
   }
 
   Future<void> _unlockAndLoadMnemonic() async {
@@ -39,10 +44,9 @@ class _MnemonicRevealScreenState extends State<MnemonicRevealScreen> {
     final gate = Provider.of<SecurityGateProvider>(context, listen: false);
     final wallet = Provider.of<WalletProvider>(context, listen: false);
 
-    await gate.lock(SecurityLockReason.sensitiveAction);
-    final settled = await gate.waitForResolution();
+    final settled = await gate.requireSensitiveActionVerification();
     if (!mounted) return;
-    if (settled == null || !settled.isSuccess) {
+    if (!settled) {
       setState(() {
         _isLoading = false;
         _error = l10n.lockAuthenticationFailedToast;
@@ -50,31 +54,60 @@ class _MnemonicRevealScreenState extends State<MnemonicRevealScreen> {
       return;
     }
 
-    final m = await wallet.readCachedMnemonic();
+    final mnemonic = await wallet.readCachedMnemonic();
     if (!mounted) return;
-    if (m != null) {
+    if (mnemonic != null) {
       setState(() {
-        _mnemonic = m;
+        _mnemonic = mnemonic;
         _isLoading = false;
         _masked = true;
       });
       return;
     }
+
     setState(() {
       _isLoading = false;
       _error = l10n.lockAuthenticationFailedToast;
     });
   }
 
-  void _copyToClipboard() {
+  Future<void> _copyToClipboard() async {
     if (_mnemonic == null) return;
-    final m = _mnemonic!;
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
-    Clipboard.setData(ClipboardData(text: m));
+    try {
+      await Clipboard.setData(ClipboardData(text: _mnemonic!));
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.mnemonicRevealCopiedToast)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        const SnackBar(
+          content: Text('Unable to copy the recovery phrase on this device.'),
+        ),
+        tone: KubusSnackBarTone.error,
+      );
+    }
+  }
+
+  Future<void> _revealMnemonic() async {
+    final gate = Provider.of<SecurityGateProvider>(context, listen: false);
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+
+    final settled = await gate.requireSensitiveActionVerification();
     if (!mounted) return;
-    messenger
-        .showKubusSnackBar(SnackBar(content: Text(l10n.mnemonicRevealCopiedToast)));
+    if (!settled) {
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.lockAuthenticationFailedToast)),
+        tone: KubusSnackBarTone.error,
+      );
+      return;
+    }
+
+    setState(() => _masked = false);
   }
 
   Future<void> _markBackupComplete() async {
@@ -95,7 +128,8 @@ class _MnemonicRevealScreenState extends State<MnemonicRevealScreen> {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final roles = KubusColorRoles.of(context);
-    final words = _mnemonic?.split(RegExp(r"\s+")) ?? [];
+    final words = _mnemonic?.split(RegExp(r'\s+')) ?? <String>[];
+
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.mnemonicRevealTitle),
@@ -108,86 +142,103 @@ class _MnemonicRevealScreenState extends State<MnemonicRevealScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (_mnemonic != null) ...[
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.shield_outlined,
-                          size: KubusSizes.sidebarActionIcon,
-                          color: scheme.primary,
-                        ),
-                        const SizedBox(width: KubusSpacing.sm),
-                        Text(
-                          l10n.mnemonicRevealPrivacyWarning,
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
                     Expanded(
-                      child: GridView.builder(
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2, childAspectRatio: 6),
-                        itemCount: words.length,
-                        itemBuilder: (context, index) {
-                          final w = words[index];
-                          final display = _masked ? '•••••' : w;
-                          return Container(
-                            margin: const EdgeInsets.all(
-                              KubusSpacing.xs + KubusSpacing.xxs,
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: KubusSpacing.sm + KubusSpacing.xs,
-                              vertical: KubusSpacing.sm,
-                            ),
-                            decoration: BoxDecoration(
-                              color: scheme.primary.withValues(alpha: 0.10),
-                              borderRadius:
-                                  BorderRadius.circular(KubusRadius.sm),
-                              border: Border.all(
-                                color: scheme.primary.withValues(alpha: 0.25),
-                                width: KubusSizes.hairline,
+                      child: LiquidGlassCard(
+                        padding: const EdgeInsets.all(KubusSpacing.md),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            FrostedContainer(
+                              backgroundColor:
+                                  scheme.primary.withValues(alpha: 0.12),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.shield_outlined,
+                                    size: KubusSizes.sidebarActionIcon,
+                                    color: scheme.primary,
+                                  ),
+                                  const SizedBox(width: KubusSpacing.sm),
+                                  Expanded(
+                                    child: Text(
+                                      l10n.mnemonicRevealPrivacyWarning,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            child: Row(
-                              children: [
-                                Text('${index + 1}. ',
-                                    style: KubusTypography.textTheme.bodyMedium),
-                                Expanded(
-                                    child: Text(display,
-                                        overflow: TextOverflow.ellipsis,  
-                                        style: KubusTypography.textTheme.bodyMedium),
-                                ),
-                              ],
+                            const SizedBox(
+                              height: KubusSpacing.sm + KubusSpacing.xs,
                             ),
-                          );
-                        },
+                            Expanded(
+                              child: GridView.builder(
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 2,
+                                  childAspectRatio: 6,
+                                ),
+                                itemCount: words.length,
+                                itemBuilder: (context, index) {
+                                  final display =
+                                      _masked ? '•••••' : words[index];
+                                  return FrostedContainer(
+                                    margin: const EdgeInsets.all(
+                                      KubusSpacing.xs + KubusSpacing.xxs,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal:
+                                          KubusSpacing.sm + KubusSpacing.xs,
+                                      vertical: KubusSpacing.sm,
+                                    ),
+                                    backgroundColor:
+                                        scheme.primary.withValues(alpha: 0.10),
+                                    child: Row(
+                                      children: [
+                                        Text(
+                                          '${index + 1}. ',
+                                          style: KubusTypography
+                                              .textTheme.bodyMedium,
+                                        ),
+                                        Expanded(
+                                          child: Text(
+                                            display,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: KubusTypography
+                                                .textTheme.bodyMedium,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
                     Row(
                       children: [
                         KubusButton(
-                          onPressed: () async {
-                            final gate = Provider.of<SecurityGateProvider>(context, listen: false);
-                            await gate.lock(SecurityLockReason.sensitiveAction);
-                            final settled = await gate.waitForResolution();
-                            if (!mounted) return;
-                            if (settled == null || !settled.isSuccess) return;
-                            setState(() => _masked = false);
-                          },
+                          onPressed: _revealMnemonic,
                           label: l10n.mnemonicRevealShowButton,
                           icon: Icons.visibility,
                           backgroundColor: scheme.primary,
                           foregroundColor: scheme.onPrimary,
                         ),
-                        const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
+                        const SizedBox(
+                            width: KubusSpacing.sm + KubusSpacing.xs),
                         KubusOutlineButton(
                           onPressed: _copyToClipboard,
                           label: l10n.commonCopy,
                           icon: Icons.copy,
                         ),
-                        const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
+                        const SizedBox(
+                            width: KubusSpacing.sm + KubusSpacing.xs),
                         KubusOutlineButton(
                           onPressed: () => Navigator.of(context).pop(),
                           label: l10n.commonClose,
@@ -204,18 +255,23 @@ class _MnemonicRevealScreenState extends State<MnemonicRevealScreen> {
                       isFullWidth: true,
                     ),
                   ] else ...[
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          size: KubusSizes.sidebarActionIcon,
-                          color: roles.warningAction,
-                        ),
-                        const SizedBox(width: KubusSpacing.sm),
-                        Expanded(
-                            child: Text(l10n.mnemonicRevealBiometricUnavailable,
-                                style: KubusTypography.textTheme.bodyMedium)),
-                      ],
+                    FrostedContainer(
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            size: KubusSizes.sidebarActionIcon,
+                            color: roles.warningAction,
+                          ),
+                          const SizedBox(width: KubusSpacing.sm),
+                          Expanded(
+                            child: Text(
+                              l10n.mnemonicRevealBiometricUnavailable,
+                              style: KubusTypography.textTheme.bodyMedium,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
                     if (_error != null)
@@ -243,7 +299,7 @@ class _MnemonicRevealScreenState extends State<MnemonicRevealScreen> {
                       label: l10n.commonCancel,
                       isFullWidth: true,
                     ),
-                  ]
+                  ],
                 ],
               ),
       ),
