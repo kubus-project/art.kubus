@@ -16,7 +16,7 @@ import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../common/kubus_cached_image.dart';
 import '../../artwork_creator_byline.dart';
-import '../../glass_components.dart';
+import '../kubus_map_glass_surface.dart';
 import '../../map_overlay_blocker.dart';
 
 enum KubusNearbyArtPanelLayout {
@@ -361,25 +361,23 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
     required VoidCallback? onTap,
   }) {
     final scheme = Theme.of(context).colorScheme;
-
-    final button = InkWell(
-      onTap: onTap,
+    final button = buildKubusMapGlassSurface(
+      context: context,
+      kind: KubusMapGlassSurfaceKind.button,
+      useBlur: false,
       borderRadius: BorderRadius.circular(12),
-      child: Container(
+      tintBase: scheme.surfaceContainerHighest,
+      padding: EdgeInsets.zero,
+      onTap: onTap,
+      child: SizedBox(
         width: 38,
         height: 38,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerHighest.withValues(alpha: 0.30),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: scheme.outlineVariant.withValues(alpha: 0.30),
+        child: Center(
+          child: Icon(
+            icon,
+            size: 18,
+            color: onTap == null ? scheme.onSurfaceVariant : scheme.onSurface,
           ),
-        ),
-        child: Icon(
-          icon,
-          size: 18,
-          color: onTap == null ? scheme.onSurfaceVariant : scheme.onSurface,
         ),
       ),
     );
@@ -462,118 +460,109 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
             ? KubusColors.textPrimaryDark
             : KubusColors.textPrimaryLight;
 
-    return LiquidGlassPanel(
-      padding: const EdgeInsets.all(10),
+    return buildKubusMapGlassSurface(
+      context: context,
+      kind: KubusMapGlassSurfaceKind.card,
+      useBlur: false,
       borderRadius: BorderRadius.circular(14),
-      showBorder: true,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _handlePrimaryTap(artwork, marker, artwork.position),
-          borderRadius: BorderRadius.circular(14),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                width: 88,
-                child: Stack(
-                  children: [
-                    _ArtworkThumbnail(
-                      url: cover,
-                      cacheVersion:
-                          KubusCachedImage.versionTokenFromDate(
-                        artwork.updatedAt ?? artwork.createdAt,
-                      ),
-                      width: 88,
-                      height: 66,
-                      borderRadius: 10,
-                      iconSize: 24,
-                    ),
-                    if (artwork.arMarkerId != null &&
-                        artwork.arMarkerId!.isNotEmpty)
-                      Positioned(
-                        top: 6,
-                        right: 6,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: accent,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Icon(Icons.view_in_ar,
-                              size: 12, color: textOnAccent),
-                        ),
-                      ),
-                  ],
+      tintBase: scheme.surface,
+      padding: const EdgeInsets.all(10),
+      onTap: () => _handlePrimaryTap(artwork, marker, artwork.position),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 88,
+            child: Stack(
+              children: [
+                _ArtworkThumbnail(
+                  url: cover,
+                  cacheVersion: KubusCachedImage.versionTokenFromDate(
+                    artwork.updatedAt ?? artwork.createdAt,
+                  ),
+                  width: 88,
+                  height: 66,
+                  borderRadius: 10,
+                  iconSize: 24,
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      artwork.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: scheme.onSurface,
-                          ),
+                if (artwork.arMarkerId != null &&
+                    artwork.arMarkerId!.isNotEmpty)
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: accent,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Icon(Icons.view_in_ar, size: 12, color: textOnAccent),
                     ),
-                    const SizedBox(height: 2),
-                    ArtworkCreatorByline(
-                      artwork: artwork,
-                      includeByPrefix: false,
-                      showUsername: true,
-                      linkToProfile: false,
-                      maxLines: 1,
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  artwork.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: scheme.onSurface,
+                      ),
+                ),
+                const SizedBox(height: 2),
+                ArtworkCreatorByline(
+                  artwork: artwork,
+                  includeByPrefix: false,
+                  showUsername: true,
+                  linkToProfile: false,
+                  maxLines: 1,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontSize: 12,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        distanceText,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: accent,
+                            ),
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${artwork.rewards} KUB8',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontSize: 12,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
                             color: scheme.onSurfaceVariant,
                           ),
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: accent.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            distanceText,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: accent,
-                                ),
-                          ),
-                        ),
-                        const Spacer(),
-                        Text(
-                          '${artwork.rewards} KUB8',
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: scheme.onSurfaceVariant,
-                                  ),
-                        ),
-                      ],
-                    ),
                   ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -595,110 +584,105 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
     final distanceText = widget.controller.formatDistance(meters);
     final accent = _subjectColorFor(context, themeProvider, artwork, marker);
 
-    return LiquidGlassPanel(
-      padding: const EdgeInsets.all(10),
+    return buildKubusMapGlassSurface(
+      context: context,
+      kind: KubusMapGlassSurfaceKind.card,
+      useBlur: false,
       borderRadius: BorderRadius.circular(16),
-      showBorder: true,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _handlePrimaryTap(artwork, marker, artwork.position),
-          borderRadius: BorderRadius.circular(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      tintBase: scheme.surface,
+      padding: const EdgeInsets.all(10),
+      onTap: () => _handlePrimaryTap(artwork, marker, artwork.position),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Stack(
             children: [
-              Stack(
-                children: [
-                  _ArtworkThumbnail(
-                    url: cover,
-                    cacheVersion:
-                        KubusCachedImage.versionTokenFromDate(
-                      artwork.updatedAt ?? artwork.createdAt,
+              _ArtworkThumbnail(
+                url: cover,
+                cacheVersion: KubusCachedImage.versionTokenFromDate(
+                  artwork.updatedAt ?? artwork.createdAt,
+                ),
+                width: double.infinity,
+                height: 120,
+                borderRadius: 12,
+                iconSize: 28,
+              ),
+              if (artwork.arMarkerId != null &&
+                  artwork.arMarkerId!.isNotEmpty)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: accent,
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    width: double.infinity,
-                    height: 120,
-                    borderRadius: 12,
-                    iconSize: 28,
+                    child: Icon(
+                      Icons.view_in_ar,
+                      size: 14,
+                      color: ThemeData.estimateBrightnessForColor(accent) ==
+                              Brightness.dark
+                          ? KubusColors.textPrimaryDark
+                          : KubusColors.textPrimaryLight,
+                    ),
                   ),
-                  if (artwork.arMarkerId != null &&
-                      artwork.arMarkerId!.isNotEmpty)
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: accent,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(
-                          Icons.view_in_ar,
-                          size: 14,
-                          color: ThemeData.estimateBrightnessForColor(accent) ==
-                                  Brightness.dark
-                              ? KubusColors.textPrimaryDark
-                              : KubusColors.textPrimaryLight,
-                        ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            artwork.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: scheme.onSurface,
+                ),
+          ),
+          const SizedBox(height: 2),
+          ArtworkCreatorByline(
+            artwork: artwork,
+            includeByPrefix: false,
+            showUsername: false,
+            linkToProfile: false,
+            maxLines: 1,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontSize: 12,
+                  color: scheme.onSurfaceVariant,
+                ),
+          ),
+          const Spacer(),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  distanceText,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: accent,
                       ),
-                    ),
-                ],
+                ),
               ),
-              const SizedBox(height: 10),
+              const Spacer(),
               Text(
-                artwork.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                '${artwork.rewards} KUB8',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: scheme.onSurface,
-                    ),
-              ),
-              const SizedBox(height: 2),
-              ArtworkCreatorByline(
-                artwork: artwork,
-                includeByPrefix: false,
-                showUsername: false,
-                linkToProfile: false,
-                maxLines: 1,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontSize: 12,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
                       color: scheme.onSurfaceVariant,
                     ),
               ),
-              const Spacer(),
-              Row(
-                children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: accent.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      distanceText,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: accent,
-                          ),
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    '${artwork.rewards} KUB8',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                  ),
-                ],
-              ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
@@ -708,7 +692,6 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
     final themeProvider = context.watch<ThemeProvider>();
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
 
     final isMobile =
         widget.layout == KubusNearbyArtPanelLayout.mobileBottomSheet;
@@ -717,8 +700,6 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
     final radius = isMobile
         ? const BorderRadius.vertical(top: Radius.circular(KubusRadius.xl))
         : BorderRadius.zero;
-
-    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.46 : 0.56);
 
     final base = widget.basePosition;
     final sorted = _sorted(widget.artworks, base);
@@ -801,51 +782,14 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
     );
 
     // Panel surface (glass + borders).
-    content = Container(
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        border: isMobile
-            ? Border.all(
-                color: scheme.outlineVariant.withValues(alpha: 0.25),
-              )
-            : Border(
-                left: BorderSide(
-                  color: scheme.outlineVariant.withValues(alpha: 0.30),
-                ),
-                top: BorderSide(
-                  color: scheme.outlineVariant.withValues(alpha: 0.30),
-                ),
-                bottom: BorderSide(
-                  color: scheme.outlineVariant.withValues(alpha: 0.30),
-                ),
-              ),
-        boxShadow: isMobile
-            ? [
-                BoxShadow(
-                  color: scheme.shadow.withValues(alpha: 0.18),
-                  blurRadius: 24,
-                  offset: const Offset(0, -6),
-                ),
-              ]
-            : [
-                BoxShadow(
-                  color: scheme.shadow.withValues(alpha: 0.10),
-                  blurRadius: 16,
-                  offset: const Offset(-4, 0),
-                ),
-              ],
-      ),
-      child: ClipRRect(
-        borderRadius: radius,
-        child: LiquidGlassPanel(
-          padding: EdgeInsets.zero,
-          margin: EdgeInsets.zero,
-          borderRadius: BorderRadius.zero,
-          showBorder: false,
-          backgroundColor: glassTint,
-          child: content,
-        ),
-      ),
+    content = buildKubusMapGlassSurface(
+      context: context,
+      kind: KubusMapGlassSurfaceKind.panel,
+      borderRadius: radius,
+      tintBase: scheme.surface,
+      padding: EdgeInsets.zero,
+      margin: EdgeInsets.zero,
+      child: content,
     );
 
     // Interception + interaction tracking.

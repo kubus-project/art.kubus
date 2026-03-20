@@ -1,6 +1,5 @@
 import 'dart:ui';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -74,10 +73,6 @@ class GlassSurface extends StatelessWidget {
     // Determine blur mode from the provider. If the provider is missing
     // (e.g. in a test harness), default to blur enabled.
     final useBlur = _resolveBlurEnabled(context);
-
-    if (kDebugMode) {
-      debugPrint('GlassSurface: useBlur=$useBlur');
-    }
 
     // --- Tint ---
     final baseTint = tintColor ??

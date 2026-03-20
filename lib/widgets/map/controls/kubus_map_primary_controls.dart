@@ -7,7 +7,7 @@ import '../../../utils/app_animations.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/design_tokens.dart';
 import '../../common/kubus_glass_icon_button.dart';
-import '../../glass_components.dart';
+import '../kubus_map_glass_surface.dart';
 import 'map_view_mode_controls.dart';
 
 /// Layout variants for [KubusMapPrimaryControls].
@@ -547,13 +547,13 @@ class KubusMapPrimaryControls extends StatelessWidget {
 
     return MouseRegion(
       cursor: SystemMouseCursors.basic,
-      child: LiquidGlassPanel(
+      child: buildKubusMapGlassSurface(
+        context: context,
+        kind: KubusMapGlassSurfaceKind.panel,
+        borderRadius: BorderRadius.circular(resolvedRadius),
+        tintBase: scheme.surface,
         padding: resolvedPadding,
         margin: EdgeInsets.zero,
-        borderRadius: BorderRadius.circular(resolvedRadius),
-        blurSigma: KubusGlassEffects.blurSigmaLight,
-        backgroundColor: scheme.surface.withValues(alpha: isDark ? 0.18 : 0.14),
-        showBorder: true,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: rowChildren,
@@ -620,7 +620,6 @@ class _KubusSquareControlButton extends StatelessWidget {
     final animationTheme = context.animationTheme;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
 
     final radius = BorderRadius.circular(KubusRadius.md);
 
@@ -650,10 +649,8 @@ class _KubusSquareControlButton extends StatelessWidget {
 
       case _KubusSquareControlVariant.desktop:
         final resolvedAccent = accent ?? scheme.primary;
-        final idleTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.12);
-        final selectedTint = activeTint ??
-            resolvedAccent.withValues(alpha: isDark ? 0.14 : 0.16);
-
+        final resolvedTintBase =
+            active ? (activeTint ?? resolvedAccent) : scheme.surface;
         final iconCol =
             active ? (activeIconColor ?? resolvedAccent) : scheme.onSurface;
 
@@ -691,13 +688,15 @@ class _KubusSquareControlButton extends StatelessWidget {
             duration: animationTheme.short,
             curve: animationTheme.defaultCurve,
             decoration: decoration,
-            child: LiquidGlassPanel(
-              padding: EdgeInsets.zero,
-              margin: EdgeInsets.zero,
+            child: buildKubusMapGlassSurface(
+              context: context,
+              kind: KubusMapGlassSurfaceKind.button,
+              useBlur: false,
               borderRadius: radius,
-              blurSigma: KubusGlassEffects.blurSigmaLight,
+              tintBase: resolvedTintBase,
               showBorder: false,
-              backgroundColor: active ? selectedTint : idleTint,
+              boxShadow: const <BoxShadow>[],
+              padding: EdgeInsets.zero,
               onTap: resolvedOnTap,
               child: tooltip.isEmpty
                   ? child

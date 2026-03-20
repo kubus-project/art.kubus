@@ -8,8 +8,8 @@ import '../../utils/artwork_media_resolver.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/media_url_resolver.dart';
 import '../artwork_creator_byline.dart';
+import '../map/kubus_map_glass_surface.dart';
 import 'kubus_cached_image.dart';
-import '../glass_components.dart';
 
 class MarkerOverlayActionSpec {
   const MarkerOverlayActionSpec({
@@ -126,304 +126,106 @@ class KubusMarkerOverlayCard extends StatelessWidget {
     final dpr = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
     final cacheWidth = (320 * dpr).clamp(128.0, 960.0).round();
     final cacheHeight = (120 * dpr).clamp(96.0, 720.0).round();
+    final hasConstrainedHeight = maxHeight != null && maxHeight!.isFinite;
+    final imageHeight = hasConstrainedHeight
+        ? ((maxHeight! * 0.28).clamp(72.0, 120.0)).toDouble()
+        : 120.0;
 
-    final showChips = _hasChips(marker: marker, artwork: artwork) ||
-        canPresentExhibition;
-    final isPromoted = marker.isPromoted || (artwork?.promotion.isPromoted ?? false);
-
+    final showChips =
+        _hasChips(marker: marker, artwork: artwork) || canPresentExhibition;
+    final isPromoted =
+        marker.isPromoted || (artwork?.promotion.isPromoted ?? false);
     final actionFg = AppColorUtils.contrastText(baseColor);
 
-    final card = Semantics(
+    Widget card = Semantics(
       label: 'marker_floating_card',
       container: true,
       child: Material(
         color: Colors.transparent,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(KubusRadius.lg),
-            border: Border.all(
-              color: baseColor.withValues(alpha: 0.35),
-              width: KubusSizes.hairline,
+        child: buildKubusMapGlassSurface(
+          context: context,
+          kind: KubusMapGlassSurfaceKind.panel,
+          borderRadius: BorderRadius.circular(KubusRadius.lg),
+          tintBase: scheme.surface,
+          padding: const EdgeInsets.all(KubusSpacing.md),
+          border: Border.all(
+            color: baseColor.withValues(alpha: 0.35),
+            width: KubusSizes.hairline,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: baseColor.withValues(alpha: 0.18),
+              blurRadius: 20,
+              offset: const Offset(0, 12),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: baseColor.withValues(alpha: 0.22),
-                blurRadius: 20,
-                offset: const Offset(0, 12),
+          ],
+          child: Column(
+            mainAxisSize:
+                hasConstrainedHeight ? MainAxisSize.max : MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(
+                l10n: l10n,
+                scheme: scheme,
+                baseColor: baseColor,
+                displayTitle: displayTitle,
+                artwork: artwork,
+                distanceText: distanceText,
+                isPromoted: isPromoted,
+              ),
+              const SizedBox(height: 10),
+              _buildImage(
+                baseColor: baseColor,
+                scheme: scheme,
+                marker: marker,
+                imageUrl: imageUrl,
+                imageVersion: imageVersion,
+                cacheWidth: cacheWidth,
+                cacheHeight: cacheHeight,
+                imageHeight: imageHeight,
+              ),
+              const SizedBox(height: 10),
+              if (hasConstrainedHeight)
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(
+                      parent: AlwaysScrollableScrollPhysics(),
+                    ),
+                    child: _buildBody(
+                      baseColor: baseColor,
+                      scheme: scheme,
+                      artwork: artwork,
+                      marker: marker,
+                      visibleDescription: visibleDescription,
+                      showChips: showChips,
+                    ),
+                  ),
+                )
+              else
+                _buildBody(
+                  baseColor: baseColor,
+                  scheme: scheme,
+                  artwork: artwork,
+                  marker: marker,
+                  visibleDescription: visibleDescription,
+                  showChips: showChips,
+                ),
+              const SizedBox(height: 12),
+              _buildFooter(
+                baseColor: baseColor,
+                actionFg: actionFg,
+                scheme: scheme,
+                stackCount: stackCount,
+                stackIndex: stackIndex,
+                actions: actions,
+                onPrimaryAction: onPrimaryAction,
+                onNextStacked: onNextStacked,
+                onPreviousStacked: onPreviousStacked,
+                onSelectStackIndex: onSelectStackIndex,
+                primaryActionIcon: primaryActionIcon,
+                primaryActionLabel: primaryActionLabel,
               ),
             ],
-          ),
-          child: LiquidGlassPanel(
-            padding: const EdgeInsets.all(KubusSpacing.md),
-            borderRadius: BorderRadius.circular(KubusRadius.lg),
-            showBorder: false,
-            backgroundColor: scheme.surface.withValues(alpha: 0.45),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (canPresentExhibition) ...[
-                            Text(
-                              l10n.commonExhibition,
-                              style: KubusTypography.textTheme.labelSmall
-                                  ?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: baseColor,
-                                height: 1.0,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                          ],
-                          Text(
-                            displayTitle,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: KubusTypography.textTheme.titleMedium
-                                ?.copyWith(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                              height: 1.2,
-                              color: scheme.onSurface,
-                            ),
-                          ),
-                          if (artwork != null) ...[
-                            const SizedBox(height: 4),
-                            ArtworkCreatorByline(
-                              artwork: artwork!,
-                              maxLines: 1,
-                              style:
-                                  KubusTypography.textTheme.bodySmall?.copyWith(
-                                color: scheme.onSurfaceVariant,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                                height: 1.15,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    if (distanceText != null && distanceText!.isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: baseColor.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.near_me, size: 12, color: baseColor),
-                            const SizedBox(width: 4),
-                            Text(
-                              distanceText!,
-                              style: KubusTypography.textTheme.labelSmall
-                                  ?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: baseColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    if (isPromoted) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: const [
-                            Icon(Icons.star, size: 12, color: Colors.amber),
-                            SizedBox(width: 4),
-                            Text(
-                              'Promoted',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.amber,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                    const SizedBox(width: 6),
-                    _OverlayIconButton(
-                      icon: Icons.close,
-                      tooltip: l10n.commonClose,
-                      onTap: onClose,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                  child: SizedBox(
-                    height: 120,
-                    width: double.infinity,
-                    child: imageUrl != null
-                        ? KubusCachedImage(
-                            imageUrl: imageUrl,
-                            fit: BoxFit.cover,
-                            filterQuality: FilterQuality.low,
-                            cacheWidth: cacheWidth,
-                            cacheHeight: cacheHeight,
-                            maxDisplayWidth: cacheWidth,
-                            cacheVersion: imageVersion,
-                            placeholderBuilder: (context) => Container(
-                              color: baseColor.withValues(alpha: 0.12),
-                              child: const Center(
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                            ),
-                            errorBuilder: (_, __, ___) => _imageFallback(
-                              baseColor,
-                              scheme,
-                              marker,
-                            ),
-                          )
-                        : _imageFallback(
-                            baseColor,
-                            scheme,
-                            marker,
-                          ),
-                  ),
-                ),
-                if (visibleDescription.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  Text(
-                    visibleDescription,
-                    maxLines: 6,
-                    overflow: TextOverflow.ellipsis,
-                    style: KubusTypography.textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                      height: 1.4,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-                if (showChips) ...[
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      if (canPresentExhibition)
-                        _OverlayChip(
-                          label: 'POAP',
-                          icon: Icons.verified_outlined,
-                          accent: baseColor,
-                          selected: true,
-                        ),
-                      if (artwork != null &&
-                          artwork!.category.isNotEmpty &&
-                          artwork!.category != 'General')
-                        _OverlayChip(
-                          label: artwork!.category,
-                          icon: Icons.palette,
-                          accent: baseColor,
-                          selected: false,
-                        ),
-                      if (marker.metadata?['subjectCategory'] != null ||
-                          marker.metadata?['subject_category'] != null)
-                        _OverlayChip(
-                          label: (marker.metadata!['subjectCategory'] ??
-                                  marker.metadata!['subject_category'])
-                              .toString(),
-                          icon: Icons.category_outlined,
-                          accent: baseColor,
-                          selected: false,
-                        ),
-                      if (marker.metadata?['locationName'] != null ||
-                          marker.metadata?['location'] != null)
-                        _OverlayChip(
-                          label: (marker.metadata!['locationName'] ??
-                                  marker.metadata!['location'])
-                              .toString(),
-                          icon: Icons.place_outlined,
-                          accent: baseColor,
-                          selected: false,
-                        ),
-                      if (artwork != null && artwork!.rewards > 0)
-                        _OverlayChip(
-                          label: '+${artwork!.rewards}',
-                          icon: Icons.card_giftcard,
-                          accent: baseColor,
-                          selected: false,
-                        ),
-                    ],
-                  ),
-                ],
-                if (actions.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      for (int i = 0; i < actions.length; i++) ...[
-                        Expanded(
-                          child: _OverlayActionButton(
-                            spec: actions[i],
-                          ),
-                        ),
-                        if (i != actions.length - 1)
-                          const SizedBox(width: 8),
-                      ],
-                    ],
-                  ),
-                ],
-                if (stackCount > 1)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: Center(
-                      child: _OverlayPager(
-                        count: stackCount,
-                        index: stackIndex,
-                        accent: baseColor,
-                        onPrevious: onPreviousStacked,
-                        onNext: onNextStacked,
-                        onSelectIndex: onSelectStackIndex,
-                        inactiveColor:
-                            scheme.onSurfaceVariant.withValues(alpha: 0.4),
-                        arrowColor: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: Semantics(
-                    label: 'marker_more_info',
-                    button: true,
-                    child: _OverlayPrimaryButton(
-                      accent: baseColor,
-                      foregroundColor: actionFg,
-                      onPressed: onPrimaryAction,
-                      icon: primaryActionIcon,
-                      label: primaryActionLabel,
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ),
         ),
       ),
@@ -436,20 +238,11 @@ class KubusMarkerOverlayCard extends StatelessWidget {
         final double? resolvedMaxHeight = maxHeight ??
             (constraints.maxHeight.isFinite ? constraints.maxHeight : null);
 
-        // If we have a bounded height, scale down the whole card (instead of
-        // scrolling) so it always fits vertically across devices.
         if (resolvedMaxHeight != null && resolvedMaxHeight.isFinite) {
           return SizedBox(
             width: resolvedMaxWidth,
             height: resolvedMaxHeight,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.topCenter,
-              child: SizedBox(
-                width: resolvedMaxWidth,
-                child: card,
-              ),
-            ),
+            child: card,
           );
         }
 
@@ -471,6 +264,305 @@ class KubusMarkerOverlayCard extends StatelessWidget {
     }
 
     return wrapped;
+  }
+
+  Widget _buildHeader({
+    required AppLocalizations l10n,
+    required ColorScheme scheme,
+    required Color baseColor,
+    required String displayTitle,
+    required Artwork? artwork,
+    required String? distanceText,
+    required bool isPromoted,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (canPresentExhibition) ...[
+                Text(
+                  l10n.commonExhibition,
+                  style: KubusTypography.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: baseColor,
+                    height: 1.0,
+                  ),
+                ),
+                const SizedBox(height: 2),
+              ],
+              Text(
+                displayTitle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: KubusTypography.textTheme.titleMedium?.copyWith(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  height: 1.2,
+                  color: scheme.onSurface,
+                ),
+              ),
+              if (artwork != null) ...[
+                const SizedBox(height: 4),
+                ArtworkCreatorByline(
+                  artwork: artwork,
+                  maxLines: 1,
+                  style: KubusTypography.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    height: 1.15,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(width: 10),
+        if (distanceText != null && distanceText.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: baseColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.near_me, size: 12, color: baseColor),
+                const SizedBox(width: 4),
+                Text(
+                  distanceText,
+                  style: KubusTypography.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: baseColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        if (isPromoted) ...[
+          const SizedBox(width: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.amber.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(Icons.star, size: 12, color: Colors.amber),
+                SizedBox(width: 4),
+                Text(
+                  'Promoted',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.amber,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        const SizedBox(width: 6),
+        _OverlayIconButton(
+          icon: Icons.close,
+          tooltip: l10n.commonClose,
+          onTap: onClose,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildImage({
+    required Color baseColor,
+    required ColorScheme scheme,
+    required ArtMarker marker,
+    required String? imageUrl,
+    required String? imageVersion,
+    required int cacheWidth,
+    required int cacheHeight,
+    required double imageHeight,
+  }) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(KubusRadius.md),
+      child: SizedBox(
+        height: imageHeight,
+        width: double.infinity,
+        child: imageUrl != null
+            ? KubusCachedImage(
+                imageUrl: imageUrl,
+                fit: BoxFit.cover,
+                filterQuality: FilterQuality.low,
+                cacheWidth: cacheWidth,
+                cacheHeight: cacheHeight,
+                maxDisplayWidth: cacheWidth,
+                cacheVersion: imageVersion,
+                placeholderBuilder: (context) => Container(
+                  color: baseColor.withValues(alpha: 0.12),
+                  child: const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+                errorBuilder: (_, __, ___) => _imageFallback(
+                  baseColor,
+                  scheme,
+                  marker,
+                ),
+              )
+            : _imageFallback(
+                baseColor,
+                scheme,
+                marker,
+              ),
+      ),
+    );
+  }
+
+  Widget _buildBody({
+    required Color baseColor,
+    required ColorScheme scheme,
+    required Artwork? artwork,
+    required ArtMarker marker,
+    required String visibleDescription,
+    required bool showChips,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (visibleDescription.isNotEmpty) ...[
+          Text(
+            visibleDescription,
+            maxLines: 6,
+            overflow: TextOverflow.ellipsis,
+            style: KubusTypography.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+              height: 1.4,
+              fontSize: 12,
+            ),
+          ),
+        ],
+        if (showChips) ...[
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (canPresentExhibition)
+                _OverlayChip(
+                  label: 'POAP',
+                  icon: Icons.verified_outlined,
+                  accent: baseColor,
+                  selected: true,
+                ),
+              if (artwork != null &&
+                  artwork.category.isNotEmpty &&
+                  artwork.category != 'General')
+                _OverlayChip(
+                  label: artwork.category,
+                  icon: Icons.palette,
+                  accent: baseColor,
+                  selected: false,
+                ),
+              if (marker.metadata?['subjectCategory'] != null ||
+                  marker.metadata?['subject_category'] != null)
+                _OverlayChip(
+                  label: (marker.metadata!['subjectCategory'] ??
+                          marker.metadata!['subject_category'])
+                      .toString(),
+                  icon: Icons.category_outlined,
+                  accent: baseColor,
+                  selected: false,
+                ),
+              if (marker.metadata?['locationName'] != null ||
+                  marker.metadata?['location'] != null)
+                _OverlayChip(
+                  label: (marker.metadata!['locationName'] ??
+                          marker.metadata!['location'])
+                      .toString(),
+                  icon: Icons.place_outlined,
+                  accent: baseColor,
+                  selected: false,
+                ),
+              if (artwork != null && artwork.rewards > 0)
+                _OverlayChip(
+                  label: '+${artwork.rewards}',
+                  icon: Icons.card_giftcard,
+                  accent: baseColor,
+                  selected: false,
+                ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildFooter({
+    required Color baseColor,
+    required Color actionFg,
+    required ColorScheme scheme,
+    required int stackCount,
+    required int stackIndex,
+    required List<MarkerOverlayActionSpec> actions,
+    required VoidCallback onPrimaryAction,
+    required VoidCallback? onNextStacked,
+    required VoidCallback? onPreviousStacked,
+    required ValueChanged<int>? onSelectStackIndex,
+    required IconData primaryActionIcon,
+    required String primaryActionLabel,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (actions.isNotEmpty) ...[
+          Row(
+            children: [
+              for (var i = 0; i < actions.length; i++) ...[
+                if (i > 0) const SizedBox(width: 8),
+                Expanded(child: _OverlayActionButton(spec: actions[i])),
+              ],
+            ],
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (stackCount > 1) ...[
+          Center(
+            child: _OverlayPager(
+              count: stackCount,
+              index: stackIndex,
+              accent: baseColor,
+              inactiveColor: scheme.onSurfaceVariant.withValues(alpha: 0.4),
+              arrowColor: scheme.onSurfaceVariant,
+              onPrevious: onPreviousStacked,
+              onNext: onNextStacked,
+              onSelectIndex: onSelectStackIndex,
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        SizedBox(
+          width: double.infinity,
+          child: Semantics(
+            label: 'marker_more_info',
+            button: true,
+            child: _OverlayPrimaryButton(
+              accent: baseColor,
+              foregroundColor: actionFg,
+              onPressed: onPrimaryAction,
+              icon: primaryActionIcon,
+              label: primaryActionLabel,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   static bool _hasChips({required ArtMarker marker, required Artwork? artwork}) {
@@ -529,45 +621,37 @@ class _OverlayIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = scheme.surface.withValues(alpha: isDark ? 0.46 : 0.52);
     final radius = BorderRadius.circular(KubusRadius.sm);
 
     return Tooltip(
       message: tooltip,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          mouseCursor: onTap == null
-              ? SystemMouseCursors.basic
-              : SystemMouseCursors.click,
+      child: MouseRegion(
+        cursor: onTap == null
+            ? SystemMouseCursors.basic
+            : SystemMouseCursors.click,
+        child: buildKubusMapGlassSurface(
+          context: context,
+          kind: KubusMapGlassSurfaceKind.button,
+          useBlur: false,
           borderRadius: radius,
+          tintBase: scheme.surface,
+          padding: EdgeInsets.zero,
+          border: Border.all(
+            color: scheme.outlineVariant.withValues(alpha: 0.35),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: scheme.shadow.withValues(alpha: 0.12),
+              blurRadius: 14,
+              offset: const Offset(0, 8),
+            ),
+          ],
           onTap: onTap,
-          child: Container(
+          child: SizedBox(
             width: 36,
             height: 36,
-            decoration: BoxDecoration(
-              borderRadius: radius,
-              border: Border.all(
-                color: scheme.outlineVariant.withValues(alpha: 0.35),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: scheme.shadow.withValues(alpha: isDark ? 0.22 : 0.12),
-                  blurRadius: 14,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: LiquidGlassPanel(
-              padding: EdgeInsets.zero,
-              margin: EdgeInsets.zero,
-              borderRadius: radius,
-              showBorder: false,
-              backgroundColor: bg,
-              child: Center(
-                child: Icon(icon, size: 18, color: scheme.onSurface),
-              ),
+            child: Center(
+              child: Icon(icon, size: 18, color: scheme.onSurface),
             ),
           ),
         ),
@@ -592,41 +676,32 @@ class _OverlayChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final bg = selected
-        ? accent.withValues(alpha: isDark ? 0.24 : 0.18)
-        : scheme.surface.withValues(alpha: isDark ? 0.34 : 0.42);
     final border = selected
         ? accent.withValues(alpha: 0.35)
         : scheme.outlineVariant.withValues(alpha: 0.30);
     final fg = selected ? accent : scheme.onSurfaceVariant;
 
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: border),
-      ),
-      child: LiquidGlassPanel(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        margin: EdgeInsets.zero,
-        borderRadius: BorderRadius.circular(999),
-        showBorder: false,
-        backgroundColor: bg,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 14, color: fg),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: KubusTypography.textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: fg,
-              ),
+    return buildKubusMapGlassSurface(
+      context: context,
+      kind: KubusMapGlassSurfaceKind.button,
+      useBlur: false,
+      borderRadius: BorderRadius.circular(999),
+      tintBase: selected ? accent : scheme.surface,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      border: Border.all(color: border),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: fg),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: KubusTypography.textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: fg,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -640,55 +715,42 @@ class _OverlayActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final bg = spec.isActive
-        ? spec.activeColor.withValues(alpha: isDark ? 0.24 : 0.18)
-        : scheme.surface.withValues(alpha: isDark ? 0.34 : 0.42);
     final border = spec.isActive
         ? spec.activeColor.withValues(alpha: 0.35)
         : scheme.outlineVariant.withValues(alpha: 0.30);
     final fg = spec.isActive ? spec.activeColor : scheme.onSurfaceVariant;
 
-    final content = Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: spec.onTap,
-        mouseCursor: spec.onTap == null
-            ? SystemMouseCursors.basic
-            : SystemMouseCursors.click,
+    final content = MouseRegion(
+      cursor: spec.onTap == null
+          ? SystemMouseCursors.basic
+          : SystemMouseCursors.click,
+      child: buildKubusMapGlassSurface(
+        context: context,
+        kind: KubusMapGlassSurfaceKind.button,
+        useBlur: false,
         borderRadius: BorderRadius.circular(KubusRadius.sm),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(KubusRadius.sm),
-            border: Border.all(color: border),
-          ),
-          child: LiquidGlassPanel(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            margin: EdgeInsets.zero,
-            borderRadius: BorderRadius.circular(KubusRadius.sm),
-            showBorder: false,
-            backgroundColor: bg,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(spec.icon, size: 16, color: fg),
-                const SizedBox(width: 4),
-                Flexible(
-                  child: Text(
-                    spec.label,
-                    style: KubusTypography.textTheme.bodyMedium?.copyWith(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: fg,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+        tintBase: spec.isActive ? spec.activeColor : scheme.surface,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        border: Border.all(color: border),
+        onTap: spec.onTap,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(spec.icon, size: 16, color: fg),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                spec.label,
+                style: KubusTypography.textTheme.bodyMedium?.copyWith(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: fg,
                 ),
-              ],
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -817,53 +879,46 @@ class _OverlayPrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = accent.withValues(alpha: isDark ? 0.30 : 0.22);
-    final border = accent.withValues(alpha: 0.45);
+    final cursor = onPressed == null
+        ? SystemMouseCursors.basic
+        : SystemMouseCursors.click;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onPressed,
-        mouseCursor: onPressed == null
-            ? SystemMouseCursors.basic
-            : SystemMouseCursors.click,
+    return MouseRegion(
+      cursor: cursor,
+      child: buildKubusMapGlassSurface(
+        context: context,
+        kind: KubusMapGlassSurfaceKind.button,
+        useBlur: false,
         borderRadius: BorderRadius.circular(KubusRadius.sm),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(KubusRadius.sm),
-            border: Border.all(color: border),
+        tintBase: accent,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        border: Border.all(color: accent.withValues(alpha: 0.45)),
+        boxShadow: [
+          BoxShadow(
+            color: accent.withValues(alpha: 0.12),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
-          child: LiquidGlassPanel(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 10,
-            ),
-            margin: EdgeInsets.zero,
-            borderRadius: BorderRadius.circular(KubusRadius.sm),
-            showBorder: false,
-            backgroundColor: bg,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, size: 18, color: foregroundColor),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    label,
-                    overflow: TextOverflow.ellipsis,
-                    style: KubusTypography.textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: foregroundColor,
-                    ),
-                  ),
+        ],
+        onTap: onPressed,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18, color: foregroundColor),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: KubusTypography.textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: foregroundColor,
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
   }
 }
-

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../utils/design_tokens.dart';
 import '../../utils/map_search_suggestion.dart';
-import '../glass_components.dart';
+import '../map/kubus_map_glass_surface.dart';
 import '../map_overlay_blocker.dart';
 import '../search/kubus_search_bar.dart';
 
@@ -152,50 +152,45 @@ class KubusSearchOverlayScaffold extends StatelessWidget {
   }
 
   Widget _buildSidePanel(BuildContext context, double topInset) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
 
     final panel = MapOverlayBlocker(
       cursor: SystemMouseCursors.basic,
-      child: Padding(
-        padding: EdgeInsets.only(
+      child: buildKubusMapGlassSurface(
+        context: context,
+        kind: KubusMapGlassSurfaceKind.panel,
+        borderRadius: BorderRadius.circular(sidePanelRadius),
+        padding: sidePanelInnerPadding,
+        margin: EdgeInsets.only(
           left: panelInsets.left,
           right: panelInsets.right,
         ),
-        child: LiquidGlassPanel(
-          padding: sidePanelInnerPadding,
-          margin: EdgeInsets.zero,
-          borderRadius: BorderRadius.circular(sidePanelRadius),
-          blurSigma: KubusGlassEffects.blurSigmaLight,
-          backgroundColor: scheme.surface.withValues(alpha: isDark ? 0.20 : 0.14),
-          showBorder: true,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  if (leading != null) ...[
-                    leading!,
-                    SizedBox(width: KubusSpacing.xl + KubusSpacing.sm),
-                  ],
-                  Expanded(child: searchField),
-                  if (filterChips != null) ...[
-                    SizedBox(width: KubusSpacing.md + KubusSpacing.xs),
-                    filterChips!,
-                  ],
-                  if (mapToggle != null) ...[
-                    SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-                    mapToggle!,
-                  ],
+        tintBase: scheme.surface,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                if (leading != null) ...[
+                  leading!,
+                  SizedBox(width: KubusSpacing.xl + KubusSpacing.sm),
                 ],
-              ),
-              if (extraContent != null) ...[
-                SizedBox(height: sectionGap),
-                extraContent!,
+                Expanded(child: searchField),
+                if (filterChips != null) ...[
+                  SizedBox(width: KubusSpacing.md + KubusSpacing.xs),
+                  filterChips!,
+                ],
+                if (mapToggle != null) ...[
+                  SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
+                  mapToggle!,
+                ],
               ],
+            ),
+            if (extraContent != null) ...[
+              SizedBox(height: sectionGap),
+              extraContent!,
             ],
-          ),
+          ],
         ),
       ),
     );

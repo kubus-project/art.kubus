@@ -255,12 +255,7 @@ class KubusMarkerOverlayCardWrapper extends StatelessWidget {
       enabled: true,
       cursor: cursor,
       interceptPlatformViews: interceptPlatformViews,
-      child: AnimatedSize(
-        duration: animation.duration,
-        curve: animation.curve,
-        alignment: Alignment.topCenter,
-        child: cardBuilder(context, layout),
-      ),
+      child: cardBuilder(context, layout),
     );
   }
 

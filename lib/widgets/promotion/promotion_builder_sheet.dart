@@ -67,13 +67,11 @@ class _PromotionBuilderSheet extends StatefulWidget {
     required this.entityType,
     required this.entityId,
     required this.entityLabel,
-    this.scrollController,
   });
 
   final PromotionEntityType entityType;
   final String entityId;
   final String entityLabel;
-  final ScrollController? scrollController;
 
   @override
   State<_PromotionBuilderSheet> createState() => _PromotionBuilderSheetState();
@@ -335,7 +333,6 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
           padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.lg),
           child: ListView(
             key: const Key('promotionBuilderListView'),
-            controller: widget.scrollController,
             children: [
               LiquidGlassCard(
                 padding: const EdgeInsets.all(KubusSpacing.md),
