@@ -533,11 +533,17 @@ class _AppLauncherState extends State<AppLauncher> {
               ),
               ChangeNotifierProvider(
                   create: (context) => CommunityCommentsProvider()),
-              ChangeNotifierProvider(create: (context) => DeepLinkProvider()),
               ChangeNotifierProvider(
-                  create: (context) => AuthDeepLinkProvider()),
+                lazy: false,
+                create: (context) => DeepLinkProvider(),
+              ),
+              ChangeNotifierProvider(
+                lazy: false,
+                create: (context) => AuthDeepLinkProvider(),
+              ),
               ChangeNotifierProxyProvider2<DeepLinkProvider,
                   AuthDeepLinkProvider, PlatformDeepLinkListenerProvider>(
+                lazy: false,
                 create: (context) => PlatformDeepLinkListenerProvider(),
                 update: (context, deepLinkProvider, authDeepLinkProvider,
                     listenerProvider) {
@@ -722,6 +728,235 @@ class ArtKubus extends StatefulWidget {
 class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
   final TelemetryRouteObserver _telemetryObserver = TelemetryRouteObserver();
 
+  Map<String, WidgetBuilder> get _namedRoutes => {
+        '/main': (context) => const MainApp(),
+        // Alias for telemetry/URL semantics: marker deep links land here so
+        // the browser URL becomes /map (not /main), while still rendering
+        // the full shell.
+        '/map': (context) => const ShellEntryScreen.map(),
+        '/ar': (context) => const ARScreen(),
+        '/artwork': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          String? artworkId;
+          String? attendanceMarkerId;
+          if (args is Map) {
+            final raw = args['artworkId'] ?? args['id'] ?? args['artwork_id'];
+            if (raw != null) {
+              artworkId = raw.toString();
+            }
+            final rawMarker = args['attendanceMarkerId'] ??
+                args['markerId'] ??
+                args['marker_id'];
+            if (rawMarker != null) {
+              attendanceMarkerId = rawMarker.toString();
+            }
+          } else if (args is String) {
+            artworkId = args;
+          }
+          artworkId = artworkId?.trim();
+          attendanceMarkerId = attendanceMarkerId?.trim();
+          if (artworkId == null || artworkId.isEmpty) {
+            final l10n = AppLocalizations.of(context)!;
+            return Scaffold(
+              body: Center(child: Text(l10n.artworkNotFound)),
+            );
+          }
+          final isDesktop = DesktopBreakpoints.isDesktop(context);
+          return isDesktop
+              ? DesktopArtworkDetailScreen(
+                  artworkId: artworkId,
+                  showAppBar: true,
+                  attendanceMarkerId: attendanceMarkerId,
+                )
+              : ArtDetailScreen(
+                  artworkId: artworkId,
+                  attendanceMarkerId: attendanceMarkerId,
+                );
+        },
+        '/connect-wallet': (context) => DesktopBreakpoints.isDesktop(context)
+            ? const DesktopConnectWalletScreen()
+            : const ConnectWallet(),
+        '/wallet_connect': (context) => DesktopBreakpoints.isDesktop(context)
+            ? const DesktopConnectWalletScreen()
+            : const ConnectWallet(),
+        '/connect_wallet': (context) => DesktopBreakpoints.isDesktop(context)
+            ? const DesktopConnectWalletScreen()
+            : const ConnectWallet(),
+        '/import-wallet': (context) => DesktopBreakpoints.isDesktop(context)
+            ? const DesktopConnectWalletScreen(initialStep: 1)
+            : const ConnectWallet(initialStep: 1),
+        '/sign-in': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          if (args is Map) {
+            final redirectRoute = args['redirectRoute']?.toString();
+            final redirectArguments = args['redirectArguments'];
+            final email = args['email']?.toString();
+            return SignInScreen(
+              redirectRoute: redirectRoute,
+              redirectArguments: redirectArguments,
+              initialEmail: email,
+            );
+          }
+          return const SignInScreen();
+        },
+        '/register': (context) => const RegisterScreen(),
+        '/secure-account': (context) => const SecureAccountScreen(),
+        '/verify-email': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          String? token;
+          String? email;
+          if (args is Map) {
+            token = args['token']?.toString();
+            email = args['email']?.toString();
+          }
+          return VerifyEmailScreen(
+            email: email?.trim().isNotEmpty == true ? email!.trim() : null,
+            token: token?.trim().isNotEmpty == true ? token!.trim() : null,
+          );
+        },
+        '/forgot-password': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          String? email;
+          if (args is Map) {
+            email = args['email']?.toString();
+          }
+          return ForgotPasswordScreen(initialEmail: email);
+        },
+        '/reset-password': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          String? token;
+          if (args is Map) {
+            token = args['token']?.toString();
+          }
+          return ResetPasswordScreen(token: token);
+        },
+        '/promotions': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments;
+          String? status;
+          String? sessionId;
+          if (args is Map) {
+            status = args['status']?.toString();
+            sessionId =
+                args['sessionId']?.toString() ?? args['session_id']?.toString();
+          }
+          return PromotionCheckoutReturnScreen(
+            status: status?.trim().isNotEmpty == true ? status!.trim() : null,
+            sessionId:
+                sessionId?.trim().isNotEmpty == true ? sessionId!.trim() : null,
+          );
+        },
+        '/web3': (context) {
+          final l10n = AppLocalizations.of(context)!;
+          return Scaffold(
+            body: Center(child: Text(l10n.web3DashboardComingSoon)),
+          );
+        },
+      };
+
+  Route<dynamic> _buildAppRoute(RouteSettings settings) {
+    final name = (settings.name ?? '').trim();
+    if (name.isEmpty) {
+      return MaterialPageRoute(
+        builder: (_) => const AppInitializer(),
+        settings: settings,
+      );
+    }
+
+    final uri = Uri.tryParse(name) ?? Uri(path: name);
+
+    if (uri.path == '/verify-email') {
+      final token = (uri.queryParameters['token'] ?? '').trim();
+      final email = (uri.queryParameters['email'] ?? '').trim();
+      if (token.isNotEmpty) {
+        return MaterialPageRoute(
+          builder: (_) => EmailVerificationSuccessScreen(token: token),
+          settings: RouteSettings(
+            name: '/verify-email',
+            arguments: {
+              'token': token,
+              if (email.isNotEmpty) 'email': email,
+            },
+          ),
+        );
+      }
+    }
+
+    if (uri.path == '/reset-password') {
+      final token = (uri.queryParameters['token'] ?? '').trim();
+      if (token.isNotEmpty) {
+        return MaterialPageRoute(
+          builder: (_) => ResetPasswordScreen(token: token),
+          settings: RouteSettings(
+            name: '/reset-password',
+            arguments: {'token': token},
+          ),
+        );
+      }
+    }
+
+    if (uri.path == '/promotions') {
+      final status = (uri.queryParameters['status'] ?? '').trim();
+      final sessionId = (uri.queryParameters['session_id'] ?? '').trim();
+      return MaterialPageRoute(
+        builder: (_) => PromotionCheckoutReturnScreen(
+          status: status.isNotEmpty ? status : null,
+          sessionId: sessionId.isNotEmpty ? sessionId : null,
+        ),
+        settings: RouteSettings(
+          name: '/promotions',
+          arguments: {
+            if (status.isNotEmpty) 'status': status,
+            if (sessionId.isNotEmpty) 'sessionId': sessionId,
+          },
+        ),
+      );
+    }
+
+    final target = const ShareDeepLinkParser().parse(uri);
+    if (target != null) {
+      return MaterialPageRoute(
+        builder: (_) => DeepLinkBootstrapScreen(target: target),
+        settings: settings,
+      );
+    }
+
+    final namedRouteBuilder = _namedRoutes[uri.path];
+    if (namedRouteBuilder != null) {
+      return MaterialPageRoute(
+        builder: namedRouteBuilder,
+        settings: settings,
+      );
+    }
+
+    // Fall back to the main initializer for unknown named routes
+    // (e.g. browser refresh on /foo).
+    return MaterialPageRoute(
+      builder: (_) => const AppInitializer(),
+      settings: settings,
+    );
+  }
+
+  List<Route<dynamic>> _generateInitialRoutes(String initialRoute) {
+    final normalized = initialRoute.trim().isEmpty ? '/' : initialRoute.trim();
+    final uri = Uri.tryParse(normalized) ?? Uri(path: normalized);
+
+    // Direct shell URLs still need AppInitializer so auth/session restoration,
+    // provider hydration, and warm-up run before the shell renders.
+    if (uri.queryParameters.isEmpty &&
+        (uri.path == '/main' || uri.path == '/map')) {
+      return <Route<dynamic>>[
+        MaterialPageRoute(
+          builder: (_) => AppInitializer(preferredShellRoute: uri.path),
+          settings: RouteSettings(name: normalized),
+        ),
+      ];
+    }
+
+    return <Route<dynamic>>[
+      _buildAppRoute(RouteSettings(name: normalized)),
+    ];
+  }
+
   @override
   void initState() {
     super.initState();
@@ -836,199 +1071,9 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
                   SecurityGateOverlay(child: child ?? const SizedBox.shrink()),
             );
           },
-          onGenerateRoute: (settings) {
-            final name = (settings.name ?? '').trim();
-            if (name.isEmpty) {
-              return MaterialPageRoute(
-                  builder: (_) => const AppInitializer(), settings: settings);
-            }
-
-            final uri = Uri.tryParse(name) ?? Uri(path: name);
-
-            if (uri.path == '/verify-email') {
-              final token = (uri.queryParameters['token'] ?? '').trim();
-              final email = (uri.queryParameters['email'] ?? '').trim();
-              if (token.isNotEmpty) {
-                return MaterialPageRoute(
-                  builder: (_) => EmailVerificationSuccessScreen(token: token),
-                  settings: RouteSettings(
-                    name: '/verify-email',
-                    arguments: {
-                      'token': token,
-                      if (email.isNotEmpty) 'email': email,
-                    },
-                  ),
-                );
-              }
-            }
-
-            if (uri.path == '/reset-password') {
-              final token = (uri.queryParameters['token'] ?? '').trim();
-              if (token.isNotEmpty) {
-                return MaterialPageRoute(
-                  builder: (_) => ResetPasswordScreen(token: token),
-                  settings: RouteSettings(
-                    name: '/reset-password',
-                    arguments: {'token': token},
-                  ),
-                );
-              }
-            }
-
-            if (uri.path == '/promotions') {
-              final status = (uri.queryParameters['status'] ?? '').trim();
-              final sessionId = (uri.queryParameters['session_id'] ?? '').trim();
-              return MaterialPageRoute(
-                builder: (_) => PromotionCheckoutReturnScreen(
-                  status: status.isNotEmpty ? status : null,
-                  sessionId: sessionId.isNotEmpty ? sessionId : null,
-                ),
-                settings: RouteSettings(
-                  name: '/promotions',
-                  arguments: {
-                    if (status.isNotEmpty) 'status': status,
-                    if (sessionId.isNotEmpty) 'sessionId': sessionId,
-                  },
-                ),
-              );
-            }
-
-            final target = const ShareDeepLinkParser().parse(uri);
-            if (target != null) {
-              return MaterialPageRoute(
-                builder: (_) => DeepLinkBootstrapScreen(target: target),
-                settings: settings,
-              );
-            }
-
-            // Fall back to the main initializer for unknown named routes (e.g. browser refresh on /foo).
-            return MaterialPageRoute(
-                builder: (_) => const AppInitializer(), settings: settings);
-          },
-          home: const AppInitializer(),
-          routes: {
-            '/main': (context) => const MainApp(),
-            // Alias for telemetry/URL semantics: marker deep links land here so
-            // the browser URL becomes /map (not /main), while still rendering
-            // the full shell.
-            '/map': (context) => const ShellEntryScreen.map(),
-            '/ar': (context) => const ARScreen(),
-            '/artwork': (context) {
-              final args = ModalRoute.of(context)?.settings.arguments;
-              String? artworkId;
-              String? attendanceMarkerId;
-              if (args is Map) {
-                final raw =
-                    args['artworkId'] ?? args['id'] ?? args['artwork_id'];
-                if (raw != null) {
-                  artworkId = raw.toString();
-                }
-                final rawMarker = args['attendanceMarkerId'] ??
-                    args['markerId'] ??
-                    args['marker_id'];
-                if (rawMarker != null) {
-                  attendanceMarkerId = rawMarker.toString();
-                }
-              } else if (args is String) {
-                artworkId = args;
-              }
-              artworkId = artworkId?.trim();
-              attendanceMarkerId = attendanceMarkerId?.trim();
-              if (artworkId == null || artworkId.isEmpty) {
-                final l10n = AppLocalizations.of(context)!;
-                return Scaffold(
-                  body: Center(child: Text(l10n.artworkNotFound)),
-                );
-              }
-              final isDesktop = DesktopBreakpoints.isDesktop(context);
-              return isDesktop
-                  ? DesktopArtworkDetailScreen(
-                      artworkId: artworkId,
-                      showAppBar: true,
-                      attendanceMarkerId: attendanceMarkerId,
-                    )
-                  : ArtDetailScreen(
-                      artworkId: artworkId,
-                      attendanceMarkerId: attendanceMarkerId,
-                    );
-            },
-            '/connect-wallet': (context) => DesktopBreakpoints.isDesktop(context)
-                ? const DesktopConnectWalletScreen()
-                : const ConnectWallet(),
-            '/wallet_connect': (context) => DesktopBreakpoints.isDesktop(context)
-                ? const DesktopConnectWalletScreen()
-                : const ConnectWallet(),
-            '/connect_wallet': (context) => DesktopBreakpoints.isDesktop(context)
-                ? const DesktopConnectWalletScreen()
-                : const ConnectWallet(),
-            '/import-wallet': (context) => DesktopBreakpoints.isDesktop(context)
-                ? const DesktopConnectWalletScreen(initialStep: 1)
-                : const ConnectWallet(initialStep: 1),
-            '/sign-in': (context) {
-              final args = ModalRoute.of(context)?.settings.arguments;
-              if (args is Map) {
-                final redirectRoute = args['redirectRoute']?.toString();
-                final redirectArguments = args['redirectArguments'];
-                final email = args['email']?.toString();
-                return SignInScreen(
-                  redirectRoute: redirectRoute,
-                  redirectArguments: redirectArguments,
-                  initialEmail: email,
-                );
-              }
-              return const SignInScreen();
-            },
-            '/register': (context) => const RegisterScreen(),
-            '/secure-account': (context) => const SecureAccountScreen(),
-            '/verify-email': (context) {
-              final args = ModalRoute.of(context)?.settings.arguments;
-              String? token;
-              String? email;
-              if (args is Map) {
-                token = args['token']?.toString();
-                email = args['email']?.toString();
-              }
-              return VerifyEmailScreen(
-                email: email?.trim().isNotEmpty == true ? email!.trim() : null,
-                token: token?.trim().isNotEmpty == true ? token!.trim() : null,
-              );
-            },
-            '/forgot-password': (context) {
-              final args = ModalRoute.of(context)?.settings.arguments;
-              String? email;
-              if (args is Map) {
-                email = args['email']?.toString();
-              }
-              return ForgotPasswordScreen(initialEmail: email);
-            },
-            '/reset-password': (context) {
-              final args = ModalRoute.of(context)?.settings.arguments;
-              String? token;
-              if (args is Map) {
-                token = args['token']?.toString();
-              }
-              return ResetPasswordScreen(token: token);
-            },
-            '/promotions': (context) {
-              final args = ModalRoute.of(context)?.settings.arguments;
-              String? status;
-              String? sessionId;
-              if (args is Map) {
-                status = args['status']?.toString();
-                sessionId = args['sessionId']?.toString() ?? args['session_id']?.toString();
-              }
-              return PromotionCheckoutReturnScreen(
-                status: status?.trim().isNotEmpty == true ? status!.trim() : null,
-                sessionId: sessionId?.trim().isNotEmpty == true ? sessionId!.trim() : null,
-              );
-            },
-            '/web3': (context) {
-              final l10n = AppLocalizations.of(context)!;
-              return Scaffold(
-                body: Center(child: Text(l10n.web3DashboardComingSoon)),
-              );
-            },
-          },
+          onGenerateInitialRoutes: _generateInitialRoutes,
+          onGenerateRoute: _buildAppRoute,
+          routes: _namedRoutes,
         );
       },
     );

@@ -43,6 +43,15 @@ void main() {
     expect(parser.parse(Uri.parse('/share/artworks/a3'))?.type, ShareEntityType.artwork);
   });
 
+  test('ShareDeepLinkParser accepts legacy map marker query links', () {
+    expect(parser.parse(Uri.parse('/map?marker=m5'))?.type, ShareEntityType.marker);
+    expect(parser.parse(Uri.parse('/map?marker=m5'))?.id, 'm5');
+    expect(
+      parser.parse(Uri.parse('https://app.kubus.site/map?marker=m6'))?.id,
+      'm6',
+    );
+  });
+
   test('ShareDeepLinkParser returns null for unsupported paths', () {
     expect(parser.parse(Uri.parse('/')), isNull);
     expect(parser.parse(Uri.parse('/unknown/123')), isNull);

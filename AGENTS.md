@@ -46,6 +46,15 @@ Security handbook: `art.kubus-threat-model.md` is the living security baseline a
    - Service-local structs must be suffixed: `*Definition`, `*Dto`, `*Record`, `*Payload`.
 11. Cross-agent consistency
     - Keep guidance aligned across all `AGENTS.md` files; if you update one, update the related layer docs too.
+12. No legacy code paths
+    - Do not add or preserve legacy compatibility layers, deprecated flows, duplicate old/new implementations, or migration-era shims unless explicitly requested.
+    - This project is pre-launch with no production users, so prefer replacing obsolete code cleanly instead of carrying legacy behavior forward.
+13. Call out drastic function changes
+    - If you substantially change a function's behavior, signature, side effects, return shape, or calling contract, explicitly note that in your handoff.
+    - Call out any required caller, test, or data-migration follow-up when the change is not drop-in compatible.
+14. Schema snapshots stay in sync
+    - Any backend database schema change must update both `backend/src/db/schema.sql` and `backend/src/db/schema_complete.sql` in the same change.
+    - Do not leave migrations/schema edits half-applied; the checked-in schema files must keep local and clean-database bootstrap paths accurate.
 
 ---
 
@@ -340,6 +349,9 @@ Any mutation touching public entities must call the relevant `publicSyncService`
 - Providers initialize idempotently; no widget-level init/binding.
 - Desktop/mobile parity maintained.
 - Local-first fallbacks remain functional.
+- No new legacy/compatibility code was introduced unless explicitly required.
+- Any drastic function contract change is called out in the handoff.
+- Any backend DB schema change updated both `backend/src/db/schema.sql` and `backend/src/db/schema_complete.sql`.
 
 ---
 

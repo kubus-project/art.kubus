@@ -47,6 +47,8 @@ Preflight: review all `AGENTS.md` files (root, `lib/**`, `backend/**`) before ma
 - No widget‑level provider initialization; use `AppInitializer` + `AppBootstrapService`.
 - Keep desktop/mobile parity (`lib/screens/**` ↔ `lib/screens/desktop/**`).
 - Avoid `dart:html`; web-only logic must be in `*_web.dart` with conditional imports.
+- Do not add legacy compatibility branches or duplicate old/new UI flows; this project is pre-launch, so obsolete frontend code should be replaced cleanly.
+- If a function is changed in a non-drop-in way, call that out explicitly in the final handoff so affected callers can be reviewed.
 
 ## Audit watchlist (keep fixed)
 - Web map style URLs must not double-prefix `assets/` and must have a production-safe fallback.

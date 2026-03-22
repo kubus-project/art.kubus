@@ -1,6 +1,7 @@
 ﻿{
   "@@locale": "en",
   "appTitle": "art.kubus",
+  "appExitConfirmBackHint": "Swipe or press back again to exit the app.",
   "commonCancel": "Cancel",
   "commonSignIn": "Sign in",
   "commonClear": "Clear",

@@ -101,6 +101,12 @@ abstract class AppLocalizations {
   /// **'art.kubus'**
   String get appTitle;
 
+  /// No description provided for @appExitConfirmBackHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Swipe or press back again to exit the app.'**
+  String get appExitConfirmBackHint;
+
   /// No description provided for @commonCancel.
   ///
   /// In en, this message translates to:
@@ -1012,12 +1018,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'An account with this email already exists. Sign in instead.'**
   String get authAccountAlreadyExistsToast;
-
-  /// No description provided for @authUsernameAlreadyTaken.
-  ///
-  /// In en, this message translates to:
-  /// **'Username already taken'**
-  String get authUsernameAlreadyTaken;
 
   /// No description provided for @authEmailSignInFailed.
   ///
@@ -13924,6 +13924,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Username must be 50 characters or fewer'**
   String get profileEditUsernameMaxLengthError;
+
+  /// No description provided for @authUsernameAlreadyTaken.
+  ///
+  /// In en, this message translates to:
+  /// **'Username already taken'**
+  String get authUsernameAlreadyTaken;
 
   /// No description provided for @profileEditDisplayNameLabel.
   ///

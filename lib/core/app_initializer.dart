@@ -37,7 +37,12 @@ import 'shell_entry_screen.dart';
 import '../services/share/share_deep_link_parser.dart';
 
 class AppInitializer extends StatefulWidget {
-  const AppInitializer({super.key});
+  const AppInitializer({
+    super.key,
+    this.preferredShellRoute,
+  });
+
+  final String? preferredShellRoute;
 
   @override
   State<AppInitializer> createState() => _AppInitializerState();
@@ -49,6 +54,20 @@ class _AppInitializerState extends State<AppInitializer> {
   Completer<void>? _initCompleter;
   Timer? _startupWatchdog;
   bool _didNavigate = false;
+
+  String get _resolvedShellRoute {
+    final route = widget.preferredShellRoute?.trim();
+    if (route == '/map') return '/map';
+    return '/main';
+  }
+
+  Map<String, String>? get _signInRedirectArguments {
+    final route = widget.preferredShellRoute?.trim();
+    if (route == '/map' || route == '/main') {
+      return <String, String>{'redirectRoute': route!};
+    }
+    return null;
+  }
 
   @override
   void initState() {
@@ -496,10 +515,13 @@ class _AppInitializerState extends State<AppInitializer> {
         if (!mounted) return;
         if (shouldShowSignIn) {
           _didNavigate = true;
-          navigator.pushReplacementNamed('/sign-in');
+          navigator.pushReplacementNamed(
+            '/sign-in',
+            arguments: _signInRedirectArguments,
+          );
         } else {
           _didNavigate = true;
-          navigator.pushReplacementNamed('/main');
+          navigator.pushReplacementNamed(_resolvedShellRoute);
         }
       } else if (shouldShowFirstRunOnboarding) {
         // First-time user - show onboarding (no wallet required)
@@ -522,7 +544,10 @@ class _AppInitializerState extends State<AppInitializer> {
         unawaited(maybeStartWarmUp());
         if (!mounted) return;
         _didNavigate = true;
-        navigator.pushReplacementNamed(shouldShowSignIn ? '/sign-in' : '/main');
+        navigator.pushReplacementNamed(
+          shouldShowSignIn ? '/sign-in' : _resolvedShellRoute,
+          arguments: shouldShowSignIn ? _signInRedirectArguments : null,
+        );
       }
     } catch (e, st) {
       AppConfig.debugPrint('AppInitializer: initialization failed: $e');

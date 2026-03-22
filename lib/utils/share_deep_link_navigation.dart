@@ -79,7 +79,6 @@ class ShareDeepLinkNavigation {
         final shellContext = appNavigatorKey.currentContext;
         if (shellContext == null) return;
         // Fire-and-forget replay; the caller's Future completes immediately.
-        // ignore: discarded_futures
         open(shellContext, target, ensureShell: false);
       });
       return;

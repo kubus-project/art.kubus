@@ -757,15 +757,6 @@ class _SendTokenScreenState extends State<SendTokenScreen>
     });
   }
 
-  // ignore: unused_element
-  String _getNetworkCurrency() {
-    final currencies = {
-      'KUB8': 'SOL',
-      'SOL': 'SOL',
-      'USDC': 'SOL',
-    };
-    return currencies[_selectedToken] ?? 'SOL';
-  }
 
   void _showUnsupportedFeature(BuildContext context, PlatformProvider platformProvider) {
     final l10n = AppLocalizations.of(context)!;

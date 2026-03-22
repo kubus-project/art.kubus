@@ -12,6 +12,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'art.kubus';
 
   @override
+  String get appExitConfirmBackHint => 'Swipe or press back again to exit the app.';
+
+  @override
   String get commonCancel => 'Cancel';
 
   @override
@@ -472,9 +475,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authAccountAlreadyExistsToast => 'An account with this email already exists. Sign in instead.';
-
-  @override
-  String get authUsernameAlreadyTaken => 'Username already taken';
 
   @override
   String get authEmailSignInFailed => 'Email sign-in failed. Please try again.';
@@ -7316,6 +7316,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileEditUsernameMaxLengthError => 'Username must be 50 characters or fewer';
+
+  @override
+  String get authUsernameAlreadyTaken => 'Username already taken';
 
   @override
   String get profileEditDisplayNameLabel => 'Display name';

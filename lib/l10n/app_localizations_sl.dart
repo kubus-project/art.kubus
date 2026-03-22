@@ -12,6 +12,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get appTitle => 'art.kubus';
 
   @override
+  String get appExitConfirmBackHint => 'Za izhod iz aplikacije še enkrat povleci ali pritisni nazaj.';
+
+  @override
   String get commonCancel => 'Prekliči';
 
   @override
@@ -472,9 +475,6 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get authAccountAlreadyExistsToast => 'Račun s tem e-poštnim naslovom že obstaja. Prijavi se.';
-
-  @override
-  String get authUsernameAlreadyTaken => 'Uporabniško ime je že zasedeno';
 
   @override
   String get authEmailSignInFailed => 'Prijava z e-pošto ni uspela. Poskusi znova.';
@@ -7340,6 +7340,9 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get profileEditUsernameMaxLengthError => 'Uporabniško ime ima lahko največ 50 znakov';
+
+  @override
+  String get authUsernameAlreadyTaken => 'Uporabniško ime je že zasedeno';
 
   @override
   String get profileEditDisplayNameLabel => 'Prikazno ime';

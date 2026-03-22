@@ -23,6 +23,7 @@ import 'screens/desktop/desktop_shell.dart';
 import 'utils/app_animations.dart';
 import 'utils/design_tokens.dart';
 import 'widgets/glass_components.dart';
+import 'widgets/mobile_shell_exit_scope.dart';
 import 'widgets/user_persona_onboarding_gate.dart';
 
 class MainApp extends StatefulWidget {
@@ -131,7 +132,8 @@ class _MainAppState extends State<MainApp> {
     // Ensure the currently visible tab is mounted.
     _mountedTabs.add(currentIndex);
 
-    final mapNeedsPlatformViewBackgroundPassthrough = kIsWeb && currentIndex == 0;
+    final mapNeedsPlatformViewBackgroundPassthrough =
+        kIsWeb && currentIndex == 0;
 
     final scaffold = Scaffold(
       backgroundColor: Colors.transparent,
@@ -152,16 +154,19 @@ class _MainAppState extends State<MainApp> {
     // Keep the Kubus gradient everywhere else, but let the map tab "punch
     // through" so the web map remains visible.
     return UserPersonaOnboardingGate(
-      child: mapNeedsPlatformViewBackgroundPassthrough
-          ? scaffold
-          : AnimatedGradientBackground(
-              // The app's base gradient needs to paint behind BOTH the app bar area
-              // (status bar) and the bottom navigation bar. Screens should keep their
-              // scaffolds transparent so this background remains visible.
-              animate: true,
-              intensity: 0.22,
-              child: scaffold,
-            ),
+      child: MobileShellExitScope(
+        child: mapNeedsPlatformViewBackgroundPassthrough
+            ? scaffold
+            : AnimatedGradientBackground(
+                // The app's base gradient needs to paint behind BOTH the app
+                // bar area (status bar) and the bottom navigation bar.
+                // Screens should keep their scaffolds transparent so this
+                // background remains visible.
+                animate: true,
+                intensity: 0.22,
+                child: scaffold,
+              ),
+      ),
     );
   }
 
@@ -183,7 +188,8 @@ class _MainAppState extends State<MainApp> {
       // For all other tabs: mount lazily to avoid expensive init work at app
       // startup.
       if (!_mountedTabs.contains(tabIndex)) {
-        return SizedBox.shrink(key: ValueKey<String>('tab-$tabIndex-placeholder'));
+        return SizedBox.shrink(
+            key: ValueKey<String>('tab-$tabIndex-placeholder'));
       }
 
       return screens[tabIndex];
@@ -198,8 +204,9 @@ class _MainAppState extends State<MainApp> {
         final theme = Theme.of(context);
         final scheme = theme.colorScheme;
         final isDark = theme.brightness == Brightness.dark;
-        final glassTint = scheme.surface.withValues(alpha: isDark ? 0.18 : 0.12);
-        
+        final glassTint =
+            scheme.surface.withValues(alpha: isDark ? 0.18 : 0.12);
+
         // Explicit height prevents the nav bar from accidentally expanding to
         // fill the entire Scaffold when it receives overly-permissive (or tight)
         // vertical constraints.
@@ -258,7 +265,8 @@ class _MainAppState extends State<MainApp> {
     IconData icon,
     bool isSmallScreen,
   ) {
-    final isSelected = context.select<MainTabProvider, bool>((p) => p.currentIndex == index);
+    final isSelected =
+        context.select<MainTabProvider, bool>((p) => p.currentIndex == index);
     final themeProvider = Provider.of<ThemeProvider>(context);
     final animationTheme = context.animationTheme;
     final scheme = Theme.of(context).colorScheme;
@@ -320,7 +328,8 @@ class _MainAppState extends State<MainApp> {
 
   void _syncTelemetryForIndex(int index) {
     if (DesktopBreakpoints.isDesktop(context)) return;
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
 
     String name;
     String route;
@@ -362,7 +371,8 @@ class _MainAppState extends State<MainApp> {
   void _syncRefreshVisibility(int index) {
     if (DesktopBreakpoints.isDesktop(context)) return;
     try {
-      final refreshProvider = Provider.of<AppRefreshProvider>(context, listen: false);
+      final refreshProvider =
+          Provider.of<AppRefreshProvider>(context, listen: false);
       final notificationProvider =
           Provider.of<NotificationProvider>(context, listen: false);
       final presenceProvider =
@@ -370,9 +380,11 @@ class _MainAppState extends State<MainApp> {
       final isCommunity = index == 2;
       final isProfile = index == 4;
 
-      refreshProvider.setViewActive(AppRefreshProvider.viewCommunity, isCommunity);
+      refreshProvider.setViewActive(
+          AppRefreshProvider.viewCommunity, isCommunity);
       refreshProvider.setViewActive(AppRefreshProvider.viewChat, isCommunity);
-      refreshProvider.setViewActive(AppRefreshProvider.viewNotifications, isCommunity);
+      refreshProvider.setViewActive(
+          AppRefreshProvider.viewNotifications, isCommunity);
       refreshProvider.setViewActive(AppRefreshProvider.viewProfile, isProfile);
       notificationProvider.handleViewVisibilityChanged();
       presenceProvider.handleViewVisibilityChanged();
@@ -387,11 +399,11 @@ class ProfileScreenWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final profileProvider = Provider.of<ProfileProvider>(context);
-    
+
     if (!profileProvider.isSignedIn) {
       return const SignInScreenWrapper();
     }
-    
+
     return const ProfileScreen();
   }
 }

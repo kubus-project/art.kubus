@@ -1,6 +1,7 @@
 {
   "@@locale": "sl",
   "appTitle": "art.kubus",
+  "appExitConfirmBackHint": "Za izhod iz aplikacije še enkrat povleci ali pritisni nazaj.",
   "commonCancel": "Prekliči",
   "commonSignIn": "Prijava",
   "commonClear": "Počisti",
