@@ -222,9 +222,7 @@ class _MapScreenState extends State<MapScreen>
       MapScreenConstants.cameraUpdateThrottle; // ~60fps
   bool _styleInitialized = false;
   bool _styleInitializationInProgress = false;
-  bool _hitboxLayerReady = false;
   int _styleEpoch = 0;
-  int _hitboxLayerEpoch = -1;
   final Set<String> _registeredMapImages = <String>{};
   final Set<String> _managedLayerIds = <String>{};
   final Set<String> _managedSourceIds = <String>{};
@@ -232,8 +230,6 @@ class _MapScreenState extends State<MapScreen>
   // Shared constants – canonical values live in MapScreenConstants.
   static const String _markerSourceId = MapScreenConstants.markerSourceId;
   static const String _markerLayerId = MapScreenConstants.markerLayerId;
-  static const String _markerHitboxLayerId =
-      MapScreenConstants.markerHitboxLayerId;
   static const String _cubeSourceId = MapScreenConstants.cubeSourceId;
   static const String _cubeLayerId = MapScreenConstants.cubeLayerId;
   static const String _cubeIconLayerId = MapScreenConstants.cubeIconLayerId;
@@ -407,8 +403,6 @@ class _MapScreenState extends State<MapScreen>
     final scheme = Theme.of(context).colorScheme;
     _styleInitializationInProgress = true;
     _styleInitialized = false;
-    _hitboxLayerReady = false;
-    _hitboxLayerEpoch = -1;
 
     final layersManager = _layersManager;
     if (layersManager == null) {
@@ -434,8 +428,6 @@ class _MapScreenState extends State<MapScreen>
       if (!mounted) return;
       _styleInitialized = true;
       _styleEpoch = _kubusMapController.styleEpoch;
-      _hitboxLayerReady = true;
-      _hitboxLayerEpoch = _styleEpoch;
       _lastAppliedMapThemeDark = themeProvider.isDarkMode;
 
       await _applyThemeToMapStyle(themeProvider: themeProvider);
@@ -879,7 +871,6 @@ class _MapScreenState extends State<MapScreen>
     _layersManager = null;
     _styleInitialized = false;
     _styleInitializationInProgress = false;
-    _hitboxLayerReady = false;
     _styleEpoch = _kubusMapController.styleEpoch;
     _perf.logEvent('mapDetached');
   }
@@ -3270,7 +3261,6 @@ class _MapScreenState extends State<MapScreen>
           _styleInitialized = _kubusMapController.styleInitialized;
           _styleInitializationInProgress =
               _kubusMapController.styleInitializationInProgress;
-          _hitboxLayerReady = _kubusMapController.styleInitialized;
           _styleEpoch = _kubusMapController.styleEpoch;
           AppConfig.debugPrint(
             'MapScreen: map created (dark=$isDark, style="$styleAsset")',
@@ -3331,17 +3321,6 @@ class _MapScreenState extends State<MapScreen>
             .instance.platformDispatcher.implicitView?.devicePixelRatio ??
         1.0;
     return dpr.clamp(1.0, 2.5);
-  }
-
-  /// Generate a transparent square image for the hitbox layer.
-  /// Returns bytes for a 1x1 transparent PNG which MapLibre will scale to the icon-size.
-  /// This allows us to use a symbol layer for square-based tap detection.
-  // ignore: unused_element
-  Uint8List _createTransparentSquareImage() {
-    // 1x1 transparent PNG (base64 decoded)
-    const String base64Png =
-        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
-    return Uint8List.fromList(base64Decode(base64Png));
   }
 
   Future<void> _applyIsometricCamera(
@@ -3494,78 +3473,10 @@ class _MapScreenState extends State<MapScreen>
     });
   }
 
-  // ignore: unused_element
-  Future<bool> _canQueryMarkerHitbox({bool forceRefresh = false}) async {
-    final controller = _mapController;
-    if (controller == null) return false;
-    if (!_styleInitialized) return false;
-    if (!forceRefresh &&
-        _hitboxLayerReady &&
-        _hitboxLayerEpoch == _styleEpoch) {
-      return true;
-    }
-
-    try {
-      final raw = await controller.getLayerIds();
-      for (final id in raw) {
-        if (id == _markerHitboxLayerId) {
-          _hitboxLayerReady = true;
-          _hitboxLayerEpoch = _styleEpoch;
-          return true;
-        }
-      }
-    } catch (_) {
-      // Ignore lookup failures; we'll fall back to manual picking.
-    }
-    _hitboxLayerReady = false;
-    _hitboxLayerEpoch = -1;
-    return false;
-  }
-
   Future<void> _handleMapTap(
     Object? point,
   ) async {
     await _markerInteractionController.handleMapClick(point);
-  }
-
-  // ignore: unused_element
-  Future<ArtMarker?> _fallbackPickMarkerAtPoint(
-    math.Point<double> point,
-  ) async {
-    final controller = _mapController;
-    if (controller == null) return null;
-
-    // Tight fallback radius to avoid oversized hitboxes.
-    final zoomScale = (_lastZoom / 15.0).clamp(0.7, 1.4);
-    final double base = _renderCoordinator.is3DModeActive
-        ? (kIsWeb ? 34.0 : 28.0)
-        : (kIsWeb ? 28.0 : 22.0);
-    final double maxDistance = base * zoomScale;
-    ArtMarker? best;
-    double bestDistance = maxDistance;
-
-    final visibleMarkers = _artMarkers.where(
-      (marker) => _markerLayerVisibility[marker.type] ?? true,
-    );
-
-    for (final marker in visibleMarkers) {
-      try {
-        final screen = await controller.toScreenLocation(
-          ml.LatLng(marker.position.latitude, marker.position.longitude),
-        );
-        final dx = screen.x.toDouble() - point.x;
-        final dy = screen.y.toDouble() - point.y;
-        final distance = math.sqrt(dx * dx + dy * dy);
-        if (distance <= bestDistance) {
-          bestDistance = distance;
-          best = marker;
-        }
-      } catch (_) {
-        // Ignore projection failures during style transitions.
-      }
-    }
-
-    return best;
   }
 
   Future<void> _syncUserLocation({required ThemeProvider themeProvider}) async {

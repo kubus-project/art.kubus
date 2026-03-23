@@ -3,7 +3,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Configuration provider that manages app-wide settings
 /// Loads settings from SharedPreferences and provides reactive updates
-/// NOTE: Mock data removed - backend controls via USE_MOCK_DATA env variable
 class ConfigProvider extends ChangeNotifier {
   // Default values (fallback if no preferences exist)
   bool _useRealBlockchain = true;
@@ -11,7 +10,6 @@ class ConfigProvider extends ChangeNotifier {
   bool _enableCrashReporting = true;
 
   // Getters
-  bool get useMockData => false; // Always false - backend controls mock data
   bool get useRealBlockchain => _useRealBlockchain;
   bool get enableAnalytics => _enableAnalytics;
   bool get enableCrashReporting => _enableCrashReporting;
@@ -26,7 +24,6 @@ class ConfigProvider extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       
-      // Mock data removed - backend controls via USE_MOCK_DATA
       _useRealBlockchain = prefs.getBool('useRealBlockchain') ?? true;
       _enableAnalytics = prefs.getBool('enableAnalytics') ?? true;
       _enableCrashReporting = prefs.getBool('enableCrashReporting') ?? true;
@@ -38,12 +35,6 @@ class ConfigProvider extends ChangeNotifier {
       }
       // Keep default values if loading fails
     }
-  }
-
-  /// Update mock data setting - NO-OP: Backend controls mock data now
-  Future<void> setUseMockData(bool value) async {
-    // NO-OP: Mock data always false, backend controls via USE_MOCK_DATA
-    debugPrint('ConfigProvider: setUseMockData ignored - backend controls mock data');
   }
 
   /// Update blockchain setting
@@ -93,7 +84,6 @@ class ConfigProvider extends ChangeNotifier {
       await prefs.remove('enableAnalytics');
       await prefs.remove('enableCrashReporting');
       
-      // Mock data always false (backend controlled)
       _useRealBlockchain = true;
       _enableAnalytics = true;
       _enableCrashReporting = true;

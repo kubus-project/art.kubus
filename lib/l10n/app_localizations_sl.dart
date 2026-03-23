@@ -1268,12 +1268,6 @@ class AppLocalizationsSl extends AppLocalizations {
   String get settingsDeveloperToolsSectionTitle => 'Razvijalska orodja';
 
   @override
-  String get settingsDeveloperResetOnboardingTitle => 'Ponastavi uvod';
-
-  @override
-  String get settingsDeveloperResetOnboardingSubtitle => 'Ponastavi stanje uvoda za testiranje';
-
-  @override
   String get settingsDeveloperClearQuickActionsTitle => 'Počisti hitre akcije';
 
   @override
@@ -6687,39 +6681,6 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get commonReset => 'Ponastavi';
-
-  @override
-  String get onboardingResetToolTitle => 'Orodje za ponastaviv uvajanja';
-
-  @override
-  String get onboardingResetDialogTitle => 'Ponastavi uvajanje';
-
-  @override
-  String get onboardingResetDialogBody => 'To bo ponastavilo vse zastavice uvajanja. Aplikacija bo ob naslednjem zagonu prikazala uvajalne zaslone.\n\nNadaljujem?';
-
-  @override
-  String get onboardingResetSnackBarMessage => 'Stanje uvajanja je ponastavljeno! Znova zaženi aplikacijo, da se prikaže uvajanje.';
-
-  @override
-  String get onboardingResetDeveloperToolTitle => 'Razvijalsko orodje';
-
-  @override
-  String get onboardingResetDeveloperToolDescription => 'To orodje prikazuje trenutno stanje uvajanja in omogoča ponastaviv za testiranje.';
-
-  @override
-  String get onboardingResetCurrentStateTitle => 'Trenutno stanje uvajanja';
-
-  @override
-  String get onboardingResetConfigSettingsTitle => 'Nastavitve konfiguracije';
-
-  @override
-  String get onboardingResetButtonLabel => 'Ponastavi stanje uvajanja';
-
-  @override
-  String get onboardingResetHowToTestTitle => 'Kako testirati';
-
-  @override
-  String get onboardingResetHowToTestSteps => '1. Tapni »Ponastavi stanje uvajanja«\n2. Znova zaženi aplikacijo (zapri in znova odpri)\n3. Uvajanje se mora prikazati ob zagonu';
 
   @override
   String get season0BannerTitle => 'Sezona 0, Ljubljana (beta)';

@@ -495,8 +495,8 @@ class BackendApiService
           walletAddress != null &&
           walletAddress.isNotEmpty) {
         // Prefer the real auth flow.
-        // NOTE: /api/profiles/issue-token is debug-only (API key/admin gated) and
-        // should not be used for client auto-auth in production.
+        // NOTE: /api/profiles/issue-token is API key/admin gated and should
+        // not be used for client auto-auth in production.
         try {
           await registerWallet(
             walletAddress: walletAddress,
@@ -3753,57 +3753,6 @@ class BackendApiService
       throw Exception('Failed to get stats series (${response.statusCode})');
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getStatsSeries failed: $e');
-      rethrow;
-    }
-  }
-
-  // ==================== Mock Data API (New) ====================
-
-  /// Get mock artworks (development/testing)
-  /// GET /api/mock/artworks
-  Future<List<Map<String, dynamic>>> getMockArtworks() async {
-    try {
-      final response = await _get(
-        Uri.parse('$baseUrl/api/mock/artworks'),
-        includeAuth: false,
-        headers: _getHeaders(includeAuth: false),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return List<Map<String, dynamic>>.from(data['data'] as List);
-      } else if (response.statusCode == 403) {
-        throw Exception('Mock data disabled on server');
-      } else {
-        throw Exception('Failed to get mock artworks: ${response.statusCode}');
-      }
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.getMockArtworks failed: $e');
-      rethrow;
-    }
-  }
-
-  /// Get mock community posts (development/testing)
-  /// GET /api/mock/community-posts
-  Future<List<Map<String, dynamic>>> getMockCommunityPosts() async {
-    try {
-      final response = await _get(
-        Uri.parse('$baseUrl/api/mock/community-posts'),
-        includeAuth: false,
-        headers: _getHeaders(includeAuth: false),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return List<Map<String, dynamic>>.from(data['data'] as List);
-      } else if (response.statusCode == 403) {
-        throw Exception('Mock data disabled on server');
-      } else {
-        throw Exception('Failed to get mock posts: ${response.statusCode}');
-      }
-    } catch (e) {
-      AppConfig.debugPrint(
-          'BackendApiService.getMockCommunityPosts failed: $e');
       rethrow;
     }
   }

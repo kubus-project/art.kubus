@@ -50,12 +50,10 @@ class MarkerVisualSyncCoordinator {
     try {
       if (_disposed) return;
       await _sync();
-    } catch (e) {
+    } catch (_) {
       // Intentionally swallow errors here; screens already log in their safe
       // sync wrappers.
       // Keep log noise low; the caller's safe wrapper should log details.
-      // ignore: unused_local_variable
-      final _ = e;
     } finally {
       _inFlight = false;
       final shouldRunQueued = !_disposed && _queued;

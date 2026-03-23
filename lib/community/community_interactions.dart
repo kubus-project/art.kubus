@@ -916,17 +916,7 @@ class CommunityService {
       {String? walletAddress}) {
     final key = _likesStorageKey(prefs, walletAddress: walletAddress);
     final liked = prefs.getStringList(key);
-    if (liked != null) {
-      return List<String>.from(liked);
-    }
-    // Fallback legacy key (pre-wallet-specific). Assume it belongs to current wallet and migrate.
-    final legacy = prefs.getStringList(_likesKey);
-    if (legacy != null && legacy.isNotEmpty) {
-      prefs.setStringList(key, legacy);
-      prefs.remove(_likesKey);
-      return List<String>.from(legacy);
-    }
-    return <String>[];
+    return liked == null ? <String>[] : List<String>.from(liked);
   }
 
   static Future<void> _saveLikedPostIds(

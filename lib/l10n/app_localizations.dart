@@ -2585,18 +2585,6 @@ abstract class AppLocalizations {
   /// **'Developer tools'**
   String get settingsDeveloperToolsSectionTitle;
 
-  /// No description provided for @settingsDeveloperResetOnboardingTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Reset onboarding'**
-  String get settingsDeveloperResetOnboardingTitle;
-
-  /// No description provided for @settingsDeveloperResetOnboardingSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Reset onboarding state for testing'**
-  String get settingsDeveloperResetOnboardingSubtitle;
-
   /// No description provided for @settingsDeveloperClearQuickActionsTitle.
   ///
   /// In en, this message translates to:
@@ -12658,72 +12646,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reset'**
   String get commonReset;
-
-  /// No description provided for @onboardingResetToolTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Onboarding Reset Tool'**
-  String get onboardingResetToolTitle;
-
-  /// No description provided for @onboardingResetDialogTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Reset onboarding'**
-  String get onboardingResetDialogTitle;
-
-  /// No description provided for @onboardingResetDialogBody.
-  ///
-  /// In en, this message translates to:
-  /// **'This will reset all onboarding flags. The app will show onboarding screens on next launch.\n\nContinue?'**
-  String get onboardingResetDialogBody;
-
-  /// No description provided for @onboardingResetSnackBarMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'Onboarding state reset! Restart the app to see onboarding.'**
-  String get onboardingResetSnackBarMessage;
-
-  /// No description provided for @onboardingResetDeveloperToolTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Developer tool'**
-  String get onboardingResetDeveloperToolTitle;
-
-  /// No description provided for @onboardingResetDeveloperToolDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'This tool shows the current onboarding state and allows you to reset it for testing.'**
-  String get onboardingResetDeveloperToolDescription;
-
-  /// No description provided for @onboardingResetCurrentStateTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Current onboarding state'**
-  String get onboardingResetCurrentStateTitle;
-
-  /// No description provided for @onboardingResetConfigSettingsTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Config settings'**
-  String get onboardingResetConfigSettingsTitle;
-
-  /// No description provided for @onboardingResetButtonLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Reset onboarding state'**
-  String get onboardingResetButtonLabel;
-
-  /// No description provided for @onboardingResetHowToTestTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'How to test'**
-  String get onboardingResetHowToTestTitle;
-
-  /// No description provided for @onboardingResetHowToTestSteps.
-  ///
-  /// In en, this message translates to:
-  /// **'1. Tap \"Reset onboarding state\"\n2. Restart the app (close and reopen)\n3. Onboarding should show on launch'**
-  String get onboardingResetHowToTestSteps;
 
   /// No description provided for @season0BannerTitle.
   ///

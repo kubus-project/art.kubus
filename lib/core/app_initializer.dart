@@ -13,7 +13,6 @@ import '../models/user_persona.dart';
 import '../config/config.dart';
 import '../providers/config_provider.dart';
 import '../providers/profile_provider.dart';
-import '../providers/artwork_provider.dart';
 import '../providers/saved_items_provider.dart';
 import '../providers/wallet_provider.dart';
 import '../providers/cache_provider.dart';
@@ -215,12 +214,7 @@ class _AppInitializerState extends State<AppInitializer> {
           timeout: const Duration(seconds: 6));
       if (!mounted) return;
 
-      // Initialize ArtworkProvider (no mock data needed)
-      final artworkProvider =
-          Provider.of<ArtworkProvider>(context, listen: false);
-      artworkProvider.setUseMockData(false); // Always use backend data
-
-      // ProfileProvider always uses backend data (no setUseMockData method)
+      // ProfileProvider always uses backend data.
 
       final prefs = await _safeStep<SharedPreferences>(
             'SharedPreferences.getInstance',

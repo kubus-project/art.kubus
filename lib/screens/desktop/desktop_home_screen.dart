@@ -16,7 +16,6 @@ import '../../providers/notification_provider.dart';
 import '../../providers/recent_activity_provider.dart';
 import '../../providers/community_hub_provider.dart';
 import '../../providers/navigation_provider.dart';
-import '../../providers/config_provider.dart';
 import '../../providers/stats_provider.dart';
 import '../../config/config.dart';
 import '../../models/artwork.dart';
@@ -347,7 +346,6 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     if (!mounted) return;
     final artworkProvider = context.read<ArtworkProvider>();
     final communityProvider = context.read<CommunityHubProvider>();
-    final configProvider = context.read<ConfigProvider>();
 
     if (artworkProvider.artworks.isEmpty &&
         !artworkProvider.isLoading('load_artworks')) {
@@ -365,12 +363,12 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
 
     if (communityProvider.artFeedPosts.isEmpty &&
         !communityProvider.artFeedLoading) {
-      final center = await _resolveArtFeedLocation(configProvider);
+      final center = await _resolveArtFeedLocation();
       if (!mounted) return;
       await communityProvider.loadArtFeed(
         latitude: center.lat ?? 46.05,
         longitude: center.lng ?? 14.50,
-        radiusKm: configProvider.useMockData ? 200 : 50,
+        radiusKm: 50,
         limit: 50,
         refresh: true,
       );
@@ -387,18 +385,6 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     // Guard before touching context to avoid "State no longer has a context"
     // crashes when the widget is disposed mid-flight (common on web routing).
     if (!mounted) return;
-
-    final communityProvider = context.read<CommunityHubProvider>();
-    final configProvider = context.read<ConfigProvider>();
-
-    if (configProvider.useMockData) {
-      if (!mounted) return;
-      setState(() {
-        _popularCommunityPosts = communityProvider.artFeedPosts;
-        _popularCommunityFetchFailed = false;
-      });
-      return;
-    }
 
     setState(() {
       _popularCommunityLoading = true;
@@ -465,12 +451,11 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     ));
   }
 
-  Future<CommunityLocation> _resolveArtFeedLocation(
-      ConfigProvider configProvider) async {
+  Future<CommunityLocation> _resolveArtFeedLocation() async {
     if (_isResolvingLocation) return CommunityLocation(lat: 46.05, lng: 14.50);
     _isResolvingLocation = true;
     try {
-      if (!AppConfig.enableLocationServices || configProvider.useMockData) {
+      if (!AppConfig.enableLocationServices) {
         return CommunityLocation(lat: 46.05, lng: 14.50);
       }
 
@@ -2771,13 +2756,6 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     ThemeProvider themeProvider,
     NotificationProvider np,
   ) async {
-    final l10n = AppLocalizations.of(context)!;
-    final configProvider = context.read<ConfigProvider>();
-    if (configProvider.useMockData) {
-      await _showMockNotificationsDialog(themeProvider);
-      return;
-    }
-
     final shellScope = DesktopShellScope.of(context);
     if (shellScope != null) {
       // Prefer the in-sidebar notifications panel on desktop.
@@ -2800,7 +2778,9 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     await showKubusDialog(
       context: context,
       barrierColor: Colors.black26,
-      builder: (dialogContext) => Align(
+      builder: (dialogContext) {
+        final l10n = AppLocalizations.of(dialogContext)!;
+        return Align(
         alignment: Alignment.topRight,
         child: Container(
           width: 400,
@@ -3036,192 +3016,12 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             ],
           ),
         ),
-      ),
+      );
+      },
     );
 
     if (!mounted) return;
     activityProvider.markAllReadLocally();
-  }
-
-  Future<void> _showMockNotificationsDialog(ThemeProvider themeProvider) async {
-    final l10n = AppLocalizations.of(context)!;
-    final mockNotifications = [
-      {
-        'title': l10n.homeMockNotificationNewArtworkTitle,
-        'description': l10n.homeMockNotificationNewArtworkBody,
-        'icon': Icons.location_on,
-        'time': l10n.commonTimeAgoMinutes(5),
-        'color': AppColorUtils.tealAccent, // Discovery
-      },
-      {
-        'title': l10n.homeMockNotificationRewardsTitle,
-        'description': l10n.homeMockNotificationRewardsBody,
-        'icon': Icons.account_balance_wallet,
-        'time': l10n.commonTimeAgoHours(1),
-        'color': AppColorUtils.greenAccent, // Reward
-      },
-      {
-        'title': l10n.homeMockNotificationFriendRequestTitle,
-        'description': l10n.homeMockNotificationFriendRequestBody,
-        'icon': Icons.person_add,
-        'time': l10n.commonTimeAgoHours(2),
-        'color': AppColorUtils.purpleAccent, // Follow
-      },
-      {
-        'title': l10n.homeMockNotificationFeaturedTitle,
-        'description': l10n.homeMockNotificationFeaturedBody,
-        'icon': Icons.star,
-        'time': l10n.commonTimeAgoHours(4),
-        'color': KubusColorRoles.of(context).achievementGold, // Achievement
-      },
-    ];
-
-    await showKubusDialog(
-      context: context,
-      barrierColor: Colors.black26,
-      builder: (dialogContext) => Align(
-        alignment: Alignment.topRight,
-        child: Container(
-          width: 380,
-          height: MediaQuery.of(dialogContext).size.height * 0.6,
-          margin: const EdgeInsets.only(top: 80, right: 32),
-          decoration: BoxDecoration(
-            color: Theme.of(dialogContext).colorScheme.surface,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.12),
-                blurRadius: 20,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                      color: Theme.of(dialogContext)
-                          .colorScheme
-                          .outline
-                          .withValues(alpha: 0.1),
-                    ),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Text(
-                      l10n.commonNotifications,
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(dialogContext).colorScheme.onSurface,
-                      ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      onPressed: () => Navigator.pop(dialogContext),
-                      icon: Icon(
-                        Icons.close,
-                        color: Theme.of(dialogContext).colorScheme.onSurface,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(20),
-                  itemCount: mockNotifications.length,
-                  itemBuilder: (context, index) => _buildMockNotificationItem(
-                    themeProvider,
-                    mockNotifications[index],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMockNotificationItem(
-    ThemeProvider themeProvider,
-    Map<String, dynamic> notification,
-  ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color:
-                  (notification['color'] as Color? ?? AppColorUtils.amberAccent)
-                      .withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              notification['icon'] as IconData,
-              color:
-                  notification['color'] as Color? ?? AppColorUtils.amberAccent,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  notification['title'] as String,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  notification['description'] as String,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.7),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  notification['time'] as String,
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.5),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   void _handleSearchFocusChange() {

@@ -4040,57 +4040,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
   }
 
-  // Build a thumbnail widget for artwork cover images with error fallback.
-  // ignore: unused_element
-  Widget _buildArtworkThumbnail(
-    String? imageUrl, {
-    required double width,
-    required double height,
-    required double borderRadius,
-    double iconSize = 24,
-  }) {
-    final scheme = Theme.of(context).colorScheme;
-    final fallback = Container(
-      color: scheme.surfaceContainerHighest,
-      child: Icon(
-        Icons.image,
-        size: iconSize,
-        color: scheme.onSurfaceVariant,
-      ),
-    );
-
-    final dpr = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
-    final cacheWidth = width.isFinite && width > 0
-        ? (width * dpr).clamp(64.0, 1024.0).round()
-        : null;
-    final cacheHeight = height.isFinite && height > 0
-        ? (height * dpr).clamp(64.0, 1024.0).round()
-        : null;
-    final resolvedImageUrl = MediaUrlResolver.resolveDisplayUrl(
-      imageUrl,
-      maxWidth: cacheWidth,
-    );
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(borderRadius),
-      child: SizedBox(
-        width: width,
-        height: height,
-        child: resolvedImageUrl != null
-            ? KubusCachedImage(
-                imageUrl: resolvedImageUrl,
-                fit: BoxFit.cover,
-                filterQuality: FilterQuality.low,
-                cacheWidth: cacheWidth,
-                cacheHeight: cacheHeight,
-                maxDisplayWidth: cacheWidth,
-                errorBuilder: (_, __, ___) => fallback,
-              )
-            : fallback,
-      ),
-    );
-  }
-
   Future<void> _openMarkerDetail(ArtMarker marker, Artwork? artwork) async {
     final resolvedArtwork =
         await _ensureLinkedArtworkLoaded(marker, initial: artwork);

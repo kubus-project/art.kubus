@@ -11,7 +11,6 @@ import '../providers/wallet_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/artwork_provider.dart';
 import '../providers/promotion_provider.dart';
-import '../providers/config_provider.dart';
 import '../providers/notification_provider.dart';
 import '../providers/recent_activity_provider.dart';
 import '../providers/profile_provider.dart';
@@ -1907,12 +1906,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   // Navigation and interaction methods
   Future<void> _showNotificationsBottomSheet(BuildContext context) async {
-    final config = context.read<ConfigProvider>();
-    if (config.useMockData) {
-      _showMockNotificationsBottomSheet(context);
-      return;
-    }
-
     final activityProvider = context.read<RecentActivityProvider>();
     final notificationProvider = context.read<NotificationProvider>();
 
@@ -1947,168 +1940,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
 
     activityProvider.markAllReadLocally();
-  }
-
-  void _showMockNotificationsBottomSheet(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.6,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.outline,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Row(
-                children: [
-                  Text(
-                    l10n.commonNotifications,
-                    style: GoogleFonts.inter(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(
-                      l10n.homeMarkAllReadButton,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: AppColorUtils.greenAccent,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                itemCount: 8,
-                itemBuilder: (context, index) => _buildNotificationItem(index),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNotificationItem(int index) {
-    final l10n = AppLocalizations.of(context)!;
-    final notifications = [
-      (
-        l10n.homeMockNotificationNewArtworkTitle,
-        l10n.homeMockNotificationNewArtworkBody,
-        Icons.location_on,
-        l10n.commonTimeAgoMinutes(5)
-      ),
-      (
-        l10n.homeMockNotificationRewardsTitle,
-        l10n.homeMockNotificationRewardsBody,
-        Icons.account_balance_wallet,
-        l10n.commonTimeAgoHours(1)
-      ),
-      (
-        l10n.homeMockNotificationFriendRequestTitle,
-        l10n.homeMockNotificationFriendRequestBody,
-        Icons.person_add,
-        l10n.commonTimeAgoHours(2)
-      ),
-      (
-        l10n.homeMockNotificationFeaturedTitle,
-        l10n.homeMockNotificationFeaturedBody,
-        Icons.star,
-        l10n.commonTimeAgoHours(4)
-      ),
-    ];
-
-    final notification = notifications[index % notifications.length];
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outline,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColorUtils.amberAccent.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              notification.$3,
-              color: AppColorUtils.amberAccent,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  notification.$1,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  notification.$2,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.7),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  notification.$4,
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.5),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   // Show wallet onboarding for first-time users

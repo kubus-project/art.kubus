@@ -324,18 +324,15 @@ class SocketService {
     // Emit the wallet room using canonical casing
     _socket!.emit('subscribe:user', _currentSubscribedWallet);
     _log('emitted subscribe:user for $_currentSubscribedWallet');
-    bool awaitingAck = true; // ignore: unused_local_variable
 
     // Register handlers only once
     void onSubscribeOk(dynamic payload) {
       _log('subscribe:ok for $walletAddress (room: user:$_currentSubscribedWallet)');
-      awaitingAck = false;
     }
 
     void onSubscribeError(dynamic payload) {
       _log('subscribe:error for $walletAddress: $payload');
       _currentSubscribedWallet = null;
-      awaitingAck = false;
     }
 
     _socket!.once('subscribe:ok', onSubscribeOk);

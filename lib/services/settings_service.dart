@@ -67,17 +67,11 @@ class SettingsService {
 
     await prefs.setString('accountType', state.accountType);
     await prefs.setBool('publicProfile', state.publicProfile);
-
-    // Legacy/compatibility keys (desktop used underscores previously)
-    await prefs.setBool('email_notifications', state.emailNotifications);
-    await prefs.setBool('push_notifications', state.pushNotifications);
-    await prefs.setBool('marketing_emails', state.marketingEmails);
   }
 
   static Future<void> saveProfileVisibility(String visibility) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('profileVisibility', visibility);
-    await prefs.setString('profile_visibility', visibility); // legacy key
   }
 
   /// Clear non-critical caches while preserving wallet credentials.
@@ -282,15 +276,12 @@ class SettingsState {
         _autoLockSecondsForLabel(storedAutoLockLabel);
 
     return SettingsState(
-      pushNotifications: prefs.getBool('pushNotifications') ??
-          prefs.getBool('push_notifications') ??
-          defaults.pushNotifications,
-      emailNotifications: prefs.getBool('emailNotifications') ??
-          prefs.getBool('email_notifications') ??
-          defaults.emailNotifications,
-      marketingEmails: prefs.getBool('marketingEmails') ??
-          prefs.getBool('marketing_emails') ??
-          defaults.marketingEmails,
+      pushNotifications:
+          prefs.getBool('pushNotifications') ?? defaults.pushNotifications,
+      emailNotifications:
+          prefs.getBool('emailNotifications') ?? defaults.emailNotifications,
+      marketingEmails:
+          prefs.getBool('marketingEmails') ?? defaults.marketingEmails,
       loginNotifications:
           prefs.getBool('loginNotifications') ?? defaults.loginNotifications,
       dataCollection:
@@ -324,9 +315,8 @@ class SettingsState {
           prefs.getString('selected_network') ??
           defaults.networkSelection,
       autoBackup: prefs.getBool('autoBackup') ?? defaults.autoBackup,
-      profileVisibility: prefs.getString('profileVisibility') ??
-          prefs.getString('profile_visibility') ??
-          defaults.profileVisibility,
+      profileVisibility:
+          prefs.getString('profileVisibility') ?? defaults.profileVisibility,
       showAchievements:
           prefs.getBool('showAchievements') ?? defaults.showAchievements,
       showFriends: prefs.getBool('showFriends') ?? defaults.showFriends,

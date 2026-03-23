@@ -17,10 +17,6 @@ class AppConfig {
   // FEATURE FLAGS
   // ===========================================
 
-  /// Use backend mock data endpoint (controlled by backend .env)
-  static const bool useBackendMockData =
-      false; // Backend serves mock data when USE_MOCK_DATA=true
-
   /// Use real blockchain connections by default
   static const bool useRealBlockchain = true;
 
@@ -183,9 +179,6 @@ class AppConfig {
     defaultValue: 'https://app.kubus.site',
   );
 
-  /// Mock data endpoint (when useBackendMockData is true)
-  static final String mockDataApiUrl = '$baseApiUrl/api/mock';
-
   /// IPFS configuration (future integration)
   static String get ipfsApiUrl => ApiKeys.ipfsApiUrl;
   static const bool enableIPFS = false; // Future feature
@@ -312,8 +305,6 @@ class AppConfig {
   /// Check if feature is enabled
   static bool isFeatureEnabled(String feature) {
     switch (feature) {
-      case 'backendMockData':
-        return useBackendMockData;
       case 'liking':
         return enableLiking;
       case 'commenting':

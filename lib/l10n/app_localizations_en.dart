@@ -1267,13 +1267,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get settingsDeveloperToolsSectionTitle => 'Developer tools';
 
-  @override
-  String get settingsDeveloperResetOnboardingTitle => 'Reset onboarding';
-
-  @override
-  String get settingsDeveloperResetOnboardingSubtitle => 'Reset onboarding state for testing';
-
-  @override
   String get settingsDeveloperClearQuickActionsTitle => 'Clear quick actions';
 
   @override
@@ -6666,40 +6659,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get commonReset => 'Reset';
 
-  @override
-  String get onboardingResetToolTitle => 'Onboarding Reset Tool';
-
-  @override
-  String get onboardingResetDialogTitle => 'Reset onboarding';
-
-  @override
-  String get onboardingResetDialogBody => 'This will reset all onboarding flags. The app will show onboarding screens on next launch.\n\nContinue?';
-
-  @override
-  String get onboardingResetSnackBarMessage => 'Onboarding state reset! Restart the app to see onboarding.';
-
-  @override
-  String get onboardingResetDeveloperToolTitle => 'Developer tool';
-
-  @override
-  String get onboardingResetDeveloperToolDescription => 'This tool shows the current onboarding state and allows you to reset it for testing.';
-
-  @override
-  String get onboardingResetCurrentStateTitle => 'Current onboarding state';
-
-  @override
-  String get onboardingResetConfigSettingsTitle => 'Config settings';
-
-  @override
-  String get onboardingResetButtonLabel => 'Reset onboarding state';
-
-  @override
-  String get onboardingResetHowToTestTitle => 'How to test';
-
-  @override
-  String get onboardingResetHowToTestSteps => '1. Tap \"Reset onboarding state\"\n2. Restart the app (close and reopen)\n3. Onboarding should show on launch';
-
-  @override
   String get season0BannerTitle => 'Season 0, Ljubljana (beta)';
 
   @override

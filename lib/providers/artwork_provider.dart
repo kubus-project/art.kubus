@@ -21,7 +21,6 @@ class ArtworkProvider extends ChangeNotifier {
   final Set<String> _walletsWithPrivateArtworks = <String>{};
   String? _error;
   SavedItemsProvider? _savedItemsProvider;
-  bool _useMockData = false;
   final ArtworkBackendApi _backendApi;
   final Map<String, Future<Artwork>> _inFlightArtworkFetches = <String, Future<Artwork>>{};
   static const String _viewHistoryPrefsKey = 'artwork_view_history_v1';
@@ -39,21 +38,6 @@ class ArtworkProvider extends ChangeNotifier {
   /// Set SavedItemsProvider reference
   void setSavedItemsProvider(SavedItemsProvider provider) {
     _savedItemsProvider = provider;
-  }
-
-  /// Set mock data usage
-  void setUseMockData(bool useMockData) {
-    if (_useMockData != useMockData) {
-      _useMockData = useMockData;
-      if (useMockData) {
-        loadArtworks();
-      } else {
-        _artworks.clear();
-        _artworkById.clear();
-        _comments.clear();
-        notifyListeners();
-      }
-    }
   }
 
   /// Get artwork by ID

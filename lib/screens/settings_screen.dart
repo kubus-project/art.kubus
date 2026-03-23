@@ -29,7 +29,6 @@ import '../widgets/email_verification_status_badge.dart';
 import 'onboarding/onboarding_flow_screen.dart';
 import 'web3/wallet/wallet_home.dart' as web3_wallet;
 import 'web3/wallet/connectwallet_screen.dart';
-import 'onboarding_reset_screen.dart';
 import 'community/profile_edit_screen.dart';
 import '../widgets/avatar_widget.dart';
 import '../widgets/empty_state_card.dart';
@@ -985,19 +984,6 @@ class _SettingsScreenState extends State<SettingsScreen>
                     ),
                     onTap: () => MapPerformanceDebug.toggle(),
                     tileKey: const Key('settings_map_perf_debug_toggle'),
-                  ),
-                  _buildSettingsTile(
-                    l10n.settingsDeveloperResetOnboardingTitle,
-                    l10n.settingsDeveloperResetOnboardingSubtitle,
-                    Icons.refresh,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const OnboardingResetScreen(),
-                        ),
-                      );
-                    },
                   ),
                   _buildSettingsTile(
                     l10n.settingsDeveloperClearQuickActionsTitle,
@@ -2632,7 +2618,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               final exportData = {
                 'profile': {
                   'profileVisibility':
-                      prefs.getString('profile_visibility') ?? 'Public',
+                      prefs.getString('profileVisibility') ?? 'Public',
                   'showAchievements': prefs.getBool('showAchievements') ?? true,
                   'showFriends': prefs.getBool('showFriends') ?? true,
                 },

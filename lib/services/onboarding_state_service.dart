@@ -33,14 +33,8 @@ class OnboardingFlowProgress {
 ///
 /// This centralizes:
 /// - Canonical keys (`PreferenceKeys.*`)
-/// - One-time migration from legacy keys used in older builds
 /// - Helper methods for marking onboarding completed / reset
 class OnboardingStateService {
-  static const String _legacyFirstTime = 'first_time';
-  static const String _legacyCompletedOnboarding = 'completed_onboarding';
-  static const String _legacyHasCompletedOnboarding = 'has_completed_onboarding';
-  static const String _legacyHasSeenOnboarding = 'has_seen_onboarding';
-  static const String _legacyHasSeenPermissions = 'has_seen_permissions';
   static const String _onboardingVersionKey = 'onboarding_version';
   static const String _onboardingCompletedStepsKey = 'onboarding_completed_steps_v2';
   static const String _onboardingDeferredStepsKey = 'onboarding_deferred_steps_v2';
@@ -77,7 +71,6 @@ class OnboardingStateService {
     await prefs.remove(
       _scopedKey(PreferenceKeys.pendingAuthOnboarding, normalizedScope),
     );
-    // Clear the unscoped legacy flag too so scoped reads don't get overridden.
     await prefs.remove(PreferenceKeys.pendingAuthOnboarding);
   }
 
@@ -98,7 +91,6 @@ class OnboardingStateService {
 
   static Future<OnboardingState> load({SharedPreferences? prefs}) async {
     final p = prefs ?? await SharedPreferences.getInstance();
-    await _migrateLegacyKeys(p);
 
     final isFirstLaunch = p.getBool(PreferenceKeys.isFirstLaunch) ?? true;
     final hasSeenWelcome = p.getBool(PreferenceKeys.hasSeenWelcome) ?? false;
@@ -112,9 +104,6 @@ class OnboardingStateService {
   }
 
   /// Mark onboarding completed and move the app into a stable "returning" state.
-  ///
-  /// Also writes legacy keys for backward compatibility with any remaining
-  /// surfaces that might still read them.
   static Future<void> markCompleted({
     SharedPreferences? prefs,
     String? authOnboardingScopeKey,
@@ -127,12 +116,6 @@ class OnboardingStateService {
       p,
       scopeKey: authOnboardingScopeKey,
     );
-
-    // Legacy keys (compat)
-    await p.setBool(_legacyCompletedOnboarding, true);
-    await p.setBool(_legacyHasCompletedOnboarding, true);
-    await p.setBool(_legacyHasSeenOnboarding, true);
-    await p.setBool(_legacyFirstTime, false);
   }
 
   /// Mark that the welcome has been seen (without necessarily completing the full onboarding flow).
@@ -140,9 +123,6 @@ class OnboardingStateService {
     final p = prefs ?? await SharedPreferences.getInstance();
     await p.setBool(PreferenceKeys.hasSeenWelcome, true);
     await p.setBool(PreferenceKeys.isFirstLaunch, false);
-
-    // Legacy
-    await p.setBool(_legacyFirstTime, false);
   }
 
   /// Reset onboarding-related flags so the app starts from a clean first-launch state.
@@ -155,60 +135,6 @@ class OnboardingStateService {
     await p.setBool(PreferenceKeys.hasSeenWelcome, false);
     await p.setBool(PreferenceKeys.isFirstLaunch, true);
     await _clearPendingAuthOnboardingKeys(p);
-
-    // Legacy
-    await p.setBool(_legacyFirstTime, true);
-    await p.remove(_legacyCompletedOnboarding);
-    await p.remove(_legacyHasCompletedOnboarding);
-    await p.remove(_legacyHasSeenOnboarding);
-    await p.remove(_legacyHasSeenPermissions);
-  }
-
-  static Future<void> _migrateLegacyKeys(SharedPreferences prefs) async {
-    // completed_onboarding -> PreferenceKeys.hasCompletedOnboarding
-    if (!prefs.containsKey(PreferenceKeys.hasCompletedOnboarding)) {
-      final legacyCompleted = (prefs.getBool(_legacyCompletedOnboarding) ?? false) ||
-          (prefs.getBool(_legacyHasCompletedOnboarding) ?? false);
-      if (legacyCompleted) {
-        await prefs.setBool(PreferenceKeys.hasCompletedOnboarding, true);
-      }
-    }
-
-    // first_time / has_seen_onboarding -> hasSeenWelcome
-    if (!prefs.containsKey(PreferenceKeys.hasSeenWelcome)) {
-      final legacyFirstTime = prefs.getBool(_legacyFirstTime);
-      final inferredSeenWelcome = (legacyFirstTime == false) ||
-          (prefs.getBool(_legacyHasSeenOnboarding) ?? false) ||
-          (prefs.getBool(_legacyCompletedOnboarding) ?? false);
-      if (inferredSeenWelcome) {
-        await prefs.setBool(PreferenceKeys.hasSeenWelcome, true);
-      }
-    }
-
-    // If first_time indicates returning user, also migrate isFirstLaunch.
-    if (!prefs.containsKey(PreferenceKeys.isFirstLaunch)) {
-      final legacyFirstTime = prefs.getBool(_legacyFirstTime);
-      if (legacyFirstTime == false) {
-        await prefs.setBool(PreferenceKeys.isFirstLaunch, false);
-      }
-    }
-
-    // Keep legacy in sync if canonical says completed.
-    final canonicalCompleted = prefs.getBool(PreferenceKeys.hasCompletedOnboarding) ?? false;
-    if (canonicalCompleted) {
-      if (prefs.getBool(_legacyCompletedOnboarding) != true) {
-        await prefs.setBool(_legacyCompletedOnboarding, true);
-      }
-      if (prefs.getBool(_legacyHasCompletedOnboarding) != true) {
-        await prefs.setBool(_legacyHasCompletedOnboarding, true);
-      }
-      if (prefs.getBool(_legacyHasSeenOnboarding) != true) {
-        await prefs.setBool(_legacyHasSeenOnboarding, true);
-      }
-      if (prefs.getBool(_legacyFirstTime) != false) {
-        await prefs.setBool(_legacyFirstTime, false);
-      }
-    }
   }
 
   static Future<OnboardingFlowProgress> loadFlowProgress({
@@ -276,16 +202,7 @@ class OnboardingStateService {
     if (normalizedScope.isNotEmpty) {
       final scopedKey =
           _scopedKey(PreferenceKeys.pendingAuthOnboarding, normalizedScope);
-      if (prefs.getBool(scopedKey) ?? false) return true;
-      final hasScopedEntries = prefs
-          .getKeys()
-          .any((key) => key.startsWith('${PreferenceKeys.pendingAuthOnboarding}:'));
-      if (!hasScopedEntries) {
-        // Legacy migration path: if scoped keys were never written, honor the
-        // old global key once for backward compatibility.
-        return prefs.getBool(PreferenceKeys.pendingAuthOnboarding) ?? false;
-      }
-      return false;
+      return prefs.getBool(scopedKey) ?? false;
     }
 
     final baseKey = PreferenceKeys.pendingAuthOnboarding;
