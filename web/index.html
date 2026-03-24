@@ -312,6 +312,68 @@
       }
     })();
   </script>
+  <script>
+    (function () {
+      try {
+        var legacyHeads = {
+          post: 'p',
+          posts: 'p',
+          artwork: 'a',
+          artworks: 'a',
+          marker: 'm',
+          markers: 'm',
+          'art-marker': 'm',
+          'art-markers': 'm',
+          profile: 'u',
+          profiles: 'u',
+          user: 'u',
+          users: 'u',
+          event: 'e',
+          events: 'e',
+          exhibition: 'x',
+          exhibitions: 'x',
+          collection: 'c',
+          collections: 'c',
+          nft: 'n',
+          nfts: 'n'
+        };
+
+        var canonicalPath = null;
+        var pathname = location.pathname || '/';
+        var segments = pathname.split('/').filter(function (segment) {
+          return segment && segment.trim().length > 0;
+        });
+
+        if (segments.length >= 2) {
+          for (var i = 0; i < segments.length - 1; i += 1) {
+            var head = String(segments[i] || '').trim().toLowerCase();
+            var shortHead = legacyHeads[head];
+            if (!shortHead) continue;
+            canonicalPath = '/' + shortHead + '/' + encodeURIComponent(decodeURIComponent(segments[i + 1]));
+            break;
+          }
+        }
+
+        if (!canonicalPath) {
+          var params = new URLSearchParams(location.search || '');
+          var markerId = (params.get('marker') || '').trim();
+          if ((pathname === '/map' || pathname === '/map/') && markerId) {
+            canonicalPath = '/m/' + encodeURIComponent(markerId);
+          } else {
+            var typedId = (params.get('id') || '').trim();
+            var typedHead = legacyHeads[String(params.get('type') || '').trim().toLowerCase()];
+            if (typedHead && typedId) {
+              canonicalPath = '/' + typedHead + '/' + encodeURIComponent(typedId);
+            }
+          }
+        }
+
+        if (!canonicalPath) return;
+        if (canonicalPath === pathname) return;
+        location.replace(canonicalPath);
+      } catch (_) {}
+    })();
+  </script>
   <!-- This script adds the flutter initialization JS code -->
   <script src="flutter_bootstrap.js" async></script>
   

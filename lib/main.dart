@@ -263,9 +263,9 @@ void main() {
           _webSemanticsHandle ??= WidgetsBinding.instance.ensureSemantics();
         }
 
-        // Canonical share URLs (e.g. https://app.kubus.site/marker/<id>) rely on
+        // Canonical share URLs (e.g. https://app.kubus.site/m/<id>) rely on
         // path-based routing on Flutter web. Without this, Flutter defaults to a
-        // hash-based strategy and a direct visit to /marker/<id> is treated as
+        // hash-based strategy and a direct visit to /m/<id> is treated as
         // route '/' (Home).
         configureUrlStrategy();
 

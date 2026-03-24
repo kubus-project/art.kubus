@@ -8,6 +8,7 @@ void main() {
 
     expect(builder.build(ShareTarget.post(postId: 'post_1')).toString(), 'https://app.kubus.site/p/post_1');
     expect(builder.build(ShareTarget.artwork(artworkId: 'art_1')).toString(), 'https://app.kubus.site/a/art_1');
+    expect(builder.build(ShareTarget.marker(markerId: 'marker_1')).toString(), 'https://app.kubus.site/m/marker_1');
     expect(builder.build(ShareTarget.profile(walletAddress: 'wallet_1')).toString(), 'https://app.kubus.site/u/wallet_1');
     expect(builder.build(ShareTarget.event(eventId: 'event_1')).toString(), 'https://app.kubus.site/e/event_1');
     expect(builder.build(ShareTarget.exhibition(exhibitionId: 'exh_1')).toString(), 'https://app.kubus.site/x/exh_1');
@@ -27,4 +28,3 @@ void main() {
     );
   });
 }
-

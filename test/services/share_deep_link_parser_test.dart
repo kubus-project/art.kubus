@@ -22,34 +22,10 @@ void main() {
     expect(parser.parse(Uri.parse('https://app.kubus.site/m/m_full'))?.id, 'm_full');
   });
 
-  test('ShareDeepLinkParser accepts legacy aliases', () {
-    expect(parser.parse(Uri.parse('/events/e2'))?.type, ShareEntityType.event);
-    expect(parser.parse(Uri.parse('/exhibitions/x2'))?.type, ShareEntityType.exhibition);
-    expect(parser.parse(Uri.parse('/user/wallet_2'))?.type, ShareEntityType.profile);
-    expect(parser.parse(Uri.parse('/u/wallet_3'))?.type, ShareEntityType.profile);
-    expect(parser.parse(Uri.parse('/art-markers/m2'))?.type, ShareEntityType.marker);
-    expect(parser.parse(Uri.parse('/markers/m3'))?.type, ShareEntityType.marker);
-    expect(parser.parse(Uri.parse('/m/m4'))?.type, ShareEntityType.marker);
-    expect(parser.parse(Uri.parse('/artworks/a1'))?.type, ShareEntityType.artwork);
-    expect(parser.parse(Uri.parse('/a/a2'))?.type, ShareEntityType.artwork);
-    expect(parser.parse(Uri.parse('/posts/p1'))?.type, ShareEntityType.post);
-    expect(parser.parse(Uri.parse('/p/p2'))?.type, ShareEntityType.post);
-    expect(parser.parse(Uri.parse('/nfts/n2'))?.type, ShareEntityType.nft);
-  });
-
   test('ShareDeepLinkParser tolerates path prefixes', () {
-    expect(parser.parse(Uri.parse('/en/marker/m1'))?.type, ShareEntityType.marker);
+    expect(parser.parse(Uri.parse('/en/m/m1'))?.type, ShareEntityType.marker);
     expect(parser.parse(Uri.parse('/sl/m/m2'))?.id, 'm2');
-    expect(parser.parse(Uri.parse('/share/artworks/a3'))?.type, ShareEntityType.artwork);
-  });
-
-  test('ShareDeepLinkParser accepts legacy map marker query links', () {
-    expect(parser.parse(Uri.parse('/map?marker=m5'))?.type, ShareEntityType.marker);
-    expect(parser.parse(Uri.parse('/map?marker=m5'))?.id, 'm5');
-    expect(
-      parser.parse(Uri.parse('https://app.kubus.site/map?marker=m6'))?.id,
-      'm6',
-    );
+    expect(parser.parse(Uri.parse('/share/a/a3'))?.type, ShareEntityType.artwork);
   });
 
   test('ShareDeepLinkParser returns null for unsupported paths', () {

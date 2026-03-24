@@ -10,7 +10,21 @@
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteRule ^ - [R=404,L]
 
-  # Flutter web SPA deep links (e.g. /marker/<id>): serve index.html for any
+  # Canonicalize legacy share URLs before Flutter boots.
+  RewriteCond %{REQUEST_URI} ^/map/?$ [NC]
+  RewriteCond %{QUERY_STRING} (^|&)marker=([^&]+) [NC]
+  RewriteRule ^map/?$ /m/%2 [R=301,L,NE,QSD]
+
+  RewriteRule ^(?:marker|markers|art-marker|art-markers)/(.+)$ /m/$1 [R=301,L,NE]
+  RewriteRule ^(?:artwork|artworks)/(.+)$ /a/$1 [R=301,L,NE]
+  RewriteRule ^(?:profile|profiles|user|users)/(.+)$ /u/$1 [R=301,L,NE]
+  RewriteRule ^(?:post|posts)/(.+)$ /p/$1 [R=301,L,NE]
+  RewriteRule ^(?:event|events)/(.+)$ /e/$1 [R=301,L,NE]
+  RewriteRule ^(?:exhibition|exhibitions)/(.+)$ /x/$1 [R=301,L,NE]
+  RewriteRule ^(?:collection|collections)/(.+)$ /c/$1 [R=301,L,NE]
+  RewriteRule ^(?:nft|nfts)/(.+)$ /n/$1 [R=301,L,NE]
+
+  # Flutter web SPA deep links (e.g. /m/<id>): serve index.html for any
   # route that isn't a real file or directory.
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d

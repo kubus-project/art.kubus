@@ -80,12 +80,6 @@ class ShareDeepLinkCodec {
         .toList(growable: false);
 
     if (segments.isNotEmpty && segments.first.toLowerCase() == 'map') {
-      final markerId =
-          Uri.decodeComponent((uri.queryParameters['marker'] ?? '').trim());
-      if (markerId.isNotEmpty) {
-        return AppRouteIntent.marker(markerId);
-      }
-
       final lat = _tryParseDouble(uri.queryParameters['lat']);
       final lng = _tryParseDouble(uri.queryParameters['lng']);
       final zoom = _tryParseDouble(
@@ -196,40 +190,20 @@ class ShareDeepLinkCodec {
   AppRouteIntentType? _intentTypeForHead(String headRaw) {
     final head = headRaw.trim().toLowerCase();
     switch (head) {
-      case 'post':
-      case 'posts':
       case 'p':
         return AppRouteIntentType.post;
-      case 'artwork':
-      case 'artworks':
       case 'a':
         return AppRouteIntentType.artwork;
-      case 'marker':
-      case 'markers':
       case 'm':
-      case 'art-marker':
-      case 'art-markers':
         return AppRouteIntentType.marker;
-      case 'collection':
-      case 'collections':
       case 'c':
         return AppRouteIntentType.collection;
-      case 'event':
-      case 'events':
       case 'e':
         return AppRouteIntentType.event;
-      case 'exhibition':
-      case 'exhibitions':
       case 'x':
         return AppRouteIntentType.exhibition;
-      case 'profile':
-      case 'profiles':
-      case 'user':
-      case 'users':
       case 'u':
         return AppRouteIntentType.profile;
-      case 'nft':
-      case 'nfts':
       case 'n':
         return AppRouteIntentType.nft;
       default:
