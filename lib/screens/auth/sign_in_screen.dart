@@ -676,32 +676,17 @@ class _SignInScreenState extends State<SignInScreen> {
     // For email account merge: pass email but NOT username to avoid overwriting
     // existing account data. Backend preserves existing username/avatar/name
     // for existing users and only uses walletAddress when creating a new user.
-    Map<String, dynamic> result;
+    late final Map<String, dynamic> result;
     try {
-      result = await api.loginWithGoogle(
-        idToken: googleResult.idToken,
-        code: googleResult.serverAuthCode,
-        email: googleResult.email,
-        username: null,
+      result = await loginWithGoogleWalletRecovery(
+        api: api,
+        googleResult: googleResult,
         walletAddress: _signerBackedWalletForGoogleAuth(),
+        createSignerBackedWallet: _createSignerBackedWallet,
       );
     } catch (e) {
-      if (isWalletRequiredForNewGoogleAccount(e)) {
-        final provisionedWallet = await _createSignerBackedWallet();
-        if ((provisionedWallet ?? '').trim().isEmpty) {
-          throw Exception('Signer-backed wallet provisioning failed');
-        }
-        result = await api.loginWithGoogle(
-          idToken: googleResult.idToken,
-          code: googleResult.serverAuthCode,
-          email: googleResult.email,
-          username: null,
-          walletAddress: provisionedWallet,
-        );
-      } else {
-        _setGoogleAuthDiagnostics('backend_error', code: _googleErrorCode(e));
-        rethrow;
-      }
+      _setGoogleAuthDiagnostics('backend_error', code: _googleErrorCode(e));
+      rethrow;
     }
 
     // Clear any stored cooldown on success.

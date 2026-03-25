@@ -735,33 +735,12 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         return;
       }
       final api = BackendApiService();
-      Map<String, dynamic> result;
-      try {
-        // For account merge: only pass email, let backend decide on
-        // username/profile preservation.
-        result = await api.loginWithGoogle(
-          idToken: googleResult.idToken,
-          code: googleResult.serverAuthCode,
-          email: googleResult.email,
-          username: null,
-          walletAddress: _signerBackedWalletForGoogleAuth(),
-        );
-      } catch (e) {
-        if (!isWalletRequiredForNewGoogleAccount(e)) {
-          rethrow;
-        }
-        final provisionedWallet = await _createSignerBackedWallet();
-        if ((provisionedWallet ?? '').trim().isEmpty) {
-          throw Exception('Signer-backed wallet provisioning failed');
-        }
-        result = await api.loginWithGoogle(
-          idToken: googleResult.idToken,
-          code: googleResult.serverAuthCode,
-          email: googleResult.email,
-          username: null,
-          walletAddress: provisionedWallet,
-        );
-      }
+      final result = await loginWithGoogleWalletRecovery(
+        api: api,
+        googleResult: googleResult,
+        walletAddress: _signerBackedWalletForGoogleAuth(),
+        createSignerBackedWallet: _createSignerBackedWallet,
+      );
       await _handleAuthSuccess(result);
       unawaited(TelemetryService().trackSignUpSuccess(method: 'google'));
     } catch (e) {
@@ -958,12 +937,11 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
                 }
                 try {
                   final api = BackendApiService();
-                  final result = await api.loginWithGoogle(
-                    idToken: googleResult.idToken,
-                    code: googleResult.serverAuthCode,
-                    email: googleResult.email,
-                    username: null,
+                  final result = await loginWithGoogleWalletRecovery(
+                    api: api,
+                    googleResult: googleResult,
                     walletAddress: _signerBackedWalletForGoogleAuth(),
+                    createSignerBackedWallet: _createSignerBackedWallet,
                   );
                   if (!mounted) return;
                   await _handleAuthSuccess(result);
