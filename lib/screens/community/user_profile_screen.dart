@@ -72,6 +72,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
   bool _artistDataLoading = false;
   bool _artistDataLoaded = false;
   bool _artistDataRequested = false;
+  int _publicStreetArtAddedCount = 0;
   List<Map<String, dynamic>> _artistArtworks = [];
   List<Map<String, dynamic>> _artistCollections = [];
   List<Map<String, dynamic>> _artistEvents = [];
@@ -182,7 +183,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       final snapshot = await statsProvider.ensureSnapshot(
         entityType: 'user',
         entityId: profile.id,
-        metrics: const ['posts', 'followers', 'following'],
+        metrics: const ['posts', 'followers', 'following', 'publicStreetArtAdded'],
         scope: 'public',
         forceRefresh: forceRefresh,
       );
@@ -192,6 +193,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
         final fetchedPosts = counters['posts'] ?? 0;
         final fetchedFollowers = counters['followers'] ?? 0;
         final fetchedFollowing = counters['following'] ?? 0;
+        final fetchedStreetArtAdded = counters['publicStreetArtAdded'] ?? 0;
 
         var resolvedFollowers = fetchedFollowers;
         var resolvedFollowing = fetchedFollowing;
@@ -207,6 +209,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
           followersCount: resolvedFollowers,
           followingCount: resolvedFollowing,
         );
+        _publicStreetArtAddedCount = fetchedStreetArtAdded;
       });
     } catch (e) {
       if (kDebugMode) {
@@ -498,6 +501,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                   ),
                   const SizedBox(height: DetailSpacing.md),
                   _buildStatsRow(l10n),
+                  const SizedBox(height: DetailSpacing.md),
+                  _buildAddedPublicArtSection(l10n),
                   const SizedBox(height: DetailSpacing.lg),
                   _buildActionButtons(themeProvider, l10n),
                   const SizedBox(height: DetailSpacing.lg),
@@ -977,6 +982,76 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     );
   }
 
+  Widget _buildAddedPublicArtSection(AppLocalizations l10n) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 0),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: Provider.of<ThemeProvider>(context, listen: false)
+                  .accentColor
+                  .withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.streetview,
+              color: Provider.of<ThemeProvider>(context, listen: false)
+                  .accentColor,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.profilePerformancePublicStreetArtAddedTitle,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  l10n.userProfileArtistHighlightsSubtitle(user!.name),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            _formatCount(_publicStreetArtAddedCount),
+            style: GoogleFonts.inter(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildAchievements(ThemeProvider themeProvider, AppLocalizations l10n) {
     final progress = user?.achievementProgress ?? [];
     final achievementsToShow = achievement_svc
@@ -1098,6 +1173,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       case achievement_svc.AchievementType.galleryVisitor:
       case achievement_svc.AchievementType.workshopParticipant:
         return l10n.userProfileAchievementCategoryEvents;
+      case achievement_svc.AchievementType.streetArtSpotter:
+      case achievement_svc.AchievementType.streetArtScout:
+      case achievement_svc.AchievementType.streetArtCurator:
+      case achievement_svc.AchievementType.streetArtPatron:
+        return l10n.userProfileAchievementCategoryStreetArt;
     }
   }
 
@@ -1139,6 +1219,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       case achievement_svc.AchievementType.galleryVisitor:
       case achievement_svc.AchievementType.workshopParticipant:
         return Icons.event_available;
+      case achievement_svc.AchievementType.streetArtSpotter:
+      case achievement_svc.AchievementType.streetArtScout:
+      case achievement_svc.AchievementType.streetArtCurator:
+      case achievement_svc.AchievementType.streetArtPatron:
+        return Icons.streetview;
     }
   }
 

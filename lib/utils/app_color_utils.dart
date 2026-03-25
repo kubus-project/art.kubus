@@ -262,6 +262,9 @@ class AppColorUtils {
   /// Dedicated color for Event markers (fallback)
   static const Color eventColor = KubusColors.accentOrangeDark;
 
+  /// Dedicated color for Street Art markers (fallback)
+  static const Color streetArtColor = KubusColors.warningDark;
+
   /// Dedicated color for Institution markers (fallback)
   static const Color institutionColor = KubusColors.successDark;
 
@@ -284,6 +287,7 @@ class AppColorUtils {
 
     final exhibitionAccent = resolvedRoles?.achievementGold ?? exhibitionColor;
     final eventAccent = resolvedRoles?.statCoral ?? eventColor;
+    final streetArtAccent = resolvedRoles?.statAmber ?? streetArtColor;
     final institutionAccent = resolvedRoles?.statGreen ?? institutionColor;
     final artworkAccent = resolvedRoles?.statTeal ?? KubusColors.accentTealDark;
     final residencyAccent = resolvedRoles?.statAmber ?? KubusColors.warningDark;
@@ -305,6 +309,14 @@ class AppColorUtils {
       if (subjectType.contains('event')) {
         return eventAccent;
       }
+      if (subjectType.contains('streetart') ||
+          subjectType.contains('street_art') ||
+          subjectType.contains('street-art') ||
+          subjectType.contains('publicart') ||
+          subjectType.contains('public_art') ||
+          subjectType.contains('public-art')) {
+        return streetArtAccent;
+      }
       if (subjectType.contains('group') ||
           subjectType.contains('dao') ||
           subjectType.contains('collective')) {
@@ -317,6 +329,11 @@ class AppColorUtils {
     switch (normalizedType) {
       case 'artwork':
         return artworkAccent;
+      case 'streetart':
+      case 'street_art':
+      case 'publicart':
+      case 'public_art':
+        return streetArtAccent;
       case 'institution':
         return institutionAccent;
       case 'event':
@@ -359,6 +376,11 @@ class AppColorUtils {
     switch (markerType.toLowerCase()) {
       case 'artwork':
         return Icons.auto_awesome;
+      case 'streetart':
+      case 'street_art':
+      case 'publicart':
+      case 'public_art':
+        return Icons.streetview;
       case 'institution':
         return Icons.museum_outlined;
       case 'event':

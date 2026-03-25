@@ -284,6 +284,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   // Marker type layer visibility - same as mobile for parity
   final Map<ArtMarkerType, bool> _markerLayerVisibility = {
     ArtMarkerType.artwork: true,
+    ArtMarkerType.streetArt: true,
     ArtMarkerType.institution: true,
     ArtMarkerType.event: true,
     ArtMarkerType.residency: true,

@@ -7,6 +7,7 @@ import '../utils/media_url_resolver.dart';
 /// High-level category for an art marker shown on the map
 enum ArtMarkerType {
   artwork,
+  streetArt,
   institution,
   event,
   residency,
@@ -365,6 +366,16 @@ class ArtMarker {
         normalized.contains('museum') ||
         normalized.contains('gallery')) {
       return ArtMarkerType.institution;
+    }
+    if (normalized.contains('streetart') ||
+        normalized.contains('street_art') ||
+        normalized.contains('street-art') ||
+        normalized.contains('street art') ||
+        normalized.contains('publicart') ||
+        normalized.contains('public_art') ||
+        normalized.contains('public-art') ||
+        normalized.contains('public art')) {
+      return ArtMarkerType.streetArt;
     }
     if (normalized.contains('event')) {
       return ArtMarkerType.event;

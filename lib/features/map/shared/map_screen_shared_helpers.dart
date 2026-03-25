@@ -179,6 +179,8 @@ class KubusMapMarkerHelpers {
     switch (type) {
       case ArtMarkerType.artwork:
         return Icons.auto_awesome;
+      case ArtMarkerType.streetArt:
+        return Icons.streetview;
       case ArtMarkerType.institution:
         return Icons.museum_outlined;
       case ArtMarkerType.event:
@@ -198,6 +200,8 @@ class KubusMapMarkerHelpers {
     switch (type) {
       case ArtMarkerType.artwork:
         return l10n.mapMarkerTypeArtworks;
+      case ArtMarkerType.streetArt:
+        return l10n.mapMarkerTypeStreetArt;
       case ArtMarkerType.institution:
         return l10n.mapMarkerTypeInstitutions;
       case ArtMarkerType.event:

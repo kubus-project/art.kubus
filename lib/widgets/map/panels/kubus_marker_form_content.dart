@@ -8,6 +8,7 @@ import 'package:latlong2/latlong.dart';
 import '../../../models/art_marker.dart';
 import '../../../models/artwork.dart';
 import '../../../models/map_marker_subject.dart';
+import '../../../config/config.dart';
 import '../../../utils/marker_subject_utils.dart';
 import '../../../utils/map_marker_subject_loader.dart';
 import '../../map_marker_dialog.dart';
@@ -60,6 +61,7 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
   late List<Artwork> _arEnabledArtworks;
 
   late final Set<MarkerSubjectType> _allowedTypes;
+  late final Set<ArtMarkerType> _allowedMarkerTypes;
 
   late MarkerSubjectType _selectedSubjectType;
   MarkerSubjectOption? _selectedSubject;
@@ -80,8 +82,13 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
   @override
   void initState() {
     super.initState();
-    _allowedTypes = widget.allowedSubjectTypes ??
-        Set<MarkerSubjectType>.from(MarkerSubjectType.values);
+    final defaultTypes = Set<MarkerSubjectType>.from(MarkerSubjectType.values);
+    _allowedMarkerTypes = Set<ArtMarkerType>.from(ArtMarkerType.values);
+    if (!AppConfig.isFeatureEnabled('streetArtMarkers')) {
+      defaultTypes.remove(MarkerSubjectType.streetArt);
+      _allowedMarkerTypes.remove(ArtMarkerType.streetArt);
+    }
+    _allowedTypes = widget.allowedSubjectTypes ?? defaultTypes;
     _subjectData = widget.subjectData;
     _subjectOptionsByType = _buildOptions(_subjectData);
     _arEnabledArtworks = _subjectData.artworks
@@ -144,9 +151,11 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
   }
 
   bool _subjectSelectionRequired(MarkerSubjectType type) =>
-      type != MarkerSubjectType.misc;
+      type != MarkerSubjectType.misc && type != MarkerSubjectType.streetArt;
   bool _showOptionalArAsset(MarkerSubjectType type) =>
-      type != MarkerSubjectType.artwork && type != MarkerSubjectType.misc;
+      type != MarkerSubjectType.artwork &&
+      type != MarkerSubjectType.misc &&
+      type != MarkerSubjectType.streetArt;
 
   MarkerSubjectType _resolveInitialSubjectType(MarkerSubjectType requested) {
     if (_allowedTypes.contains(requested)) {
@@ -394,7 +403,9 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
             else
               _hintBox(
                 scheme,
-                l10n.mapMarkerDialogMiscHint,
+                _selectedSubjectType == MarkerSubjectType.streetArt
+                    ? l10n.mapMarkerDialogStreetArtHint
+                    : l10n.mapMarkerDialogMiscHint,
               ),
             const SizedBox(height: 14),
             if (_showOptionalArAsset(_selectedSubjectType)) ...[
@@ -497,6 +508,7 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
               items: ArtMarkerType.values
+                  .where(_allowedMarkerTypes.contains)
                   .map((type) => DropdownMenuItem<ArtMarkerType>(
                         value: type,
                         child: Text(_describeMarkerType(l10n, type)),
@@ -671,6 +683,8 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
     switch (type) {
       case MarkerSubjectType.artwork:
         return l10n.mapMarkerSubjectTypeArtwork;
+      case MarkerSubjectType.streetArt:
+        return l10n.mapMarkerSubjectTypeStreetArt;
       case MarkerSubjectType.exhibition:
         return l10n.mapMarkerSubjectTypeExhibition;
       case MarkerSubjectType.institution:
@@ -688,6 +702,8 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
     switch (type) {
       case ArtMarkerType.artwork:
         return l10n.mapMarkerLayerArtwork;
+      case ArtMarkerType.streetArt:
+        return l10n.mapMarkerLayerStreetArt;
       case ArtMarkerType.institution:
         return l10n.mapMarkerLayerInstitution;
       case ArtMarkerType.event:

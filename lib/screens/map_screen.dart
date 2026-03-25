@@ -288,6 +288,7 @@ class _MapScreenState extends State<MapScreen>
 
   final Map<ArtMarkerType, bool> _markerLayerVisibility = {
     ArtMarkerType.artwork: true,
+    ArtMarkerType.streetArt: true,
     ArtMarkerType.institution: true,
     ArtMarkerType.event: true,
     ArtMarkerType.residency: true,

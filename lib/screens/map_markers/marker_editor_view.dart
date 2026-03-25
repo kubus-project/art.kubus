@@ -75,6 +75,8 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
   Map<MarkerSubjectType, List<MarkerSubjectOption>> _subjectOptionsByType =
       const <MarkerSubjectType, List<MarkerSubjectOption>>{};
   List<Artwork> _arEnabledArtworks = const <Artwork>[];
+  late final Set<MarkerSubjectType> _allowedSubjectTypes;
+  late final Set<ArtMarkerType> _allowedMarkerTypes;
   MarkerSubjectType _subjectType = MarkerSubjectType.artwork;
   MarkerSubjectOption? _subject;
   Artwork? _linkedArtwork;
@@ -106,6 +108,13 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
     _isPublic = marker?.isPublic ?? true;
     _isActive = marker?.isActive ?? true;
     _requiresProximity = marker?.requiresProximity ?? true;
+
+    _allowedSubjectTypes = Set<MarkerSubjectType>.from(MarkerSubjectType.values);
+    _allowedMarkerTypes = Set<ArtMarkerType>.from(ArtMarkerType.values);
+    if (!AppConfig.isFeatureEnabled('streetArtMarkers')) {
+      _allowedSubjectTypes.remove(MarkerSubjectType.streetArt);
+      _allowedMarkerTypes.remove(ArtMarkerType.streetArt);
+    }
 
     _bootstrapSubjects(marker);
 
@@ -245,7 +254,7 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
 
   MarkerSubjectType _parseSubjectType(String? raw) {
     final normalized = (raw ?? '').trim().toLowerCase();
-    for (final type in MarkerSubjectType.values) {
+    for (final type in _allowedSubjectTypes) {
       if (type.name == normalized) return type;
     }
     if (normalized.contains('exhibition')) return MarkerSubjectType.exhibition;
@@ -263,10 +272,12 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
   }
 
   bool _subjectSelectionRequired(MarkerSubjectType type) =>
-      type != MarkerSubjectType.misc;
+      type != MarkerSubjectType.misc && type != MarkerSubjectType.streetArt;
 
   bool _showOptionalArAsset(MarkerSubjectType type) =>
-      type != MarkerSubjectType.artwork && type != MarkerSubjectType.misc;
+      type != MarkerSubjectType.artwork &&
+      type != MarkerSubjectType.misc &&
+      type != MarkerSubjectType.streetArt;
 
   static const int _subjectSubtitleMetadataMaxLength = 600;
 
@@ -278,7 +289,7 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
   Map<MarkerSubjectType, List<MarkerSubjectOption>> _buildOptions(
       MarkerSubjectData data) {
     return {
-      for (final type in MarkerSubjectType.values)
+      for (final type in _allowedSubjectTypes)
         type: buildSubjectOptions(
           type: type,
           artworks: data.artworks,
@@ -304,7 +315,10 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
               (marker?.artworkId ?? '').trim().isNotEmpty
           ? MarkerSubjectType.artwork
           : requestedType;
-      _subjectType = widget.isNew ? MarkerSubjectType.artwork : resolvedType;
+        final initialType = widget.isNew ? MarkerSubjectType.artwork : resolvedType;
+        _subjectType = _allowedSubjectTypes.contains(initialType)
+          ? initialType
+          : MarkerSubjectType.artwork;
 
       final options =
           _subjectOptionsByType[_subjectType] ?? const <MarkerSubjectOption>[];
@@ -573,6 +587,8 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
         return l10n.mapMarkerSubjectTypeGroup;
       case MarkerSubjectType.misc:
         return l10n.mapMarkerSubjectTypeMisc;
+      case MarkerSubjectType.streetArt:
+        return l10n.mapMarkerSubjectTypeStreetArt;
     }
   }
 
@@ -592,6 +608,8 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
         return l10n.mapMarkerLayerArExperience;
       case ArtMarkerType.other:
         return l10n.mapMarkerLayerOther;
+      case ArtMarkerType.streetArt:
+        return l10n.mapMarkerLayerStreetArt;
     }
   }
 
@@ -1020,7 +1038,7 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                         initialValue: _subjectType,
                         decoration: _creatorInputDecoration(scheme,
                             labelText: l10n.mapMarkerDialogSubjectTypeLabel),
-                        items: MarkerSubjectType.values
+                        items: _allowedSubjectTypes
                             .map(
                               (type) => DropdownMenuItem<MarkerSubjectType>(
                                 value: type,
@@ -1107,7 +1125,9 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                           padding:
                               const EdgeInsets.only(bottom: KubusSpacing.xs),
                           child: Text(
-                            l10n.mapMarkerDialogMiscHint,
+                            _subjectType == MarkerSubjectType.streetArt
+                                ? l10n.mapMarkerDialogStreetArtHint
+                                : l10n.mapMarkerDialogMiscHint,
                             style: KubusTextStyles.detailLabel.copyWith(
                               color: scheme.onSurface.withValues(alpha: 0.65),
                             ),
@@ -1228,7 +1248,7 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                         initialValue: _markerType,
                         decoration: _creatorInputDecoration(scheme,
                             labelText: l10n.mapMarkerDialogMarkerLayerLabel),
-                        items: ArtMarkerType.values
+                        items: _allowedMarkerTypes
                             .map(
                               (type) => DropdownMenuItem(
                                 value: type,

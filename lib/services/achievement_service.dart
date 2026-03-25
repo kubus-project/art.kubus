@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/config.dart';
+import '../models/art_marker.dart';
 import 'backend_api_service.dart';
 import 'push_notification_service.dart';
 import '../models/collectible.dart';
@@ -47,6 +48,12 @@ enum AchievementType {
   eventAttendee,
   galleryVisitor,
   workshopParticipant,
+
+  // Public street art contribution achievements
+  streetArtSpotter,
+  streetArtScout,
+  streetArtCurator,
+  streetArtPatron,
 }
 
 /// Achievement definition
@@ -337,6 +344,44 @@ class AchievementService {
       requiredCount: 1,
       rarity: CollectibleRarity.epic,
     ),
+
+    // Public street art contribution achievements
+    AchievementType.streetArtSpotter: AchievementDefinition(
+      type: AchievementType.streetArtSpotter,
+      id: 'street_art_spotter',
+      title: 'Street Art Spotter',
+      description: 'Added your first public street art marker',
+      tokenReward: 15,
+      requiredCount: 1,
+      rarity: CollectibleRarity.common,
+    ),
+    AchievementType.streetArtScout: AchievementDefinition(
+      type: AchievementType.streetArtScout,
+      id: 'street_art_scout',
+      title: 'Street Art Scout',
+      description: 'Added 5 public street art markers',
+      tokenReward: 60,
+      requiredCount: 5,
+      rarity: CollectibleRarity.uncommon,
+    ),
+    AchievementType.streetArtCurator: AchievementDefinition(
+      type: AchievementType.streetArtCurator,
+      id: 'street_art_curator',
+      title: 'Street Art Curator',
+      description: 'Added 25 public street art markers',
+      tokenReward: 180,
+      requiredCount: 25,
+      rarity: CollectibleRarity.rare,
+    ),
+    AchievementType.streetArtPatron: AchievementDefinition(
+      type: AchievementType.streetArtPatron,
+      id: 'street_art_patron',
+      title: 'Street Art Patron',
+      description: 'Added 100 public street art markers',
+      tokenReward: 500,
+      requiredCount: 100,
+      rarity: CollectibleRarity.legendary,
+    ),
   };
 
   /// Check and unlock achievements based on user actions
@@ -384,6 +429,9 @@ class AchievementService {
           break;
         case 'event_attended':
           await _checkEventAchievements(userId, data);
+          break;
+        case 'public_street_art_added':
+          await _checkStreetArtAchievements(userId, data);
           break;
       }
     } catch (e) {
@@ -526,6 +574,60 @@ class AchievementService {
       case 'workshop':
         await _unlockAchievement(userId, AchievementType.workshopParticipant, eventData: data);
         break;
+    }
+  }
+
+  /// Check public street art contribution achievements
+  Future<void> _checkStreetArtAchievements(String userId, Map<String, dynamic>? data) async {
+    final raw = data?['streetArtCount'] ?? data?['publicStreetArtCount'] ?? data?['count'];
+    final count = raw is int
+        ? raw
+        : raw is num
+            ? raw.toInt()
+            : int.tryParse(raw?.toString() ?? '') ?? 0;
+
+    if (count == 1) {
+      await _unlockAchievement(userId, AchievementType.streetArtSpotter);
+    } else if (count == 5) {
+      await _unlockAchievement(userId, AchievementType.streetArtScout);
+    } else if (count == 25) {
+      await _unlockAchievement(userId, AchievementType.streetArtCurator);
+    } else if (count == 100) {
+      await _unlockAchievement(userId, AchievementType.streetArtPatron);
+    }
+  }
+
+  /// Shared helper for street-art marker creation flows.
+  ///
+  /// Centralizes the logic used by both [MapMarkerService] and
+  /// [MarkerManagementProvider] so marker creation paths stay consistent.
+  Future<void> trackPublicStreetArtMarkerAdded({
+    required ArtMarker marker,
+    required Future<List<ArtMarker>> Function() loadMyMarkers,
+    required String? userId,
+  }) async {
+    try {
+      if (marker.type != ArtMarkerType.streetArt || !marker.isPublic) return;
+
+      final myMarkers = await loadMyMarkers();
+      final streetArtCount = myMarkers
+          .where((m) => m.type == ArtMarkerType.streetArt && m.isPublic)
+          .length;
+      if (streetArtCount <= 0) return;
+
+      final normalizedUserId = (userId ?? '').trim();
+      if (normalizedUserId.isEmpty) return;
+
+      await checkAchievements(
+        userId: normalizedUserId,
+        action: 'public_street_art_added',
+        data: <String, dynamic>{
+          'streetArtCount': streetArtCount,
+        },
+      );
+    } catch (e) {
+      AppConfig.debugPrint(
+          'AchievementService: trackPublicStreetArtMarkerAdded failed: $e');
     }
   }
 

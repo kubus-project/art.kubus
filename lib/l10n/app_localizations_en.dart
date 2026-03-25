@@ -1267,6 +1267,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get settingsDeveloperToolsSectionTitle => 'Developer tools';
 
+  @override
   String get settingsDeveloperClearQuickActionsTitle => 'Clear quick actions';
 
   @override
@@ -2793,7 +2794,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapMarkerDialogValidLongitudeError => 'Enter a valid longitude';
 
   @override
+  String get mapMarkerDialogStreetArtHint => 'Street art markers do not need a linked subject. Add a title and description for the public artwork you found.';
+
+  @override
   String get mapMarkerSubjectTypeArtwork => 'Artwork';
+
+  @override
+  String get mapMarkerSubjectTypeStreetArt => 'Street Art';
 
   @override
   String get mapMarkerSubjectTypeExhibition => 'Exhibition';
@@ -2812,6 +2819,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mapMarkerLayerArtwork => 'Artwork';
+
+  @override
+  String get mapMarkerLayerStreetArt => 'Street Art';
 
   @override
   String get mapMarkerLayerInstitution => 'Institution';
@@ -3104,6 +3114,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mapMarkerTypeMisc => 'Misc';
+
+  @override
+  String get mapMarkerTypeStreetArt => 'Street Art';
 
   @override
   String get mapSortNearest => 'Nearest';
@@ -6659,6 +6672,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get commonReset => 'Reset';
 
+  @override
   String get season0BannerTitle => 'Season 0, Ljubljana (beta)';
 
   @override
@@ -7640,6 +7654,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userProfileAchievementCategorySpecial => 'Special';
 
   @override
+  String get userProfileAchievementCategoryStreetArt => 'Street Art';
+
+  @override
   String get daoHubStatYourVotingPowerLabel => 'Your voting power';
 
   @override
@@ -8079,6 +8096,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profilePerformanceFollowersFollowingTitle => 'Followers / following';
+
+  @override
+  String get profilePerformancePublicStreetArtAddedTitle => 'Added Public Art';
 
   @override
   String get profileMenuSavedItemsTitle => 'Saved items';

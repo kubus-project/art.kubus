@@ -78,6 +78,12 @@ class AppConfig {
   /// Map: optional isometric-like perspective on the map canvas.
   static const bool enableMapIsometricView = true;
 
+  /// Map: allow public/street art marker type submissions.
+  static const bool enableStreetArtMarkers = true;
+
+  /// Claims: allow verified artist ownership-claim workflow UI/APIs.
+  static const bool enableStreetArtClaims = true;
+
   /// Web map performance: preserve the WebGL drawing buffer.
   ///
   /// This can improve stability in some environments (historically Firefox),
@@ -387,6 +393,10 @@ class AppConfig {
         return enableMapTravelMode;
       case 'mapIsometricView':
         return enableMapIsometricView;
+      case 'streetArtMarkers':
+        return enableStreetArtMarkers;
+      case 'streetArtClaims':
+        return enableStreetArtClaims;
       case 'mapWebPreserveDrawingBuffer':
         return enableMapWebPreserveDrawingBuffer;
       default:

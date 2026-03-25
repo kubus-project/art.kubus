@@ -2794,7 +2794,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapMarkerDialogValidLongitudeError => 'Vnesi veljavno zemljepisno dolžino';
 
   @override
+  String get mapMarkerDialogStreetArtHint => 'Označevalci ulične umetnosti ne potrebujejo povezanega predmeta. Dodaj naslov in opis javne umetnine, ki si jo našel/našla.';
+
+  @override
   String get mapMarkerSubjectTypeArtwork => 'Umetnina';
+
+  @override
+  String get mapMarkerSubjectTypeStreetArt => 'Ulična umetnost';
 
   @override
   String get mapMarkerSubjectTypeExhibition => 'Razstava';
@@ -2813,6 +2819,9 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get mapMarkerLayerArtwork => 'Umetnina';
+
+  @override
+  String get mapMarkerLayerStreetArt => 'Ulična umetnost';
 
   @override
   String get mapMarkerLayerInstitution => 'Institucija';
@@ -3107,6 +3116,9 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get mapMarkerTypeMisc => 'Razno';
+
+  @override
+  String get mapMarkerTypeStreetArt => 'Ulična umetnost';
 
   @override
   String get mapSortNearest => 'Najbližje';
@@ -7666,6 +7678,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get userProfileAchievementCategorySpecial => 'Posebno';
 
   @override
+  String get userProfileAchievementCategoryStreetArt => 'Ulična umetnost';
+
+  @override
   String get daoHubStatYourVotingPowerLabel => 'Tvoja glasovalna moč';
 
   @override
@@ -8109,6 +8124,9 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get profilePerformanceFollowersFollowingTitle => 'Sledilci / sledenje';
+
+  @override
+  String get profilePerformancePublicStreetArtAddedTitle => 'Dodana javna umetnost';
 
   @override
   String get profileMenuSavedItemsTitle => 'Shranjene vsebine';

@@ -1945,6 +1945,11 @@ class _ProfileScreenState extends State<ProfileScreen>
               case achievement_svc.AchievementType.galleryVisitor:
               case achievement_svc.AchievementType.workshopParticipant:
                 return Icons.event_available;
+              case achievement_svc.AchievementType.streetArtSpotter:
+              case achievement_svc.AchievementType.streetArtScout:
+              case achievement_svc.AchievementType.streetArtCurator:
+              case achievement_svc.AchievementType.streetArtPatron:
+                return Icons.streetview;
             }
           }
 
@@ -2103,6 +2108,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             'followers',
             'following',
             'artworks',
+            'publicStreetArtAdded',
             'nftsMinted',
           ];
           const privateMetrics = <String>['artworksDiscovered'];
@@ -2173,6 +2179,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           final followingValue = publicCounters['following'] ??
               stats?.followingCount ??
               profileProvider.followingCount;
+            final publicStreetArtAddedValue = publicCounters['publicStreetArtAdded'];
 
           final discoveriesLabel = privateLoading
               ? '\u2026'
@@ -2194,6 +2201,11 @@ class _ProfileScreenState extends State<ProfileScreen>
               publicLoading ? '\u2026' : _formatCount(followersValue);
           final followingLabel =
               publicLoading ? '\u2026' : _formatCount(followingValue);
+            final publicStreetArtAddedLabel = publicLoading
+              ? '\u2026'
+              : publicStreetArtAddedValue == null
+                ? '\u2014'
+                : _formatCount(publicStreetArtAddedValue);
 
           final hasData = wallet.isNotEmpty || viewedCount > 0;
           if (!hasData) {
@@ -2248,6 +2260,13 @@ class _ProfileScreenState extends State<ProfileScreen>
               _buildPerformanceCard(
                   AppLocalizations.of(context)!.profilePerformanceFollowersFollowingTitle,
                   '$followersLabel / $followingLabel', Icons.group, null),
+              const SizedBox(height: 12),
+              _buildPerformanceCard(
+                  AppLocalizations.of(context)!
+                    .profilePerformancePublicStreetArtAddedTitle,
+                  publicStreetArtAddedLabel,
+                  Icons.streetview,
+                  null),
             ],
           );
         },

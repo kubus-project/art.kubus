@@ -5525,11 +5525,23 @@ abstract class AppLocalizations {
   /// **'Enter a valid longitude'**
   String get mapMarkerDialogValidLongitudeError;
 
+  /// No description provided for @mapMarkerDialogStreetArtHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Street art markers do not need a linked subject. Add a title and description for the public artwork you found.'**
+  String get mapMarkerDialogStreetArtHint;
+
   /// No description provided for @mapMarkerSubjectTypeArtwork.
   ///
   /// In en, this message translates to:
   /// **'Artwork'**
   String get mapMarkerSubjectTypeArtwork;
+
+  /// No description provided for @mapMarkerSubjectTypeStreetArt.
+  ///
+  /// In en, this message translates to:
+  /// **'Street Art'**
+  String get mapMarkerSubjectTypeStreetArt;
 
   /// No description provided for @mapMarkerSubjectTypeExhibition.
   ///
@@ -5566,6 +5578,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Artwork'**
   String get mapMarkerLayerArtwork;
+
+  /// No description provided for @mapMarkerLayerStreetArt.
+  ///
+  /// In en, this message translates to:
+  /// **'Street Art'**
+  String get mapMarkerLayerStreetArt;
 
   /// No description provided for @mapMarkerLayerInstitution.
   ///
@@ -6130,6 +6148,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Misc'**
   String get mapMarkerTypeMisc;
+
+  /// No description provided for @mapMarkerTypeStreetArt.
+  ///
+  /// In en, this message translates to:
+  /// **'Street Art'**
+  String get mapMarkerTypeStreetArt;
 
   /// No description provided for @mapSortNearest.
   ///
@@ -14549,6 +14573,12 @@ abstract class AppLocalizations {
   /// **'Special'**
   String get userProfileAchievementCategorySpecial;
 
+  /// No description provided for @userProfileAchievementCategoryStreetArt.
+  ///
+  /// In en, this message translates to:
+  /// **'Street Art'**
+  String get userProfileAchievementCategoryStreetArt;
+
   /// No description provided for @daoHubStatYourVotingPowerLabel.
   ///
   /// In en, this message translates to:
@@ -15298,6 +15328,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Followers / following'**
   String get profilePerformanceFollowersFollowingTitle;
+
+  /// No description provided for @profilePerformancePublicStreetArtAddedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Added Public Art'**
+  String get profilePerformancePublicStreetArtAddedTitle;
 
   /// No description provided for @profileMenuSavedItemsTitle.
   ///

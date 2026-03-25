@@ -7,6 +7,7 @@ import '../models/art_marker.dart';
 import '../providers/storage_provider.dart';
 import '../utils/geo_bounds.dart';
 import 'backend_api_service.dart';
+import 'achievement_service.dart';
 import 'storage_config.dart';
 import 'socket_service.dart';
 import 'telemetry/telemetry_uuid.dart';
@@ -597,6 +598,7 @@ class MapMarkerService {
         _cachedMarkers.removeWhere((m) => m.id == created.id);
         _cachedMarkers.add(created);
         notifyMarkerUpserted(created);
+        unawaited(_trackStreetArtAchievements(created));
         return created;
       }
 
@@ -608,6 +610,7 @@ class MapMarkerService {
             _cachedMarkers.removeWhere((m) => m.id == marker.id);
             _cachedMarkers.add(marker);
             notifyMarkerUpserted(marker);
+            unawaited(_trackStreetArtAchievements(marker));
             _log('MapMarkerService: recovered created marker via nonce ${marker.id}');
             return marker;
           }
@@ -626,6 +629,7 @@ class MapMarkerService {
               _cachedMarkers.removeWhere((m) => m.id == marker.id);
               _cachedMarkers.add(marker);
               notifyMarkerUpserted(marker);
+              unawaited(_trackStreetArtAchievements(marker));
               _log('MapMarkerService: recovered created marker after error ${marker.id}');
               return marker;
             }
@@ -746,6 +750,18 @@ class MapMarkerService {
     } catch (e) {
       _log('MapMarkerService: _markerFromSocketPayload failed: $e');
       return null;
+    }
+  }
+
+  Future<void> _trackStreetArtAchievements(ArtMarker marker) async {
+    try {
+      await AchievementService().trackPublicStreetArtMarkerAdded(
+        marker: marker,
+        loadMyMarkers: _backendApi.getMyArtMarkers,
+        userId: _backendApi.getCurrentAuthWalletAddress() ?? marker.createdBy,
+      );
+    } catch (e) {
+      _log('MapMarkerService: street-art achievement tracking failed: $e');
     }
   }
 }

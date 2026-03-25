@@ -1,4 +1,5 @@
 import 'package:art_kubus/config/config.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/achievement_progress.dart';
 import 'package:art_kubus/providers/task_provider.dart';
 import 'package:art_kubus/services/achievement_service.dart' as achievement_svc;
@@ -274,6 +275,11 @@ class _AchievementsPageState extends State<AchievementsPage> {
       case achievement_svc.AchievementType.galleryVisitor:
       case achievement_svc.AchievementType.workshopParticipant:
         return 'Events';
+      case achievement_svc.AchievementType.streetArtSpotter:
+      case achievement_svc.AchievementType.streetArtScout:
+      case achievement_svc.AchievementType.streetArtCurator:
+      case achievement_svc.AchievementType.streetArtPatron:
+        return AppLocalizations.of(context)!.userProfileAchievementCategoryStreetArt;
     }
   }
 
@@ -315,6 +321,11 @@ class _AchievementsPageState extends State<AchievementsPage> {
       case achievement_svc.AchievementType.galleryVisitor:
       case achievement_svc.AchievementType.workshopParticipant:
         return Icons.event_available;
+      case achievement_svc.AchievementType.streetArtSpotter:
+      case achievement_svc.AchievementType.streetArtScout:
+      case achievement_svc.AchievementType.streetArtCurator:
+      case achievement_svc.AchievementType.streetArtPatron:
+        return Icons.streetview;
     }
   }
 

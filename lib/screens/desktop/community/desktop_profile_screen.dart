@@ -1057,7 +1057,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         final viewHistory = artworkProvider.viewHistoryEntries;
         final viewedCount = viewHistory.length;
 
-        const publicMetrics = <String>['artworks', 'nftsMinted'];
+        const publicMetrics = <String>['artworks', 'nftsMinted', 'publicStreetArtAdded'];
         const privateMetrics = <String>['artworksDiscovered'];
 
         if (wallet.isNotEmpty) {
@@ -1115,6 +1115,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         final discoveriesValue = privateCounters['artworksDiscovered'] ?? stats?.artworksDiscovered;
         final createdValue = publicCounters['artworks'] ?? stats?.artworksCreated;
         final nftsOwnedValue = publicCounters['nftsMinted'] ?? stats?.nftsOwned;
+        final publicStreetArtAddedValue = publicCounters['publicStreetArtAdded'];
 
         final discoveriesLabel = privateLoading
             ? '\u2026'
@@ -1131,6 +1132,11 @@ class _ProfileScreenState extends State<ProfileScreen>
             : nftsOwnedValue == null
                 ? '\u2014'
                 : _formatStatCount(nftsOwnedValue);
+        final publicStreetArtAddedLabel = publicLoading
+          ? '\u2026'
+          : publicStreetArtAddedValue == null
+            ? '\u2014'
+            : _formatStatCount(publicStreetArtAddedValue);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1168,6 +1174,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                   l10n.desktopProfilePerformanceNftsOwnedTitle,
                   nftsLabel,
                   Icons.token_outlined,
+                  themeProvider,
+                ),
+                _buildPerformanceStatCard(
+                  l10n.profilePerformancePublicStreetArtAddedTitle,
+                  publicStreetArtAddedLabel,
+                  Icons.streetview,
                   themeProvider,
                 ),
               ],
@@ -1666,6 +1678,12 @@ class _ProfileScreenState extends State<ProfileScreen>
       case achievement_svc.AchievementType.galleryVisitor:
       case achievement_svc.AchievementType.workshopParticipant:
         return 'Events';
+      case achievement_svc.AchievementType.streetArtSpotter:
+      case achievement_svc.AchievementType.streetArtScout:
+      case achievement_svc.AchievementType.streetArtCurator:
+      case achievement_svc.AchievementType.streetArtPatron:
+        return AppLocalizations.of(context)!
+            .userProfileAchievementCategoryStreetArt;
     }
   }
 
@@ -1707,6 +1725,11 @@ class _ProfileScreenState extends State<ProfileScreen>
       case achievement_svc.AchievementType.galleryVisitor:
       case achievement_svc.AchievementType.workshopParticipant:
         return Icons.event_available;
+      case achievement_svc.AchievementType.streetArtSpotter:
+      case achievement_svc.AchievementType.streetArtScout:
+      case achievement_svc.AchievementType.streetArtCurator:
+      case achievement_svc.AchievementType.streetArtPatron:
+        return Icons.streetview;
     }
   }
 

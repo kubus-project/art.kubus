@@ -3,6 +3,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../models/art_marker.dart';
 import '../services/backend_api_service.dart';
+import '../services/achievement_service.dart';
 import '../services/map_marker_service.dart';
 import '../services/telemetry/telemetry_uuid.dart';
 
@@ -306,6 +307,7 @@ class MarkerManagementProvider extends ChangeNotifier {
         ..._markers.where((m) => m.id != created.id)
       ];
       _mapMarkerService.notifyMarkerUpserted(created);
+      _trackStreetArtAchievements(created);
       notifyListeners();
       return created;
     } catch (e) {
@@ -320,6 +322,7 @@ class MarkerManagementProvider extends ChangeNotifier {
             if ((marker.metadata?['clientNonce'] ?? '').toString() ==
                 clientNonce) {
               _mapMarkerService.notifyMarkerUpserted(marker);
+              _trackStreetArtAchievements(marker);
               return marker;
             }
           }
@@ -441,5 +444,22 @@ class MarkerManagementProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  void _trackStreetArtAchievements(ArtMarker marker) {
+    Future<void>(() async {
+      try {
+        final backendApi = _api is BackendApiService ? _api : null;
+        await AchievementService().trackPublicStreetArtMarkerAdded(
+          marker: marker,
+          loadMyMarkers: _api.getMyArtMarkers,
+          userId: backendApi?.getCurrentAuthWalletAddress() ?? marker.createdBy,
+        );
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('MarkerManagementProvider: street-art achievement tracking failed: $e');
+        }
+      }
+    });
   }
 }

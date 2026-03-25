@@ -60,6 +60,8 @@ List<MarkerSubjectOption> buildSubjectOptions({
             ),
           )
           .toList();
+    case MarkerSubjectType.streetArt:
+      return const [];
     case MarkerSubjectType.exhibition:
       return exhibitions
           .map(
