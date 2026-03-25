@@ -310,15 +310,21 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
       _arEnabledArtworks =
           snapshot.artworks.where(artworkSupportsAR).toList(growable: false);
 
-      final requestedType = _parseSubjectType(marker?.subjectType);
-      final resolvedType = requestedType == MarkerSubjectType.misc &&
-              (marker?.artworkId ?? '').trim().isNotEmpty
+        final requestedType = _parseSubjectType(marker?.subjectType);
+        final resolvedType = requestedType == MarkerSubjectType.misc &&
+            (marker?.artworkId ?? '').trim().isNotEmpty
           ? MarkerSubjectType.artwork
           : requestedType;
-        final initialType = widget.isNew ? MarkerSubjectType.artwork : resolvedType;
+        final MarkerSubjectType preferredNewType =
+          _allowedSubjectTypes.contains(MarkerSubjectType.streetArt)
+            ? MarkerSubjectType.streetArt
+            : MarkerSubjectType.artwork;
+        final initialType = widget.isNew ? preferredNewType : resolvedType;
         _subjectType = _allowedSubjectTypes.contains(initialType)
           ? initialType
-          : MarkerSubjectType.artwork;
+          : (_allowedSubjectTypes.contains(MarkerSubjectType.artwork)
+            ? MarkerSubjectType.artwork
+            : _allowedSubjectTypes.first);
 
       final options =
           _subjectOptionsByType[_subjectType] ?? const <MarkerSubjectOption>[];

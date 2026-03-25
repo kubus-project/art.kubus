@@ -2406,6 +2406,8 @@ class _MapScreenState extends State<MapScreen>
 
     final allowedSubjectTypes = <MarkerSubjectType>{
       MarkerSubjectType.misc,
+      if (AppConfig.isFeatureEnabled('streetArtMarkers'))
+        MarkerSubjectType.streetArt,
       if (subjectData.artworks.isNotEmpty) MarkerSubjectType.artwork,
       if (subjectData.exhibitions.isNotEmpty) MarkerSubjectType.exhibition,
       if (subjectData.institutions.isNotEmpty) MarkerSubjectType.institution,
@@ -2416,6 +2418,8 @@ class _MapScreenState extends State<MapScreen>
     final initialSubjectType = allowedSubjectTypes
             .contains(MarkerSubjectType.artwork)
         ? MarkerSubjectType.artwork
+      : allowedSubjectTypes.contains(MarkerSubjectType.streetArt)
+        ? MarkerSubjectType.streetArt
         : allowedSubjectTypes.contains(MarkerSubjectType.exhibition)
             ? MarkerSubjectType.exhibition
             : allowedSubjectTypes.contains(MarkerSubjectType.event)
