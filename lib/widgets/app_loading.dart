@@ -4,7 +4,14 @@ import 'splash_diamonds.dart';
 import 'dart:math';
 
 class AppLoading extends StatefulWidget {
-  const AppLoading({super.key});
+  const AppLoading({
+    super.key,
+    this.appVersion,
+    this.serverVersion,
+  });
+
+  final String? appVersion;
+  final String? serverVersion;
 
   @override
   State<AppLoading> createState() => _AppLoadingState();
@@ -25,11 +32,51 @@ class _AppLoadingState extends State<AppLoading> {
 
   @override
   Widget build(BuildContext context) {
-    // Deterministic between rebuilds for the lifetime of the widget instance
-    if (_useDiamonds) {
-      return SplashDiamonds(seed: _seed);
-    } else {
-      return const SplashWave();
+    final showVersionFooter =
+        (widget.appVersion ?? '').trim().isNotEmpty ||
+            (widget.serverVersion ?? '').trim().isNotEmpty;
+    final splash = _useDiamonds ? SplashDiamonds(seed: _seed) : const SplashWave();
+
+    if (!showVersionFooter) {
+      return splash;
     }
+
+    final colorScheme = Theme.of(context).colorScheme;
+    final appVersion = (widget.appVersion ?? '').trim();
+    final serverVersion = (widget.serverVersion ?? '').trim();
+
+    // Deterministic between rebuilds for the lifetime of the widget instance
+    return Stack(
+      children: [
+        Positioned.fill(child: splash),
+        Positioned(
+          left: 16,
+          right: 16,
+          bottom: 24,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: colorScheme.surface.withValues(alpha: 0.62),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: DefaultTextStyle(
+                style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                      color: colorScheme.onSurface.withValues(alpha: 0.92),
+                    ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (appVersion.isNotEmpty) Text('App: $appVersion'),
+                    if (serverVersion.isNotEmpty) Text('Server: $serverVersion'),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }

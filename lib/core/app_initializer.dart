@@ -49,15 +49,31 @@ class AppInitializer extends StatefulWidget {
 
 class _AppInitializerState extends State<AppInitializer> {
   static const ShareDeepLinkCodec _deepLinkCodec = ShareDeepLinkCodec();
+  static const String _serverVersionOfflineLabel = 'offline';
   String? initializationError;
   Completer<void>? _initCompleter;
   Timer? _startupWatchdog;
   bool _didNavigate = false;
+  String? _serverVersion;
 
   String get _resolvedShellRoute {
     final route = widget.preferredShellRoute?.trim();
     if (route == '/map') return '/map';
     return '/main';
+  }
+
+  Future<void> _refreshServerVersion(ConfigProvider configProvider) async {
+    final fetched = await BackendApiService().fetchServerVersion(
+      timeout: const Duration(seconds: 3),
+    );
+    final normalized = (fetched ?? '').trim();
+    final nextVersion = normalized.isEmpty ? null : normalized;
+
+    await configProvider.setServerVersion(nextVersion);
+    if (!mounted) return;
+    setState(() {
+      _serverVersion = nextVersion;
+    });
   }
 
   Map<String, String>? get _signInRedirectArguments {
@@ -156,6 +172,13 @@ class _AppInitializerState extends State<AppInitializer> {
       await _safeStep<void>('config.initialize', configProvider.initialize,
           timeout: const Duration(seconds: 6));
       if (!mounted) return;
+
+      final cachedServerVersion = (configProvider.serverVersion ?? '').trim();
+      setState(() {
+        _serverVersion =
+            cachedServerVersion.isEmpty ? null : cachedServerVersion;
+      });
+      unawaited(_refreshServerVersion(configProvider));
 
       // Ensure cache provider is hydrated before any screen depends on it.
       final cacheProvider = Provider.of<CacheProvider>(context, listen: false);
@@ -567,9 +590,16 @@ class _AppInitializerState extends State<AppInitializer> {
 
   @override
   Widget build(BuildContext context) {
+    final serverVersion = (_serverVersion ?? '').trim().isEmpty
+      ? _serverVersionOfflineLabel
+      : _serverVersion!.trim();
+
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      body: const AppLoading(),
+      body: AppLoading(
+        appVersion: AppInfo.fullVersion,
+        serverVersion: serverVersion,
+      ),
     );
   }
 }

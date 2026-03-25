@@ -1566,6 +1566,35 @@ class BackendApiService
     return normalizeSearchSuggestionsPayload(raw);
   }
 
+  /// Fetch backend server version from health endpoint.
+  ///
+  /// Returns null when unavailable/unreachable and never throws.
+  Future<String?> fetchServerVersion({
+    Duration timeout = const Duration(seconds: 3),
+  }) async {
+    final uri = Uri.parse('$baseUrl/health');
+    try {
+      final response = await _get(
+        uri,
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
+        timeout: timeout,
+      );
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return null;
+      }
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map) return null;
+      final map = Map<String, dynamic>.from(decoded);
+      final rawVersion = (map['version'] ?? '').toString().trim();
+      return rawVersion.isEmpty ? null : rawVersion;
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.fetchServerVersion failed: $e');
+      return null;
+    }
+  }
+
   // ==================== User/Profile Endpoints ====================
 
   /// Create a new user profile with wallet

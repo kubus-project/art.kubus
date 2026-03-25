@@ -1,0 +1,7 @@
+{
+  "name": "art-kubus-workspace",
+  "private": true,
+  "scripts": {
+    "sync:versions": "node ./scripts/sync_versions.js"
+  }
+}
