@@ -42,6 +42,7 @@ class ArtMapView extends StatefulWidget {
     this.zoomGesturesEnabled = true,
     this.tiltGesturesEnabled = true,
     this.compassEnabled,
+    this.webResizeRecoveryToken = 0,
   });
 
   final ll.LatLng initialCenter;
@@ -71,6 +72,10 @@ class ArtMapView extends StatefulWidget {
   /// compass is enabled on mobile platforms (Android/iOS) and disabled on
   /// web (where we use the JS NavigationControl instead).
   final bool? compassEnabled;
+
+  /// Increment this value when the parent wants the shared map view to run the
+  /// web resize recovery path after route/tab/overlay visibility changes.
+  final int webResizeRecoveryToken;
 
   /// Test-only helper used by widget/service tests to validate the style-ready
   /// gating logic.
@@ -133,6 +138,9 @@ class _ArtMapViewState extends State<ArtMapView> {
   // Web: force-resize is heavier than resize; throttle to avoid double-calls
   // across lifecycle hooks (map created + style loaded).
   int _lastWebForceResizeMs = 0;
+  int _webResizeRecoveryCount = 0;
+  int _webResizeCallCount = 0;
+  int _webForceResizeCallCount = 0;
 
   int _styleRequestId = 0;
   bool _pendingStyleApply = false;
@@ -179,6 +187,14 @@ class _ArtMapViewState extends State<ArtMapView> {
         unawaited(_applyStyleToController());
       }
     }
+
+    if (kIsWeb &&
+        oldWidget.webResizeRecoveryToken != widget.webResizeRecoveryToken &&
+        _controller != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _requestWebResizeRecovery(reason: 'externalRecovery');
+      });
+    }
   }
 
   @override
@@ -216,6 +232,17 @@ class _ArtMapViewState extends State<ArtMapView> {
     _controller = null;
     if (kIsWeb) {
       webGLContextHealthy.removeListener(_handleWebGLHealthChanged);
+      if (kDebugMode &&
+          (_webResizeRecoveryCount > 0 ||
+              _webResizeCallCount > 0 ||
+              _webForceResizeCallCount > 0)) {
+        AppConfig.debugPrint(
+          'ArtMapView: web resize stats '
+          'recoveries=$_webResizeRecoveryCount '
+          'resizeCalls=$_webResizeCallCount '
+          'forceResizeCalls=$_webForceResizeCallCount',
+        );
+      }
     }
     assert(() {
       _debugLiveInstances = math.max(0, _debugLiveInstances - 1);
@@ -246,10 +273,7 @@ class _ArtMapViewState extends State<ArtMapView> {
         _styleFailed = false;
         _styleFailureReason = null;
       });
-      final controller = _controller;
-      if (controller != null && kIsWeb) {
-        _forceResizeWebMapThrottled(controller);
-      }
+      _requestWebResizeRecovery(reason: 'webGLRecovered');
     }
   }
 
@@ -277,6 +301,10 @@ class _ArtMapViewState extends State<ArtMapView> {
     // Debounce: this can be called repeatedly during animated layout changes
     // (e.g., opening the desktop sidebar). MapLibre GL JS requires an explicit
     // resize to correctly re-measure its canvas within the container.
+    _scheduleResizeWebMap();
+  }
+
+  void _scheduleResizeWebMap() {
     _webResizeDebounce?.cancel();
     final debounce = Duration(milliseconds: _webResizeDebounceMs);
     _webResizeDebounce = Timer(debounce, () {
@@ -284,6 +312,7 @@ class _ArtMapViewState extends State<ArtMapView> {
       final controller = _controller;
       if (controller == null) return;
       try {
+        _webResizeCallCount += 1;
         controller.resizeWebMap();
       } catch (e, st) {
         AppConfig.debugPrint('ArtMapView: resizeWebMap failed: $e');
@@ -294,16 +323,29 @@ class _ArtMapViewState extends State<ArtMapView> {
     });
   }
 
-  void _forceResizeWebMapThrottled(ml.MapLibreMapController controller) {
+  void _requestWebResizeRecovery({required String reason}) {
+    if (!kIsWeb || !mounted || _disposed) return;
+    final controller = _controller;
+    if (controller == null) return;
+    _webResizeRecoveryCount += 1;
+    _forceResizeWebMapThrottled(controller, reason: reason);
+    _scheduleResizeWebMap();
+  }
+
+  void _forceResizeWebMapThrottled(
+    ml.MapLibreMapController controller, {
+    required String reason,
+  }) {
     if (!kIsWeb) return;
     final nowMs = DateTime.now().millisecondsSinceEpoch;
     if (nowMs - _lastWebForceResizeMs < 250) return;
     _lastWebForceResizeMs = nowMs;
 
     try {
+      _webForceResizeCallCount += 1;
       controller.forceResizeWebMap();
     } catch (e, st) {
-      AppConfig.debugPrint('ArtMapView: forceResizeWebMap failed: $e');
+      AppConfig.debugPrint('ArtMapView: forceResizeWebMap failed ($reason): $e');
       if (kDebugMode) {
         AppConfig.debugPrint('ArtMapView: forceResizeWebMap stack: $st');
       }
@@ -527,14 +569,9 @@ class _ArtMapViewState extends State<ArtMapView> {
                   );
                   widget.onMapCreated(controller);
                   if (kIsWeb) {
-                    // MapLibre GL JS sometimes initializes while the element is still
-                    // measuring (0x0) during the first frame, especially when the
-                    // map is mounted behind onboarding / tab transitions. A forced
-                    // resize after layout makes the map reliably paint on web.
                     WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (!mounted || _disposed) return;
                       if (_controller != controller) return;
-                      _forceResizeWebMapThrottled(controller);
+                      _requestWebResizeRecovery(reason: 'mapCreated');
                     });
                   }
                 },
@@ -550,10 +587,7 @@ class _ArtMapViewState extends State<ArtMapView> {
                     AppConfig.debugPrint('ArtMapView: style loaded');
                   }
                   if (kIsWeb) {
-                    final controller = _controller;
-                    if (controller != null && mounted && !_disposed) {
-                      _forceResizeWebMapThrottled(controller);
-                    }
+                    _requestWebResizeRecovery(reason: 'styleLoaded');
                   }
                   if (_pendingStyleApply) {
                     _pendingStyleApply = false;

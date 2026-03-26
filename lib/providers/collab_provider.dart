@@ -24,6 +24,7 @@ class CollabProvider extends ChangeNotifier {
         _socket = SocketService();
 
   AppRefreshProvider? _refreshProvider;
+  VoidCallback? _refreshListener;
   ProfileProvider? _profileProvider;
   VoidCallback? _profileListener;
 
@@ -36,6 +37,7 @@ class CollabProvider extends ChangeNotifier {
   final Map<String, List<CollabMember>> _membersByEntityKey = <String, List<CollabMember>>{};
   final List<CollabInvite> _invitesInbox = <CollabInvite>[];
   final Set<String> _knownInviteIds = <String>{};
+  static const int _maxKnownInviteIds = 200;
 
   Timer? _invitePollingTimer;
   bool _pollingInFlight = false;
@@ -80,12 +82,22 @@ class CollabProvider extends ChangeNotifier {
   }
 
   void bindToRefresh(AppRefreshProvider refreshProvider) {
-    if (identical(_refreshProvider, refreshProvider)) return;
+    if (identical(_refreshProvider, refreshProvider) &&
+        _refreshListener != null) {
+      return;
+    }
+
+    if (_refreshProvider != null && _refreshListener != null) {
+      try {
+        _refreshProvider!.removeListener(_refreshListener!);
+      } catch (_) {}
+    }
+
     _refreshProvider = refreshProvider;
     _lastGlobalVersion = refreshProvider.globalVersion;
     _lastProfileVersion = refreshProvider.profileVersion;
 
-    refreshProvider.addListener(() {
+    _refreshListener = () {
       try {
         final nextGlobal = refreshProvider.globalVersion;
         final nextProfile = refreshProvider.profileVersion;
@@ -101,7 +113,8 @@ class CollabProvider extends ChangeNotifier {
           debugPrint('CollabProvider: refresh listener error: $e');
         }
       }
-    });
+    };
+    refreshProvider.addListener(_refreshListener!);
   }
 
   void bindProfileProvider(ProfileProvider profileProvider) {
@@ -125,6 +138,27 @@ class CollabProvider extends ChangeNotifier {
     if (_socketBound) return;
     _socketBound = true;
     _socket.addCollabListener(_onSocketCollabEvent);
+  }
+
+  void _resetSessionState({
+    bool clearKnownInvites = false,
+  }) {
+    stopInvitePolling();
+    _pollingInFlight = false;
+    _inviteBackoffUntil = null;
+    _inviteBackoff = Duration.zero;
+    _readyToNotifyNewInvites = false;
+    _initialized = false;
+    _isLoading = false;
+    _lastAuthWallet = '';
+    _invitesInbox.clear();
+    _membersByEntityKey.clear();
+    _error = null;
+
+    if (clearKnownInvites) {
+      _knownInviteIds.clear();
+      _knownInvitesHydrated = false;
+    }
   }
 
   void _onSocketCollabEvent(Map<String, dynamic> payload) {
@@ -165,26 +199,25 @@ class CollabProvider extends ChangeNotifier {
     final token = (_api.getAuthToken() ?? '').trim();
 
     if (!signedIn || wallet.isEmpty || token.isEmpty) {
-      if (_lastAuthWallet.isNotEmpty || _invitesInbox.isNotEmpty || _membersByEntityKey.isNotEmpty) {
-        _lastAuthWallet = '';
-        _invitesInbox.clear();
-        _membersByEntityKey.clear();
-        _error = null;
+      if (_lastAuthWallet.isNotEmpty ||
+          _invitesInbox.isNotEmpty ||
+          _membersByEntityKey.isNotEmpty ||
+          _error != null) {
         // Schedule notifyListeners in microtask to avoid synchronous notification
         // during ProxyProvider update callback, which could cause infinite recursion.
+        _resetSessionState();
         Future.microtask(notifyListeners);
+      } else {
+        _resetSessionState();
       }
-      stopInvitePolling();
       return;
     }
 
     _bindSocketOnce();
 
     if (_lastAuthWallet != wallet) {
+      _resetSessionState();
       _lastAuthWallet = wallet;
-      _invitesInbox.clear();
-      _membersByEntityKey.clear();
-      _error = null;
       // Schedule notifyListeners in microtask to avoid synchronous notification.
       Future.microtask(notifyListeners);
       unawaited(initialize(refresh: true));
@@ -206,8 +239,7 @@ class CollabProvider extends ChangeNotifier {
     final token = (_api.getAuthToken() ?? '').trim();
     if (token.isEmpty) {
       // Anonymous user; keep state empty and avoid noisy errors.
-      _invitesInbox.clear();
-      _error = null;
+      _resetSessionState();
       notifyListeners();
       return;
     }
@@ -264,7 +296,7 @@ class CollabProvider extends ChangeNotifier {
     try {
       final token = (_api.getAuthToken() ?? '').trim();
       if (token.isEmpty) {
-        _invitesInbox.clear();
+        _resetSessionState();
         notifyListeners();
         return;
       }
@@ -288,6 +320,7 @@ class CollabProvider extends ChangeNotifier {
         if (id.isEmpty) continue;
         _knownInviteIds.add(id);
       }
+      _pruneKnownInviteIds();
       unawaited(_persistKnownInvites());
 
       if (notifyOnNew &&
@@ -330,6 +363,7 @@ class CollabProvider extends ChangeNotifier {
         if (trimmed.isEmpty) continue;
         _knownInviteIds.add(trimmed);
       }
+      _pruneKnownInviteIds();
     } catch (_) {
       // Best-effort; if hydration fails we'll still function, but may notify more than desired.
     } finally {
@@ -340,11 +374,17 @@ class CollabProvider extends ChangeNotifier {
   Future<void> _persistKnownInvites() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final list = _knownInviteIds.toList(growable: false);
-      final capped = list.length > 200 ? list.sublist(list.length - 200) : list;
+      _pruneKnownInviteIds();
+      final capped = _knownInviteIds.toList(growable: false);
       await prefs.setStringList('collab_known_invite_ids_v1', capped);
     } catch (_) {
       // Ignore persistence errors.
+    }
+  }
+
+  void _pruneKnownInviteIds() {
+    while (_knownInviteIds.length > _maxKnownInviteIds) {
+      _knownInviteIds.remove(_knownInviteIds.first);
     }
   }
 
@@ -542,11 +582,34 @@ class CollabProvider extends ChangeNotifier {
     if (_socketBound) {
       _socket.removeCollabListener(_onSocketCollabEvent);
     }
+    if (_refreshProvider != null && _refreshListener != null) {
+      try {
+        _refreshProvider!.removeListener(_refreshListener!);
+      } catch (_) {}
+    }
+    _refreshProvider = null;
+    _refreshListener = null;
     if (_profileProvider != null && _profileListener != null) {
       try {
         _profileProvider!.removeListener(_profileListener!);
       } catch (_) {}
     }
+    _profileProvider = null;
+    _profileListener = null;
     super.dispose();
   }
+
+  Map<String, Object> get debugSnapshot => <String, Object>{
+        'initialized': _initialized,
+        'loading': _isLoading,
+        'lastAuthWallet': _lastAuthWallet,
+        'refreshBound': _refreshListener != null,
+        'profileBound': _profileListener != null,
+        'socketBound': _socketBound,
+        'invitePollingActive': _invitePollingTimer?.isActive ?? false,
+        'invitesInbox': _invitesInbox.length,
+        'membersCacheEntries': _membersByEntityKey.length,
+        'knownInviteIds': _knownInviteIds.length,
+        'readyToNotifyNewInvites': _readyToNotifyNewInvites,
+      };
 }

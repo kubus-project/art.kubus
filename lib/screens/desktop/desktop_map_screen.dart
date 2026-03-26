@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:developer' as dev;
 import 'dart:math' as math;
 
@@ -257,6 +258,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   late final MapTutorialCoordinator _mapTutorialCoordinator;
   bool _pendingSafeSetState = false;
   int _debugMarkerTapCount = 0;
+  int _debugMarkerSourceWriteCount = 0;
+  int _webResizeRecoveryToken = 0;
 
   late AnimationController _cubeIconSpinController;
 
@@ -1000,25 +1003,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   void _scheduleWebMapResizeRecovery({required String reason}) {
     if (!kIsWeb) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final controller = _mapController;
-      if (controller == null) return;
-
-      try {
-        controller.forceResizeWebMap();
-      } catch (_) {}
-      try {
-        controller.resizeWebMap();
-      } catch (_) {}
-
-      _perf.logEvent(
-        'webResizeRecovery',
-        extra: <String, Object?>{
-          'reason': reason,
-        },
-      );
-    });
+    _safeSetState(() => _webResizeRecoveryToken += 1);
+    _perf.logEvent(
+      'webResizeRecovery',
+      extra: <String, Object?>{
+        'reason': reason,
+      },
+    );
   }
 
   void _handleActiveStateChanged() {
@@ -1301,6 +1292,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (!mounted) return;
     try {
       await controller.setGeoJsonSource(_markerSourceId, collection);
+      _debugMarkerSourceWriteCount += 1;
     } catch (_) {
       // Best-effort: style swaps can temporarily invalidate sources.
     }
@@ -1514,6 +1506,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       'dispose',
       extra: <String, Object?>{
         'markerTaps': _debugMarkerTapCount,
+        'markerSourceWrites': _debugMarkerSourceWriteCount,
         'styleEpoch': _styleEpoch,
       },
     );
@@ -1723,6 +1716,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           maxZoom: 24.0,
           isDarkMode: isDark,
           styleAsset: styleAsset,
+          webResizeRecoveryToken: _webResizeRecoveryToken,
           onMapCreated: _handleMapCreated,
           onStyleLoaded: () {
             AppConfig.debugPrint(
@@ -3668,6 +3662,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (scope == _MarkerSocketScope.outOfScope && existingIndex < 0) {
       return;
     }
+    if (existingIndex >= 0 &&
+        scope != _MarkerSocketScope.outOfScope &&
+        _markersHaveEquivalentVisibleState(_artMarkers[existingIndex], marker)) {
+      return;
+    }
 
     var changed = false;
     setState(() {
@@ -3712,6 +3711,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   void _handleMarkerDeleted(String markerId) {
     if (!mounted) return;
+    if (_artMarkers.indexWhere((m) => m.id == markerId) < 0) {
+      return;
+    }
 
     try {
       setState(() {
@@ -3725,6 +3727,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _kubusMapController.setMarkers(_artMarkers);
     _renderCoordinator.requestStyleUpdate(force: true);
     unawaited(_syncMapMarkers(themeProvider: context.read<ThemeProvider>()));
+  }
+
+  bool _markersHaveEquivalentVisibleState(ArtMarker current, ArtMarker next) {
+    try {
+      return jsonEncode(current.toMap()) == jsonEncode(next.toMap());
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> _syncMarkerCubes({required ThemeProvider themeProvider}) async {

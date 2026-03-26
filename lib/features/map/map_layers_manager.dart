@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 
+import 'shared/map_marker_collision_config.dart';
 import '../../utils/maplibre_style_utils.dart';
 import '../../widgets/map_marker_style_config.dart';
 
@@ -863,7 +864,7 @@ class MapLayersManager {
     await _ensureHitboxImageRegistered();
 
     final Object hitboxIconSize = kIsWeb
-        ? 60.0
+        ? MapMarkerCollisionConfig.webHitboxIconSizeExpression()
         : <Object>[
             'interpolate',
             <Object>['linear'],
@@ -916,7 +917,7 @@ class MapLayersManager {
       _addLayerCalls += 1;
     } catch (_) {
       final Object hitboxRadius = kIsWeb
-          ? 32.0
+          ? MapMarkerCollisionConfig.webHitboxRadiusExpression()
           : <Object>[
               'interpolate',
               <Object>['linear'],

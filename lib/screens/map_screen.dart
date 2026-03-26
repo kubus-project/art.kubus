@@ -333,9 +333,14 @@ class _MapScreenState extends State<MapScreen>
   bool _filtersExpanded = false;
   final GlobalKey _discoveryCardKey = GlobalKey();
   double _markerOverlayTopPadding = MapOverlaySizing.defaultVerticalPadding;
+  bool _markerOverlayTopPaddingMeasurePending = false;
+  String? _pendingMarkerOverlayTopPaddingLayoutKey;
+  String? _lastMarkerOverlayTopPaddingLayoutKey;
 
   bool _pendingSafeSetState = false;
   int _debugMarkerTapCount = 0;
+  int _debugMarkerSourceWriteCount = 0;
+  int _webResizeRecoveryToken = 0;
   int _debugSheetExtentEventCount = 0;
   DateTime _debugSheetExtentWindowStart = DateTime.now();
 
@@ -814,28 +819,13 @@ class _MapScreenState extends State<MapScreen>
 
   void _scheduleWebMapResizeRecovery({required String reason}) {
     if (!kIsWeb) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final controller = _mapController;
-      if (controller == null) return;
-
-      // MapLibre GL JS can end up with a blank canvas after transient route
-      // overlays (e.g. modal bottom sheets) on first load. A forced resize
-      // reliably triggers a repaint without requiring a full page refresh.
-      try {
-        controller.forceResizeWebMap();
-      } catch (_) {}
-      try {
-        controller.resizeWebMap();
-      } catch (_) {}
-
-      _perf.logEvent(
-        'webResizeRecovery',
-        extra: <String, Object?>{
-          'reason': reason,
-        },
-      );
-    });
+    _safeSetState(() => _webResizeRecoveryToken += 1);
+    _perf.logEvent(
+      'webResizeRecovery',
+      extra: <String, Object?>{
+        'reason': reason,
+      },
+    );
   }
 
   void _handleActiveStateChanged() {
@@ -1271,6 +1261,9 @@ class _MapScreenState extends State<MapScreen>
     }
     _proximityCheckTimer?.cancel();
     _perf.timerStopped('proximity_timer');
+    _pushNotificationService.onNotificationTap = null;
+    _pushNotificationService.dispose();
+    _arIntegrationService.dispose();
     _markerSocketSubscription?.cancel();
     _perf.subscriptionStopped('marker_socket_created');
     _markerDeletedSubscription?.cancel();
@@ -1290,6 +1283,7 @@ class _MapScreenState extends State<MapScreen>
       'dispose',
       extra: <String, Object?>{
         'markerTaps': _debugMarkerTapCount,
+        'markerSourceWrites': _debugMarkerSourceWriteCount,
         'styleEpoch': _styleEpoch,
       },
     );
@@ -1681,6 +1675,11 @@ class _MapScreenState extends State<MapScreen>
       if (scope == _MarkerSocketScope.outOfScope && existingIndex < 0) {
         return;
       }
+      if (existingIndex >= 0 &&
+          scope != _MarkerSocketScope.outOfScope &&
+          _markersHaveEquivalentVisibleState(_artMarkers[existingIndex], marker)) {
+        return;
+      }
 
       var changed = false;
       setState(() {
@@ -1737,12 +1736,23 @@ class _MapScreenState extends State<MapScreen>
 
   void _handleMarkerDeleted(String markerId) {
     try {
+      if (_artMarkers.indexWhere((m) => m.id == markerId) < 0) {
+        return;
+      }
       setState(() {
         _artMarkers.removeWhere((m) => m.id == markerId);
       });
       _kubusMapController.setMarkers(_artMarkers);
       unawaited(_syncMapMarkers(themeProvider: context.read<ThemeProvider>()));
     } catch (_) {}
+  }
+
+  bool _markersHaveEquivalentVisibleState(ArtMarker current, ArtMarker next) {
+    try {
+      return jsonEncode(current.toMap()) == jsonEncode(next.toMap());
+    } catch (_) {
+      return false;
+    }
   }
 
   void _handleNotificationTap(String payload) {
@@ -2159,8 +2169,33 @@ class _MapScreenState extends State<MapScreen>
     _kubusMapController.setSelectedStackIndex(index);
   }
 
-  void _scheduleMarkerOverlayTopPaddingMeasure({required bool hasDiscovery}) {
+  void _scheduleMarkerOverlayTopPaddingMeasure({
+    required bool hasDiscovery,
+    required int discoveryTaskCount,
+  }) {
+    final layoutKey = [
+      hasDiscovery ? '1' : '0',
+      _isDiscoveryExpanded ? '1' : '0',
+      discoveryTaskCount,
+      _filtersExpanded ? '1' : '0',
+      _mapSearchController.state.isOverlayVisible ? '1' : '0',
+      _mapSearchController.state.suggestions.length,
+    ].join(':');
+    if (_markerOverlayTopPaddingMeasurePending &&
+        _pendingMarkerOverlayTopPaddingLayoutKey == layoutKey) {
+      return;
+    }
+    if (!_markerOverlayTopPaddingMeasurePending &&
+        _lastMarkerOverlayTopPaddingLayoutKey == layoutKey) {
+      return;
+    }
+    _markerOverlayTopPaddingMeasurePending = true;
+    _pendingMarkerOverlayTopPaddingLayoutKey = layoutKey;
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _markerOverlayTopPaddingMeasurePending = false;
+      _lastMarkerOverlayTopPaddingLayoutKey =
+          _pendingMarkerOverlayTopPaddingLayoutKey ?? layoutKey;
+      _pendingMarkerOverlayTopPaddingLayoutKey = null;
       if (!mounted) return;
 
       if (!hasDiscovery) {
@@ -3251,6 +3286,7 @@ class _MapScreenState extends State<MapScreen>
         zoomGesturesEnabled: !disableGesturesForOverlays,
         tiltGesturesEnabled: !disableGesturesForOverlays,
         compassEnabled: false,
+        webResizeRecoveryToken: _webResizeRecoveryToken,
         onCameraMove: _handleCameraMove,
         onCameraIdle: _handleCameraIdle,
         onMapClick: (dynamic point, _) {
@@ -3587,6 +3623,7 @@ class _MapScreenState extends State<MapScreen>
       if (!mounted) return;
       try {
         await controller.setGeoJsonSource(_markerSourceId, collection);
+        _debugMarkerSourceWriteCount += 1;
       } catch (_) {
         // Best-effort: style swaps can temporarily invalidate sources.
       }
@@ -4048,9 +4085,13 @@ class _MapScreenState extends State<MapScreen>
       listenable: _mapSearchController,
       builder: (context, _) {
         final state = _mapSearchController.state;
-        final hasDiscovery = taskProvider != null &&
-            taskProvider.getActiveTaskProgress().isNotEmpty;
-        _scheduleMarkerOverlayTopPaddingMeasure(hasDiscovery: hasDiscovery);
+        final discoveryTaskCount =
+            taskProvider?.getActiveTaskProgress().length ?? 0;
+        final hasDiscovery = discoveryTaskCount > 0;
+        _scheduleMarkerOverlayTopPaddingMeasure(
+          hasDiscovery: hasDiscovery,
+          discoveryTaskCount: discoveryTaskCount,
+        );
         final hasExtraContent = _filtersExpanded || hasDiscovery;
         return KubusSearchOverlayScaffold(
           layout: KubusSearchOverlayLayout.topOverlay,

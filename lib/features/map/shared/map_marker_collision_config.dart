@@ -58,4 +58,110 @@ abstract final class MapMarkerCollisionConfig {
 
   /// Debounce for nearby radius slider fetches.
   static const int nearbyRadiusDebounceMs = 400;
+
+  /// Upper bound for animation-driven marker data syncs.
+  static const int entrySyncThrottleMs = 96;
+
+  static Object webHitboxIconSizeExpression() {
+    return <Object>[
+      'interpolate',
+      <Object>['linear'],
+      <Object>['zoom'],
+      3,
+      <Object>[
+        'case',
+        <Object>['==', <Object>['get', 'kind'], 'cluster'],
+        44,
+        28,
+      ],
+      12,
+      <Object>[
+        'case',
+        <Object>['==', <Object>['get', 'kind'], 'cluster'],
+        52,
+        34,
+      ],
+      15,
+      <Object>[
+        'case',
+        <Object>['==', <Object>['get', 'kind'], 'cluster'],
+        62,
+        40,
+      ],
+      24,
+      <Object>[
+        'case',
+        <Object>['==', <Object>['get', 'kind'], 'cluster'],
+        74,
+        56,
+      ],
+    ];
+  }
+
+  static Object webHitboxRadiusExpression() {
+    return <Object>[
+      'interpolate',
+      <Object>['linear'],
+      <Object>['zoom'],
+      3,
+      <Object>[
+        'case',
+        <Object>['==', <Object>['get', 'kind'], 'cluster'],
+        22,
+        14,
+      ],
+      12,
+      <Object>[
+        'case',
+        <Object>['==', <Object>['get', 'kind'], 'cluster'],
+        26,
+        17,
+      ],
+      15,
+      <Object>[
+        'case',
+        <Object>['==', <Object>['get', 'kind'], 'cluster'],
+        31,
+        20,
+      ],
+      24,
+      <Object>[
+        'case',
+        <Object>['==', <Object>['get', 'kind'], 'cluster'],
+        37,
+        28,
+      ],
+    ];
+  }
+
+  static double webFallbackPickRadiusForZoom(double zoom) {
+    return _interpolateStops(
+      zoom,
+      const <double>[3, 12, 15, 24],
+      const <double>[14, 17, 20, 28],
+    );
+  }
+
+  static double _interpolateStops(
+    double zoom,
+    List<double> stops,
+    List<double> values,
+  ) {
+    if (stops.isEmpty || values.isEmpty || stops.length != values.length) {
+      return 0.0;
+    }
+    final clamped = zoom.clamp(stops.first, stops.last).toDouble();
+    for (var i = 1; i < stops.length; i++) {
+      final currentStop = stops[i];
+      if (clamped > currentStop) continue;
+      final previousStop = stops[i - 1];
+      final previousValue = values[i - 1];
+      final currentValue = values[i];
+      final span = currentStop - previousStop;
+      if (span <= 0) return currentValue;
+      final t = (clamped - previousStop) / span;
+      return previousValue + ((currentValue - previousValue) * t);
+    }
+    return values.last;
+  }
 }

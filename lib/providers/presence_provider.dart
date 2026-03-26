@@ -14,6 +14,7 @@ class PresenceProvider extends ChangeNotifier {
   static const Duration _batchDebounce = Duration(milliseconds: 60);
   static const Duration _visitDebounce = Duration(milliseconds: 400);
   static const Duration _visitDedupeWindow = Duration(minutes: 5);
+  static const Duration _cacheMaxAge = Duration(minutes: 10);
   // Keep presence feeling "live" without spamming the backend.
   static const Duration _baseAutoRefreshInterval = Duration(seconds: 20);
   static const Duration _heartbeatInterval = Duration(seconds: 30);
@@ -24,12 +25,16 @@ class PresenceProvider extends ChangeNotifier {
   /// than waking the network stack forever.
   static const int _maxWatchedWallets = 120;
   static const Duration _watchedWalletTtl = Duration(minutes: 2);
+  static const int _maxCachedWallets = 180;
+  static const int _maxVisitDedupeEntries = 240;
 
   final PresenceApi _api;
 
   AppRefreshProvider? _boundRefreshProvider;
+  VoidCallback? _refreshListener;
   ProfileProvider? _profileProvider;
   VoidCallback? _profileListener;
+  String? _lastAuthWalletLower;
 
   bool _initialized = false;
 
@@ -73,13 +78,23 @@ class PresenceProvider extends ChangeNotifier {
   }
 
   void bindToRefresh(AppRefreshProvider refreshProvider) {
-    if (identical(_boundRefreshProvider, refreshProvider)) return;
+    if (identical(_boundRefreshProvider, refreshProvider) &&
+        _refreshListener != null) {
+      return;
+    }
+
+    if (_boundRefreshProvider != null && _refreshListener != null) {
+      try {
+        _boundRefreshProvider!.removeListener(_refreshListener!);
+      } catch (_) {}
+    }
+
     _boundRefreshProvider = refreshProvider;
     _lastGlobalVersion = refreshProvider.globalVersion;
     _lastCommunityVersion = refreshProvider.communityVersion;
     _lastChatVersion = refreshProvider.chatVersion;
 
-    refreshProvider.addListener(() {
+    _refreshListener = () {
       try {
         final nextGlobal = refreshProvider.globalVersion;
         final nextCommunity = refreshProvider.communityVersion;
@@ -110,7 +125,8 @@ class PresenceProvider extends ChangeNotifier {
           debugPrint('PresenceProvider: bindToRefresh listener error: $e');
         }
       }
-    });
+    };
+    refreshProvider.addListener(_refreshListener!);
   }
 
   void bindProfileProvider(ProfileProvider profileProvider) {
@@ -146,18 +162,39 @@ class PresenceProvider extends ChangeNotifier {
 
     final hadAuth = _hasAuthSession;
     _lastAuthSignature = signature;
-    _hasAuthSession =
-        signedIn && allowVisible && wallet.isNotEmpty && tokenPresent;
+    final authAvailable = signedIn && wallet.isNotEmpty && tokenPresent;
+    _hasAuthSession = authAvailable;
+    final walletLower = wallet.toLowerCase();
+    final walletChanged = hadAuth &&
+        _lastAuthWalletLower != null &&
+        _lastAuthWalletLower != walletLower &&
+        walletLower.isNotEmpty;
+    _lastAuthWalletLower = authAvailable ? walletLower : null;
 
     if (!_initialized) {
       unawaited(initialize());
     }
 
-    if (!_hasAuthSession) {
-      _heartbeatTimer?.cancel();
-      _heartbeatTimer = null;
-      _heartbeatInFlight = false;
-      _lastHeartbeatAt = null;
+    if (!authAvailable) {
+      _resetSessionState(
+        clearWatchedWallets: true,
+        clearLastVisitHistory: true,
+      );
+      return;
+    }
+
+    if (walletChanged) {
+      _resetSessionState(
+        clearWatchedWallets: true,
+        clearLastVisitHistory: true,
+      );
+    }
+
+    if (!allowVisible) {
+      _resetSessionState(
+        clearWatchedWallets: false,
+        clearLastVisitHistory: false,
+      );
       return;
     }
 
@@ -176,14 +213,7 @@ class PresenceProvider extends ChangeNotifier {
     final now = DateTime.now();
     if (_watchedWalletsLower.isEmpty) return;
 
-    final keys = _cacheByWalletLower.keys.toList(growable: false);
-    for (final key in keys) {
-      final existing = _cacheByWalletLower[key];
-      if (existing == null) continue;
-      _cacheByWalletLower[key] = existing.copyWith(
-        fetchedAt: DateTime.fromMillisecondsSinceEpoch(0),
-      );
-    }
+    _markCacheEntriesStale();
 
     for (final key in _watchedWalletsLower) {
       _pendingWalletsLower.add(key);
@@ -193,6 +223,16 @@ class PresenceProvider extends ChangeNotifier {
     _scheduleBatchFetch();
     if (forceImmediate) {
       unawaited(_flushBatchFetch());
+    }
+  }
+
+  void _markCacheEntriesStale() {
+    final staleAt = DateTime.fromMillisecondsSinceEpoch(0);
+    final keys = _cacheByWalletLower.keys.toList(growable: false);
+    for (final key in keys) {
+      final existing = _cacheByWalletLower[key];
+      if (existing == null) continue;
+      _cacheByWalletLower[key] = existing.copyWith(fetchedAt: staleAt);
     }
   }
 
@@ -220,6 +260,7 @@ class PresenceProvider extends ChangeNotifier {
       _watchedWalletLastRequestedAt[key] = now;
     }
     _pruneWatchedWallets(now);
+    _prunePresenceCache(now);
     _ensureAutoRefreshTimer();
     _ensureHeartbeatTimer();
     _scheduleBatchFetch();
@@ -238,6 +279,7 @@ class PresenceProvider extends ChangeNotifier {
     _pendingWalletsLower.add(key);
     _watchedWalletsLower.add(key);
     _watchedWalletLastRequestedAt[key] = DateTime.now();
+    _prunePresenceCache(DateTime.now());
     _ensureAutoRefreshTimer();
     _ensureHeartbeatTimer();
     await _flushBatchFetch();
@@ -358,6 +400,83 @@ class PresenceProvider extends ChangeNotifier {
     }
   }
 
+  void _prunePresenceCache(DateTime now) {
+    final cutoff = now.subtract(_cacheMaxAge);
+    _cacheByWalletLower.removeWhere((key, entry) {
+      if (_watchedWalletsLower.contains(key)) return false;
+      return entry.fetchedAt.isBefore(cutoff);
+    });
+
+    if (_cacheByWalletLower.length <= _maxCachedWallets) return;
+
+    final nonWatchedEntries = _cacheByWalletLower.entries
+        .where((entry) => !_watchedWalletsLower.contains(entry.key))
+        .toList(growable: false)
+      ..sort((a, b) => a.value.fetchedAt.compareTo(b.value.fetchedAt));
+
+    var overflow = _cacheByWalletLower.length - _maxCachedWallets;
+    for (final entry in nonWatchedEntries) {
+      if (overflow <= 0) break;
+      _cacheByWalletLower.remove(entry.key);
+      overflow--;
+    }
+
+    if (overflow <= 0) return;
+
+    final allEntries = _cacheByWalletLower.entries.toList(growable: false)
+      ..sort((a, b) => a.value.fetchedAt.compareTo(b.value.fetchedAt));
+    for (final entry in allEntries) {
+      if (overflow <= 0) break;
+      _cacheByWalletLower.remove(entry.key);
+      overflow--;
+    }
+  }
+
+  void _pruneVisitDedupes(DateTime now) {
+    final cutoff = now.subtract(_visitDedupeWindow);
+    _lastVisitSentAt.removeWhere((_, sentAt) => sentAt.isBefore(cutoff));
+
+    if (_lastVisitSentAt.length <= _maxVisitDedupeEntries) return;
+
+    final entries = _lastVisitSentAt.entries.toList(growable: false)
+      ..sort((a, b) => a.value.compareTo(b.value));
+    var overflow = _lastVisitSentAt.length - _maxVisitDedupeEntries;
+    for (final entry in entries) {
+      if (overflow <= 0) break;
+      _lastVisitSentAt.remove(entry.key);
+      overflow--;
+    }
+  }
+
+  void _resetSessionState({
+    required bool clearWatchedWallets,
+    required bool clearLastVisitHistory,
+  }) {
+    _batchTimer?.cancel();
+    _batchTimer = null;
+    _batchInFlight = false;
+    _visitTimer?.cancel();
+    _visitTimer = null;
+    _pendingVisit = null;
+    _autoRefreshTimer?.cancel();
+    _autoRefreshTimer = null;
+    _autoRefreshIntervalCurrent = null;
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
+    _heartbeatInFlight = false;
+    _lastHeartbeatAt = null;
+    _pendingWalletsLower.clear();
+
+    if (clearWatchedWallets) {
+      _watchedWalletsLower.clear();
+      _watchedWalletLastRequestedAt.clear();
+    }
+
+    if (clearLastVisitHistory) {
+      _lastVisitSentAt.clear();
+    }
+  }
+
   void _ensureHeartbeatTimer() {
     if (!_initialized) return;
 
@@ -447,6 +566,9 @@ class PresenceProvider extends ChangeNotifier {
     if (!AppConfig.isFeatureEnabled('presence')) return;
     if (!AppConfig.isFeatureEnabled('presenceLastVisitedLocation')) return;
 
+    final now = DateTime.now();
+    _pruneVisitDedupes(now);
+
     final normalizedType = type.trim().toLowerCase();
     final normalizedId = id.trim();
     if (normalizedType.isEmpty || normalizedId.isEmpty) return;
@@ -461,7 +583,7 @@ class PresenceProvider extends ChangeNotifier {
     final visitKey = '$normalizedType:$normalizedId';
     final lastSent = _lastVisitSentAt[visitKey];
     if (lastSent != null &&
-        DateTime.now().difference(lastSent) < _visitDedupeWindow) {
+        now.difference(lastSent) < _visitDedupeWindow) {
       return;
     }
 
@@ -557,6 +679,7 @@ class PresenceProvider extends ChangeNotifier {
         }
         if (didChange) notifyListeners();
       }
+      _prunePresenceCache(now);
     } catch (e) {
       if (kDebugMode) {
         debugPrint('PresenceProvider: batch fetch failed: $e');
@@ -569,16 +692,24 @@ class PresenceProvider extends ChangeNotifier {
 
   @override
   void dispose() {
-    _batchTimer?.cancel();
-    _visitTimer?.cancel();
-    _autoRefreshTimer?.cancel();
-    _heartbeatTimer?.cancel();
-    _watchedWalletLastRequestedAt.clear();
+    _resetSessionState(
+      clearWatchedWallets: true,
+      clearLastVisitHistory: true,
+    );
     if (_profileProvider != null && _profileListener != null) {
       try {
         _profileProvider!.removeListener(_profileListener!);
       } catch (_) {}
     }
+    _profileProvider = null;
+    _profileListener = null;
+    if (_boundRefreshProvider != null && _refreshListener != null) {
+      try {
+        _boundRefreshProvider!.removeListener(_refreshListener!);
+      } catch (_) {}
+    }
+    _boundRefreshProvider = null;
+    _refreshListener = null;
     super.dispose();
   }
 
@@ -586,6 +717,20 @@ class PresenceProvider extends ChangeNotifier {
         'autoRefreshTicks': _debugAutoRefreshTicks,
         'autoRefreshSkipped': _debugAutoRefreshSkipped,
         'heartbeats': _debugHeartbeats,
+      };
+
+  Map<String, Object> get debugSnapshot => <String, Object>{
+        'initialized': _initialized,
+        'hasAuthSession': _hasAuthSession,
+        'watchedWallets': _watchedWalletsLower.length,
+        'pendingWallets': _pendingWalletsLower.length,
+        'cachedWallets': _cacheByWalletLower.length,
+        'visitDedupeEntries': _lastVisitSentAt.length,
+        'refreshBound': _refreshListener != null,
+        'profileBound': _profileListener != null,
+        'batchTimerActive': _batchTimer?.isActive ?? false,
+        'autoRefreshTimerActive': _autoRefreshTimer?.isActive ?? false,
+        'heartbeatTimerActive': _heartbeatTimer?.isActive ?? false,
       };
 
   Future<void> _flushVisit() async {
@@ -609,6 +754,7 @@ class PresenceProvider extends ChangeNotifier {
       if (resp['success'] == true) {
         final key = '${pending.type}:${pending.id}';
         _lastVisitSentAt[key] = DateTime.now();
+        _pruneVisitDedupes(DateTime.now());
       }
     } catch (e) {
       if (kDebugMode) {

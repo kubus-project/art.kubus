@@ -278,6 +278,7 @@ class KubusMapController {
   int _viewportInitAttemptCount = 0;
 
   Timer? _entryAnimationTicker;
+  Timer? _entryAnimationSyncTimer;
   bool _viewportStateInitialized = false;
   Set<String> _visibleMarkerIds = <String>{};
   final Map<String, _MarkerEntryAnimationState> _entryAnimationByMarkerId =
@@ -286,6 +287,11 @@ class KubusMapController {
   String? _expandedCoordinateKey;
   final Map<String, LatLng> _spiderfiedPositionByMarkerId = <String, LatLng>{};
   int _entrySerialCounter = 0;
+  int _lastEntryAnimationSyncMs = 0;
+  int _debugFeatureTapCount = 0;
+  int _debugFeatureHoverCount = 0;
+  int _debugMarkerDataSyncCount = 0;
+  int _debugQueuedMarkerDataSyncCount = 0;
 
   KubusMapCameraState get camera => _camera;
   bool get autoFollow => _autoFollow;
@@ -305,6 +311,49 @@ class KubusMapController {
 
   String? get hoveredMarkerId => _hoveredMarkerId;
   String? get pressedMarkerId => _pressedMarkerId;
+
+  Map<String, Object?> get debugResourceSnapshot {
+    final layersStats = _layersManager?.stats;
+    return <String, Object?>{
+      'styleEpoch': _styleEpoch,
+      'styleInitialized': _styleInitialized,
+      'styleInitializationInProgress': _styleInitializationInProgress,
+      'managedLayerCount': managedLayerIds.length,
+      'managedSourceCount': managedSourceIds.length,
+      'registeredImageCount': registeredMapImages.length,
+      'activeTimers': <String, bool>{
+        'pressedClear': _pressedClearTimer?.isActive ?? false,
+        'viewportInitRetry': _viewportInitRetryTimer?.isActive ?? false,
+        'entryAnimationTicker': _entryAnimationTicker?.isActive ?? false,
+        'entryAnimationSync': _entryAnimationSyncTimer?.isActive ?? false,
+      },
+      'markerState': <String, Object?>{
+        'totalMarkers': _markers.length,
+        'visibleMarkerIds': _visibleMarkerIds.length,
+        'entryAnimations': _entryAnimationByMarkerId.length,
+        'spiderfiedMarkers': _spiderfiedPositionByMarkerId.length,
+        'expandedCoordinateKey': _expandedCoordinateKey,
+      },
+      'interactionCounts': <String, int>{
+        'featureTaps': _debugFeatureTapCount,
+        'featureHovers': _debugFeatureHoverCount,
+        'markerDataSyncs': _debugMarkerDataSyncCount,
+        'queuedMarkerDataSyncs': _debugQueuedMarkerDataSyncCount,
+      },
+      'layers': layersStats == null
+          ? null
+          : <String, int>{
+              'addSourceCalls': layersStats.addSourceCalls,
+              'addLayerCalls': layersStats.addLayerCalls,
+              'removeLayerCalls': layersStats.removeLayerCalls,
+              'removeSourceCalls': layersStats.removeSourceCalls,
+              'sourceUpdateCalls': layersStats.sourceUpdateCalls,
+              'layerPropertiesCalls': layersStats.layerPropertiesCalls,
+              'visibilityCalls': layersStats.visibilityCalls,
+              'modeToggles': layersStats.modeToggles,
+            },
+    };
+  }
 
   KubusMarkerSelectionState get selectionState => KubusMarkerSelectionState(
         selectionToken: _markerSelectionToken,
@@ -480,6 +529,8 @@ class KubusMapController {
     _collapseSpiderfy(requestSync: false);
     _entryAnimationTicker?.cancel();
     _entryAnimationTicker = null;
+    _entryAnimationSyncTimer?.cancel();
+    _entryAnimationSyncTimer = null;
     _entryAnimationByMarkerId.clear();
     _visibleMarkerIds.clear();
     _viewportStateInitialized = false;
@@ -719,6 +770,7 @@ class KubusMapController {
 
     _lastFeatureTapAt = DateTime.now();
     _lastFeatureTapPoint = tapPoint;
+    _debugFeatureTapCount += 1;
 
     if (featureId.startsWith(tapConfig.sameLocationClusterIdPrefix)) {
       final coordinateKey =
@@ -764,6 +816,7 @@ class KubusMapController {
     dynamic eventType,
   ) {
     if (!kIsWeb) return;
+    _debugFeatureHoverCount += 1;
 
     final featureId = id?.toString();
     if (featureId == null || featureId.isEmpty) {
@@ -1181,7 +1234,6 @@ class KubusMapController {
       grouped.map((m) => m.id).toList(growable: false),
       staggered: true,
     );
-    onRequestMarkerDataSync?.call();
   }
 
   void _maybeAutoExpandSelectedSameLocation() {
@@ -1309,7 +1361,7 @@ class KubusMapController {
     _expandedCoordinateKey = null;
     _spiderfiedPositionByMarkerId.clear();
     if (requestSync) {
-      onRequestMarkerDataSync?.call();
+      _requestMarkerDataSync(force: true);
     }
   }
 
@@ -1508,7 +1560,7 @@ class KubusMapController {
       );
     }
 
-    onRequestMarkerDataSync?.call();
+    _requestMarkerDataSync(force: true);
     _startEntryAnimationTicker();
   }
 
@@ -1563,7 +1615,7 @@ class KubusMapController {
   void _startEntryAnimationTicker() {
     if (_entryAnimationTicker?.isActive ?? false) return;
     _entryAnimationTicker = Timer.periodic(
-      const Duration(milliseconds: 16),
+      const Duration(milliseconds: 32),
       _handleEntryAnimationTick,
     );
   }
@@ -1577,16 +1629,76 @@ class KubusMapController {
 
     final nowMs = DateTime.now().millisecondsSinceEpoch;
     final expireAfter = MapMarkerCollisionConfig.entryDurationMs + 120;
-    _entryAnimationByMarkerId.removeWhere(
-      (_, state) => nowMs - state.revealAtMs > expireAfter,
-    );
+    var boundaryCrossed = false;
+    var hasActiveAnimations = false;
+    final removeIds = <String>[];
+    _entryAnimationByMarkerId.forEach((markerId, state) {
+      if (!state.revealSyncIssued && nowMs >= state.revealAtMs) {
+        state.revealSyncIssued = true;
+        boundaryCrossed = true;
+      }
+      final completeAtMs =
+          state.revealAtMs + MapMarkerCollisionConfig.entryDurationMs;
+      if (!state.completeSyncIssued && nowMs >= completeAtMs) {
+        state.completeSyncIssued = true;
+        boundaryCrossed = true;
+      }
+      if (nowMs >= state.revealAtMs && nowMs < completeAtMs) {
+        hasActiveAnimations = true;
+      }
+      if (nowMs - state.revealAtMs > expireAfter) {
+        removeIds.add(markerId);
+      }
+    });
+    for (final markerId in removeIds) {
+      _entryAnimationByMarkerId.remove(markerId);
+    }
 
     if (_entryAnimationByMarkerId.isEmpty) {
       timer.cancel();
       _entryAnimationTicker = null;
+      _requestMarkerDataSync(force: true);
+      return;
     }
 
-    onRequestMarkerDataSync?.call();
+    if (boundaryCrossed || hasActiveAnimations) {
+      _requestMarkerDataSync();
+    }
+  }
+
+  void _requestMarkerDataSync({bool force = false}) {
+    if (onRequestMarkerDataSync == null) return;
+    if (force) {
+      _entryAnimationSyncTimer?.cancel();
+      _entryAnimationSyncTimer = null;
+      _lastEntryAnimationSyncMs = DateTime.now().millisecondsSinceEpoch;
+      _debugMarkerDataSyncCount += 1;
+      onRequestMarkerDataSync!.call();
+      return;
+    }
+
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final deltaMs = nowMs - _lastEntryAnimationSyncMs;
+    if (deltaMs >= MapMarkerCollisionConfig.entrySyncThrottleMs) {
+      _lastEntryAnimationSyncMs = nowMs;
+      _debugMarkerDataSyncCount += 1;
+      onRequestMarkerDataSync!.call();
+      return;
+    }
+
+    _debugQueuedMarkerDataSyncCount += 1;
+    if (_entryAnimationSyncTimer?.isActive ?? false) return;
+    final remainingMs = MapMarkerCollisionConfig.entrySyncThrottleMs - deltaMs;
+    _entryAnimationSyncTimer = Timer(
+      Duration(milliseconds: remainingMs.clamp(1, 250).toInt()),
+      () {
+        _entryAnimationSyncTimer = null;
+        if (onRequestMarkerDataSync == null) return;
+        _lastEntryAnimationSyncMs = DateTime.now().millisecondsSinceEpoch;
+        _debugMarkerDataSyncCount += 1;
+        onRequestMarkerDataSync!.call();
+      },
+    );
   }
 
   ArtMarker? _findMarkerById(String id) {
@@ -1638,10 +1750,9 @@ class KubusMapController {
     final controller = _mapController;
     if (controller == null) return null;
 
-    // Tight fallback radius to avoid oversized hitboxes.
-    final zoomScale = (_camera.zoom / 15.0).clamp(0.7, 1.4);
-    final double base = kIsWeb ? 28.0 : 22.0;
-    final double maxDistance = base * zoomScale;
+    final double maxDistance = kIsWeb
+        ? MapMarkerCollisionConfig.webFallbackPickRadiusForZoom(_camera.zoom)
+        : 22.0 * (_camera.zoom / 15.0).clamp(0.7, 1.4);
 
     ArtMarker? best;
     double bestDistance = maxDistance;
@@ -1764,15 +1875,16 @@ class KubusMapController {
   }
 }
 
-@immutable
 class _MarkerEntryAnimationState {
-  const _MarkerEntryAnimationState({
+  _MarkerEntryAnimationState({
     required this.revealAtMs,
     required this.serial,
   });
 
   final int revealAtMs;
   final int serial;
+  bool revealSyncIssued = false;
+  bool completeSyncIssued = false;
 }
 
 @immutable

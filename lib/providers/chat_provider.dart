@@ -17,6 +17,11 @@ import 'app_refresh_provider.dart';
 import 'profile_provider.dart';
 
 class ChatProvider extends ChangeNotifier {
+  static const int _maxCachedMessageConversations = 24;
+  static const int _maxMessagesPerConversation = 200;
+  static const int _maxCachedMemberLists = 80;
+  static const int _maxCachedUsers = 320;
+
   ChatProvider() {
     // Register socket listeners early so the provider receives events even
     // if initialize() runs earlier or in a different order. SocketService
@@ -263,7 +268,7 @@ class ChatProvider extends ChangeNotifier {
           }
         }
         if (shouldReplace) {
-          _userCache[wallet] = newUser;
+          _cacheUser(newUser);
           seededUsers.add(newUser);
         }
       }
@@ -292,10 +297,7 @@ class ChatProvider extends ChangeNotifier {
       }
 
       if (entries.isNotEmpty) {
-        _membersCache[conv.id] = {
-          'result': entries,
-          'ts': now,
-        };
+        _cacheMembers(conv.id, entries, timestampMs: now);
       }
     } catch (e) {
       debugPrint('ChatProvider._seedConversationMetadataCaches error: $e');
@@ -464,6 +466,7 @@ class ChatProvider extends ChangeNotifier {
 
   bool _initialized = false;
   AppRefreshProvider? _boundRefreshProvider;
+  VoidCallback? _refreshListener;
   int _lastChatVersion = 0;
   int _lastGlobalVersion = 0;
   // Throttle for notifyListeners to avoid update storms
@@ -475,6 +478,9 @@ class ChatProvider extends ChangeNotifier {
   DateTime? _lastUnauthorizedAt;
   final Duration _unauthCooldown = const Duration(seconds: 30);
   String _lastAuthSignature = '';
+  final Map<String, int> _messageCacheTouchMs = {};
+  final Map<String, int> _membersCacheTouchMs = {};
+  final Map<String, int> _userCacheTouchMs = {};
 
   String _computeStateSignature() {
     try {
@@ -557,11 +563,156 @@ class ChatProvider extends ChangeNotifier {
   List<Conversation> get conversations => _conversations;
   Map<String, List<ChatMessage>> get messages => _messages;
   Map<String, int> get unreadCounts => _unreadCounts;
-  User? getCachedUser(String wallet) => _userCache[wallet];
+  User? getCachedUser(String wallet) {
+    final cached = _userCache[wallet];
+    if (cached != null) {
+      _userCacheTouchMs[wallet] = DateTime.now().millisecondsSinceEpoch;
+    }
+    return cached;
+  }
   bool get isAuthenticated => (_api.getAuthToken() ?? '').isNotEmpty;
   bool get _hasAuthToken => (_api.getAuthToken() ?? '').isNotEmpty;
   bool get _hasAuthContext =>
       _hasAuthToken || ((_currentWallet ?? '').isNotEmpty);
+  Map<String, Object?> get debugResourceSnapshot => <String, Object?>{
+        'initialized': _initialized,
+        'hasAuthToken': _hasAuthToken,
+        'currentWallet': _currentWallet,
+        'openConversationId': _openConversationId,
+        'conversationCount': _conversations.length,
+        'messageConversationCount': _messages.length,
+        'cachedMemberLists': _membersCache.length,
+        'cachedUsers': _userCache.length,
+        'activeTimers': <String, bool>{
+          'pollTimer': _pollTimer?.isActive ?? false,
+          'subscriptionMonitor': _subscriptionMonitorTimer?.isActive ?? false,
+        },
+        'bindings': <String, bool>{
+          'refreshProvider': _boundRefreshProvider != null,
+          'refreshListener': _refreshListener != null,
+          'eventBusProfile': _eventBusSub != null,
+          'eventBusProfiles': _eventBusProfilesSub != null,
+        },
+        'socket': _socket.debugResourceSnapshot,
+      };
+
+  void _unbindRefreshProvider() {
+    final provider = _boundRefreshProvider;
+    final listener = _refreshListener;
+    if (provider != null && listener != null) {
+      try {
+        provider.removeListener(listener);
+      } catch (_) {}
+    }
+    _refreshListener = null;
+    _boundRefreshProvider = null;
+  }
+
+  void _cacheMessages(String conversationId, List<ChatMessage> messages) {
+    final trimmed = messages.length <= _maxMessagesPerConversation
+        ? List<ChatMessage>.from(messages)
+        : List<ChatMessage>.from(messages.take(_maxMessagesPerConversation));
+    _messages[conversationId] = trimmed;
+    _messageCacheTouchMs[conversationId] = DateTime.now().millisecondsSinceEpoch;
+    _pruneCacheMap<List<ChatMessage>>(
+      _messages,
+      _messageCacheTouchMs,
+      _maxCachedMessageConversations,
+      preserveKey: _openConversationId,
+    );
+  }
+
+  void _touchMessageCache(String conversationId) {
+    if (_messages.containsKey(conversationId)) {
+      _messageCacheTouchMs[conversationId] =
+          DateTime.now().millisecondsSinceEpoch;
+    }
+  }
+
+  void _cacheMembers(
+    String conversationId,
+    List<dynamic> list, {
+    required int timestampMs,
+  }) {
+    _membersCache[conversationId] = {
+      'result': list,
+      'ts': timestampMs,
+    };
+    _membersCacheTouchMs[conversationId] = timestampMs;
+    _pruneCacheMap<Map<String, dynamic>>(
+      _membersCache,
+      _membersCacheTouchMs,
+      _maxCachedMemberLists,
+    );
+  }
+
+  void _cacheUser(User user) {
+    if (user.id.isEmpty) return;
+    _userCache[user.id] = user;
+    _userCacheTouchMs[user.id] = DateTime.now().millisecondsSinceEpoch;
+    _pruneCacheMap<User>(
+      _userCache,
+      _userCacheTouchMs,
+      _maxCachedUsers,
+    );
+  }
+
+  void _pruneCacheMap<T>(
+    Map<String, T> cache,
+    Map<String, int> touchMs,
+    int maxEntries, {
+    String? preserveKey,
+  }) {
+    if (cache.length <= maxEntries) return;
+    final entries = touchMs.entries.toList(growable: false)
+      ..sort((a, b) => a.value.compareTo(b.value));
+    for (final entry in entries) {
+      if (cache.length <= maxEntries) break;
+      if (preserveKey != null && entry.key == preserveKey) continue;
+      cache.remove(entry.key);
+      touchMs.remove(entry.key);
+    }
+  }
+
+  void _resetSessionState({
+    required String reason,
+    bool notify = true,
+  }) {
+    try {
+      _pollTimer?.cancel();
+      _pollTimer = null;
+    } catch (_) {}
+    try {
+      _subscriptionMonitorTimer?.cancel();
+      _subscriptionMonitorTimer = null;
+    } catch (_) {}
+
+    _openConversationId = null;
+    try {
+      _socket.leaveAllConversations();
+    } catch (_) {}
+
+    _currentWallet = null;
+    _conversations = [];
+    _messages.clear();
+    _messageCacheTouchMs.clear();
+    _unreadCounts.clear();
+    _membersRequests.clear();
+    _membersCache.clear();
+    _membersCacheTouchMs.clear();
+    _userCache.clear();
+    _userCacheTouchMs.clear();
+    _lastUnauthorizedAt = null;
+    _lastStateSignature = '';
+    _lastTotalUnread = 0;
+
+    if (kDebugMode) {
+      debugPrint('ChatProvider: reset session state ($reason)');
+    }
+    if (notify) {
+      _safeNotifyListeners(force: true);
+    }
+  }
 
   Future<void> initialize({String? initialWallet}) async {
     final normalizedInitialWallet = (initialWallet ?? '').trim();
@@ -905,10 +1056,11 @@ class ChatProvider extends ChangeNotifier {
   void bindToRefresh(AppRefreshProvider appRefresh) {
     try {
       if (identical(_boundRefreshProvider, appRefresh)) return;
+      _unbindRefreshProvider();
       _boundRefreshProvider = appRefresh;
       _lastChatVersion = appRefresh.chatVersion;
       _lastGlobalVersion = appRefresh.globalVersion;
-      appRefresh.addListener(() {
+      _refreshListener = () {
         try {
           if (!_hasAuthContext) {
             return;
@@ -929,7 +1081,8 @@ class ChatProvider extends ChangeNotifier {
         } catch (e) {
           debugPrint('ChatProvider.bindToRefresh handler error: $e');
         }
-      });
+      };
+      appRefresh.addListener(_refreshListener!);
     } catch (e) {
       debugPrint('ChatProvider.bindToRefresh failed: $e');
     }
@@ -957,7 +1110,10 @@ class ChatProvider extends ChangeNotifier {
 
       final hasSession =
           token.isNotEmpty || resolvedWallet.isNotEmpty || signedIn;
-      if (!hasSession) return;
+      if (!hasSession) {
+        _resetSessionState(reason: 'authCleared');
+        return;
+      }
 
       if (resolvedWallet.isNotEmpty &&
           !WalletUtils.equals(resolvedWallet, _currentWallet)) {
@@ -1087,7 +1243,7 @@ class ChatProvider extends ChangeNotifier {
         if (_openConversationId != null && _openConversationId == convId) {
           // Insert the message into a fresh list
           final newList = <ChatMessage>[msg, ...existing];
-          _messages[convId] = newList;
+          _cacheMessages(convId, newList);
           // Optimistically mark this message as read locally
           markMessageReadLocal(convId, msg.id);
           // Ensure conversation unread count is zero while open
@@ -1096,14 +1252,14 @@ class ChatProvider extends ChangeNotifier {
           _sendMarkMessageReadToServer(convId, msg.id);
           _safeNotifyListeners();
         } else {
-          _messages[convId] = <ChatMessage>[msg, ...existing];
+          _cacheMessages(convId, <ChatMessage>[msg, ...existing]);
         }
       } else {
         // Fetch messages in background, don't block socket handling
         debugPrint(
             'ChatProvider: Messages for conv $convId unknown locally, fetching');
         // Mark as fetching with empty list to avoid duplicate fetches
-        _messages[convId] = [];
+        _cacheMessages(convId, const <ChatMessage>[]);
         _api.fetchMessages(convId).then((resp) {
           if (resp['success'] == true) {
             final items = (resp['data'] as List<dynamic>?) ?? [];
@@ -1123,7 +1279,7 @@ class ChatProvider extends ChangeNotifier {
                 _sendMarkMessageReadToServer(convId, msg.id);
               }
             }
-            _messages[convId] = fetched;
+            _cacheMessages(convId, fetched);
             _safeNotifyListeners();
             debugPrint(
                 'ChatProvider: Fetched ${_messages[convId]?.length ?? 0} messages for conv $convId after socket event');
@@ -1243,7 +1399,7 @@ class ChatProvider extends ChangeNotifier {
         for (var j = 0; j < list.length; j++) {
           newList.add(j == i ? updatedMsg : list[j]);
         }
-        _messages[convId] = newList;
+        _cacheMessages(convId, newList);
 
         // Update unread count if current user is the reader
         if (_currentWallet != null &&
@@ -1348,7 +1504,7 @@ class ChatProvider extends ChangeNotifier {
       return;
     }
     final newList = <ChatMessage>[msg, ...existing];
-    _messages[nid] = newList;
+    _cacheMessages(nid, newList);
     _upsertConversationMetadataForMessage(nid, msg);
     debugPrint(
         'ChatProvider.sendMessage: Added message ${msg.id} to conv $nid, total messages: ${newList.length}');
@@ -1399,7 +1555,7 @@ class ChatProvider extends ChangeNotifier {
       final list = items
           .map((i) => ChatMessage.fromJson(i as Map<String, dynamic>))
           .toList();
-      _messages[conversationId] = list;
+      _cacheMessages(conversationId, list);
       debugPrint(
           'ChatProvider.loadMessages: conversationId=$conversationId loaded ${list.length} messages');
       _safeNotifyListeners(force: true);
@@ -1523,10 +1679,11 @@ class ChatProvider extends ChangeNotifier {
       if (resp['success'] == true) {
         final list = (resp['data'] as List<dynamic>?) ?? [];
         // cache it
-        _membersCache[conversationId] = {
-          'result': list,
-          'ts': DateTime.now().millisecondsSinceEpoch
-        };
+        _cacheMembers(
+          conversationId,
+          list,
+          timestampMs: DateTime.now().millisecondsSinceEpoch,
+        );
         debugPrint(
             'ChatProvider: cached ${list.length} members for conversation $conversationId');
         // Notify listeners so UI can react to newly-cached member lists
@@ -1553,10 +1710,11 @@ class ChatProvider extends ChangeNotifier {
         return list.map((e) => e as Map<String, dynamic>).toList();
       }
       // For 429 or other non-200, cache an empty list with a short cooldown to avoid spamming the server
-      _membersCache[conversationId] = {
-        'result': <dynamic>[],
-        'ts': DateTime.now().millisecondsSinceEpoch
-      };
+      _cacheMembers(
+        conversationId,
+        const <dynamic>[],
+        timestampMs: DateTime.now().millisecondsSinceEpoch,
+      );
       debugPrint(
           'ChatProvider: cached 0 members (empty) for conversation $conversationId');
       try {
@@ -1580,7 +1738,7 @@ class ChatProvider extends ChangeNotifier {
       final updated = <String>[];
       for (final u in users) {
         if (u.id.isNotEmpty) {
-          _userCache[u.id] = u;
+          _cacheUser(u);
           updated.add(u.id);
         }
       }
@@ -1608,7 +1766,7 @@ class ChatProvider extends ChangeNotifier {
     final updated = <String>[];
     for (final u in users) {
       if (u.id.isNotEmpty) {
-        _userCache[u.id] = u;
+        _cacheUser(u);
         updated.add(u.id);
       }
     }
@@ -2095,7 +2253,10 @@ class ChatProvider extends ChangeNotifier {
   Future<void> setCurrentWallet(String wallet) async {
     try {
       if (wallet.isEmpty) return;
-      if (_currentWallet == wallet) return;
+      if (WalletUtils.equals(_currentWallet, wallet)) return;
+      if ((_currentWallet ?? '').isNotEmpty) {
+        _resetSessionState(reason: 'walletChanged', notify: false);
+      }
       // Set initial wallet (may be casing provided by caller). Then try to
       // resolve canonical casing from backend so we subscribe to the exact
       // room name the server will use.
@@ -2152,6 +2313,7 @@ class ChatProvider extends ChangeNotifier {
         debugPrint(
             'ChatProvider.setCurrentWallet: refreshConversations failed: $e');
       }
+      _startSubscriptionMonitor();
       // Notify UI immediately so badges reflect current state
       _safeNotifyListeners(force: true);
     } catch (e) {
@@ -2190,6 +2352,7 @@ class ChatProvider extends ChangeNotifier {
     // Start periodic polling only when socket sync is unavailable.
     try {
       _pollTimer?.cancel();
+      _pollTimer = null;
       final shouldPoll =
           !_socket.isConnected || !_socket.isSubscribedToConversation(nid);
       if (shouldPoll) {
@@ -2201,7 +2364,7 @@ class ChatProvider extends ChangeNotifier {
               final list = items
                   .map((i) => ChatMessage.fromJson(i as Map<String, dynamic>))
                   .toList();
-              _messages[nid] = list;
+              _cacheMessages(nid, list);
               _safeNotifyListeners();
             }
           } catch (e) {
@@ -2262,9 +2425,10 @@ class ChatProvider extends ChangeNotifier {
               final oldList = _messages[conversationId] ?? <ChatMessage>[];
               final newList = List<ChatMessage>.from(oldList);
               newList[i] = updatedMsg;
-              _messages[conversationId] = newList;
+              _cacheMessages(conversationId, newList);
             } catch (_) {
               _messages[conversationId]![i] = updatedMsg;
+              _touchMessageCache(conversationId);
             }
             debugPrint(
                 'ChatProvider.markMessageRead: updated local message readByCurrent for conv=$conversationId msg=$messageId at index=$i');
@@ -2317,9 +2481,10 @@ class ChatProvider extends ChangeNotifier {
           final oldList = _messages[nid] ?? <ChatMessage>[];
           final newList = List<ChatMessage>.from(oldList);
           newList[i] = updatedMsg;
-          _messages[nid] = newList;
+          _cacheMessages(nid, newList);
         } catch (_) {
           _messages[nid]![i] = updatedMsg;
+          _touchMessageCache(nid);
         }
         final curr = _unreadCounts[nid] ?? 0;
         if (curr > 0) _unreadCounts[nid] = curr - 1;
@@ -2335,7 +2500,15 @@ class ChatProvider extends ChangeNotifier {
 
   @override
   void dispose() {
-    // No cache listener to remove (we avoid using the UserService cache notification system to prevent loops)
+    _unbindRefreshProvider();
+    try {
+      _subscriptionMonitorTimer?.cancel();
+      _subscriptionMonitorTimer = null;
+    } catch (_) {}
+    try {
+      _pollTimer?.cancel();
+      _pollTimer = null;
+    } catch (_) {}
     try {
       _socket.removeMessageListener(_onMessageReceived);
     } catch (_) {}
@@ -2349,13 +2522,19 @@ class ChatProvider extends ChangeNotifier {
       _socket.removeConversationListener(_onMembersUpdated);
     } catch (_) {}
     try {
+      _socket.removeConversationListener(_onConversationUpdated);
+    } catch (_) {}
+    try {
+      _socket.removeConversationListener(_onConversationMemberRead);
+    } catch (_) {}
+    try {
       _socket.removeConversationListener(_onConversationRenamed);
     } catch (_) {}
     try {
       _socket.removeMessageReactionListener(_onMessageReaction);
     } catch (_) {}
     try {
-      closeConversation();
+      _resetSessionState(reason: 'dispose', notify: false);
     } catch (_) {}
     try {
       _eventBusSub?.cancel();
@@ -2397,7 +2576,7 @@ class ChatProvider extends ChangeNotifier {
           // Update list
           final newList = List<ChatMessage>.from(list);
           newList[i] = updatedMsg;
-          _messages[convId] = newList;
+          _cacheMessages(convId, newList);
 
           _safeNotifyListeners(force: true);
           break;
@@ -2498,7 +2677,7 @@ class ChatProvider extends ChangeNotifier {
           final updatedMsg = msg.copyWith(reactions: newReactions);
           final newList = List<ChatMessage>.from(list);
           newList[i] = updatedMsg;
-          _messages[conversationId] = newList;
+          _cacheMessages(conversationId, newList);
           _safeNotifyListeners(force: true);
 
           // Call API

@@ -22,6 +22,7 @@ class NotificationProvider extends ChangeNotifier {
   int _lastNotifVersion = 0;
   int _lastGlobalVersion = 0;
   AppRefreshProvider? _boundRefreshProvider;
+  VoidCallback? _refreshListener;
   String? _lastNotifHash;
   DateTime? _lastNotifTimestamp;
   bool _initialized = false;
@@ -80,9 +81,11 @@ class NotificationProvider extends ChangeNotifier {
             'NotificationProvider.initialize: skipping protected init - no restored auth session',
           );
         }
-        _stopAutoRefreshLoop();
-        _scheduledServerSync?.cancel();
-        _initialized = false;
+        final previousWallet = _currentWallet;
+        _resetSessionState(
+          clearUnreadCount: true,
+        );
+        await _persistUnreadCount(0, walletOverride: previousWallet);
         return;
       }
 
@@ -106,12 +109,24 @@ class NotificationProvider extends ChangeNotifier {
       if (normalizedWallet.isEmpty) {
         debugPrint(
             'NotificationProvider.initialize: wallet not available yet, listeners registered');
-        _initialized = false;
+        final previousWallet = _currentWallet;
+        _resetSessionState(
+          clearUnreadCount: true,
+        );
+        await _persistUnreadCount(0, walletOverride: previousWallet);
         return;
       }
 
-      _stopAutoRefreshLoop();
-      _scheduledServerSync?.cancel();
+      if (walletChanged && _currentWallet != null && _currentWallet!.isNotEmpty) {
+        _resetSessionState(
+          clearUnreadCount: true,
+        );
+      } else {
+        _stopAutoRefreshLoop();
+        _scheduledServerSync?.cancel();
+        _scheduledServerSync = null;
+        _scheduledServerSyncDueAt = null;
+      }
       _currentWallet = normalizedWallet;
       _initialized = true;
 
@@ -200,6 +215,33 @@ class NotificationProvider extends ChangeNotifier {
     if (!_connectListenerRegistered) {
       _socket.addConnectListener(_handleSocketReconnect);
       _connectListenerRegistered = true;
+    }
+  }
+
+  void _resetSessionState({
+    required bool clearUnreadCount,
+  }) {
+    _scheduledServerSync?.cancel();
+    _scheduledServerSync = null;
+    _scheduledServerSyncDueAt = null;
+    _stopAutoRefreshLoop();
+    _lastSubscriptionCheckAt = null;
+    _refreshInFlight = false;
+    _lastNotifHash = null;
+    _lastNotifTimestamp = null;
+    _lastServerSync = null;
+    _currentWallet = null;
+    _initialized = false;
+
+    if (clearUnreadCount) {
+      final changed = _communityUnreadCount != 0 || _hasNew;
+      _communityUnreadCount = 0;
+      _hasNew = false;
+      if (changed) {
+        notifyListeners();
+      }
+    } else {
+      _hasNew = _communityUnreadCount > 0;
     }
   }
 
@@ -340,11 +382,12 @@ class NotificationProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> _persistUnreadCount(int count) async {
-    if (_currentWallet == null || _currentWallet!.isEmpty) return;
+  Future<void> _persistUnreadCount(int count, {String? walletOverride}) async {
+    final wallet = walletOverride ?? _currentWallet;
+    if (wallet == null || wallet.isEmpty) return;
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt(_unreadCacheKey(_currentWallet!), count);
+      await prefs.setInt(_unreadCacheKey(wallet), count);
     } catch (e) {
       debugPrint('NotificationProvider: failed to persist unread cache: $e');
     }
@@ -406,12 +449,11 @@ class NotificationProvider extends ChangeNotifier {
       if (!hasSession || token == null || token.isEmpty) {
         debugPrint(
             'NotificationProvider.refresh: skipping unread fetch - no auth token available');
-        if (_communityUnreadCount != 0 || _hasNew) {
-          _communityUnreadCount = 0;
-          _hasNew = false;
-          await _persistUnreadCount(0);
-          notifyListeners();
-        }
+        final previousWallet = _currentWallet;
+        _resetSessionState(
+          clearUnreadCount: true,
+        );
+        await _persistUnreadCount(0, walletOverride: previousWallet);
         return;
       }
 
@@ -479,11 +521,21 @@ class NotificationProvider extends ChangeNotifier {
   /// Bind to the AppRefreshProvider to receive global or specific refresh triggers.
   void bindToRefresh(AppRefreshProvider appRefresh) {
     try {
-      if (identical(_boundRefreshProvider, appRefresh)) return;
+      if (identical(_boundRefreshProvider, appRefresh) &&
+          _refreshListener != null) {
+        return;
+      }
+
+      if (_boundRefreshProvider != null && _refreshListener != null) {
+        try {
+          _boundRefreshProvider!.removeListener(_refreshListener!);
+        } catch (_) {}
+      }
+
       _boundRefreshProvider = appRefresh;
       _lastNotifVersion = appRefresh.notificationsVersion;
       _lastGlobalVersion = appRefresh.globalVersion;
-      appRefresh.addListener(() {
+      _refreshListener = () {
         try {
           if (!_hasAuthContext) {
             return;
@@ -500,7 +552,8 @@ class NotificationProvider extends ChangeNotifier {
             }
           }
         } catch (e) {/* ignore */}
-      });
+      };
+      appRefresh.addListener(_refreshListener!);
       _ensureCadenceTimer(forceRestart: true);
     } catch (e) {
       // ignore
@@ -731,12 +784,33 @@ class NotificationProvider extends ChangeNotifier {
       _socket.removeConnectListener(_handleSocketReconnect);
       _connectListenerRegistered = false;
     }
+    if (_boundRefreshProvider != null && _refreshListener != null) {
+      try {
+        _boundRefreshProvider!.removeListener(_refreshListener!);
+      } catch (_) {}
+    }
+    _boundRefreshProvider = null;
+    _refreshListener = null;
     _scheduledServerSync?.cancel();
     _scheduledServerSync = null;
     _scheduledServerSyncDueAt = null;
     _stopAutoRefreshLoop();
     super.dispose();
   }
+
+  Map<String, Object> get debugSnapshot => <String, Object>{
+        'initialized': _initialized,
+        'hasAuthContext': _hasAuthContext,
+        'currentWallet': _currentWallet ?? '',
+        'unreadCount': _communityUnreadCount,
+        'hasNew': _hasNew,
+        'refreshBound': _refreshListener != null,
+        'socketListenersRegistered': _socketListenersRegistered,
+        'connectListenerRegistered': _connectListenerRegistered,
+        'cadenceTimerActive': _cadenceTimer?.isActive ?? false,
+        'scheduledSyncActive': _scheduledServerSync?.isActive ?? false,
+        'currentSubscribedWallet': _socket.currentSubscribedWallet ?? '',
+      };
 
   void _maybeCheckSubscription() {
     final now = DateTime.now();

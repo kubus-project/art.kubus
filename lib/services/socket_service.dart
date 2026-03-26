@@ -37,6 +37,7 @@ class SocketService {
   final List<NotificationCallback> _postListeners = [];
   String? _currentSubscribedWallet;
   final Set<String> _subscribedConversations = {};
+  final Map<String, _PendingSubscriptionAck> _pendingSubscriptionAcks = {};
   bool _notificationHandlerRegistered = false;
   final List<NotificationCallback> _messageReactionListeners = [];
 
@@ -180,6 +181,8 @@ class SocketService {
 
       _socket!.onDisconnect((_) {
         _log('Disconnected');
+        _resolveAllPendingSubscriptionAcks(false);
+        _subscribedConversations.clear();
         final c = _connectCompleter;
         if (c != null && !c.isCompleted) c.complete(false);
         _connectCompleter = null;
@@ -188,6 +191,7 @@ class SocketService {
       // Fail fast on connection errors.
       _socket!.on('connect_error', (err) {
         _log('connect_error: $err');
+        _resolveAllPendingSubscriptionAcks(false);
         final c = _connectCompleter;
         if (c != null && !c.isCompleted) c.complete(false);
         _connectCompleter = null;
@@ -242,45 +246,9 @@ class SocketService {
   /// Connects and attempts to subscribe, resolving when subscription is confirmed or rejects on timeout/error
   Future<bool> connectAndSubscribe(String baseUrl, String walletAddress, {Duration timeout = const Duration(seconds: 6)}) async {
     try {
-      // Ensure socket is connected before attempting subscription
       final connected = await connect(baseUrl);
       if (!connected) return false;
-
-      final expectedRoom = 'user:${walletAddress.toString()}';
-      final completer = Completer<bool>();
-
-      void handleOk(dynamic payload) {
-        try {
-          if (payload is Map<String, dynamic> && payload['room'] != null) {
-            final room = payload['room'].toString();
-            if (room == expectedRoom) {
-              if (!completer.isCompleted) completer.complete(true);
-            } else {
-              // Not the ack we're waiting for - ignore
-              _log('connectAndSubscribe: ignoring subscribe:ok for room=$room expected=$expectedRoom');
-            }
-          } else {
-            // Fallback: if payload is a string or has no room, accept as generic ack
-            if (!completer.isCompleted) completer.complete(true);
-          }
-        } catch (e) {
-          if (!completer.isCompleted) completer.complete(false);
-        }
-      }
-
-      void handleErr(dynamic payload) {
-        try {
-          _log('connectAndSubscribe: subscribe:error payload=$payload');
-        } catch (_) {}
-        if (!completer.isCompleted) completer.complete(false);
-      }
-
-      _socket!.once('subscribe:ok', handleOk);
-      _socket!.once('subscribe:error', handleErr);
-      // Request subscription; subscribeUser registers its own handlers too
-      subscribeUser(walletAddress);
-
-      return await completer.future.timeout(timeout, onTimeout: () => false);
+      return await _subscribeUserWithAck(walletAddress, timeout: timeout);
     } catch (e) {
       _log('connectAndSubscribe error: $e');
       return false;
@@ -296,8 +264,16 @@ class SocketService {
   /// Subscribe to personal user room. Requires server validation with JWT.
   /// Will auto-connect if needed and avoid duplicate subscriptions.
   void subscribeUser(String walletAddress) {
+    unawaited(_subscribeUserWithAck(walletAddress));
+  }
+
+  Future<bool> _subscribeUserWithAck(
+    String walletAddress, {
+    Duration timeout = const Duration(seconds: 6),
+  }) async {
     final roomWallet = walletAddress.toString();
-    if (roomWallet.isEmpty) return;
+    if (roomWallet.isEmpty) return false;
+    final expectedRoom = 'user:$roomWallet';
 
     final previouslySubscribed = _currentSubscribedWallet;
     final socketReady = _socket != null && _socket!.connected;
@@ -306,37 +282,38 @@ class SocketService {
       _currentSubscribedWallet = roomWallet;
       _log('subscribeUser queued until socket connects');
       unawaited(connect());
-      return;
+      return false;
     }
 
-    // Prevent duplicate subscriptions (compare canonical strings)
-    if (previouslySubscribed == roomWallet) {
+    if (previouslySubscribed == roomWallet &&
+        !_pendingSubscriptionAcks.containsKey(expectedRoom)) {
       _log('Already subscribed to $walletAddress');
-      return;
+      return true;
     }
 
-    // Unsubscribe from previous wallet if any (use stored canonical value)
     if (previouslySubscribed != null && previouslySubscribed.isNotEmpty) {
       _socket!.emit('unsubscribe:user', previouslySubscribed);
+      _resolvePendingSubscriptionAck('user:$previouslySubscribed', false);
     }
 
     _currentSubscribedWallet = roomWallet;
-    // Emit the wallet room using canonical casing
-    _socket!.emit('subscribe:user', _currentSubscribedWallet);
-    _log('emitted subscribe:user for $_currentSubscribedWallet');
-
-    // Register handlers only once
-    void onSubscribeOk(dynamic payload) {
-      _log('subscribe:ok for $walletAddress (room: user:$_currentSubscribedWallet)');
+    final ok = await _awaitSubscriptionAck(
+      room: expectedRoom,
+      timeout: timeout,
+      emitRequest: () {
+        _socket!.emit('subscribe:user', roomWallet);
+        _log('emitted subscribe:user for $roomWallet');
+      },
+    );
+    if (ok) {
+      _log('subscribe:ok for $walletAddress (room: $expectedRoom)');
+      return true;
     }
-
-    void onSubscribeError(dynamic payload) {
-      _log('subscribe:error for $walletAddress: $payload');
+    _log('subscribe:error for $walletAddress');
+    if (_currentSubscribedWallet == roomWallet) {
       _currentSubscribedWallet = null;
     }
-
-    _socket!.once('subscribe:ok', onSubscribeOk);
-    _socket!.once('subscribe:error', onSubscribeError);
+    return false;
   }
 
   void _registerAllHandlers() {
@@ -371,6 +348,32 @@ class SocketService {
       } catch (_) {}
       return null;
     }
+
+    _socket!.on('subscribe:ok', (payload) {
+      final room = _extractSubscriptionRoom(payload);
+      if (room == null || room.isEmpty) {
+        if (_pendingSubscriptionAcks.length == 1) {
+          _resolvePendingSubscriptionAck(
+            _pendingSubscriptionAcks.keys.first,
+            true,
+          );
+        }
+        return;
+      }
+      _resolvePendingSubscriptionAck(room, true);
+    });
+
+    _socket!.on('subscribe:error', (payload) {
+      try {
+        _log('subscribe:error payload=$payload');
+      } catch (_) {}
+      final room = _extractSubscriptionRoom(payload);
+      if (room != null && room.isNotEmpty) {
+        _resolvePendingSubscriptionAck(room, false);
+        return;
+      }
+      _resolveAllPendingSubscriptionAcks(false);
+    });
 
     _socket!.on('notification:new', (data) {
       try {
@@ -671,11 +674,11 @@ class SocketService {
     if (_currentSubscribedWallet == roomWallet) {
       _currentSubscribedWallet = null;
     }
+    _resolvePendingSubscriptionAck('user:$roomWallet', false);
   }
 
   /// Subscribe to a conversation room so the client receives message/read/member events
   Future<bool> subscribeConversation(String conversationId, {Duration timeout = const Duration(seconds: 6)}) async {
-    // Async subscription with acknowledgement
     if (_socket == null || !_socket!.connected) {
       _log('Cannot subscribe to conversation - socket not connected');
       return false;
@@ -686,33 +689,11 @@ class SocketService {
       _log('Already subscribed to conversation $nid');
       return false;
     }
-    _socket!.emit('subscribe:conversation', nid);
-    final completer = Completer<bool>();
-
-    _socket!.once('subscribe:ok', (payload) {
-      try {
-        if (payload is Map<String, dynamic> && payload['room'] != null) {
-          final room = payload['room'].toString();
-          if (room == 'conversation:$nid') {
-            if (!completer.isCompleted) completer.complete(true);
-          } else {
-            _log('subscribeConversation: ignoring subscribe:ok for room=$room expected=conversation:$nid');
-          }
-        } else {
-          if (!completer.isCompleted) completer.complete(true);
-        }
-      } catch (e) {
-        if (!completer.isCompleted) completer.complete(false);
-      }
-    });
-
-    _socket!.once('subscribe:error', (payload) {
-      try { _log('subscribeConversation: subscribe:error payload=$payload'); } catch (_) {}
-      if (!completer.isCompleted) completer.complete(false);
-    });
-
-    // Wait for acknowledgement or timeout
-    final ok = await completer.future.timeout(timeout, onTimeout: () => false);
+    final ok = await _awaitSubscriptionAck(
+      room: 'conversation:$nid',
+      timeout: timeout,
+      emitRequest: () => _socket!.emit('subscribe:conversation', nid),
+    );
     if (ok == true) {
       _subscribedConversations.add(nid);
       return true;
@@ -727,19 +708,138 @@ class SocketService {
     if (!_subscribedConversations.contains(nid)) return;
     _socket!.emit('leave:conversation', nid);
     _subscribedConversations.remove(nid);
+    _resolvePendingSubscriptionAck('conversation:$nid', false);
     _log('left conversation $nid');
   }
 
+  void leaveAllConversations() {
+    if (_socket == null) {
+      _subscribedConversations.clear();
+      return;
+    }
+    final ids = _subscribedConversations.toList(growable: false);
+    for (final id in ids) {
+      try {
+        _socket!.emit('leave:conversation', id);
+      } catch (_) {}
+      _resolvePendingSubscriptionAck('conversation:$id', false);
+    }
+    _subscribedConversations.clear();
+  }
+
   void disconnect() {
+    _resolveAllPendingSubscriptionAcks(false);
     _socket?.disconnect();
     _socket = null;
     _socketBaseUrl = null;
     _socketAuthToken = null;
     _currentSubscribedWallet = null;
+    _subscribedConversations.clear();
     _notificationHandlerRegistered = false;
     _connectCompleter = null;
   }
 
   /// Returns the wallet address the socket is currently subscribed to (user room), or null.
   String? get currentSubscribedWallet => _currentSubscribedWallet;
+
+  Set<String> get subscribedConversationIds =>
+      Set<String>.unmodifiable(_subscribedConversations);
+
+  Map<String, Object?> get debugResourceSnapshot => <String, Object?>{
+        'connected': _socket?.connected == true,
+        'baseUrl': _socketBaseUrl,
+        'currentSubscribedWallet': _currentSubscribedWallet,
+        'subscribedConversationCount': _subscribedConversations.length,
+        'pendingSubscriptionAcks': _pendingSubscriptionAcks.length,
+        'listenerCounts': <String, int>{
+          'notification': _notificationListeners.length,
+          'message': _messageListeners.length,
+          'messageRead': _messageReadListeners.length,
+          'conversation': _conversationListeners.length,
+          'collab': _collabListeners.length,
+          'connect': _connectListeners.length,
+          'marker': _markerListeners.length,
+          'messageReaction': _messageReactionListeners.length,
+        },
+      };
+
+  Future<bool> _awaitSubscriptionAck({
+    required String room,
+    required void Function() emitRequest,
+    required Duration timeout,
+  }) async {
+    _resolvePendingSubscriptionAck(room, false);
+    final completer = Completer<bool>();
+    late final _PendingSubscriptionAck pending;
+    pending = _PendingSubscriptionAck(
+      room: room,
+      completer: completer,
+      timeoutTimer: Timer(timeout, () {
+        if (!completer.isCompleted) {
+          completer.complete(false);
+        }
+        if (identical(_pendingSubscriptionAcks[room], pending)) {
+          _pendingSubscriptionAcks.remove(room);
+        }
+      }),
+    );
+    _pendingSubscriptionAcks[room] = pending;
+    try {
+      emitRequest();
+    } catch (e) {
+      _log('failed to emit subscription request for $room: $e');
+      _resolvePendingSubscriptionAck(room, false);
+      return false;
+    }
+    final ok = await completer.future;
+    if (identical(_pendingSubscriptionAcks[room], pending)) {
+      _pendingSubscriptionAcks.remove(room);
+    }
+    pending.timeoutTimer.cancel();
+    return ok;
+  }
+
+  String? _extractSubscriptionRoom(dynamic payload) {
+    try {
+      if (payload is Map && payload['room'] != null) {
+        return payload['room'].toString();
+      }
+      if (payload is String && payload.isNotEmpty) {
+        final decoded = json.decode(payload);
+        if (decoded is Map && decoded['room'] != null) {
+          return decoded['room'].toString();
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  void _resolvePendingSubscriptionAck(String room, bool ok) {
+    final pending = _pendingSubscriptionAcks.remove(room);
+    if (pending == null) return;
+    pending.timeoutTimer.cancel();
+    if (!pending.completer.isCompleted) {
+      pending.completer.complete(ok);
+    }
+  }
+
+  void _resolveAllPendingSubscriptionAcks(bool ok) {
+    if (_pendingSubscriptionAcks.isEmpty) return;
+    final rooms = _pendingSubscriptionAcks.keys.toList(growable: false);
+    for (final room in rooms) {
+      _resolvePendingSubscriptionAck(room, ok);
+    }
+  }
+}
+
+class _PendingSubscriptionAck {
+  _PendingSubscriptionAck({
+    required this.room,
+    required this.completer,
+    required this.timeoutTimer,
+  });
+
+  final String room;
+  final Completer<bool> completer;
+  final Timer timeoutTimer;
 }
