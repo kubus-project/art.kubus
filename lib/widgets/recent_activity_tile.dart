@@ -32,13 +32,12 @@ class RecentActivityTile extends StatelessWidget {
     final isUnread = !activity.isRead;
     final tileColor = accentColor ??
         AppColorUtils.activityColor(activity.category.name, theme.colorScheme);
-
     final baseSurface =
-      isUnread ? scheme.secondaryContainer : scheme.primaryContainer;
-    final glassTint = baseSurface.withValues(
-      alpha: isUnread
-        ? (isDark ? 0.34 : 0.40)
-        : (isDark ? 0.28 : 0.36),
+        isUnread ? scheme.secondaryContainer : scheme.primaryContainer;
+    final style = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.card,
+      tintBase: baseSurface,
     );
 
     final radius = BorderRadius.circular(KubusRadius.md);
@@ -67,14 +66,15 @@ class RecentActivityTile extends StatelessWidget {
                 ),
               ],
             ),
-            child: LiquidGlassPanel(
+            child: LiquidGlassCard(
               padding: const EdgeInsets.all(KubusSpacing.md),
               margin: EdgeInsets.zero,
               borderRadius: radius,
+              blurSigma: style.blurSigma,
               showBorder: false,
-              backgroundColor: glassTint,
+              backgroundColor: style.tintColor,
+              fallbackMinOpacity: style.fallbackMinOpacity,
               child: Stack(
-                fit: StackFit.expand,
                 children: [
                   Positioned.fill(
                     child: IgnorePointer(
@@ -120,7 +120,8 @@ class RecentActivityTile extends StatelessWidget {
                                 Expanded(
                                   child: Text(
                                     activity.title,
-                                    style: KubusTextStyles.sectionTitle.copyWith(
+                                    style:
+                                        KubusTextStyles.sectionTitle.copyWith(
                                       color: theme.colorScheme.onSurface,
                                       fontWeight: isUnread
                                           ? FontWeight.w700

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../providers/glass_capabilities_provider.dart';
@@ -53,8 +54,9 @@ KubusMapGlassSurfacePreset resolveKubusMapGlassSurfacePreset(
     tintBase: tintBase,
   );
 
-  final resolvedBlur =
-      useBlur ? GlassCapabilitiesProvider.watchAllowBlurEnabled(context) : false;
+  final resolvedBlur = useBlur &&
+      !kIsWeb &&
+      GlassCapabilitiesProvider.watchAllowBlurEnabled(context);
   final borderColor = scheme.outlineVariant.withValues(
     alpha: switch (kind) {
       KubusMapGlassSurfaceKind.panel =>

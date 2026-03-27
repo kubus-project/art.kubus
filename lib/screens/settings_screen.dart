@@ -252,6 +252,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       snap: true,
       backgroundColor: Colors.transparent,
       elevation: 0,
+      flexibleSpace: const KubusGlassAppBarBackdrop(showBottomDivider: true),
       title: KubusHeaderText(
         title: l10n.settingsTitle,
         kind: KubusHeaderKind.screen,
@@ -276,28 +277,23 @@ class _SettingsScreenState extends State<SettingsScreen>
     final scheme = Theme.of(context).colorScheme;
     final headerColor = scheme.secondary;
 
-    return Container(
-      padding: const EdgeInsets.all(KubusSpacing.lg),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            headerColor,
-            headerColor.withValues(alpha: 0.8),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: headerColor.withValues(alpha: 0.3),
-            blurRadius: 20,
-            spreadRadius: 0,
-            offset: const Offset(0, 10),
+    return _buildSettingsPanel(
+      padding: EdgeInsets.zero,
+      borderRadius: BorderRadius.circular(KubusRadius.xl),
+      tintBase: headerColor,
+      child: Container(
+        padding: const EdgeInsets.all(KubusSpacing.lg),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              headerColor,
+              headerColor.withValues(alpha: 0.8),
+            ],
           ),
-        ],
-      ),
-      child: Column(
+        ),
+        child: Column(
         children: [
           Row(
             children: [
@@ -415,6 +411,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           ],
         ],
       ),
+      ),
     );
   }
 
@@ -481,15 +478,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       l10n.settingsLanguageTitle,
       Icons.language,
       [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: Theme.of(context).colorScheme.outline,
-            ),
-          ),
+        _buildSettingsPanel(
           child: Row(
             children: [
               Expanded(
@@ -548,15 +537,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget _buildThemeModeTile(
       AppLocalizations l10n, ThemeProvider themeProvider) {
     final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: scheme.primaryContainer,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: scheme.outline,
-        ),
-      ),
+    return _buildSettingsPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -733,15 +714,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget _buildAccentColorTile(
       AppLocalizations l10n, ThemeProvider themeProvider) {
     final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: scheme.primaryContainer,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: scheme.outline,
-        ),
-      ),
+    return _buildSettingsPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -811,13 +784,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     final isOn = glassProv?.reduceEffects ?? false;
     final autoDetected = glassProv?.autoReduceEffectsApplied ?? false;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: scheme.primaryContainer,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: scheme.outline),
-      ),
+    return _buildSettingsPanel(
       child: Row(
         children: [
           Icon(
@@ -881,14 +848,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           l10n.settingsPlatformFeaturesSectionTitle,
           Icons.devices,
           [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(12),
-                border:
-                    Border.all(color: Theme.of(context).colorScheme.outline),
-              ),
+            _buildSettingsPanel(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1622,6 +1582,29 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
+  Widget _buildSettingsPanel({
+    required Widget child,
+    EdgeInsetsGeometry padding = const EdgeInsets.all(KubusSpacing.md),
+    BorderRadius? borderRadius,
+    Color? tintBase,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    final style = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.card,
+      tintBase: tintBase ?? scheme.surface,
+    );
+    return LiquidGlassPanel(
+      padding: padding,
+      margin: EdgeInsets.zero,
+      borderRadius: borderRadius ?? BorderRadius.circular(KubusRadius.md),
+      blurSigma: style.blurSigma,
+      backgroundColor: style.tintColor,
+      fallbackMinOpacity: style.fallbackMinOpacity,
+      child: child,
+    );
+  }
+
   Widget _buildSettingsTile(
     String title,
     String subtitle,
@@ -1631,57 +1614,59 @@ class _SettingsScreenState extends State<SettingsScreen>
     bool isDestructive = false,
     Key? tileKey,
   }) {
+    final scheme = Theme.of(context).colorScheme;
+    final tintBase = isDestructive
+        ? Color.lerp(scheme.surface, scheme.errorContainer, 0.32)
+        : scheme.surface;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        key: tileKey,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        tileColor: Theme.of(context).colorScheme.primaryContainer,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(
-            color: isDestructive
-                ? Colors.red.withValues(alpha: 0.3)
-                : Theme.of(context).colorScheme.outline,
+      child: _buildSettingsPanel(
+        tintBase: tintBase,
+        padding: EdgeInsets.zero,
+        child: ListTile(
+          key: tileKey,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: isDestructive
+                  ? Colors.red.withValues(alpha: 0.3)
+                  : scheme.outline,
+            ),
           ),
-        ),
-        leading: Icon(
-          icon,
-          color: isDestructive
-              ? Colors.red
-              : Provider.of<ThemeProvider>(context).accentColor,
-          size: 24,
-        ),
-        title: Text(
-          title,
-          style: KubusTypography.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
+          leading: Icon(
+            icon,
             color: isDestructive
                 ? Colors.red
-                : Theme.of(context).colorScheme.onSurface,
+                : Provider.of<ThemeProvider>(context).accentColor,
+            size: 24,
           ),
-        ),
-        subtitle: Text(
-          subtitle,
-          style: KubusTypography.inter(
-            fontSize: 14,
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+          title: Text(
+            title,
+            style: KubusTypography.inter(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: isDestructive ? Colors.red : scheme.onSurface,
+            ),
           ),
+          subtitle: Text(
+            subtitle,
+            style: KubusTypography.inter(
+              fontSize: 14,
+              color: scheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          trailing: trailing ??
+              (onTap != null
+                  ? Icon(
+                      Icons.arrow_forward_ios,
+                      size: 16,
+                      color: scheme.onSurface.withValues(alpha: 0.4),
+                    )
+                  : null),
+          onTap: onTap,
         ),
-        trailing: trailing ??
-            (onTap != null
-                ? Icon(
-                    Icons.arrow_forward_ios,
-                    size: 16,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.4),
-                  )
-                : null),
-        onTap: onTap,
       ),
     );
   }

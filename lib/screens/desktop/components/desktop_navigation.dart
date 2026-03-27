@@ -541,13 +541,14 @@ class _DesktopNavigationState extends State<DesktopNavigation>
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
-          child: Center(
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(
+        child: SizedBox(
+          width: KubusHeaderMetrics.actionHitArea,
+          height: KubusHeaderMetrics.actionHitArea,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Center(
+                child: Icon(
                   icon,
                   color: Theme.of(context)
                       .colorScheme
@@ -555,96 +556,12 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                       .withValues(alpha: 0.7),
                   size: KubusChromeMetrics.navIcon,
                 ),
-                // Generic badge with count (for collab invites, etc.)
-                if (showBadge && badgeCount > 0)
-                  Positioned(
-                    right: -6,
-                    top: -6,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 4, vertical: 1),
-                      constraints:
-                          const BoxConstraints(minWidth: 14, minHeight: 14),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.error,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: Theme.of(context).colorScheme.surface,
-                          width: 1,
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          badgeCount > 99 ? '99+' : badgeCount.toString(),
-                          style: KubusTextStyles.compactBadge.copyWith(
-                            color: Theme.of(context).colorScheme.onError,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                // Notification badge (uses NotificationProvider)
-                if (showBadge && badgeCount == 0)
-                  Consumer<NotificationProvider>(
-                    builder: (context, np, _) {
-                      if (np.unreadCount == 0) return const SizedBox.shrink();
-                      return Positioned(
-                        right: -2,
-                        top: -2,
-                        child: Container(
-                          width: KubusChromeMetrics.navBadgeDot,
-                          height: KubusChromeMetrics.navBadgeDot,
-                          decoration: BoxDecoration(
-                            color: themeProvider.accentColor,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Theme.of(context).colorScheme.surface,
-                              width: 1,
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCollapsedActionButton({
-    required IconData icon,
-    required VoidCallback onTap,
-    required ThemeProvider themeProvider,
-    bool showBadge = false,
-    int badgeCount = 0,
-  }) {
-    final collapsedButtonPadding = 7.0;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(KubusRadius.md),
-        child: Padding(
-          padding: EdgeInsets.all(collapsedButtonPadding),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Icon(
-                icon,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.7),
-                size: KubusChromeMetrics.navIcon,
               ),
               // Generic badge with count (for collab invites, etc.)
               if (showBadge && badgeCount > 0)
                 Positioned(
-                  right: -6,
-                  top: -6,
+                  right: 0,
+                  top: 0,
                   child: Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
@@ -674,8 +591,95 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                   builder: (context, np, _) {
                     if (np.unreadCount == 0) return const SizedBox.shrink();
                     return Positioned(
-                      right: -2,
-                      top: -2,
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        width: KubusChromeMetrics.navBadgeDot,
+                        height: KubusChromeMetrics.navBadgeDot,
+                        decoration: BoxDecoration(
+                          color: themeProvider.accentColor,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.surface,
+                            width: 1,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCollapsedActionButton({
+    required IconData icon,
+    required VoidCallback onTap,
+    required ThemeProvider themeProvider,
+    bool showBadge = false,
+    int badgeCount = 0,
+  }) {
+    final collapsedButtonPadding = 7.0;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(KubusRadius.md),
+        child: SizedBox(
+          width: KubusHeaderMetrics.actionHitArea - collapsedButtonPadding,
+          height: KubusHeaderMetrics.actionHitArea - collapsedButtonPadding,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Center(
+                child: Icon(
+                  icon,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.7),
+                  size: KubusChromeMetrics.navIcon,
+                ),
+              ),
+              // Generic badge with count (for collab invites, etc.)
+              if (showBadge && badgeCount > 0)
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    constraints:
+                        const BoxConstraints(minWidth: 14, minHeight: 14),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.error,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.surface,
+                        width: 1,
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        badgeCount > 99 ? '99+' : badgeCount.toString(),
+                        style: KubusTextStyles.compactBadge.copyWith(
+                          color: Theme.of(context).colorScheme.onError,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              // Notification badge (uses NotificationProvider)
+              if (showBadge && badgeCount == 0)
+                Consumer<NotificationProvider>(
+                  builder: (context, np, _) {
+                    if (np.unreadCount == 0) return const SizedBox.shrink();
+                    return Positioned(
+                      right: 0,
+                      top: 0,
                       child: Container(
                         width: KubusChromeMetrics.navBadgeDot,
                         height: KubusChromeMetrics.navBadgeDot,

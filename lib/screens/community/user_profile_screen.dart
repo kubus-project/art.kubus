@@ -452,6 +452,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     if (isLoading) {
       return Scaffold(
         appBar: AppBar(
+          flexibleSpace:
+              const KubusGlassAppBarBackdrop(showBottomDivider: true),
           title: Text(
             l10n.userProfileTitle,
             style: KubusTextStyles.screenTitle,
@@ -464,6 +466,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     if (user == null) {
       return Scaffold(
         appBar: AppBar(
+          flexibleSpace:
+              const KubusGlassAppBarBackdrop(showBottomDivider: true),
           title: Text(
             l10n.userProfileTitle,
             style: KubusTextStyles.screenTitle,
@@ -494,6 +498,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
+          flexibleSpace:
+              const KubusGlassAppBarBackdrop(showBottomDivider: true),
           title: Text(
             user!.name.isNotEmpty ? user!.name : l10n.userProfileTitle,
             style: KubusTextStyles.screenTitle,
@@ -565,9 +571,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: LiquidGlassPanel(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              backgroundColor: surface.withValues(alpha: 0.65),
+            child: BackdropGlassSheet(
+              padding: const EdgeInsets.symmetric(vertical: KubusSpacing.xs),
+              backgroundColor: surface,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -714,7 +720,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                 child: Container(
                   clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(26),
+                    borderRadius: BorderRadius.circular(90 * 0.22),
                     border: Border.all(
                       color: Theme.of(context).colorScheme.surface,
                       width: 5,
@@ -823,27 +829,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   }
 
   Widget _buildStatsRow(AppLocalizations l10n) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 0),
+    return LiquidGlassCard(
+      margin: EdgeInsets.zero,
+      borderRadius: BorderRadius.circular(KubusRadius.lg),
       padding: const EdgeInsets.symmetric(
         horizontal: KubusSpacing.lg,
         vertical: KubusSpacing.md,
-      ),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
-        border: Border.all(
-            color: Theme.of(context)
-                .colorScheme
-                .onSurface
-                .withValues(alpha: 0.08)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: KubusSpacing.sm,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Row(
         children: [
@@ -1789,22 +1780,19 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         ),
         const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
         if (_artistDataLoading && !_artistDataLoaded)
-          Container(
+          SizedBox(
             height: 180,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.08)),
+            child: LiquidGlassCard(
+              padding: EdgeInsets.zero,
+              margin: EdgeInsets.zero,
+              borderRadius: BorderRadius.circular(KubusRadius.lg),
+              child: const Center(
+                child: SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: CircularProgressIndicator(strokeWidth: 2)),
+              ),
             ),
-            child: const SizedBox(
-                width: 28,
-                height: 28,
-                child: CircularProgressIndicator(strokeWidth: 2)),
           )
         else if (items.isEmpty)
           _buildEmptyStateCard(
@@ -1946,12 +1934,15 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     final normalizedImage = _normalizeMediaUrl(imageUrl);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
     final radius = BorderRadius.circular(KubusRadius.lg);
+    final style = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.card,
+      tintBase: scheme.surface,
+    );
 
     return Container(
       width: 200,
-      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         borderRadius: radius,
         border: Border.all(
@@ -1960,19 +1951,22 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         ),
         boxShadow: [
           BoxShadow(
-            color: scheme.shadow.withValues(alpha: isDark ? 0.10 : 0.08),
+            color: scheme.shadow.withValues(
+              alpha: theme.brightness == Brightness.dark ? 0.10 : 0.08,
+            ),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
         ],
       ),
-      child: LiquidGlassPanel(
+      child: LiquidGlassCard(
         padding: EdgeInsets.zero,
         margin: EdgeInsets.zero,
         borderRadius: radius,
+        blurSigma: style.blurSigma,
         showBorder: false,
-        backgroundColor:
-            scheme.surface.withValues(alpha: isDark ? 0.18 : 0.12),
+        backgroundColor: style.tintColor,
+        fallbackMinOpacity: style.fallbackMinOpacity,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

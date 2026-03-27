@@ -17,7 +17,8 @@ class UserPersonaOnboardingGate extends StatefulWidget {
   const UserPersonaOnboardingGate({super.key, required this.child});
 
   @override
-  State<UserPersonaOnboardingGate> createState() => _UserPersonaOnboardingGateState();
+  State<UserPersonaOnboardingGate> createState() =>
+      _UserPersonaOnboardingGateState();
 }
 
 class _UserPersonaOnboardingGateState extends State<UserPersonaOnboardingGate> {
@@ -57,10 +58,12 @@ class _UserPersonaOnboardingGateState extends State<UserPersonaOnboardingGate> {
         walletAddress: wallet,
         userId: (prefs.getString('user_id') ?? '').trim(),
       );
-      if (OnboardingStateService.hasPendingAuthOnboardingSync(
+      final hasScopedPending =
+          OnboardingStateService.hasPendingAuthOnboardingSync(
         prefs,
         scopeKey: flowScopeKey,
-      )) {
+      );
+      if (hasScopedPending) {
         return;
       }
 

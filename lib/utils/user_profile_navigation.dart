@@ -138,10 +138,14 @@ class UserProfileNavigation {
                         ),
                         child: ClipRRect(
                           borderRadius: radius,
-                          child: desktop.UserProfileScreen(
-                            userId: userId,
-                            username: username,
-                            heroTag: heroTag,
+                          child: DesktopProfilePresentationScope(
+                            presentation:
+                                DesktopProfilePresentation.communityOverlay,
+                            child: desktop.UserProfileScreen(
+                              userId: userId,
+                              username: username,
+                              heroTag: heroTag,
+                            ),
                           ),
                         ),
                       ),

@@ -83,8 +83,10 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                         ),
                       ),
                     ),
-                    child:
-                        GovernanceHub(selectedIndexNotifier: _hubSelectedIndex),
+                    child: GovernanceHub(
+                      selectedIndexNotifier: _hubSelectedIndex,
+                      embedded: true,
+                    ),
                   ),
                 ),
 

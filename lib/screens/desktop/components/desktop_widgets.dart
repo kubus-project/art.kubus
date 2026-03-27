@@ -525,6 +525,7 @@ class DesktopSearchBar extends StatelessWidget {
   final TextEditingController? controller;
   final FocusNode? focusNode;
   final bool autofocus;
+  final bool enableBlur;
 
   const DesktopSearchBar({
     super.key,
@@ -534,6 +535,7 @@ class DesktopSearchBar extends StatelessWidget {
     this.controller,
     this.focusNode,
     this.autofocus = false,
+    this.enableBlur = true,
   });
 
   @override
@@ -559,6 +561,7 @@ class DesktopSearchBar extends StatelessWidget {
       autofocus: autofocus,
       onChanged: onChanged,
       onSubmitted: onSubmitted,
+      enableBlur: enableBlur,
       style: KubusSearchBarStyle(
         borderRadius: radius,
         backgroundColor: glassTint,

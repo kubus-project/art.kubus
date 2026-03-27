@@ -252,6 +252,10 @@ class LiquidGlassPanel extends StatelessWidget {
   /// Minimum tint opacity to keep in low-power fallback mode.
   final double fallbackMinOpacity;
 
+  /// Force the panel onto the opaque fallback path while preserving canonical
+  /// Kubus glass tint, border, and shadow handling.
+  final bool enableBlur;
+
   const LiquidGlassPanel({
     super.key,
     required this.child,
@@ -263,6 +267,7 @@ class LiquidGlassPanel extends StatelessWidget {
     this.backgroundColor,
     this.onTap,
     this.fallbackMinOpacity = KubusGlassEffects.fallbackOpaqueOpacity,
+    this.enableBlur = true,
   });
 
   @override
@@ -278,6 +283,7 @@ class LiquidGlassPanel extends StatelessWidget {
         showBorder: showBorder,
         tintColor: backgroundColor,
         fallbackMinOpacity: fallbackMinOpacity,
+        enableBlur: enableBlur,
         child: Padding(
           padding: padding ?? const EdgeInsets.all(KubusSpacing.md),
           child: child,
@@ -314,6 +320,7 @@ class LiquidGlassCard extends StatelessWidget {
   final Color? backgroundColor;
   final VoidCallback? onTap;
   final double fallbackMinOpacity;
+  final bool enableBlur;
 
   const LiquidGlassCard({
     super.key,
@@ -326,6 +333,7 @@ class LiquidGlassCard extends StatelessWidget {
     this.backgroundColor,
     this.onTap,
     this.fallbackMinOpacity = KubusGlassEffects.fallbackOpaqueOpacity,
+    this.enableBlur = true,
   });
 
   @override
@@ -339,6 +347,7 @@ class LiquidGlassCard extends StatelessWidget {
       backgroundColor: backgroundColor,
       onTap: onTap,
       fallbackMinOpacity: fallbackMinOpacity,
+      enableBlur: enableBlur,
       child: child,
     );
   }
@@ -356,6 +365,7 @@ class FrostedContainer extends StatelessWidget {
   final Color? backgroundColor;
   final VoidCallback? onTap;
   final double fallbackMinOpacity;
+  final bool enableBlur;
 
   const FrostedContainer({
     super.key,
@@ -368,6 +378,7 @@ class FrostedContainer extends StatelessWidget {
     this.backgroundColor,
     this.onTap,
     this.fallbackMinOpacity = KubusGlassEffects.fallbackOpaqueOpacity,
+    this.enableBlur = true,
   });
 
   @override
@@ -381,6 +392,7 @@ class FrostedContainer extends StatelessWidget {
       backgroundColor: backgroundColor,
       onTap: onTap,
       fallbackMinOpacity: fallbackMinOpacity,
+      enableBlur: enableBlur,
       child: child,
     );
   }

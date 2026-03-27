@@ -28,6 +28,7 @@ import 'components/desktop_widgets.dart';
 import 'desktop_shell_scope.dart';
 import '../web3/wallet/wallet_home.dart';
 import '../web3/wallet/wallet_backup_protection_screen.dart';
+import '../auth/secure_account_screen.dart';
 import '../onboarding/onboarding_flow_screen.dart';
 import '../../../config/config.dart';
 import '../../providers/locale_provider.dart';
@@ -128,6 +129,19 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       context: context,
       walletProvider: walletProvider,
       refreshBackendSession: true,
+    );
+  }
+
+  void _openShellAwareScreen(Widget screen) {
+    final shellScope = DesktopShellScope.of(context);
+    if (shellScope != null) {
+      shellScope.pushScreen(screen);
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => screen),
     );
   }
 
@@ -320,26 +334,16 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                         ),
                       ),
                     ),
-                    child: widget.embeddedInShell
-                        ? DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: scheme.surface.withValues(
-                                alpha: themeProvider.isDarkMode ? 0.94 : 0.90,
-                              ),
-                            ),
-                            child: _buildSettingsSidebar(themeProvider),
-                          )
-                        : LiquidGlassPanel(
-                            padding: EdgeInsets.zero,
-                            margin: EdgeInsets.zero,
-                            borderRadius: BorderRadius.zero,
-                            blurSigma: sidebarStyle.blurSigma,
-                            fallbackMinOpacity:
-                                sidebarStyle.fallbackMinOpacity,
-                            showBorder: false,
-                            backgroundColor: sidebarStyle.tintColor,
-                            child: _buildSettingsSidebar(themeProvider),
-                          ),
+                    child: LiquidGlassPanel(
+                      padding: EdgeInsets.zero,
+                      margin: EdgeInsets.zero,
+                      borderRadius: BorderRadius.zero,
+                      blurSigma: sidebarStyle.blurSigma,
+                      fallbackMinOpacity: sidebarStyle.fallbackMinOpacity,
+                      showBorder: false,
+                      backgroundColor: sidebarStyle.tintColor,
+                      child: _buildSettingsSidebar(themeProvider),
+                    ),
                   ),
                 ),
               Expanded(
@@ -817,11 +821,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                               );
                               return;
                             }
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => const WalletHome()),
-                            );
+                            _openShellAwareScreen(const WalletHome());
                           },
                           icon: Icon(
                             walletProvider.isReadOnlySession
@@ -996,12 +996,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const WalletBackupProtectionScreen(),
-                ),
-              );
+              _openShellAwareScreen(const WalletBackupProtectionScreen());
             },
             style: ElevatedButton.styleFrom(
               backgroundColor:
@@ -1939,10 +1934,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             },
             child: Text(
               l10n.settingsClearPinButton,
-              style:
-                  KubusTextStyles.navLabel.copyWith(
-                    color: Theme.of(context).colorScheme.error,
-                  ),
+              style: KubusTextStyles.navLabel.copyWith(
+                color: Theme.of(context).colorScheme.error,
+              ),
             ),
           ),
           ElevatedButton(
@@ -2244,7 +2238,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                           color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
-                      const SizedBox(height: KubusSpacing.sm - KubusSpacing.xxs),
+                      const SizedBox(
+                          height: KubusSpacing.sm - KubusSpacing.xxs),
                       Text(
                         l10n.settingsLanguageDescription,
                         style: KubusTextStyles.sectionSubtitle.copyWith(
@@ -2948,7 +2943,12 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                     alignment: Alignment.centerRight,
                   ),
                   onTap: () async {
-                    await Navigator.of(context).pushNamed('/secure-account');
+                    final shellScope = DesktopShellScope.of(context);
+                    if (shellScope != null) {
+                      shellScope.pushScreen(const SecureAccountScreen());
+                    } else {
+                      await Navigator.of(context).pushNamed('/secure-account');
+                    }
                     if (!mounted) return;
                     await _loadSecureAccountStatus();
                   },

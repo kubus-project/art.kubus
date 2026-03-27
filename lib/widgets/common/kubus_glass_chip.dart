@@ -15,6 +15,7 @@ class KubusGlassChip extends StatelessWidget {
     required this.onPressed,
     this.accentColor,
     this.borderRadius = 20,
+    this.enableBlur = true,
   });
 
   final String label;
@@ -23,6 +24,7 @@ class KubusGlassChip extends StatelessWidget {
   final VoidCallback? onPressed;
   final Color? accentColor;
   final double borderRadius;
+  final bool enableBlur;
 
   @override
   Widget build(BuildContext context) {
@@ -89,6 +91,7 @@ class KubusGlassChip extends StatelessWidget {
           blurSigma: KubusGlassEffects.blurSigmaLight,
           showBorder: false,
           backgroundColor: active ? selectedTint : idleTint,
+          enableBlur: enableBlur,
           onTap: onPressed,
           child: Row(
             mainAxisSize: MainAxisSize.min,

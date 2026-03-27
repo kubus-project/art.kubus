@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../utils/design_tokens.dart';
 import 'glass_components.dart';
 
 class TopBarIcon extends StatelessWidget {
@@ -26,10 +27,12 @@ class TopBarIcon extends StatelessWidget {
     final containerSize = size ?? (isSmallScreen ? 40.0 : 44.0);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-
+    final style = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.button,
+      tintBase: scheme.surface,
+    );
     final radius = BorderRadius.circular(10);
-    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
 
     Widget inner = IconButton(
       padding: EdgeInsets.zero,
@@ -43,50 +46,64 @@ class TopBarIcon extends StatelessWidget {
     }
 
     return SizedBox(
-      width: containerSize,
-      height: containerSize,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          border: Border.all(
-            color: scheme.outline.withValues(alpha: 0.16),
+      width: containerSize + (KubusSpacing.sm * 1.5),
+      height: containerSize + (KubusSpacing.sm * 1.5),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: KubusSpacing.xs,
+            top: KubusSpacing.sm - KubusSpacing.xxs,
+            child: Container(
+              width: containerSize,
+              height: containerSize,
+              decoration: BoxDecoration(
+                borderRadius: radius,
+                border: Border.all(
+                  color: scheme.outline.withValues(alpha: 0.16),
+                ),
+              ),
+              child: LiquidGlassPanel(
+                padding: EdgeInsets.zero,
+                margin: EdgeInsets.zero,
+                borderRadius: radius,
+                blurSigma: style.blurSigma,
+                showBorder: false,
+                backgroundColor: style.tintColor,
+                fallbackMinOpacity: style.fallbackMinOpacity,
+                child: Center(child: inner),
+              ),
+            ),
           ),
-        ),
-        child: LiquidGlassPanel(
-          padding: EdgeInsets.zero,
-          margin: EdgeInsets.zero,
-          borderRadius: radius,
-          showBorder: false,
-          backgroundColor: glassTint,
-          child: Center(
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            inner,
-            if ((badgeCount ?? 0) > 0)
-              Positioned(
-                right: -6,
-                top: -6,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: badgeColor ?? theme.colorScheme.primary,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: theme.scaffoldBackgroundColor, width: 1.5),
+          if ((badgeCount ?? 0) > 0)
+            Positioned(
+              right: -KubusSpacing.xxs,
+              top: KubusSpacing.xxs,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.xs,
+                  vertical: KubusSpacing.xxs,
+                ),
+                decoration: BoxDecoration(
+                  color: badgeColor ?? theme.colorScheme.primary,
+                  borderRadius: BorderRadius.circular(KubusRadius.xl),
+                  border: Border.all(
+                    color: theme.scaffoldBackgroundColor,
+                    width: KubusSizes.hairline + 0.5,
                   ),
-                  constraints: const BoxConstraints(minWidth: 20, minHeight: 18),
-                  child: Center(
-                    child: Text(
-                      (badgeCount ?? 0) > 99 ? '99+' : '${badgeCount ?? 0}',
-                      style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                ),
+                constraints: const BoxConstraints(minWidth: 20, minHeight: 18),
+                child: Center(
+                  child: Text(
+                    (badgeCount ?? 0) > 99 ? '99+' : '${badgeCount ?? 0}',
+                    style: KubusTextStyles.badgeCount.copyWith(
+                      color: Colors.white,
                     ),
                   ),
                 ),
               ),
-          ],
-        ),
-          ),
-        ),
+            ),
+        ],
       ),
     );
   }

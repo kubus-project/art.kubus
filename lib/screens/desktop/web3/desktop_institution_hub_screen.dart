@@ -166,6 +166,7 @@ class _DesktopInstitutionHubScreenState
                       ),
                     ),
                     child: InstitutionHub(
+                      embedded: true,
                       showVerificationCard: false,
                       onTabChanged: (tabIndex) {
                         context
@@ -496,6 +497,11 @@ class _DesktopInstitutionHubScreenState
     required ValueChanged<String> onChanged,
   }) {
     final scheme = Theme.of(context).colorScheme;
+    final cardStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.card,
+      tintBase: scheme.surfaceContainerHighest,
+    );
     final normalized = value.trim().toLowerCase();
     final effective =
         AnalyticsFiltersProvider.allowedTimeframes.contains(normalized)
@@ -505,8 +511,9 @@ class _DesktopInstitutionHubScreenState
     return LiquidGlassCard(
       padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
       borderRadius: BorderRadius.circular(KubusRadius.md),
-      blurSigma: KubusGlassEffects.blurSigmaLight,
-      backgroundColor: scheme.surfaceContainerHighest.withValues(alpha: 0.18),
+      blurSigma: cardStyle.blurSigma,
+      fallbackMinOpacity: cardStyle.fallbackMinOpacity,
+      backgroundColor: cardStyle.tintColor,
       child: Row(
         children: [
           Expanded(
@@ -754,9 +761,12 @@ class _DesktopInstitutionHubScreenState
 
   Widget _buildStatCard(
       String label, String value, IconData icon, Color color) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final glassStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.card,
+      tintBase: color,
+    );
     final radius = BorderRadius.circular(KubusRadius.md);
-    final glassTint = color.withValues(alpha: isDark ? 0.12 : 0.08);
 
     return Container(
       clipBehavior: Clip.antiAlias,
@@ -772,7 +782,9 @@ class _DesktopInstitutionHubScreenState
         margin: EdgeInsets.zero,
         borderRadius: radius,
         showBorder: false,
-        backgroundColor: glassTint,
+        blurSigma: glassStyle.blurSigma,
+        fallbackMinOpacity: glassStyle.fallbackMinOpacity,
+        backgroundColor: glassStyle.tintColor,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -801,11 +813,17 @@ class _DesktopInstitutionHubScreenState
 
   Widget _buildUpcomingEvents(ThemeProvider themeProvider) {
     final scheme = Theme.of(context).colorScheme;
+    final cardStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.card,
+      tintBase: scheme.primaryContainer,
+    );
     return LiquidGlassCard(
       padding: const EdgeInsets.all(KubusSpacing.md),
       borderRadius: BorderRadius.circular(KubusRadius.md),
-      blurSigma: KubusGlassEffects.blurSigmaLight,
-      backgroundColor: scheme.primaryContainer.withValues(alpha: 0.18),
+      blurSigma: cardStyle.blurSigma,
+      fallbackMinOpacity: cardStyle.fallbackMinOpacity,
+      backgroundColor: cardStyle.tintColor,
       child: Column(
         children: [
           Icon(

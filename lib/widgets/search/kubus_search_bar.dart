@@ -66,6 +66,7 @@ class KubusSearchBar extends StatefulWidget {
     this.mouseCursor,
     this.animationDuration = const Duration(milliseconds: 120),
     this.animationCurve = Curves.easeOut,
+    this.enableBlur = true,
   });
 
   final String hintText;
@@ -101,6 +102,7 @@ class KubusSearchBar extends StatefulWidget {
 
   final Duration animationDuration;
   final Curve animationCurve;
+  final bool enableBlur;
 
   @override
   State<KubusSearchBar> createState() => _KubusSearchBarState();
@@ -362,6 +364,7 @@ class _KubusSearchBarState extends State<KubusSearchBar> {
             showBorder: false,
             backgroundColor: style.backgroundColor,
             fallbackMinOpacity: KubusGlassEffects.fallbackOpaqueOpacity,
+            enableBlur: widget.enableBlur,
             child: textField,
           ),
         ),

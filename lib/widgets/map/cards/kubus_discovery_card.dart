@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
@@ -107,6 +108,7 @@ class KubusDiscoveryCard extends StatelessWidget {
         tooltip: expanded ? l10n.commonCollapse : l10n.commonExpand,
         size: expandButtonSize,
         borderRadius: KubusRadius.sm,
+        enableBlur: !kIsWeb,
         onPressed: onToggleExpanded,
       ),
       titleStyle: titleStyle,

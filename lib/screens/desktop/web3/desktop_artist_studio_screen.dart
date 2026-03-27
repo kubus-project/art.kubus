@@ -245,6 +245,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                       ),
                     ),
                     child: ArtistStudio(
+                      embedded: true,
                       showVerificationCard: false,
                       onOpenArtworkCreator: openArtworkCreator,
                       onOpenCollectionCreator: openCollectionCreator,
@@ -592,6 +593,11 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
     required ValueChanged<String> onChanged,
   }) {
     final scheme = Theme.of(context).colorScheme;
+    final cardStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.card,
+      tintBase: scheme.surfaceContainerHighest,
+    );
     final normalized = value.trim().toLowerCase();
     final effective =
         AnalyticsFiltersProvider.allowedTimeframes.contains(normalized)
@@ -615,8 +621,9 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
     return LiquidGlassCard(
       padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
       borderRadius: BorderRadius.circular(KubusRadius.md),
-      blurSigma: KubusGlassEffects.blurSigmaLight,
-      backgroundColor: scheme.surfaceContainerHighest.withValues(alpha: 0.18),
+      blurSigma: cardStyle.blurSigma,
+      fallbackMinOpacity: cardStyle.fallbackMinOpacity,
+      backgroundColor: cardStyle.tintColor,
       child: Row(
         children: [
           Expanded(
@@ -860,9 +867,12 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
   Widget _buildStatCard(
       String label, String value, IconData icon, Color color) {
     final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final glassStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.card,
+      tintBase: color,
+    );
     final radius = BorderRadius.circular(KubusRadius.md);
-    final glassTint = color.withValues(alpha: isDark ? 0.12 : 0.08);
 
     return Container(
       clipBehavior: Clip.antiAlias,
@@ -878,8 +888,9 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
         margin: EdgeInsets.zero,
         borderRadius: radius,
         showBorder: false,
-        blurSigma: KubusGlassEffects.blurSigmaLight,
-        backgroundColor: glassTint,
+        blurSigma: glassStyle.blurSigma,
+        fallbackMinOpacity: glassStyle.fallbackMinOpacity,
+        backgroundColor: glassStyle.tintColor,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -905,11 +916,17 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
   Widget _buildRecentActivity(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    final cardStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.card,
+      tintBase: scheme.primaryContainer,
+    );
     return LiquidGlassCard(
       padding: const EdgeInsets.all(KubusSpacing.md),
       borderRadius: BorderRadius.circular(KubusRadius.md),
-      blurSigma: KubusGlassEffects.blurSigmaLight,
-      backgroundColor: scheme.primaryContainer.withValues(alpha: 0.18),
+      blurSigma: cardStyle.blurSigma,
+      fallbackMinOpacity: cardStyle.fallbackMinOpacity,
+      backgroundColor: cardStyle.tintColor,
       child: Column(
         children: [
           Icon(

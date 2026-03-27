@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -13,12 +15,15 @@ import 'event_manager.dart';
 import 'institution_analytics.dart';
 import '../../../providers/dao_provider.dart';
 import '../../../providers/collab_provider.dart';
+import '../../../providers/notification_provider.dart';
 import '../../../providers/profile_provider.dart';
+import '../../../providers/recent_activity_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../config/config.dart';
 import '../../../models/dao.dart';
 import '../../../models/promotion.dart';
 import '../../../models/user_persona.dart';
+import '../../../utils/activity_navigation.dart';
 import '../../../utils/dao_role_verification.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../collab/invites_inbox_screen.dart';
@@ -26,15 +31,20 @@ import '../../events/exhibition_list_screen.dart';
 import '../../map_markers/manage_markers_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../../widgets/promotion/promotion_builder_sheet.dart';
+import '../../../widgets/empty_state_card.dart';
+import '../../../widgets/recent_activity_tile.dart';
+import '../../../widgets/topbar_icon.dart';
 
 class InstitutionHub extends StatefulWidget {
   final ValueChanged<int>? onTabChanged;
   final bool showVerificationCard;
+  final bool embedded;
 
   const InstitutionHub({
     super.key,
     this.onTabChanged,
     this.showVerificationCard = true,
+    this.embedded = false,
   });
 
   @override
@@ -196,92 +206,90 @@ class _InstitutionHubState extends State<InstitutionHub> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        flexibleSpace: KubusGlassAppBarBackdrop(
-          tintBase: Theme.of(context).colorScheme.surface,
-        ),
-        title: Text(
-          'Institution Hub',
-          style: KubusTextStyles.screenTitle.copyWith(
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-          overflow: TextOverflow.ellipsis,
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.help_outline,
-                color: Theme.of(context).colorScheme.onSurface),
-            onPressed: _showOnboarding,
-          ),
-          IconButton(
-            tooltip: l10n.manageMarkersTitle,
-            icon: Icon(Icons.place_outlined,
-                color: Theme.of(context).colorScheme.onSurface),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ManageMarkersScreen()),
-              );
-            },
-          ),
-          if (AppConfig.isFeatureEnabled('collabInvites'))
-            Consumer<CollabProvider>(
-              builder: (context, collabProvider, _) {
-                final pendingCount = collabProvider.pendingInviteCount;
-                return Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    IconButton(
-                      tooltip: 'Invites',
-                      icon: Icon(Icons.inbox_outlined,
-                          color: Theme.of(context).colorScheme.onSurface),
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                              builder: (_) => const InvitesInboxScreen()),
-                        );
-                      },
-                    ),
-                    if (pendingCount > 0)
-                      Positioned(
-                        right: KubusSpacing.sm,
-                        top: KubusSpacing.xs + KubusSpacing.xxs,
-                        child: FrostedContainer(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: KubusSpacing.xs + KubusSpacing.xxs,
-                            vertical: KubusSpacing.xxs,
-                          ),
-                          borderRadius: BorderRadius.circular(KubusRadius.sm),
-                          showBorder: true,
-                          backgroundColor: Theme.of(context).colorScheme.error,
-                          child: Text(
-                            pendingCount > 99 ? '99+' : pendingCount.toString(),
-                            style: KubusTextStyles.badgeCount.copyWith(
-                              color: Theme.of(context).colorScheme.onError,
-                            ),
-                          ),
-                        ),
+      appBar: widget.embedded
+          ? null
+          : AppBar(
+              backgroundColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              flexibleSpace: KubusGlassAppBarBackdrop(
+                tintBase: Theme.of(context).colorScheme.surface,
+              ),
+              title: Text(
+                'Institution Hub',
+                style: KubusTextStyles.screenTitle.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+              actions: [
+                TopBarIcon(
+                  tooltip: 'Help',
+                  icon: Icon(
+                    Icons.help_outline,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  onPressed: _showOnboarding,
+                ),
+                TopBarIcon(
+                  tooltip: l10n.manageMarkersTitle,
+                  icon: Icon(
+                    Icons.place_outlined,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const ManageMarkersScreen(),
                       ),
-                  ],
-                );
-              },
+                    );
+                  },
+                ),
+                if (AppConfig.isFeatureEnabled('collabInvites'))
+                  Consumer<CollabProvider>(
+                    builder: (context, collabProvider, _) {
+                      final pendingCount = collabProvider.pendingInviteCount;
+                      return TopBarIcon(
+                        tooltip: 'Invites',
+                        badgeCount: pendingCount,
+                        badgeColor: Theme.of(context).colorScheme.error,
+                        icon: Icon(
+                          Icons.inbox_outlined,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const InvitesInboxScreen(),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                TopBarIcon(
+                  tooltip: 'Promote my profile',
+                  icon: Icon(
+                    Icons.campaign_outlined,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  onPressed: _openProfilePromotionFlow,
+                ),
+                Consumer<NotificationProvider>(
+                  builder: (context, notificationProvider, _) => TopBarIcon(
+                    tooltip: l10n.commonNotifications,
+                    badgeCount: notificationProvider.unreadCount,
+                    badgeColor: Theme.of(context).colorScheme.error,
+                    icon: Icon(
+                      Icons.notifications_outlined,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    onPressed: _showNotifications,
+                  ),
+                ),
+              ],
             ),
-          IconButton(
-            tooltip: 'Promote my profile',
-            icon: Icon(Icons.campaign_outlined,
-                color: Theme.of(context).colorScheme.onSurface),
-            onPressed: _openProfilePromotionFlow,
-          ),
-          IconButton(
-            icon: Icon(Icons.notifications,
-                color: Theme.of(context).colorScheme.onSurface),
-            onPressed: _showNotifications,
-          ),
-        ],
-      ),
       body: NestedScrollView(
         headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
           return [
@@ -517,7 +525,6 @@ class _InstitutionHubState extends State<InstitutionHub> {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final roles = KubusColorRoles.of(context);
-    final surface = scheme.surface;
     final accent = roles.web3InstitutionAccent;
     final wallet = _resolveWalletAddress();
     final status = review?.status.toLowerCase() ?? '';
@@ -550,6 +557,11 @@ class _InstitutionHubState extends State<InstitutionHub> {
             : Icons.send_rounded;
 
     final cardRadius = BorderRadius.circular(KubusRadius.lg);
+    final cardStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.card,
+      tintBase: accent,
+    );
     return LiquidGlassCard(
       margin: const EdgeInsets.symmetric(
         horizontal: KubusSpacing.md,
@@ -557,9 +569,10 @@ class _InstitutionHubState extends State<InstitutionHub> {
       ),
       padding: EdgeInsets.zero,
       borderRadius: cardRadius,
+      blurSigma: cardStyle.blurSigma,
+      fallbackMinOpacity: cardStyle.fallbackMinOpacity,
       showBorder: false,
-      backgroundColor: surface.withValues(
-          alpha: theme.brightness == Brightness.dark ? 0.22 : 0.14),
+      backgroundColor: cardStyle.tintColor,
       child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: cardRadius,
@@ -672,33 +685,19 @@ class _InstitutionHubState extends State<InstitutionHub> {
               const SizedBox(height: KubusSpacing.md),
               SizedBox(
                 width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed:
-                      canSubmit ? _showInstitutionApplicationModal : null,
-                  icon: Icon(
-                    ctaIcon,
-                    color: canSubmit
-                        ? accent
-                        : scheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                  label: Text(
-                    ctaLabel,
-                    style: KubusTextStyles.actionTileTitle.copyWith(
-                      color: canSubmit
-                          ? accent
-                          : scheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: accent.withValues(alpha: 0.4)),
-                    padding: const EdgeInsets.symmetric(
-                      vertical: KubusSpacing.sm + KubusSpacing.xs,
-                      horizontal: KubusSpacing.md,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(KubusRadius.md),
-                    ),
-                  ),
+                child: KubusButton(
+                  onPressed: canSubmit
+                      ? () => _showInstitutionApplicationModal()
+                      : null,
+                  label: ctaLabel,
+                  icon: ctaIcon,
+                  isFullWidth: true,
+                  backgroundColor: accent,
+                  foregroundColor:
+                      ThemeData.estimateBrightnessForColor(accent) ==
+                              Brightness.dark
+                          ? KubusColors.textPrimaryDark
+                          : KubusColors.textPrimaryLight,
                 ),
               ),
             ],
@@ -973,24 +972,102 @@ class _InstitutionHubState extends State<InstitutionHub> {
   }
 
   void _showNotifications() {
+    final provider =
+        Provider.of<RecentActivityProvider>(context, listen: false);
+    final notificationProvider =
+        Provider.of<NotificationProvider>(context, listen: false);
+    unawaited(provider.initialize(force: true));
+    unawaited(notificationProvider.markViewed());
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) {
         final scheme = Theme.of(context).colorScheme;
         return BackdropGlassSheet(
-          padding: const EdgeInsets.all(KubusSpacing.lg),
+          padding: EdgeInsets.zero,
           showHandle: false,
-          backgroundColor:
-              scheme.surfaceContainerHighest.withValues(alpha: 0.18),
+          showBorder: false,
+          backgroundColor: scheme.surface,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               KubusSheetHeader(
-                title: 'Notifications',
-                showHandle: false,
+                title: AppLocalizations.of(context)!.commonNotifications,
+                trailing: TopBarIcon(
+                  tooltip: AppLocalizations.of(context)!.commonRefresh,
+                  icon: Icon(
+                    Icons.refresh,
+                    color: scheme.onSurface,
+                  ),
+                  onPressed: () => provider.refresh(force: true),
+                ),
               ),
-              // Add notifications here
+              Flexible(
+                child: Consumer<RecentActivityProvider>(
+                  builder: (context, activityProvider, _) {
+                    final activities = activityProvider.activities;
+                    final isLoading =
+                        activityProvider.isLoading && activities.isEmpty;
+                    final hasError =
+                        activityProvider.error != null && activities.isEmpty;
+
+                    if (isLoading) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    return RefreshIndicator(
+                      onRefresh: () => activityProvider.refresh(force: true),
+                      child: activities.isEmpty
+                          ? ListView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: KubusSpacing.xl,
+                                vertical: KubusSpacing.xxl,
+                              ),
+                              children: [
+                                EmptyStateCard(
+                                  icon: hasError
+                                      ? Icons.error_outline
+                                      : Icons.notifications_off_outlined,
+                                  title: hasError
+                                      ? AppLocalizations.of(context)!
+                                          .homeUnableToLoadNotificationsTitle
+                                      : AppLocalizations.of(context)!
+                                          .homeNoNotificationsTitle,
+                                  description: hasError
+                                      ? AppLocalizations.of(context)!
+                                          .commonSomethingWentWrong
+                                      : AppLocalizations.of(context)!
+                                          .homeAllCaughtUpDescription,
+                                ),
+                              ],
+                            )
+                          : ListView.separated(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: KubusSpacing.lg,
+                                vertical: KubusSpacing.sm,
+                              ),
+                              itemCount: activities.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: KubusSpacing.sm),
+                              itemBuilder: (context, index) {
+                                final activity = activities[index];
+                                return RecentActivityTile(
+                                  activity: activity,
+                                  margin: EdgeInsets.zero,
+                                  onTap: () {
+                                    Navigator.of(context).pop();
+                                    ActivityNavigation.open(context, activity);
+                                  },
+                                );
+                              },
+                            ),
+                    );
+                  },
+                ),
+              ),
             ],
           ),
         );

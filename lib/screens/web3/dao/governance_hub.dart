@@ -19,11 +19,17 @@ import '../../../utils/kubus_labs_feature.dart';
 import '../../../utils/design_tokens.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/common/kubus_labs_adornment.dart';
+import '../../../widgets/topbar_icon.dart';
 
 class GovernanceHub extends StatefulWidget {
   final ValueNotifier<int>? selectedIndexNotifier;
+  final bool embedded;
 
-  const GovernanceHub({super.key, this.selectedIndexNotifier});
+  const GovernanceHub({
+    super.key,
+    this.selectedIndexNotifier,
+    this.embedded = false,
+  });
 
   @override
   State<GovernanceHub> createState() => _GovernanceHubState();
@@ -134,43 +140,54 @@ class _GovernanceHubState extends State<GovernanceHub>
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(
-              child: Text(
-                l10n.daoHubAppBarTitle,
-                style: KubusTextStyles.screenTitle.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-                overflow: TextOverflow.ellipsis,
+      appBar: widget.embedded
+          ? null
+          : AppBar(
+              backgroundColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              flexibleSpace: const KubusGlassAppBarBackdrop(
+                showBottomDivider: true,
               ),
+              title: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      l10n.daoHubAppBarTitle,
+                      style: KubusTextStyles.screenTitle.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: KubusSpacing.sm),
+                  const KubusLabsAdornment.inlinePill(
+                    feature: KubusLabsFeature.dao,
+                    emphasized: true,
+                  ),
+                ],
+              ),
+              actions: [
+                TopBarIcon(
+                  tooltip: 'Help',
+                  icon: Icon(
+                    Icons.help_outline,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  onPressed: _showOnboarding,
+                ),
+                TopBarIcon(
+                  tooltip: MaterialLocalizations.of(context).moreButtonTooltip,
+                  icon: Icon(
+                    Icons.info_outline,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  onPressed: _showGovernanceInfo,
+                ),
+              ],
             ),
-            const SizedBox(width: KubusSpacing.sm),
-            const KubusLabsAdornment.inlinePill(
-              feature: KubusLabsFeature.dao,
-              emphasized: true,
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.help_outline,
-                color: Theme.of(context).colorScheme.onSurface),
-            onPressed: _showOnboarding,
-          ),
-          IconButton(
-            icon: Icon(Icons.info_outline,
-                color: Theme.of(context).colorScheme.onSurface),
-            onPressed: _showGovernanceInfo,
-          ),
-        ],
-      ),
       body: FadeTransition(
         opacity: _fadeAnimation,
         child: NestedScrollView(
@@ -211,111 +228,127 @@ class _GovernanceHubState extends State<GovernanceHub>
             daoProvider.getActiveProposals().length.toString();
         final totalMembers = daoProvider.delegates.length.toString();
         final accent = KubusLabsFeature.dao.accent(_roles);
+        final panelStyle = KubusGlassStyle.resolve(
+          context,
+          surfaceType: KubusGlassSurfaceType.panelBackground,
+          tintBase: accent,
+        );
+        final radius = BorderRadius.circular(KubusRadius.lg + KubusRadius.xs);
 
-        return Container(
+        return LiquidGlassCard(
           margin: const EdgeInsets.symmetric(
             horizontal: KubusSpacing.md,
             vertical: KubusSpacing.sm,
           ),
           padding: const EdgeInsets.all(KubusSpacing.lg - KubusSpacing.xs),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                accent,
-                accent.withValues(alpha: 0.76),
-              ],
-            ),
-            borderRadius:
-                BorderRadius.circular(KubusRadius.lg + KubusRadius.xs),
-            boxShadow: [
-              BoxShadow(
-                color: accent.withValues(alpha: 0.28),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+          borderRadius: radius,
+          blurSigma: panelStyle.blurSigma,
+          fallbackMinOpacity: panelStyle.fallbackMinOpacity,
+          showBorder: false,
+          backgroundColor: panelStyle.tintColor,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: radius,
+              border: Border.all(
+                color: accent.withValues(alpha: 0.24),
+                width: KubusSizes.hairline,
               ),
-            ],
-          ),
-          child: Column(
-            children: [
-              Row(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  accent.withValues(alpha: 0.28),
+                  accent.withValues(alpha: 0.14),
+                ],
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(KubusSpacing.lg - KubusSpacing.xs),
+              child: Column(
                 children: [
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.25),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Icon(
-                      KubusLabsFeature.dao.screenIcon,
-                      color: Colors.white,
-                      size: 30,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Wrap(
-                          spacing: KubusSpacing.sm,
-                          runSpacing: KubusSpacing.xs,
-                          crossAxisAlignment: WrapCrossAlignment.center,
+                  Row(
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: accent.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Icon(
+                          KubusLabsFeature.dao.screenIcon,
+                          color: accent,
+                          size: 30,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'art.kubus DAO',
-                              style: KubusTextStyles.heroTitle.copyWith(
-                                color: Colors.white,
-                              ),
+                            Wrap(
+                              spacing: KubusSpacing.sm,
+                              runSpacing: KubusSpacing.xs,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Text(
+                                  'art.kubus DAO',
+                                  style: KubusTextStyles.heroTitle.copyWith(
+                                    color:
+                                        Theme.of(context).colorScheme.onSurface,
+                                  ),
+                                ),
+                                const KubusLabsAdornment.inlinePill(
+                                  feature: KubusLabsFeature.dao,
+                                  emphasized: true,
+                                ),
+                              ],
                             ),
-                            const KubusLabsAdornment.inlinePill(
-                              feature: KubusLabsFeature.dao,
-                              emphasized: true,
+                            const SizedBox(height: 4),
+                            Text(
+                              l10n.daoHubHeaderSubtitle,
+                              style: KubusTextStyles.heroSubtitle.copyWith(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.82),
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          l10n.daoHubHeaderSubtitle,
-                          style: KubusTextStyles.heroSubtitle.copyWith(
-                            color: Colors.white.withValues(alpha: 0.9),
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatCard(
+                          l10n.daoHubStatYourVotingPowerLabel,
+                          votingPower,
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildStatCard(
+                          l10n.daoHubStatActiveProposalsLabel,
+                          activeProposals,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildStatCard(
+                          l10n.daoHubStatTotalDelegatesLabel,
+                          totalMembers,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatCard(
-                      l10n.daoHubStatYourVotingPowerLabel,
-                      votingPower,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildStatCard(
-                      l10n.daoHubStatActiveProposalsLabel,
-                      activeProposals,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildStatCard(
-                      l10n.daoHubStatTotalDelegatesLabel,
-                      totalMembers,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
         );
       },
@@ -324,10 +357,13 @@ class _GovernanceHubState extends State<GovernanceHub>
 
   Widget _buildStatCard(String label, String value) {
     final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final radius = BorderRadius.circular(8);
     final statColor = _daoAccent;
-    final glassTint = statColor.withValues(alpha: isDark ? 0.12 : 0.08);
+    final glassStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.card,
+      tintBase: statColor,
+    );
 
     return Container(
       clipBehavior: Clip.antiAlias,
@@ -343,7 +379,9 @@ class _GovernanceHubState extends State<GovernanceHub>
         margin: EdgeInsets.zero,
         borderRadius: radius,
         showBorder: false,
-        backgroundColor: glassTint,
+        blurSigma: glassStyle.blurSigma,
+        fallbackMinOpacity: glassStyle.fallbackMinOpacity,
+        backgroundColor: glassStyle.tintColor,
         child: Column(
           children: [
             Text(
@@ -757,7 +795,8 @@ class _GovernanceHubState extends State<GovernanceHub>
                                     )
                                   : Text(
                                       l10n.daoModerationRejectLabel,
-                                      style: KubusTextStyles.navMetaLabel.copyWith(
+                                      style:
+                                          KubusTextStyles.navMetaLabel.copyWith(
                                         fontWeight: FontWeight.w700,
                                       ),
                                     ),
@@ -2237,7 +2276,8 @@ class _GovernanceHubState extends State<GovernanceHub>
                               children: [
                                 Text(
                                   delegate.name,
-                                  style: KubusTextStyles.actionTileTitle.copyWith(
+                                  style:
+                                      KubusTextStyles.actionTileTitle.copyWith(
                                     color:
                                         Theme.of(context).colorScheme.onSurface,
                                   ),
@@ -2493,7 +2533,8 @@ class _GovernanceHubState extends State<GovernanceHub>
                                         ),
                                         Text(
                                           '${l10n.daoDelegationDelegatorsCountLabel(delegate.delegatorCount)} • ${l10n.daoDelegationParticipationRateLabel((delegate.participationRate * 100).toStringAsFixed(0))}',
-                                          style: KubusTextStyles.navMetaLabel.copyWith(
+                                          style: KubusTextStyles.navMetaLabel
+                                              .copyWith(
                                             color: scheme.onSurface
                                                 .withValues(alpha: 0.7),
                                           ),
@@ -2503,7 +2544,8 @@ class _GovernanceHubState extends State<GovernanceHub>
                                   ),
                                   Text(
                                     '${(delegate.votingPower / 1000).toStringAsFixed(1)}K KUB8',
-                                    style: KubusTextStyles.actionTileTitle.copyWith(
+                                    style: KubusTextStyles.actionTileTitle
+                                        .copyWith(
                                       color: scheme.primary,
                                     ),
                                   ),
@@ -2692,7 +2734,8 @@ class _GovernanceHubState extends State<GovernanceHub>
                       Theme.of(context).colorScheme.surfaceContainerHighest,
                   foregroundColor: Colors.white,
                   side: BorderSide(color: Colors.grey[600]!),
-                  padding: const EdgeInsets.symmetric(vertical: KubusSpacing.md),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: KubusSpacing.md),
                 ),
                 child: Text(
                   l10n.daoRevokeDelegationButton,

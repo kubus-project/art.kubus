@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
@@ -93,6 +94,7 @@ class KubusDiscoveryPathCard extends StatelessWidget {
           borderRadius: radius,
           showBorder: false,
           backgroundColor: glassTint,
+          enableBlur: !kIsWeb,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,

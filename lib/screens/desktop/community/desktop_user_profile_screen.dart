@@ -85,10 +85,24 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
   String? _currentWalletAddress() {
     try {
-      return Provider.of<WalletProvider>(context, listen: false).currentWalletAddress;
+      return Provider.of<WalletProvider>(context, listen: false)
+          .currentWalletAddress;
     } catch (_) {
       return null;
     }
+  }
+
+  void _openDesktopShellAwareScreen(Widget screen) {
+    final shellScope = DesktopShellScope.of(context);
+    if (shellScope != null) {
+      shellScope.pushScreen(screen);
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => screen),
+    );
   }
 
   @override
@@ -104,7 +118,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     );
     _scrollController = ScrollController();
     _scrollController.addListener(() {
-      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 200) {
         _loadMorePosts();
       }
     });
@@ -133,7 +148,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     _followButtonController.dispose();
     _scrollController.dispose();
     try {
-      Provider.of<WalletProvider>(context, listen: false).removeListener(_onWalletChanged);
+      Provider.of<WalletProvider>(context, listen: false)
+          .removeListener(_onWalletChanged);
     } catch (_) {}
     try {
       SocketService().removePostListener(_handleIncomingPost);
@@ -144,7 +160,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   void _handleIncomingPost(Map<String, dynamic> data) async {
     try {
       if (user == null) return;
-      final incomingAuthor = (data['walletAddress'] ?? data['author'] ?? data['authorWallet'])?.toString();
+      final incomingAuthor =
+          (data['walletAddress'] ?? data['author'] ?? data['authorWallet'])
+              ?.toString();
       if (incomingAuthor == null) return;
       if (!WalletUtils.equals(incomingAuthor, user!.id)) return;
 
@@ -174,7 +192,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   void _onWalletChanged() async {
     try {
       if (_posts.isNotEmpty) {
-        await CommunityService.loadSavedInteractions(_posts, walletAddress: _currentWalletAddress());
+        await CommunityService.loadSavedInteractions(_posts,
+            walletAddress: _currentWalletAddress());
         if (!mounted) return;
         setState(() {});
       }
@@ -214,8 +233,14 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
     final daoProvider = Provider.of<DAOProvider>(context);
     final DAOReview? daoReview = daoProvider.findReviewForWallet(user!.id);
-    final isArtist = user!.isArtist || (daoReview != null && daoReview.isArtistApplication && daoReview.isApproved);
-    final isInstitution = user!.isInstitution || (daoReview != null && daoReview.isInstitutionApplication && daoReview.isApproved);
+    final isArtist = user!.isArtist ||
+        (daoReview != null &&
+            daoReview.isArtistApplication &&
+            daoReview.isApproved);
+    final isInstitution = user!.isInstitution ||
+        (daoReview != null &&
+            daoReview.isInstitutionApplication &&
+            daoReview.isApproved);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -241,16 +266,20 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 20),
-                        _buildHeader(themeProvider, isArtist, isInstitution, l10n),
+                        _buildHeader(
+                            themeProvider, isArtist, isInstitution, l10n),
                         const SizedBox(height: 20),
-                        _buildProfileCard(themeProvider, isArtist, isInstitution, l10n),
+                        _buildProfileCard(
+                            themeProvider, isArtist, isInstitution, l10n),
                         const SizedBox(height: 16),
                         // Stats and action buttons in a row on wide screens
                         if (isWide)
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(child: _buildStatsCards(themeProvider, isLarge, l10n)),
+                              Expanded(
+                                  child: _buildStatsCards(
+                                      themeProvider, isLarge, l10n)),
                               const SizedBox(width: 16),
                               SizedBox(
                                 width: 320,
@@ -360,7 +389,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     );
   }
 
-  Widget _buildHeader(ThemeProvider themeProvider, bool isArtist, bool isInstitution, AppLocalizations l10n) {
+  Widget _buildHeader(ThemeProvider themeProvider, bool isArtist,
+      bool isInstitution, AppLocalizations l10n) {
     return Row(
       children: [
         IconButton(
@@ -413,7 +443,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             if (targetWallet == null || targetWallet.isEmpty) return;
             ShareService().showShareSheet(
               context,
-              target: ShareTarget.profile(walletAddress: targetWallet, title: user?.name),
+              target: ShareTarget.profile(
+                  walletAddress: targetWallet, title: user?.name),
               sourceScreen: 'desktop_user_profile',
             );
           },
@@ -483,18 +514,15 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                 ),
                 onTap: () {
                   Navigator.pop(dialogContext);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => AdvancedAnalyticsScreen(
-                        statType: '',
-                        walletAddress: wallet,
-                        initialContext: AnalyticsExperienceContext.profile,
-                        contexts: const <AnalyticsExperienceContext>[
-                          AnalyticsExperienceContext.profile,
-                          AnalyticsExperienceContext.community,
-                        ],
-                      ),
+                  _openDesktopShellAwareScreen(
+                    AdvancedAnalyticsScreen(
+                      statType: '',
+                      walletAddress: wallet,
+                      initialContext: AnalyticsExperienceContext.profile,
+                      contexts: const <AnalyticsExperienceContext>[
+                        AnalyticsExperienceContext.profile,
+                        AnalyticsExperienceContext.community,
+                      ],
                     ),
                   );
                 },
@@ -512,18 +540,15 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                 ),
                 onTap: () {
                   Navigator.pop(dialogContext);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => AdvancedAnalyticsScreen(
-                        statType: '',
-                        walletAddress: wallet,
-                        initialContext: AnalyticsExperienceContext.community,
-                        contexts: const <AnalyticsExperienceContext>[
-                          AnalyticsExperienceContext.profile,
-                          AnalyticsExperienceContext.community,
-                        ],
-                      ),
+                  _openDesktopShellAwareScreen(
+                    AdvancedAnalyticsScreen(
+                      statType: '',
+                      walletAddress: wallet,
+                      initialContext: AnalyticsExperienceContext.community,
+                      contexts: const <AnalyticsExperienceContext>[
+                        AnalyticsExperienceContext.profile,
+                        AnalyticsExperienceContext.community,
+                      ],
                     ),
                   );
                 },
@@ -544,7 +569,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     );
   }
 
-  Widget _buildProfileCard(ThemeProvider themeProvider, bool isArtist, bool isInstitution, AppLocalizations l10n) {
+  Widget _buildProfileCard(ThemeProvider themeProvider, bool isArtist,
+      bool isInstitution, AppLocalizations l10n) {
     final coverImageUrl = _normalizeMediaUrl(user!.coverImageUrl);
     final hasCoverImage = coverImageUrl != null && coverImageUrl.isNotEmpty;
     const avatarRadius = 44.0;
@@ -557,7 +583,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           Stack(
             children: [
               ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(16)),
                 child: Container(
                   height: hasCoverImage ? 120 : 70,
                   width: double.infinity,
@@ -584,8 +611,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                   colors: [
-                                    themeProvider.accentColor.withValues(alpha: 0.3),
-                                    themeProvider.accentColor.withValues(alpha: 0.1),
+                                    themeProvider.accentColor
+                                        .withValues(alpha: 0.3),
+                                    themeProvider.accentColor
+                                        .withValues(alpha: 0.1),
                                   ],
                                 ),
                               ),
@@ -599,7 +628,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                 Positioned.fill(
                   child: Container(
                     decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                      borderRadius:
+                          const BorderRadius.vertical(top: Radius.circular(16)),
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
@@ -631,7 +661,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                     color: Theme.of(context).colorScheme.surface,
                     boxShadow: [
                       BoxShadow(
-                        color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
+                        color: Theme.of(context)
+                            .shadowColor
+                            .withValues(alpha: 0.1),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -679,7 +711,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                         user!.username,
                         style: KubusTypography.inter(
                           fontSize: 14,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6),
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -688,7 +723,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                         textAlign: TextAlign.start,
                         textStyle: KubusTypography.inter(
                           fontSize: 13,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6),
                         ),
                       ),
                       if (user!.bio.isNotEmpty) ...[
@@ -698,7 +736,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                           style: KubusTypography.inter(
                             fontSize: 14,
                             height: 1.4,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.8),
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -715,7 +756,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                         l10n.userProfileJoinedLabel(user!.joinedDate),
                         style: KubusTypography.inter(
                           fontSize: 12,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.5),
                         ),
                       ),
                     ],
@@ -729,7 +773,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     );
   }
 
-  Widget _buildStatsCards(ThemeProvider themeProvider, bool isLarge, AppLocalizations l10n) {
+  Widget _buildStatsCards(
+      ThemeProvider themeProvider, bool isLarge, AppLocalizations l10n) {
     final screenWidth = MediaQuery.of(context).size.width;
     final maxCols = screenWidth >= 1400 ? 4 : (isLarge ? 4 : 2);
 
@@ -753,7 +798,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               await _loadUserStats(forceRefresh: true);
             } catch (_) {}
             if (!mounted) return;
-            ProfileScreenMethods.showFollowers(context, walletAddress: user!.id);
+            ProfileScreenMethods.showFollowers(context,
+                walletAddress: user!.id);
           },
         ),
         DesktopStatCard(
@@ -765,29 +811,37 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               await _loadUserStats(forceRefresh: true);
             } catch (_) {}
             if (!mounted) return;
-            ProfileScreenMethods.showFollowing(context, walletAddress: user!.id);
+            ProfileScreenMethods.showFollowing(context,
+                walletAddress: user!.id);
           },
         ),
         DesktopStatCard(
           label: l10n.userProfileAchievementsTitle,
-          value: (user!.achievementProgress.where((p) => p.isCompleted).length).toString(),
+          value: (user!.achievementProgress.where((p) => p.isCompleted).length)
+              .toString(),
           icon: Icons.emoji_events_outlined,
         ),
       ],
     );
   }
 
-  Widget _buildActionButtons(ThemeProvider themeProvider, AppLocalizations l10n) {
+  Widget _buildActionButtons(
+      ThemeProvider themeProvider, AppLocalizations l10n) {
     return Row(
       children: [
         Expanded(
           child: ScaleTransition(
             scale: Tween<double>(begin: 1.0, end: 0.95).animate(
-              CurvedAnimation(parent: _followButtonController, curve: Curves.easeInOut),
+              CurvedAnimation(
+                  parent: _followButtonController, curve: Curves.easeInOut),
             ),
             child: DesktopActionButton(
-              label: user!.isFollowing ? l10n.userProfileFollowingButton : l10n.userProfileFollowButton,
-              icon: user!.isFollowing ? Icons.person_remove_outlined : Icons.person_add_outlined,
+              label: user!.isFollowing
+                  ? l10n.userProfileFollowingButton
+                  : l10n.userProfileFollowButton,
+              icon: user!.isFollowing
+                  ? Icons.person_remove_outlined
+                  : Icons.person_add_outlined,
               onPressed: _toggleFollow,
               isPrimary: !user!.isFollowing,
             ),
@@ -806,7 +860,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     );
   }
 
-  Widget _buildAddedPublicArtSection(ThemeProvider themeProvider, AppLocalizations l10n) {
+  Widget _buildAddedPublicArtSection(
+      ThemeProvider themeProvider, AppLocalizations l10n) {
     return DesktopCard(
       child: Row(
         children: [
@@ -862,7 +917,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     );
   }
 
-  Widget _buildArtistPortfolioSection(ThemeProvider themeProvider, AppLocalizations l10n) {
+  Widget _buildArtistPortfolioSection(
+      ThemeProvider themeProvider, AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -895,14 +951,16 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               scrollDirection: Axis.horizontal,
               itemCount: _artistArtworks.length,
               separatorBuilder: (_, __) => const SizedBox(width: 16),
-              itemBuilder: (context, index) => _buildArtworkShowcaseCard(_artistArtworks[index], l10n),
+              itemBuilder: (context, index) =>
+                  _buildArtworkShowcaseCard(_artistArtworks[index], l10n),
             ),
           ),
       ],
     );
   }
 
-  Widget _buildArtistCollectionsSection(ThemeProvider themeProvider, AppLocalizations l10n) {
+  Widget _buildArtistCollectionsSection(
+      ThemeProvider themeProvider, AppLocalizations l10n) {
     final name = (user?.name ?? '').trim();
     final labelName = name.isEmpty ? widget.userId.trim() : name;
     return Column(
@@ -937,14 +995,16 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               scrollDirection: Axis.horizontal,
               itemCount: _artistCollections.length,
               separatorBuilder: (_, __) => const SizedBox(width: 16),
-              itemBuilder: (context, index) => _buildCollectionShowcaseCard(_artistCollections[index], l10n),
+              itemBuilder: (context, index) =>
+                  _buildCollectionShowcaseCard(_artistCollections[index], l10n),
             ),
           ),
       ],
     );
   }
 
-  Widget _buildInstitutionHighlightsSection(ThemeProvider themeProvider, AppLocalizations l10n) {
+  Widget _buildInstitutionHighlightsSection(
+      ThemeProvider themeProvider, AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -990,7 +1050,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                     scrollDirection: Axis.horizontal,
                     itemCount: _artistArtworks.length,
                     separatorBuilder: (_, __) => const SizedBox(width: 16),
-                    itemBuilder: (context, index) => _buildArtworkShowcaseCard(_artistArtworks[index], l10n),
+                    itemBuilder: (context, index) =>
+                        _buildArtworkShowcaseCard(_artistArtworks[index], l10n),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -1011,7 +1072,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                     scrollDirection: Axis.horizontal,
                     itemCount: _artistCollections.length,
                     separatorBuilder: (_, __) => const SizedBox(width: 16),
-                    itemBuilder: (context, index) => _buildCollectionShowcaseCard(_artistCollections[index], l10n),
+                    itemBuilder: (context, index) =>
+                        _buildCollectionShowcaseCard(
+                            _artistCollections[index], l10n),
                   ),
                 ),
               ],
@@ -1021,19 +1084,28 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     );
   }
 
-  Widget _buildArtworkShowcaseCard(Map<String, dynamic> data, AppLocalizations l10n) {
-    final imageUrl = _extractImageUrl(data, ['imageUrl', 'image', 'previewUrl', 'coverImage', 'mediaUrl']);
-    final title = (data['title'] ?? data['name'] ?? l10n.commonUntitled).toString();
-    final category = (data['category'] ?? data['medium'] ?? l10n.commonArtwork).toString();
-    final artworkId = (data['id'] ?? data['artwork_id'] ?? data['artworkId'])?.toString();
+  Widget _buildArtworkShowcaseCard(
+      Map<String, dynamic> data, AppLocalizations l10n) {
+    final imageUrl = _extractImageUrl(
+        data, ['imageUrl', 'image', 'previewUrl', 'coverImage', 'mediaUrl']);
+    final title =
+        (data['title'] ?? data['name'] ?? l10n.commonUntitled).toString();
+    final category =
+        (data['category'] ?? data['medium'] ?? l10n.commonArtwork).toString();
+    final artworkId =
+        (data['id'] ?? data['artwork_id'] ?? data['artworkId'])?.toString();
     final likesCount = data['likesCount'] ?? data['likes'] ?? 0;
-    
+
     return GestureDetector(
-      onTap: artworkId != null ? () {
-        openArtwork(context, artworkId, source: 'desktop_user_profile');
-      } : null,
+      onTap: artworkId != null
+          ? () {
+              openArtwork(context, artworkId, source: 'desktop_user_profile');
+            }
+          : null,
       child: MouseRegion(
-        cursor: artworkId != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
+        cursor: artworkId != null
+            ? SystemMouseCursors.click
+            : SystemMouseCursors.basic,
         child: SizedBox(
           width: 220,
           child: DesktopCard(
@@ -1043,14 +1115,16 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(16)),
                   child: imageUrl != null
                       ? Image.network(
                           _normalizeMediaUrl(imageUrl) ?? '',
                           height: 160,
                           width: double.infinity,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _buildPlaceholderImage(160, Icons.image_outlined),
+                          errorBuilder: (_, __, ___) =>
+                              _buildPlaceholderImage(160, Icons.image_outlined),
                         )
                       : _buildPlaceholderImage(160, Icons.image_outlined),
                 ),
@@ -1074,7 +1148,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                         category,
                         style: KubusTypography.inter(
                           fontSize: 13,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -1083,14 +1160,20 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                           Icon(
                             Icons.favorite_border,
                             size: 14,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.5),
                           ),
                           const SizedBox(width: 4),
                           Text(
                             '$likesCount',
                             style: KubusTypography.inter(
                               fontSize: 12,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.5),
                             ),
                           ),
                         ],
@@ -1106,7 +1189,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     );
   }
 
-  Widget _buildCollectionShowcaseCard(Map<String, dynamic> data, AppLocalizations l10n) {
+  Widget _buildCollectionShowcaseCard(
+      Map<String, dynamic> data, AppLocalizations l10n) {
     final imageUrl = _extractImageUrl(data, [
       'thumbnailUrl',
       'coverImage',
@@ -1116,12 +1200,14 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       'cover_url',
       'image',
     ]);
-    final title = (data['name'] ?? l10n.userProfileCollectionFallbackTitle).toString();
+    final title =
+        (data['name'] ?? l10n.userProfileCollectionFallbackTitle).toString();
     final count = data['artworksCount'] ?? data['artworks_count'] ?? 0;
     final description = (data['description'] ?? '').toString();
     final collectionId =
-        (data['id'] ?? data['collection_id'] ?? data['collectionId'])?.toString();
-    
+        (data['id'] ?? data['collection_id'] ?? data['collectionId'])
+            ?.toString();
+
     return SizedBox(
       width: 200,
       child: DesktopCard(
@@ -1129,12 +1215,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         enableHover: true,
         onTap: (collectionId != null && collectionId.isNotEmpty)
             ? () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        CollectionDetailScreen(collectionId: collectionId),
-                  ),
+                _openDesktopShellAwareScreen(
+                  CollectionDetailScreen(collectionId: collectionId),
                 );
               }
             : null,
@@ -1142,14 +1224,16 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(16)),
               child: imageUrl != null
                   ? Image.network(
                       _normalizeMediaUrl(imageUrl) ?? '',
                       height: 120,
                       width: double.infinity,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _buildPlaceholderImage(120, Icons.collections_outlined),
+                      errorBuilder: (_, __, ___) => _buildPlaceholderImage(
+                          120, Icons.collections_outlined),
                     )
                   : _buildPlaceholderImage(120, Icons.collections_outlined),
             ),
@@ -1173,7 +1257,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                     l10n.userProfileArtworksCountLabel(count as int),
                     style: KubusTypography.inter(
                       fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
                     ),
                   ),
                   if (description.isNotEmpty) ...[
@@ -1182,7 +1269,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                       description,
                       style: KubusTypography.inter(
                         fontSize: 11,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.5),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -1205,11 +1295,18 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         color: Theme.of(context).colorScheme.primaryContainer,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      child: Center(child: Icon(icon, size: 48, color: Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.4))),
+      child: Center(
+          child: Icon(icon,
+              size: 48,
+              color: Theme.of(context)
+                  .colorScheme
+                  .onPrimaryContainer
+                  .withValues(alpha: 0.4))),
     );
   }
 
-  Widget _buildAchievementsSection(ThemeProvider themeProvider, AppLocalizations l10n) {
+  Widget _buildAchievementsSection(
+      ThemeProvider themeProvider, AppLocalizations l10n) {
     final progress = user?.achievementProgress ?? [];
     final achievementsToShow = achievement_svc
         .AchievementService.achievementDefinitions.values
@@ -1237,7 +1334,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       children: [
         DesktopSectionHeader(
           title: l10n.userProfileAchievementsTitle,
-          subtitle: l10n.userProfileAchievementsProgressLabel(completedCount, totalAchievements),
+          subtitle: l10n.userProfileAchievementsProgressLabel(
+              completedCount, totalAchievements),
           icon: Icons.emoji_events_outlined,
         ),
         const SizedBox(height: 16),
@@ -1366,7 +1464,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   ) {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final l10n = AppLocalizations.of(context)!;
-    final required = achievement.requiredCount > 0 ? achievement.requiredCount : 1;
+    final required =
+        achievement.requiredCount > 0 ? achievement.requiredCount : 1;
     final ratio = (progress.currentProgress / required).clamp(0.0, 1.0);
     final isCompleted = progress.isCompleted || ratio >= 1.0;
     final accent = CategoryAccentColor.resolve(
@@ -1386,13 +1485,17 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                   color: accent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(_iconForAchievement(achievement), color: accent, size: 24),
+                child: Icon(_iconForAchievement(achievement),
+                    color: accent, size: 24),
               ),
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.secondaryContainer.withValues(alpha: 0.4),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .secondaryContainer
+                      .withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -1419,13 +1522,18 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           ),
           const SizedBox(height: 8),
           Text(
-            isCompleted ? l10n.userProfileAchievementCompletedLabel : '${progress.currentProgress}/$required',
+            isCompleted
+                ? l10n.userProfileAchievementCompletedLabel
+                : '${progress.currentProgress}/$required',
             style: KubusTypography.inter(
               fontSize: 13,
               fontWeight: FontWeight.w600,
               color: isCompleted
                   ? themeProvider.accentColor
-                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  : Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
             ),
           ),
           const SizedBox(height: 8),
@@ -1434,7 +1542,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             child: LinearProgressIndicator(
               value: ratio,
               minHeight: 6,
-              backgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
+              backgroundColor: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.08),
               valueColor: AlwaysStoppedAnimation<Color>(
                 isCompleted ? themeProvider.accentColor : accent,
               ),
@@ -1445,7 +1556,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     );
   }
 
-  Widget _buildPostsSection(ThemeProvider themeProvider, AppLocalizations l10n) {
+  Widget _buildPostsSection(
+      ThemeProvider themeProvider, AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1499,7 +1611,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                   child: Text(
                     l10n.userProfileNoMorePostsLabel,
                     style: KubusTypography.inter(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
                     ),
                   ),
                 ),
@@ -1515,10 +1630,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       child: DesktopCard(
         enableHover: true,
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => PostDetailScreen(post: post)),
-          );
+          _openDesktopShellAwareScreen(PostDetailScreen(post: post));
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1550,20 +1662,30 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                           ),
                           if (post.authorIsArtist) ...[
                             const SizedBox(width: 8),
-                            const ArtistBadge(fontSize: 9, padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2)),
+                            const ArtistBadge(
+                                fontSize: 9,
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2)),
                           ],
                           if (post.authorIsInstitution) ...[
                             const SizedBox(width: 8),
-                            const InstitutionBadge(fontSize: 9, padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2)),
+                            const InstitutionBadge(
+                                fontSize: 9,
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2)),
                           ],
                         ],
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        _formatPostTime(AppLocalizations.of(context)!, post.timestamp),
+                        _formatPostTime(
+                            AppLocalizations.of(context)!, post.timestamp),
                         style: KubusTypography.inter(
                           fontSize: 12,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.5),
                         ),
                       ),
                     ],
@@ -1603,7 +1725,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                   size: 20,
                   color: post.isLiked
                       ? themeProvider.accentColor
-                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      : Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
                 ),
                 const SizedBox(width: 6),
                 Text(
@@ -1612,21 +1737,30 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                     fontSize: 14,
                     color: post.isLiked
                         ? themeProvider.accentColor
-                        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        : Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
                   ),
                 ),
                 const SizedBox(width: 24),
                 Icon(
                   Icons.comment_outlined,
                   size: 20,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
                 ),
                 const SizedBox(width: 6),
                 Text(
                   post.commentCount.toString(),
                   style: KubusTypography.inter(
                     fontSize: 14,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -1650,7 +1784,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       if (widget.username != null) {
         loadedUser = await UserService.getUserByUsername(widget.username!);
       } else {
-        loadedUser = await UserService.getUserById(widget.userId, forceRefresh: true);
+        loadedUser =
+            await UserService.getUserById(widget.userId, forceRefresh: true);
       }
     } catch (e) {
       debugPrint('Failed to fetch user: $e');
@@ -1692,7 +1827,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       );
 
       try {
-        await CommunityService.loadSavedInteractions(posts, walletAddress: _currentWalletAddress());
+        await CommunityService.loadSavedInteractions(posts,
+            walletAddress: _currentWalletAddress());
       } catch (_) {}
 
       setState(() {
@@ -1734,7 +1870,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       );
 
       try {
-        await CommunityService.loadSavedInteractions(more, walletAddress: _currentWalletAddress());
+        await CommunityService.loadSavedInteractions(more,
+            walletAddress: _currentWalletAddress());
       } catch (_) {}
 
       setState(() {
@@ -1752,7 +1889,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     }
   }
 
-  Future<void> _loadUserStats({bool skipFollowersOverwrite = false, bool forceRefresh = false}) async {
+  Future<void> _loadUserStats(
+      {bool skipFollowersOverwrite = false, bool forceRefresh = false}) async {
     final profile = user;
     if (profile == null) return;
 
@@ -1761,7 +1899,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       final snapshot = await statsProvider.ensureSnapshot(
         entityType: 'user',
         entityId: profile.id,
-        metrics: const ['posts', 'followers', 'following', 'publicStreetArtAdded'],
+        metrics: const [
+          'posts',
+          'followers',
+          'following',
+          'publicStreetArtAdded'
+        ],
         scope: 'public',
         forceRefresh: forceRefresh,
       );
@@ -1875,15 +2018,24 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       final conv = await chatProvider.createConversation('', false, [user!.id]);
       if (conv != null) {
         if (!mounted) return;
-        final preloaded = chatProvider.getPreloadedProfileMapsForConversation(conv.id);
-        final rawMembers = (preloaded['members'] as List<dynamic>?)?.cast<String>() ?? <String>[];
+        final preloaded =
+            chatProvider.getPreloadedProfileMapsForConversation(conv.id);
+        final rawMembers =
+            (preloaded['members'] as List<dynamic>?)?.cast<String>() ??
+                <String>[];
         final members = rawMembers.isNotEmpty ? rawMembers : <String>[user!.id];
-        final avatars = Map<String, String?>.from((preloaded['avatars'] as Map<String, String?>?) ?? <String, String?>{});
-        if (!avatars.containsKey(members.first) || (avatars[members.first]?.isEmpty ?? true)) {
+        final avatars = Map<String, String?>.from(
+            (preloaded['avatars'] as Map<String, String?>?) ??
+                <String, String?>{});
+        if (!avatars.containsKey(members.first) ||
+            (avatars[members.first]?.isEmpty ?? true)) {
           avatars[members.first] = user!.profileImageUrl;
         }
-        final names = Map<String, String?>.from((preloaded['names'] as Map<String, String?>?) ?? <String, String?>{});
-        if (!names.containsKey(members.first) || (names[members.first]?.isEmpty ?? true)) {
+        final names = Map<String, String?>.from(
+            (preloaded['names'] as Map<String, String?>?) ??
+                <String, String?>{});
+        if (!names.containsKey(members.first) ||
+            (names[members.first]?.isEmpty ?? true)) {
           names[members.first] = user!.name;
         }
         await ConversationNavigator.openConversationWithPreload(
@@ -1909,7 +2061,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     } catch (e) {
       debugPrint('DesktopUserProfileScreen: failed to open conversation: $e');
       if (!mounted) return;
-      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.userProfileConversationOpenGenericErrorToast)));
+      messenger.showKubusSnackBar(SnackBar(
+          content: Text(l10n.userProfileConversationOpenGenericErrorToast)));
     }
   }
 
@@ -1930,7 +2083,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -1995,7 +2151,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         content: Text(
           l10n.userProfileBlockDialogDescription,
           style: KubusTypography.inter(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
           ),
         ),
         actions: [
@@ -2009,10 +2166,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               try {
                 await BlockListService().blockWallet(targetWallet);
               } catch (e) {
-                debugPrint('DesktopUserProfileScreen: failed to block user: $e');
+                debugPrint(
+                    'DesktopUserProfileScreen: failed to block user: $e');
                 if (!mounted) return;
                 Navigator.pop(context);
-                messenger.showKubusSnackBar(SnackBar(content: Text(l10n.userProfileBlockFailedToast)));
+                messenger.showKubusSnackBar(
+                    SnackBar(content: Text(l10n.userProfileBlockFailedToast)));
                 return;
               }
 
@@ -2020,10 +2179,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               Navigator.pop(context);
               messenger.showKubusSnackBar(
                 SnackBar(
-                  content: Text(l10n.userProfileBlockedToast(user?.name ?? targetWallet)),
+                  content: Text(
+                      l10n.userProfileBlockedToast(user?.name ?? targetWallet)),
                   action: SnackBarAction(
                     label: l10n.commonUndo,
-                    onPressed: () => BlockListService().unblockWallet(targetWallet),
+                    onPressed: () =>
+                        BlockListService().unblockWallet(targetWallet),
                   ),
                 ),
               );
@@ -2044,26 +2205,32 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           l10n.userProfileReportDialogTitle(user?.name ?? ''),
-          style: KubusTypography.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface),
+          style: KubusTypography.inter(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.onSurface),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               title: Text(l10n.userProfileReportReasonSpam),
-              onTap: () => _submitReport(dialogContext, l10n.userProfileReportReasonSpam),
+              onTap: () => _submitReport(
+                  dialogContext, l10n.userProfileReportReasonSpam),
             ),
             ListTile(
               title: Text(l10n.userProfileReportReasonInappropriate),
-              onTap: () => _submitReport(dialogContext, l10n.userProfileReportReasonInappropriate),
+              onTap: () => _submitReport(
+                  dialogContext, l10n.userProfileReportReasonInappropriate),
             ),
             ListTile(
               title: Text(l10n.userProfileReportReasonHarassment),
-              onTap: () => _submitReport(dialogContext, l10n.userProfileReportReasonHarassment),
+              onTap: () => _submitReport(
+                  dialogContext, l10n.userProfileReportReasonHarassment),
             ),
             ListTile(
               title: Text(l10n.userProfileReportReasonOther),
-              onTap: () => _submitReport(dialogContext, l10n.userProfileReportReasonOther),
+              onTap: () => _submitReport(
+                  dialogContext, l10n.userProfileReportReasonOther),
             ),
           ],
         ),
@@ -2079,22 +2246,27 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     Navigator.pop(dialogContext);
 
     if (targetWallet.isEmpty) {
-      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));
+      messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.commonActionFailedToast)));
       return;
     }
 
     try {
-      await CommunityService.reportUser(targetWallet, reason, details: user?.name);
+      await CommunityService.reportUser(targetWallet, reason,
+          details: user?.name);
       if (!mounted) return;
-      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.userProfileReportSubmittedToast)));
+      messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.userProfileReportSubmittedToast)));
     } catch (_) {
       if (!mounted) return;
-      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));
+      messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.commonActionFailedToast)));
     }
   }
 
   Future<void> _maybeLoadArtistData({bool force = false}) async {
-    final isCreator = (user?.isArtist ?? false) || (user?.isInstitution ?? false);
+    final isCreator =
+        (user?.isArtist ?? false) || (user?.isInstitution ?? false);
     if (!isCreator) return;
     if (_artistDataLoading && !force) return;
     if (_artistDataRequested && !force) return;
@@ -2103,14 +2275,16 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     await _loadArtistData(user!.id, force: force);
   }
 
-  Future<void> _loadArtistData(String walletAddress, {bool force = false}) async {
+  Future<void> _loadArtistData(String walletAddress,
+      {bool force = false}) async {
     if (!mounted) return;
     setState(() => _artistDataLoading = true);
 
     try {
       final api = BackendApiService();
       final artworks = await api.getArtistArtworks(walletAddress, limit: 6);
-      final collections = await api.getCollections(walletAddress: walletAddress, limit: 6);
+      final collections =
+          await api.getCollections(walletAddress: walletAddress, limit: 6);
 
       if (!mounted) return;
       setState(() {

@@ -1,10 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../utils/design_tokens.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../common/kubus_cached_image.dart';
 import '../../common/kubus_glass_icon_button.dart';
-import '../../glass_components.dart';
+import '../kubus_map_glass_surface.dart';
 
 enum DetailPanelKind {
   artwork,
@@ -49,7 +50,6 @@ class KubusDetailPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
     final panelBody = SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -63,16 +63,14 @@ class KubusDetailPanel extends StatelessWidget {
       ),
     );
 
-    return LiquidGlassPanel(
+    return buildKubusMapGlassSurface(
+      context: context,
+      kind: KubusMapGlassSurfaceKind.panel,
       margin: margin,
       padding: EdgeInsets.zero,
       borderRadius: BorderRadius.circular(borderRadius),
-      blurSigma: blurSigma,
-      backgroundColor: scheme.surface.withValues(
-        alpha: isDark ? backgroundAlphaDark : backgroundAlphaLight,
-      ),
-      fallbackMinOpacity: KubusGlassEffects.fallbackOpaqueOpacity,
-      showBorder: true,
+      tintBase: scheme.surface,
+      useBlur: !kIsWeb,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -178,6 +176,7 @@ class DetailHeader extends StatelessWidget {
                 accentColor: closeAccentColor ?? accentColor,
                 iconColor: closeIconColor,
                 tooltip: closeTooltip,
+                enableBlur: !kIsWeb,
                 onPressed: onClose,
               ),
             ),

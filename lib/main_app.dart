@@ -128,6 +128,7 @@ class _MainAppState extends State<MainApp> {
     MobileShellRegistry.instance.register(context);
 
     final currentIndex = context.watch<MainTabProvider>().currentIndex;
+    final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
 
     // Ensure the currently visible tab is mounted.
     _mountedTabs.add(currentIndex);
@@ -138,13 +139,14 @@ class _MainAppState extends State<MainApp> {
     final scaffold = Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
-      resizeToAvoidBottomInset: false,
+      resizeToAvoidBottomInset: true,
       body: IndexedStack(
         index: currentIndex,
         // Keep heavy AR resources out of the tree unless the AR tab is active.
         children: _buildScreens(currentIndex),
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
+      bottomNavigationBar:
+          keyboardVisible ? null : _buildBottomNavigationBar(),
     );
 
     // On web, MapLibre is rendered via a platform view (MapLibre GL JS).

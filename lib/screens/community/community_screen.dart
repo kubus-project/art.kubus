@@ -1143,116 +1143,129 @@ class _CommunityScreenState extends State<CommunityScreen>
     final l10n = AppLocalizations.of(context)!;
     final isSmallScreen = MediaQuery.of(context).size.width < 375;
     final animationTheme = context.animationTheme;
+    final scheme = Theme.of(context).colorScheme;
+    final surfaceStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.header,
+      tintBase: scheme.surface,
+    );
     return Container(
       padding:
           const EdgeInsets.all(KubusHeaderMetrics.appBarHorizontalPaddingLg),
-      child: Row(
-        children: [
-          Expanded(
-            child: KubusHeaderText(
-              title: l10n.communityScreenTitle,
-              kind: KubusHeaderKind.screen,
-              titleColor: Theme.of(context).colorScheme.onSurface,
-              maxTitleLines: 1,
+      child: LiquidGlassPanel(
+        margin: EdgeInsets.zero,
+        padding: const EdgeInsets.symmetric(
+          horizontal: KubusSpacing.md,
+          vertical: KubusSpacing.sm,
+        ),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
+        blurSigma: surfaceStyle.blurSigma,
+        backgroundColor: surfaceStyle.tintColor,
+        fallbackMinOpacity: surfaceStyle.fallbackMinOpacity,
+        child: Row(
+          children: [
+            Expanded(
+              child: KubusHeaderText(
+                title: l10n.communityScreenTitle,
+                kind: KubusHeaderKind.screen,
+                titleColor: scheme.onSurface,
+                maxTitleLines: 1,
+              ),
             ),
-          ),
-          TopBarIcon(
-            tooltip: l10n.commonSearch,
-            icon: Icon(
-              Icons.search,
-              color: Theme.of(context).colorScheme.onSurface,
-              size: KubusHeaderMetrics.actionIcon,
+            TopBarIcon(
+              tooltip: l10n.commonSearch,
+              icon: Icon(
+                Icons.search,
+                color: scheme.onSurface,
+                size: KubusHeaderMetrics.actionIcon,
+              ),
+              onPressed: _showSearchBottomSheet,
             ),
-            onPressed: _showSearchBottomSheet,
-          ),
-          const SizedBox(width: KubusSpacing.sm),
-          TopBarIcon(
-            tooltip: l10n.commonNotifications,
-            icon: AnimatedBuilder(
-              animation: _bellController,
-              builder: (ctx, child) {
-                final scale = _bellScale.value;
-                return Transform.scale(
-                  scale: scale,
-                  child: Icon(
-                    _bellUnreadCount > 0
-                        ? Icons.notifications
-                        : Icons.notifications_outlined,
-                    color: Theme.of(context).colorScheme.onSurface,
-                    size: KubusHeaderMetrics.actionIcon,
+            const SizedBox(width: KubusSpacing.sm),
+            TopBarIcon(
+              tooltip: l10n.commonNotifications,
+              icon: AnimatedBuilder(
+                animation: _bellController,
+                builder: (ctx, child) {
+                  final scale = _bellScale.value;
+                  return Transform.scale(
+                    scale: scale,
+                    child: Icon(
+                      _bellUnreadCount > 0
+                          ? Icons.notifications
+                          : Icons.notifications_outlined,
+                      color: scheme.onSurface,
+                      size: KubusHeaderMetrics.actionIcon,
+                    ),
+                  );
+                },
+              ),
+              onPressed: _showNotifications,
+              badgeCount: _bellUnreadCount,
+              badgeColor: themeProvider.accentColor,
+            ),
+            const SizedBox(width: 8),
+            Selector<ChatProvider, int>(
+              selector: (_, cp) => cp.totalUnread,
+              builder: (context, totalUnread, child) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (totalUnread > 0 && _messageScale.value == 1.0) {
+                    _messagePulseController.forward(from: 0.0);
+                  }
+                });
+                return TopBarIcon(
+                  tooltip: l10n.messagesTitle,
+                  icon: ScaleTransition(
+                    scale: _messageScale,
+                    child: Icon(
+                      totalUnread > 0
+                          ? Icons.chat_bubble
+                          : Icons.chat_bubble_outline,
+                      color: totalUnread > 0
+                          ? themeProvider.accentColor
+                          : scheme.onSurface,
+                      size: isSmallScreen ? 20 : 24,
+                    ),
                   ),
+                  onPressed: () {
+                    showGeneralDialog(
+                      context: context,
+                      barrierDismissible: true,
+                      barrierLabel: l10n.messagesTitle,
+                      barrierColor:
+                          scheme.primaryContainer.withValues(alpha: 0.7),
+                      transitionDuration: animationTheme.medium,
+                      pageBuilder: (ctx, a1, a2) => const MessagesScreen(),
+                      transitionBuilder: (ctx, anim1, anim2, child) {
+                        final slideCurve = CurvedAnimation(
+                          parent: anim1,
+                          curve: animationTheme.defaultCurve,
+                        );
+                        final fadeCurve = CurvedAnimation(
+                          parent: anim1,
+                          curve: animationTheme.fadeCurve,
+                        );
+                        return Transform.translate(
+                          offset: Offset(
+                            0,
+                            (1 - slideCurve.value) *
+                                MediaQuery.of(context).size.height,
+                          ),
+                          child: FadeTransition(
+                            opacity: fadeCurve,
+                            child: child,
+                          ),
+                        );
+                      },
+                    );
+                  },
+                  badgeCount: totalUnread,
+                  badgeColor: themeProvider.accentColor,
                 );
               },
             ),
-            onPressed: _showNotifications,
-            badgeCount: _bellUnreadCount,
-            badgeColor: themeProvider.accentColor,
-          ),
-          const SizedBox(width: 8),
-          // Message icon - open messages screen as a full-screen modal
-          Selector<ChatProvider, int>(
-            selector: (_, cp) => cp.totalUnread,
-            builder: (context, totalUnread, child) {
-              // Animate when unread count increases
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (totalUnread > 0 && _messageScale.value == 1.0) {
-                  _messagePulseController.forward(from: 0.0);
-                }
-              });
-              return TopBarIcon(
-                tooltip: l10n.messagesTitle,
-                icon: ScaleTransition(
-                  scale: _messageScale,
-                  child: Icon(
-                    totalUnread > 0
-                        ? Icons.chat_bubble
-                        : Icons.chat_bubble_outline,
-                    color: totalUnread > 0
-                        ? themeProvider.accentColor
-                        : Theme.of(context).colorScheme.onSurface,
-                    size: isSmallScreen ? 20 : 24,
-                  ),
-                ),
-                onPressed: () {
-                  showGeneralDialog(
-                    context: context,
-                    barrierDismissible: true,
-                    barrierLabel: l10n.messagesTitle,
-                    barrierColor: Theme.of(context)
-                        .colorScheme
-                        .primaryContainer
-                        .withAlpha(179),
-                    transitionDuration: animationTheme.medium,
-                    pageBuilder: (ctx, a1, a2) => const MessagesScreen(),
-                    transitionBuilder: (ctx, anim1, anim2, child) {
-                      final slideCurve = CurvedAnimation(
-                        parent: anim1,
-                        curve: animationTheme.defaultCurve,
-                      );
-                      final fadeCurve = CurvedAnimation(
-                        parent: anim1,
-                        curve: animationTheme.fadeCurve,
-                      );
-                      return Transform.translate(
-                        offset: Offset(
-                          0,
-                          (1 - slideCurve.value) *
-                              MediaQuery.of(context).size.height,
-                        ),
-                        child: FadeTransition(
-                          opacity: fadeCurve,
-                          child: child,
-                        ),
-                      );
-                    },
-                  );
-                },
-                badgeCount: totalUnread,
-                badgeColor: themeProvider.accentColor,
-              );
-            },
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1306,49 +1319,61 @@ class _CommunityScreenState extends State<CommunityScreen>
       builder: (context, constraints) {
         final isSmallScreen = constraints.maxWidth < 375;
 
+        final glassStyle = KubusGlassStyle.resolve(
+          context,
+          surfaceType: KubusGlassSurfaceType.card,
+          tintBase: Theme.of(context).colorScheme.surface,
+        );
+
         return Container(
           margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primaryContainer,
+          child: LiquidGlassPanel(
+            margin: EdgeInsets.zero,
+            padding: const EdgeInsets.all(KubusSpacing.xxs),
             borderRadius: KubusRadius.circular(KubusRadius.lg),
-          ),
-          child: TabBar(
-            controller: _tabController,
-            isScrollable: isSmallScreen,
-            tabAlignment:
-                isSmallScreen ? TabAlignment.start : TabAlignment.fill,
-            tabs: tabLabels
-                .map((tab) => Tab(
-                      child: Text(
-                        tab,
-                        style: KubusTypography.textTheme.labelSmall?.copyWith(
-                          fontSize: isSmallScreen ? 9 : 10,
-                          fontWeight: FontWeight.w600,
+            blurSigma: glassStyle.blurSigma,
+            backgroundColor: glassStyle.tintColor,
+            fallbackMinOpacity: glassStyle.fallbackMinOpacity,
+            child: TabBar(
+              controller: _tabController,
+              isScrollable: isSmallScreen,
+              tabAlignment:
+                  isSmallScreen ? TabAlignment.start : TabAlignment.fill,
+              tabs: tabLabels
+                  .map((tab) => Tab(
+                        child: Text(
+                          tab,
+                          style: KubusTypography.textTheme.labelSmall?.copyWith(
+                            fontSize: isSmallScreen ? 9 : 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ))
-                .toList(),
-            indicator: BoxDecoration(
-              color: themeProvider.accentColor,
-              borderRadius: KubusRadius.circular(KubusRadius.md),
+                      ))
+                  .toList(),
+              indicator: BoxDecoration(
+                color: themeProvider.accentColor,
+                borderRadius: KubusRadius.circular(KubusRadius.md),
+              ),
+              indicatorPadding: EdgeInsets.all(isSmallScreen ? 2 : 4),
+              indicatorSize: TabBarIndicatorSize.tab,
+              labelColor: Theme.of(context).colorScheme.onPrimary,
+              unselectedLabelColor: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.6),
+              labelStyle: KubusTypography.textTheme.labelSmall?.copyWith(
+                fontSize: isSmallScreen ? 9 : 10,
+                fontWeight: FontWeight.w600,
+              ),
+              unselectedLabelStyle:
+                  KubusTypography.textTheme.labelSmall?.copyWith(
+                fontSize: isSmallScreen ? 9 : 10,
+                fontWeight: FontWeight.normal,
+              ),
+              dividerHeight: 0,
             ),
-            indicatorPadding: EdgeInsets.all(isSmallScreen ? 2 : 4),
-            indicatorSize: TabBarIndicatorSize.tab,
-            labelColor: Theme.of(context).colorScheme.onPrimary,
-            unselectedLabelColor:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-            labelStyle: KubusTypography.textTheme.labelSmall?.copyWith(
-              fontSize: isSmallScreen ? 9 : 10,
-              fontWeight: FontWeight.w600,
-            ),
-            unselectedLabelStyle:
-                KubusTypography.textTheme.labelSmall?.copyWith(
-              fontSize: isSmallScreen ? 9 : 10,
-              fontWeight: FontWeight.normal,
-            ),
-            dividerHeight: 0,
           ),
         );
       },
@@ -3015,236 +3040,223 @@ class _CommunityScreenState extends State<CommunityScreen>
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) => Container(
+        builder: (context, setModalState) => SizedBox(
           height: MediaQuery.of(context).size.height * 0.6,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.outline,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(KubusSpacing.lg),
-                child: Row(
-                  children: [
-                    Text(
-                      'Community Notifications',
-                      style: KubusTypography.inter(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
+          child: BackdropGlassSheet(
+            showHandle: false,
+            showBorder: false,
+            padding: EdgeInsets.zero,
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            child: Column(
+              children: [
+                KubusSheetHeader(
+                  title: 'Community Notifications',
+                  trailing: TopBarIcon(
+                    tooltip: AppLocalizations.of(context)!.commonRefresh,
+                    icon: Icon(
+                      Icons.refresh,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
-                    const Spacer(),
-                    // Removed 'Mark all read' per UX decision: notifications are marked as read when viewed
-                  ],
+                    onPressed: () async {
+                      final refreshed = await loadNotifications();
+                      setModalState(() {
+                        combined = refreshed;
+                      });
+                    },
+                  ),
                 ),
-              ),
-              Expanded(
-                child: combined.isEmpty
-                    ? RefreshIndicator(
-                        onRefresh: () async {
-                          final refreshed = await loadNotifications();
-                          setModalState(() {
-                            combined = refreshed;
-                          });
-                        },
-                        child: SingleChildScrollView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          child: SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.4,
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.all(KubusSpacing.lg),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.notifications_none,
-                                      size: 64,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withValues(alpha: 0.3),
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      'No Notifications',
-                                      style: KubusTypography.inter(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
+                Expanded(
+                  child: combined.isEmpty
+                      ? RefreshIndicator(
+                          onRefresh: () async {
+                            final refreshed = await loadNotifications();
+                            setModalState(() {
+                              combined = refreshed;
+                            });
+                          },
+                          child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            child: SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.4,
+                              child: Center(
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsets.all(KubusSpacing.lg),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.notifications_none,
+                                        size: 64,
                                         color: Theme.of(context)
                                             .colorScheme
                                             .onSurface
-                                            .withValues(alpha: 0.6),
+                                            .withValues(alpha: 0.3),
                                       ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'You\'re all caught up!',
-                                      style: KubusTypography.inter(
-                                        fontSize: 14,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withValues(alpha: 0.5),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'No Notifications',
+                                        style: KubusTypography.inter(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.6),
+                                        ),
                                       ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ],
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'You\'re all caught up!',
+                                        style: KubusTypography.inter(
+                                          fontSize: 14,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.5),
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      )
-                    : RefreshIndicator(
-                        onRefresh: () async {
-                          final refreshed = await loadNotifications();
-                          setModalState(() {
-                            combined = refreshed;
-                          });
-                        },
-                        child: ListView.separated(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
-                          itemBuilder: (ctx, i) {
-                            final n = combined[i];
-                            final type =
-                                (n['interactionType'] ?? n['type'] ?? '')
-                                    .toString();
-                            // Extract sender info from backend notification structure
-                            final sender = n['sender'] as Map<String, dynamic>?;
-                            final user = sender?['displayName'] as String? ??
-                                sender?['username'] as String? ??
-                                (n['userName'] ?? n['authorName'] ?? 'Someone')
-                                    .toString();
-                            final body = (n['comment'] ??
-                                    n['message'] ??
-                                    n['content'] ??
-                                    '')
-                                .toString();
-                            final ts = (n['timestamp'] ?? n['createdAt'] ?? '')
-                                .toString();
-                            String time = ts.isNotEmpty ? ts : '';
-                            try {
-                              if (time.isNotEmpty) {
-                                time = _getTimeAgo(DateTime.parse(time));
-                              }
-                            } catch (_) {}
-                            final leadSeed = (sender?['wallet'] ??
-                                    sender?['wallet_address'] ??
-                                    sender?['walletAddress'] ??
-                                    user)
-                                .toString();
-                            return Container(
-                              margin: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 6),
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.surface,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.06)),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.02),
-                                    blurRadius: 6,
-                                  )
-                                ],
-                              ),
-                              child: InkWell(
-                                onTap: () {
-                                  Navigator.pop(context);
-                                  final postId = n['postId']?.toString();
-                                  if (postId != null && postId.isNotEmpty) {
-                                    final idx = _communityPosts
-                                        .indexWhere((p) => p.id == postId);
-                                    if (idx != -1) {
-                                      WidgetsBinding.instance
-                                          .addPostFrameCallback((_) {
-                                        _showComments(idx);
-                                      });
-                                    }
-                                  }
-                                },
-                                borderRadius: BorderRadius.circular(12),
-                                child: Row(
-                                  children: [
-                                    AvatarWidget(
-                                        wallet: leadSeed,
-                                        radius: 20,
-                                        allowFabricatedFallback: false),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            type == 'like'
-                                                ? '$user liked your post'
-                                                : type == 'comment'
-                                                    ? '$user commented'
-                                                    : type == 'reply'
-                                                        ? '$user replied'
-                                                        : type == 'mention'
-                                                            ? '$user mentioned you'
-                                                            : (n['type'] ??
-                                                                    'Notification')
-                                                                .toString(),
-                                            style: KubusTypography.inter(
-                                                fontWeight: FontWeight.w600),
-                                          ),
-                                          const SizedBox(height: 6),
-                                          Text(body,
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: KubusTypography.inter(
-                                                  color: Theme.of(context)
-                                                      .colorScheme
-                                                      .onSurface
-                                                      .withValues(alpha: 0.7))),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(time,
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurface
-                                                .withValues(alpha: 0.5))),
-                                  ],
-                                ),
-                              ),
-                            );
+                        )
+                      : RefreshIndicator(
+                          onRefresh: () async {
+                            final refreshed = await loadNotifications();
+                            setModalState(() {
+                              combined = refreshed;
+                            });
                           },
-                          separatorBuilder: (ctx, i) => Divider(
-                              height: 1,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.06)),
-                          itemCount: combined.length,
+                          child: ListView.separated(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            itemBuilder: (ctx, i) {
+                              final n = combined[i];
+                              final type =
+                                  (n['interactionType'] ?? n['type'] ?? '')
+                                      .toString();
+                              // Extract sender info from backend notification structure
+                              final sender =
+                                  n['sender'] as Map<String, dynamic>?;
+                              final user = sender?['displayName'] as String? ??
+                                  sender?['username'] as String? ??
+                                  (n['userName'] ??
+                                          n['authorName'] ??
+                                          'Someone')
+                                      .toString();
+                              final body = (n['comment'] ??
+                                      n['message'] ??
+                                      n['content'] ??
+                                      '')
+                                  .toString();
+                              final ts =
+                                  (n['timestamp'] ?? n['createdAt'] ?? '')
+                                      .toString();
+                              String time = ts.isNotEmpty ? ts : '';
+                              try {
+                                if (time.isNotEmpty) {
+                                  time = _getTimeAgo(DateTime.parse(time));
+                                }
+                              } catch (_) {}
+                              final leadSeed = (sender?['wallet'] ??
+                                      sender?['wallet_address'] ??
+                                      sender?['walletAddress'] ??
+                                      user)
+                                  .toString();
+                              return LiquidGlassCard(
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: KubusSpacing.md,
+                                  vertical: KubusSpacing.xs,
+                                ),
+                                padding: const EdgeInsets.all(KubusSpacing.md),
+                                backgroundColor:
+                                    Theme.of(context).colorScheme.surface,
+                                child: InkWell(
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    final postId = n['postId']?.toString();
+                                    if (postId != null && postId.isNotEmpty) {
+                                      final idx = _communityPosts
+                                          .indexWhere((p) => p.id == postId);
+                                      if (idx != -1) {
+                                        WidgetsBinding.instance
+                                            .addPostFrameCallback((_) {
+                                          _showComments(idx);
+                                        });
+                                      }
+                                    }
+                                  },
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Row(
+                                    children: [
+                                      AvatarWidget(
+                                          wallet: leadSeed,
+                                          radius: 20,
+                                          allowFabricatedFallback: false),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              type == 'like'
+                                                  ? '$user liked your post'
+                                                  : type == 'comment'
+                                                      ? '$user commented'
+                                                      : type == 'reply'
+                                                          ? '$user replied'
+                                                          : type == 'mention'
+                                                              ? '$user mentioned you'
+                                                              : (n['type'] ??
+                                                                      'Notification')
+                                                                  .toString(),
+                                              style: KubusTypography.inter(
+                                                  fontWeight: FontWeight.w600),
+                                            ),
+                                            const SizedBox(height: 6),
+                                            Text(body,
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: KubusTypography.inter(
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .onSurface
+                                                        .withValues(
+                                                            alpha: 0.7))),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(time,
+                                          style: TextStyle(
+                                              fontSize: 12,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface
+                                                  .withValues(alpha: 0.5))),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                            separatorBuilder: (ctx, i) => Divider(
+                                height: 1,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.06)),
+                            itemCount: combined.length,
+                          ),
                         ),
-                      ),
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -6428,8 +6440,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                             radius: 20,
                             allowFabricatedFallback: false),
                         title: Text(formatted.primary,
-                            style:
-                                KubusTypography.inter(fontWeight: FontWeight.w600)),
+                            style: KubusTypography.inter(
+                                fontWeight: FontWeight.w600)),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -6522,9 +6534,10 @@ class _CommunityScreenState extends State<CommunityScreen>
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
-        title: Text(l10n.communityUnrepostTitle, style: KubusTypography.inter()),
-        content:
-            Text(l10n.communityUnrepostConfirmBody, style: KubusTypography.inter()),
+        title:
+            Text(l10n.communityUnrepostTitle, style: KubusTypography.inter()),
+        content: Text(l10n.communityUnrepostConfirmBody,
+            style: KubusTypography.inter()),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
@@ -6534,8 +6547,8 @@ class _CommunityScreenState extends State<CommunityScreen>
             onPressed: () => Navigator.pop(dialogContext, true),
             style: TextButton.styleFrom(
                 foregroundColor: Theme.of(dialogContext).colorScheme.error),
-            child:
-                Text(l10n.communityUnrepostAction, style: KubusTypography.inter()),
+            child: Text(l10n.communityUnrepostAction,
+                style: KubusTypography.inter()),
           ),
         ],
       ),

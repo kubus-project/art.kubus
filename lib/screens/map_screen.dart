@@ -94,6 +94,7 @@ import '../widgets/map/controls/kubus_map_primary_controls.dart'
     show KubusMapPrimaryControlsLayout;
 import '../widgets/map/dialogs/kubus_map_attribution_dialog.dart';
 import '../widgets/common/kubus_filter_panel.dart';
+import '../widgets/common/kubus_glass_icon_button.dart';
 import '../widgets/common/kubus_glass_chip.dart';
 import '../widgets/common/kubus_map_controls.dart';
 import '../widgets/common/kubus_cached_image.dart';
@@ -4304,6 +4305,7 @@ class _MapScreenState extends State<MapScreen>
               hintText: l10n.mapSearchHint,
               controller: _mapSearchController.textController,
               focusNode: _mapSearchController.focusNode,
+              enableBlur: !kIsWeb,
               onChanged: (value) => _mapSearchController.onQueryChanged(
                 context,
                 value,
@@ -4712,30 +4714,14 @@ class _MapScreenState extends State<MapScreen>
                   KubusSpacing.sm,
             ),
             child: MapOverlayBlocker(
-              child: Tooltip(
-                message: 'Map attributions',
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () =>
-                        unawaited(showKubusMapAttributionDialog(context)),
-                    borderRadius: BorderRadius.circular(KubusRadius.sm),
-                    child: SizedBox(
-                      width: 42,
-                      height: 42,
-                      child: Center(
-                        child: Icon(
-                          Icons.info_outline,
-                          size: 20,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .primary
-                              .withValues(alpha: 0.96),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+              child: KubusGlassIconButton(
+                icon: Icons.info_outline,
+                tooltip: 'Map attributions',
+                borderRadius: KubusRadius.sm,
+                iconColor: Theme.of(context).colorScheme.primary,
+                enableBlur: !kIsWeb,
+                onPressed: () =>
+                    unawaited(showKubusMapAttributionDialog(context)),
               ),
             ),
           );

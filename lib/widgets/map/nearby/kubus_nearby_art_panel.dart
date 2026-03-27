@@ -391,18 +391,14 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
     final teal = roles.statTeal;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.lg),
       child: Center(
-        child: Container(
-          padding: const EdgeInsets.all(28),
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainerHighest.withValues(alpha: 0.50),
-            borderRadius: KubusRadius.circular(24),
-            border: Border.all(
-              color: scheme.outlineVariant.withValues(alpha: 0.30),
-              width: 1,
-            ),
-          ),
+        child: buildKubusMapGlassSurface(
+          context: context,
+          kind: KubusMapGlassSurfaceKind.card,
+          borderRadius: KubusRadius.circular(24),
+          tintBase: scheme.surface,
+          padding: const EdgeInsets.all(KubusSpacing.xl),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -415,7 +411,7 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
                 ),
                 child: Icon(Icons.explore_outlined, size: 38, color: teal),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: KubusSpacing.md),
               Text(
                 l10n.mapEmptyNoArtworksTitle,
                 style: KubusTypography.textTheme.titleMedium?.copyWith(
@@ -423,7 +419,7 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
                   color: scheme.onSurface,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: KubusSpacing.sm),
               Text(
                 l10n.mapEmptyNoArtworksDescription,
                 textAlign: TextAlign.center,
@@ -779,8 +775,11 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
             ),
           ),
         if (isMobile)
-          const SliverToBoxAdapter(
-            child: SizedBox(height: KubusLayout.mainBottomNavBarHeight),
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: KubusLayout.mainBottomNavBarHeight +
+                  MediaQuery.of(context).padding.bottom,
+            ),
           ),
       ],
     );

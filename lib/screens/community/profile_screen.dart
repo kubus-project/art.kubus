@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/app_loading.dart';
@@ -166,6 +166,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     final themeProvider = Provider.of<ThemeProvider>(context);
     final profileProvider = Provider.of<ProfileProvider>(context);
     final daoProvider = Provider.of<DAOProvider>(context);
+    final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
+    final bottomSafeInset = MediaQuery.of(context).padding.bottom;
     final walletAddress = profileProvider.currentUser?.walletAddress ?? '';
     final DAOReview? daoReview = walletAddress.isNotEmpty
         ? daoProvider.findReviewForWallet(walletAddress)
@@ -237,8 +239,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                       const SliverToBoxAdapter(
                           child: SizedBox(height: DetailSpacing.xxl)),
                       const SliverToBoxAdapter(
+                        child: SizedBox.shrink(),
+                      ),
+                      SliverToBoxAdapter(
                         child: SizedBox(
-                          height: KubusLayout.mainBottomNavBarHeight,
+                          height: keyboardVisible
+                              ? KubusSpacing.none
+                              : KubusLayout.mainBottomNavBarHeight +
+                                  bottomSafeInset,
                         ),
                       ),
                     ],
@@ -411,8 +419,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                                         size: isSmallScreen ? 22 : 24,
                                       ),
                                       onPressed: () => _shareProfile(),
-                                      tooltip:
-                                          AppLocalizations.of(context)!.commonShare,
+                                      tooltip: AppLocalizations.of(context)!
+                                          .commonShare,
                                     ),
                                     const SizedBox(width: 8),
                                     TopBarIcon(
@@ -437,34 +445,45 @@ class _ProfileScreenState extends State<ProfileScreen>
                                           .profileInvitesTooltip,
                                     ),
                                     const SizedBox(width: 8),
-                                    if (AppConfig.isFeatureEnabled('analytics')) ...[
+                                    if (AppConfig.isFeatureEnabled(
+                                        'analytics')) ...[
                                       TopBarIcon(
                                         icon: Icon(
                                           Icons.analytics_outlined,
                                           color: hasCoverImage
                                               ? Colors.white
-                                              : Theme.of(context).colorScheme.onSurface,
+                                              : Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface,
                                           size: isSmallScreen ? 22 : 24,
                                         ),
                                         onPressed: () {
-                                          final wallet = profileProvider.currentUser?.walletAddress ?? '';
+                                          final wallet = profileProvider
+                                                  .currentUser?.walletAddress ??
+                                              '';
                                           if (wallet.trim().isEmpty) return;
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (_) => AdvancedAnalyticsScreen(
+                                              builder: (_) =>
+                                                  AdvancedAnalyticsScreen(
                                                 statType: '',
                                                 walletAddress: wallet,
-                                                initialContext: AnalyticsExperienceContext.profile,
+                                                initialContext:
+                                                    AnalyticsExperienceContext
+                                                        .profile,
                                                 contexts: const <AnalyticsExperienceContext>[
-                                                  AnalyticsExperienceContext.profile,
-                                                  AnalyticsExperienceContext.community,
+                                                  AnalyticsExperienceContext
+                                                      .profile,
+                                                  AnalyticsExperienceContext
+                                                      .community,
                                                 ],
                                               ),
                                             ),
                                           );
                                         },
-                                        tooltip: AppLocalizations.of(context)!.navigationScreenAnalytics,
+                                        tooltip: AppLocalizations.of(context)!
+                                            .navigationScreenAnalytics,
                                       ),
                                       const SizedBox(width: 8),
                                     ],
@@ -677,11 +696,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                       Center(
                         child: EmptyStateCard(
                           icon: Icons.person_outline,
-                          title:
-                              AppLocalizations.of(context)!.profileNoBioYetTitle,
-                          description:
-                              AppLocalizations.of(context)!
-                                  .profileNoBioYetDescription,
+                          title: AppLocalizations.of(context)!
+                              .profileNoBioYetTitle,
+                          description: AppLocalizations.of(context)!
+                              .profileNoBioYetDescription,
                           showAction: true,
                           actionLabel: AppLocalizations.of(context)!
                               .settingsEditProfileTileTitle,
@@ -854,12 +872,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                 Row(
                   children: [
                     _buildInlineStat(
-                      label: AppLocalizations.of(context)!.userProfilePostsStatLabel,
+                      label: AppLocalizations.of(context)!
+                          .userProfilePostsStatLabel,
                       value: profileProvider.formattedPostsCount,
                       isCompact: isSmallScreen,
                     ),
                     _buildInlineStat(
-                      label: AppLocalizations.of(context)!.userProfileFollowersStatLabel,
+                      label: AppLocalizations.of(context)!
+                          .userProfileFollowersStatLabel,
                       value: profileProvider.formattedFollowersCount,
                       isCompact: isSmallScreen,
                       onTap: () => ProfileScreenMethods.showFollowers(
@@ -868,7 +888,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                     ),
                     _buildInlineStat(
-                      label: AppLocalizations.of(context)!.userProfileFollowingStatLabel,
+                      label: AppLocalizations.of(context)!
+                          .userProfileFollowingStatLabel,
                       value: profileProvider.formattedFollowingCount,
                       isCompact: isSmallScreen,
                       onTap: () => ProfileScreenMethods.showFollowing(
@@ -893,7 +914,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                     const SizedBox(width: 12),
                     Expanded(
                       child: _buildStatCard(
-                        AppLocalizations.of(context)!.userProfileCollectionsTitle,
+                        AppLocalizations.of(context)!
+                            .userProfileCollectionsTitle,
                         profileProvider.formattedCollectionsCount,
                         Icons.collections,
                         isSmallScreen: isSmallScreen,
@@ -1115,8 +1137,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                 const SizedBox(height: 12),
                 _buildEmptyStateCard(
                   title: AppLocalizations.of(context)!.userProfileNoPostsTitle,
-                  description:
-                      AppLocalizations.of(context)!.profileNoPostsYetDescription,
+                  description: AppLocalizations.of(context)!
+                      .profileNoPostsYetDescription,
                   icon: Icons.article,
                 ),
               ],
@@ -1471,8 +1493,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           _buildShowcaseSection(
             title: AppLocalizations.of(context)!.profileUpcomingEventsTitle,
             items: _artistEvents,
-            emptyLabel: AppLocalizations.of(context)!
-                .profileUpcomingEventsEmptyLabel,
+            emptyLabel:
+                AppLocalizations.of(context)!.profileUpcomingEventsEmptyLabel,
             emptyIcon: Icons.event_outlined,
             builder: _buildEventCard,
           ),
@@ -1545,8 +1567,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
           const SizedBox(height: 8),
           Text(
-            AppLocalizations.of(context)!
-                .profileInstitutionHighlightsSubtitle,
+            AppLocalizations.of(context)!.profileInstitutionHighlightsSubtitle,
             style: KubusTypography.inter(
               fontSize: 14,
               color: Theme.of(context)
@@ -1559,8 +1580,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           _buildShowcaseSection(
             title: AppLocalizations.of(context)!.userProfileEventsTitle,
             items: _artistEvents,
-            emptyLabel:
-                AppLocalizations.of(context)!.profileInstitutionEventsEmptyLabel,
+            emptyLabel: AppLocalizations.of(context)!
+                .profileInstitutionEventsEmptyLabel,
             emptyIcon: Icons.event_outlined,
             builder: _buildEventCard,
           ),
@@ -1591,27 +1612,22 @@ class _ProfileScreenState extends State<ProfileScreen>
       children: [
         Text(
           title,
-          style: KubusTypography.inter(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+          style: KubusTextStyles.sectionTitle.copyWith(
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 12),
         if (_artistDataLoading && !_artistDataLoaded)
-          Container(
+          SizedBox(
             height: 160,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.08)),
+            child: LiquidGlassCard(
+              padding: EdgeInsets.zero,
+              margin: EdgeInsets.zero,
+              borderRadius: BorderRadius.circular(KubusRadius.lg),
+              child: const Center(
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
             ),
-            child: const CircularProgressIndicator(strokeWidth: 2),
           )
         else if (items.isEmpty)
           _buildEmptyStateCard(
@@ -1637,11 +1653,12 @@ class _ProfileScreenState extends State<ProfileScreen>
     final l10n = AppLocalizations.of(context)!;
     final imageUrl = _extractImageUrl(
         data, ['imageUrl', 'image', 'previewUrl', 'coverImage', 'mediaUrl']);
-    final title = (data['title'] ?? data['name'] ?? l10n.commonUntitled)
+    final title =
+        (data['title'] ?? data['name'] ?? l10n.commonUntitled).toString();
+    final medium = (data['category'] ??
+            data['medium'] ??
+            l10n.profileArtworkMediumFallback)
         .toString();
-    final medium =
-        (data['category'] ?? data['medium'] ?? l10n.profileArtworkMediumFallback)
-            .toString();
     final artworkId =
         (data['id'] ?? data['artwork_id'] ?? data['artworkId'])?.toString();
     final likesRaw = data['likesCount'] ?? data['likes'] ?? 0;
@@ -1713,8 +1730,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       'banner_url',
       'image',
     ]);
-    final title =
-        (data['title'] ?? l10n.profileEventFallbackTitle).toString();
+    final title = (data['title'] ?? l10n.profileEventFallbackTitle).toString();
     final date = _formatDateLabel(data['startDate'] ?? data['start_date']);
     final location =
         (data['location'] ?? l10n.profileEventLocationTba).toString();
@@ -1751,12 +1767,15 @@ class _ProfileScreenState extends State<ProfileScreen>
     final normalizedImage = _normalizeMediaUrl(imageUrl);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
     final radius = BorderRadius.circular(KubusRadius.lg);
+    final style = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.card,
+      tintBase: scheme.surface,
+    );
 
     return Container(
       width: 200,
-      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         borderRadius: radius,
         border: Border.all(
@@ -1765,19 +1784,22 @@ class _ProfileScreenState extends State<ProfileScreen>
         ),
         boxShadow: [
           BoxShadow(
-            color: scheme.shadow.withValues(alpha: isDark ? 0.10 : 0.08),
+            color: scheme.shadow.withValues(
+              alpha: theme.brightness == Brightness.dark ? 0.10 : 0.08,
+            ),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
         ],
       ),
-      child: LiquidGlassPanel(
+      child: LiquidGlassCard(
         padding: EdgeInsets.zero,
         margin: EdgeInsets.zero,
         borderRadius: radius,
+        blurSigma: style.blurSigma,
         showBorder: false,
-        backgroundColor:
-            scheme.surface.withValues(alpha: isDark ? 0.18 : 0.12),
+        backgroundColor: style.tintColor,
+        fallbackMinOpacity: style.fallbackMinOpacity,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1950,7 +1972,8 @@ class _ProfileScreenState extends State<ProfileScreen>
 
           final achievements = taskProvider.achievementProgress;
           final progressById = <String, AchievementProgress>{
-            for (final progress in achievements) progress.achievementId: progress,
+            for (final progress in achievements)
+              progress.achievementId: progress,
           };
           final displayAchievements = achievement_svc
               .AchievementService.achievementDefinitions.values
@@ -2174,7 +2197,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           final followingValue = publicCounters['following'] ??
               stats?.followingCount ??
               profileProvider.followingCount;
-            final publicStreetArtAddedValue = publicCounters['publicStreetArtAdded'];
+          final publicStreetArtAddedValue =
+              publicCounters['publicStreetArtAdded'];
 
           final discoveriesLabel = privateLoading
               ? '\u2026'
@@ -2196,11 +2220,11 @@ class _ProfileScreenState extends State<ProfileScreen>
               publicLoading ? '\u2026' : _formatCount(followersValue);
           final followingLabel =
               publicLoading ? '\u2026' : _formatCount(followingValue);
-            final publicStreetArtAddedLabel = publicLoading
+          final publicStreetArtAddedLabel = publicLoading
               ? '\u2026'
               : publicStreetArtAddedValue == null
-                ? '\u2014'
-                : _formatCount(publicStreetArtAddedValue);
+                  ? '\u2014'
+                  : _formatCount(publicStreetArtAddedValue);
 
           final hasData = wallet.isNotEmpty || viewedCount > 0;
           if (!hasData) {
@@ -2218,7 +2242,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                 const SizedBox(height: 16),
                 _buildEmptyStateCard(
                   icon: Icons.analytics,
-                  title: AppLocalizations.of(context)!.homeNoStatsAvailableTitle,
+                  title:
+                      AppLocalizations.of(context)!.homeNoStatsAvailableTitle,
                   description: AppLocalizations.of(context)!
                       .homeNoStatsAvailableDescription,
                 ),
@@ -2239,26 +2264,36 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
               const SizedBox(height: 16),
               _buildPerformanceCard(
-                  AppLocalizations.of(context)!.profilePerformanceArtworksViewedTitle,
-                  _formatCount(viewedCount), Icons.visibility, null),
+                  AppLocalizations.of(context)!
+                      .profilePerformanceArtworksViewedTitle,
+                  _formatCount(viewedCount),
+                  Icons.visibility,
+                  null),
               const SizedBox(height: 12),
               _buildPerformanceCard(
-                  AppLocalizations.of(context)!.profilePerformanceDiscoveriesTitle,
+                  AppLocalizations.of(context)!
+                      .profilePerformanceDiscoveriesTitle,
                   discoveriesLabel,
                   Icons.location_on,
                   null),
               const SizedBox(height: 12),
               _buildPerformanceCard(
-                  AppLocalizations.of(context)!.profilePerformanceCreatedOwnedTitle,
-                  '$createdLabel / $ownedLabel', Icons.auto_fix_high, null),
-              const SizedBox(height: 12),
-              _buildPerformanceCard(
-                  AppLocalizations.of(context)!.profilePerformanceFollowersFollowingTitle,
-                  '$followersLabel / $followingLabel', Icons.group, null),
+                  AppLocalizations.of(context)!
+                      .profilePerformanceCreatedOwnedTitle,
+                  '$createdLabel / $ownedLabel',
+                  Icons.auto_fix_high,
+                  null),
               const SizedBox(height: 12),
               _buildPerformanceCard(
                   AppLocalizations.of(context)!
-                    .profilePerformancePublicStreetArtAddedTitle,
+                      .profilePerformanceFollowersFollowingTitle,
+                  '$followersLabel / $followingLabel',
+                  Icons.group,
+                  null),
+              const SizedBox(height: 12),
+              _buildPerformanceCard(
+                  AppLocalizations.of(context)!
+                      .profilePerformancePublicStreetArtAddedTitle,
                   publicStreetArtAddedLabel,
                   Icons.streetview,
                   null),
@@ -2428,8 +2463,8 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
             ),
             const SizedBox(height: 24),
-            _buildOptionItem(
-                Icons.bookmark, AppLocalizations.of(context)!.profileMenuSavedItemsTitle, () {
+            _buildOptionItem(Icons.bookmark,
+                AppLocalizations.of(context)!.profileMenuSavedItemsTitle, () {
               Navigator.pop(context);
               _navigateToSavedItems();
             }),
@@ -2517,7 +2552,8 @@ class _ProfileScreenState extends State<ProfileScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildHelpOption(Icons.description, _ProfileHelpOption.documentation),
+              _buildHelpOption(
+                  Icons.description, _ProfileHelpOption.documentation),
               _buildHelpOption(
                   Icons.chat_bubble_outline, _ProfileHelpOption.contactSupport),
               _buildHelpOption(Icons.bug_report, _ProfileHelpOption.reportBug),
@@ -2609,13 +2645,17 @@ class _ProfileScreenState extends State<ProfileScreen>
                 style: KubusTypography.inter(fontSize: 14),
               ),
               const SizedBox(height: 16),
-              _buildContactOption(
-                  Icons.email, l10n.profileContactSupportEmailLabel, 'support@kubus.site'),
+              _buildContactOption(Icons.email,
+                  l10n.profileContactSupportEmailLabel, 'support@kubus.site'),
               const SizedBox(height: 12),
-              _buildContactOption(Icons.chat, l10n.profileContactSupportLiveChatLabel,
+              _buildContactOption(
+                  Icons.chat,
+                  l10n.profileContactSupportLiveChatLabel,
                   l10n.profileContactSupportLiveChatAvailability),
               const SizedBox(height: 12),
-              _buildContactOption(Icons.public, l10n.profileContactSupportWebsiteLabel,
+              _buildContactOption(
+                  Icons.public,
+                  l10n.profileContactSupportWebsiteLabel,
                   'https://art.kubus.site'),
             ],
           ),
@@ -2857,5 +2897,3 @@ extension _ProfileHelpOptionLabels on _ProfileHelpOption {
     }
   }
 }
-
-

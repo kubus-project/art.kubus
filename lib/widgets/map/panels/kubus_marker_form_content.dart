@@ -13,6 +13,7 @@ import '../../../utils/marker_subject_utils.dart';
 import '../../../utils/map_marker_subject_loader.dart';
 import '../../map_marker_dialog.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import '../../glass_components.dart';
 
 /// Reusable stateful form body for creating a map marker.
 ///
@@ -138,8 +139,7 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
             type: type,
             artworks: type == MarkerSubjectType.artwork
                 ? data.artworks
-                    .where(
-                        (art) => !widget.blockedArtworkIds.contains(art.id))
+                    .where((art) => !widget.blockedArtworkIds.contains(art.id))
                     .toList()
                 : data.artworks,
             exhibitions: data.exhibitions,
@@ -343,51 +343,41 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
                     border: OutlineInputBorder(
                       borderRadius: KubusRadius.circular(8),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
-                  items:
-                      (_subjectOptionsByType[_selectedSubjectType] ?? [])
-                          .map(
-                            (option) =>
-                                DropdownMenuItem<MarkerSubjectOption>(
-                              value: option,
-                              child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
-                                children: [
-                                  Text(option.title,
-                                      style: KubusTypography
-                                          .textTheme.titleSmall
-                                          ?.copyWith(
-                                              fontWeight:
-                                                  FontWeight.w600)),
-                                  if (option.subtitle.isNotEmpty)
-                                    Text(
-                                      option.subtitle,
-                                      style: KubusTypography
-                                          .textTheme.bodySmall
-                                          ?.copyWith(fontSize: 12),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          )
-                          .toList(),
+                  items: (_subjectOptionsByType[_selectedSubjectType] ?? [])
+                      .map(
+                        (option) => DropdownMenuItem<MarkerSubjectOption>(
+                          value: option,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(option.title,
+                                  style: KubusTypography.textTheme.titleSmall
+                                      ?.copyWith(fontWeight: FontWeight.w600)),
+                              if (option.subtitle.isNotEmpty)
+                                Text(
+                                  option.subtitle,
+                                  style: KubusTypography.textTheme.bodySmall
+                                      ?.copyWith(fontSize: 12),
+                                ),
+                            ],
+                          ),
+                        ),
+                      )
+                      .toList(),
                   onChanged: (value) {
                     if (value != null) {
                       setState(() {
                         _selectedSubject = value;
                         _titleController.text = value.title;
-                        _descriptionController.text =
-                            value.subtitle.isNotEmpty
-                                ? value.subtitle
-                                : l10n.mapMarkerDialogMarkerForTitle(
-                                    value.title);
-                        if (_selectedSubjectType ==
-                            MarkerSubjectType.artwork) {
-                          _selectedArAsset = findArtworkById(
-                              _subjectData.artworks, value.id);
+                        _descriptionController.text = value.subtitle.isNotEmpty
+                            ? value.subtitle
+                            : l10n.mapMarkerDialogMarkerForTitle(value.title);
+                        if (_selectedSubjectType == MarkerSubjectType.artwork) {
+                          _selectedArAsset =
+                              findArtworkById(_subjectData.artworks, value.id);
                         }
                       });
                     }
@@ -430,8 +420,8 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
                     border: OutlineInputBorder(
                       borderRadius: KubusRadius.circular(8),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
                   items: _arEnabledArtworks
                       .map(
@@ -528,8 +518,8 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
                       ?.copyWith(fontWeight: FontWeight.w600)),
               subtitle: Text(
                 l10n.mapMarkerDialogPublicMarkerSubtitle,
-                style: KubusTypography.textTheme.bodySmall
-                    ?.copyWith(fontSize: 12),
+                style:
+                    KubusTypography.textTheme.bodySmall?.copyWith(fontSize: 12),
               ),
               value: _isPublic,
               onChanged: (value) => setState(() => _isPublic = value),
@@ -547,8 +537,8 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
                           borderRadius: KubusRadius.circular(8),
                         ),
                       ),
-                      keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
                       validator: (value) {
                         final parsed = double.tryParse(value ?? '');
                         if (parsed == null || parsed.abs() > 90) {
@@ -568,8 +558,8 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
                           borderRadius: KubusRadius.circular(8),
                         ),
                       ),
-                      keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
                       validator: (value) {
                         final parsed = double.tryParse(value ?? '');
                         if (parsed == null || parsed.abs() > 180) {
@@ -630,16 +620,16 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
   }
 
   Widget _hintBox(ColorScheme scheme, String text) {
-    return Container(
-      width: double.infinity,
+    return LiquidGlassCard(
+      margin: EdgeInsets.zero,
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.3),
-        borderRadius: KubusRadius.circular(8),
-      ),
+      borderRadius: KubusRadius.circular(8),
       child: Text(
         text,
-        style: KubusTypography.textTheme.bodyMedium?.copyWith(fontSize: 13),
+        style: KubusTypography.textTheme.bodyMedium?.copyWith(
+          fontSize: 13,
+          color: scheme.onSurface.withValues(alpha: 0.78),
+        ),
       ),
     );
   }

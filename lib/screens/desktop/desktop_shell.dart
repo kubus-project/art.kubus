@@ -15,9 +15,12 @@ import '../../providers/deferred_onboarding_provider.dart';
 import '../../config/config.dart';
 import '../../models/recent_activity.dart';
 import '../../utils/activity_navigation.dart';
+import '../../services/backend_api_service.dart';
 import '../../services/telemetry/telemetry_service.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/kubus_labs_feature.dart';
+import '../../widgets/common/kubus_screen_header.dart';
+import '../../widgets/topbar_icon.dart';
 import 'desktop_home_screen.dart';
 import 'desktop_map_screen.dart';
 import 'community/desktop_community_screen.dart';
@@ -96,6 +99,7 @@ class _DesktopShellState extends State<DesktopShell>
   DateTime? _lastDeepLinkHandledAt;
   bool _pendingRouteCorrection = false;
   bool _pendingNavCollapse = false;
+  bool _pendingProfileHydration = false;
 
   static final List<DesktopNavItem> _signedInNavItems = [
     DesktopNavItem(
@@ -519,6 +523,25 @@ class _DesktopShellState extends State<DesktopShell>
   @override
   Widget build(BuildContext context) {
     final profileProvider = Provider.of<ProfileProvider>(context);
+    final authWallet =
+        (BackendApiService().getCurrentAuthWalletAddress() ?? '').trim();
+    final canHydrateAuthenticatedProfile =
+        !profileProvider.isSignedIn && authWallet.isNotEmpty;
+
+    if (canHydrateAuthenticatedProfile && !_pendingProfileHydration) {
+      _pendingProfileHydration = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        try {
+          await profileProvider.loadProfile(authWallet);
+        } catch (_) {
+        } finally {
+          _pendingProfileHydration = false;
+        }
+      });
+    } else if (!canHydrateAuthenticatedProfile) {
+      _pendingProfileHydration = false;
+    }
+
     final isSignedIn = profileProvider.isSignedIn;
     final currentUser = profileProvider.currentUser;
     final isArtist = currentUser?.isArtist ?? false;
@@ -950,7 +973,11 @@ class _NotificationsPanel extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
+    final headerStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.panelBackground,
+      tintBase: scheme.surface,
+    );
     final hasUnread =
         context.select<RecentActivityProvider, bool>((p) => p.hasUnread);
 
@@ -969,34 +996,23 @@ class _NotificationsPanel extends StatelessWidget {
             padding: const EdgeInsets.all(KubusSpacing.lg),
             margin: EdgeInsets.zero,
             borderRadius: BorderRadius.zero,
-            blurSigma: KubusGlassEffects.blurSigmaLight,
+            blurSigma: headerStyle.blurSigma,
             showBorder: false,
-            backgroundColor:
-                scheme.surface.withValues(alpha: isDark ? 0.18 : 0.12),
+            fallbackMinOpacity: headerStyle.fallbackMinOpacity,
+            backgroundColor: headerStyle.tintColor,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        l10n.commonNotifications,
-                        style: KubusTextStyles.screenTitle.copyWith(
-                          color: scheme.onSurface,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                KubusSheetHeader(
+                  title: l10n.commonNotifications,
+                  trailing: TopBarIcon(
+                    tooltip: l10n.commonClose,
+                    icon: Icon(
+                      Icons.close,
+                      color: scheme.onSurface,
                     ),
-                    IconButton(
-                      tooltip: l10n.commonClose,
-                      onPressed: onClose,
-                      icon: Icon(
-                        Icons.close,
-                        color: scheme.onSurface,
-                      ),
-                    ),
-                  ],
+                    onPressed: onClose,
+                  ),
                 ),
                 const SizedBox(height: KubusSpacing.xs),
                 Wrap(
@@ -1004,7 +1020,7 @@ class _NotificationsPanel extends StatelessWidget {
                   runSpacing: KubusSpacing.xs,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    IconButton(
+                    TopBarIcon(
                       tooltip: l10n.commonRefresh,
                       onPressed: () => unawaited(context
                           .read<RecentActivityProvider>()

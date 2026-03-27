@@ -56,7 +56,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
     this.artwork,
     this.distanceText,
     this.description,
-    this.maxPreviewChars = 300,
+    this.maxPreviewChars = 440,
     this.actions = const <MarkerOverlayActionSpec>[],
     this.stackCount = 1,
     this.stackIndex = 0,
@@ -192,13 +192,13 @@ class KubusMarkerOverlayCard extends StatelessWidget {
                 child: LayoutBuilder(
                   builder: (context, previewConstraints) {
                     final previewHeight = previewConstraints.maxHeight;
-                    final constrainedImageHeight = hasConstrainedHeight &&
-                            previewHeight.isFinite
-                        ? math.min(
-                            imageHeight,
-                            math.max(0.0, previewHeight * 0.72),
-                          )
-                        : imageHeight;
+                    final constrainedImageHeight =
+                        hasConstrainedHeight && previewHeight.isFinite
+                            ? math.min(
+                                imageHeight,
+                                math.max(0.0, previewHeight * 0.72),
+                              )
+                            : imageHeight;
                     final showImage = constrainedImageHeight >= 40.0;
 
                     return _CardTapArea(
@@ -310,8 +310,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
       displayTitle,
       maxLines: 2,
       overflow: TextOverflow.ellipsis,
-      style: KubusTypography.textTheme.titleMedium?.copyWith(
-        fontSize: 20,
+      style: KubusTextStyles.screenTitle.copyWith(
         fontWeight: FontWeight.w700,
         height: 1.2,
         color: scheme.onSurface,
@@ -483,10 +482,11 @@ class KubusMarkerOverlayCard extends StatelessWidget {
   }) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final availableHeight =
-            constraints.maxHeight.isFinite ? constraints.maxHeight : double.infinity;
+        final availableHeight = constraints.maxHeight.isFinite
+            ? constraints.maxHeight
+            : double.infinity;
 
-        int maxDescriptionLines = isConstrained ? 3 : 6;
+        int maxDescriptionLines = isConstrained ? 4 : 7;
         var showChipsResolved = showChips;
 
         if (isConstrained && availableHeight.isFinite) {
@@ -497,7 +497,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
             maxDescriptionLines = 2;
             showChipsResolved = false;
           } else if (availableHeight < 148) {
-            maxDescriptionLines = 2;
+            maxDescriptionLines = 3;
             showChipsResolved = false;
           }
         }
@@ -511,10 +511,10 @@ class KubusMarkerOverlayCard extends StatelessWidget {
                 visibleDescription,
                 maxLines: maxDescriptionLines,
                 overflow: TextOverflow.ellipsis,
-                style: KubusTypography.textTheme.bodySmall?.copyWith(
+                style: KubusTextStyles.detailBody.copyWith(
                   color: scheme.onSurfaceVariant,
                   height: 1.4,
-                  fontSize: 12,
+                  fontSize: KubusHeaderMetrics.sectionSubtitle,
                 ),
               ),
             ],

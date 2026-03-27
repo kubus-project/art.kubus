@@ -21,6 +21,7 @@ class KubusGlassIconButton extends StatelessWidget {
     this.tooltipPreferBelow,
     this.tooltipVerticalOffset,
     this.borderRadius = 999,
+    this.enableBlur = true,
   });
 
   final IconData icon;
@@ -36,6 +37,7 @@ class KubusGlassIconButton extends StatelessWidget {
   final bool? tooltipPreferBelow;
   final double? tooltipVerticalOffset;
   final double borderRadius;
+  final bool enableBlur;
 
   @override
   Widget build(BuildContext context) {
@@ -115,6 +117,7 @@ class KubusGlassIconButton extends StatelessWidget {
             showBorder: false,
             backgroundColor: active ? selectedTint : idleTint,
             fallbackMinOpacity: idleStyle.fallbackMinOpacity,
+            enableBlur: enableBlur,
             child: Center(
               child:
                   Icon(icon, size: resolvedIconSize, color: resolvedIconColor),

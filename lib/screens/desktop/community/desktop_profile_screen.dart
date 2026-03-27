@@ -388,8 +388,9 @@ class _ProfileScreenState extends State<ProfileScreen>
               onPressed: () {
                 final shellScope = DesktopShellScope.of(context);
                 if (shellScope != null) {
-                  shellScope
-                      .pushScreen(const DesktopSettingsScreen(embeddedInShell: true));
+                  shellScope.pushScreen(
+                    const DesktopSettingsScreen(embeddedInShell: true),
+                  );
                   return;
                 }
                 Navigator.push(
@@ -445,18 +446,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
                 onTap: () {
                   Navigator.pop(dialogContext);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => AdvancedAnalyticsScreen(
-                        statType: '',
-                        walletAddress: wallet,
-                        initialContext: AnalyticsExperienceContext.profile,
-                        contexts: const <AnalyticsExperienceContext>[
-                          AnalyticsExperienceContext.profile,
-                          AnalyticsExperienceContext.community,
-                        ],
-                      ),
+                  _openDesktopShellAwareScreen(
+                    AdvancedAnalyticsScreen(
+                      statType: '',
+                      walletAddress: wallet,
+                      initialContext: AnalyticsExperienceContext.profile,
+                      contexts: const <AnalyticsExperienceContext>[
+                        AnalyticsExperienceContext.profile,
+                        AnalyticsExperienceContext.community,
+                      ],
                     ),
                   );
                 },
@@ -474,18 +472,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
                 onTap: () {
                   Navigator.pop(dialogContext);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => AdvancedAnalyticsScreen(
-                        statType: '',
-                        walletAddress: wallet,
-                        initialContext: AnalyticsExperienceContext.community,
-                        contexts: const <AnalyticsExperienceContext>[
-                          AnalyticsExperienceContext.profile,
-                          AnalyticsExperienceContext.community,
-                        ],
-                      ),
+                  _openDesktopShellAwareScreen(
+                    AdvancedAnalyticsScreen(
+                      statType: '',
+                      walletAddress: wallet,
+                      initialContext: AnalyticsExperienceContext.community,
+                      contexts: const <AnalyticsExperienceContext>[
+                        AnalyticsExperienceContext.profile,
+                        AnalyticsExperienceContext.community,
+                      ],
                     ),
                   );
                 },
@@ -1445,12 +1440,8 @@ class _ProfileScreenState extends State<ProfileScreen>
         enableHover: true,
         onTap: (collectionId != null && collectionId.isNotEmpty)
             ? () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        CollectionDetailScreen(collectionId: collectionId),
-                  ),
+                _openDesktopShellAwareScreen(
+                  CollectionDetailScreen(collectionId: collectionId),
                 );
               }
             : null,
@@ -1540,11 +1531,8 @@ class _ProfileScreenState extends State<ProfileScreen>
         enableHover: true,
         onTap: (eventId != null && eventId.isNotEmpty)
             ? () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => EventDetailScreen(eventId: eventId),
-                  ),
+                _openDesktopShellAwareScreen(
+                  EventDetailScreen(eventId: eventId),
                 );
               }
             : null,
@@ -1751,10 +1739,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 onPressed: () {
                   final shellScope = DesktopShellScope.of(context);
                   if (shellScope != null) {
-                    shellScope.pushSubScreen(
-                      title: l10n.userProfileAchievementsTitle,
-                      child: const AchievementsPage(),
-                    );
+                    shellScope.pushScreen(const AchievementsPage());
                     return;
                   }
                   Navigator.push(
@@ -2050,10 +2035,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       child: DesktopCard(
         enableHover: true,
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => PostDetailScreen(post: post)),
-          );
+          _openDesktopShellAwareScreen(PostDetailScreen(post: post));
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2340,9 +2322,8 @@ class _ProfileScreenState extends State<ProfileScreen>
   void _editProfile() async {
     final shellScope = DesktopShellScope.of(context);
     if (shellScope != null) {
-      shellScope.pushSubScreen(
-        title: AppLocalizations.of(context)!.settingsEditProfileTileTitle,
-        child: ProfileEditScreen(onSaved: _refreshProfileAfterEdit),
+      shellScope.pushScreen(
+        ProfileEditScreen(onSaved: _refreshProfileAfterEdit),
       );
       return;
     }
@@ -2380,6 +2361,19 @@ class _ProfileScreenState extends State<ProfileScreen>
             profileProvider.currentUser?.username,
       ),
       sourceScreen: 'desktop_profile',
+    );
+  }
+
+  void _openDesktopShellAwareScreen(Widget screen) {
+    final shellScope = DesktopShellScope.of(context);
+    if (shellScope != null) {
+      shellScope.pushScreen(screen);
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => screen),
     );
   }
 

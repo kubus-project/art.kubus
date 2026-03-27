@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../utils/design_tokens.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -29,6 +29,8 @@ import '../../utils/media_url_resolver.dart';
 import '../../utils/app_color_utils.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
+import '../../widgets/common/kubus_screen_header.dart';
+import '../../widgets/topbar_icon.dart';
 
 // Use AvatarWidget from widgets to render avatars safely
 
@@ -1125,7 +1127,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: ['ðŸ‘', 'â¤ï¸', 'ðŸ˜‚', 'ðŸ˜®', 'ðŸ˜¢', 'ðŸ˜¡'].map((emoji) {
+                children: ['ðŸ‘', 'â¤ï¸', 'ðŸ˜‚', 'ðŸ˜®', 'ðŸ˜¢', 'ðŸ˜¡']
+                    .map((emoji) {
                   return GestureDetector(
                     onTap: () {
                       Navigator.pop(context);
@@ -1188,22 +1191,39 @@ class _ConversationScreenState extends State<ConversationScreen> {
       });
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: widget.onClose ?? () => Navigator.of(context).maybePop(),
+    return AnimatedGradientBackground(
+      intensity: 0.18,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          flexibleSpace:
+              const KubusGlassAppBarBackdrop(showBottomDivider: true),
+          leadingWidth: KubusHeaderMetrics.actionHitArea + KubusSpacing.md,
+          leading: Padding(
+            padding: const EdgeInsets.only(left: KubusSpacing.sm),
+            child: TopBarIcon(
+              icon: Icon(
+                Icons.arrow_back,
+                color: Theme.of(context).colorScheme.onSurface,
+                size: KubusHeaderMetrics.actionIcon,
+              ),
+              onPressed:
+                  widget.onClose ?? () => Navigator.of(context).maybePop(),
+            ),
+          ),
+          title: _buildHeaderTitle(),
+          actions: _buildHeaderActions(),
         ),
-        title: _buildHeaderTitle(),
-        actions: _buildHeaderActions(),
-      ),
-      body: Column(
-        children: [
-          Expanded(child: _buildMessagesList()),
-          _buildMessageInput(),
-          if (_isUploading) LinearProgressIndicator(),
-        ],
+        body: Column(
+          children: [
+            Expanded(child: _buildMessagesList()),
+            _buildMessageInput(),
+            if (_isUploading) const LinearProgressIndicator(),
+          ],
+        ),
       ),
     );
   }
@@ -1271,12 +1291,13 @@ class _ConversationScreenState extends State<ConversationScreen> {
     return Row(
       children: [
         avatar,
-        const SizedBox(width: 12),
+        const SizedBox(width: KubusSpacing.sm + KubusSpacing.xxs),
         Expanded(
-          child: Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          child: KubusHeaderText(
+            title: title,
+            kind: KubusHeaderKind.screen,
+            compact: true,
+            maxTitleLines: 1,
           ),
         ),
       ],
@@ -1487,7 +1508,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
               value: 'change_group_avatar',
               child: Text(l10n.messagesMenuChangeGroupAvatar)),
         ],
-        icon: const Icon(Icons.more_vert),
+        icon: Icon(
+          Icons.more_vert,
+          color: Theme.of(context).colorScheme.onSurface,
+        ),
       ),
     ];
   }
@@ -1507,6 +1531,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
     return ListView.builder(
       controller: _scrollController,
       reverse: true,
+      padding: const EdgeInsets.fromLTRB(
+        KubusSpacing.sm,
+        KubusSpacing.sm,
+        KubusSpacing.sm,
+        KubusSpacing.md,
+      ),
       itemCount: display.length,
       itemBuilder: (context, index) {
         final message = display[index];
@@ -1588,13 +1618,16 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
     final bubble = ConstrainedBox(
       constraints: BoxConstraints(maxWidth: bubbleMaxWidth),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isMe ? scheme.primary : scheme.tertiaryContainer,
-          borderRadius: BorderRadius.circular(16),
-          border: isMe ? null : Border.all(color: scheme.outline),
+      child: LiquidGlassPanel(
+        padding: const EdgeInsets.symmetric(
+          horizontal: KubusSpacing.md,
+          vertical: KubusSpacing.sm + KubusSpacing.xxs,
         ),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
+        backgroundColor: isMe
+            ? scheme.primary.withValues(alpha: 0.92)
+            : scheme.surface.withValues(alpha: 0.84),
+        enableBlur: !kIsWeb,
         child: Column(
           crossAxisAlignment:
               isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
@@ -1607,10 +1640,11 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 padding: const EdgeInsets.only(bottom: 2),
                 child: Text(
                   displayName,
-                  style: TextStyle(
+                  style: KubusTextStyles.navMetaLabel.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: scheme.onTertiaryContainer,
-                    fontSize: 12,
+                    color: isMe
+                        ? scheme.onPrimary
+                        : scheme.onSurface.withValues(alpha: 0.76),
                   ),
                 ),
               ),
@@ -1630,10 +1664,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
       onLongPress: () => _showMessageOptions(message),
       child: Padding(
         padding: EdgeInsets.only(
-          top: isFirst ? 12 : 6,
-          bottom: isLast ? 12 : 6,
-          left: 12,
-          right: 12,
+          top: isFirst ? KubusSpacing.sm + KubusSpacing.xs : KubusSpacing.sm,
+          bottom: isLast ? KubusSpacing.sm + KubusSpacing.xs : KubusSpacing.xs,
+          left: KubusSpacing.sm,
+          right: KubusSpacing.sm,
         ),
         child: Align(
           alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
@@ -1670,7 +1704,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
       children: [
         Text(
           _formatTimeAgo(message.createdAt),
-          style: TextStyle(fontSize: 10, color: timeColor),
+          style: KubusTextStyles.navMetaLabel.copyWith(
+            fontSize: 10,
+            color: timeColor,
+          ),
         ),
         if (isMe) ...[
           const SizedBox(width: 4),
@@ -2052,34 +2089,49 @@ class _ConversationScreenState extends State<ConversationScreen> {
       children: [
         _buildReplyPreview(),
         Container(
-          padding: const EdgeInsets.all(8.0),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            border: Border(
-                top: BorderSide(
-                    color: Theme.of(context).colorScheme.outlineVariant)),
+          padding: const EdgeInsets.fromLTRB(
+            KubusSpacing.md,
+            KubusSpacing.sm,
+            KubusSpacing.md,
+            KubusSpacing.md,
           ),
-          child: Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.attach_file),
-                onPressed: _attachAndSend,
-              ),
-              Expanded(
-                child: TextField(
-                  controller: _controller,
-                  decoration: InputDecoration(
-                    hintText: l10n.messagesTypeMessageHint,
-                    border: InputBorder.none,
-                  ),
-                  onSubmitted: (_) => _send(),
+          child: LiquidGlassPanel(
+            padding: const EdgeInsets.symmetric(
+              horizontal: KubusSpacing.sm,
+              vertical: KubusSpacing.xs,
+            ),
+            borderRadius: BorderRadius.circular(KubusRadius.lg),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.attach_file),
+                  onPressed: _attachAndSend,
                 ),
-              ),
-              IconButton(
-                icon: Icon(Icons.send, color: AppColorUtils.tealAccent),
-                onPressed: _send,
-              ),
-            ],
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    decoration: InputDecoration(
+                      hintText: l10n.messagesTypeMessageHint,
+                      hintStyle: KubusTextStyles.sectionSubtitle.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.58),
+                      ),
+                      border: InputBorder.none,
+                    ),
+                    style: KubusTextStyles.detailBody.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    onSubmitted: (_) => _send(),
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.send, color: AppColorUtils.tealAccent),
+                  onPressed: _send,
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -2366,8 +2418,9 @@ class _AddMemberDialogState extends State<_AddMemberDialog> {
                               suggestion['walletAddress']?.toString() ??
                                   suggestion['wallet_address']?.toString() ??
                                   '';
-                          final displayName = suggestion['displayName']?.toString() ??
-                              suggestion['display_name']?.toString();
+                          final displayName =
+                              suggestion['displayName']?.toString() ??
+                                  suggestion['display_name']?.toString();
                           final avatarCandidate =
                               suggestion['avatar'] ?? suggestion['avatar_url'];
                           final effectiveAvatar = avatarCandidate != null &&
@@ -2399,7 +2452,8 @@ class _AddMemberDialogState extends State<_AddMemberDialog> {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                             onTap: () {
-                              final ret = wallet.isNotEmpty ? wallet : rawUsername;
+                              final ret =
+                                  wallet.isNotEmpty ? wallet : rawUsername;
                               if (kDebugMode) {
                                 debugPrint(
                                     'AddMemberDialog: tapped suggestion -> username="$rawUsername" wallet="$wallet" returning="$ret"');
@@ -2664,5 +2718,3 @@ class _RenameConversationDialogState extends State<_RenameConversationDialog> {
     );
   }
 }
-
-

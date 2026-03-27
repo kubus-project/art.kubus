@@ -7,6 +7,7 @@ import '../../../widgets/gradient_icon_card.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../widgets/glass_components.dart';
+import '../../../widgets/kubus_button.dart';
 import '../desktop_shell.dart';
 
 /// Desktop-optimized Web3 feature onboarding
@@ -30,8 +31,7 @@ class DesktopWeb3OnboardingScreen extends StatefulWidget {
 }
 
 class _DesktopWeb3OnboardingScreenState
-    extends State<DesktopWeb3OnboardingScreen>
-    with TickerProviderStateMixin {
+    extends State<DesktopWeb3OnboardingScreen> with TickerProviderStateMixin {
   late PageController _pageController;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -119,23 +119,23 @@ class _DesktopWeb3OnboardingScreenState
     final screenWidth = MediaQuery.of(context).size.width;
 
     final current = widget.pages.isEmpty
-      ? null
-      : widget.pages[_currentPage.clamp(0, widget.pages.length - 1)];
+        ? null
+        : widget.pages[_currentPage.clamp(0, widget.pages.length - 1)];
     final fallbackStart = Theme.of(context).colorScheme.primary;
     final fallbackEnd = accentColor;
     final start = (current?.gradientColors.isNotEmpty ?? false)
-      ? current!.gradientColors.first
-      : fallbackStart;
-    final end = (current?.gradientColors.length ?? 0) > 1
-      ? current!.gradientColors[1]
-      : (current?.gradientColors.isNotEmpty ?? false)
         ? current!.gradientColors.first
-        : fallbackEnd;
+        : fallbackStart;
+    final end = (current?.gradientColors.length ?? 0) > 1
+        ? current!.gradientColors[1]
+        : (current?.gradientColors.isNotEmpty ?? false)
+            ? current!.gradientColors.first
+            : fallbackEnd;
 
     final bgStart = start.withValues(alpha: 0.55);
     final bgEnd = end.withValues(alpha: 0.50);
-    final bgMid = (Color.lerp(bgStart, bgEnd, 0.55) ?? bgEnd)
-      .withValues(alpha: 0.52);
+    final bgMid =
+        (Color.lerp(bgStart, bgEnd, 0.55) ?? bgEnd).withValues(alpha: 0.52);
     final bgColors = <Color>[bgStart, bgMid, bgEnd, bgStart];
 
     final contentWidth = screenWidth > DesktopBreakpoints.large
@@ -216,6 +216,7 @@ class _DesktopWeb3OnboardingScreenState
 
   Widget _buildPageContent(Web3OnboardingPage page) {
     final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     return FadeTransition(
       opacity: _fadeAnimation,
       child: SlideTransition(
@@ -226,96 +227,124 @@ class _DesktopWeb3OnboardingScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Icon with gradient
                 GradientIconCard(
                   start: page.gradientColors.first,
                   end: page.gradientColors.length > 1
                       ? page.gradientColors[1]
                       : page.gradientColors.first,
                   icon: page.icon,
-                  width: 140,
-                  height: 140,
+                  width: 88,
+                  height: 88,
                   radius: 24,
-                  iconSize: 70,
+                  iconSize: 42,
                 ),
-                const SizedBox(height: 48),
-                // Title
+                const SizedBox(height: KubusSpacing.xl),
                 Text(
                   page.title,
-                  style: KubusTextStyles.heroTitle.copyWith(
-                    fontSize: 48,
-                    color: Theme.of(context).colorScheme.onSurface,
-                    height: 1.1,
-                  ),
+                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                        color: scheme.onSurface,
+                        fontWeight: FontWeight.w800,
+                        height: 1.02,
+                      ),
                 ),
-                const SizedBox(height: 24),
-                // Description
-                Container(
+                const SizedBox(height: KubusSpacing.md),
+                ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 600),
                   child: Text(
                     page.description,
-                    style: KubusTextStyles.heroSubtitle.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.7),
-                      height: 1.6,
-                    ),
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: scheme.onSurface.withValues(alpha: 0.76),
+                          height: 1.55,
+                        ),
                   ),
                 ),
-                const SizedBox(height: 40),
-                // Features list
+                const SizedBox(height: KubusSpacing.xl),
+                Wrap(
+                  spacing: KubusSpacing.sm,
+                  runSpacing: KubusSpacing.sm,
+                  children: page.features
+                      .take(4)
+                      .map(
+                        (feature) => DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: scheme.surface.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
+                            ),
+                            child: Text(
+                              feature,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelLarge
+                                  ?.copyWith(
+                                    color: scheme.onSurface
+                                        .withValues(alpha: 0.84),
+                                  ),
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(growable: false),
+                ),
+                const SizedBox(height: KubusSpacing.xl),
                 LiquidGlassPanel(
                   padding: const EdgeInsets.all(KubusSpacing.xl),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(32),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         l10n.web3OnboardingKeyFeaturesTitle,
-                        style: KubusTextStyles.sectionTitle,
+                        style: KubusTextStyles.sectionTitle.copyWith(
+                          color: scheme.onSurface,
+                        ),
                       ),
                       const SizedBox(height: KubusSpacing.lg),
-                      ...page.features.map((feature) => Padding(
-                            padding: const EdgeInsets.only(bottom: KubusSpacing.md),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  margin: const EdgeInsets.only(top: 2),
-                                  width: 24,
-                                  height: 24,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: page.gradientColors,
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                    shape: BoxShape.circle,
+                      ...page.features.map(
+                        (feature) => Padding(
+                          padding:
+                              const EdgeInsets.only(bottom: KubusSpacing.md),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                margin: const EdgeInsets.only(top: 2),
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: page.gradientColors,
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
                                   ),
-                                  child: const Icon(
-                                    Icons.check,
-                                    size: 16,
-                                    color: Colors.white,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.check,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(width: KubusSpacing.md),
+                              Expanded(
+                                child: Text(
+                                  feature,
+                                  style: KubusTextStyles.detailBody.copyWith(
+                                    fontSize: KubusHeaderMetrics.screenSubtitle,
+                                    color:
+                                        scheme.onSurface.withValues(alpha: 0.8),
+                                    height: 1.4,
                                   ),
                                 ),
-                                const SizedBox(width: KubusSpacing.md),
-                                Expanded(
-                                  child: Text(
-                                    feature,
-                                    style: KubusTextStyles.detailBody.copyWith(
-                                      fontSize: KubusHeaderMetrics.screenSubtitle,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withValues(alpha: 0.8),
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -330,197 +359,157 @@ class _DesktopWeb3OnboardingScreenState
   Widget _buildSidebar(Color accentColor, AppAnimationTheme animationTheme) {
     final l10n = AppLocalizations.of(context)!;
     final isLastPage = _currentPage == widget.pages.length - 1;
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
       padding: const EdgeInsets.only(right: 40, top: 20, bottom: 40),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Spacer(),
-          // Feature name badge
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: KubusSpacing.lg,
-              vertical: KubusSpacing.md,
-            ),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: widget.pages[_currentPage].gradientColors,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              widget.featureTitle,
-              style: KubusTextStyles.navLabel.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-            ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: scheme.surface.withValues(alpha: isDark ? 0.18 : 0.84),
+          borderRadius: BorderRadius.circular(32),
+          border: Border.all(
+            color:
+                scheme.outlineVariant.withValues(alpha: isDark ? 0.18 : 0.12),
           ),
-          const SizedBox(height: KubusSpacing.xl),
-          // Page indicators
-          ...widget.pages.asMap().entries.map((entry) {
-            final index = entry.key;
-            final page = entry.value;
-            final isActive = index == _currentPage;
-            final isPast = index < _currentPage;
-            final pageColor = page.gradientColors.first;
-
-            return MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: GestureDetector(
-                onTap: () {
-                  _pageController.animateToPage(
-                    index,
-                    duration: const Duration(milliseconds: 400),
-                    curve: Curves.easeInOutCubic,
-                  );
-                },
-                child: AnimatedContainer(
-                  duration: animationTheme.short,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: isActive
-                        ? Theme.of(context).colorScheme.primaryContainer
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isActive
-                          ? accentColor.withValues(alpha: 0.3)
-                          : Theme.of(context)
-                              .colorScheme
-                              .outline
-                              .withValues(alpha: 0.1),
-                      width: isActive ? 2 : 1,
-                    ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.18 : 0.08),
+              blurRadius: 28,
+              offset: const Offset(0, 18),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(KubusSpacing.xl),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.lg,
+                  vertical: KubusSpacing.md,
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: widget.pages[_currentPage].gradientColors,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  child: Row(
-                    children: [
-                      // Dot indicator
-                      AnimatedContainer(
-                        duration: animationTheme.short,
-                        width: isActive ? 32 : 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          // Match the dot to the page icon/gradient color.
-                          color: pageColor.withValues(
-                            alpha: isActive
-                                ? 1.0
-                                : isPast
-                                    ? 0.65
-                                    : 0.25,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  widget.featureTitle,
+                  style: KubusTextStyles.navLabel.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: KubusSpacing.xl),
+              Expanded(
+                child: ListView(
+                  children: widget.pages.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final page = entry.value;
+                    final isActive = index == _currentPage;
+                    final isPast = index < _currentPage;
+                    final pageColor = page.gradientColors.first;
+
+                    return MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: GestureDetector(
+                        onTap: () {
+                          _pageController.animateToPage(
+                            index,
+                            duration: const Duration(milliseconds: 400),
+                            curve: Curves.easeInOutCubic,
+                          );
+                        },
+                        child: AnimatedContainer(
+                          duration: animationTheme.short,
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: scheme.surface.withValues(
+                              alpha: isActive ? 0.12 : 0.06,
+                            ),
+                            borderRadius: BorderRadius.circular(24),
                           ),
-                          borderRadius: BorderRadius.circular(4),
+                          child: Row(
+                            children: [
+                              AnimatedContainer(
+                                duration: animationTheme.short,
+                                width: isActive ? 32 : 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: pageColor.withValues(
+                                    alpha: isActive
+                                        ? 1.0
+                                        : isPast
+                                            ? 0.65
+                                            : 0.25,
+                                  ),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  page.title,
+                                  style: (isActive
+                                          ? KubusTextStyles.navLabel
+                                          : KubusTextStyles.navMetaLabel)
+                                      .copyWith(
+                                    fontWeight: isActive
+                                        ? FontWeight.w600
+                                        : FontWeight.w500,
+                                    color: scheme.onSurface.withValues(
+                                      alpha: isActive ? 1.0 : 0.58,
+                                    ),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      if (isActive) ...[
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            page.title,
-                            style: KubusTextStyles.navLabel.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ] else ...[
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            page.title,
-                            style: KubusTextStyles.navMetaLabel.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.5),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
+                    );
+                  }).toList(growable: false),
                 ),
               ),
-            );
-          }),
-          const SizedBox(height: KubusSpacing.xl),
-          // Navigation buttons
-          if (_currentPage > 0)
-            SizedBox(
-              height: 56,
-              child: OutlinedButton.icon(
-                onPressed: _previousPage,
-                icon: const Icon(Icons.arrow_back),
-                label: Text(
-                  l10n.commonBack,
-                  style: KubusTextStyles.navLabel.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Theme.of(context).colorScheme.onSurface,
-                  side: BorderSide(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .outline
-                        .withValues(alpha: 0.3),
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(KubusRadius.md),
-                  ),
-                ),
-              ),
-            ),
-          if (_currentPage > 0) const SizedBox(height: 12),
-          // Action button
-          SizedBox(
-            height: 56,
-            child: ElevatedButton(
-              onPressed: _nextPage,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: widget.pages[_currentPage].gradientColors.first,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              child: Text(
-                isLastPage ? l10n.commonGetStarted : l10n.commonContinue,
-                style: KubusTextStyles.sectionTitle.copyWith(
-                  fontSize: KubusHeaderMetrics.screenSubtitle,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-            ),
-          ),
-          const Spacer(),
-          // Progress indicator
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
+              const SizedBox(height: KubusSpacing.lg),
               Text(
                 l10n.commonStepOfTotal(_currentPage + 1, widget.pages.length),
                 style: KubusTextStyles.navMetaLabel.copyWith(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.5),
+                  color: scheme.onSurface.withValues(alpha: 0.5),
                 ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: KubusSpacing.lg),
+              if (_currentPage > 0) ...[
+                KubusOutlineButton(
+                  onPressed: _previousPage,
+                  label: l10n.commonBack,
+                  icon: Icons.arrow_back,
+                  isFullWidth: true,
+                ),
+                const SizedBox(height: KubusSpacing.sm),
+              ],
+              KubusButton(
+                onPressed: _nextPage,
+                label: isLastPage ? l10n.commonGetStarted : l10n.commonContinue,
+                isFullWidth: true,
+                backgroundColor:
+                    widget.pages[_currentPage].gradientColors.first,
+                foregroundColor: Colors.white,
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }

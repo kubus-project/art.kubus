@@ -8,8 +8,11 @@ import '../../../utils/design_tokens.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../widgets/gradient_icon_card.dart';
 import '../../../widgets/glass_components.dart';
+import '../../../widgets/kubus_button.dart';
+import '../../../widgets/common/kubus_screen_header.dart';
 import '../../desktop/desktop_shell.dart';
-import '../../desktop/onboarding/desktop_web3_onboarding.dart' show DesktopWeb3OnboardingScreen, Web3OnboardingPage;
+import '../../desktop/onboarding/desktop_web3_onboarding.dart'
+    show DesktopWeb3OnboardingScreen, Web3OnboardingPage;
 
 class Web3OnboardingScreen extends StatefulWidget {
   final String featureKey;
@@ -45,7 +48,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    
+
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
@@ -53,7 +56,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
       parent: _animationController,
       curve: Curves.easeInOut,
     ));
-    
+
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
@@ -61,7 +64,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
       parent: _animationController,
       curve: Curves.easeOutBack,
     ));
-    
+
     _animationController.forward();
   }
 
@@ -152,8 +155,8 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
 
     final bgStart = start.withValues(alpha: 0.55);
     final bgEnd = end.withValues(alpha: 0.50);
-    final bgMid = (Color.lerp(bgStart, bgEnd, 0.55) ?? bgEnd)
-        .withValues(alpha: 0.52);
+    final bgMid =
+        (Color.lerp(bgStart, bgEnd, 0.55) ?? bgEnd).withValues(alpha: 0.52);
     final bgColors = <Color>[bgStart, bgMid, bgEnd, bgStart];
 
     return AnimatedGradientBackground(
@@ -201,101 +204,152 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
 
   Widget _buildHeader() {
     final l10n = AppLocalizations.of(context)!;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isSmallScreen = constraints.maxWidth < 400;
-        final isTablet = constraints.maxWidth > 600 && constraints.maxWidth <= 800;
-        final isWideScreen = constraints.maxWidth > 800;
-        
-        return Padding(
-          padding: EdgeInsets.all(isWideScreen ? 32 : isTablet ? 28 : 24),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Flexible(
-                child: Text(
-                  widget.featureTitle,
-                  style: KubusTypography.inter(
-                    fontSize: isWideScreen ? 28 : isTablet ? 26 : isSmallScreen ? 20 : 24,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              TextButton(
-                onPressed: _skipOnboarding,
-                child: Text(
-                  l10n.commonSkip,
-                  style: KubusTypography.inter(
-                    fontSize: isWideScreen ? 18 : isTablet ? 17 : isSmallScreen ? 14 : 16,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                ),
-              ),
-            ],
+    final scheme = Theme.of(context).colorScheme;
+    final currentStep = _currentPage + 1;
+    final totalSteps = widget.pages.length;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        KubusSpacing.lg,
+        KubusSpacing.lg,
+        KubusSpacing.lg,
+        KubusSpacing.md,
+      ),
+      child: LiquidGlassPanel(
+        padding: const EdgeInsets.symmetric(
+          horizontal: KubusSpacing.md,
+          vertical: KubusSpacing.sm,
+        ),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
+        child: KubusScreenHeaderBar(
+          title: widget.featureTitle,
+          subtitle: totalSteps > 0 ? '$currentStep / $totalSteps' : null,
+          compact: true,
+          titleStyle: KubusTextStyles.screenTitle,
+          subtitleStyle: KubusTextStyles.sectionSubtitle.copyWith(
+            color: scheme.onSurface.withValues(alpha: 0.68),
           ),
-        );
-      },
+          actions: [
+            TextButton(
+              onPressed: _skipOnboarding,
+              style: TextButton.styleFrom(
+                foregroundColor: scheme.onSurface,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.md,
+                  vertical: KubusSpacing.sm,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(KubusRadius.sm),
+                ),
+              ),
+              child: Text(
+                l10n.commonSkip,
+                style: KubusTextStyles.navLabel.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.76),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildPage(OnboardingPage page) {
+    final l10n = AppLocalizations.of(context)!;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isSmallScreen = constraints.maxHeight < 700;
         final isVerySmallScreen = constraints.maxHeight < 600;
-        final isWideScreen = constraints.maxWidth > 800;
-        final isTablet = constraints.maxWidth > 600 && constraints.maxWidth <= 800;
-        
+        final isTablet = constraints.maxWidth > 600;
+        final scheme = Theme.of(context).colorScheme;
+        final titleStyle = (isTablet
+                ? Theme.of(context).textTheme.displaySmall
+                : Theme.of(context).textTheme.headlineMedium)
+            ?.copyWith(
+          color: scheme.onSurface,
+          fontWeight: FontWeight.w800,
+          height: 1.05,
+        );
+        final subtitleStyle = Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.76),
+                  height: 1.55,
+                ) ??
+            KubusTextStyles.heroSubtitle.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.76),
+            );
+
         return SingleChildScrollView(
-          padding: EdgeInsets.symmetric(
-            horizontal: isWideScreen ? 48 : isTablet ? 32 : 24,
-            vertical: isVerySmallScreen ? 12 : 24,
+          padding: EdgeInsets.fromLTRB(
+            isTablet ? KubusSpacing.xl : KubusSpacing.lg,
+            isVerySmallScreen ? KubusSpacing.sm : KubusSpacing.md,
+            isTablet ? KubusSpacing.xl : KubusSpacing.lg,
+            KubusSpacing.lg,
           ),
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              minHeight: constraints.maxHeight - (isVerySmallScreen ? 24 : 48),
-              maxWidth: isWideScreen ? 600 : double.infinity,
+              minHeight: constraints.maxHeight - KubusSpacing.xxl,
+              maxWidth: isTablet ? 720 : double.infinity,
             ),
             child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  GradientIconCard(
-                    start: page.gradientColors.first,
-                    end: page.gradientColors.length > 1 ? page.gradientColors[1] : page.gradientColors.first,
-                    icon: page.icon,
-                    width: isVerySmallScreen ? 100 : isSmallScreen ? 110 : isTablet ? 140 : isWideScreen ? 160 : 120,
-                    height: isVerySmallScreen ? 100 : isSmallScreen ? 110 : isTablet ? 140 : isWideScreen ? 160 : 120,
-                    iconSize: isVerySmallScreen ? 50 : isSmallScreen ? 55 : isTablet ? 70 : isWideScreen ? 80 : 60,
-                    radius: 20,
-                  ),
-                  SizedBox(height: isVerySmallScreen ? 20 : isSmallScreen ? 30 : isTablet ? 48 : isWideScreen ? 56 : 40),
-                  Text(
-                    page.title,
-                    style: KubusTypography.inter(
-                      fontSize: isVerySmallScreen ? 20 : isSmallScreen ? 24 : isTablet ? 32 : isWideScreen ? 36 : 28,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
+              child: LiquidGlassPanel(
+                padding: EdgeInsets.all(
+                  isTablet ? KubusSpacing.xl : KubusSpacing.lg,
+                ),
+                borderRadius: BorderRadius.circular(32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    GradientIconCard(
+                      start: page.gradientColors.first,
+                      end: page.gradientColors.length > 1
+                          ? page.gradientColors[1]
+                          : page.gradientColors.first,
+                      icon: page.icon,
+                      width: isVerySmallScreen ? 76 : 88,
+                      height: isVerySmallScreen ? 76 : 88,
+                      iconSize: isVerySmallScreen ? 36 : 42,
+                      radius: 24,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: isVerySmallScreen ? 8 : isSmallScreen ? 12 : isTablet ? 20 : isWideScreen ? 24 : 16),
-                  Text(
-                    page.description,
-                    style: KubusTypography.inter(
-                      fontSize: isVerySmallScreen ? 14 : isSmallScreen ? 15 : isTablet ? 18 : isWideScreen ? 20 : 16,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
-                      height: 1.5,
+                    SizedBox(
+                      height:
+                          isVerySmallScreen ? KubusSpacing.md : KubusSpacing.xl,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: isVerySmallScreen ? 16 : isSmallScreen ? 24 : isTablet ? 40 : isWideScreen ? 48 : 32),
-                  if (page.features.isNotEmpty) ...[
-                    ...page.features.map((feature) => _buildFeatureItem(feature, isSmallScreen, isTablet, isWideScreen)),
+                    Text(page.title, style: titleStyle),
+                    const SizedBox(height: KubusSpacing.md),
+                    Text(page.description, style: subtitleStyle),
+                    if (page.features.isNotEmpty) ...[
+                      const SizedBox(height: KubusSpacing.xl),
+                      Wrap(
+                        spacing: KubusSpacing.sm,
+                        runSpacing: KubusSpacing.sm,
+                        children: page.features
+                            .take(isTablet ? 4 : 3)
+                            .map(
+                                (feature) => _buildFeatureChip(feature, scheme))
+                            .toList(growable: false),
+                      ),
+                      const SizedBox(height: KubusSpacing.xl),
+                      LiquidGlassPanel(
+                        padding: const EdgeInsets.all(KubusSpacing.lg),
+                        borderRadius: BorderRadius.circular(24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n.web3OnboardingKeyFeaturesTitle,
+                              style: KubusTextStyles.sectionTitle.copyWith(
+                                color: scheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: KubusSpacing.md),
+                            ...page.features.map(_buildFeatureItem),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),
@@ -304,30 +358,52 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
     );
   }
 
-  Widget _buildFeatureItem(String feature, [bool isSmallScreen = false, bool isTablet = false, bool isWideScreen = false]) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: isWideScreen ? 24 : isTablet ? 20 : 16, 
-        top: isSmallScreen ? 6 : isTablet ? 10 : isWideScreen ? 12 : 8, 
-        bottom: isSmallScreen ? 6 : isTablet ? 10 : isWideScreen ? 12 : 8
+  Widget _buildFeatureChip(String feature, ColorScheme scheme) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.surface.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
       ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        child: Text(
+          feature,
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.84),
+              ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeatureItem(String feature) {
+    final scheme = Theme.of(context).colorScheme;
+    final colors = widget.pages[_currentPage].gradientColors;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: KubusSpacing.md),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: isSmallScreen ? 5 : isTablet ? 7 : isWideScreen ? 8 : 6,
-            height: isSmallScreen ? 5 : isTablet ? 7 : isWideScreen ? 8 : 6,
+            margin: const EdgeInsets.only(top: 2),
+            width: 24,
+            height: 24,
             decoration: BoxDecoration(
-              color: Provider.of<ThemeProvider>(context).accentColor,
+              gradient: LinearGradient(
+                colors: colors,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               shape: BoxShape.circle,
             ),
+            child: const Icon(Icons.check, size: 16, color: Colors.white),
           ),
-          SizedBox(width: isWideScreen ? 20 : isTablet ? 18 : 16),
+          const SizedBox(width: KubusSpacing.md),
           Expanded(
             child: Text(
               feature,
-              style: KubusTypography.inter(
-                fontSize: isSmallScreen ? 13 : isTablet ? 16 : isWideScreen ? 18 : 14,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9),
+              style: KubusTextStyles.detailBody.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.82),
               ),
             ),
           ),
@@ -338,94 +414,93 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
 
   Widget _buildBottomNavigation() {
     final l10n = AppLocalizations.of(context)!;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isSmallScreen = constraints.maxWidth < 400;
-        final isTablet = constraints.maxWidth > 600 && constraints.maxWidth <= 800;
-        final isWideScreen = constraints.maxWidth > 800;
-        
-        return Padding(
-          padding: EdgeInsets.all(isWideScreen ? 32 : isTablet ? 28 : isSmallScreen ? 20 : 24),
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        KubusSpacing.lg,
+        KubusSpacing.sm,
+        KubusSpacing.lg,
+        KubusSpacing.lg,
+      ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: scheme.surface.withValues(alpha: isDark ? 0.18 : 0.84),
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(
+            color: scheme.outlineVariant.withValues(alpha: 0.16),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.18 : 0.08),
+              blurRadius: 28,
+              offset: const Offset(0, 18),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(KubusSpacing.lg),
           child: Column(
             children: [
-              // Page indicators
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(
                   widget.pages.length,
-                  (index) => Container(
-                    margin: EdgeInsets.symmetric(horizontal: isWideScreen ? 6 : isTablet ? 5 : 4),
-                    width: index == _currentPage 
-                        ? (isWideScreen ? 32 : isTablet ? 28 : isSmallScreen ? 20 : 24) 
-                        : (isWideScreen ? 10 : isTablet ? 9 : isSmallScreen ? 6 : 8),
-                    height: isWideScreen ? 10 : isTablet ? 9 : isSmallScreen ? 6 : 8,
+                  (index) => AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    margin:
+                        const EdgeInsets.symmetric(horizontal: KubusSpacing.xs),
+                    width: index == _currentPage ? 24 : 8,
+                    height: 8,
                     decoration: BoxDecoration(
-                      // Match each dot to the page's icon gradient color.
-                      color: widget.pages[index].gradientColors.first
-                          .withValues(alpha: index == _currentPage ? 1.0 : 0.35),
-                      borderRadius: BorderRadius.circular(4),
+                      color:
+                          widget.pages[index].gradientColors.first.withValues(
+                        alpha: index == _currentPage ? 1.0 : 0.25,
+                      ),
+                      borderRadius: BorderRadius.circular(999),
                     ),
                   ),
                 ),
               ),
-              SizedBox(height: isWideScreen ? 40 : isTablet ? 36 : isSmallScreen ? 24 : 32),
-              // Navigation buttons
+              const SizedBox(height: KubusSpacing.md),
+              Text(
+                l10n.commonStepOfTotal(_currentPage + 1, widget.pages.length),
+                style: KubusTextStyles.navMetaLabel.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+              const SizedBox(height: KubusSpacing.lg),
               Row(
                 children: [
                   if (_currentPage > 0)
                     Expanded(
-                      child: OutlinedButton(
-                          onPressed: _previousPage,
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: Theme.of(context).colorScheme.outline),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          foregroundColor: Theme.of(context).colorScheme.onSurface,
-                          padding: EdgeInsets.symmetric(
-                            vertical: isWideScreen ? 18 : isTablet ? 16 : isSmallScreen ? 12 : 14,
-                          ),
-                        ),
-                        child: Text(
-                          l10n.commonBack,
-                          style: KubusTypography.inter(
-                            fontSize: isWideScreen ? 18 : isTablet ? 17 : isSmallScreen ? 14 : 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                      child: KubusOutlineButton(
+                        onPressed: _previousPage,
+                        label: l10n.commonBack,
+                        isFullWidth: true,
                       ),
                     ),
-                  if (_currentPage > 0) SizedBox(width: isWideScreen ? 20 : isTablet ? 18 : 16),
+                  if (_currentPage > 0) const SizedBox(width: KubusSpacing.md),
                   Expanded(
                     flex: _currentPage == 0 ? 1 : 2,
-                    child: ElevatedButton(
+                    child: KubusButton(
                       onPressed: _nextPage,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: EdgeInsets.symmetric(
-                          vertical: isWideScreen ? 18 : isTablet ? 16 : isSmallScreen ? 12 : 14,
-                        ),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        _currentPage == widget.pages.length - 1 ? l10n.commonGetStarted : l10n.commonNext,
-                        style: KubusTypography.inter(
-                          fontSize: isWideScreen ? 18 : isTablet ? 17 : isSmallScreen ? 14 : 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      label: _currentPage == widget.pages.length - 1
+                          ? l10n.commonGetStarted
+                          : l10n.commonNext,
+                      isFullWidth: true,
+                      backgroundColor:
+                          widget.pages[_currentPage].gradientColors.first,
+                      foregroundColor: Colors.white,
                     ),
                   ),
                 ],
               ),
             ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
@@ -449,17 +524,18 @@ class OnboardingPage {
 // Utility function to check if onboarding is needed
 Future<bool> isOnboardingNeeded(String featureKey) async {
   final prefs = await SharedPreferences.getInstance();
-  
+
   // Check user preference for skipping Web3 onboarding (defaults to config setting)
-  final userSkipWeb3Onboarding = prefs.getBool('skipOnboardingForReturningUsers') ?? AppConfig.skipWeb3OnboardingForReturningUsers;
-  
+  final userSkipWeb3Onboarding =
+      prefs.getBool('skipOnboardingForReturningUsers') ??
+          AppConfig.skipWeb3OnboardingForReturningUsers;
+
   // Check if Web3 onboarding should be skipped for returning users
   if (userSkipWeb3Onboarding) {
     final onboardingState = await OnboardingStateService.load(prefs: prefs);
     if (onboardingState.isReturningUser) return false;
   }
-  
+
   // Otherwise, check if this specific feature onboarding was completed
   return !(prefs.getBool('${featureKey}_onboarding_completed') ?? false);
 }
-

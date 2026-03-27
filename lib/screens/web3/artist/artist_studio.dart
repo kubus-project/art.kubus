@@ -27,6 +27,7 @@ import '../../collab/invites_inbox_screen.dart';
 import '../../events/exhibition_list_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../../widgets/promotion/promotion_builder_sheet.dart';
+import '../../../widgets/topbar_icon.dart';
 
 class ArtistStudio extends StatefulWidget {
   final VoidCallback? onOpenArtworkCreator;
@@ -34,6 +35,7 @@ class ArtistStudio extends StatefulWidget {
   final VoidCallback? onOpenExhibitionCreator;
   final ValueChanged<int>? onTabChanged;
   final bool showVerificationCard;
+  final bool embedded;
 
   const ArtistStudio({
     super.key,
@@ -42,6 +44,7 @@ class ArtistStudio extends StatefulWidget {
     this.onOpenExhibitionCreator,
     this.onTabChanged,
     this.showVerificationCard = true,
+    this.embedded = false,
   });
 
   @override
@@ -212,82 +215,73 @@ class _ArtistStudioState extends State<ArtistStudio> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        flexibleSpace: KubusGlassAppBarBackdrop(
-          tintBase: Theme.of(context).colorScheme.surface,
-        ),
-        title: Text(
-          l10n.artistStudioTitle,
-          style: KubusTextStyles.screenTitle.copyWith(
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-          overflow: TextOverflow.ellipsis,
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.help_outline,
-                color: Theme.of(context).colorScheme.onSurface),
-            onPressed: _showOnboarding,
-          ),
-          if (AppConfig.isFeatureEnabled('collabInvites'))
-            Consumer<CollabProvider>(
-              builder: (context, collabProvider, _) {
-                final pendingCount = collabProvider.pendingInviteCount;
-                return Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    IconButton(
-                      tooltip: 'Invites',
-                      icon: Icon(Icons.inbox_outlined,
-                          color: Theme.of(context).colorScheme.onSurface),
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                              builder: (_) => const InvitesInboxScreen()),
-                        );
-                      },
-                    ),
-                    if (pendingCount > 0)
-                      Positioned(
-                        right: KubusSpacing.sm,
-                        top: KubusSpacing.xs + KubusSpacing.xxs,
-                        child: FrostedContainer(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: KubusSpacing.xs + KubusSpacing.xxs,
-                            vertical: KubusSpacing.xxs,
-                          ),
-                          borderRadius: BorderRadius.circular(KubusRadius.sm),
-                          showBorder: true,
-                          backgroundColor: Theme.of(context).colorScheme.error,
-                          child: Text(
-                            pendingCount > 99 ? '99+' : pendingCount.toString(),
-                            style: KubusTextStyles.badgeCount.copyWith(
-                              color: Theme.of(context).colorScheme.onError,
-                            ),
-                          ),
+      appBar: widget.embedded
+          ? null
+          : AppBar(
+              backgroundColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              flexibleSpace: KubusGlassAppBarBackdrop(
+                tintBase: Theme.of(context).colorScheme.surface,
+              ),
+              title: Text(
+                l10n.artistStudioTitle,
+                style: KubusTextStyles.screenTitle.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+              actions: [
+                TopBarIcon(
+                  tooltip: 'Help',
+                  icon: Icon(
+                    Icons.help_outline,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  onPressed: _showOnboarding,
+                ),
+                if (AppConfig.isFeatureEnabled('collabInvites'))
+                  Consumer<CollabProvider>(
+                    builder: (context, collabProvider, _) {
+                      final pendingCount = collabProvider.pendingInviteCount;
+                      return TopBarIcon(
+                        tooltip: 'Invites',
+                        badgeCount: pendingCount,
+                        badgeColor: Theme.of(context).colorScheme.error,
+                        icon: Icon(
+                          Icons.inbox_outlined,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
-                      ),
-                  ],
-                );
-              },
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const InvitesInboxScreen(),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                TopBarIcon(
+                  icon: Icon(
+                    Icons.campaign_outlined,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  tooltip: 'Promote my profile',
+                  onPressed: _openProfilePromotionFlow,
+                ),
+                TopBarIcon(
+                  icon: Icon(
+                    Icons.settings,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  tooltip:
+                      MaterialLocalizations.of(context).openAppDrawerTooltip,
+                  onPressed: _showSettings,
+                ),
+              ],
             ),
-          IconButton(
-            icon: Icon(Icons.campaign_outlined,
-                color: Theme.of(context).colorScheme.onSurface),
-            tooltip: 'Promote my profile',
-            onPressed: _openProfilePromotionFlow,
-          ),
-          IconButton(
-            icon: Icon(Icons.settings,
-                color: Theme.of(context).colorScheme.onSurface),
-            onPressed: _showSettings,
-          ),
-        ],
-      ),
       body: NestedScrollView(
         headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
           return [
@@ -483,6 +477,11 @@ class _ArtistStudioState extends State<ArtistStudio> {
             : Icons.send_rounded;
 
     final cardRadius = BorderRadius.circular(KubusRadius.lg);
+    final cardStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.card,
+      tintBase: studioColor,
+    );
     return LiquidGlassCard(
       margin: const EdgeInsets.symmetric(
         horizontal: KubusSpacing.md,
@@ -490,9 +489,10 @@ class _ArtistStudioState extends State<ArtistStudio> {
       ),
       padding: EdgeInsets.zero,
       borderRadius: cardRadius,
+      blurSigma: cardStyle.blurSigma,
+      fallbackMinOpacity: cardStyle.fallbackMinOpacity,
       showBorder: false,
-      backgroundColor: scheme.surface.withValues(
-          alpha: Theme.of(context).brightness == Brightness.dark ? 0.22 : 0.14),
+      backgroundColor: cardStyle.tintColor,
       child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: cardRadius,

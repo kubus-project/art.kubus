@@ -289,13 +289,19 @@ class _DesktopArtworkDetailScreenState
       children: [
         _buildMedia(artwork, coverUrl),
         const SizedBox(height: DetailSpacing.lg),
-        _buildHeader(artwork),
-        const SizedBox(height: DetailSpacing.md),
-        _buildActionsRow(artwork, artworkProvider, isSignedIn),
+        DetailCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(artwork),
+              const SizedBox(height: DetailSpacing.md),
+              _buildActionsRow(artwork, artworkProvider, isSignedIn),
+            ],
+          ),
+        ),
         _buildAttendanceConfirmSection(
             artwork: artwork, isSignedIn: isSignedIn),
         _buildArSetupSection(artwork),
-        const SizedBox(height: DetailSpacing.lg),
         _buildDescription(artwork),
         _buildPoapInfoCard(artwork),
       ],
@@ -454,9 +460,13 @@ class _DesktopArtworkDetailScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          artwork.title,
-          style: KubusTextStyles.screenTitle,
+        KubusHeaderText(
+          title: artwork.title,
+          subtitle: artwork.category.trim().isNotEmpty &&
+                  artwork.category.trim() != 'General'
+              ? artwork.category.trim()
+              : null,
+          kind: KubusHeaderKind.screen,
         ),
         const SizedBox(height: DetailSpacing.sm),
         ArtworkCreatorByline(
@@ -471,7 +481,19 @@ class _DesktopArtworkDetailScreenState
   Widget _buildDescription(Artwork artwork) {
     final text = (artwork.description).trim();
     if (text.isEmpty) return const SizedBox.shrink();
-    return Text(text, style: DetailTypography.body(context));
+    return Padding(
+      padding: const EdgeInsets.only(top: DetailSpacing.lg),
+      child: DetailCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SectionHeader(title: 'Description'),
+            const SizedBox(height: DetailSpacing.sm),
+            Text(text, style: DetailTypography.body(context)),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildPoapInfoCard(Artwork artwork) {

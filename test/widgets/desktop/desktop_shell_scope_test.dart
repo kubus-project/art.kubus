@@ -1,9 +1,12 @@
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell_scope.dart';
 import 'package:art_kubus/screens/desktop/community/desktop_user_profile_screen.dart'
     as desktop_profile;
+import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/utils/user_profile_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 
 void main() {
   testWidgets('openInDesktopShell renders content inside DesktopSubScreen',
@@ -131,5 +134,73 @@ void main() {
 
     expect(pushedScreen, isA<desktop_profile.UserProfileScreen>());
     expect(pushedScreen, isNot(isA<DesktopSubScreen>()));
+  });
+
+  testWidgets(
+      'UserProfileNavigation keeps community overlay presentation inside modal profiles',
+      (tester) async {
+    Widget? pushedScreen;
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider(
+        create: (_) => ThemeProvider(),
+        child: MaterialApp(
+          locale: const Locale('en'),
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          home: MediaQuery(
+            data: const MediaQueryData(size: Size(1280, 800)),
+            child: DesktopShellScope(
+              pushScreen: (screen) => pushedScreen = screen,
+              popScreen: () {},
+              navigateToRoute: (_) {},
+              openNotifications: () {},
+              openFunctionsPanel: (_, {content}) {},
+              setFunctionsPanelContent: (_) {},
+              closeFunctionsPanel: () {},
+              canPop: false,
+              child: DesktopProfilePresentationScope(
+                presentation: DesktopProfilePresentation.communityOverlay,
+                child: Builder(
+                  builder: (context) => Scaffold(
+                    body: Center(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          UserProfileNavigation.open(
+                            context,
+                            userId: 'wallet_123',
+                          );
+                        },
+                        child: const Text('Open overlay profile'),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Open overlay profile'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 900));
+
+    expect(pushedScreen, isNull);
+    expect(find.byType(desktop_profile.UserProfileScreen), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is DesktopProfilePresentationScope &&
+            widget.presentation ==
+                DesktopProfilePresentation.communityOverlay,
+      ),
+      findsNWidgets(2),
+    );
+
+    await tester.tapAt(const Offset(5, 5));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 }

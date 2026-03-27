@@ -1978,6 +1978,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               active: _showFiltersPanel,
               accentColor: themeProvider.accentColor,
               borderRadius: 10,
+              enableBlur: !kIsWeb,
               onPressed: () {
                 setState(() {
                   _showFiltersPanel = !_showFiltersPanel;
@@ -2022,6 +2023,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 controller: _mapSearchController.textController,
                 focusNode: _mapSearchController.focusNode,
                 hintText: l10n.mapSearchHint,
+                enableBlur: !kIsWeb,
                 onChanged: (value) {
                   _mapSearchController.onQueryChanged(
                     context,
@@ -2045,13 +2047,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           final isActive = _selectedFilter == filter;
           return Padding(
             padding: const EdgeInsets.only(left: KubusSpacing.sm),
-            child: KubusGlassChip(
-              label: _getFilterLabel(filter),
-              icon: Icons.filter_alt_outlined,
-              active: isActive,
-              accentColor: themeProvider.accentColor,
-              borderRadius: 10,
-              onPressed: () {
+              child: KubusGlassChip(
+                label: _getFilterLabel(filter),
+                icon: Icons.filter_alt_outlined,
+                active: isActive,
+                accentColor: themeProvider.accentColor,
+                borderRadius: 10,
+                enableBlur: !kIsWeb,
+                onPressed: () {
                 setState(() => _selectedFilter = filter);
                 // Reload markers so the nearby panel reflects the new filter.
                 unawaited(_loadMarkersForCurrentView(force: true).then((_) {
@@ -2324,6 +2327,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     accentColor: themeProvider.accentColor,
                     activeTint: scheme.error.withValues(alpha: 0.18),
                     activeIconColor: scheme.error,
+                    enableBlur: !kIsWeb,
                     onPressed: () {
                       unawaited(artworkProvider.toggleLike(artwork.id));
                     },
@@ -2332,6 +2336,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     icon: Icons.share,
                     accentColor: themeProvider.accentColor,
                     tooltip: AppLocalizations.of(context)!.commonShare,
+                    enableBlur: !kIsWeb,
                     onPressed: () {
                       ShareService().showShareSheet(
                         context,
@@ -2733,6 +2738,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 backgroundColor:
                     scheme.surface.withValues(alpha: isDark ? 0.16 : 0.12),
                 showBorder: true,
+                enableBlur: !kIsWeb,
                 child: Text(
                   l10n.commonDistanceKm(
                     _searchRadius.toStringAsFixed(1),
@@ -2873,6 +2879,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       tooltip: 'Map attributions',
       borderRadius: KubusRadius.sm,
       iconColor: Theme.of(context).colorScheme.primary,
+      enableBlur: !kIsWeb,
       onPressed: () => unawaited(showKubusMapAttributionDialog(context)),
     );
   }
