@@ -2,17 +2,22 @@ import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 
+import '../../../utils/design_tokens.dart';
+
 /// Shared sizing helpers for marker overlay cards on mobile + desktop maps.
 class MapOverlaySizing {
   const MapOverlaySizing._();
 
   static const double minCardWidth = 280.0;
   static const double maxCardWidth = 360.0;
+  static const double preferredCardWidth = maxCardWidth;
   static const double minCardHeight = 240.0;
   static const double maxCardHeight = 360.0;
+  static const double fixedCardHeight = maxCardHeight;
 
-  static const double defaultHorizontalPadding = 16.0;
-  static const double defaultVerticalPadding = 12.0;
+  static const double defaultHorizontalPadding = KubusSpacing.md;
+  static const double defaultVerticalPadding =
+      KubusSpacing.md - KubusSpacing.xs;
 
   static double topSafeInset(MediaQueryData media) {
     return math.max(media.padding.top, media.viewPadding.top);
@@ -55,5 +60,14 @@ class MapOverlaySizing {
     final minExpandedHeight = isCompactWidth ? 320.0 : 260.0;
     final raw = math.max(estimatedHeight, minExpandedHeight);
     return raw.clamp(minCardHeight, maxCardHeight).toDouble();
+  }
+
+  static double resolveFixedCardHeight({
+    required double maxCardHeight,
+    double preferredHeight = fixedCardHeight,
+  }) {
+    final clampedPreferred =
+        preferredHeight.clamp(minCardHeight, maxCardHeight).toDouble();
+    return clampedPreferred;
   }
 }

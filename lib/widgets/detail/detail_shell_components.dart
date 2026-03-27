@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/media_url_resolver.dart';
+import '../common/kubus_screen_header.dart';
 import '../glass_components.dart';
 
 /// Design system spacing constants for detail screens
@@ -39,13 +40,13 @@ class DetailTypography {
 
   /// Screen title (AppBar)
   static TextStyle screenTitle(BuildContext context) =>
-      KubusTextStyles.detailScreenTitle.copyWith(
+      KubusTextStyles.screenTitle.copyWith(
         color: Theme.of(context).colorScheme.onSurface,
       );
 
   /// Section header (16px, bold)
   static TextStyle sectionTitle(BuildContext context) =>
-      KubusTextStyles.detailSectionTitle.copyWith(
+      KubusTextStyles.sectionTitle.copyWith(
         color: Theme.of(context).colorScheme.onSurface,
       );
 
@@ -56,14 +57,14 @@ class DetailTypography {
       );
 
   /// Body text (14px)
-  static TextStyle body(BuildContext context) => KubusTextStyles.detailBody
-      .copyWith(
+  static TextStyle body(BuildContext context) =>
+      KubusTextStyles.detailBody.copyWith(
         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85),
       );
 
   /// Secondary/caption text (13px)
   static TextStyle caption(BuildContext context) =>
-      KubusTextStyles.detailCaption.copyWith(
+      KubusTextStyles.sectionSubtitle.copyWith(
         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
       );
 
@@ -74,8 +75,7 @@ class DetailTypography {
       );
 
   /// Button text
-  static TextStyle button(BuildContext context) =>
-      KubusTextStyles.detailButton;
+  static TextStyle button(BuildContext context) => KubusTextStyles.detailButton;
 }
 
 /// Standard border radius values
@@ -160,13 +160,19 @@ class SectionHeader extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: Text(title, style: DetailTypography.sectionTitle(context)),
+          child: KubusHeaderText(
+            title: title,
+            kind: KubusHeaderKind.section,
+          ),
         ),
         if (trailing != null) trailing!,
         if (onAction != null && trailing == null)
           TextButton.icon(
             onPressed: onAction,
-            icon: Icon(actionIcon ?? Icons.arrow_forward, size: 16),
+            icon: Icon(
+              actionIcon ?? Icons.arrow_forward,
+              size: KubusHeaderMetrics.actionIcon,
+            ),
             label: Text(
               actionLabel ?? '',
               style: DetailTypography.button(context),
@@ -203,7 +209,7 @@ class InfoRow extends StatelessWidget {
         children: [
           Icon(
             icon,
-            size: 18,
+            size: KubusHeaderMetrics.actionIcon,
             color: iconColor ?? scheme.onSurface.withValues(alpha: 0.55),
           ),
           const SizedBox(width: DetailSpacing.sm),
@@ -322,7 +328,8 @@ class DetailActionButton extends StatelessWidget {
         border: Border.all(
           color: isActive
               ? effectiveActiveColor.withValues(alpha: 0.28)
-              : scheme.outlineVariant.withValues(alpha: isEnabled ? 0.35 : 0.22),
+              : scheme.outlineVariant
+                  .withValues(alpha: isEnabled ? 0.35 : 0.22),
         ),
       ),
       child: LiquidGlassPanel(
@@ -343,7 +350,8 @@ class DetailActionButton extends StatelessWidget {
             Flexible(
               child: Text(
                 label,
-                style: DetailTypography.button(context).copyWith(color: fgColor),
+                style:
+                    DetailTypography.button(context).copyWith(color: fgColor),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -421,7 +429,7 @@ class DetailHeader extends StatelessWidget {
           IconButton(
             onPressed: () => Navigator.of(context).pop(),
             icon: Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(KubusSpacing.sm),
               decoration: BoxDecoration(
                 color: scheme.surface.withValues(alpha: 0.9),
                 shape: BoxShape.circle,
@@ -433,7 +441,11 @@ class DetailHeader extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Icon(Icons.arrow_back, size: 20, color: scheme.onSurface),
+              child: Icon(
+                Icons.arrow_back,
+                size: KubusHeaderMetrics.actionIcon,
+                color: scheme.onSurface,
+              ),
             ),
           ),
       actions: actions
@@ -462,9 +474,7 @@ class DetailHeader extends StatelessWidget {
                       title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
+                      style: KubusTextStyles.screenTitle.copyWith(
                         color: Colors.white,
                         shadows: [
                           Shadow(
@@ -480,9 +490,7 @@ class DetailHeader extends StatelessWidget {
                         subtitle!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
+                        style: KubusTextStyles.screenSubtitle.copyWith(
                           color: Colors.white.withValues(alpha: 0.9),
                           shadows: [
                             Shadow(
@@ -559,7 +567,7 @@ class DetailHeader extends StatelessWidget {
       child: Center(
         child: Icon(
           Icons.image_outlined,
-          size: 64,
+          size: KubusHeaderMetrics.actionHitArea + KubusSpacing.lg,
           color: scheme.onSurface.withValues(alpha: 0.2),
         ),
       ),
@@ -760,9 +768,7 @@ class DetailSection extends StatelessWidget {
             Expanded(
               child: Text(
                 title,
-                style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
+                style: KubusTextStyles.sectionTitle.copyWith(
                   color: scheme.onSurface,
                 ),
               ),
@@ -859,9 +865,7 @@ class _CollapsibleSectionState extends State<_CollapsibleSection>
                 Expanded(
                   child: Text(
                     widget.title,
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
+                    style: KubusTextStyles.sectionTitle.copyWith(
                       color: scheme.onSurface,
                     ),
                   ),

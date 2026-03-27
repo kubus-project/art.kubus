@@ -1,8 +1,7 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -19,6 +18,7 @@ import '../../services/stats_api_service.dart';
 import '../../widgets/charts/stats_interactive_line_chart.dart';
 import '../../widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import '../../utils/design_tokens.dart';
  
 
 class AdvancedStatsScreen extends StatefulWidget {
@@ -159,7 +159,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
         body: FadeTransition(
           opacity: _fadeAnimation,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(KubusSpacing.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -193,7 +193,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
           children: [
             Text(
               'Time Range',
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
@@ -244,7 +244,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
     
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(KubusSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -253,14 +253,14 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
               children: [
                 Text(
                   '${widget.statType} Over Time',
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
                   _selectedTimeframe,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 12,
                     color: scheme.onSurface.withValues(alpha: 0.6),
                   ),
@@ -281,7 +281,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                       ? Center(
                           child: Text(
                             'No data available',
-                            style: GoogleFonts.inter(
+                            style: KubusTypography.inter(
                               fontSize: 12,
                               color: scheme.onSurface.withValues(alpha: 0.6),
                             ),
@@ -322,14 +322,14 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
             children: [
               Text(
                 'Current Value',
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 12,
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
               Text(
                 currentValue,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
@@ -343,7 +343,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
             children: [
               Text(
                 'Change ($_selectedTimeframe)',
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 12,
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
@@ -364,7 +364,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                   const SizedBox(width: 4),
                   Text(
                     stats.changePctLabel,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: change == null
@@ -394,7 +394,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
           children: [
             Text(
               'Detailed Metrics',
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -415,11 +415,11 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                       children: [
                         Text(
                           metric['title'] ?? '',
-                          style: GoogleFonts.inter(fontSize: 14),
+                          style: KubusTypography.inter(fontSize: 14),
                         ),
                         Text(
                           metric['value'] ?? '',
-                          style: GoogleFonts.inter(
+                          style: KubusTypography.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
@@ -442,7 +442,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
           children: [
             Text(
               'Comparative Analysis',
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -481,7 +481,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
         children: [
           Text(
             label,
-            style: GoogleFonts.inter(fontSize: 14),
+            style: KubusTypography.inter(fontSize: 14),
           ),
           Row(
             children: [
@@ -493,7 +493,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
               const SizedBox(width: 4),
               Text(
                 value,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: resolvedColor,
@@ -524,7 +524,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                 const SizedBox(width: 8),
                 Text(
                   'AI Insights',
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -558,7 +558,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                         Expanded(
                           child: Text(
                             insight,
-                            style: GoogleFonts.inter(fontSize: 14),
+                            style: KubusTypography.inter(fontSize: 14),
                           ),
                         ),
                       ],
@@ -579,7 +579,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
           children: [
             Text(
               'Goals & Milestones',
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -607,11 +607,11 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
           children: [
             Text(
               title,
-              style: GoogleFonts.inter(fontSize: 14),
+              style: KubusTypography.inter(fontSize: 14),
             ),
             Text(
               target,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 12,
                 color: scheme.onSurface.withValues(alpha: 0.6),
               ),
@@ -634,7 +634,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
         const SizedBox(height: 4),
         Text(
           '${(progress * 100).toInt()}% complete',
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 12,
             color: scheme.onSurface.withValues(alpha: 0.6),
           ),

@@ -10,7 +10,7 @@ import '../utils/design_tokens.dart';
 class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
   static const String _themeKey = 'app_theme_mode';
   static const String _accentColorKey = 'accent_color';
-  
+
   ThemeMode _themeMode = ThemeMode.system; // Default to system theme
   Color _accentColor = const Color(0xFF00838F); // Deep blue-cyan
   bool _isInitialized = false;
@@ -28,8 +28,9 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
     final brightness = ThemeData.estimateBrightnessForColor(_accentColor);
     return brightness == Brightness.dark ? Colors.white : Colors.black;
   }
+
   bool get isInitialized => _isInitialized;
-  
+
   // Enhanced theme detection that properly handles system mode
   bool get isDarkMode {
     switch (_themeMode) {
@@ -38,10 +39,11 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
       case ThemeMode.light:
         return false;
       case ThemeMode.system:
-        return PlatformDispatcher.instance.platformBrightness == Brightness.dark;
+        return PlatformDispatcher.instance.platformBrightness ==
+            Brightness.dark;
     }
   }
-  
+
   bool get isLightMode {
     switch (_themeMode) {
       case ThemeMode.light:
@@ -49,10 +51,11 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
       case ThemeMode.dark:
         return false;
       case ThemeMode.system:
-        return PlatformDispatcher.instance.platformBrightness == Brightness.light;
+        return PlatformDispatcher.instance.platformBrightness ==
+            Brightness.light;
     }
   }
-  
+
   bool get isSystemMode => _themeMode == ThemeMode.system;
 
   // Available accent colors with deep blue-cyan theme
@@ -71,15 +74,16 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
   Future<void> _loadThemePreferences() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      
+
       // Load theme mode
       final themeModeIndex = prefs.getInt(_themeKey) ?? 2; // Default to dark
       _themeMode = ThemeMode.values[themeModeIndex];
-      
+
       // Load accent color
-      final accentColorValue = prefs.getInt(_accentColorKey) ?? KubusColors.primary.toARGB32();
+      final accentColorValue =
+          prefs.getInt(_accentColorKey) ?? KubusColors.primary.toARGB32();
       _accentColor = Color(accentColorValue);
-      
+
       _isInitialized = true;
       notifyListeners();
     } catch (e) {
@@ -120,9 +124,8 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
 
   // Toggle between light and dark mode
   Future<void> toggleTheme() async {
-    final newMode = _themeMode == ThemeMode.dark 
-        ? ThemeMode.light 
-        : ThemeMode.dark;
+    final newMode =
+        _themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
     await setThemeMode(newMode);
   }
 
@@ -153,190 +156,203 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
 
   // Dark theme data
   ThemeData get darkTheme => ThemeData(
-    useMaterial3: true,
-    brightness: Brightness.dark,
-    textTheme: KubusTypography.textTheme.apply(
-      bodyColor: KubusColors.textPrimaryDark,
-      displayColor: KubusColors.textPrimaryDark,
-    ),
-    pageTransitionsTheme: AppAnimations.pageTransitionsTheme,
-    colorScheme: ColorScheme.dark(
-      primary: _accentColor,
-      secondary: _accentColor.withValues(alpha: 0.8),
-      surface: KubusColors.surfaceDark,
-      onSurface: KubusColors.textPrimaryDark,
-      primaryContainer: const Color(0xFF1A1A1A), // Keep custom for now or make token
-      secondaryContainer: const Color(0xFF2A2A2A),
-      outline: KubusColors.outlineDark,
-      error: KubusColors.errorDark,
-    ),
-    scaffoldBackgroundColor: KubusColors.backgroundDark,
-    appBarTheme: AppBarTheme(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      iconTheme: const IconThemeData(color: KubusColors.textPrimaryDark),
-      titleTextStyle: KubusTypography.textTheme.headlineMedium!.copyWith(
-        color: KubusColors.textPrimaryDark,
-      ),
-    ),
-    cardTheme: CardThemeData(
-      color: KubusColors.surfaceDark,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: KubusRadius.circular(KubusRadius.md),
-        side: const BorderSide(color: KubusColors.outlineDark),
-      ),
-    ),
-    dialogTheme: DialogThemeData(
-      backgroundColor: KubusColors.surfaceDark.withValues(alpha: 0.22),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: KubusRadius.circular(KubusRadius.xl),
-        side: const BorderSide(color: KubusColors.glassBorderDark),
-      ),
-    ),
-    bottomSheetTheme: BottomSheetThemeData(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      showDragHandle: false,
-      shape: RoundedRectangleBorder(
-        borderRadius: KubusRadius.circular(KubusRadius.xl),
-      ),
-    ),
-    elevatedButtonTheme: ElevatedButtonThemeData(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: _accentColor,
-        foregroundColor: KubusColors.textPrimaryDark,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: KubusRadius.circular(KubusRadius.sm),
+        useMaterial3: true,
+        brightness: Brightness.dark,
+        textTheme: KubusTypography.textTheme.apply(
+          bodyColor: KubusColors.textPrimaryDark,
+          displayColor: KubusColors.textPrimaryDark,
         ),
-        padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.lg, vertical: KubusSpacing.sm + 4),
-      ),
-    ),
-    inputDecorationTheme: InputDecorationTheme(
-      filled: true,
-      fillColor: KubusColors.surfaceDark,
-      border: OutlineInputBorder(
-        borderRadius: KubusRadius.circular(KubusRadius.sm),
-        borderSide: const BorderSide(color: KubusColors.outlineDark),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: KubusRadius.circular(KubusRadius.sm),
-        borderSide: const BorderSide(color: KubusColors.outlineDark),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: KubusRadius.circular(KubusRadius.sm),
-        borderSide: BorderSide(color: _accentColor),
-      ),
-      labelStyle: TextStyle(color: Colors.grey[400]),
-      hintStyle: TextStyle(color: Colors.grey[600]),
-    ),
-    bottomNavigationBarTheme: BottomNavigationBarThemeData(
-      backgroundColor: KubusColors.surfaceDark,
-      selectedItemColor: _accentColor,
-      unselectedItemColor: Colors.grey[600],
-      type: BottomNavigationBarType.fixed,
-      elevation: 0,
-    ),
-    extensions: const <ThemeExtension<dynamic>>[
-      AppAnimationTheme.defaults,
-      KubusColorRoles.dark,
-    ],
-  );
+        pageTransitionsTheme: AppAnimations.pageTransitionsTheme,
+        colorScheme: ColorScheme.dark(
+          primary: _accentColor,
+          secondary: _accentColor.withValues(alpha: 0.8),
+          surface: KubusColors.surfaceDark,
+          onSurface: KubusColors.textPrimaryDark,
+          primaryContainer:
+              const Color(0xFF1A1A1A), // Keep custom for now or make token
+          secondaryContainer: const Color(0xFF2A2A2A),
+          outline: KubusColors.outlineDark,
+          error: KubusColors.errorDark,
+        ),
+        scaffoldBackgroundColor: KubusColors.backgroundDark,
+        appBarTheme: AppBarTheme(
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          centerTitle: false,
+          toolbarHeight: KubusHeaderMetrics.actionHitArea +
+              (KubusHeaderMetrics.appBarVerticalPadding * 2),
+          iconTheme: const IconThemeData(color: KubusColors.textPrimaryDark),
+          titleTextStyle: KubusTextStyles.screenTitle.copyWith(
+            color: KubusColors.textPrimaryDark,
+          ),
+        ),
+        cardTheme: CardThemeData(
+          color: KubusColors.surfaceDark,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: KubusRadius.circular(KubusRadius.md),
+            side: const BorderSide(color: KubusColors.outlineDark),
+          ),
+        ),
+        dialogTheme: DialogThemeData(
+          backgroundColor: KubusColors.surfaceDark.withValues(alpha: 0.22),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: KubusRadius.circular(KubusRadius.xl),
+            side: const BorderSide(color: KubusColors.glassBorderDark),
+          ),
+        ),
+        bottomSheetTheme: BottomSheetThemeData(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          showDragHandle: false,
+          shape: RoundedRectangleBorder(
+            borderRadius: KubusRadius.circular(KubusRadius.xl),
+          ),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _accentColor,
+            foregroundColor: KubusColors.textPrimaryDark,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: KubusRadius.circular(KubusRadius.sm),
+            ),
+            padding: const EdgeInsets.symmetric(
+                horizontal: KubusSpacing.lg, vertical: KubusSpacing.sm + 4),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: KubusColors.surfaceDark,
+          border: OutlineInputBorder(
+            borderRadius: KubusRadius.circular(KubusRadius.sm),
+            borderSide: const BorderSide(color: KubusColors.outlineDark),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: KubusRadius.circular(KubusRadius.sm),
+            borderSide: const BorderSide(color: KubusColors.outlineDark),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: KubusRadius.circular(KubusRadius.sm),
+            borderSide: BorderSide(color: _accentColor),
+          ),
+          labelStyle: TextStyle(color: Colors.grey[400]),
+          hintStyle: TextStyle(color: Colors.grey[600]),
+        ),
+        bottomNavigationBarTheme: BottomNavigationBarThemeData(
+          backgroundColor: KubusColors.surfaceDark,
+          selectedItemColor: _accentColor,
+          unselectedItemColor: Colors.grey[600],
+          type: BottomNavigationBarType.fixed,
+          elevation: 0,
+        ),
+        extensions: const <ThemeExtension<dynamic>>[
+          AppAnimationTheme.defaults,
+          KubusColorRoles.dark,
+        ],
+      );
 
   // Light theme data
   ThemeData get lightTheme => ThemeData(
-    useMaterial3: true,
-    brightness: Brightness.light,
-    textTheme: KubusTypography.textTheme.apply(
-      bodyColor: KubusColors.textPrimaryLight,
-      displayColor: KubusColors.textPrimaryLight,
-    ),
-    pageTransitionsTheme: AppAnimations.pageTransitionsTheme,
-    colorScheme: ColorScheme.light(
-      primary: _accentColor,
-      secondary: _accentColor.withValues(alpha: 0.8),
-      surface: KubusColors.surfaceLight,
-      onSurface: KubusColors.textPrimaryLight,
-      primaryContainer: const Color(0xFFF5F5F7),
-      secondaryContainer: const Color(0xFFE5E5EA),
-      outline: KubusColors.outlineLight,
-      error: KubusColors.error,
-    ),
-    scaffoldBackgroundColor: KubusColors.backgroundLight,
-    appBarTheme: AppBarTheme(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      iconTheme: const IconThemeData(color: KubusColors.textPrimaryLight),
-      titleTextStyle: KubusTypography.textTheme.headlineMedium!.copyWith(
-        color: KubusColors.textPrimaryLight,
-      ),
-    ),
-    cardTheme: CardThemeData(
-      color: KubusColors.surfaceLight,
-      elevation: 2,
-      shadowColor: Colors.black.withValues(alpha: 0.1),
-      shape: RoundedRectangleBorder(
-        borderRadius: KubusRadius.circular(KubusRadius.md),
-        side: const BorderSide(color: KubusColors.outlineLight),
-      ),
-    ),
-    dialogTheme: DialogThemeData(
-      backgroundColor: KubusColors.surfaceLight.withValues(alpha: 0.16),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: KubusRadius.circular(KubusRadius.xl),
-        side: const BorderSide(color: KubusColors.glassBorderLight),
-      ),
-    ),
-    bottomSheetTheme: BottomSheetThemeData(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      showDragHandle: false,
-      shape: RoundedRectangleBorder(
-        borderRadius: KubusRadius.circular(KubusRadius.xl),
-      ),
-    ),
-    elevatedButtonTheme: ElevatedButtonThemeData(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: _accentColor,
-        foregroundColor: Colors.white,
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: KubusRadius.circular(KubusRadius.sm),
+        useMaterial3: true,
+        brightness: Brightness.light,
+        textTheme: KubusTypography.textTheme.apply(
+          bodyColor: KubusColors.textPrimaryLight,
+          displayColor: KubusColors.textPrimaryLight,
         ),
-        padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.lg, vertical: KubusSpacing.sm + 4),
-      ),
-    ),
-    inputDecorationTheme: InputDecorationTheme(
-      filled: true,
-      fillColor: KubusColors.surfaceLight,
-      border: OutlineInputBorder(
-        borderRadius: KubusRadius.circular(KubusRadius.sm),
-        borderSide: const BorderSide(color: KubusColors.outlineLight),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: KubusRadius.circular(KubusRadius.sm),
-        borderSide: const BorderSide(color: KubusColors.outlineLight),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: KubusRadius.circular(KubusRadius.sm),
-        borderSide: BorderSide(color: _accentColor),
-      ),
-      labelStyle: TextStyle(color: Colors.grey[700]),
-      hintStyle: TextStyle(color: Colors.grey[500]),
-    ),
-    bottomNavigationBarTheme: BottomNavigationBarThemeData(
-      backgroundColor: KubusColors.surfaceLight,
-      selectedItemColor: _accentColor,
-      unselectedItemColor: Colors.grey[500],
-      type: BottomNavigationBarType.fixed,
-      elevation: 8,
-    ),
-    extensions: const <ThemeExtension<dynamic>>[
-      AppAnimationTheme.defaults,
-      KubusColorRoles.light,
-    ],
-  );
+        pageTransitionsTheme: AppAnimations.pageTransitionsTheme,
+        colorScheme: ColorScheme.light(
+          primary: _accentColor,
+          secondary: _accentColor.withValues(alpha: 0.8),
+          surface: KubusColors.surfaceLight,
+          onSurface: KubusColors.textPrimaryLight,
+          primaryContainer: const Color(0xFFF5F5F7),
+          secondaryContainer: const Color(0xFFE5E5EA),
+          outline: KubusColors.outlineLight,
+          error: KubusColors.error,
+        ),
+        scaffoldBackgroundColor: KubusColors.backgroundLight,
+        appBarTheme: AppBarTheme(
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          centerTitle: false,
+          toolbarHeight: KubusHeaderMetrics.actionHitArea +
+              (KubusHeaderMetrics.appBarVerticalPadding * 2),
+          iconTheme: const IconThemeData(color: KubusColors.textPrimaryLight),
+          titleTextStyle: KubusTextStyles.screenTitle.copyWith(
+            color: KubusColors.textPrimaryLight,
+          ),
+        ),
+        cardTheme: CardThemeData(
+          color: KubusColors.surfaceLight,
+          elevation: 2,
+          shadowColor: Colors.black.withValues(alpha: 0.1),
+          shape: RoundedRectangleBorder(
+            borderRadius: KubusRadius.circular(KubusRadius.md),
+            side: const BorderSide(color: KubusColors.outlineLight),
+          ),
+        ),
+        dialogTheme: DialogThemeData(
+          backgroundColor: KubusColors.surfaceLight.withValues(alpha: 0.16),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: KubusRadius.circular(KubusRadius.xl),
+            side: const BorderSide(color: KubusColors.glassBorderLight),
+          ),
+        ),
+        bottomSheetTheme: BottomSheetThemeData(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          showDragHandle: false,
+          shape: RoundedRectangleBorder(
+            borderRadius: KubusRadius.circular(KubusRadius.xl),
+          ),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _accentColor,
+            foregroundColor: Colors.white,
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: KubusRadius.circular(KubusRadius.sm),
+            ),
+            padding: const EdgeInsets.symmetric(
+                horizontal: KubusSpacing.lg, vertical: KubusSpacing.sm + 4),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: KubusColors.surfaceLight,
+          border: OutlineInputBorder(
+            borderRadius: KubusRadius.circular(KubusRadius.sm),
+            borderSide: const BorderSide(color: KubusColors.outlineLight),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: KubusRadius.circular(KubusRadius.sm),
+            borderSide: const BorderSide(color: KubusColors.outlineLight),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: KubusRadius.circular(KubusRadius.sm),
+            borderSide: BorderSide(color: _accentColor),
+          ),
+          labelStyle: TextStyle(color: Colors.grey[700]),
+          hintStyle: TextStyle(color: Colors.grey[500]),
+        ),
+        bottomNavigationBarTheme: BottomNavigationBarThemeData(
+          backgroundColor: KubusColors.surfaceLight,
+          selectedItemColor: _accentColor,
+          unselectedItemColor: Colors.grey[500],
+          type: BottomNavigationBarType.fixed,
+          elevation: 8,
+        ),
+        extensions: const <ThemeExtension<dynamic>>[
+          AppAnimationTheme.defaults,
+          KubusColorRoles.light,
+        ],
+      );
 }

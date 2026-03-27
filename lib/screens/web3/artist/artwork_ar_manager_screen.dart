@@ -5,7 +5,6 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -15,6 +14,7 @@ import '../../../providers/artwork_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../utils/kubus_color_roles.dart';
+import '../../../utils/design_tokens.dart';
 import '../../../utils/maplibre_style_utils.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../utils/wallet_utils.dart';
@@ -32,7 +32,16 @@ class ArtworkArManagerScreen extends StatefulWidget {
 }
 
 class _ArtworkArManagerScreenState extends State<ArtworkArManagerScreen> {
-  static const List<int> _pngSignature = <int>[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+  static const List<int> _pngSignature = <int>[
+    0x89,
+    0x50,
+    0x4E,
+    0x47,
+    0x0D,
+    0x0A,
+    0x1A,
+    0x0A
+  ];
 
   int _markerSizePx = 1024;
   bool _requestedArtwork = false;
@@ -47,14 +56,19 @@ class _ArtworkArManagerScreenState extends State<ArtworkArManagerScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!mounted) return;
         try {
-          await context.read<ArtworkProvider>().fetchArtworkIfNeeded(widget.artworkId);
+          await context
+              .read<ArtworkProvider>()
+              .fetchArtworkIfNeeded(widget.artworkId);
         } catch (_) {}
       });
     }
 
-    final artwork = context.read<ArtworkProvider>().getArtworkById(widget.artworkId);
+    final artwork =
+        context.read<ArtworkProvider>().getArtworkById(widget.artworkId);
     final arConfigId = artwork?.arConfigId;
-    if (arConfigId != null && arConfigId.trim().isNotEmpty && arConfigId != _loadedArConfigId) {
+    if (arConfigId != null &&
+        arConfigId.trim().isNotEmpty &&
+        arConfigId != _loadedArConfigId) {
       _loadedArConfigId = arConfigId;
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!mounted) return;
@@ -108,36 +122,43 @@ class _ArtworkArManagerScreenState extends State<ArtworkArManagerScreen> {
     if (bytes == null || bytes.isEmpty) return;
 
     if (!_isPng(bytes)) {
-      messenger.showKubusSnackBar(const SnackBar(content: Text('Only PNG markers are supported.')));
+      messenger.showKubusSnackBar(
+          const SnackBar(content: Text('Only PNG markers are supported.')));
       return;
     }
 
     final decoded = await _decodeImage(bytes);
     if (!mounted) return;
     if (decoded == null) {
-      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));
+      messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.commonActionFailedToast)));
       return;
     }
 
     final w = decoded.width;
     final h = decoded.height;
     if (w != h) {
-      messenger.showKubusSnackBar(const SnackBar(content: Text('Marker must be square (width == height).')));
+      messenger.showKubusSnackBar(const SnackBar(
+          content: Text('Marker must be square (width == height).')));
       return;
     }
     if (w < 512) {
-      messenger.showKubusSnackBar(const SnackBar(content: Text('Marker is too small. Minimum is 512×512px.')));
+      messenger.showKubusSnackBar(const SnackBar(
+          content: Text('Marker is too small. Minimum is 512×512px.')));
       return;
     }
     if (w > 4096) {
-      messenger.showKubusSnackBar(const SnackBar(content: Text('Marker is too large. Maximum is 4096×4096px.')));
+      messenger.showKubusSnackBar(const SnackBar(
+          content: Text('Marker is too large. Maximum is 4096×4096px.')));
       return;
     }
 
     provider.setPendingUpload(
       artworkId: widget.artworkId,
       bytes: bytes,
-      fileName: (file?.name ?? 'marker.png').trim().isEmpty ? 'marker.png' : file!.name,
+      fileName: (file?.name ?? 'marker.png').trim().isEmpty
+          ? 'marker.png'
+          : file!.name,
     );
   }
 
@@ -155,30 +176,42 @@ class _ArtworkArManagerScreenState extends State<ArtworkArManagerScreen> {
     final scheme = Theme.of(context).colorScheme;
     final accent = KubusColorRoles.of(context).web3ArtistStudioAccent;
 
-    final artwork = context.watch<ArtworkProvider>().getArtworkById(widget.artworkId);
+    final artwork =
+        context.watch<ArtworkProvider>().getArtworkById(widget.artworkId);
     final arProvider = context.watch<ArtworkArConfigProvider>();
     final arState = arProvider.stateFor(widget.artworkId);
     final config = arState.config;
-    final resolvedMarkerUrl = config?.markerAssetUrl == null ? null : (MediaUrlResolver.resolve(config!.markerAssetUrl!) ?? config.markerAssetUrl);
+    final resolvedMarkerUrl = config?.markerAssetUrl == null
+        ? null
+        : (MediaUrlResolver.resolve(config!.markerAssetUrl!) ??
+            config.markerAssetUrl);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('AR Marker', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+        title: Text(
+          'AR Marker',
+          style: KubusTextStyles.screenTitle.copyWith(
+            color: scheme.onSurface,
+          ),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         children: [
           Text(
             artwork?.title ?? l10n.artDetailTitle,
-            style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: scheme.onSurface),
+            style:
+                KubusTextStyles.sectionTitle.copyWith(color: scheme.onSurface),
           ),
           const SizedBox(height: 6),
           Text(
             'Set up a printable marker so people can scan and unlock the AR experience.',
-            style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.7)),
+            style: KubusTextStyles.sectionSubtitle.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.7),
+            ),
           ),
           const SizedBox(height: 16),
-          Text('Marker mode', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+          Text('Marker mode', style: KubusTextStyles.sectionTitle),
           const SizedBox(height: 8),
           RadioGroup<ArMarkerMode>(
             groupValue: arState.markerMode,
@@ -205,7 +238,13 @@ class _ArtworkArManagerScreenState extends State<ArtworkArManagerScreen> {
           ),
           if (arState.error != null) ...[
             const SizedBox(height: 8),
-            Text(arState.error!, style: GoogleFonts.inter(color: scheme.error, fontWeight: FontWeight.w600)),
+            Text(
+              arState.error!,
+              style: KubusTextStyles.sectionSubtitle.copyWith(
+                color: scheme.error,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
           const SizedBox(height: 12),
           if (arState.markerMode == ArMarkerMode.autoGenerated) ...[
@@ -214,14 +253,17 @@ class _ArtworkArManagerScreenState extends State<ArtworkArManagerScreen> {
                 Expanded(
                   child: DropdownButtonFormField<int>(
                     initialValue: _markerSizePx,
-                    decoration: const InputDecoration(labelText: 'Marker size (px)'),
+                    decoration:
+                        const InputDecoration(labelText: 'Marker size (px)'),
                     items: const [
                       DropdownMenuItem(value: 512, child: Text('512')),
                       DropdownMenuItem(value: 1024, child: Text('1024')),
                       DropdownMenuItem(value: 1536, child: Text('1536')),
                       DropdownMenuItem(value: 2048, child: Text('2048')),
                     ],
-                    onChanged: arState.isLoading ? null : (v) => setState(() => _markerSizePx = v ?? 1024),
+                    onChanged: arState.isLoading
+                        ? null
+                        : (v) => setState(() => _markerSizePx = v ?? 1024),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -232,19 +274,29 @@ class _ArtworkArManagerScreenState extends State<ArtworkArManagerScreen> {
                           final wallet = _resolveWalletAddress(context);
                           if (wallet.isEmpty) {
                             ScaffoldMessenger.of(context).showKubusSnackBar(
-                              SnackBar(content: Text(l10n.communityCommentAuthRequiredToast)),
+                              SnackBar(
+                                  content: Text(
+                                      l10n.communityCommentAuthRequiredToast)),
                             );
                             return;
                           }
-                          final subjectColor = MapLibreStyleUtils.hexRgb(accent);
-                          await context.read<ArtworkArConfigProvider>().autogenerateMarker(
+                          final subjectColor =
+                              MapLibreStyleUtils.hexRgb(accent);
+                          await context
+                              .read<ArtworkArConfigProvider>()
+                              .autogenerateMarker(
                                 artworkId: widget.artworkId,
                                 walletAddress: wallet,
                                 subjectColor: subjectColor,
                                 markerSizePx: _markerSizePx,
                               );
                         },
-                  icon: arState.isLoading ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.auto_fix_high),
+                  icon: arState.isLoading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.auto_fix_high),
                   label: Text(config == null ? 'Generate' : 'Regenerate'),
                 ),
               ],
@@ -255,25 +307,34 @@ class _ArtworkArManagerScreenState extends State<ArtworkArManagerScreen> {
               decoration: BoxDecoration(
                 color: scheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: scheme.outline.withValues(alpha: 0.18)),
+                border:
+                    Border.all(color: scheme.outline.withValues(alpha: 0.18)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Upload requirements', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                  Text('Upload requirements',
+                      style: KubusTextStyles.sectionTitle),
                   const SizedBox(height: 6),
                   Text(
                     'PNG only • Square • 512–4096px • High contrast • Leave a safe border for printing.',
-                    style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.7)),
+                    style: KubusTextStyles.sectionSubtitle.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.7),
+                    ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 10),
             OutlinedButton.icon(
-              onPressed: arState.isLoading ? null : () => _pickPngMarker(context.read<ArtworkArConfigProvider>()),
+              onPressed: arState.isLoading
+                  ? null
+                  : () =>
+                      _pickPngMarker(context.read<ArtworkArConfigProvider>()),
               icon: const Icon(Icons.upload_file),
-              label: Text(arState.pendingUploadBytes == null ? 'Select PNG' : 'Change file'),
+              label: Text(arState.pendingUploadBytes == null
+                  ? 'Select PNG'
+                  : 'Change file'),
             ),
             if (arState.pendingUploadBytes != null) ...[
               const SizedBox(height: 10),
@@ -283,7 +344,8 @@ class _ArtworkArManagerScreenState extends State<ArtworkArManagerScreen> {
                   height: 220,
                   color: scheme.surfaceContainerHighest,
                   alignment: Alignment.center,
-                  child: Image.memory(arState.pendingUploadBytes!, fit: BoxFit.contain),
+                  child: Image.memory(arState.pendingUploadBytes!,
+                      fit: BoxFit.contain),
                 ),
               ),
               const SizedBox(height: 10),
@@ -294,23 +356,33 @@ class _ArtworkArManagerScreenState extends State<ArtworkArManagerScreen> {
                         final wallet = _resolveWalletAddress(context);
                         if (wallet.isEmpty) {
                           ScaffoldMessenger.of(context).showKubusSnackBar(
-                            SnackBar(content: Text(l10n.communityCommentAuthRequiredToast)),
+                            SnackBar(
+                                content: Text(
+                                    l10n.communityCommentAuthRequiredToast)),
                           );
                           return;
                         }
-                        await context.read<ArtworkArConfigProvider>().uploadMarker(
+                        await context
+                            .read<ArtworkArConfigProvider>()
+                            .uploadMarker(
                               artworkId: widget.artworkId,
                               walletAddress: wallet,
                             );
                       },
-                icon: arState.isLoading ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.cloud_upload_outlined),
+                icon: arState.isLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.cloud_upload_outlined),
                 label: const Text('Upload marker'),
               ),
             ],
           ],
-          if (resolvedMarkerUrl != null && resolvedMarkerUrl.trim().isNotEmpty) ...[
+          if (resolvedMarkerUrl != null &&
+              resolvedMarkerUrl.trim().isNotEmpty) ...[
             const SizedBox(height: 16),
-            Text('Preview', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+            Text('Preview', style: KubusTextStyles.sectionTitle),
             const SizedBox(height: 10),
             ClipRRect(
               borderRadius: BorderRadius.circular(14),
@@ -338,18 +410,21 @@ class _ArtworkArManagerScreenState extends State<ArtworkArManagerScreen> {
                         ? null
                         : () async {
                             final messenger = ScaffoldMessenger.of(context);
-                            final arConfigProvider = context.read<ArtworkArConfigProvider>();
+                            final arConfigProvider =
+                                context.read<ArtworkArConfigProvider>();
                             final wallet = _resolveWalletAddress(context);
                             if (wallet.isEmpty) {
                               messenger.showKubusSnackBar(
-                                SnackBar(content: Text(l10n.communityCommentAuthRequiredToast)),
+                                SnackBar(
+                                    content: Text(l10n
+                                        .communityCommentAuthRequiredToast)),
                               );
                               return;
                             }
                             await arConfigProvider.finalize(
-                                  artworkId: widget.artworkId,
-                                  walletAddress: wallet,
-                                );
+                              artworkId: widget.artworkId,
+                              walletAddress: wallet,
+                            );
                             if (!mounted) return;
                             messenger.showKubusSnackBar(
                               const SnackBar(content: Text('AR setup saved.')),

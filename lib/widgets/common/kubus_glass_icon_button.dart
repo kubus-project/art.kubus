@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../providers/glass_capabilities_provider.dart';
 import '../../utils/design_tokens.dart';
 import '../glass_components.dart';
 
@@ -11,7 +12,7 @@ class KubusGlassIconButton extends StatelessWidget {
     required this.onPressed,
     required this.tooltip,
     this.active = false,
-    this.size = 42,
+    this.size = KubusHeaderMetrics.actionHitArea,
     this.accentColor,
     this.iconColor,
     this.activeIconColor,
@@ -42,14 +43,31 @@ class KubusGlassIconButton extends StatelessWidget {
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
     final accent = accentColor ?? scheme.primary;
+    final idleStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.button,
+      tintBase: scheme.surface,
+    );
+    final activeStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.button,
+      tintBase: activeTint ?? accent,
+    );
+    final allowBlur =
+        GlassCapabilitiesProvider.watchAllowBlurEnabled(context);
     final resolvedRadius = borderRadius.clamp(0.0, 999.0).toDouble();
     final radius = BorderRadius.circular(resolvedRadius);
-    final idleTint = scheme.surface.withValues(alpha: isDark ? 0.46 : 0.52);
-    final selectedTint =
-        activeTint ?? accent.withValues(alpha: isDark ? 0.14 : 0.16);
-    final resolvedIconColor = active
-        ? (activeIconColor ?? accent)
-        : (iconColor ?? scheme.onSurface);
+    final idleTint = idleStyle.tintColor;
+    final selectedBase =
+        Color.lerp(scheme.surface, activeTint ?? accent, 0.18) ??
+            scheme.surface;
+    final selectedTint = selectedBase.withValues(
+      alpha: allowBlur
+          ? activeStyle.tintColor.a
+          : KubusGlassEffects.fallbackOpaqueOpacity,
+    );
+    final resolvedIconColor =
+        active ? (activeIconColor ?? accent) : (iconColor ?? scheme.onSurface);
     final resolvedSize = size.clamp(32.0, 56.0).toDouble();
     final resolvedIconSize =
         (resolvedSize * 0.46).clamp(16.0, 22.0).toDouble();
@@ -72,12 +90,18 @@ class KubusGlassIconButton extends StatelessWidget {
             border: Border.all(
               color: active
                   ? accent.withValues(alpha: 0.85)
-                  : scheme.outlineVariant.withValues(alpha: 0.35),
+                  : scheme.outlineVariant.withValues(
+                      alpha: KubusGlassEffects.glassBorderOpacityStrong,
+                    ),
               width: active ? 1.25 : KubusSizes.hairline,
             ),
             boxShadow: [
               BoxShadow(
-                color: scheme.shadow.withValues(alpha: isDark ? 0.22 : 0.12),
+                color: scheme.shadow.withValues(
+                  alpha: isDark
+                      ? KubusGlassEffects.shadowOpacityDark
+                      : KubusGlassEffects.shadowOpacityLight,
+                ),
                 blurRadius: active ? 16 : 14,
                 offset: const Offset(0, 8),
               ),
@@ -87,11 +111,13 @@ class KubusGlassIconButton extends StatelessWidget {
             padding: EdgeInsets.zero,
             margin: EdgeInsets.zero,
             borderRadius: radius,
-            blurSigma: KubusGlassEffects.blurSigmaLight,
+            blurSigma: idleStyle.blurSigma,
             showBorder: false,
             backgroundColor: active ? selectedTint : idleTint,
+            fallbackMinOpacity: idleStyle.fallbackMinOpacity,
             child: Center(
-              child: Icon(icon, size: resolvedIconSize, color: resolvedIconColor),
+              child:
+                  Icon(icon, size: resolvedIconSize, color: resolvedIconColor),
             ),
           ),
         ),

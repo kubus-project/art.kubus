@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../../../utils/design_tokens.dart';
 
 import '../../../config/config.dart';
 import '../../../l10n/app_localizations.dart';
@@ -55,7 +55,7 @@ class _NFTGalleryState extends State<NFTGallery> {
         scrolledUnderElevation: 0,
         title: Text(
           l10n.walletHomeActionNfts,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 24,
             fontWeight: FontWeight.bold,
             color: scheme.onSurface,
@@ -219,7 +219,7 @@ class _NFTGalleryState extends State<NFTGallery> {
                       ),
                       child: Text(
                         collectible.status.name.toUpperCase(),
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                           color: scheme.onSurface,
@@ -240,7 +240,7 @@ class _NFTGalleryState extends State<NFTGallery> {
                 children: [
                   Text(
                     title,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: isSmallScreen ? 13 : 15,
                       fontWeight: FontWeight.w700,
                       color: scheme.onSurface,
@@ -263,7 +263,7 @@ class _NFTGalleryState extends State<NFTGallery> {
                       Expanded(
                         child: Text(
                           'Token #${collectible.tokenId}',
-                          style: GoogleFonts.inter(
+                          style: KubusTypography.inter(
                             fontSize: 12,
                             color: scheme.onSurface.withValues(alpha: 0.7),
                           ),
@@ -277,7 +277,7 @@ class _NFTGalleryState extends State<NFTGallery> {
                     (collectible.transactionHash ?? '').isNotEmpty
                         ? 'Tx: ${_shortenHash(collectible.transactionHash ?? '')}'
                         : 'Tx: —',
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 11,
                       color: scheme.onSurface.withValues(alpha: 0.55),
                     ),
@@ -321,3 +321,4 @@ class _NFTGalleryState extends State<NFTGallery> {
     return '${value.substring(0, 6)}…${value.substring(value.length - 6)}';
   }
 }
+

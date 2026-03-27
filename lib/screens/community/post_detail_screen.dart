@@ -3,7 +3,7 @@ import 'package:art_kubus/widgets/glass_components.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../../utils/design_tokens.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../utils/kubus_color_roles.dart';
@@ -361,7 +361,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(l10n.commonLikes, style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
+                    Text(l10n.commonLikes, style: KubusTypography.inter(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
                     IconButton(icon: const Icon(Icons.close), color: theme.colorScheme.onSurface, onPressed: () => Navigator.of(sheetContext).pop()),
                   ],
                 ),
@@ -376,8 +376,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     if (snapshot.hasError) {
                       return Center(
                         child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Text(l10n.postDetailLoadLikesFailedMessage, style: GoogleFonts.inter(color: theme.colorScheme.onSurface)),
+                          padding: const EdgeInsets.all(KubusSpacing.lg),
+                          child: Text(l10n.postDetailLoadLikesFailedMessage, style: KubusTypography.inter(color: theme.colorScheme.onSurface)),
                         ),
                       );
                     }
@@ -385,7 +385,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     if (likes.isEmpty) {
                       return Center(
                       child: Padding(
-                        padding: const EdgeInsets.all(24),
+                        padding: const EdgeInsets.all(KubusSpacing.lg),
                         child: EmptyStateCard(
                           icon: Icons.favorite_border,
                           title: l10n.postDetailNoLikesTitle,
@@ -407,8 +407,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         return ListTile(
                           contentPadding: EdgeInsets.zero,
                           leading: AvatarWidget(wallet: user.walletAddress ?? user.userId, avatarUrl: user.avatarUrl, radius: 20, enableProfileNavigation: true),
-                          title: Text(user.displayName.isNotEmpty ? user.displayName : l10n.commonUnnamed, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-                          subtitle: subtitleParts.isNotEmpty ? Text(subtitleParts.join(' • '), style: GoogleFonts.inter(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.6))) : null,
+                          title: Text(user.displayName.isNotEmpty ? user.displayName : l10n.commonUnnamed, style: KubusTypography.inter(fontWeight: FontWeight.w600)),
+                          subtitle: subtitleParts.isNotEmpty ? Text(subtitleParts.join(' • '), style: KubusTypography.inter(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.6))) : null,
                         );
                       },
                     );
@@ -460,7 +460,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   children: [
                     Text(
                       l10n.communityPostLikesTitle,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: theme.colorScheme.onSurface,
@@ -484,10 +484,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     if (snapshot.hasError) {
                       return Center(
                         child: Padding(
-                          padding: const EdgeInsets.all(24),
+                          padding: const EdgeInsets.all(KubusSpacing.lg),
                           child: Text(
                             l10n.postDetailLoadLikesFailedMessage,
-                            style: GoogleFonts.inter(
+                            style: KubusTypography.inter(
                               color: theme.colorScheme.onSurface,
                             ),
                           ),
@@ -498,7 +498,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     if (likes.isEmpty) {
                       return Center(
                         child: Padding(
-                          padding: const EdgeInsets.all(24),
+                          padding: const EdgeInsets.all(KubusSpacing.lg),
                           child: EmptyStateCard(
                             icon: Icons.favorite_border,
                             title: l10n.postDetailNoLikesTitle,
@@ -538,12 +538,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             user.displayName.isNotEmpty
                                 ? user.displayName
                                 : l10n.commonUnnamed,
-                            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                            style: KubusTypography.inter(fontWeight: FontWeight.w600),
                           ),
                           subtitle: subtitleParts.isNotEmpty
                               ? Text(
                                     subtitleParts.join(' • '),
-                                  style: GoogleFonts.inter(
+                                  style: KubusTypography.inter(
                                     fontSize: 12,
                                     color: theme.colorScheme.onSurface
                                         .withValues(alpha: 0.6),
@@ -601,7 +601,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 children: [
                   Text(
                     l10n.communityRepostedByTitle,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: theme.colorScheme.onSurface,
@@ -626,7 +626,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     return Center(
                       child: Text(
                         l10n.communityRepostsLoadFailedMessage,
-                        style: GoogleFonts.inter(),
+                        style: KubusTypography.inter(),
                       ),
                     );
                   }
@@ -679,7 +679,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         ),
                         title: Text(
                           formatted.primary,
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                          style: KubusTypography.inter(fontWeight: FontWeight.w600),
                         ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -687,7 +687,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             if (subtitle != null)
                               Text(
                                 subtitle,
-                                style: GoogleFonts.inter(fontSize: 12),
+                                style: KubusTypography.inter(fontSize: 12),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -695,7 +695,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               const SizedBox(height: 4),
                               Text(
                                 comment,
-                                style: GoogleFonts.inter(fontSize: 12),
+                                style: KubusTypography.inter(fontSize: 12),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -705,7 +705,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         trailing: createdAt != null
                             ? Text(
                                 _timeAgo(createdAt),
-                                style: GoogleFonts.inter(
+                                style: KubusTypography.inter(
                                   fontSize: 11,
                                   color: theme.colorScheme.onSurface
                                       .withValues(alpha: 0.5),
@@ -757,14 +757,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       builder: (dialogContext) => KubusAlertDialog(
         title: Text(
           l10n.postDetailReportPostDialogTitle,
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+          style: KubusTypography.inter(fontWeight: FontWeight.bold),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               l10n.postDetailReportPostDialogQuestion,
-              style: GoogleFonts.inter(),
+              style: KubusTypography.inter(),
             ),
             const SizedBox(height: 16),
             _buildPostReportOption(dialogContext, post, l10n.userProfileReportReasonSpam),
@@ -789,7 +789,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     String reason,
   ) {
     return ListTile(
-      title: Text(reason, style: GoogleFonts.inter()),
+      title: Text(reason, style: KubusTypography.inter()),
       onTap: () async {
         Navigator.pop(dialogContext);
         try {
@@ -892,7 +892,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       children: [
                         Text(
                           l10n.postDetailEditPostTitle,
-                          style: GoogleFonts.inter(
+                          style: KubusTypography.inter(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: theme.colorScheme.onSurface,
@@ -912,7 +912,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       child: TextField(
                         controller: controller,
                         maxLines: null,
-                        style: GoogleFonts.inter(),
+                        style: KubusTypography.inter(),
                         decoration: InputDecoration(
                           hintText: l10n.communityComposerTextHint,
                           border: OutlineInputBorder(
@@ -994,7 +994,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                   children: [
                                     Text(
                                       title,
-                                      style: GoogleFonts.inter(
+                                      style: KubusTypography.inter(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -1002,7 +1002,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                     const SizedBox(height: 4),
                                     Text(
                                       label,
-                                      style: GoogleFonts.inter(
+                                      style: KubusTypography.inter(
                                         fontSize: 12,
                                         color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                                       ),
@@ -1183,11 +1183,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         builder: (context, setDialogState) => KubusAlertDialog(
           title: Text(
             l10n.postDetailDeletePostTitle,
-            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+            style: KubusTypography.inter(fontWeight: FontWeight.bold),
           ),
           content: Text(
             l10n.postDetailDeletePostBody,
-            style: GoogleFonts.inter(),
+            style: KubusTypography.inter(),
           ),
           actions: [
             TextButton(
@@ -1289,12 +1289,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(AppLocalizations.of(context)!.postDetailRepostTitle, style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
+                    Text(AppLocalizations.of(context)!.postDetailRepostTitle, style: KubusTypography.inter(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
                     Row(
                       children: [
                         TextButton(
                           onPressed: () => Navigator.pop(sheetContext),
-                          child: Text(AppLocalizations.of(context)!.commonCancel, style: GoogleFonts.inter()),
+                          child: Text(AppLocalizations.of(context)!.commonCancel, style: KubusTypography.inter()),
                         ),
                         const SizedBox(width: 8),
                         ElevatedButton(
@@ -1334,7 +1334,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               }
                             }
                           },
-                          child: Text(AppLocalizations.of(context)!.postDetailRepostButton, style: GoogleFonts.inter()),
+                          child: Text(AppLocalizations.of(context)!.postDetailRepostButton, style: KubusTypography.inter()),
                         ),
                       ],
                     ),
@@ -1344,7 +1344,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
               const Divider(),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(KubusSpacing.lg),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1361,7 +1361,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       const SizedBox(height: 16),
                       Text(
                         AppLocalizations.of(context)!.postDetailRepostingLabel,
-                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
+                        style: KubusTypography.inter(fontSize: 12, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
                       ),
                       const SizedBox(height: 8),
                       Container(
@@ -1388,7 +1388,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                             fit: FlexFit.loose,
                                             child: Text(
                                               _post!.authorName,
-                                              style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                                              style: KubusTypography.inter(fontWeight: FontWeight.w600, fontSize: 14),
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
@@ -1399,14 +1399,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                           ),
                                         ],
                                       ),
-                                      Text(_timeAgo(_post!.timestamp), style: GoogleFonts.inter(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
+                                      Text(_timeAgo(_post!.timestamp), style: KubusTypography.inter(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
                                     ],
                                   ),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 8),
-                            Text(_post!.content, style: GoogleFonts.inter(fontSize: 14), maxLines: 5, overflow: TextOverflow.ellipsis),
+                            Text(_post!.content, style: KubusTypography.inter(fontSize: 14), maxLines: 5, overflow: TextOverflow.ellipsis),
                             if (_post!.imageUrl != null && _post!.imageUrl!.isNotEmpty) ...[
                               const SizedBox(height: 8),
                               ClipRRect(
@@ -1471,12 +1471,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: widget.onClose ?? () => Navigator.of(context).maybePop(),
         ),
-        title: Text(l10n.commonPost, style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+        title: Text(l10n.commonPost, style: KubusTypography.inter(fontWeight: FontWeight.bold)),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(child: Text(_error!, style: GoogleFonts.inter()))
+              ? Center(child: Text(_error!, style: KubusTypography.inter()))
               : SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -1522,12 +1522,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             children: [
                               Text(
                                 l10n.commonComments,
-                                style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                                style: KubusTypography.inter(fontWeight: FontWeight.bold),
                               ),
                               const Spacer(),
                               Text(
                                 l10n.commonCommentsCount(count),
-                                style: GoogleFonts.inter(
+                                style: KubusTypography.inter(
                                   fontSize: 12,
                                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                 ),
@@ -1565,13 +1565,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(l10n.commentHistoryCurrentLabel, style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                                        Text(l10n.commentHistoryCurrentLabel, style: KubusTypography.inter(fontWeight: FontWeight.w700)),
                                         const SizedBox(height: 8),
-                                        SelectableText(c.content, style: GoogleFonts.inter()),
+                                        SelectableText(c.content, style: KubusTypography.inter()),
                                         const SizedBox(height: 16),
-                                        Text(l10n.commentHistoryOriginalLabel, style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                                        Text(l10n.commentHistoryOriginalLabel, style: KubusTypography.inter(fontWeight: FontWeight.w700)),
                                         const SizedBox(height: 8),
-                                        SelectableText(c.originalContent ?? '', style: GoogleFonts.inter()),
+                                        SelectableText(c.originalContent ?? '', style: KubusTypography.inter()),
                                       ],
                                     ),
                                   ),
@@ -1702,7 +1702,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               children: [
                                 Text(
                                   _timeAgo(c.timestamp),
-                                  style: GoogleFonts.inter(
+                                  style: KubusTypography.inter(
                                     fontSize: 11,
                                     color: scheme.onSurface.withValues(alpha: 0.55),
                                   ),
@@ -1711,7 +1711,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                   const SizedBox(width: 8),
                                   Text(
                                     l10n.commonEditedTag,
-                                    style: GoogleFonts.inter(
+                                    style: KubusTypography.inter(
                                       fontSize: 11,
                                       color: scheme.onSurface.withValues(alpha: 0.55),
                                     ),
@@ -1733,7 +1733,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                     child: avatar == null
                                         ? Text(
                                             c.authorName.isNotEmpty ? c.authorName[0] : '?',
-                                            style: GoogleFonts.inter(fontSize: isReply ? 12 : 14),
+                                            style: KubusTypography.inter(fontSize: isReply ? 12 : 14),
                                           )
                                         : null,
                                   ),
@@ -1747,7 +1747,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                             Expanded(
                                               child: Text(
                                                 c.authorName,
-                                                style: GoogleFonts.inter(
+                                                style: KubusTypography.inter(
                                                   fontWeight: FontWeight.w600,
                                                   fontSize: isReply ? 13 : 14,
                                                 ),
@@ -1778,7 +1778,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                           onTap: (c.isEdited && c.originalContent != null) ? () => showHistory(c) : null,
                                           child: Text(
                                             c.content,
-                                            style: GoogleFonts.inter(fontSize: isReply ? 14 : 14),
+                                            style: KubusTypography.inter(fontSize: isReply ? 14 : 14),
                                           ),
                                         ),
                                         const SizedBox(height: 6),
@@ -1824,7 +1824,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                                 padding: const EdgeInsets.symmetric(horizontal: 6.0),
                                                 child: Text(
                                                   '${c.likeCount}',
-                                                  style: GoogleFonts.inter(
+                                                  style: KubusTypography.inter(
                                                     fontSize: 12,
                                                     color: scheme.onSurface.withValues(alpha: 0.6),
                                                   ),
@@ -1844,7 +1844,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                                 );
                                                 FocusScope.of(context).requestFocus(_commentFocusNode);
                                               },
-                                              child: Text(l10n.commonReply, style: GoogleFonts.inter(fontSize: 12)),
+                                              child: Text(l10n.commonReply, style: KubusTypography.inter(fontSize: 12)),
                                             ),
                                           ],
                                         ),
@@ -1911,7 +1911,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               Expanded(
                                 child: Text(
                                   l10n.postDetailReplyingToLabel(_replyToAuthorName!),
-                                  style: GoogleFonts.inter(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
+                                  style: KubusTypography.inter(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
                                 ),
                               ),
                               IconButton(icon: const Icon(Icons.close), onPressed: () { setState(() { _replyToAuthorName = null; _replyToCommentId = null; _commentController.clear(); }); }),
@@ -1941,3 +1941,5 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     );
   }
 }
+
+

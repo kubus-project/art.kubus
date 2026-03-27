@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
@@ -146,9 +145,7 @@ class _GovernanceHubState extends State<GovernanceHub>
             Flexible(
               child: Text(
                 l10n.daoHubAppBarTitle,
-                style: GoogleFonts.inter(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                style: KubusTextStyles.screenTitle.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
                 overflow: TextOverflow.ellipsis,
@@ -269,9 +266,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                           children: [
                             Text(
                               'art.kubus DAO',
-                              style: GoogleFonts.inter(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                              style: KubusTextStyles.heroTitle.copyWith(
                                 color: Colors.white,
                               ),
                             ),
@@ -284,8 +279,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                         const SizedBox(height: 4),
                         Text(
                           l10n.daoHubHeaderSubtitle,
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
+                          style: KubusTextStyles.heroSubtitle.copyWith(
                             color: Colors.white.withValues(alpha: 0.9),
                           ),
                           maxLines: 2,
@@ -354,17 +348,13 @@ class _GovernanceHubState extends State<GovernanceHub>
           children: [
             Text(
               value,
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: scheme.onSurface,
-              ),
+              style:
+                  KubusTextStyles.statValue.copyWith(color: scheme.onSurface),
             ),
             const SizedBox(height: 4),
             Text(
               label,
-              style: GoogleFonts.inter(
-                fontSize: 10,
+              style: KubusTextStyles.statLabel.copyWith(
                 color: scheme.onSurface.withValues(alpha: 0.8),
               ),
               textAlign: TextAlign.center,
@@ -536,15 +526,13 @@ class _GovernanceHubState extends State<GovernanceHub>
       children: [
         Text(
           l10n.daoReviewQueueTitle,
-          style: GoogleFonts.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
+          style: KubusTextStyles.sectionTitle.copyWith(
             color: colorScheme.onSurface,
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
         ...reviews.map((review) => _buildReviewCard(review, themeProvider)),
-        const SizedBox(height: 12),
+        const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
       ],
     );
   }
@@ -583,8 +571,8 @@ class _GovernanceHubState extends State<GovernanceHub>
     final isActionInFlight = _reviewActionId == review.id;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: KubusSpacing.sm + KubusSpacing.xs),
+      padding: const EdgeInsets.all(KubusSpacing.md - KubusSpacing.xxs),
       decoration: BoxDecoration(
         color: colorScheme.onPrimary.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(12),
@@ -606,7 +594,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                     ? Icon(Icons.person, color: _daoAccent)
                     : null,
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: KubusSpacing.sm + KubusSpacing.xxs),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -614,17 +602,15 @@ class _GovernanceHubState extends State<GovernanceHub>
                     Text(
                       review.applicantProfile?['displayName']?.toString() ??
                           review.walletAddress,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
+                      style: KubusTextStyles.navLabel.copyWith(
                         color: colorScheme.onSurface,
+                        fontWeight: FontWeight.w700,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       review.portfolioUrl,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
+                      style: KubusTextStyles.navMetaLabel.copyWith(
                         color: colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                       overflow: TextOverflow.ellipsis,
@@ -640,36 +626,33 @@ class _GovernanceHubState extends State<GovernanceHub>
                 ),
                 child: Text(
                   review.status.toUpperCase(),
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
+                  style: KubusTextStyles.compactBadge.copyWith(
                     color: statusColor,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: KubusSpacing.sm),
           Text(
             review.medium.isNotEmpty
                 ? review.medium
                 : l10n.daoReviewMediumNotProvided,
-            style: GoogleFonts.inter(
-              fontSize: 12,
+            style: KubusTextStyles.navMetaLabel.copyWith(
               color: colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: KubusSpacing.sm),
           Text(
             review.statement,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.inter(
-              fontSize: 12,
+            style: KubusTextStyles.detailBody.copyWith(
+              fontSize: KubusChromeMetrics.navMetaLabel,
               color: colorScheme.onSurface.withValues(alpha: 0.8),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: KubusSpacing.sm + KubusSpacing.xxs),
           Row(
             children: [
               ElevatedButton.icon(
@@ -686,27 +669,26 @@ class _GovernanceHubState extends State<GovernanceHub>
                 ),
                 label: Text(
                   l10n.daoReviewViewDetailsButton,
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.w600,
+                  style: KubusTextStyles.actionTileTitle.copyWith(
                     color: colorScheme.onSurface,
-                    fontSize: 12,
+                    fontSize: KubusChromeMetrics.navMetaLabel,
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: KubusSpacing.sm + KubusSpacing.xxs),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       voteHelperText,
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
+                      style: KubusTextStyles.navMetaLabel.copyWith(
+                        fontSize: KubusChromeMetrics.navMetaLabel - 1,
                         color: colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                     if (canModerate) ...[
-                      const SizedBox(height: 8),
+                      const SizedBox(height: KubusSpacing.sm),
                       Row(
                         children: [
                           Expanded(
@@ -737,13 +719,16 @@ class _GovernanceHubState extends State<GovernanceHub>
                                     )
                                   : Text(
                                       l10n.daoModerationApproveLabel,
-                                      style: GoogleFonts.inter(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 12),
+                                      style: KubusTextStyles.actionTileTitle
+                                          .copyWith(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize:
+                                            KubusChromeMetrics.navMetaLabel,
+                                      ),
                                     ),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: KubusSpacing.sm),
                           Expanded(
                             child: OutlinedButton(
                               onPressed: isActionInFlight
@@ -772,9 +757,9 @@ class _GovernanceHubState extends State<GovernanceHub>
                                     )
                                   : Text(
                                       l10n.daoModerationRejectLabel,
-                                      style: GoogleFonts.inter(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 12),
+                                      style: KubusTextStyles.navMetaLabel.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                      ),
                                     ),
                             ),
                           ),
@@ -808,7 +793,9 @@ class _GovernanceHubState extends State<GovernanceHub>
         backgroundColor: colorScheme.surfaceContainerHighest,
         title: Text(
           l10n.daoModerationDecisionDialogTitle(decisionLabel),
-          style: GoogleFonts.inter(color: colorScheme.onSurface),
+          style: KubusTextStyles.sectionTitle.copyWith(
+            color: colorScheme.onSurface,
+          ),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -816,8 +803,9 @@ class _GovernanceHubState extends State<GovernanceHub>
           children: [
             Text(
               l10n.daoModerationDecisionDialogDescription,
-              style: GoogleFonts.inter(
-                  color: colorScheme.onSurface.withValues(alpha: 0.75)),
+              style: KubusTextStyles.sectionSubtitle.copyWith(
+                color: colorScheme.onSurface.withValues(alpha: 0.75),
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -1077,9 +1065,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                 ),
                 child: Text(
                   proposal.type.name.toUpperCase(),
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
+                  style: KubusTextStyles.compactBadge.copyWith(
                     color: color,
                   ),
                 ),
@@ -1087,8 +1073,7 @@ class _GovernanceHubState extends State<GovernanceHub>
               const Spacer(),
               Text(
                 proposal.timeLeft,
-                style: GoogleFonts.inter(
-                  fontSize: 12,
+                style: KubusTextStyles.navMetaLabel.copyWith(
                   color: Theme.of(context)
                       .colorScheme
                       .onSurface
@@ -1100,17 +1085,14 @@ class _GovernanceHubState extends State<GovernanceHub>
           const SizedBox(height: 12),
           Text(
             proposal.title,
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+            style: KubusTextStyles.sectionTitle.copyWith(
               color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             proposal.description,
-            style: GoogleFonts.inter(
-              fontSize: 14,
+            style: KubusTextStyles.sectionSubtitle.copyWith(
               color: Theme.of(context)
                   .colorScheme
                   .onSurface
@@ -1129,8 +1111,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                       totalVotes,
                       supportPct.toStringAsFixed(1),
                     ),
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
+                    style: KubusTextStyles.navMetaLabel.copyWith(
                       color: Theme.of(context)
                           .colorScheme
                           .onSurface
@@ -1155,8 +1136,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                   const SizedBox(height: 6),
                   Text(
                     quorumText,
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
+                    style: KubusTextStyles.compactBadge.copyWith(
                       color: Theme.of(context)
                           .colorScheme
                           .onSurface
@@ -1172,20 +1152,23 @@ class _GovernanceHubState extends State<GovernanceHub>
                   Text(
                     AppLocalizations.of(context)!
                         .daoProposalVotesYesLabel(proposal.yesVotes.toString()),
-                    style: GoogleFonts.inter(
-                        fontSize: 12, color: Colors.grey[400]),
+                    style: KubusTextStyles.navMetaLabel.copyWith(
+                      color: Colors.grey[400],
+                    ),
                   ),
                   Text(
                     AppLocalizations.of(context)!
                         .daoProposalVotesNoLabel(proposal.noVotes.toString()),
-                    style: GoogleFonts.inter(
-                        fontSize: 12, color: Colors.grey[400]),
+                    style: KubusTextStyles.navMetaLabel.copyWith(
+                      color: Colors.grey[400],
+                    ),
                   ),
                   Text(
                     AppLocalizations.of(context)!.daoProposalVotesAbstainLabel(
                         proposal.abstainVotes.toString()),
-                    style: GoogleFonts.inter(
-                        fontSize: 12, color: Colors.grey[400]),
+                    style: KubusTextStyles.navMetaLabel.copyWith(
+                      color: Colors.grey[400],
+                    ),
                   ),
                 ],
               ),
@@ -1312,9 +1295,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                         Expanded(
                           child: Text(
                             title,
-                            style: GoogleFonts.inter(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                            style: KubusTextStyles.sectionTitle.copyWith(
                               color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
@@ -1331,16 +1312,14 @@ class _GovernanceHubState extends State<GovernanceHub>
                           ),
                           child: Text(
                             resultLabel,
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
+                            style: KubusTextStyles.compactBadge.copyWith(
                               color: accent.withValues(alpha: 0.95),
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: KubusSpacing.md),
                     Row(
                       children: [
                         _buildHistoryInfo(
@@ -1377,16 +1356,13 @@ class _GovernanceHubState extends State<GovernanceHub>
       children: [
         Text(
           label,
-          style: GoogleFonts.inter(
-            fontSize: 12,
+          style: KubusTextStyles.navMetaLabel.copyWith(
             color: scheme.onSurface.withValues(alpha: 0.65),
           ),
         ),
         Text(
           value,
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
+          style: KubusTextStyles.navLabel.copyWith(
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
@@ -1406,17 +1382,14 @@ class _GovernanceHubState extends State<GovernanceHub>
           children: [
             Text(
               l10n.daoCreateProposalTitle,
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+              style: KubusTextStyles.screenTitle.copyWith(
                 color: scheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               l10n.daoCreateProposalSubtitle,
-              style: GoogleFonts.inter(
-                fontSize: 14,
+              style: KubusTextStyles.screenSubtitle.copyWith(
                 color: scheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
@@ -1459,8 +1432,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                 ),
                 child: Text(
                   l10n.daoCreateProposalSubmitButtonLabel,
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
+                  style: KubusTextStyles.navLabel.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -1485,9 +1457,7 @@ class _GovernanceHubState extends State<GovernanceHub>
       children: [
         Text(
           label,
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
+          style: KubusTextStyles.navLabel.copyWith(
             color: scheme.onSurface,
           ),
         ),
@@ -1540,9 +1510,7 @@ class _GovernanceHubState extends State<GovernanceHub>
       children: [
         Text(
           l10n.daoProposalCategoryLabel,
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
+          style: KubusTextStyles.navLabel.copyWith(
             color: scheme.onSurface,
           ),
         ),
@@ -1615,9 +1583,7 @@ class _GovernanceHubState extends State<GovernanceHub>
               const SizedBox(width: 8),
               Text(
                 l10n.daoProposalRequirementsTitle,
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+                style: KubusTextStyles.navLabel.copyWith(
                   color: scheme.onSurface,
                 ),
               ),
@@ -1650,8 +1616,7 @@ class _GovernanceHubState extends State<GovernanceHub>
           Expanded(
             child: Text(
               text,
-              style: GoogleFonts.inter(
-                fontSize: 12,
+              style: KubusTextStyles.navMetaLabel.copyWith(
                 color: scheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
@@ -1762,17 +1727,14 @@ class _GovernanceHubState extends State<GovernanceHub>
           children: [
             Text(
               l10n.daoTreasuryTitle,
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+              style: KubusTextStyles.screenTitle.copyWith(
                 color: scheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               l10n.daoTreasurySubtitle,
-              style: GoogleFonts.inter(
-                fontSize: 14,
+              style: KubusTextStyles.screenSubtitle.copyWith(
                 color: scheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
@@ -1804,7 +1766,7 @@ class _GovernanceHubState extends State<GovernanceHub>
             .fold<double>(0, (sum, tx) => sum + tx.amount.abs());
         const treasuryColor = AppColorUtils.amberAccent;
         return Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
@@ -1829,8 +1791,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                       children: [
                         Text(
                           l10n.daoTreasuryTotalValueLabel,
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
+                          style: KubusTextStyles.statLabel.copyWith(
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurface
@@ -1839,9 +1800,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                         ),
                         Text(
                           '$treasuryAmountDisplay KUB8',
-                          style: GoogleFonts.inter(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
+                          style: KubusTextStyles.statValue.copyWith(
                             color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
@@ -1881,27 +1840,24 @@ class _GovernanceHubState extends State<GovernanceHub>
 
   Widget _buildTreasuryStatCard(String label, String value, IconData icon) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(KubusSpacing.md),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
       ),
       child: Column(
         children: [
           Icon(icon, color: Theme.of(context).colorScheme.onSurface, size: 20),
-          const SizedBox(height: 8),
+          const SizedBox(height: KubusSpacing.sm),
           Text(
             value,
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+            style: KubusTextStyles.sectionTitle.copyWith(
               color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           Text(
             label,
-            style: GoogleFonts.inter(
-              fontSize: 10,
+            style: KubusTextStyles.compactBadge.copyWith(
               color: Theme.of(context)
                   .colorScheme
                   .onSurface
@@ -1925,9 +1881,7 @@ class _GovernanceHubState extends State<GovernanceHub>
           children: [
             Text(
               l10n.daoRecentTransactionsTitle,
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+              style: KubusTextStyles.sectionTitle.copyWith(
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
@@ -1987,7 +1941,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                             size: 20,
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        const SizedBox(width: KubusSpacing.lg),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1998,17 +1952,14 @@ class _GovernanceHubState extends State<GovernanceHub>
                                     .split('.')
                                     .last
                                     .toUpperCase(),
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
+                                style: KubusTextStyles.navLabel.copyWith(
                                   color:
                                       Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                               Text(
                                 tx.description,
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
+                                style: KubusTextStyles.navMetaLabel.copyWith(
                                   color: Theme.of(context)
                                       .colorScheme
                                       .onSurface
@@ -2023,17 +1974,17 @@ class _GovernanceHubState extends State<GovernanceHub>
                           children: [
                             Text(
                               '${tx.amount.toStringAsFixed(0)} ${tx.currency}',
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
+                              style: KubusTextStyles.navLabel.copyWith(
                                 color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
                             Text(
                               _formatDate(tx.timestamp),
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                color: Colors.grey[400],
+                              style: KubusTextStyles.navMetaLabel.copyWith(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.6),
                               ),
                             ),
                           ],
@@ -2084,9 +2035,7 @@ class _GovernanceHubState extends State<GovernanceHub>
               children: [
                 Text(
                   l10n.daoTreasuryProposalsTitle,
-                  style: GoogleFonts.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                  style: KubusTextStyles.screenTitle.copyWith(
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
@@ -2121,17 +2070,14 @@ class _GovernanceHubState extends State<GovernanceHub>
           children: [
             Text(
               l10n.daoVoteDelegationTitle,
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+              style: KubusTextStyles.screenTitle.copyWith(
                 color: scheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               l10n.daoVoteDelegationSubtitle,
-              style: GoogleFonts.inter(
-                fontSize: 14,
+              style: KubusTextStyles.screenSubtitle.copyWith(
                 color: scheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
@@ -2151,10 +2097,10 @@ class _GovernanceHubState extends State<GovernanceHub>
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(color: scheme.outline.withValues(alpha: 0.25)),
       ),
       child: Column(
@@ -2166,9 +2112,7 @@ class _GovernanceHubState extends State<GovernanceHub>
               const SizedBox(width: 12),
               Text(
                 l10n.daoDelegationCurrentStatusTitle,
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                style: KubusTextStyles.sectionTitle.copyWith(
                   color: scheme.onSurface,
                 ),
               ),
@@ -2212,17 +2156,14 @@ class _GovernanceHubState extends State<GovernanceHub>
       children: [
         Text(
           label,
-          style: GoogleFonts.inter(
-            fontSize: 12,
+          style: KubusTextStyles.navMetaLabel.copyWith(
             color: scheme.onSurface.withValues(alpha: 0.65),
           ),
         ),
         const SizedBox(height: 4),
         Text(
           value,
-          style: GoogleFonts.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
+          style: KubusTextStyles.sectionTitle.copyWith(
             color: scheme.onSurface,
           ),
         ),
@@ -2242,9 +2183,7 @@ class _GovernanceHubState extends State<GovernanceHub>
           children: [
             Text(
               l10n.daoTopDelegatesTitle,
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+              style: KubusTextStyles.sectionTitle.copyWith(
                 color: scheme.onSurface,
               ),
             ),
@@ -2261,14 +2200,16 @@ class _GovernanceHubState extends State<GovernanceHub>
               ...delegates.map((delegate) => GestureDetector(
                     onTap: () => _delegateVote(delegate.name),
                     child: Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(16),
+                      margin: const EdgeInsets.only(bottom: KubusSpacing.md),
+                      padding: const EdgeInsets.all(KubusSpacing.lg),
                       decoration: BoxDecoration(
                         color: Theme.of(context)
                             .colorScheme
                             .surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey[800]!),
+                        border: Border.all(
+                          color: scheme.outline.withValues(alpha: 0.25),
+                        ),
                       ),
                       child: Row(
                         children: [
@@ -2282,9 +2223,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                             child: Center(
                               child: Text(
                                 delegate.name.substring(0, 1).toUpperCase(),
-                                style: GoogleFonts.inter(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                                style: KubusTextStyles.sectionTitle.copyWith(
                                   color:
                                       Theme.of(context).colorScheme.onSurface,
                                 ),
@@ -2298,17 +2237,14 @@ class _GovernanceHubState extends State<GovernanceHub>
                               children: [
                                 Text(
                                   delegate.name,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
+                                  style: KubusTextStyles.actionTileTitle.copyWith(
                                     color:
                                         Theme.of(context).colorScheme.onSurface,
                                   ),
                                 ),
                                 Text(
                                   '${l10n.daoDelegationDelegatorsCountLabel(delegate.delegatorCount)} • ${l10n.daoDelegationParticipationRateLabel((delegate.participationRate * 100).toStringAsFixed(0))}',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
+                                  style: KubusTextStyles.navMetaLabel.copyWith(
                                     color:
                                         scheme.onSurface.withValues(alpha: 0.7),
                                   ),
@@ -2321,9 +2257,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                             children: [
                               Text(
                                 '${(delegate.votingPower / 1000).toStringAsFixed(1)}K KUB8',
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
+                                style: KubusTextStyles.actionTileTitle.copyWith(
                                   color: scheme.primary,
                                 ),
                               ),
@@ -2336,18 +2270,15 @@ class _GovernanceHubState extends State<GovernanceHub>
                                 ),
                                 child: Text(
                                   l10n.daoDelegateActiveLabel,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w500,
+                                  style: KubusTextStyles.compactBadge.copyWith(
                                     color: scheme.primary,
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 4),
+                              const SizedBox(height: KubusSpacing.xs),
                               Text(
                                 l10n.daoTapToDelegateHint,
-                                style: GoogleFonts.inter(
-                                  fontSize: 10,
+                                style: KubusTextStyles.compactBadge.copyWith(
                                   color:
                                       scheme.onSurface.withValues(alpha: 0.6),
                                   fontStyle: FontStyle.italic,
@@ -2373,17 +2304,14 @@ class _GovernanceHubState extends State<GovernanceHub>
       children: [
         Text(
           l10n.daoDelegationActionsTitle,
-          style: GoogleFonts.inter(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+          style: KubusTextStyles.sectionTitle.copyWith(
             color: scheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),
         Text(
           l10n.daoDelegationActionsSubtitle,
-          style: GoogleFonts.inter(
-            fontSize: 14,
+          style: KubusTextStyles.sectionSubtitle.copyWith(
             color: scheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
@@ -2470,7 +2398,7 @@ class _GovernanceHubState extends State<GovernanceHub>
             child: Column(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(KubusSpacing.xl),
                   child: Column(
                     children: [
                       Container(
@@ -2484,9 +2412,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                       const SizedBox(height: 16),
                       Text(
                         l10n.daoDelegationSelectDelegateTitle,
-                        style: GoogleFonts.inter(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                        style: KubusTextStyles.sheetTitle.copyWith(
                           color: scheme.onSurface,
                         ),
                       ),
@@ -2494,8 +2420,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                       Text(
                         l10n.daoDelegationSelectDelegateSubtitle,
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
+                        style: KubusTextStyles.sheetSubtitle.copyWith(
                           color: scheme.onSurface.withValues(alpha: 0.7),
                         ),
                       ),
@@ -2542,9 +2467,8 @@ class _GovernanceHubState extends State<GovernanceHub>
                                         delegate.name
                                             .substring(0, 1)
                                             .toUpperCase(),
-                                        style: GoogleFonts.inter(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
+                                        style: KubusTextStyles.sectionTitle
+                                            .copyWith(
                                           color: Theme.of(context)
                                               .colorScheme
                                               .onSurface,
@@ -2560,9 +2484,8 @@ class _GovernanceHubState extends State<GovernanceHub>
                                       children: [
                                         Text(
                                           delegate.name,
-                                          style: GoogleFonts.inter(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
+                                          style: KubusTextStyles.sectionTitle
+                                              .copyWith(
                                             color: Theme.of(context)
                                                 .colorScheme
                                                 .onSurface,
@@ -2570,8 +2493,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                                         ),
                                         Text(
                                           '${l10n.daoDelegationDelegatorsCountLabel(delegate.delegatorCount)} • ${l10n.daoDelegationParticipationRateLabel((delegate.participationRate * 100).toStringAsFixed(0))}',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 12,
+                                          style: KubusTextStyles.navMetaLabel.copyWith(
                                             color: scheme.onSurface
                                                 .withValues(alpha: 0.7),
                                           ),
@@ -2581,9 +2503,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                                   ),
                                   Text(
                                     '${(delegate.votingPower / 1000).toStringAsFixed(1)}K KUB8',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
+                                    style: KubusTextStyles.actionTileTitle.copyWith(
                                       color: scheme.primary,
                                     ),
                                   ),
@@ -2622,7 +2542,7 @@ class _GovernanceHubState extends State<GovernanceHub>
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title: Text(
           l10n.daoDelegateVotingPowerDialogTitle,
-          style: GoogleFonts.inter(color: scheme.onSurface),
+          style: KubusTextStyles.sheetTitle.copyWith(color: scheme.onSurface),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -2631,15 +2551,16 @@ class _GovernanceHubState extends State<GovernanceHub>
             Text(
               l10n.daoDelegateVotingPowerDialogBody(
                   votingPowerDisplay, delegateName),
-              style: GoogleFonts.inter(
-                  color: scheme.onSurface.withValues(alpha: 0.7)),
+              style: KubusTextStyles.detailBody.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.7),
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: KubusSpacing.lg),
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(KubusSpacing.md),
               decoration: BoxDecoration(
                 color: scheme.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
                 border: Border.all(color: scheme.primary),
               ),
               child: Column(
@@ -2651,19 +2572,16 @@ class _GovernanceHubState extends State<GovernanceHub>
                       const SizedBox(width: 8),
                       Text(
                         l10n.daoDelegationBenefitsTitle,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                        style: KubusTextStyles.navMetaLabel.copyWith(
                           color: scheme.primary,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: KubusSpacing.sm),
                   Text(
                     l10n.daoDelegationBenefitsBody,
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
+                    style: KubusTextStyles.detailCaption.copyWith(
                       color: scheme.onSurface.withValues(alpha: 0.7),
                       height: 1.4,
                     ),
@@ -2727,10 +2645,12 @@ class _GovernanceHubState extends State<GovernanceHub>
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(KubusSpacing.lg),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(KubusRadius.xl),
+          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -2739,18 +2659,16 @@ class _GovernanceHubState extends State<GovernanceHub>
             Row(
               children: [
                 Icon(Icons.check_circle, color: scheme.primary, size: 24),
-                const SizedBox(width: 12),
+                const SizedBox(width: KubusSpacing.md),
                 Text(
                   l10n.daoDelegationActiveTitle,
-                  style: GoogleFonts.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                  style: KubusTextStyles.detailSectionTitle.copyWith(
                     color: scheme.onSurface,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: KubusSpacing.lg),
             _buildDetailRow(
                 l10n.daoDelegationDetailDelegateLabel, delegateName),
             _buildDetailRow(
@@ -2774,9 +2692,12 @@ class _GovernanceHubState extends State<GovernanceHub>
                       Theme.of(context).colorScheme.surfaceContainerHighest,
                   foregroundColor: Colors.white,
                   side: BorderSide(color: Colors.grey[600]!),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  padding: const EdgeInsets.symmetric(vertical: KubusSpacing.md),
                 ),
-                child: Text(l10n.daoRevokeDelegationButton),
+                child: Text(
+                  l10n.daoRevokeDelegationButton,
+                  style: KubusTextStyles.navLabel,
+                ),
               ),
             ),
           ],
@@ -2787,21 +2708,22 @@ class _GovernanceHubState extends State<GovernanceHub>
 
   Widget _buildDetailRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: KubusSpacing.xs),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             label,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: Colors.grey[400],
+            style: KubusTextStyles.navLabel.copyWith(
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.6),
             ),
           ),
           Text(
             value,
-            style: GoogleFonts.inter(
-              fontSize: 14,
+            style: KubusTextStyles.navLabel.copyWith(
               fontWeight: FontWeight.w600,
               color: Theme.of(context).colorScheme.onSurface,
             ),
@@ -2889,7 +2811,7 @@ class _GovernanceHubState extends State<GovernanceHub>
         final l10n = AppLocalizations.of(context)!;
         final scheme = Theme.of(context).colorScheme;
         return Container(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(KubusSpacing.lg),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -2899,17 +2821,14 @@ class _GovernanceHubState extends State<GovernanceHub>
             children: [
               Text(
                 l10n.daoHubInfoDialogTitle,
-                style: GoogleFonts.inter(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                style: KubusTextStyles.sheetTitle.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 16),
               Text(
                 l10n.daoHubInfoDialogBody,
-                style: GoogleFonts.inter(
-                  fontSize: 14,
+                style: KubusTextStyles.sheetSubtitle.copyWith(
                   color: scheme.onSurface.withValues(alpha: 0.7),
                   height: 1.4,
                 ),

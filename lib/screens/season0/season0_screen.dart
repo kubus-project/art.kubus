@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/config.dart';
 import '../../l10n/app_localizations.dart';
+import '../../utils/design_tokens.dart';
 import '../../providers/themeprovider.dart';
 import '../../services/backend_api_service.dart';
 import '../web3/artist/artist_studio.dart';
@@ -27,7 +27,7 @@ class Season0Screen extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           l10n.season0ScreenTitle,
-          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          style: KubusTypography.inter(fontWeight: FontWeight.w600),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -39,7 +39,7 @@ class Season0Screen extends StatelessWidget {
             // Header
             Text(
               l10n.season0ScreenSubtitle,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
                 color: accent,
@@ -48,7 +48,7 @@ class Season0Screen extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               l10n.season0ScreenDescription,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 15,
                 height: 1.4,
                 color: scheme.onSurface.withValues(alpha: 0.85),
@@ -123,7 +123,7 @@ class Season0Screen extends StatelessWidget {
                   children: [
                     Text(
                       l10n.season0PointsLabel,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                         color: scheme.onSurface,
@@ -144,7 +144,7 @@ class Season0Screen extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     l10n.season0OnChainNote,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 12,
                       color: scheme.onSurface.withValues(alpha: 0.6),
                     ),
@@ -246,7 +246,7 @@ class _ActionCard extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: scheme.onSurface,
@@ -255,7 +255,7 @@ class _ActionCard extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(
                     subtitle,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 13,
                       color: scheme.onSurface.withValues(alpha: 0.65),
                     ),

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
@@ -31,6 +30,7 @@ import '../../widgets/artist_badge.dart';
 import '../../widgets/institution_badge.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/artwork_creator_byline.dart';
+import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/glass_components.dart';
 import '../../utils/app_animations.dart';
@@ -39,14 +39,14 @@ import '../../utils/artwork_navigation.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/user_profile_navigation.dart';
 import 'components/desktop_widgets.dart';
 import '../web3/wallet/connectwallet_screen.dart';
 import 'web3/desktop_wallet_screen.dart';
 import '../onboarding/web3/web3_onboarding.dart' as web3;
 import '../onboarding/web3/onboarding_data.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
-import 'community/desktop_user_profile_screen.dart';
-import 'desktop_settings_screen.dart';
+import 'community/desktop_profile_screen.dart';
 import 'desktop_shell.dart';
 import '../activity/advanced_analytics_screen.dart';
 import '../../services/search_service.dart';
@@ -673,12 +673,9 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                                 child: Text(
                                   user?.displayName ??
                                       l10n.desktopHomeWelcomeFallbackName,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w700,
+                                  style: KubusTextStyles.heroTitle.copyWith(
                                     color:
                                         Theme.of(context).colorScheme.onSurface,
-                                    letterSpacing: -0.3,
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                   softWrap: false,
@@ -769,9 +766,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                         ),
                         child: Text(
                           np.unreadCount > 9 ? '9+' : np.unreadCount.toString(),
-                          style: DetailTypography.label(context).copyWith(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                          style: KubusTextStyles.badgeCount.copyWith(
                             color: Colors.white,
                           ),
                         ),
@@ -795,7 +790,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       padding: EdgeInsets.zero,
       showBorder: false,
       child: Container(
-        padding: const EdgeInsets.all(DetailSpacing.xxl),
+        padding: const EdgeInsets.all(KubusSpacing.xxl),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -815,20 +810,15 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                 children: [
                   Text(
                     l10n.desktopHomeDiscoverArtTitle,
-                    style: GoogleFonts.inter(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w700,
+                    style: KubusTextStyles.heroTitle.copyWith(
                       color: Colors.white,
-                      letterSpacing: -0.5,
                     ),
                   ),
                   const SizedBox(height: DetailSpacing.md),
                   Text(
                     l10n.desktopHomeDiscoverArtDescription,
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
+                    style: KubusTextStyles.heroSubtitle.copyWith(
                       color: Colors.white.withValues(alpha: 0.9),
-                      height: 1.6,
                     ),
                   ),
                   const SizedBox(height: DetailSpacing.xl),
@@ -921,9 +911,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             child: Center(
               child: Text(
                 symbol == 'KUB8' ? 'K' : 'S',
-                style: DetailTypography.label(context).copyWith(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
+                style: KubusTextStyles.navLabel.copyWith(
+                  fontWeight: FontWeight.w700,
                   color: Provider.of<ThemeProvider>(context).accentColor,
                 ),
               ),
@@ -932,9 +921,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           const SizedBox(width: 10),
           Text(
             '$amount $symbol',
-            style: DetailTypography.body(context).copyWith(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
+            style: KubusTextStyles.actionTileTitle.copyWith(
               color: Colors.white,
             ),
           ),
@@ -1276,10 +1263,11 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         }
         return;
       case 'profile':
-        _pushScreen(const DesktopSettingsScreen(), screenKey);
+        _pushScreen(const ProfileScreen(), screenKey);
         return;
       case 'analytics':
-        _pushScreen(const AdvancedAnalyticsScreen(statType: 'Engagement'), screenKey);
+        _pushScreen(
+            const AdvancedAnalyticsScreen(statType: 'Engagement'), screenKey);
         return;
       case 'achievements':
         // Reuse onboarding to surface achievements context
@@ -1307,11 +1295,9 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     // Use in-shell navigation if available, otherwise fallback to fullscreen
     final shellScope = DesktopShellScope.of(context);
     if (shellScope != null) {
-      shellScope.pushScreen(
-        DesktopSubScreen(
-          title: _screenKeyToTitle(screenKey),
-          child: screen,
-        ),
+      shellScope.pushSubScreen(
+        title: _screenKeyToTitle(screenKey),
+        child: screen,
       );
     } else {
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
@@ -1321,7 +1307,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   String _screenKeyToTitle(String key) {
     switch (key) {
       case 'profile':
-        return 'Settings';
+        return AppLocalizations.of(context)!.navigationScreenProfile;
       case 'analytics':
         return 'Analytics';
       case 'achievements':
@@ -1354,19 +1340,11 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   }
 
   void _openUserProfile(String userId, String title) {
-    final shellScope = DesktopShellScope.of(context);
-    if (shellScope != null) {
-      shellScope.pushScreen(
-        DesktopSubScreen(
-          title: title,
-          child: UserProfileScreen(userId: userId),
-        ),
-      );
-      return;
-    }
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => UserProfileScreen(userId: userId)),
-    );
+    unawaited(UserProfileNavigation.open(
+      context,
+      userId: userId,
+      username: title,
+    ));
   }
 
   String _indexToRoute(int index) {
@@ -1525,9 +1503,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     ),
                     child: Text(
                       visitCount.toString(),
-                      style: DetailTypography.label(context).copyWith(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
+                      style: KubusTextStyles.badgeCount.copyWith(
                         color: Colors.white,
                       ),
                       textAlign: TextAlign.center,
@@ -1539,8 +1515,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           const SizedBox(width: DetailSpacing.md),
           Text(
             title,
-            style: DetailTypography.body(context).copyWith(
-              fontSize: 15,
+            style: KubusTextStyles.detailCardTitle.copyWith(
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -1632,7 +1607,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     return DesktopCard(
                       width: 240,
                       margin: EdgeInsets.only(
-                        right: index < profiles.length - 1 ? DetailSpacing.lg : 0,
+                        right:
+                            index < profiles.length - 1 ? DetailSpacing.lg : 0,
                       ),
                       onTap: () {
                         final wallet = (item.walletAddress ?? '').trim();
@@ -1671,7 +1647,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                             ),
                           ),
                           if (item.promotion.isPromoted)
-                            const Icon(Icons.star, color: Colors.amber, size: 18),
+                            const Icon(Icons.star,
+                                color: Colors.amber, size: 18),
                         ],
                       ),
                     );
@@ -1726,18 +1703,14 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
               children: [
                 Text(
                   artwork.title,
-                  style: DetailTypography.cardTitle(context).copyWith(
-                    fontSize: 14,
-                  ),
+                  style: KubusTextStyles.detailCardTitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: DetailSpacing.xs),
                 ArtworkCreatorByline(
                   artwork: artwork,
-                  style: DetailTypography.caption(context).copyWith(
-                    fontSize: 12,
-                  ),
+                  style: KubusTextStyles.navMetaLabel,
                   maxLines: 1,
                 ),
                 const SizedBox(height: DetailSpacing.md),
@@ -1754,9 +1727,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     const SizedBox(width: DetailSpacing.xs),
                     Text(
                       artwork.likesCount.toString(),
-                      style: DetailTypography.caption(context).copyWith(
-                        fontSize: 12,
-                      ),
+                      style: KubusTextStyles.navMetaLabel,
                     ),
                     const SizedBox(width: DetailSpacing.md),
                     Icon(
@@ -1770,9 +1741,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     const SizedBox(width: DetailSpacing.xs),
                     Text(
                       artwork.viewsCount.toString(),
-                      style: DetailTypography.caption(context).copyWith(
-                        fontSize: 12,
-                      ),
+                      style: KubusTextStyles.navMetaLabel,
                     ),
                   ],
                 ),
@@ -1848,9 +1817,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   const SizedBox(width: 4),
                   Text(
                     l10n.commonArShort,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
+                    style: KubusTextStyles.badgeCount.copyWith(
                       color: Colors.white,
                     ),
                   ),
@@ -1910,15 +1877,12 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   Widget _buildRightSidebar(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
     return ListView(
-      padding: const EdgeInsets.all(DetailSpacing.xxl),
+      padding: const EdgeInsets.all(KubusSpacing.xxl),
       children: [
         Text(
           l10n.homeActivityTitle,
-          style: GoogleFonts.inter(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
+          style: KubusTextStyles.screenTitle.copyWith(
             color: Theme.of(context).colorScheme.onSurface,
-            letterSpacing: -0.3,
           ),
         ),
         const SizedBox(height: DetailSpacing.xl),
@@ -1950,36 +1914,34 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   }) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    final titleWidget = KubusHeaderText(
+      title: title,
+      kind: KubusHeaderKind.section,
+      titleColor: scheme.onSurface,
+    );
 
     return Row(
       children: [
-        if (onTitleTap != null)
-          InkWell(
-            onTap: onTitleTap,
-            borderRadius: BorderRadius.circular(DetailRadius.sm),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                  vertical: DetailSpacing.xs, horizontal: 2),
-              child: Text(
-                title,
-                style: DetailTypography.sectionTitle(context)
-                    .copyWith(fontSize: 17),
-              ),
-            ),
-          )
-        else
-          Text(
-            title,
-            style:
-                DetailTypography.sectionTitle(context).copyWith(fontSize: 17),
-          ),
-        const Spacer(),
+        Expanded(
+          child: onTitleTap == null
+              ? titleWidget
+              : InkWell(
+                  onTap: onTitleTap,
+                  borderRadius: BorderRadius.circular(DetailRadius.sm),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: DetailSpacing.xs,
+                    ),
+                    child: titleWidget,
+                  ),
+                ),
+        ),
         IconButton(
           tooltip: l10n.commonRefresh,
           onPressed: isLoading ? null : onRefresh,
           icon: Icon(
             Icons.refresh,
-            size: 18,
+            size: KubusHeaderMetrics.actionIcon,
             color: scheme.onSurface.withValues(alpha: 0.5),
           ),
         ),
@@ -1990,11 +1952,9 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   void _openFullActivity() {
     final shellScope = DesktopShellScope.of(context);
     if (shellScope != null) {
-      shellScope.pushScreen(
-        DesktopSubScreen(
-          title: 'Activity',
-          child: const ActivityScreen(),
-        ),
+      shellScope.pushSubScreen(
+        title: AppLocalizations.of(context)!.homeActivityTitle,
+        child: const ActivityScreen(),
       );
     } else {
       Navigator.of(context).push(
@@ -2050,7 +2010,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     Expanded(
                       child: Text(
                         l10n.desktopHomeTrendingArtLoadFailed,
-                        style: GoogleFonts.inter(
+                        style: KubusTextStyles.sectionSubtitle.copyWith(
                           color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
@@ -2135,17 +2095,13 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
               children: [
                 Text(
                   entry.title,
-                  style: DetailTypography.cardTitle(context).copyWith(
-                    fontSize: 14,
-                  ),
+                  style: KubusTextStyles.detailCardTitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   entry.subtitle ?? l10n.commonNotAvailableShort,
-                  style: DetailTypography.caption(context).copyWith(
-                    fontSize: 12,
-                  ),
+                  style: KubusTextStyles.navMetaLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -2167,8 +2123,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   const SizedBox(width: DetailSpacing.xs),
                   Text(
                     entry.likes.toString(),
-                    style: DetailTypography.label(context).copyWith(
-                      fontSize: 12,
+                    style: KubusTextStyles.navMetaLabel.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -2185,8 +2140,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   ),
                   child: Text(
                     l10n.commonArShort,
-                    style: DetailTypography.label(context).copyWith(
-                      fontSize: 9,
+                    style: KubusTextStyles.compactBadge.copyWith(
                       fontWeight: FontWeight.bold,
                       color: AppColorUtils.tealAccent,
                     ),
@@ -2316,21 +2270,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     return DesktopCard(
       onTap: () {
         if (userId.isNotEmpty) {
-          final shellScope = DesktopShellScope.of(context);
-          if (shellScope != null) {
-            shellScope.pushScreen(
-              DesktopSubScreen(
-                title: displayName,
-                child: UserProfileScreen(userId: userId),
-              ),
-            );
-          } else {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => UserProfileScreen(userId: userId),
-              ),
-            );
-          }
+          unawaited(UserProfileNavigation.open(context, userId: userId));
         }
       },
       padding: const EdgeInsets.all(DetailSpacing.sm + 2),
@@ -2351,18 +2291,14 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
               children: [
                 Text(
                   displayName,
-                  style: DetailTypography.cardTitle(context).copyWith(
-                    fontSize: 14,
-                  ),
+                  style: KubusTextStyles.detailCardTitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 if (handle != null)
                   Text(
                     handle,
-                    style: DetailTypography.caption(context).copyWith(
-                      fontSize: 12,
-                    ),
+                    style: KubusTextStyles.navMetaLabel,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -2380,8 +2316,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             ),
             child: Text(
               l10n.desktopHomePostsCount(creator['postCount'] as int? ?? 0),
-              style: DetailTypography.label(context).copyWith(
-                fontSize: 11,
+              style: KubusTextStyles.navMetaLabel.copyWith(
                 fontWeight: FontWeight.w600,
                 color: Theme.of(context).colorScheme.secondary,
               ),
@@ -2525,8 +2460,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         Expanded(
           child: Text(
             label,
-            style: DetailTypography.body(context).copyWith(
-              fontSize: 13,
+            style: KubusTextStyles.detailCaption.copyWith(
               color: Theme.of(context)
                   .colorScheme
                   .onSurface
@@ -2536,9 +2470,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         ),
         Text(
           value,
-          style: DetailTypography.cardTitle(context).copyWith(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
+          style: KubusTextStyles.actionTileTitle.copyWith(
+            fontWeight: FontWeight.w700,
           ),
         ),
       ],
@@ -2660,8 +2593,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
               children: [
                 Text(
                   activity.title,
-                  style: DetailTypography.body(context).copyWith(
-                    fontSize: 13,
+                  style: KubusTextStyles.detailCaption.copyWith(
                     fontWeight: FontWeight.w500,
                   ),
                   maxLines: 1,
@@ -2669,9 +2601,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                 ),
                 Text(
                   activity.description,
-                  style: DetailTypography.caption(context).copyWith(
-                    fontSize: 11,
-                  ),
+                  style: KubusTextStyles.detailCaption,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -2702,7 +2632,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       left: 0,
       right: 0,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+        padding: const EdgeInsets.symmetric(
+          horizontal: KubusSpacing.xl,
+          vertical: KubusSpacing.md,
+        ),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.95),
           border: Border(
@@ -2725,9 +2658,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             const SizedBox(width: 12),
             Text(
               'art.kubus',
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+              style: KubusTextStyles.sectionTitle.copyWith(
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
@@ -2781,242 +2712,245 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       builder: (dialogContext) {
         final l10n = AppLocalizations.of(dialogContext)!;
         return Align(
-        alignment: Alignment.topRight,
-        child: Container(
-          width: 400,
-          height: MediaQuery.of(dialogContext).size.height * 0.7,
-          margin: const EdgeInsets.only(top: 80, right: 32),
-          decoration: BoxDecoration(
-            color: Theme.of(dialogContext).colorScheme.surface,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                      color: Theme.of(dialogContext)
-                          .colorScheme
-                          .outline
-                          .withValues(alpha: 0.2),
+          alignment: Alignment.topRight,
+          child: Container(
+            width: 400,
+            height: MediaQuery.of(dialogContext).size.height * 0.7,
+            margin: const EdgeInsets.only(
+              top: KubusSpacing.xxl + KubusSpacing.xl,
+              right: KubusSpacing.xl,
+            ),
+            decoration: BoxDecoration(
+              color: Theme.of(dialogContext).colorScheme.surface,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: Theme.of(dialogContext)
+                            .colorScheme
+                            .outline
+                            .withValues(alpha: 0.2),
+                      ),
                     ),
                   ),
-                ),
-                child: Row(
-                  children: [
-                    Text(
-                      l10n.commonNotifications,
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(dialogContext).colorScheme.onSurface,
+                  child: Row(
+                    children: [
+                      Text(
+                        l10n.commonNotifications,
+                        style: KubusTextStyles.sectionTitle.copyWith(
+                          color: Theme.of(dialogContext).colorScheme.onSurface,
+                        ),
                       ),
-                    ),
-                    const Spacer(),
-                    if (np.unreadCount > 0)
-                      TextButton(
-                        onPressed: () => np.markViewed(),
-                        child: Text(
-                          l10n.homeMarkAllReadButton,
-                          style: GoogleFonts.inter(
-                            color: AppColorUtils.greenAccent,
-                            fontWeight: FontWeight.w600,
+                      const Spacer(),
+                      if (np.unreadCount > 0)
+                        TextButton(
+                          onPressed: () => np.markViewed(),
+                          child: Text(
+                            l10n.homeMarkAllReadButton,
+                            style: KubusTextStyles.navLabel.copyWith(
+                              color: AppColorUtils.greenAccent,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
-                      ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(dialogContext),
-                      icon: Icon(
-                        Icons.close,
-                        color: Theme.of(dialogContext).colorScheme.onSurface,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: np.unreadCount == 0
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.notifications_none,
-                              size: 64,
-                              color: Theme.of(dialogContext)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.3),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              l10n.homeNoNotificationsTitle,
-                              style: GoogleFonts.inter(
-                                color: Theme.of(dialogContext)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.6),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              l10n.homeAllCaughtUpDescription,
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                color: Theme.of(dialogContext)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.4),
-                              ),
-                            ),
-                          ],
+                      IconButton(
+                        onPressed: () => Navigator.pop(dialogContext),
+                        icon: Icon(
+                          Icons.close,
+                          color: Theme.of(dialogContext).colorScheme.onSurface,
                         ),
-                      )
-                    : Consumer<RecentActivityProvider>(
-                        builder: (dialogInnerContext, activityProvider, _) {
-                          final activities = activityProvider.activities
-                              .where((a) => !a.isRead)
-                              .take(10)
-                              .toList();
-                          if (activities.isEmpty) {
-                            return Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 80,
-                                    height: 80,
-                                    decoration: BoxDecoration(
-                                      color: AppColorUtils.amberAccent
-                                          .withValues(alpha: 0.1),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        '${np.unreadCount}',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 28,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColorUtils.amberAccent,
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: np.unreadCount == 0
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.notifications_none,
+                                size: 64,
+                                color: Theme.of(dialogContext)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.3),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                l10n.homeNoNotificationsTitle,
+                                style: KubusTextStyles.sectionSubtitle.copyWith(
+                                  color: Theme.of(dialogContext)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.6),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                l10n.homeAllCaughtUpDescription,
+                                style: KubusTextStyles.navMetaLabel.copyWith(
+                                  color: Theme.of(dialogContext)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.4),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : Consumer<RecentActivityProvider>(
+                          builder: (dialogInnerContext, activityProvider, _) {
+                            final activities = activityProvider.activities
+                                .where((a) => !a.isRead)
+                                .take(10)
+                                .toList();
+                            if (activities.isEmpty) {
+                              return Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 80,
+                                      height: 80,
+                                      decoration: BoxDecoration(
+                                        color: AppColorUtils.amberAccent
+                                            .withValues(alpha: 0.1),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          '${np.unreadCount}',
+                                          style: KubusTextStyles.statValue
+                                              .copyWith(
+                                            color: AppColorUtils.amberAccent,
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    l10n.desktopHomeUnreadNotificationsLabel,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
-                                      color: Theme.of(dialogInnerContext)
-                                          .colorScheme
-                                          .onSurface
-                                          .withValues(alpha: 0.6),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      l10n.desktopHomeUnreadNotificationsLabel,
+                                      style: KubusTextStyles.statLabel.copyWith(
+                                        color: Theme.of(dialogInnerContext)
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.6),
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }
-                          return ListView.builder(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: activities.length,
-                            itemBuilder: (itemContext, index) {
-                              final activity = activities[index];
-                              return Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  onTap: () {
-                                    Navigator.pop(dialogContext);
-                                    ActivityNavigation.open(context, activity);
-                                  },
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Container(
-                                    margin: const EdgeInsets.only(bottom: 8),
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(dialogInnerContext)
-                                          .colorScheme
-                                          .primaryContainer
-                                          .withValues(alpha: 0.5),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          width: 40,
-                                          height: 40,
-                                          decoration: BoxDecoration(
-                                            color: _getActivityColor(
-                                                    activity.category)
-                                                .withValues(alpha: 0.12),
-                                            borderRadius:
-                                                BorderRadius.circular(10),
-                                          ),
-                                          child: Icon(
-                                            _getActivityIcon(activity.category),
-                                            color: _getActivityColor(
-                                                activity.category),
-                                            size: 20,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                activity.title,
-                                                style: GoogleFonts.inter(
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Theme.of(
-                                                          dialogInnerContext)
-                                                      .colorScheme
-                                                      .onSurface,
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                              Text(
-                                                activity.description,
-                                                style: GoogleFonts.inter(
-                                                  fontSize: 12,
-                                                  color: Theme.of(
-                                                          dialogInnerContext)
-                                                      .colorScheme
-                                                      .onSurface
-                                                      .withValues(alpha: 0.6),
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
+                                  ],
                                 ),
                               );
-                            },
-                          );
-                        },
-                      ),
-              ),
-            ],
+                            }
+                            return ListView.builder(
+                              padding: const EdgeInsets.all(KubusSpacing.md),
+                              itemCount: activities.length,
+                              itemBuilder: (itemContext, index) {
+                                final activity = activities[index];
+                                return Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: () {
+                                      Navigator.pop(dialogContext);
+                                      ActivityNavigation.open(
+                                          context, activity);
+                                    },
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Container(
+                                      margin: const EdgeInsets.only(bottom: 8),
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(dialogInnerContext)
+                                            .colorScheme
+                                            .primaryContainer
+                                            .withValues(alpha: 0.5),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 40,
+                                            height: 40,
+                                            decoration: BoxDecoration(
+                                              color: _getActivityColor(
+                                                      activity.category)
+                                                  .withValues(alpha: 0.12),
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                            child: Icon(
+                                              _getActivityIcon(
+                                                  activity.category),
+                                              color: _getActivityColor(
+                                                  activity.category),
+                                              size: 20,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  activity.title,
+                                                  style: KubusTextStyles
+                                                      .sectionTitle
+                                                      .copyWith(
+                                                    color: Theme.of(
+                                                            dialogInnerContext)
+                                                        .colorScheme
+                                                        .onSurface,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                                Text(
+                                                  activity.description,
+                                                  style: KubusTextStyles
+                                                      .navMetaLabel
+                                                      .copyWith(
+                                                    color: Theme.of(
+                                                            dialogInnerContext)
+                                                        .colorScheme
+                                                        .onSurface
+                                                        .withValues(alpha: 0.6),
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
           ),
-        ),
-      );
+        );
       },
     );
 
@@ -3164,21 +3098,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         showInvalidSelection();
         return;
       }
-      final shellScope = DesktopShellScope.of(context);
-      if (shellScope != null) {
-        shellScope.pushScreen(
-          DesktopSubScreen(
-            title: suggestion.subtitle ?? suggestion.label,
-            child: UserProfileScreen(userId: resolvedId),
-          ),
-        );
-      } else {
-        await Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => UserProfileScreen(userId: resolvedId),
-          ),
-        );
-      }
+      await UserProfileNavigation.open(context, userId: resolvedId);
       return;
     }
 
@@ -3257,7 +3177,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         padding: const EdgeInsets.all(16),
         child: Text(
           l10n.mapSearchMinCharsHint,
-          style: GoogleFonts.inter(
+          style: KubusTextStyles.sectionSubtitle.copyWith(
             color: scheme.onSurfaceVariant,
           ),
         ),
@@ -3266,17 +3186,17 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
 
     if (_isFetchingSuggestions) {
       return const Padding(
-        padding: EdgeInsets.all(24),
+        padding: EdgeInsets.all(KubusSpacing.xl),
         child: Center(child: CircularProgressIndicator()),
       );
     }
 
     if (_searchSuggestions.isEmpty) {
       return Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.lg),
         child: Text(
           l10n.commonNoSuggestions,
-          style: GoogleFonts.inter(
+          style: KubusTextStyles.sectionSubtitle.copyWith(
             color: scheme.onSurfaceVariant,
           ),
         ),
@@ -3303,15 +3223,14 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           ),
           title: Text(
             suggestion.label,
-            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+            style: KubusTextStyles.actionTileTitle,
           ),
           subtitle: suggestion.subtitle == null
               ? null
               : Text(
                   suggestion.subtitle!,
-                  style: GoogleFonts.inter(
+                  style: KubusTextStyles.navMetaLabel.copyWith(
                     color: scheme.onSurfaceVariant,
-                    fontSize: 12,
                   ),
                 ),
           onTap: () => _handleSuggestionTap(suggestion),

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
@@ -14,6 +13,7 @@ import '../../utils/map_navigation.dart';
 import '../../widgets/collaboration_panel.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../widgets/glass_components.dart';
+import '../../utils/design_tokens.dart';
  
 
 class EventDetailScreen extends StatefulWidget {
@@ -71,7 +71,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          title: Text(event.title, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          title: Text(event.title, style: KubusTypography.inter(fontWeight: FontWeight.w600)),
           actions: [
             if (event.lat != null && event.lng != null)
               IconButton(
@@ -205,7 +205,7 @@ class _EventDetailsCard extends StatelessWidget {
           children: [
             Text(
               'Overview',
-              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700),
+              style: KubusTypography.inter(fontSize: 16, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 10),
             if (dateRange != null)
@@ -215,7 +215,7 @@ class _EventDetailsCard extends StatelessWidget {
             _InfoRow(icon: Icons.collections_outlined, label: 'Exhibitions: $exhibitionsCount'),
             if ((event.description ?? '').trim().isNotEmpty) ...[
               const SizedBox(height: 12),
-              Text(event.description!, style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface.withValues(alpha: 0.8))),
+              Text(event.description!, style: KubusTypography.inter(fontSize: 13, color: scheme.onSurface.withValues(alpha: 0.8))),
             ],
           ],
         ),
@@ -249,7 +249,7 @@ class _InfoRow extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface),
+              style: KubusTypography.inter(fontSize: 13, color: scheme.onSurface),
             ),
           ),
         ],
@@ -284,7 +284,7 @@ class _ExhibitionsPreview extends StatelessWidget {
                 exhibitionsCount == 0
                     ? 'No exhibitions yet.'
                     : 'This event includes $exhibitionsCount exhibition${exhibitionsCount == 1 ? '' : 's'}.',
-                style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface.withValues(alpha: 0.8)),
+                style: KubusTypography.inter(fontSize: 13, color: scheme.onSurface.withValues(alpha: 0.8)),
               ),
             ),
           ],
@@ -293,3 +293,4 @@ class _ExhibitionsPreview extends StatelessWidget {
     );
   }
 }
+

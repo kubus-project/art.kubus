@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../models/collectible.dart';
 import '../../../providers/collectibles_provider.dart';
@@ -12,6 +11,7 @@ import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../widgets/artwork_creator_byline.dart';
 import '../../../widgets/common/kubus_labs_adornment.dart';
+import '../../../widgets/common/kubus_screen_header.dart';
 import '../../../widgets/detail/detail_shell_components.dart';
 import '../../../widgets/glass_components.dart';
 import '../components/desktop_widgets.dart';
@@ -134,7 +134,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
 
   Widget _buildHeader(ThemeProvider themeProvider) {
     return Container(
-      padding: EdgeInsets.all(DetailSpacing.xl),
+      padding: const EdgeInsets.all(KubusSpacing.lg + KubusSpacing.xs),
       child: Row(
         children: [
           Row(
@@ -142,7 +142,9 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
             children: [
               Text(
                 'NFT Marketplace',
-                style: DetailTypography.screenTitle(context),
+                style: KubusTextStyles.screenTitle.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
               const SizedBox(width: KubusSpacing.sm),
               const KubusLabsAdornment.inlinePill(
@@ -159,7 +161,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
               onSubmitted: (value) {},
             ),
           ),
-          SizedBox(width: DetailSpacing.lg),
+          const SizedBox(width: KubusSpacing.lg),
           Consumer<Web3Provider>(
             builder: (context, web3Provider, _) {
               return ElevatedButton.icon(
@@ -170,17 +172,23 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                     : () {
                         Navigator.of(context).pushNamed('/connect-wallet');
                       },
-                icon: Icon(web3Provider.isConnected
-                    ? Icons.add
-                    : Icons.account_balance_wallet),
+                icon: Icon(
+                  web3Provider.isConnected
+                      ? Icons.add
+                      : Icons.account_balance_wallet,
+                  size: KubusHeaderMetrics.actionIcon,
+                ),
                 label: Text(
-                    web3Provider.isConnected ? 'Create' : 'Connect Wallet'),
+                  web3Provider.isConnected ? 'Create' : 'Connect Wallet',
+                  style: KubusTextStyles.detailButton,
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: themeProvider.accentColor,
                   foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(
-                      horizontal: DetailSpacing.lg + DetailSpacing.xs,
-                      vertical: DetailSpacing.md + 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: KubusSpacing.lg + KubusSpacing.xs,
+                    vertical: KubusSpacing.md,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(DetailRadius.md),
                   ),
@@ -195,7 +203,9 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
 
   Widget _buildCategoryTabs(ThemeProvider themeProvider) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: DetailSpacing.xl),
+      padding: const EdgeInsets.symmetric(
+        horizontal: KubusSpacing.lg + KubusSpacing.xs,
+      ),
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
@@ -210,8 +220,12 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
         labelColor: themeProvider.accentColor,
         unselectedLabelColor:
             Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-        labelStyle: DetailTypography.label(context),
-        unselectedLabelStyle: DetailTypography.body(context),
+        labelStyle: KubusTextStyles.detailLabel.copyWith(
+          color: themeProvider.accentColor,
+        ),
+        unselectedLabelStyle: KubusTextStyles.detailBody.copyWith(
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+        ),
         indicatorColor: themeProvider.accentColor,
         indicatorWeight: 3,
         dividerColor: Colors.transparent,
@@ -222,8 +236,8 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
 
   Widget _buildStatsBanner(ThemeProvider themeProvider) {
     return Container(
-      margin: EdgeInsets.all(DetailSpacing.xl),
-      padding: EdgeInsets.all(DetailSpacing.xl),
+      margin: const EdgeInsets.all(KubusSpacing.lg + KubusSpacing.xs),
+      padding: const EdgeInsets.all(KubusSpacing.lg + KubusSpacing.xs),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -263,21 +277,20 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
   Widget _buildStatItem(String label, String value, IconData icon) {
     return Column(
       children: [
-        Icon(icon, color: Colors.white.withValues(alpha: 0.7), size: 26),
-        SizedBox(height: DetailSpacing.sm),
+        Icon(
+          icon,
+          color: Colors.white.withValues(alpha: 0.7),
+          size: KubusChromeMetrics.heroIcon,
+        ),
+        const SizedBox(height: KubusSpacing.sm),
         Text(
           value,
-          style: GoogleFonts.inter(
-            fontSize: 26,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+          style: KubusTextStyles.heroTitle.copyWith(color: Colors.white),
         ),
-        SizedBox(height: DetailSpacing.xs),
+        const SizedBox(height: KubusSpacing.xs),
         Text(
           label,
-          style: GoogleFonts.inter(
-            fontSize: 14,
+          style: KubusTextStyles.heroSubtitle.copyWith(
             color: Colors.white.withValues(alpha: 0.8),
           ),
         ),
@@ -295,8 +308,10 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
 
   Widget _buildToolbar(ThemeProvider themeProvider) {
     return Container(
-      padding: EdgeInsets.symmetric(
-          horizontal: DetailSpacing.xl, vertical: DetailSpacing.md),
+      padding: const EdgeInsets.symmetric(
+        horizontal: KubusSpacing.lg + KubusSpacing.xs,
+        vertical: KubusSpacing.md,
+      ),
       child: Row(
         children: [
           // Filter button
@@ -306,9 +321,12 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
             },
             icon: Icon(
               _showFilters ? Icons.filter_list_off : Icons.filter_list,
-              size: 20,
+              size: KubusHeaderMetrics.actionIcon,
             ),
-            label: Text(_showFilters ? 'Hide Filters' : 'Filters'),
+            label: Text(
+              _showFilters ? 'Hide Filters' : 'Filters',
+              style: KubusTextStyles.detailButton,
+            ),
             style: OutlinedButton.styleFrom(
               foregroundColor: Theme.of(context).colorScheme.onSurface,
               side: BorderSide(
@@ -317,21 +335,28 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                     .outline
                     .withValues(alpha: 0.3),
               ),
-              padding: EdgeInsets.symmetric(
-                  horizontal: DetailSpacing.lg, vertical: DetailSpacing.md),
+              padding: const EdgeInsets.symmetric(
+                horizontal: KubusSpacing.lg,
+                vertical: KubusSpacing.md,
+              ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(DetailRadius.sm + 2),
               ),
             ),
           ),
-          SizedBox(width: DetailSpacing.lg),
+          const SizedBox(width: KubusSpacing.lg),
 
           // Results count
           Consumer<CollectiblesProvider>(
             builder: (context, collectiblesProvider, _) {
               return Text(
                 '${_resolveVisibleEntries(collectiblesProvider).length} items',
-                style: DetailTypography.caption(context),
+                style: KubusTextStyles.sectionSubtitle.copyWith(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.7),
+                ),
               );
             },
           ),
@@ -339,7 +364,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
 
           // Sort dropdown
           Container(
-            padding: EdgeInsets.symmetric(horizontal: DetailSpacing.md),
+            padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.primaryContainer,
               borderRadius: BorderRadius.circular(DetailRadius.sm + 2),
@@ -371,7 +396,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
               },
             ),
           ),
-          SizedBox(width: DetailSpacing.md),
+          const SizedBox(width: KubusSpacing.md),
 
           // View toggle
           Container(
@@ -402,14 +427,14 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
         },
         borderRadius: BorderRadius.circular(DetailRadius.sm),
         child: Container(
-          padding: EdgeInsets.all(DetailSpacing.md),
+          padding: const EdgeInsets.all(KubusSpacing.md),
           decoration: BoxDecoration(
             color: isActive ? themeProvider.accentColor : Colors.transparent,
             borderRadius: BorderRadius.circular(DetailRadius.sm),
           ),
           child: Icon(
             icon,
-            size: 20,
+            size: KubusHeaderMetrics.actionIcon,
             color: isActive
                 ? Colors.white
                 : Theme.of(context)
@@ -423,96 +448,116 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
   }
 
   Widget _buildFiltersSidebar(ThemeProvider themeProvider) {
+    final glassStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.sidebarBackground,
+    );
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
         border: Border(
           right: BorderSide(
             color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
           ),
         ),
       ),
-      child: ListView(
-        padding: EdgeInsets.all(DetailSpacing.xl),
-        children: [
-          // Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Filters',
-                style: DetailTypography.sectionTitle(context),
-              ),
-              TextButton(
+      child: LiquidGlassPanel(
+        padding: EdgeInsets.zero,
+        margin: EdgeInsets.zero,
+        borderRadius: BorderRadius.zero,
+        showBorder: false,
+        backgroundColor: glassStyle.tintColor,
+        blurSigma: glassStyle.blurSigma,
+        fallbackMinOpacity: glassStyle.fallbackMinOpacity,
+        child: ListView(
+          padding: const EdgeInsets.all(KubusSpacing.lg + KubusSpacing.xs),
+          children: [
+            KubusSectionHeader(
+              title: 'Filters',
+              action: TextButton(
                 onPressed: () {
                   // Reset filters
                 },
                 child: Text(
                   'Reset',
-                  style: GoogleFonts.inter(
+                  style: KubusTextStyles.detailButton.copyWith(
                     color: themeProvider.accentColor,
                   ),
                 ),
               ),
-            ],
-          ),
-          SizedBox(height: DetailSpacing.xl),
+            ),
+            const SizedBox(height: KubusSpacing.lg + KubusSpacing.xs),
 
-          // Status
-          _buildFilterSection('Status', [
-            _buildCheckboxFilter('Buy Now', true, themeProvider),
-            _buildCheckboxFilter('On Auction', false, themeProvider),
-            _buildCheckboxFilter('New', false, themeProvider),
-            _buildCheckboxFilter('Has Offers', false, themeProvider),
-          ]),
-          SizedBox(height: DetailSpacing.xl),
+            // Status
+            _buildFilterSection('Status', [
+              _buildCheckboxFilter('Buy Now', true, themeProvider),
+              _buildCheckboxFilter('On Auction', false, themeProvider),
+              _buildCheckboxFilter('New', false, themeProvider),
+              _buildCheckboxFilter('Has Offers', false, themeProvider),
+            ]),
+            const SizedBox(height: KubusSpacing.lg + KubusSpacing.xs),
 
-          // Price range
-          Text(
-            'Price Range (KUB8)',
-            style: DetailTypography.label(context),
-          ),
-          SizedBox(height: DetailSpacing.md),
-          RangeSlider(
-            values: _priceRange,
-            min: 0,
-            max: 100,
-            divisions: 20,
-            activeColor: themeProvider.accentColor,
-            onChanged: (values) {
-              setState(() => _priceRange = values);
-            },
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '${_priceRange.start.toInt()} KUB8',
-                style: DetailTypography.caption(context),
+            // Price range
+            Text(
+              'Price Range (KUB8)',
+              style: KubusTextStyles.detailLabel.copyWith(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
               ),
-              Text(
-                '${_priceRange.end.toInt()} KUB8',
-                style: DetailTypography.caption(context),
-              ),
-            ],
-          ),
-          SizedBox(height: DetailSpacing.xl),
+            ),
+            const SizedBox(height: KubusSpacing.md),
+            RangeSlider(
+              values: _priceRange,
+              min: 0,
+              max: 100,
+              divisions: 20,
+              activeColor: themeProvider.accentColor,
+              onChanged: (values) {
+                setState(() => _priceRange = values);
+              },
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${_priceRange.start.toInt()} KUB8',
+                  style: KubusTextStyles.detailCaption.copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.7),
+                  ),
+                ),
+                Text(
+                  '${_priceRange.end.toInt()} KUB8',
+                  style: KubusTextStyles.detailCaption.copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.7),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: KubusSpacing.lg + KubusSpacing.xs),
 
-          // Blockchain
-          _buildFilterSection('Blockchain', [
-            _buildCheckboxFilter('Solana', true, themeProvider),
-            _buildCheckboxFilter('Ethereum', false, themeProvider),
-            _buildCheckboxFilter('Polygon', false, themeProvider),
-          ]),
-          SizedBox(height: DetailSpacing.xl),
+            // Blockchain
+            _buildFilterSection('Blockchain', [
+              _buildCheckboxFilter('Solana', true, themeProvider),
+              _buildCheckboxFilter('Ethereum', false, themeProvider),
+              _buildCheckboxFilter('Polygon', false, themeProvider),
+            ]),
+            const SizedBox(height: KubusSpacing.lg + KubusSpacing.xs),
 
-          // AR Features
-          _buildFilterSection('Features', [
-            _buildCheckboxFilter('AR Enabled', false, themeProvider),
-            _buildCheckboxFilter('3D Model', false, themeProvider),
-            _buildCheckboxFilter('Unlockable', false, themeProvider),
-          ]),
-        ],
+            // AR Features
+            _buildFilterSection('Features', [
+              _buildCheckboxFilter('AR Enabled', false, themeProvider),
+              _buildCheckboxFilter('3D Model', false, themeProvider),
+              _buildCheckboxFilter('Unlockable', false, themeProvider),
+            ]),
+          ],
+        ),
       ),
     );
   }
@@ -523,9 +568,12 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
       children: [
         Text(
           title,
-          style: DetailTypography.label(context),
+          style: KubusTextStyles.detailLabel.copyWith(
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
         ),
-        SizedBox(height: DetailSpacing.md),
+        const SizedBox(height: KubusSpacing.md),
         ...children,
       ],
     );
@@ -538,8 +586,8 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
       child: Row(
         children: [
           SizedBox(
-            width: 20,
-            height: 20,
+            width: KubusHeaderMetrics.actionHitArea - 24,
+            height: KubusHeaderMetrics.actionHitArea - 24,
             child: Checkbox(
               value: checked,
               onChanged: (value) {},
@@ -549,10 +597,15 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
               ),
             ),
           ),
-          SizedBox(width: DetailSpacing.md),
+          const SizedBox(width: KubusSpacing.md),
           Text(
             label,
-            style: DetailTypography.body(context),
+            style: KubusTextStyles.detailBody.copyWith(
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.85),
+            ),
           ),
         ],
       ),
@@ -641,26 +694,31 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
               children: [
                 Icon(
                   Icons.collections,
-                  size: 72,
+                  size: KubusChromeMetrics.heroIconBox + KubusSpacing.lg,
                   color: Theme.of(context)
                       .colorScheme
                       .onSurface
                       .withValues(alpha: 0.25),
                 ),
-                SizedBox(height: DetailSpacing.lg),
+                const SizedBox(height: KubusSpacing.lg),
                 Text(
                   'No NFTs found',
-                  style: DetailTypography.cardTitle(context).copyWith(
+                  style: KubusTextStyles.detailCardTitle.copyWith(
                     color: Theme.of(context)
                         .colorScheme
                         .onSurface
                         .withValues(alpha: 0.5),
                   ),
                 ),
-                SizedBox(height: DetailSpacing.sm),
+                const SizedBox(height: KubusSpacing.sm),
                 Text(
                   'Try adjusting your filters',
-                  style: DetailTypography.caption(context),
+                  style: KubusTextStyles.detailCaption.copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.7),
+                  ),
                 ),
               ],
             ),
@@ -669,7 +727,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
 
         return GridView.builder(
           controller: _scrollController,
-          padding: EdgeInsets.all(DetailSpacing.xl),
+          padding: const EdgeInsets.all(KubusSpacing.lg + KubusSpacing.xs),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: isLarge ? 4 : 3,
             crossAxisSpacing: DetailSpacing.lg + DetailSpacing.xs,
@@ -727,7 +785,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                         errorBuilder: (_, __, ___) => const Center(
                           child: Icon(
                             Icons.image,
-                            size: 52,
+                            size: KubusChromeMetrics.heroIcon,
                             color: Colors.white,
                           ),
                         ),
@@ -737,7 +795,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                     const Center(
                       child: Icon(
                         Icons.image,
-                        size: 52,
+                        size: KubusChromeMetrics.heroIcon,
                         color: Colors.white,
                       ),
                     ),
@@ -747,25 +805,29 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                       top: DetailSpacing.md,
                       right: DetailSpacing.md,
                       child: Container(
-                        padding: EdgeInsets.symmetric(
-                            horizontal: DetailSpacing.sm,
-                            vertical: DetailSpacing.xs),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: KubusSpacing.sm,
+                          vertical: KubusSpacing.xs,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFF4ECDC4),
                           borderRadius: BorderRadius.circular(DetailRadius.xs),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.view_in_ar,
-                                size: 12, color: Colors.white),
-                            SizedBox(width: 4),
-                            Text('AR',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                )),
+                            const Icon(
+                              Icons.view_in_ar,
+                              size: KubusSizes.trailingChevron,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: KubusSpacing.xs),
+                            Text(
+                              'AR',
+                              style: KubusTextStyles.compactBadge.copyWith(
+                                color: Colors.white,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -775,7 +837,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                     top: DetailSpacing.md,
                     left: DetailSpacing.md,
                     child: Container(
-                      padding: EdgeInsets.all(DetailSpacing.sm),
+                      padding: const EdgeInsets.all(KubusSpacing.sm),
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.3),
                         shape: BoxShape.circle,
@@ -784,7 +846,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                         artwork.isLikedByCurrentUser
                             ? Icons.favorite
                             : Icons.favorite_border,
-                        size: 16,
+                        size: KubusSizes.trailingChevron,
                         color: artwork.isLikedByCurrentUser
                             ? Colors.red
                             : Colors.white,
@@ -810,11 +872,10 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  SizedBox(height: DetailSpacing.xs),
+                  const SizedBox(height: KubusSpacing.xs),
                   ArtworkCreatorByline(
                     artwork: artwork,
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
+                    style: KubusTextStyles.detailCaption.copyWith(
                       color: marketplaceAccent,
                     ),
                     maxLines: 1,
@@ -828,8 +889,11 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                         children: [
                           Text(
                             entry.displayValue?.label ?? 'Status',
-                            style: DetailTypography.caption(context).copyWith(
-                              fontSize: 11,
+                            style: KubusTextStyles.detailLabel.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.6),
                             ),
                           ),
                           Text(
@@ -844,17 +908,20 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                         children: [
                           Icon(
                             Icons.favorite,
-                            size: 14,
+                            size: KubusSizes.trailingChevron,
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurface
                                 .withValues(alpha: 0.4),
                           ),
-                          SizedBox(width: DetailSpacing.xs),
+                          const SizedBox(width: KubusSpacing.xs),
                           Text(
                             '${artwork.likesCount}',
-                            style: DetailTypography.caption(context).copyWith(
-                              fontSize: 12,
+                            style: KubusTextStyles.detailCaption.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.7),
                             ),
                           ),
                         ],
@@ -873,6 +940,10 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
   void _showNFTDetail(
       MarketplaceArtworkEntry entry, ThemeProvider themeProvider) {
     final artwork = entry.artwork;
+    final dialogGlassStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.panelBackground,
+    );
     showKubusDialog<void>(
       context: context,
       builder: (dialogContext) {
@@ -882,7 +953,9 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
             padding: EdgeInsets.zero,
             margin: EdgeInsets.zero,
             borderRadius: BorderRadius.circular(DetailRadius.xl),
-            blurSigma: KubusGlassEffects.blurSigmaHeavy,
+            blurSigma: dialogGlassStyle.blurSigma,
+            backgroundColor: dialogGlassStyle.tintColor,
+            fallbackMinOpacity: dialogGlassStyle.fallbackMinOpacity,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 640),
               child: SizedBox(
@@ -918,7 +991,8 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                                   errorBuilder: (_, __, ___) => const Center(
                                     child: Icon(
                                       Icons.image,
-                                      size: 110,
+                                      size: KubusChromeMetrics.heroIconBox +
+                                          KubusSpacing.xl,
                                       color: Colors.white,
                                     ),
                                   ),
@@ -928,7 +1002,8 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                               const Center(
                                 child: Icon(
                                   Icons.image,
-                                  size: 110,
+                                  size: KubusChromeMetrics.heroIconBox +
+                                      KubusSpacing.xl,
                                   color: Colors.white,
                                 ),
                               ),
@@ -945,13 +1020,20 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                                       ),
                                     );
                                   },
-                                  icon: const Icon(Icons.view_in_ar),
-                                  label: const Text('View in AR'),
+                                  icon: const Icon(
+                                    Icons.view_in_ar,
+                                    size: KubusHeaderMetrics.actionIcon,
+                                  ),
+                                  label: Text(
+                                    'View in AR',
+                                    style: KubusTextStyles.detailButton,
+                                  ),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.white,
                                     foregroundColor: themeProvider.accentColor,
-                                    padding: EdgeInsets.symmetric(
-                                        vertical: DetailSpacing.lg),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: KubusSpacing.lg,
+                                    ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(
                                           DetailRadius.md),
@@ -967,7 +1049,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                     // Info side
                     Expanded(
                       child: Padding(
-                        padding: EdgeInsets.all(DetailSpacing.xxl),
+                        padding: const EdgeInsets.all(KubusSpacing.xxl),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -989,36 +1071,35 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                                 ),
                               ],
                             ),
-                            SizedBox(height: DetailSpacing.sm),
+                            const SizedBox(height: KubusSpacing.sm),
                             Text(
                               'by ${entry.artistName}',
-                              style:
-                                  DetailTypography.body(dialogContext).copyWith(
+                              style: KubusTextStyles.detailBody.copyWith(
                                 color: themeProvider.accentColor,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                            SizedBox(
-                                height: DetailSpacing.lg + DetailSpacing.xs),
+                            const SizedBox(
+                                height: KubusSpacing.lg + KubusSpacing.xs),
                             if (artwork.description.isNotEmpty)
                               Expanded(
                                 child: SingleChildScrollView(
                                   child: Text(
                                     artwork.description,
-                                    style: DetailTypography.body(dialogContext)
-                                        .copyWith(
+                                    style: KubusTextStyles.detailBody.copyWith(
                                       height: 1.7,
                                     ),
                                   ),
                                 ),
                               ),
-                            SizedBox(
-                                height: DetailSpacing.lg + DetailSpacing.xs),
+                            const SizedBox(
+                                height: KubusSpacing.lg + KubusSpacing.xs),
 
                             // Price
                             Container(
-                              padding: EdgeInsets.all(
-                                  DetailSpacing.lg + DetailSpacing.xs),
+                              padding: const EdgeInsets.all(
+                                KubusSpacing.lg + KubusSpacing.xs,
+                              ),
                               decoration: BoxDecoration(
                                 color: Theme.of(dialogContext)
                                     .colorScheme
@@ -1037,18 +1118,22 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                                       Text(
                                         entry.displayValue?.label ??
                                             'Current status',
-                                        style: DetailTypography.caption(
-                                            dialogContext),
+                                        style: KubusTextStyles.detailLabel
+                                            .copyWith(
+                                          color: Theme.of(dialogContext)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.6),
+                                        ),
                                       ),
-                                      SizedBox(height: DetailSpacing.xs),
+                                      const SizedBox(height: KubusSpacing.xs),
                                       Text(
                                         MarketplaceValueFormatter
                                             .formatDisplayValue(
                                           entry.displayValue,
                                         ),
-                                        style: GoogleFonts.inter(
-                                          fontSize: 30,
-                                          fontWeight: FontWeight.bold,
+                                        style:
+                                            KubusTextStyles.heroTitle.copyWith(
                                           color: Theme.of(dialogContext)
                                               .colorScheme
                                               .onSurface,
@@ -1060,25 +1145,39 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                                     children: [
                                       Row(
                                         children: [
-                                          Icon(Icons.favorite,
-                                              size: 16,
-                                              color: Colors.red
-                                                  .withValues(alpha: 0.7)),
-                                          SizedBox(width: DetailSpacing.xs),
-                                          Text('${artwork.likesCount}'),
+                                          Icon(
+                                            Icons.favorite,
+                                            size: KubusSizes.trailingChevron,
+                                            color: Colors.red
+                                                .withValues(alpha: 0.7),
+                                          ),
+                                          const SizedBox(
+                                              width: KubusSpacing.xs),
+                                          Text(
+                                            '${artwork.likesCount}',
+                                            style:
+                                                KubusTextStyles.detailCaption,
+                                          ),
                                         ],
                                       ),
-                                      SizedBox(height: DetailSpacing.xs),
+                                      const SizedBox(height: KubusSpacing.xs),
                                       Row(
                                         children: [
-                                          Icon(Icons.visibility,
-                                              size: 16,
-                                              color: Theme.of(dialogContext)
-                                                  .colorScheme
-                                                  .onSurface
-                                                  .withValues(alpha: 0.5)),
-                                          SizedBox(width: DetailSpacing.xs),
-                                          Text('${artwork.viewsCount}'),
+                                          Icon(
+                                            Icons.visibility,
+                                            size: KubusSizes.trailingChevron,
+                                            color: Theme.of(dialogContext)
+                                                .colorScheme
+                                                .onSurface
+                                                .withValues(alpha: 0.5),
+                                          ),
+                                          const SizedBox(
+                                              width: KubusSpacing.xs),
+                                          Text(
+                                            '${artwork.viewsCount}',
+                                            style:
+                                                KubusTextStyles.detailCaption,
+                                          ),
                                         ],
                                       ),
                                     ],
@@ -1086,8 +1185,8 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                                 ],
                               ),
                             ),
-                            SizedBox(
-                                height: DetailSpacing.lg + DetailSpacing.xs),
+                            const SizedBox(
+                                height: KubusSpacing.lg + KubusSpacing.xs),
 
                             // Actions
                             Row(
@@ -1106,17 +1205,21 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                                       backgroundColor:
                                           themeProvider.accentColor,
                                       foregroundColor: Colors.white,
-                                      padding: EdgeInsets.symmetric(
-                                          vertical: DetailSpacing.lg),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: KubusSpacing.lg,
+                                      ),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(
                                             DetailRadius.md),
                                       ),
                                     ),
-                                    child: const Text('Buy Now'),
+                                    child: Text(
+                                      'Buy Now',
+                                      style: KubusTextStyles.detailButton,
+                                    ),
                                   ),
                                 ),
-                                SizedBox(width: DetailSpacing.md),
+                                const SizedBox(width: KubusSpacing.md),
                                 OutlinedButton(
                                   onPressed: () {
                                     Navigator.of(dialogContext).push(
@@ -1127,10 +1230,11 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                                     );
                                   },
                                   style: OutlinedButton.styleFrom(
-                                    padding: EdgeInsets.symmetric(
-                                        vertical: DetailSpacing.lg,
-                                        horizontal: DetailSpacing.lg +
-                                            DetailSpacing.xs),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: KubusSpacing.lg,
+                                      horizontal:
+                                          KubusSpacing.lg + KubusSpacing.xs,
+                                    ),
                                     side: BorderSide(
                                         color: themeProvider.accentColor),
                                     shape: RoundedRectangleBorder(
@@ -1138,7 +1242,10 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                                           DetailRadius.md),
                                     ),
                                   ),
-                                  child: const Text('Make Offer'),
+                                  child: Text(
+                                    'Make Offer',
+                                    style: KubusTextStyles.detailButton,
+                                  ),
                                 ),
                               ],
                             ),

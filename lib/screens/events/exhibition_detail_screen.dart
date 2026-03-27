@@ -2,7 +2,6 @@
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 
@@ -23,6 +22,7 @@ import '../../utils/media_url_resolver.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../utils/artwork_navigation.dart';
+import '../../utils/design_tokens.dart';
 import '../../config/config.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
@@ -101,7 +101,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       if (!mounted) return;
       messenger.showKubusSnackBar(
         SnackBar(
-          content: Text(l10n.commonSavedToast, style: GoogleFonts.inter()),
+          content: Text(l10n.commonSavedToast, style: KubusTypography.inter()),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -110,7 +110,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       messenger.showKubusSnackBar(
         SnackBar(
           content:
-              Text(l10n.commonActionFailedToast, style: GoogleFonts.inter()),
+              Text(l10n.commonActionFailedToast, style: KubusTypography.inter()),
           backgroundColor: scheme.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -139,7 +139,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
         messenger.showKubusSnackBar(
           SnackBar(
             content:
-                Text(l10n.commonActionFailedToast, style: GoogleFonts.inter()),
+                Text(l10n.commonActionFailedToast, style: KubusTypography.inter()),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -157,7 +157,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
         messenger.showKubusSnackBar(
           SnackBar(
             content:
-                Text(l10n.commonActionFailedToast, style: GoogleFonts.inter()),
+                Text(l10n.commonActionFailedToast, style: KubusTypography.inter()),
             backgroundColor: scheme.error,
             behavior: SnackBarBehavior.floating,
           ),
@@ -171,7 +171,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       if (!mounted) return;
       messenger.showKubusSnackBar(
         SnackBar(
-          content: Text(l10n.commonSavedToast, style: GoogleFonts.inter()),
+          content: Text(l10n.commonSavedToast, style: KubusTypography.inter()),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -180,7 +180,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       messenger.showKubusSnackBar(
         SnackBar(
           content:
-              Text(l10n.commonActionFailedToast, style: GoogleFonts.inter()),
+              Text(l10n.commonActionFailedToast, style: KubusTypography.inter()),
           backgroundColor: scheme.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -254,7 +254,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
         messenger.showKubusSnackBar(
           SnackBar(
             content: Text(l10n.exhibitionDetailNoArtworksAvailableToLinkToast,
-                style: GoogleFonts.inter()),
+                style: KubusTypography.inter()),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -271,7 +271,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
           builder: (context, setLocalState) {
             return KubusAlertDialog(
               title: Text(l10n.exhibitionDetailAddArtworksDialogTitle,
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                  style: KubusTypography.inter(fontWeight: FontWeight.w700)),
               content: SizedBox(
                 width: 520,
                 child: ListView.builder(
@@ -293,11 +293,11 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                       },
                       title: Text(
                         art.title,
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                        style: KubusTypography.inter(fontWeight: FontWeight.w600),
                       ),
                       subtitle: Text(
                         art.artist.isNotEmpty ? art.artist : 'â€”',
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                             fontSize: 12,
                             color: scheme.onSurface.withValues(alpha: 0.75)),
                       ),
@@ -310,14 +310,14 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(dialogContext).pop(false),
-                  child: Text(l10n.commonCancel, style: GoogleFonts.inter()),
+                  child: Text(l10n.commonCancel, style: KubusTypography.inter()),
                 ),
                 FilledButton(
                   onPressed: selectedIds.isEmpty
                       ? null
                       : () => Navigator.of(dialogContext).pop(true),
                   child: Text(l10n.commonLink,
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                      style: KubusTypography.inter(fontWeight: FontWeight.w600)),
                 ),
               ],
             );
@@ -334,7 +334,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       messenger.showKubusSnackBar(
         SnackBar(
           content: Text(l10n.exhibitionDetailArtworksLinkedToast,
-              style: GoogleFonts.inter()),
+              style: KubusTypography.inter()),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -342,7 +342,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       messenger.showKubusSnackBar(
         SnackBar(
           content: Text(l10n.exhibitionDetailLinkArtworksFailedToast,
-              style: GoogleFonts.inter()),
+              style: KubusTypography.inter()),
           backgroundColor: scheme.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -533,7 +533,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(ex.title,
-            style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+            style: KubusTypography.inter(fontWeight: FontWeight.w600)),
         actions: [
           IconButton(
             tooltip: l10n.commonShare,
@@ -733,7 +733,7 @@ class _LinkedArtworksListState extends State<_LinkedArtworksList> {
     if (ids.isEmpty) {
       return Text(
         l10n.exhibitionDetailNoArtworksLinkedYet,
-        style: GoogleFonts.inter(
+        style: KubusTypography.inter(
           fontSize: 13,
           color: scheme.onSurface.withValues(alpha: 0.7),
         ),
@@ -760,11 +760,11 @@ class _LinkedArtworksListState extends State<_LinkedArtworksList> {
             },
           title: Text(
             title,
-            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+            style: KubusTypography.inter(fontWeight: FontWeight.w600),
           ),
           subtitle: Text(
             subtitle,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 12,
               color: scheme.onSurface.withValues(alpha: 0.75),
             ),
@@ -971,3 +971,5 @@ class _ExhibitionDetailsCard extends StatelessWidget {
 }
 
 // Remove old _InfoRow since we now use InfoRow from detail_shell_components
+
+

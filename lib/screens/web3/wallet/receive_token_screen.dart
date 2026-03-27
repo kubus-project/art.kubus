@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../../utils/design_tokens.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../models/wallet.dart';
@@ -68,7 +68,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
         ),
         title: Text(
           l10n.receiveTokenTitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.onSurface,
@@ -135,7 +135,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
           children: [
             Text(
               l10n.receiveTokenSelectTokenTitle,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: theme.colorScheme.onSurface,
@@ -176,7 +176,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                               children: [
                                 Text(
                                   token.symbol,
-                                  style: GoogleFonts.inter(
+                                  style: KubusTypography.inter(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600,
                                     color: theme.colorScheme.onSurface,
@@ -187,7 +187,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                                   l10n.receiveTokenBalanceLabel(
                                     token.balance.toStringAsFixed(token.decimals >= 3 ? 3 : 2),
                                   ),
-                                  style: GoogleFonts.inter(
+                                  style: KubusTypography.inter(
                                     fontSize: 11,
                                     color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                                   ),
@@ -219,7 +219,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
     return ScaleTransition(
       scale: _scaleAnimation,
       child: Container(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(KubusSpacing.lg),
         decoration: BoxDecoration(
           color: theme.colorScheme.primaryContainer,
           borderRadius: BorderRadius.circular(20),
@@ -250,7 +250,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                             child: Text(
                               l10n.receiveTokenQrError,
                               textAlign: TextAlign.center,
-                              style: GoogleFonts.inter(
+                              style: KubusTypography.inter(
                                 color: theme.colorScheme.onSurface,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -262,7 +262,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                         child: Text(
                           l10n.receiveTokenQrRequiresWallet,
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(
+                          style: KubusTypography.inter(
                             color: Theme.of(context).colorScheme.onPrimary,
                             fontWeight: FontWeight.w600,
                           ),
@@ -273,7 +273,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
             const SizedBox(height: 16),
             Text(
               l10n.receiveTokenScanToSend(tokenSymbol),
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
                       color: theme.colorScheme.onSurface,
@@ -284,7 +284,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
               hasWalletAddress
                   ? l10n.receiveTokenAnyoneCanSend(tokenSymbol)
                   : l10n.receiveTokenFinishSetupToShare,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 14,
                       color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
@@ -303,7 +303,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
     final tokenSymbol = token?.symbol ?? _selectedToken;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: theme.colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(16),
@@ -317,7 +317,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
             children: [
               Text(
                 l10n.receiveTokenYourAddressTitle(tokenSymbol),
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: theme.colorScheme.onSurface,
@@ -359,7 +359,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
             child: hasWalletAddress
                 ? SelectableText(
                     walletAddress!,
-                    style: GoogleFonts.jetBrainsMono(
+                    style: KubusTypography.inter(
                       fontSize: 14,
                       color: theme.colorScheme.onSurface,
                       fontWeight: FontWeight.w500,
@@ -368,7 +368,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                   )
                 : Text(
                     l10n.receiveTokenRequiresWalletToReceive,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 14,
                       color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
@@ -390,7 +390,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
               icon: Icon(Icons.content_copy, color: theme.colorScheme.onSurface, size: 18),
               label: Text(
                 l10n.receiveTokenCopyAddressButton,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: theme.colorScheme.onSurface,
@@ -406,7 +406,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
   Widget _buildInstructions() {
     final l10n = AppLocalizations.of(context)!;
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(16),
@@ -425,7 +425,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
               const SizedBox(width: 8),
               Text(
                 l10n.receiveTokenHowToReceiveTitle(_selectedToken),
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).colorScheme.onSurface,
@@ -466,7 +466,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                 Expanded(
                   child: Text(
                     l10n.receiveTokenWarningOnlySend(_selectedToken),
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 12,
                       color: Theme.of(context).colorScheme.error,
                     ),
@@ -494,7 +494,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
           child: Center(
             child: Text(
               number,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
                 color: Theme.of(context).colorScheme.onSurface,
@@ -509,7 +509,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
             children: [
               Text(
                 title,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: Theme.of(context).colorScheme.onSurface,
@@ -518,7 +518,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
               const SizedBox(height: 4),
               Text(
                 description,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 13,
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   height: 1.4,
@@ -596,7 +596,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: theme.colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(16),
@@ -609,7 +609,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
           Expanded(
             child: Text(
               l10n.receiveTokenNoTokensMessage,
-              style: GoogleFonts.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
+              style: KubusTypography.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
             ),
           ),
         ],
@@ -659,7 +659,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
       child: Center(
         child: Text(
           token.symbol.isNotEmpty ? token.symbol.substring(0, 1).toUpperCase() : '?',
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontWeight: FontWeight.bold,
             color: theme.colorScheme.onSurface,
           ),
@@ -668,6 +668,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
     );
   }
 }
+
 
 
 

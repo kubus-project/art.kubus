@@ -6,7 +6,6 @@ import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../models/institution.dart';
@@ -23,6 +22,7 @@ import '../../../utils/wallet_utils.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../utils/app_animations.dart';
+import '../../../utils/design_tokens.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class InstitutionAnalytics extends StatefulWidget {
@@ -213,7 +213,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
       children: [
         Text(
           'Institution Analytics',
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 22,
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.onSurface,
@@ -222,7 +222,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
         const SizedBox(height: 4),
         Text(
           'Track your institution\'s performance and engagement',
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 12,
             color:
                 Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -275,7 +275,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
         children: [
           Text(
             'Time Period',
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 14,
               fontWeight: FontWeight.w600,
               color: Theme.of(context).colorScheme.onSurface,
@@ -309,7 +309,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                 isExpanded: true,
                 dropdownColor:
                     Theme.of(context).colorScheme.surfaceContainerHighest,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 12,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
@@ -350,7 +350,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
             children: [
               Text(
                 'Overview',
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: scheme.onSurface,
@@ -374,7 +374,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
             children: [
               Text(
                 'Overview',
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: scheme.onSurface,
@@ -568,7 +568,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
           children: [
             Text(
               'Overview',
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: scheme.onSurface,
@@ -590,7 +590,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                     Expanded(
                       child: Text(
                         'Unable to load analytics right now.',
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 12,
                           color: scheme.onSurface,
                         ),
@@ -625,7 +625,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                       },
                       child: Text(
                         'Retry',
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: scheme.primary,
@@ -682,7 +682,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
           Flexible(
             child: Text(
               stat['title'],
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 10,
                 color: Theme.of(context)
                     .colorScheme
@@ -697,7 +697,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
           Flexible(
             child: Text(
               stat['value'],
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: Theme.of(context).colorScheme.onSurface,
@@ -721,7 +721,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                 Flexible(
                   child: Text(
                     stat['change'],
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 10,
                       color: stat['positive']
                           ? KubusColorRoles.of(context).positiveAction
@@ -741,7 +741,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
 
   Widget _buildVisitorAnalytics() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
@@ -754,7 +754,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
         children: [
           Text(
             'Visitor Analytics',
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Theme.of(context).colorScheme.onSurface,
@@ -907,7 +907,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                 icon: Icon(Icons.refresh, color: Theme.of(context).colorScheme.primary),
                 label: Text(
                   'Retry loading visitors',
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: Theme.of(context).colorScheme.primary,
@@ -1010,7 +1010,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                             children: [
                               Text(
                                 metric['value']!,
-                                style: GoogleFonts.inter(
+                                style: KubusTypography.inter(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                   color: Theme.of(context).colorScheme.onSurface,
@@ -1018,7 +1018,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                               ),
                               Text(
                                 metric['label']!,
-                                style: GoogleFonts.inter(
+                                style: KubusTypography.inter(
                                   fontSize: 10,
                                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                                 ),
@@ -1054,7 +1054,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
         final topEvents = institutionEvents.take(3).toList();
 
         return Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
           decoration: BoxDecoration(
             color:
                 Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
@@ -1070,7 +1070,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
             children: [
               Text(
                 'Event Performance',
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).colorScheme.onSurface,
@@ -1103,7 +1103,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                             children: [
                               Text(
                                 event.title,
-                                style: GoogleFonts.inter(
+                                style: KubusTypography.inter(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                   color:
@@ -1113,7 +1113,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                               ),
                               Text(
                                 '${event.currentAttendees} attendees',
-                                style: GoogleFonts.inter(
+                                style: KubusTypography.inter(
                                   fontSize: 12,
                                   color: Theme.of(context)
                                       .colorScheme
@@ -1141,7 +1141,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                           ),
                           child: Text(
                             fillText,
-                            style: GoogleFonts.inter(
+                            style: KubusTypography.inter(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
                               color: Theme.of(context)
@@ -1194,7 +1194,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
           ..sort((a, b) => b.value.compareTo(a.value));
 
         return Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
           decoration: BoxDecoration(
             color:
                 Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
@@ -1210,7 +1210,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
             children: [
               Text(
                 'Revenue Analytics',
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).colorScheme.onSurface,
@@ -1235,7 +1235,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                 const SizedBox(height: 4),
                 Text(
                   'Total: \$${totalRevenue.toStringAsFixed(0)}',
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: Theme.of(context)
@@ -1265,14 +1265,14 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
             children: [
               Text(
                 category,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 14,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               Text(
                 amount,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: Theme.of(context).colorScheme.onSurface,
@@ -1309,7 +1309,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
         final topArtworks = artworks.take(3).toList();
 
         return Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
           decoration: BoxDecoration(
             color:
                 Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
@@ -1325,7 +1325,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
             children: [
               Text(
                 'Top Artworks',
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).colorScheme.onSurface,
@@ -1374,7 +1374,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -1382,7 +1382,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                 ),
                 Text(
                   '$views • $rating',
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 12,
                     color: Theme.of(context)
                         .colorScheme
@@ -1595,3 +1595,4 @@ class _BucketStat {
 
   const _BucketStat(this.bucketStart, this.value);
 }
+

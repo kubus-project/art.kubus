@@ -240,22 +240,35 @@ class _KubusSearchBarState extends State<KubusSearchBar> {
     if (widget.style != null) return widget.style!;
 
     final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-    final radius = BorderRadius.circular(12);
+    final surfaceStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.button,
+      tintBase: scheme.surface,
+    );
+    final radius = BorderRadius.circular(KubusRadius.md);
 
     return KubusSearchBarStyle(
       borderRadius: radius,
-      backgroundColor: scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10),
+      backgroundColor: surfaceStyle.tintColor,
       borderColor: scheme.outline.withValues(alpha: 0.18),
       focusedBorderColor: scheme.primary,
       borderWidth: 1,
       focusedBorderWidth: 2,
-      blurSigma: null,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      blurSigma: surfaceStyle.blurSigma,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: KubusSpacing.md,
+        vertical: KubusSpacing.md - KubusSpacing.xxs,
+      ),
       boxShadow: null,
       focusedBoxShadow: null,
-      prefixIconConstraints: null,
-      suffixIconConstraints: null,
+      prefixIconConstraints: const BoxConstraints(
+        minWidth: KubusHeaderMetrics.actionHitArea,
+        minHeight: KubusHeaderMetrics.searchBarHeight,
+      ),
+      suffixIconConstraints: const BoxConstraints(
+        minWidth: KubusHeaderMetrics.actionHitArea,
+        minHeight: KubusHeaderMetrics.searchBarHeight,
+      ),
       textStyle: theme.textTheme.bodyMedium,
       hintStyle: theme.textTheme.bodyMedium?.copyWith(
         color: scheme.onSurface.withValues(alpha: 0.5),
@@ -345,9 +358,10 @@ class _KubusSearchBarState extends State<KubusSearchBar> {
             padding: EdgeInsets.zero,
             margin: EdgeInsets.zero,
             borderRadius: style.borderRadius,
-            blurSigma: style.blurSigma ?? KubusGlassEffects.blurSigma,
+            blurSigma: style.blurSigma ?? KubusGlassEffects.blurSigmaLight,
             showBorder: false,
             backgroundColor: style.backgroundColor,
+            fallbackMinOpacity: KubusGlassEffects.fallbackOpaqueOpacity,
             child: textField,
           ),
         ),
@@ -401,8 +415,11 @@ class KubusSearchSuggestionsOverlay extends StatelessWidget {
     final trimmed = query.trim();
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.22 : 0.26);
+    final surfaceStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.panelBackground,
+      tintBase: scheme.surface,
+    );
 
     return Positioned.fill(
       child: MapOverlayBlocker(
@@ -426,16 +443,18 @@ class KubusSearchSuggestionsOverlay extends StatelessWidget {
                   maxHeight: maxHeight,
                 ),
                 child: LiquidGlassPanel(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
                   margin: EdgeInsets.zero,
-                  borderRadius: BorderRadius.circular(12),
-                  blurSigma: KubusGlassEffects.blurSigmaLight,
-                  backgroundColor: glassTint,
+                  borderRadius: BorderRadius.circular(KubusRadius.lg),
+                  blurSigma: surfaceStyle.blurSigma,
+                  backgroundColor: surfaceStyle.tintColor,
+                  fallbackMinOpacity: surfaceStyle.fallbackMinOpacity,
                   child: Builder(
                     builder: (context) {
                       if (trimmed.length < 2) {
                         return Padding(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(KubusSpacing.md),
                           child: Text(
                             minCharsHint,
                             style: theme.textTheme.bodyMedium?.copyWith(
@@ -447,14 +466,14 @@ class KubusSearchSuggestionsOverlay extends StatelessWidget {
 
                       if (isFetching) {
                         return const Padding(
-                          padding: EdgeInsets.all(16),
+                          padding: EdgeInsets.all(KubusSpacing.md),
                           child: Center(child: CircularProgressIndicator()),
                         );
                       }
 
                       if (suggestions.isEmpty) {
                         return Padding(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(KubusSpacing.md),
                           child: Row(
                             children: [
                               Icon(

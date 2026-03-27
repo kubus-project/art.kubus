@@ -1,6 +1,5 @@
-﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../utils/wallet_utils.dart';
 import '../../widgets/app_loading.dart';
@@ -14,6 +13,7 @@ import '../../services/block_list_service.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../utils/category_accent_color.dart';
+import '../../utils/design_tokens.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../community/community_interactions.dart';
 import '../../providers/themeprovider.dart';
@@ -28,6 +28,7 @@ import '../../widgets/artist_badge.dart';
 import '../../widgets/institution_badge.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/profile_artist_info_fields.dart';
+import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import 'post_detail_screen.dart';
 import '../../utils/artwork_navigation.dart';
@@ -39,7 +40,6 @@ import 'profile_screen_methods.dart';
 import '../../models/dao.dart';
 import '../../widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
- 
 
 class UserProfileScreen extends StatefulWidget {
   final String userId;
@@ -57,7 +57,8 @@ class UserProfileScreen extends StatefulWidget {
   State<UserProfileScreen> createState() => _UserProfileScreenState();
 }
 
-class _UserProfileScreenState extends State<UserProfileScreen> with TickerProviderStateMixin {
+class _UserProfileScreenState extends State<UserProfileScreen>
+    with TickerProviderStateMixin {
   User? user;
   bool isLoading = true;
   List<CommunityPost> _posts = [];
@@ -80,7 +81,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
 
   String? _currentWalletAddress() {
     try {
-      return Provider.of<WalletProvider>(context, listen: false).currentWalletAddress;
+      return Provider.of<WalletProvider>(context, listen: false)
+          .currentWalletAddress;
     } catch (_) {
       return null;
     }
@@ -98,7 +100,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     );
     _scrollController = ScrollController();
     _scrollController.addListener(() {
-      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 200) {
         _loadMorePosts();
       }
     });
@@ -121,8 +124,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
   @override
   void dispose() {
     _followButtonController.dispose();
-    try { Provider.of<WalletProvider>(context, listen: false).removeListener(_onWalletChanged); } catch (_) {}
-    try { SocketService().removePostListener(_handleIncomingPost); } catch (_) {}
+    try {
+      Provider.of<WalletProvider>(context, listen: false)
+          .removeListener(_onWalletChanged);
+    } catch (_) {}
+    try {
+      SocketService().removePostListener(_handleIncomingPost);
+    } catch (_) {}
     _scrollController.dispose();
     super.dispose();
   }
@@ -130,7 +138,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
   void _handleIncomingPost(Map<String, dynamic> data) async {
     try {
       if (user == null) return;
-      final incomingAuthor = (data['walletAddress'] ?? data['author'] ?? data['authorWallet'])?.toString();
+      final incomingAuthor =
+          (data['walletAddress'] ?? data['author'] ?? data['authorWallet'])
+              ?.toString();
       if (incomingAuthor == null) return;
       // author id stored as wallet string in this profile screen
       if (!WalletUtils.equals(incomingAuthor, user!.id)) return;
@@ -175,7 +185,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     }
   }
 
-  Future<void> _loadUserStats({bool skipFollowersOverwrite = false, bool forceRefresh = false}) async {
+  Future<void> _loadUserStats(
+      {bool skipFollowersOverwrite = false, bool forceRefresh = false}) async {
     final profile = user;
     if (profile == null) return;
     try {
@@ -183,7 +194,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       final snapshot = await statsProvider.ensureSnapshot(
         entityType: 'user',
         entityId: profile.id,
-        metrics: const ['posts', 'followers', 'following', 'publicStreetArtAdded'],
+        metrics: const [
+          'posts',
+          'followers',
+          'following',
+          'publicStreetArtAdded'
+        ],
         scope: 'public',
         forceRefresh: forceRefresh,
       );
@@ -230,7 +246,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       if (widget.username != null) {
         loadedUser = await UserService.getUserByUsername(widget.username!);
       } else {
-        loadedUser = await UserService.getUserById(widget.userId, forceRefresh: true);
+        loadedUser =
+            await UserService.getUserById(widget.userId, forceRefresh: true);
       }
     } catch (e) {
       debugPrint('UserProfileScreen._loadUser: failed to fetch user: $e');
@@ -271,7 +288,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
 
     try {
       const pageSize = 20;
-      final posts = await BackendApiService().getCommunityPosts(page: _currentPage, limit: pageSize, authorWallet: user!.id);
+      final posts = await BackendApiService().getCommunityPosts(
+          page: _currentPage, limit: pageSize, authorWallet: user!.id);
       try {
         await CommunityService.loadSavedInteractions(
           posts,
@@ -310,7 +328,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
 
     try {
       const pageSize = 20;
-      final more = await BackendApiService().getCommunityPosts(page: _currentPage, limit: pageSize, authorWallet: user!.id);
+      final more = await BackendApiService().getCommunityPosts(
+          page: _currentPage, limit: pageSize, authorWallet: user!.id);
       try {
         await CommunityService.loadSavedInteractions(
           more,
@@ -359,7 +378,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
         avatarUrl: user!.profileImageUrl,
       );
     } catch (e) {
-      debugPrint('UserProfileScreen: failed to toggle follow for ${user!.id}: $e');
+      debugPrint(
+          'UserProfileScreen: failed to toggle follow for ${user!.id}: $e');
       if (!mounted) return;
       final message = e.toString().contains('401')
           ? l10n.userProfileSignInToFollowToast
@@ -374,7 +394,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       await _loadUserStats(skipFollowersOverwrite: true);
       return;
     }
-    
+
     setState(() {
       final currentFollowers = user!.followersCount;
       final updatedFollowers = newFollowState
@@ -391,7 +411,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       messenger.showKubusSnackBar(
         SnackBar(
           content: Text(
-            newFollowState 
+            newFollowState
                 ? l10n.userProfileNowFollowingToast(user!.name)
                 : l10n.userProfileUnfollowedToast(user!.name),
           ),
@@ -416,7 +436,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
         try {
           if (!mounted) return;
           await _loadUserStats();
-          try { if (user != null) UserService.setUsersInCache([user!]); } catch (_) {}
+          try {
+            if (user != null) UserService.setUsersInCache([user!]);
+          } catch (_) {}
         } catch (_) {}
       });
     } catch (_) {}
@@ -426,16 +448,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final l10n = AppLocalizations.of(context)!;
-    
+
     if (isLoading) {
       return Scaffold(
         appBar: AppBar(
           title: Text(
             l10n.userProfileTitle,
-            style: GoogleFonts.inter(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+            style: KubusTextStyles.screenTitle,
           ),
         ),
         body: const AppLoading(),
@@ -447,10 +466,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
         appBar: AppBar(
           title: Text(
             l10n.userProfileTitle,
-            style: GoogleFonts.inter(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+            style: KubusTextStyles.screenTitle,
           ),
         ),
         body: Center(
@@ -462,9 +478,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     // Determine artist/institution status from User model + DAO reviews (like profile_screen.dart)
     final daoProvider = Provider.of<DAOProvider>(context);
     final DAOReview? daoReview = daoProvider.findReviewForWallet(user!.id);
-    
-    final isArtist = user!.isArtist || (daoReview != null && daoReview.isArtistApplication && daoReview.isApproved);
-    final isInstitution = user!.isInstitution || (daoReview != null && daoReview.isInstitutionApplication && daoReview.isApproved);
+
+    final isArtist = user!.isArtist ||
+        (daoReview != null &&
+            daoReview.isArtistApplication &&
+            daoReview.isApproved);
+    final isInstitution = user!.isInstitution ||
+        (daoReview != null &&
+            daoReview.isInstitutionApplication &&
+            daoReview.isApproved);
 
     return AnimatedGradientBackground(
       child: Scaffold(
@@ -474,7 +496,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
           elevation: 0,
           title: Text(
             user!.name.isNotEmpty ? user!.name : l10n.userProfileTitle,
-            style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+            style: KubusTextStyles.screenTitle,
           ),
           actions: [
             IconButton(
@@ -531,7 +553,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
 
   Future<void> _showMoreOptions() async {
     final l10n = AppLocalizations.of(context)!;
-    final target = ShareTarget.profile(walletAddress: user!.id, title: user!.name);
+    final target =
+        ShareTarget.profile(walletAddress: user!.id, title: user!.name);
 
     await showModalBottomSheet<void>(
       context: context,
@@ -550,7 +573,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                 children: [
                   ListTile(
                     leading: const Icon(Icons.ios_share),
-                    title: Text(l10n.commonShare, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                    title: Text(l10n.commonShare,
+                        style: KubusTextStyles.sectionTitle),
                     onTap: () async {
                       Navigator.of(sheetContext).pop();
                       await ShareService().showShareSheet(
@@ -562,7 +586,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                   ),
                   ListTile(
                     leading: const Icon(Icons.block),
-                    title: Text(l10n.userProfileMoreOptionsBlockUser, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                    title: Text(l10n.userProfileMoreOptionsBlockUser,
+                        style: KubusTextStyles.sectionTitle),
                     onTap: () {
                       Navigator.of(sheetContext).pop();
                       _showBlockConfirmation();
@@ -570,7 +595,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                   ),
                   ListTile(
                     leading: const Icon(Icons.report),
-                    title: Text(l10n.userProfileMoreOptionsReportUser, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                    title: Text(l10n.userProfileMoreOptionsReportUser,
+                        style: KubusTextStyles.sectionTitle),
                     onTap: () {
                       Navigator.of(sheetContext).pop();
                       _showReportDialog();
@@ -585,11 +611,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     );
   }
 
-  Widget _buildProfileHeader(ThemeProvider themeProvider, {required bool isArtist, required bool isInstitution}) {
+  Widget _buildProfileHeader(ThemeProvider themeProvider,
+      {required bool isArtist, required bool isInstitution}) {
     final coverImageUrl = _normalizeMediaUrl(user!.coverImageUrl);
-    final coverUrlIsKnownBad = coverImageUrl != null && coverImageUrl == _failedCoverImageUrl;
-    final hasCoverImage = coverImageUrl != null && coverImageUrl.isNotEmpty && !coverUrlIsKnownBad;
-    
+    final coverUrlIsKnownBad =
+        coverImageUrl != null && coverImageUrl == _failedCoverImageUrl;
+    final hasCoverImage = coverImageUrl != null &&
+        coverImageUrl.isNotEmpty &&
+        !coverUrlIsKnownBad;
+
     return Column(
       children: [
         // Cover Image Section
@@ -629,8 +659,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                       LayoutBuilder(
                         builder: (context, constraints) {
                           final dpr = MediaQuery.of(context).devicePixelRatio;
-                          final cacheWidth = (constraints.maxWidth * dpr).round();
-                          final cacheHeight = (constraints.maxHeight * dpr).round();
+                          final cacheWidth =
+                              (constraints.maxWidth * dpr).round();
+                          final cacheHeight =
+                              (constraints.maxHeight * dpr).round();
                           return Image.network(
                             coverImageUrl,
                             fit: BoxFit.cover,
@@ -639,9 +671,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                             filterQuality: FilterQuality.medium,
                             errorBuilder: (context, error, stackTrace) {
                               if (_failedCoverImageUrl != coverImageUrl) {
-                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                WidgetsBinding.instance
+                                    .addPostFrameCallback((_) {
                                   if (!mounted) return;
-                                  setState(() => _failedCoverImageUrl = coverImageUrl);
+                                  setState(() =>
+                                      _failedCoverImageUrl = coverImageUrl);
                                 });
                               }
                               return const SizedBox.expand();
@@ -678,8 +712,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
               right: 0,
               child: Center(
                 child: Container(
+                  clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(26),
                     border: Border.all(
                       color: Theme.of(context).colorScheme.surface,
                       width: 5,
@@ -706,130 +741,149 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
         ),
         // Spacing for avatar overflow
         const SizedBox(height: 48),
-        
+
         // Name and Username
         Align(
-            alignment: Alignment.center,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flexible(
-                  child: Text(
-                    user!.name,
-                    style: GoogleFonts.inter(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  user!.name,
+                  style: KubusTextStyles.heroTitle.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
-                if (user!.isVerified) ...[
-                  const SizedBox(width: 8),
-                  Icon(
-                    Icons.verified,
-                    color: themeProvider.accentColor,
-                    size: 20,
-                  ),
-                ],
-                if (isArtist) ...[
-                  const SizedBox(width: 8),
-                  const ArtistBadge(),
-                ],
-                if (isInstitution) ...[
-                  const SizedBox(width: 8),
-                  const InstitutionBadge(),
-                ],
+              ),
+              if (user!.isVerified) ...[
+                const SizedBox(width: KubusSpacing.sm),
+                Icon(
+                  Icons.verified,
+                  color: themeProvider.accentColor,
+                  size: KubusHeaderMetrics.actionIcon,
+                ),
               ],
-            ),
+              if (isArtist) ...[
+                const SizedBox(width: KubusSpacing.sm),
+                const ArtistBadge(),
+              ],
+              if (isInstitution) ...[
+                const SizedBox(width: KubusSpacing.sm),
+                const InstitutionBadge(),
+              ],
+            ],
           ),
-          const SizedBox(height: 4),
-          Text(
-            user!.username,
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
+        ),
+        const SizedBox(height: KubusSpacing.xs),
+        Text(
+          user!.username,
+          style: KubusTextStyles.sectionTitle.copyWith(
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
-          const SizedBox(height: 6),
-          UserActivityStatusLine(
-            walletAddress: user!.id,
-            textAlign: TextAlign.center,
-            textStyle: GoogleFonts.inter(
-              fontSize: 13,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
+        ),
+        const SizedBox(height: KubusSpacing.sm - KubusSpacing.xxs),
+        UserActivityStatusLine(
+          walletAddress: user!.id,
+          textAlign: TextAlign.center,
+          textStyle: KubusTextStyles.sectionSubtitle.copyWith(
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
-          const SizedBox(height: 16),
-           
-          // Bio
-          Text(
-            user!.bio,
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              height: 1.5,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-            textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: KubusSpacing.md),
+
+        // Bio
+        Text(
+          user!.bio,
+          style: KubusTextStyles.detailBody.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
           ),
-          const SizedBox(height: 8),
-          ProfileArtistInfoFields(
-            fieldOfWork: user!.fieldOfWork,
-            yearsActive: user!.yearsActive,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: KubusSpacing.sm),
+        ProfileArtistInfoFields(
+          fieldOfWork: user!.fieldOfWork,
+          yearsActive: user!.yearsActive,
+        ),
+        const SizedBox(height: KubusSpacing.sm),
+
+        // Join Date
+        Text(
+          user!.joinedDate,
+          style: KubusTextStyles.detailCaption.copyWith(
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
           ),
-          const SizedBox(height: 8),
-          
-          // Join Date
-          Text(
-            user!.joinedDate,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-            ),
-          ),
-        ],
-      );
+        ),
+      ],
+    );
   }
 
   Widget _buildStatsRow(AppLocalizations l10n) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 0),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+      padding: const EdgeInsets.symmetric(
+        horizontal: KubusSpacing.lg,
+        vertical: KubusSpacing.md,
+      ),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08)),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
+        border: Border.all(
+            color: Theme.of(context)
+                .colorScheme
+                .onSurface
+                .withValues(alpha: 0.08)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
+            blurRadius: KubusSpacing.sm,
             offset: const Offset(0, 2),
           ),
         ],
       ),
-    child: Row(
+      child: Row(
         children: [
-          _buildInlineStat(label: l10n.userProfilePostsStatLabel, value: _formatCount(user!.postsCount)),
+          _buildInlineStat(
+              label: l10n.userProfilePostsStatLabel,
+              value: _formatCount(user!.postsCount)),
           Container(
             width: 1,
             height: 40,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
           ),
-          _buildInlineStat(label: l10n.userProfileFollowersStatLabel, value: _formatCount(user!.followersCount), onTap: () async {
-            try { await _loadUserStats(); } catch (_) {}
-            if (!mounted) return;
-            ProfileScreenMethods.showFollowers(context, walletAddress: user!.id);
-          }),
+          _buildInlineStat(
+              label: l10n.userProfileFollowersStatLabel,
+              value: _formatCount(user!.followersCount),
+              onTap: () async {
+                try {
+                  await _loadUserStats();
+                } catch (_) {}
+                if (!mounted) return;
+                ProfileScreenMethods.showFollowers(context,
+                    walletAddress: user!.id);
+              }),
           Container(
             width: 1,
             height: 40,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
           ),
-          _buildInlineStat(label: l10n.userProfileFollowingStatLabel, value: _formatCount(user!.followingCount), onTap: () async {
-            try { await _loadUserStats(); } catch (_) {}
-            if (!mounted) return;
-            ProfileScreenMethods.showFollowing(context, walletAddress: user!.id);
-          }),
+          _buildInlineStat(
+              label: l10n.userProfileFollowingStatLabel,
+              value: _formatCount(user!.followingCount),
+              onTap: () async {
+                try {
+                  await _loadUserStats();
+                } catch (_) {}
+                if (!mounted) return;
+                ProfileScreenMethods.showFollowing(context,
+                    walletAddress: user!.id);
+              }),
         ],
       ),
     );
@@ -845,18 +899,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       children: [
         Text(
           value,
-          style: GoogleFonts.inter(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+          style: KubusTextStyles.statValue.copyWith(
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           label,
-          style: GoogleFonts.inter(
-            fontSize: 12,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+          style: KubusTextStyles.statLabel.copyWith(
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ],
@@ -874,7 +926,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     );
   }
 
-  Widget _buildActionButtons(ThemeProvider themeProvider, AppLocalizations l10n) {
+  Widget _buildActionButtons(
+      ThemeProvider themeProvider, AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 12),
       child: Row(
@@ -885,15 +938,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
               child: ElevatedButton(
                 onPressed: _toggleFollow,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: user!.isFollowing 
+                  backgroundColor: user!.isFollowing
                       ? Theme.of(context).colorScheme.surface
                       : themeProvider.accentColor,
-                  foregroundColor: user!.isFollowing 
+                  foregroundColor: user!.isFollowing
                       ? Theme.of(context).colorScheme.onSurface
                       : Colors.white,
-                  side: user!.isFollowing 
+                  side: user!.isFollowing
                       ? BorderSide(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.2),
                           width: 1.5,
                         )
                       : null,
@@ -908,10 +964,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                   user!.isFollowing
                       ? l10n.userProfileFollowingButton
                       : l10n.userProfileFollowButton,
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: KubusTextStyles.actionTileTitle,
                 ),
               ),
             ),
@@ -919,54 +972,83 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
           const SizedBox(width: 12),
           ElevatedButton(
             onPressed: () async {
-              final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+              final chatProvider =
+                  Provider.of<ChatProvider>(context, listen: false);
               // navigator variable no longer used; ConversationNavigator handles navigation
               final messenger = ScaffoldMessenger.of(context);
               final chatAuth = chatProvider.isAuthenticated;
               final l10n = AppLocalizations.of(context)!;
               try {
-                final conv = await chatProvider.createConversation('', false, [user!.id]);
+                final conv = await chatProvider
+                    .createConversation('', false, [user!.id]);
                 if (conv != null) {
                   if (!mounted) return;
-                  final preloaded = Provider.of<ChatProvider>(context, listen: false).getPreloadedProfileMapsForConversation(conv.id);
+                  final preloaded =
+                      Provider.of<ChatProvider>(context, listen: false)
+                          .getPreloadedProfileMapsForConversation(conv.id);
                   // Ensure we pass non-empty members and sensible fallbacks for avatars / display names
-                  final rawMembers = (preloaded['members'] as List<dynamic>?)?.cast<String>() ?? <String>[];
-                  final members = (rawMembers.isNotEmpty) ? rawMembers : <String>[user!.id];
-                  final rawAvatars = (preloaded['avatars'] as Map<String, String?>?) ?? <String, String?>{};
+                  final rawMembers = (preloaded['members'] as List<dynamic>?)
+                          ?.cast<String>() ??
+                      <String>[];
+                  final members =
+                      (rawMembers.isNotEmpty) ? rawMembers : <String>[user!.id];
+                  final rawAvatars =
+                      (preloaded['avatars'] as Map<String, String?>?) ??
+                          <String, String?>{};
                   final avatars = Map<String, String?>.from(rawAvatars);
-                  if (!avatars.containsKey(members.first) || (avatars[members.first] == null || avatars[members.first]!.isEmpty)) {
+                  if (!avatars.containsKey(members.first) ||
+                      (avatars[members.first] == null ||
+                          avatars[members.first]!.isEmpty)) {
                     avatars[members.first] = user!.profileImageUrl;
                   }
-                  final rawNames = (preloaded['names'] as Map<String, String?>?) ?? <String, String?>{};
+                  final rawNames =
+                      (preloaded['names'] as Map<String, String?>?) ??
+                          <String, String?>{};
                   final names = Map<String, String?>.from(rawNames);
-                  if (!names.containsKey(members.first) || (names[members.first] == null || names[members.first]!.isEmpty)) {
+                  if (!names.containsKey(members.first) ||
+                      (names[members.first] == null ||
+                          names[members.first]!.isEmpty)) {
                     names[members.first] = user!.name;
                   }
-                  await ConversationNavigator.openConversationWithPreload(context, conv, preloadedMembers: members, preloadedAvatars: avatars, preloadedDisplayNames: names);
+                  await ConversationNavigator.openConversationWithPreload(
+                      context, conv,
+                      preloadedMembers: members,
+                      preloadedAvatars: avatars,
+                      preloadedDisplayNames: names);
                 } else {
                   // Improve messaging: suggest login if token isn't present
                   // use pre-captured chatAuth variable
                   if (!chatAuth) {
                     if (mounted) {
-                      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.userProfileMessageLoginRequiredToast)));
+                      messenger.showKubusSnackBar(SnackBar(
+                          content:
+                              Text(l10n.userProfileMessageLoginRequiredToast)));
                     }
                   } else {
                     if (mounted) {
-                      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.userProfileConversationOpenFailedToast)));
+                      messenger.showKubusSnackBar(SnackBar(
+                          content: Text(
+                              l10n.userProfileConversationOpenFailedToast)));
                     }
                   }
                 }
               } catch (e) {
-                debugPrint('UserProfileScreen: failed to open conversation: $e');
+                debugPrint(
+                    'UserProfileScreen: failed to open conversation: $e');
                 if (!mounted) return;
-                messenger.showKubusSnackBar(SnackBar(content: Text(l10n.userProfileConversationOpenGenericErrorToast)));
+                messenger.showKubusSnackBar(SnackBar(
+                    content: Text(
+                        l10n.userProfileConversationOpenGenericErrorToast)));
               }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.surface,
               foregroundColor: Theme.of(context).colorScheme.onSurface,
               side: BorderSide(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.2),
                 width: 1.5,
               ),
               elevation: 0,
@@ -990,7 +1072,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
+          color:
+              Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
         ),
       ),
       child: Row(
@@ -1017,9 +1100,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
               children: [
                 Text(
                   l10n.profilePerformancePublicStreetArtAddedTitle,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                  style: KubusTextStyles.sectionTitle.copyWith(
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
@@ -1028,8 +1109,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                   l10n.userProfileArtistHighlightsSubtitle(user!.name),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
+                  style: KubusTextStyles.sectionSubtitle.copyWith(
                     color: Theme.of(context)
                         .colorScheme
                         .onSurface
@@ -1041,9 +1121,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
           ),
           Text(
             _formatCount(_publicStreetArtAddedCount),
-            style: GoogleFonts.inter(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
+            style: KubusTextStyles.statValue.copyWith(
               color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
@@ -1052,7 +1130,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     );
   }
 
-  Widget _buildAchievements(ThemeProvider themeProvider, AppLocalizations l10n) {
+  Widget _buildAchievements(
+      ThemeProvider themeProvider, AppLocalizations l10n) {
     final progress = user?.achievementProgress ?? [];
     final achievementsToShow = achievement_svc
         .AchievementService.achievementDefinitions.values
@@ -1088,16 +1167,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
             children: [
               Text(
                 l10n.userProfileAchievementsTitle,
-                style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                style: KubusTextStyles.sectionTitle.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               Text(
                 '$completedCount/$totalAchievements',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
+                style: KubusTextStyles.sectionSubtitle.copyWith(
                   color: themeProvider.accentColor,
                   fontWeight: FontWeight.w600,
                 ),
@@ -1233,7 +1309,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     AchievementProgress progress,
   ) {
     final l10n = AppLocalizations.of(context)!;
-    final required = achievement.requiredCount > 0 ? achievement.requiredCount : 1;
+    final required =
+        achievement.requiredCount > 0 ? achievement.requiredCount : 1;
     final ratio = (progress.currentProgress / required).clamp(0.0, 1.0);
     final isCompleted = progress.isCompleted || ratio >= 1.0;
     final accent = CategoryAccentColor.resolve(
@@ -1284,26 +1361,27 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                   achievement.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                  style: KubusTextStyles.sectionTitle.copyWith(
+                    fontSize: KubusHeaderMetrics.screenSubtitle,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
           Text(
             achievement.description,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+            style: KubusTextStyles.navMetaLabel.copyWith(
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.7),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -1311,25 +1389,31 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                 isCompleted
                     ? l10n.userProfileAchievementCompletedLabel
                     : '${progress.currentProgress}/$required',
-                style: GoogleFonts.inter(
-                  fontSize: 12,
+                style: KubusTextStyles.navMetaLabel.copyWith(
                   fontWeight: FontWeight.w600,
                   color: isCompleted
                       ? themeProvider.accentColor
-                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                      : Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7),
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.sm - KubusSpacing.xxs,
+                  vertical: KubusSpacing.xxs,
+                ),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.secondaryContainer.withValues(alpha: 0.4),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .secondaryContainer
+                      .withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   '+${achievement.tokenReward}',
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
+                  style: KubusTextStyles.badgeCount.copyWith(
                     color: Theme.of(context).colorScheme.onSecondaryContainer,
                   ),
                 ),
@@ -1342,7 +1426,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
             child: LinearProgressIndicator(
               value: ratio,
               minHeight: 6,
-              backgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
+              backgroundColor: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.08),
               valueColor: AlwaysStoppedAnimation<Color>(
                 isCompleted ? themeProvider.accentColor : accent,
               ),
@@ -1361,9 +1448,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
         children: [
           Text(
             l10n.userProfilePostsTitle,
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+            style: KubusTextStyles.sectionTitle.copyWith(
               color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
@@ -1372,7 +1457,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
             Container(
               padding: const EdgeInsets.symmetric(vertical: 24),
               child: const Center(child: CircularProgressIndicator()),
-            ) else if (_postsError != null)
+            )
+          else if (_postsError != null)
             _buildEmptyStateCard(
               l10n: l10n,
               title: l10n.userProfilePostsLoadFailedTitle,
@@ -1381,13 +1467,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
               showAction: true,
               actionLabel: l10n.commonRetry,
               onActionTap: _loadPosts,
-            ) else if (_posts.isEmpty)
+            )
+          else if (_posts.isEmpty)
             _buildEmptyStateCard(
               l10n: l10n,
               title: l10n.userProfileNoPostsTitle,
               description: l10n.userProfileNoPostsDescription(user!.name),
               icon: Icons.article,
-            ) else
+            )
+          else
             ListView.separated(
               physics: const NeverScrollableScrollPhysics(),
               shrinkWrap: true,
@@ -1399,7 +1487,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => PostDetailScreen(post: post)),
+                      MaterialPageRoute(
+                          builder: (context) => PostDetailScreen(post: post)),
                     );
                   },
                   child: Container(
@@ -1407,7 +1496,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06)),
+                      border: Border.all(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.06)),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.04),
@@ -1421,7 +1514,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                       children: [
                         Row(
                           children: [
-                            AvatarWidget(wallet: post.authorId, avatarUrl: post.authorAvatar, radius: 18, enableProfileNavigation: false),
+                            AvatarWidget(
+                                wallet: post.authorId,
+                                avatarUrl: post.authorAvatar,
+                                radius: 18,
+                                enableProfileNavigation: false),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Column(
@@ -1432,35 +1529,55 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                                       Expanded(
                                         child: Text(
                                           post.authorName,
-                                          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                                          style: KubusTextStyles.sectionTitle,
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                       if (post.authorIsArtist) ...[
                                         const SizedBox(width: 6),
-                                        ArtistBadge(fontSize: 8, padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2)),
+                                        ArtistBadge(
+                                            fontSize: 8,
+                                            padding: EdgeInsets.symmetric(
+                                                horizontal: 6, vertical: 2)),
                                       ],
                                       if (post.authorIsInstitution) ...[
                                         const SizedBox(width: 6),
-                                        InstitutionBadge(fontSize: 8, padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2)),
+                                        InstitutionBadge(
+                                            fontSize: 8,
+                                            padding: EdgeInsets.symmetric(
+                                                horizontal: 6, vertical: 2)),
                                       ],
                                     ],
                                   ),
                                   const SizedBox(height: 2),
-                                  Text(_formatPostTime(l10n, post.timestamp), style: GoogleFonts.inter(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))),
+                                  Text(
+                                    _formatPostTime(l10n, post.timestamp),
+                                    style: KubusTextStyles.sectionSubtitle
+                                        .copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.5),
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 8),
-                        Text(post.content, style: GoogleFonts.inter(), maxLines: 3, overflow: TextOverflow.ellipsis),
-                        if (post.imageUrl != null && post.imageUrl!.isNotEmpty) ...[
+                        Text(post.content,
+                            style: KubusTextStyles.sectionSubtitle,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis),
+                        if (post.imageUrl != null &&
+                            post.imageUrl!.isNotEmpty) ...[
                           const SizedBox(height: 8),
                           ClipRRect(
                             borderRadius: BorderRadius.circular(8),
                             child: Image.network(
-                              MediaUrlResolver.resolveDisplayUrl(post.imageUrl) ??
+                              MediaUrlResolver.resolveDisplayUrl(
+                                      post.imageUrl) ??
                                   post.imageUrl!,
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) {
@@ -1480,13 +1597,48 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                         const SizedBox(height: 8),
                         Row(
                           children: [
-                            Icon(post.isLiked ? Icons.favorite : Icons.favorite_border, size: 16, color: post.isLiked ? Provider.of<ThemeProvider>(context).accentColor : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+                            Icon(
+                                post.isLiked
+                                    ? Icons.favorite
+                                    : Icons.favorite_border,
+                                size: 16,
+                                color: post.isLiked
+                                    ? Provider.of<ThemeProvider>(context)
+                                        .accentColor
+                                    : Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.6)),
                             const SizedBox(width: 6),
-                            Text('${post.likeCount}', style: GoogleFonts.inter(fontSize: 12, color: post.isLiked ? Provider.of<ThemeProvider>(context).accentColor : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
+                            Text(
+                              '${post.likeCount}',
+                              style: KubusTextStyles.compactBadge.copyWith(
+                                color: post.isLiked
+                                    ? Provider.of<ThemeProvider>(context)
+                                        .accentColor
+                                    : Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.6),
+                              ),
+                            ),
                             const SizedBox(width: 16),
-                            Icon(Icons.comment_outlined, size: 16, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+                            Icon(Icons.comment_outlined,
+                                size: 16,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.6)),
                             const SizedBox(width: 6),
-                            Text('${post.commentCount}', style: GoogleFonts.inter(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
+                            Text(
+                              '${post.commentCount}',
+                              style: KubusTextStyles.compactBadge.copyWith(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.6),
+                              ),
+                            ),
                           ],
                         ),
                       ],
@@ -1495,20 +1647,31 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                 );
               },
             ),
-            const SizedBox(height: 12),
-            if (_loadingMore)
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                alignment: Alignment.center,
-                child: const SizedBox(width:24, height:24, child: CircularProgressIndicator(strokeWidth:2)),
-              )
-            else if (_isLastPage)
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                alignment: Alignment.center,
-                child: Text(l10n.userProfileNoMorePostsLabel, style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
+          const SizedBox(height: 12),
+          if (_loadingMore)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              alignment: Alignment.center,
+              child: const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2)),
+            )
+          else if (_isLastPage)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              alignment: Alignment.center,
+              child: Text(
+                l10n.userProfileNoMorePostsLabel,
+                style: KubusTextStyles.sectionSubtitle.copyWith(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
+                ),
               ),
-            const SizedBox(height: 24),
+            ),
+          const SizedBox(height: 24),
         ],
       ),
     );
@@ -1516,27 +1679,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
 
   Widget _buildArtistHighlightsGrid(AppLocalizations l10n) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            l10n.userProfileArtistHighlightsTitle,
-            style: GoogleFonts.inter(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+          KubusHeaderText(
+            title: l10n.userProfileArtistHighlightsTitle,
+            subtitle: l10n.userProfileArtistHighlightsSubtitle(user!.name),
+            kind: KubusHeaderKind.section,
           ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.userProfileArtistHighlightsSubtitle(user!.name),
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-            ),
-          ),
-          const SizedBox(height: 20),
+          const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
           _buildShowcaseSection(
             l10n: l10n,
             title: l10n.userProfileArtworksTitle,
@@ -1545,7 +1697,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
             emptyIcon: Icons.image_outlined,
             builder: _buildArtworkCard,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
           _buildShowcaseSection(
             l10n: l10n,
             title: l10n.userProfileCollectionsTitle,
@@ -1561,27 +1713,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
 
   Widget _buildArtistEventsShowcase(AppLocalizations l10n) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            l10n.userProfileEventsTitle,
-            style: GoogleFonts.inter(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+          KubusHeaderText(
+            title: l10n.userProfileEventsTitle,
+            subtitle: l10n.userProfileEventsSubtitleFeaturing(user!.name),
+            kind: KubusHeaderKind.section,
           ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.userProfileEventsSubtitleFeaturing(user!.name),
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-            ),
-          ),
-          const SizedBox(height: 20),
+          const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
           _buildShowcaseSection(
             l10n: l10n,
             title: l10n.userProfileEventsTitle,
@@ -1597,27 +1738,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
 
   Widget _buildInstitutionHighlights(AppLocalizations l10n) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            l10n.userProfileInstitutionHighlightsTitle,
-            style: GoogleFonts.inter(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+          KubusHeaderText(
+            title: l10n.userProfileInstitutionHighlightsTitle,
+            subtitle: l10n.userProfileInstitutionHighlightsSubtitle(user!.name),
+            kind: KubusHeaderKind.section,
           ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.userProfileInstitutionHighlightsSubtitle(user!.name),
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-            ),
-          ),
-          const SizedBox(height: 20),
+          const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
           _buildShowcaseSection(
             l10n: l10n,
             title: l10n.userProfileEventsTitle,
@@ -1626,7 +1756,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
             emptyIcon: Icons.event,
             builder: _buildEventCard,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
           _buildShowcaseSection(
             l10n: l10n,
             title: l10n.userProfileCollectionsTitle,
@@ -1653,13 +1783,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       children: [
         Text(
           title,
-          style: GoogleFonts.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
+          style: KubusTextStyles.sectionTitle.copyWith(
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
         if (_artistDataLoading && !_artistDataLoaded)
           Container(
             height: 180,
@@ -1667,9 +1795,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08)),
+              border: Border.all(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.08)),
             ),
-            child: const SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 2)),
+            child: const SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(strokeWidth: 2)),
           )
         else if (items.isEmpty)
           _buildEmptyStateCard(
@@ -1693,19 +1828,25 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
   }
 
   Widget _buildArtworkCard(Map<String, dynamic> data) {
-    final imageUrl = _extractImageUrl(data, ['imageUrl', 'image', 'previewUrl', 'coverImage']);
+    final imageUrl = _extractImageUrl(
+        data, ['imageUrl', 'image', 'previewUrl', 'coverImage']);
     final l10n = AppLocalizations.of(context)!;
-    final title = (data['title'] ?? data['name'] ?? l10n.commonUntitled).toString();
-    final medium = (data['medium'] ?? data['category'] ?? l10n.commonDigital).toString();
+    final title =
+        (data['title'] ?? data['name'] ?? l10n.commonUntitled).toString();
+    final medium =
+        (data['medium'] ?? data['category'] ?? l10n.commonDigital).toString();
     final likes = data['likesCount'] ?? data['likes'] ?? 0;
     final likesCount = int.tryParse(likes.toString()) ?? 0;
-    final artworkId = (data['id'] ?? data['artwork_id'] ?? data['artworkId'])?.toString();
-    
+    final artworkId =
+        (data['id'] ?? data['artwork_id'] ?? data['artworkId'])?.toString();
+
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: artworkId != null ? () {
-          openArtwork(context, artworkId, source: 'user_profile');
-        } : null,
+      onTap: artworkId != null
+          ? () {
+              openArtwork(context, artworkId, source: 'user_profile');
+            }
+          : null,
       child: _buildShowcaseCard(
         imageUrl: imageUrl,
         title: title,
@@ -1726,11 +1867,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       'cover_url',
       'image',
     ]);
-    final title = (data['name'] ?? l10n.userProfileCollectionFallbackTitle).toString();
+    final title =
+        (data['name'] ?? l10n.userProfileCollectionFallbackTitle).toString();
     final count = data['artworksCount'] ?? data['artworks_count'] ?? 0;
     final artworksCount = int.tryParse(count.toString()) ?? 0;
     final collectionId =
-        (data['id'] ?? data['collection_id'] ?? data['collectionId'])?.toString();
+        (data['id'] ?? data['collection_id'] ?? data['collectionId'])
+            ?.toString();
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -1749,8 +1892,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
         imageUrl: imageUrl,
         title: title,
         subtitle: l10n.userProfileArtworksCountLabel(artworksCount),
-        footer: (data['description'] ?? l10n.userProfileCuratedByLabel(user!.name))
-            .toString(),
+        footer:
+            (data['description'] ?? l10n.userProfileCuratedByLabel(user!.name))
+                .toString(),
       ),
     );
   }
@@ -1764,10 +1908,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       'banner_url',
       'image',
     ]);
-    final title = (data['title'] ?? l10n.userProfileEventFallbackTitle).toString();
-    final dateLabel = _formatDateLabel(l10n, data['startDate'] ?? data['start_date']);
+    final title =
+        (data['title'] ?? l10n.userProfileEventFallbackTitle).toString();
+    final dateLabel =
+        _formatDateLabel(l10n, data['startDate'] ?? data['start_date']);
     final location = (data['location'] ?? l10n.commonTba).toString();
-    final eventId = (data['id'] ?? data['event_id'] ?? data['eventId'])?.toString();
+    final eventId =
+        (data['id'] ?? data['event_id'] ?? data['eventId'])?.toString();
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -1797,74 +1944,91 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     required String footer,
   }) {
     final normalizedImage = _normalizeMediaUrl(imageUrl);
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final radius = BorderRadius.circular(KubusRadius.lg);
+
     return Container(
       width: 200,
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08)),
+        borderRadius: radius,
+        border: Border.all(
+          color: scheme.outline.withValues(alpha: 0.14),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: scheme.shadow.withValues(alpha: isDark ? 0.10 : 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (normalizedImage != null)
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-              child: Image.network(
+      child: LiquidGlassPanel(
+        padding: EdgeInsets.zero,
+        margin: EdgeInsets.zero,
+        borderRadius: radius,
+        showBorder: false,
+        backgroundColor:
+            scheme.surface.withValues(alpha: isDark ? 0.18 : 0.12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (normalizedImage != null)
+              Image.network(
                 normalizedImage,
                 height: 110,
                 width: double.infinity,
                 fit: BoxFit.cover,
+              )
+            else
+              Container(
+                height: 110,
+                width: double.infinity,
+                color: scheme.primaryContainer.withValues(alpha: 0.34),
+                child: const Center(child: Icon(Icons.image_outlined)),
               ),
-            )
-          else
-            Container(
-              height: 110,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(KubusSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: KubusTextStyles.sectionTitle.copyWith(
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: KubusSpacing.xxs),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: KubusTextStyles.navMetaLabel.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                    const SizedBox(height: KubusSpacing.sm),
+                    Text(
+                      footer,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: KubusTextStyles.detailCaption.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.72),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              child: const Center(child: Icon(Icons.image_outlined)),
             ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  footer,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1920,7 +2084,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
   }
 
   Future<void> _maybeLoadArtistData({bool force = false}) async {
-    final isCreator = (user?.isArtist ?? false) || (user?.isInstitution ?? false);
+    final isCreator =
+        (user?.isArtist ?? false) || (user?.isInstitution ?? false);
     if (!isCreator) {
       return;
     }
@@ -1934,7 +2099,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     await _loadArtistData(user!.id, force: force);
   }
 
-  Future<void> _loadArtistData(String walletAddress, {bool force = false}) async {
+  Future<void> _loadArtistData(String walletAddress,
+      {bool force = false}) async {
     if (!mounted) return;
     setState(() {
       _artistDataLoading = true;
@@ -1947,17 +2113,27 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     try {
       final api = BackendApiService();
       final artworks = await api.getArtistArtworks(walletAddress, limit: 6);
-      final collections = await api.getCollections(walletAddress: walletAddress, limit: 6);
+      final collections =
+          await api.getCollections(walletAddress: walletAddress, limit: 6);
       final eventsResponse = await api.listEvents(limit: 100);
       final normalizedWallet = WalletUtils.normalize(walletAddress);
-      final filteredEvents = eventsResponse.where((event) {
-        final createdBy = WalletUtils.normalize((event['createdBy'] ?? event['created_by'] ?? '').toString());
-        final artistIdsRaw = event['artistIds'] ?? event['artist_ids'] ?? [];
-        final artistIds = artistIdsRaw is List
-            ? artistIdsRaw.map((id) => WalletUtils.normalize(id.toString())).toList()
-            : <String>[];
-        return createdBy == normalizedWallet || artistIds.contains(normalizedWallet);
-      }).take(6).map((e) => Map<String, dynamic>.from(e)).toList();
+      final filteredEvents = eventsResponse
+          .where((event) {
+            final createdBy = WalletUtils.normalize(
+                (event['createdBy'] ?? event['created_by'] ?? '').toString());
+            final artistIdsRaw =
+                event['artistIds'] ?? event['artist_ids'] ?? [];
+            final artistIds = artistIdsRaw is List
+                ? artistIdsRaw
+                    .map((id) => WalletUtils.normalize(id.toString()))
+                    .toList()
+                : <String>[];
+            return createdBy == normalizedWallet ||
+                artistIds.contains(normalizedWallet);
+          })
+          .take(6)
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
 
       if (!mounted) return;
       setState(() {
@@ -1989,11 +2165,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       builder: (dialogContext) => KubusAlertDialog(
         title: Text(
           l10n.userProfileBlockDialogTitle(user!.name),
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+          style: KubusTextStyles.sectionTitle,
         ),
         content: Text(
           l10n.userProfileBlockDialogDescription,
-          style: GoogleFonts.inter(),
+          style: KubusTextStyles.sectionSubtitle,
         ),
         actions: [
           TextButton(
@@ -2003,11 +2179,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
           ElevatedButton(
             onPressed: () async {
               final messenger = ScaffoldMessenger.of(context);
-              final targetWallet = WalletUtils.canonical(user?.id ?? widget.userId);
+              final targetWallet =
+                  WalletUtils.canonical(user?.id ?? widget.userId);
               if (targetWallet.isEmpty) {
                 if (!mounted) return;
                 Navigator.pop(context);
-                messenger.showKubusSnackBar(SnackBar(content: Text(l10n.userProfileUnableToBlockToast)));
+                messenger.showKubusSnackBar(SnackBar(
+                    content: Text(l10n.userProfileUnableToBlockToast)));
                 return;
               }
 
@@ -2017,14 +2195,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                 debugPrint('UserProfileScreen: failed to block user: $e');
                 if (!mounted) return;
                 Navigator.pop(context);
-                messenger.showKubusSnackBar(SnackBar(content: Text(l10n.userProfileBlockFailedToast)));
+                messenger.showKubusSnackBar(
+                    SnackBar(content: Text(l10n.userProfileBlockFailedToast)));
                 return;
               }
 
               if (!mounted) return;
               Navigator.pop(context);
               messenger.showKubusSnackBar(
-                SnackBar(content: Text(l10n.userProfileBlockedToast(user?.name ?? targetWallet))),
+                SnackBar(
+                    content: Text(l10n
+                        .userProfileBlockedToast(user?.name ?? targetWallet))),
               );
             },
             child: Text(l10n.userProfileBlockButtonLabel),
@@ -2041,20 +2222,23 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       builder: (dialogContext) => KubusAlertDialog(
         title: Text(
           l10n.userProfileReportDialogTitle(user!.name),
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+          style: KubusTextStyles.sectionTitle,
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               l10n.userProfileReportDialogQuestion,
-              style: GoogleFonts.inter(),
+              style: KubusTextStyles.sectionSubtitle,
             ),
             const SizedBox(height: 16),
             _buildReportOption(dialogContext, l10n.userProfileReportReasonSpam),
-            _buildReportOption(dialogContext, l10n.userProfileReportReasonInappropriate),
-            _buildReportOption(dialogContext, l10n.userProfileReportReasonHarassment),
-            _buildReportOption(dialogContext, l10n.userProfileReportReasonOther),
+            _buildReportOption(
+                dialogContext, l10n.userProfileReportReasonInappropriate),
+            _buildReportOption(
+                dialogContext, l10n.userProfileReportReasonHarassment),
+            _buildReportOption(
+                dialogContext, l10n.userProfileReportReasonOther),
           ],
         ),
         actions: [
@@ -2089,7 +2273,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
 
         if (targetWallet.isEmpty) {
           messenger.showKubusSnackBar(
-            SnackBar(content: Text(l10n.commonActionFailedToast), duration: const Duration(seconds: 2)),
+            SnackBar(
+                content: Text(l10n.commonActionFailedToast),
+                duration: const Duration(seconds: 2)),
           );
           return;
         }
@@ -2102,12 +2288,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
           );
           if (!mounted) return;
           messenger.showKubusSnackBar(
-            SnackBar(content: Text(l10n.userProfileReportSubmittedToast), duration: const Duration(seconds: 2)),
+            SnackBar(
+                content: Text(l10n.userProfileReportSubmittedToast),
+                duration: const Duration(seconds: 2)),
           );
         } catch (_) {
           if (!mounted) return;
           messenger.showKubusSnackBar(
-            SnackBar(content: Text(l10n.commonActionFailedToast), duration: const Duration(seconds: 2)),
+            SnackBar(
+                content: Text(l10n.commonActionFailedToast),
+                duration: const Duration(seconds: 2)),
           );
         }
       },

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
+import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../providers/artwork_drafts_provider.dart';
 import '../../art/collection_detail_screen.dart';
@@ -38,7 +38,7 @@ class ArtistStudioCreateScreen extends StatelessWidget {
       children: [
         Text(
           l10n.artistStudioCreatePrompt,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 16,
             fontWeight: FontWeight.w600,
             color: scheme.onSurface,
@@ -187,7 +187,7 @@ class _CreateOptionCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                         color: scheme.onSurface,
@@ -196,7 +196,7 @@ class _CreateOptionCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 12,
                         height: 1.25,
                         color: scheme.onSurface.withValues(alpha: 0.7),
@@ -216,3 +216,4 @@ class _CreateOptionCard extends StatelessWidget {
     );
   }
 }
+

@@ -1,7 +1,7 @@
 ﻿import 'package:flutter/material.dart';
+import '../../utils/design_tokens.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'dart:io' as io;
@@ -834,7 +834,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                     color: Theme.of(context).colorScheme.surface, width: 1.0),
               ),
               child: Text('+${count - visible.length}',
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                       fontSize: 10,
                       color: Theme.of(context).colorScheme.onSurface)),
             ),
@@ -2664,3 +2664,5 @@ class _RenameConversationDialogState extends State<_RenameConversationDialog> {
     );
   }
 }
+
+

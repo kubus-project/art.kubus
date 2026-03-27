@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
+import 'package:art_kubus/widgets/common/kubus_screen_header.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import '../../onboarding/web3/web3_onboarding.dart';
@@ -979,17 +980,16 @@ class _InstitutionHubState extends State<InstitutionHub> {
         final scheme = Theme.of(context).colorScheme;
         return BackdropGlassSheet(
           padding: const EdgeInsets.all(KubusSpacing.lg),
+          showHandle: false,
           backgroundColor:
               scheme.surfaceContainerHighest.withValues(alpha: 0.18),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'Notifications',
-                style: KubusTextStyles.screenTitle
-                    .copyWith(color: scheme.onSurface),
+              KubusSheetHeader(
+                title: 'Notifications',
+                showHandle: false,
               ),
-              const SizedBox(height: KubusSpacing.lg),
               // Add notifications here
             ],
           ),
@@ -1032,6 +1032,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
           child: SingleChildScrollView(
             child: BackdropGlassSheet(
               padding: const EdgeInsets.all(KubusSpacing.lg),
+              showHandle: false,
               backgroundColor:
                   scheme.surfaceContainerHighest.withValues(alpha: 0.18),
               child: Form(
@@ -1040,19 +1041,13 @@ class _InstitutionHubState extends State<InstitutionHub> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Institution application',
-                      style: KubusTextStyles.screenTitle
-                          .copyWith(color: scheme.onSurface),
+                    KubusSheetHeader(
+                      title: 'Institution application',
+                      subtitle:
+                          'Share your mission, programming focus, and how you plan to collaborate with the DAO.',
+                      showHandle: false,
                     ),
                     const SizedBox(height: KubusSpacing.sm),
-                    Text(
-                      'Share your mission, programming focus, and how you plan to collaborate with the DAO.',
-                      style: KubusTextStyles.actionTileTitle.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.7),
-                      ),
-                    ),
-                    const SizedBox(height: KubusSpacing.lg),
                     TextFormField(
                       controller: _organizationController,
                       decoration: const InputDecoration(

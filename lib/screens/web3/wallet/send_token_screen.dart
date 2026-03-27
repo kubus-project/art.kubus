@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/foundation.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:solana/solana.dart' show Ed25519HDPublicKey;
+import '../../../utils/design_tokens.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../providers/platform_provider.dart';
@@ -76,7 +76,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
         ),
         title: Text(
           l10n.sendTokenTitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.onSurface,
@@ -170,7 +170,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
           children: [
             Text(
               l10n.sendTokenSelectTokenTitle,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: theme.colorScheme.onSurface,
@@ -213,7 +213,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
                           children: [
                             Text(
                               token.symbol,
-                              style: GoogleFonts.inter(
+                              style: KubusTypography.inter(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
                                 color: theme.colorScheme.onSurface,
@@ -224,7 +224,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
                               l10n.receiveTokenBalanceLabel(
                                 token.balance.toStringAsFixed(token.decimals >= 3 ? 3 : 2),
                               ),
-                              style: GoogleFonts.inter(
+                              style: KubusTypography.inter(
                                 fontSize: 11,
                                 color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                               ),
@@ -250,7 +250,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
       children: [
         Text(
           l10n.sendTokenRecipientAddressTitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 18,
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.onSurface,
@@ -269,11 +269,11 @@ class _SendTokenScreenState extends State<SendTokenScreen>
           ),
           child: TextField(
             controller: _addressController,
-            style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onPrimary),
+            style: KubusTypography.inter(color: Theme.of(context).colorScheme.onPrimary),
             onChanged: _validateAddress,
             decoration: InputDecoration(
               hintText: l10n.sendTokenRecipientAddressHint,
-              hintStyle: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+              hintStyle: KubusTypography.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.all(16),
               suffixIcon: Consumer<PlatformProvider>(
@@ -301,7 +301,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
           const SizedBox(height: 8),
           Text(
             _addressError,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 12,
               color: Theme.of(context).colorScheme.error,
             ),
@@ -321,7 +321,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
           children: [
             Text(
               l10n.sendTokenAmountTitle,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Theme.of(context).colorScheme.onSurface,
@@ -340,7 +340,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
                 ),
                 child: Text(
                   l10n.sendTokenMaxButton,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: Provider.of<ThemeProvider>(context).accentColor,
@@ -363,12 +363,12 @@ class _SendTokenScreenState extends State<SendTokenScreen>
           ),
           child: TextField(
             controller: _amountController,
-            style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onPrimary, fontSize: 18),
+            style: KubusTypography.inter(color: Theme.of(context).colorScheme.onPrimary, fontSize: 18),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             onChanged: _validateAmount,
             decoration: InputDecoration(
               hintText: '0.0',
-              hintStyle: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 18),
+              hintStyle: KubusTypography.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 18),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.all(16),
               suffixIcon: Padding(
@@ -377,7 +377,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
                   widthFactor: 1,
                   child: Text(
                     _selectedToken,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: Provider.of<ThemeProvider>(context).accentColor,
@@ -392,7 +392,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
           const SizedBox(height: 8),
           Text(
             _amountError,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 12,
               color: Theme.of(context).colorScheme.error,
             ),
@@ -401,7 +401,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
         const SizedBox(height: 12),
         Text(
           l10n.sendTokenAvailableLabel(_getTokenBalance(_selectedToken), _selectedToken),
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 14,
             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
@@ -419,7 +419,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
     final totalTokenDebit = amount + projectFee;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: theme.colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(16),
@@ -430,7 +430,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
         children: [
           Text(
             l10n.sendTokenTransactionSummaryTitle,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: theme.colorScheme.onSurface,
@@ -460,7 +460,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
           const SizedBox(height: 10),
           Text(
             l10n.sendTokenNetworkFeeNote,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 12,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
@@ -476,7 +476,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
       children: [
         Text(
           label,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: isTotal ? 16 : 14,
             fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -484,7 +484,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
         ),
         Text(
           value,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: isTotal ? 16 : 14,
             fontWeight: isTotal ? FontWeight.bold : FontWeight.w600,
             color: Theme.of(context).colorScheme.onSurface,
@@ -498,7 +498,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: theme.colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(16),
@@ -511,7 +511,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
           Expanded(
             child: Text(
               l10n.sendTokenNoTokensMessage,
-              style: GoogleFonts.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
+              style: KubusTypography.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
             ),
           ),
         ],
@@ -565,7 +565,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
       child: Center(
         child: Text(
           token.symbol.isNotEmpty ? token.symbol.substring(0, 1).toUpperCase() : '?',
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontWeight: FontWeight.bold,
             color: theme.colorScheme.onSurface,
           ),
@@ -609,7 +609,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
                   )
                 : Text(
                     l10n.sendTokenButtonLabel(_selectedToken),
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -940,5 +940,6 @@ class _SendTokenScreenState extends State<SendTokenScreen>
     }
   }
 }
+
 
 

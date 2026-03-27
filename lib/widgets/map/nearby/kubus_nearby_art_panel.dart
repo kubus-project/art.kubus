@@ -15,6 +15,7 @@ import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../common/kubus_cached_image.dart';
+import '../../common/kubus_screen_header.dart';
 import '../../artwork_creator_byline.dart';
 import '../kubus_map_glass_surface.dart';
 import '../../map_overlay_blocker.dart';
@@ -241,33 +242,23 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
     final headerRow = Row(
       children: [
         if (!isMobile) ...[
-          Icon(Icons.auto_awesome, color: themeProvider.accentColor, size: 18),
-          const SizedBox(width: 8),
+          Icon(
+            Icons.auto_awesome,
+            color: themeProvider.accentColor,
+            size: KubusHeaderMetrics.actionIcon - KubusSpacing.xxs,
+          ),
+          const SizedBox(width: KubusSpacing.sm),
         ],
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                key: widget.titleKey,
-                style: KubusTypography.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: scheme.onSurface,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: KubusTypography.textTheme.bodySmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+          child: KeyedSubtree(
+            key: widget.titleKey,
+            child: KubusHeaderText(
+              title: title,
+              subtitle: subtitle,
+              kind: KubusHeaderKind.section,
+              titleColor: scheme.onSurface,
+              subtitleColor: scheme.onSurfaceVariant,
+            ),
           ),
         ),
         if (isMobile) ...[
@@ -279,7 +270,7 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
                 : l10n.mapNearbyRadiusTooltip(widget.radiusKm.toInt()),
             onTap: widget.travelModeEnabled ? null : widget.onRadiusTap,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: KubusSpacing.sm),
           _glassIconButton(
             context,
             icon: _useGrid ? Icons.view_list : Icons.grid_view,
@@ -288,7 +279,7 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
                 : l10n.mapShowGridViewTooltip,
             onTap: () => setState(() => _useGrid = !_useGrid),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: KubusSpacing.sm),
           PopupMenuButton<KubusNearbyArtSort>(
             tooltip: l10n.mapSortResultsTooltip,
             onSelected: (value) => setState(() => _sort = value),
@@ -323,7 +314,12 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
 
     if (isMobile) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        padding: const EdgeInsets.fromLTRB(
+          KubusSpacing.md,
+          KubusSpacing.md - KubusSpacing.xxs,
+          KubusSpacing.md,
+          0,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -331,7 +327,7 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
               child: Semantics(
                 label: 'nearby_art_handle',
                 child: Container(
-                  width: 48,
+                  width: KubusHeaderMetrics.searchBarHeight,
                   height: 4,
                   decoration: BoxDecoration(
                     color: scheme.outlineVariant.withValues(alpha: 0.85),
@@ -340,16 +336,21 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: KubusSpacing.md - KubusSpacing.xxs),
             headerRow,
-            const SizedBox(height: 8),
+            const SizedBox(height: KubusSpacing.sm),
           ],
         ),
       );
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+      padding: const EdgeInsets.fromLTRB(
+        KubusSpacing.md,
+        KubusSpacing.md,
+        KubusSpacing.md,
+        KubusSpacing.sm + KubusSpacing.xxs,
+      ),
       child: headerRow,
     );
   }
@@ -364,18 +365,17 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
     final button = buildKubusMapGlassSurface(
       context: context,
       kind: KubusMapGlassSurfaceKind.button,
-      useBlur: false,
       borderRadius: BorderRadius.circular(12),
       tintBase: scheme.surfaceContainerHighest,
       padding: EdgeInsets.zero,
       onTap: onTap,
       child: SizedBox(
-        width: 38,
-        height: 38,
+        width: KubusHeaderMetrics.actionHitArea,
+        height: KubusHeaderMetrics.actionHitArea,
         child: Center(
           child: Icon(
             icon,
-            size: 18,
+            size: KubusHeaderMetrics.actionIcon - KubusSpacing.xxs,
             color: onTap == null ? scheme.onSurfaceVariant : scheme.onSurface,
           ),
         ),
@@ -463,10 +463,9 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
     return buildKubusMapGlassSurface(
       context: context,
       kind: KubusMapGlassSurfaceKind.card,
-      useBlur: false,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(KubusRadius.md),
       tintBase: scheme.surface,
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xxs),
       onTap: () => _handlePrimaryTap(artwork, marker, artwork.position),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -496,7 +495,11 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
                         color: accent,
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: Icon(Icons.view_in_ar, size: 12, color: textOnAccent),
+                      child: Icon(
+                        Icons.view_in_ar,
+                        size: KubusHeaderMetrics.sectionSubtitle - 1,
+                        color: textOnAccent,
+                      ),
                     ),
                   ),
               ],
@@ -512,7 +515,7 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: 13,
+                        fontSize: KubusHeaderMetrics.sectionSubtitle,
                         fontWeight: FontWeight.w700,
                         color: scheme.onSurface,
                       ),
@@ -525,7 +528,7 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
                   linkToProfile: false,
                   maxLines: 1,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: 12,
+                        fontSize: KubusTextStyles.sectionSubtitle.fontSize,
                         color: scheme.onSurfaceVariant,
                       ),
                 ),
@@ -533,8 +536,8 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
                 Row(
                   children: [
                     Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
                         color: accent.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(999),
@@ -542,7 +545,8 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
                       child: Text(
                         distanceText,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontSize: 11,
+                              fontSize: KubusTypography
+                                  .textTheme.labelMedium?.fontSize,
                               fontWeight: FontWeight.w600,
                               color: accent,
                             ),
@@ -552,7 +556,8 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
                     Text(
                       '${artwork.rewards} KUB8',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontSize: 11,
+                            fontSize:
+                                KubusTypography.textTheme.labelMedium?.fontSize,
                             fontWeight: FontWeight.w600,
                             color: scheme.onSurfaceVariant,
                           ),
@@ -587,10 +592,9 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
     return buildKubusMapGlassSurface(
       context: context,
       kind: KubusMapGlassSurfaceKind.card,
-      useBlur: false,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(KubusRadius.lg),
       tintBase: scheme.surface,
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xxs),
       onTap: () => _handlePrimaryTap(artwork, marker, artwork.position),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -607,8 +611,7 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
                 borderRadius: 12,
                 iconSize: 28,
               ),
-              if (artwork.arMarkerId != null &&
-                  artwork.arMarkerId!.isNotEmpty)
+              if (artwork.arMarkerId != null && artwork.arMarkerId!.isNotEmpty)
                 Positioned(
                   top: 8,
                   right: 8,
@@ -636,7 +639,7 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontSize: 13,
+                  fontSize: KubusHeaderMetrics.sectionSubtitle,
                   fontWeight: FontWeight.w700,
                   color: scheme.onSurface,
                 ),
@@ -649,7 +652,7 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
             linkToProfile: false,
             maxLines: 1,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontSize: 12,
+                  fontSize: KubusTextStyles.sectionSubtitle.fontSize,
                   color: scheme.onSurfaceVariant,
                 ),
           ),
@@ -665,7 +668,8 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
                 child: Text(
                   distanceText,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: 11,
+                        fontSize:
+                            KubusTypography.textTheme.labelMedium?.fontSize,
                         fontWeight: FontWeight.w600,
                         color: accent,
                       ),
@@ -675,7 +679,7 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
               Text(
                 '${artwork.rewards} KUB8',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontSize: 11,
+                      fontSize: KubusTypography.textTheme.labelMedium?.fontSize,
                       fontWeight: FontWeight.w600,
                       color: scheme.onSurfaceVariant,
                     ),

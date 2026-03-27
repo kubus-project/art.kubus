@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../config/config.dart';
+import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/gradient_icon_card.dart';
@@ -33,7 +33,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   void initState() {
     super.initState();
-    _emailController = TextEditingController(text: (widget.initialEmail ?? '').trim());
+    _emailController =
+        TextEditingController(text: (widget.initialEmail ?? '').trim());
   }
 
   @override
@@ -94,7 +95,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ),
         const SizedBox(height: 12),
         if (_inlineError != null) ...[
-          Text(_inlineError!, style: GoogleFonts.inter(color: scheme.error)),
+          Text(
+            _inlineError!,
+            style: KubusTextStyles.statChange.copyWith(color: scheme.error),
+          ),
           const SizedBox(height: 12),
         ],
         KubusButton(
@@ -109,9 +113,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           onPressed: _goToSignIn,
           child: Text(
             l10n.commonBack,
-            style: GoogleFonts.inter(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-              fontWeight: FontWeight.w600,
+            style: KubusTextStyles.sectionTitle.copyWith(
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.7),
             ),
           ),
         ),
@@ -124,7 +130,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final roles = KubusColorRoles.of(context);
-    final isDesktop = MediaQuery.of(context).size.width >= DesktopBreakpoints.medium;
+    final isDesktop =
+        MediaQuery.of(context).size.width >= DesktopBreakpoints.medium;
 
     final form = _buildForm(l10n: l10n);
 
@@ -153,7 +160,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     final bgStart = scheme.primary.withValues(alpha: 0.55);
     final bgEnd = roles.positiveAction.withValues(alpha: 0.50);
-    final bgMid = (Color.lerp(bgStart, bgEnd, 0.55) ?? bgEnd).withValues(alpha: 0.52);
+    final bgMid =
+        (Color.lerp(bgStart, bgEnd, 0.55) ?? bgEnd).withValues(alpha: 0.52);
     final bgColors = <Color>[bgStart, bgMid, bgEnd, bgStart];
 
     return Scaffold(
@@ -202,17 +210,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             const SizedBox(height: 12),
                             Text(
                               l10n.authForgotPasswordTitle,
-                              style: GoogleFonts.inter(
-                                fontSize: 26,
-                                fontWeight: FontWeight.w800,
+                              style: KubusTextStyles.heroTitle.copyWith(
                                 color: scheme.onSurface,
                               ),
                             ),
                             const SizedBox(height: 8),
                             Text(
                               l10n.authForgotPasswordSubtitle,
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
+                              style: KubusTextStyles.heroSubtitle.copyWith(
                                 color: scheme.onSurface.withValues(alpha: 0.85),
                               ),
                               textAlign: TextAlign.center,
@@ -221,7 +226,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         ),
                         const SizedBox(height: 20),
                         KubusCard(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(KubusSpacing.md),
                           color: scheme.surfaceContainerHighest,
                           child: form,
                         ),

@@ -1,5 +1,4 @@
 ﻿import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/app_loading.dart';
@@ -371,13 +370,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                                   child: Text(
                                     AppLocalizations.of(context)!
                                         .navigationScreenProfile,
-                                    style: GoogleFonts.inter(
+                                    style: KubusTextStyles.heroTitle.copyWith(
                                       fontSize: isVerySmallScreen
-                                          ? 24
+                                          ? KubusChromeMetrics.heroTitle
                                           : isSmallScreen
-                                              ? 26
-                                              : 28,
-                                      fontWeight: FontWeight.bold,
+                                              ? KubusChromeMetrics.heroTitle +
+                                                  KubusSpacing.xs
+                                              : KubusChromeMetrics.heroTitle +
+                                                  KubusSpacing.sm,
                                       color: hasCoverImage
                                           ? Colors.white
                                           : Theme.of(context)
@@ -548,7 +548,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                   profileProvider.currentUser?.username ??
                                   AppLocalizations.of(context)!
                                       .profilePersonaArtEnthusiast,
-                              style: GoogleFonts.inter(
+                              style: KubusTypography.inter(
                                 fontSize: isVerySmallScreen
                                     ? 20
                                     : isSmallScreen
@@ -577,7 +577,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       SizedBox(height: isSmallScreen ? 4 : 6),
                       Text(
                         '@${profileProvider.currentUser!.username}',
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: isVerySmallScreen
                               ? 14
                               : isSmallScreen
@@ -601,7 +601,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       walletAddress:
                           profileProvider.currentUser?.walletAddress ?? '',
                       textAlign: TextAlign.center,
-                      textStyle: GoogleFonts.inter(
+                      textStyle: KubusTypography.inter(
                         fontSize: isVerySmallScreen
                             ? 12
                             : isSmallScreen
@@ -631,7 +631,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                         child: Text(
                           web3Provider
                               .formatAddress(web3Provider.walletAddress),
-                          style: GoogleFonts.robotoMono(
+                          style: KubusTypography.inter(
                             fontSize: isSmallScreen ? 12 : 14,
                             fontWeight: FontWeight.w600,
                             color: themeProvider.accentColor,
@@ -642,7 +642,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       Text(
                         AppLocalizations.of(context)!
                             .profileConnectWalletToSeeProfileLabel,
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: isSmallScreen ? 14 : 16,
                           color: Theme.of(context)
                               .colorScheme
@@ -658,7 +658,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       Text(
                         profileProvider.currentUser!.bio,
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: isVerySmallScreen
                               ? 14
                               : isSmallScreen
@@ -722,7 +722,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                   child: Text(
                                     AppLocalizations.of(context)!
                                         .settingsEditProfileTileTitle,
-                                    style: GoogleFonts.inter(
+                                    style: KubusTypography.inter(
                                       fontSize: isVerySmallScreen ? 14 : 16,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -750,7 +750,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                   child: Text(
                                     AppLocalizations.of(context)!
                                         .profileMoreOptionsTitle,
-                                    style: GoogleFonts.inter(
+                                    style: KubusTypography.inter(
                                       fontSize: isVerySmallScreen ? 14 : 16,
                                       fontWeight: FontWeight.w600,
                                       color: themeProvider.accentColor,
@@ -782,7 +782,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                   child: Text(
                                     AppLocalizations.of(context)!
                                         .settingsEditProfileTileTitle,
-                                    style: GoogleFonts.inter(
+                                    style: KubusTypography.inter(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -962,7 +962,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         const SizedBox(height: DetailSpacing.xs),
         Text(
           label,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: isCompact ? 12 : 13,
             color:
                 Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -1078,7 +1078,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               children: [
                 Text(
                   AppLocalizations.of(context)!.userProfilePostsTitle,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -1106,7 +1106,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               children: [
                 Text(
                   AppLocalizations.of(context)!.userProfilePostsTitle,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -1128,7 +1128,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             children: [
               Text(
                 AppLocalizations.of(context)!.userProfilePostsTitle,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).colorScheme.onSurface,
@@ -1166,7 +1166,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         children: [
           Text(
             message,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 14,
               color: Theme.of(context).colorScheme.error,
               fontWeight: FontWeight.w600,
@@ -1244,7 +1244,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                           Expanded(
                             child: Text(
                               post.authorName,
-                              style: GoogleFonts.inter(
+                              style: KubusTypography.inter(
                                 fontWeight: FontWeight.w600,
                                 color: Theme.of(context).colorScheme.onSurface,
                               ),
@@ -1270,7 +1270,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       const SizedBox(height: 2),
                       Text(
                         _formatRelativeTime(post.timestamp),
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 12,
                           color: Theme.of(context)
                               .colorScheme
@@ -1286,7 +1286,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             const SizedBox(height: 12),
             Text(
               post.content,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 14,
                 height: 1.4,
                 color: Theme.of(context).colorScheme.onSurface,
@@ -1330,7 +1330,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 const SizedBox(width: 6),
                 Text(
                   post.likeCount.toString(),
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 13,
                     color: post.isLiked
                         ? themeProvider.accentColor
@@ -1352,7 +1352,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 const SizedBox(width: 6),
                 Text(
                   post.commentCount.toString(),
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 13,
                     color: Theme.of(context)
                         .colorScheme
@@ -1461,7 +1461,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         children: [
           Text(
             AppLocalizations.of(context)!.userProfileEventsTitle,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Theme.of(context).colorScheme.onSurface,
@@ -1489,7 +1489,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         children: [
           Text(
             AppLocalizations.of(context)!.userProfileArtistHighlightsTitle,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: Theme.of(context).colorScheme.onSurface,
@@ -1498,7 +1498,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           const SizedBox(height: 8),
           Text(
             AppLocalizations.of(context)!.profileArtistHighlightsSubtitle,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 14,
               color: Theme.of(context)
                   .colorScheme
@@ -1537,7 +1537,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         children: [
           Text(
             AppLocalizations.of(context)!.userProfileInstitutionHighlightsTitle,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: Theme.of(context).colorScheme.onSurface,
@@ -1547,7 +1547,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           Text(
             AppLocalizations.of(context)!
                 .profileInstitutionHighlightsSubtitle,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 14,
               color: Theme.of(context)
                   .colorScheme
@@ -1591,7 +1591,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       children: [
         Text(
           title,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 18,
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.onSurface,
@@ -1749,96 +1749,91 @@ class _ProfileScreenState extends State<ProfileScreen>
     required String footer,
   }) {
     final normalizedImage = _normalizeMediaUrl(imageUrl);
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final radius = BorderRadius.circular(KubusRadius.lg);
+
     return Container(
       width: 200,
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: radius,
         border: Border.all(
-          color:
-              Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
+          color: scheme.outline.withValues(alpha: 0.14),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: scheme.shadow.withValues(alpha: isDark ? 0.10 : 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (normalizedImage != null)
-            ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(16)),
-              child: Image.network(
+      child: LiquidGlassPanel(
+        padding: EdgeInsets.zero,
+        margin: EdgeInsets.zero,
+        borderRadius: radius,
+        showBorder: false,
+        backgroundColor:
+            scheme.surface.withValues(alpha: isDark ? 0.18 : 0.12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (normalizedImage != null)
+              Image.network(
                 normalizedImage,
                 height: 110,
                 width: double.infinity,
                 fit: BoxFit.cover,
+              )
+            else
+              Container(
+                height: 110,
+                width: double.infinity,
+                color: scheme.primaryContainer.withValues(alpha: 0.34),
+                child: const Center(child: Icon(Icons.image_not_supported)),
               ),
-            )
-          else
-            Container(
-              height: 110,
-              decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .primaryContainer
-                    .withValues(alpha: 0.3),
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(16)),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(KubusSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: KubusTextStyles.sectionTitle.copyWith(
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: KubusSpacing.xxs),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: KubusTextStyles.navMetaLabel.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                    const SizedBox(height: KubusSpacing.sm),
+                    Text(
+                      footer,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: KubusTextStyles.detailCaption.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.72),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              child: const Center(child: Icon(Icons.image_not_supported)),
             ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  footer,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.7),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1970,7 +1965,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 children: [
                   Text(
                     AppLocalizations.of(context)!.userProfileAchievementsTitle,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -1997,7 +1992,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                       child: Text(
                         AppLocalizations.of(context)!.commonViewAll,
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: accent,
@@ -2076,7 +2071,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           const SizedBox(height: 8),
           Text(
             title,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 12,
               fontWeight: FontWeight.w600,
               color: unlocked
@@ -2214,7 +2209,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               children: [
                 Text(
                   AppLocalizations.of(context)!.profilePerformanceSectionTitle,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -2236,7 +2231,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             children: [
               Text(
                 AppLocalizations.of(context)!.profilePerformanceSectionTitle,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).colorScheme.onSurface,
@@ -2307,7 +2302,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 14,
                     color: Theme.of(context)
                         .colorScheme
@@ -2317,7 +2312,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
                 Text(
                   value,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -2340,7 +2335,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ),
                   child: Text(
                     change,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: positiveColor,
@@ -2416,7 +2411,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(KubusSpacing.lg),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -2463,7 +2458,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       ),
       title: Text(
         title,
-        style: GoogleFonts.inter(
+        style: KubusTypography.inter(
           fontSize: 16,
           color: Theme.of(context).colorScheme.onSurface,
         ),
@@ -2516,7 +2511,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         return KubusAlertDialog(
           title: Text(
             l10n.profileHelpSupportTitle,
-            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+            style: KubusTypography.inter(fontWeight: FontWeight.bold),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -2532,7 +2527,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text(l10n.commonClose, style: GoogleFonts.inter()),
+              child: Text(l10n.commonClose, style: KubusTypography.inter()),
             ),
           ],
         );
@@ -2549,7 +2544,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       ),
       title: Text(
         option.label(l10n),
-        style: GoogleFonts.inter(fontSize: 14),
+        style: KubusTypography.inter(fontSize: 14),
       ),
       dense: true,
       onTap: () {
@@ -2603,7 +2598,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         return KubusAlertDialog(
           title: Text(
             l10n.profileContactSupportTitle,
-            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+            style: KubusTypography.inter(fontWeight: FontWeight.bold),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -2611,7 +2606,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             children: [
               Text(
                 l10n.profileContactSupportSubtitle,
-                style: GoogleFonts.inter(fontSize: 14),
+                style: KubusTypography.inter(fontSize: 14),
               ),
               const SizedBox(height: 16),
               _buildContactOption(
@@ -2627,7 +2622,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text(l10n.commonClose, style: GoogleFonts.inter()),
+              child: Text(l10n.commonClose, style: KubusTypography.inter()),
             ),
           ],
         );
@@ -2647,7 +2642,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             children: [
               Text(
                 label,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: Theme.of(context).colorScheme.onSurface,
@@ -2655,7 +2650,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
               Text(
                 value,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 11,
                   color: Theme.of(context)
                       .colorScheme
@@ -2680,14 +2675,14 @@ class _ProfileScreenState extends State<ProfileScreen>
         return KubusAlertDialog(
           title: Text(
             l10n.profileReportBugTitle,
-            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+            style: KubusTypography.inter(fontWeight: FontWeight.bold),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 l10n.profileReportBugSubtitle,
-                style: GoogleFonts.inter(fontSize: 14),
+                style: KubusTypography.inter(fontSize: 14),
               ),
               const SizedBox(height: 16),
               TextField(
@@ -2705,7 +2700,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text(l10n.commonCancel, style: GoogleFonts.inter()),
+              child: Text(l10n.commonCancel, style: KubusTypography.inter()),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -2740,7 +2735,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               },
               child: Text(
                 l10n.commonSubmit,
-                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                style: KubusTypography.inter(fontWeight: FontWeight.w600),
               ),
             ),
           ],
@@ -2757,7 +2752,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         return KubusAlertDialog(
           title: Text(
             l10n.profileAboutTitle,
-            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+            style: KubusTypography.inter(fontWeight: FontWeight.bold),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -2780,7 +2775,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               const SizedBox(height: 16),
               Text(
                 'art.kubus',
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
@@ -2788,7 +2783,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               const SizedBox(height: 8),
               Text(
                 l10n.profileAboutVersionLabel('1.0.0+1'),
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 14,
                   color: Theme.of(context)
                       .colorScheme
@@ -2800,7 +2795,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               Text(
                 l10n.profileAboutDescription,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 14,
                   height: 1.5,
                   color: Theme.of(context)
@@ -2812,7 +2807,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               const SizedBox(height: 16),
               Text(
                 l10n.profileAboutCopyright,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 12,
                   color: Theme.of(context)
                       .colorScheme
@@ -2825,7 +2820,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text(l10n.commonClose, style: GoogleFonts.inter()),
+              child: Text(l10n.commonClose, style: KubusTypography.inter()),
             ),
           ],
         );
@@ -2862,3 +2857,5 @@ extension _ProfileHelpOptionLabels on _ProfileHelpOption {
     }
   }
 }
+
+

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
+import '../../../utils/design_tokens.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../providers/navigation_provider.dart';
 import '../../../widgets/app_loading.dart';
@@ -67,7 +67,7 @@ class _WalletHomeState extends State<WalletHome> {
               scrolledUnderElevation: 0,
               title: Text(
                 l10n.walletHomeTitle,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).colorScheme.onSurface,
@@ -107,7 +107,7 @@ class _WalletHomeState extends State<WalletHome> {
               scrolledUnderElevation: 0,
               title: Text(
                 l10n.walletHomeTitle,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).colorScheme.onSurface,
@@ -164,7 +164,7 @@ class _WalletHomeState extends State<WalletHome> {
                 scrolledUnderElevation: 0,
                 title: Text(
                   l10n.walletHomeTitle,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -227,7 +227,7 @@ class _WalletHomeState extends State<WalletHome> {
                             children: [
                               Text(
                                 l10n.walletHomeTotalBalanceLabel,
-                                style: GoogleFonts.inter(
+                                style: KubusTypography.inter(
                                   fontSize: isSmallScreen ? 14 : 16,
                                   color: Theme.of(context)
                                       .colorScheme
@@ -279,7 +279,7 @@ class _WalletHomeState extends State<WalletHome> {
                                   child: Text(
                                     wallet?.shortAddress ??
                                         _shortenAddress(walletAddress ?? ''),
-                                    style: GoogleFonts.inter(
+                                    style: KubusTypography.inter(
                                       fontSize: isSmallScreen ? 12 : 14,
                                       color: Theme.of(context)
                                           .colorScheme
@@ -299,7 +299,7 @@ class _WalletHomeState extends State<WalletHome> {
                             children: [
                               Text(
                                 _getKub8Balance().toStringAsFixed(2),
-                                style: GoogleFonts.inter(
+                                style: KubusTypography.inter(
                                   fontSize: isSmallScreen ? 36 : 48,
                                   fontWeight: FontWeight.bold,
                                   color:
@@ -309,7 +309,7 @@ class _WalletHomeState extends State<WalletHome> {
                               const SizedBox(width: 8),
                               Text(
                                 'KUB8',
-                                style: GoogleFonts.inter(
+                                style: KubusTypography.inter(
                                   fontSize: isSmallScreen ? 16 : 20,
                                   fontWeight: FontWeight.w600,
                                   color: Theme.of(context)
@@ -326,7 +326,7 @@ class _WalletHomeState extends State<WalletHome> {
                             children: [
                               Text(
                                 '${_getSolBalance().toStringAsFixed(3)} SOL',
-                                style: GoogleFonts.inter(
+                                style: KubusTypography.inter(
                                   fontSize: isSmallScreen ? 14 : 16,
                                   fontWeight: FontWeight.w500,
                                   color: Theme.of(context)
@@ -338,7 +338,7 @@ class _WalletHomeState extends State<WalletHome> {
                               const SizedBox(width: 16),
                               Text(
                                 '≈ \$${wallet?.totalValue.toStringAsFixed(2) ?? '0.00'}',
-                                style: GoogleFonts.inter(
+                                style: KubusTypography.inter(
                                   fontSize: isSmallScreen ? 14 : 16,
                                   fontWeight: FontWeight.w500,
                                   color: Theme.of(context)
@@ -353,7 +353,7 @@ class _WalletHomeState extends State<WalletHome> {
                             SizedBox(height: isSmallScreen ? 12 : 16),
                             Text(
                               'Reconnect to enable signing and transfers.',
-                              style: GoogleFonts.inter(
+                              style: KubusTypography.inter(
                                 fontSize: isSmallScreen ? 13 : 14,
                                 fontWeight: FontWeight.w500,
                                 color: Theme.of(context)
@@ -471,7 +471,7 @@ class _WalletHomeState extends State<WalletHome> {
                       children: [
                         Text(
                           l10n.walletHomeYourTokensTitle,
-                          style: GoogleFonts.inter(
+                          style: KubusTypography.inter(
                             fontSize: isSmallScreen ? 18 : 20,
                             fontWeight: FontWeight.bold,
                             color: Theme.of(context).colorScheme.onSurface,
@@ -510,7 +510,7 @@ class _WalletHomeState extends State<WalletHome> {
                                         children: [
                                           Text(
                                             token.name,
-                                            style: GoogleFonts.inter(
+                                            style: KubusTypography.inter(
                                               fontSize: 16,
                                               fontWeight: FontWeight.w600,
                                               color: Theme.of(context)
@@ -520,7 +520,7 @@ class _WalletHomeState extends State<WalletHome> {
                                           ),
                                           Text(
                                             token.symbol,
-                                            style: GoogleFonts.inter(
+                                            style: KubusTypography.inter(
                                               fontSize: 14,
                                               color: Theme.of(context)
                                                   .colorScheme
@@ -537,7 +537,7 @@ class _WalletHomeState extends State<WalletHome> {
                                       children: [
                                         Text(
                                           token.balance.toStringAsFixed(4),
-                                          style: GoogleFonts.inter(
+                                          style: KubusTypography.inter(
                                             fontSize: 16,
                                             fontWeight: FontWeight.w600,
                                             color: Theme.of(context)
@@ -547,7 +547,7 @@ class _WalletHomeState extends State<WalletHome> {
                                         ),
                                         Text(
                                           '\$${token.value.toStringAsFixed(2)}',
-                                          style: GoogleFonts.inter(
+                                          style: KubusTypography.inter(
                                             fontSize: 14,
                                             color: Theme.of(context)
                                                 .colorScheme
@@ -632,7 +632,7 @@ class _WalletHomeState extends State<WalletHome> {
       child: Center(
         child: Text(
           _getTokenInitial(token),
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 16,
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.onSurface,
@@ -701,7 +701,7 @@ class _WalletHomeState extends State<WalletHome> {
                 SizedBox(height: isSmallScreen ? 4 : 8),
                 Text(
                   title,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: isSmallScreen ? 10 : 12,
                     fontWeight: FontWeight.w600,
                     color: enabled
@@ -774,7 +774,7 @@ class _WalletHomeState extends State<WalletHome> {
             Flexible(
               child: Text(
                 l10n.walletHomeRecentTransactionsTitle,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: isSmallScreen ? 18 : 20,
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).colorScheme.onSurface,
@@ -786,7 +786,7 @@ class _WalletHomeState extends State<WalletHome> {
               onPressed: _showTransactionHistorySheet,
               child: Text(
                 l10n.commonViewAll,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: isSmallScreen ? 12 : 14,
                   color: AppColorUtils.amberAccent,
                 ),
@@ -843,7 +843,7 @@ class _WalletHomeState extends State<WalletHome> {
                         children: [
                           Text(
                             _transactionTypeLabel(transaction.type, l10n),
-                            style: GoogleFonts.inter(
+                            style: KubusTypography.inter(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                               color: Theme.of(context).colorScheme.onSurface,
@@ -851,7 +851,7 @@ class _WalletHomeState extends State<WalletHome> {
                           ),
                           Text(
                             '${transaction.txHash.substring(0, 10)}...',
-                            style: GoogleFonts.inter(
+                            style: KubusTypography.inter(
                               fontSize: 12,
                               color: Theme.of(context)
                                   .colorScheme
@@ -867,7 +867,7 @@ class _WalletHomeState extends State<WalletHome> {
                       children: [
                         Text(
                           '${transaction.amount.toStringAsFixed(4)} ${transaction.token}',
-                          style: GoogleFonts.inter(
+                          style: KubusTypography.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                             color: _getTransactionColor(transaction.type),
@@ -875,7 +875,7 @@ class _WalletHomeState extends State<WalletHome> {
                         ),
                         Text(
                           _formatTime(transaction.timestamp),
-                          style: GoogleFonts.inter(
+                          style: KubusTypography.inter(
                             fontSize: 12,
                             color: Theme.of(context)
                                 .colorScheme
@@ -994,7 +994,7 @@ class _WalletHomeState extends State<WalletHome> {
                       Expanded(
                         child: Text(
                           l10n.settingsTransactionHistoryDialogTitle,
-                          style: GoogleFonts.inter(
+                          style: KubusTypography.inter(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: Theme.of(context).colorScheme.onSurface,
@@ -1065,7 +1065,7 @@ class _WalletHomeState extends State<WalletHome> {
                                     children: [
                                       Text(
                                         _transactionTypeLabel(tx.type, l10n),
-                                        style: GoogleFonts.inter(
+                                        style: KubusTypography.inter(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w600,
                                           color: Theme.of(context)
@@ -1076,7 +1076,7 @@ class _WalletHomeState extends State<WalletHome> {
                                       const SizedBox(height: 2),
                                       Text(
                                         '${tx.txHash.substring(0, 10)}...',
-                                        style: GoogleFonts.inter(
+                                        style: KubusTypography.inter(
                                           fontSize: 12,
                                           color: Theme.of(context)
                                               .colorScheme
@@ -1093,7 +1093,7 @@ class _WalletHomeState extends State<WalletHome> {
                                   children: [
                                     Text(
                                       '${tx.amount.toStringAsFixed(4)} ${tx.token}',
-                                      style: GoogleFonts.inter(
+                                      style: KubusTypography.inter(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
                                         color: _getTransactionColor(tx.type),
@@ -1102,7 +1102,7 @@ class _WalletHomeState extends State<WalletHome> {
                                     const SizedBox(height: 2),
                                     Text(
                                       _formatTime(tx.timestamp),
-                                      style: GoogleFonts.inter(
+                                      style: KubusTypography.inter(
                                         fontSize: 12,
                                         color: Theme.of(context)
                                             .colorScheme
@@ -1127,3 +1127,4 @@ class _WalletHomeState extends State<WalletHome> {
     );
   }
 }
+

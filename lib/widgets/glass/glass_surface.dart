@@ -54,6 +54,10 @@ class GlassSurface extends StatelessWidget {
   /// Optional custom border (takes precedence over [showBorder]).
   final BoxBorder? border;
 
+  /// Allows callers to force the opaque fallback path while still using the
+  /// canonical glass tint/border/shadow logic.
+  final bool enableBlur;
+
   const GlassSurface({
     super.key,
     required this.child,
@@ -61,22 +65,32 @@ class GlassSurface extends StatelessWidget {
     this.blurSigma = KubusGlassEffects.blurSigma,
     this.tintColor,
     this.tintOpacity,
-    this.fallbackMinOpacity = 0.24,
+    this.fallbackMinOpacity = KubusGlassEffects.fallbackOpaqueOpacity,
     this.showBorder = true,
     this.border,
+    this.enableBlur = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final scheme = theme.colorScheme;
 
     // Determine blur mode from the provider. If the provider is missing
     // (e.g. in a test harness), default to blur enabled.
-    final useBlur = _resolveBlurEnabled(context);
+    final useBlur = enableBlur && _resolveBlurEnabled(context);
 
     // --- Tint ---
-    final baseTint = tintColor ??
+    final blurTint = tintColor ??
         (isDark ? KubusColors.surfaceDark : KubusColors.surfaceLight);
+    final fallbackTintBase = Color.lerp(
+          scheme.surface,
+          tintColor ?? scheme.surface,
+          tintColor == null ? 0.0 : KubusGlassEffects.fallbackTintBlend,
+        ) ??
+        scheme.surface;
+    final baseTint = useBlur ? blurTint : fallbackTintBase;
 
     // Determine opacity:
     // 1. Explicit tintOpacity always wins.
@@ -97,11 +111,16 @@ class GlassSurface extends StatelessWidget {
     // so text stays readable even without the backdrop blur.
     final resolvedOpacity = useBlur
         ? nominalOpacity
-        : nominalOpacity.clamp(fallbackMinOpacity, 1.0);
+        : fallbackMinOpacity
+            .clamp(KubusGlassEffects.fallbackOpaqueOpacity, 1.0)
+            .toDouble();
 
-    // Gradient tint: top-left slightly darker than bottom-right.
+    // Keep a slight tonal shift when blur is enabled, but stay more uniform in
+    // opaque fallback mode.
     final tintPrimary = baseTint.withValues(alpha: resolvedOpacity);
-    final tintSecondary = baseTint.withValues(alpha: resolvedOpacity * 0.85);
+    final tintSecondary = baseTint.withValues(
+      alpha: resolvedOpacity * (useBlur ? 0.85 : 0.94),
+    );
 
     // --- Border ---
     final effectiveBorder = border ??
@@ -123,11 +142,15 @@ class GlassSurface extends StatelessWidget {
       ),
       borderRadius: borderRadius,
       border: effectiveBorder,
-      boxShadow: useBlur || fallbackMinOpacity < 0.20
+      boxShadow: useBlur
           ? null
           : [
               BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.08),
+                color: scheme.shadow.withValues(
+                  alpha: isDark
+                      ? KubusGlassEffects.shadowOpacityDark
+                      : KubusGlassEffects.shadowOpacityLight,
+                ),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),

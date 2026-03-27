@@ -5,9 +5,9 @@ import 'package:art_kubus/providers/task_provider.dart';
 import 'package:art_kubus/services/achievement_service.dart' as achievement_svc;
 import 'package:art_kubus/utils/category_accent_color.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
+import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/widgets/inline_loading.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 class AchievementsPage extends StatefulWidget {
@@ -53,8 +53,9 @@ class _AchievementsPageState extends State<AchievementsPage> {
         progress.achievementId: progress,
     };
 
-    final achievements =
-        achievement_svc.AchievementService.achievementDefinitions.values.toList();
+    final achievements = achievement_svc
+        .AchievementService.achievementDefinitions.values
+        .toList();
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -65,9 +66,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
         scrolledUnderElevation: 0,
         title: Text(
           'Achievements & POAPs',
-          style: GoogleFonts.inter(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
+          style: KubusTextStyles.screenTitle.copyWith(
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
@@ -89,7 +88,8 @@ class _AchievementsPageState extends State<AchievementsPage> {
   ) {
     final completedCount = achievements.where((achievement) {
       final progress = progressById[achievement.id];
-      final required = achievement.requiredCount > 0 ? achievement.requiredCount : 1;
+      final required =
+          achievement.requiredCount > 0 ? achievement.requiredCount : 1;
       final ratio =
           ((progress?.currentProgress ?? 0) / required).clamp(0.0, 1.0);
       return (progress?.isCompleted ?? false) || ratio >= 1.0;
@@ -101,12 +101,12 @@ class _AchievementsPageState extends State<AchievementsPage> {
     final roles = KubusColorRoles.of(context);
     final scheme = Theme.of(context).colorScheme;
     final accentPrimary = roles.achievementGold;
-    final accentSecondary = Color.lerp(accentPrimary, scheme.primary, 0.25) ??
-        scheme.primary;
+    final accentSecondary =
+        Color.lerp(accentPrimary, scheme.primary, 0.25) ?? scheme.primary;
 
     return Container(
-      margin: const EdgeInsets.all(24),
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.all(KubusSpacing.lg),
+      padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -139,17 +139,13 @@ class _AchievementsPageState extends State<AchievementsPage> {
                   children: [
                     Text(
                       'Your Achievements',
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: scheme.onPrimary,
-                      ),
+                      style: KubusTextStyles.heroTitle
+                          .copyWith(color: scheme.onPrimary),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Collect POAPs and unlock KUB8 rewards',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
+                      style: KubusTextStyles.heroSubtitle.copyWith(
                         color: scheme.onPrimary.withValues(alpha: 0.85),
                       ),
                     ),
@@ -195,16 +191,11 @@ class _AchievementsPageState extends State<AchievementsPage> {
       children: [
         Text(
           value,
-          style: GoogleFonts.inter(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: scheme.onPrimary,
-          ),
+          style: KubusTextStyles.statValue.copyWith(color: scheme.onPrimary),
         ),
         Text(
           label,
-          style: GoogleFonts.inter(
-            fontSize: 12,
+          style: KubusTextStyles.statLabel.copyWith(
             color: scheme.onPrimary.withValues(alpha: 0.85),
           ),
         ),
@@ -279,7 +270,8 @@ class _AchievementsPageState extends State<AchievementsPage> {
       case achievement_svc.AchievementType.streetArtScout:
       case achievement_svc.AchievementType.streetArtCurator:
       case achievement_svc.AchievementType.streetArtPatron:
-        return AppLocalizations.of(context)!.userProfileAchievementCategoryStreetArt;
+        return AppLocalizations.of(context)!
+            .userProfileAchievementCategoryStreetArt;
     }
   }
 
@@ -364,7 +356,8 @@ class _AchievementsPageState extends State<AchievementsPage> {
             ),
             child: Icon(
               _iconFor(achievement),
-              color: isUnlocked ? accent : scheme.onSurface.withValues(alpha: 0.4),
+              color:
+                  isUnlocked ? accent : scheme.onSurface.withValues(alpha: 0.4),
               size: 30,
             ),
           ),
@@ -372,9 +365,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
           Flexible(
             child: Text(
               achievement.title,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
+              style: KubusTextStyles.sectionTitle.copyWith(
                 color: scheme.onSurface,
               ),
               textAlign: TextAlign.center,
@@ -386,9 +377,9 @@ class _AchievementsPageState extends State<AchievementsPage> {
           Flexible(
             child: Text(
               achievement.description,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: scheme.onSurface.withValues(alpha: isUnlocked ? 0.8 : 0.6),
+              style: KubusTextStyles.sectionSubtitle.copyWith(
+                color:
+                    scheme.onSurface.withValues(alpha: isUnlocked ? 0.8 : 0.6),
               ),
               textAlign: TextAlign.center,
               maxLines: 3,
@@ -399,8 +390,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
           if (!isUnlocked && required > 1) ...[
             Text(
               '${progress.currentProgress}/$required',
-              style: GoogleFonts.inter(
-                fontSize: 10,
+              style: KubusTextStyles.compactBadge.copyWith(
                 color: scheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
@@ -428,9 +418,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
               ),
               child: Text(
                 achievement.isPOAP ? 'POAP' : 'UNLOCKED',
-                style: GoogleFonts.inter(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
+                style: KubusTextStyles.compactBadge.copyWith(
                   color: accent,
                 ),
               ),
@@ -444,11 +432,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
               const SizedBox(width: 2),
               Text(
                 '${achievement.tokenReward}',
-                style: GoogleFonts.inter(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: accent,
-                ),
+                style: KubusTextStyles.compactBadge.copyWith(color: accent),
               ),
             ],
           ),
@@ -457,4 +441,3 @@ class _AchievementsPageState extends State<AchievementsPage> {
     );
   }
 }
-

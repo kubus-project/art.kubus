@@ -17,6 +17,7 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../features/map/shared/map_screen_shared_helpers.dart';
 import '../features/map/shared/map_artwork_filtering.dart';
+import '../features/map/shared/map_marker_overlay_actions.dart';
 import '../features/map/shared/map_overlay_sizing.dart';
 import '../providers/artwork_provider.dart';
 import '../providers/task_provider.dart';
@@ -41,7 +42,6 @@ import '../core/app_route_observer.dart';
 import '../models/art_marker.dart';
 import '../widgets/map_marker_style_config.dart';
 import '../utils/artwork_navigation.dart';
-import 'community/user_profile_screen.dart';
 import '../utils/grid_utils.dart';
 import '../utils/artwork_media_resolver.dart';
 import '../utils/design_tokens.dart';
@@ -59,6 +59,7 @@ import '../utils/map_performance_debug.dart';
 import '../utils/presence_marker_visit.dart';
 import '../utils/geo_bounds.dart';
 import '../utils/media_url_resolver.dart';
+import '../utils/user_profile_navigation.dart';
 import '../widgets/map_marker_dialog.dart';
 import '../providers/tile_providers.dart';
 import '../widgets/art_map_view.dart';
@@ -1677,7 +1678,8 @@ class _MapScreenState extends State<MapScreen>
       }
       if (existingIndex >= 0 &&
           scope != _MarkerSocketScope.outOfScope &&
-          _markersHaveEquivalentVisibleState(_artMarkers[existingIndex], marker)) {
+          _markersHaveEquivalentVisibleState(
+              _artMarkers[existingIndex], marker)) {
         return;
       }
 
@@ -2132,10 +2134,10 @@ class _MapScreenState extends State<MapScreen>
       final double minMarkerY =
           (topSafe + overlayHeight + 24).clamp(0.0, size.height).toDouble();
 
-          // Keep anchored behavior, but compose the camera so the marker sits
-          // closer to center-height while preserving room for the larger card.
-          final double desiredY = math
-            .max(size.height * 0.74, minMarkerY)
+      // Keep anchored behavior, but compose the camera so the marker sits
+      // closer to center-height while preserving room for the larger card.
+      final double desiredY = math
+          .max(size.height * 0.74, minMarkerY)
           .clamp(0.0, size.height)
           .toDouble();
       final double dy = desiredY - (size.height / 2);
@@ -2203,8 +2205,7 @@ class _MapScreenState extends State<MapScreen>
                 .abs() >
             1.0) {
           _safeSetState(() {
-            _markerOverlayTopPadding =
-                MapOverlaySizing.defaultVerticalPadding;
+            _markerOverlayTopPadding = MapOverlaySizing.defaultVerticalPadding;
           });
         }
         return;
@@ -2450,18 +2451,19 @@ class _MapScreenState extends State<MapScreen>
       if (subjectData.delegates.isNotEmpty) MarkerSubjectType.group,
     };
 
-    final initialSubjectType = allowedSubjectTypes
-            .contains(MarkerSubjectType.artwork)
-        ? MarkerSubjectType.artwork
-      : allowedSubjectTypes.contains(MarkerSubjectType.streetArt)
-        ? MarkerSubjectType.streetArt
-        : allowedSubjectTypes.contains(MarkerSubjectType.exhibition)
-            ? MarkerSubjectType.exhibition
-            : allowedSubjectTypes.contains(MarkerSubjectType.event)
-                ? MarkerSubjectType.event
-                : allowedSubjectTypes.contains(MarkerSubjectType.institution)
-                    ? MarkerSubjectType.institution
-                    : MarkerSubjectType.misc;
+    final initialSubjectType =
+        allowedSubjectTypes.contains(MarkerSubjectType.artwork)
+            ? MarkerSubjectType.artwork
+            : allowedSubjectTypes.contains(MarkerSubjectType.streetArt)
+                ? MarkerSubjectType.streetArt
+                : allowedSubjectTypes.contains(MarkerSubjectType.exhibition)
+                    ? MarkerSubjectType.exhibition
+                    : allowedSubjectTypes.contains(MarkerSubjectType.event)
+                        ? MarkerSubjectType.event
+                        : allowedSubjectTypes
+                                .contains(MarkerSubjectType.institution)
+                            ? MarkerSubjectType.institution
+                            : MarkerSubjectType.misc;
 
     final MapMarkerFormResult? result = await MapMarkerDialog.show(
       context: context,
@@ -3286,6 +3288,11 @@ class _MapScreenState extends State<MapScreen>
         zoomGesturesEnabled: !disableGesturesForOverlays,
         tiltGesturesEnabled: !disableGesturesForOverlays,
         compassEnabled: false,
+        attributionButtonPosition: ml.AttributionButtonPosition.bottomLeft,
+        attributionButtonMargins: math.Point<double>(
+          12.0,
+          attributionBottomMargin,
+        ),
         webResizeRecoveryToken: _webResizeRecoveryToken,
         onCameraMove: _handleCameraMove,
         onCameraIdle: _handleCameraIdle,
@@ -3780,7 +3787,8 @@ class _MapScreenState extends State<MapScreen>
     final marker = selection.selectedMarker;
     final animationKey = marker == null
         ? const ValueKey<String>('marker_overlay_empty')
-        : ValueKey<String>('marker_overlay:selection:${selection.selectionToken}');
+        : ValueKey<String>(
+            'marker_overlay:selection:${selection.selectionToken}');
     return KubusMapMarkerOverlayLayer(
       content: marker == null
           ? null
@@ -3859,66 +3867,15 @@ class _MapScreenState extends State<MapScreen>
 
     final l10n = AppLocalizations.of(context)!;
 
-    final estimatedHeight = stack.fold<double>(0.0, (maxHeight, entry) {
-      final entryArtwork = entry.isExhibitionMarker
-          ? null
-          : context.read<ArtworkProvider>().getArtworkById(entry.artworkId ?? '');
-      final entryPrimaryExhibition = entry.resolvedExhibitionSummary;
-      final exhibitionsFeatureEnabled = AppConfig.isFeatureEnabled('exhibitions');
-      final exhibitionsApiAvailable = BackendApiService().exhibitionsApiAvailable;
-      final canPresentExhibition = exhibitionsFeatureEnabled &&
-          entryPrimaryExhibition != null &&
-          entryPrimaryExhibition.id.isNotEmpty &&
-          exhibitionsApiAvailable != false;
-
-      final exhibitionTitle = (entryPrimaryExhibition?.title ?? '').trim();
-      final displayTitle = canPresentExhibition && exhibitionTitle.isNotEmpty
-          ? exhibitionTitle
-          : (entryArtwork?.title.isNotEmpty == true
-              ? entryArtwork!.title
-              : entry.name);
-
-      final distanceText = () {
-        if (_currentPosition == null) return null;
-        final meters = _distanceCalculator.as(
-          LengthUnit.Meter,
-          _currentPosition!,
-          entry.position,
-        );
-        if (meters >= 1000) {
-          return l10n.commonDistanceKm((meters / 1000).toStringAsFixed(1));
-        }
-        return l10n.commonDistanceM(meters.round().toString());
-      }();
-
-      final rawDescription =
-          (entry.description.isNotEmpty ? entry.description : (entryArtwork?.description ?? ''))
-              .trim();
-      const int maxPreviewChars = 300;
-      final visibleDescription = rawDescription.length <= maxPreviewChars
-          ? rawDescription
-          : '${rawDescription.substring(0, maxPreviewChars)}...';
-
-      final showChips =
-          _hasMetadataChips(entry, entryArtwork) || canPresentExhibition;
-
-      final entryHeight = _computeMobileMarkerHeight(
-        title: displayTitle,
-        distanceText: distanceText,
-        description: visibleDescription,
-        hasChips: showChips,
-        buttonLabel: l10n.commonViewDetails,
-        showTypeLabel: canPresentExhibition,
-      );
-      return math.max(maxHeight, entryHeight);
-    });
-
     void goToStackIndex(int index) {
       if (index < 0 || index >= stack.length) return;
       _handleMarkerStackPageChanged(index);
     }
 
-    KubusMarkerOverlayCard buildCardForMarker(ArtMarker pageMarker) {
+    KubusMarkerOverlayCard buildCardForMarker(
+      ArtMarker pageMarker, {
+      required double maxCardHeight,
+    }) {
       final pageArtwork = pageMarker.isExhibitionMarker
           ? null
           : context
@@ -3957,6 +3914,21 @@ class _MapScreenState extends State<MapScreen>
       }();
 
       final pageBaseColor = _resolveArtMarkerColor(pageMarker, themeProvider);
+      final overlayActions = buildMarkerOverlayActions(
+        context: context,
+        artwork: pageArtwork,
+        canPresentExhibition: canPresentExhibition,
+        baseColor: pageBaseColor,
+        sourceScreen: 'map_marker',
+      );
+
+      final openDetails = canPresentExhibition
+          ? () => _openExhibitionFromMarker(
+                pageMarker,
+                pagePrimaryExhibition,
+                pageArtwork,
+              )
+          : () => _openMarkerDetail(pageMarker, pageArtwork);
 
       return KubusMarkerOverlayCard(
         marker: pageMarker,
@@ -3969,16 +3941,13 @@ class _MapScreenState extends State<MapScreen>
             ? pageMarker.description
             : (pageArtwork?.description ?? ''),
         onClose: _dismissSelectedMarker,
-        onPrimaryAction: canPresentExhibition
-            ? () => _openExhibitionFromMarker(
-                  pageMarker,
-                  pagePrimaryExhibition,
-                  pageArtwork,
-                )
-            : () => _openMarkerDetail(pageMarker, pageArtwork),
+        onPrimaryAction: openDetails,
+        onCardTap: openDetails,
+        onTitleTap: openDetails,
         primaryActionIcon:
             canPresentExhibition ? Icons.museum_outlined : Icons.arrow_forward,
         primaryActionLabel: l10n.commonViewDetails,
+        actions: overlayActions,
         stackCount: stack.length,
         stackIndex: stackIndex,
         onNextStacked: stack.length > 1 ? _nextStackedMarker : null,
@@ -3986,8 +3955,8 @@ class _MapScreenState extends State<MapScreen>
         onSelectStackIndex: stack.length > 1 ? (i) => goToStackIndex(i) : null,
         onHorizontalDragEnd: stack.length > 1
             ? (details) {
-                final velocityX =
-                    details.primaryVelocity ?? details.velocity.pixelsPerSecond.dx;
+                final velocityX = details.primaryVelocity ??
+                    details.velocity.pixelsPerSecond.dx;
                 if (!velocityX.isFinite || velocityX.abs() < 120) return;
                 if (velocityX < 0) {
                   _nextStackedMarker();
@@ -3996,25 +3965,22 @@ class _MapScreenState extends State<MapScreen>
                 }
               }
             : null,
+        maxHeight: maxCardHeight,
       );
     }
 
     final visibleMarker = stack[stackIndex];
-
-    final Widget cardDeck = RepaintBoundary(
-      child: buildCardForMarker(visibleMarker),
-    );
 
     return Positioned.fill(
       child: KubusMarkerOverlayCardWrapper(
         anchorListenable: _selectedMarkerAnchorNotifier,
         placementStrategy: KubusMarkerOverlayPlacementStrategy.anchored,
         widthResolver: (constraints, mediaQuery) {
-          final availableWidth =
-              math.max(1.0, constraints.maxWidth - (10.0 * 2.0));
-          // Make the overlay slightly wider while still leaving side breathing
-          // room on smaller phones.
-          return math.min(availableWidth, 392.0).toDouble();
+          return MapOverlaySizing.resolveCardWidth(
+            constraints,
+            preferred: MapOverlaySizing.preferredCardWidth,
+            horizontalPadding: KubusSpacing.sm + KubusSpacing.xxs,
+          );
         },
         maxHeightResolver: (constraints, mediaQuery) {
           return MapOverlaySizing.resolveMaxCardHeight(
@@ -4023,10 +3989,8 @@ class _MapScreenState extends State<MapScreen>
           );
         },
         heightResolver: (constraints, mediaQuery, maxCardHeight) {
-          return MapOverlaySizing.resolveCardHeight(
-            estimatedHeight: estimatedHeight,
+          return MapOverlaySizing.resolveFixedCardHeight(
             maxCardHeight: maxCardHeight,
-            isCompactWidth: constraints.maxWidth < 600,
           );
         },
         fallbackAnchorResolver: (constraints) {
@@ -4042,7 +4006,7 @@ class _MapScreenState extends State<MapScreen>
           );
         },
         markerOffset: 14.0,
-        horizontalPadding: 10.0,
+        horizontalPadding: KubusSpacing.sm + KubusSpacing.xxs,
         topPadding: _markerOverlayTopPadding,
         bottomPadding: MapOverlaySizing.defaultVerticalPadding,
         animation: const KubusMarkerOverlayAnimationConfig(
@@ -4057,7 +4021,7 @@ class _MapScreenState extends State<MapScreen>
           if (kDebugMode) {
             AppConfig.debugPrint(
               'MapScreen: card anchor=(${layout.anchor?.dx.toStringAsFixed(0)}, ${layout.anchor?.dy.toStringAsFixed(0)}) '
-              'maxH=${layout.maxCardHeight.toStringAsFixed(0)} estH=${estimatedHeight.toStringAsFixed(0)} cardH=${layout.cardHeight.toStringAsFixed(0)}',
+              'maxH=${layout.maxCardHeight.toStringAsFixed(0)} cardH=${layout.cardHeight.toStringAsFixed(0)}',
             );
           }
           return ConstrainedBox(
@@ -4066,7 +4030,12 @@ class _MapScreenState extends State<MapScreen>
             ),
             child: SizedBox(
               height: layout.cardHeight,
-              child: cardDeck,
+              child: RepaintBoundary(
+                child: buildCardForMarker(
+                  visibleMarker,
+                  maxCardHeight: layout.cardHeight,
+                ),
+              ),
             ),
           );
         },
@@ -4126,141 +4095,6 @@ class _MapScreenState extends State<MapScreen>
         );
       },
     );
-  }
-
-  double _computeMobileMarkerHeight({
-    required String title,
-    required String? distanceText,
-    required String description,
-    required bool hasChips,
-    required String buttonLabel,
-    bool showTypeLabel = false,
-  }) {
-    // Use the same width as the actual card render.
-    const double cardWidth = 360;
-    const double horizontalPadding = 12;
-    const double verticalPadding = 12;
-    final double contentWidth = cardWidth - (horizontalPadding * 2);
-
-    // Optional type label height (e.g. "Razstava")
-    double typeLabelHeight = 0;
-    if (showTypeLabel) {
-      final typeLabelPainter = TextPainter(
-        text: TextSpan(
-          text: 'Razstava',
-          style: KubusTypography.textTheme.labelSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-            height: 1.0,
-          ),
-        ),
-        maxLines: 1,
-        textDirection: TextDirection.ltr,
-      )..layout(maxWidth: contentWidth);
-      typeLabelHeight = typeLabelPainter.size.height + 2;
-    }
-
-    // Title height (max 2 lines)
-    final titlePainter = TextPainter(
-      text: TextSpan(
-        text: title,
-        style: KubusTypography.textTheme.titleSmall?.copyWith(
-          fontWeight: FontWeight.w700,
-          height: 1.2,
-        ),
-      ),
-      maxLines: 2,
-      textDirection: TextDirection.ltr,
-    )..layout(maxWidth: contentWidth);
-    final double titleHeight = titlePainter.size.height;
-
-    // Distance badge height
-    double distanceBadgeHeight = 0;
-    if (distanceText != null && distanceText.isNotEmpty) {
-      final distancePainter = TextPainter(
-        text: TextSpan(
-          text: distanceText,
-          style: KubusTypography.textTheme.labelSmall?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout(maxWidth: contentWidth);
-      distanceBadgeHeight = (distancePainter.size.height).clamp(10, 20) + 4;
-    }
-
-    // Close icon button is 36x36 in the UI.
-    const double closeIconHeight = 36;
-    final double headerContentHeight = typeLabelHeight + titleHeight;
-    final double headerHeight = [
-      headerContentHeight,
-      distanceBadgeHeight,
-      closeIconHeight
-    ].reduce((a, b) => a > b ? a : b);
-
-    // Description height
-    double descriptionHeight = 0;
-    if (description.isNotEmpty) {
-      final descriptionPainter = TextPainter(
-        text: TextSpan(
-          text: description,
-          style: KubusTypography.textTheme.bodySmall?.copyWith(
-            height: 1.4,
-            fontSize: 12,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-        maxLines: null,
-      )..layout(maxWidth: contentWidth);
-      descriptionHeight = descriptionPainter.size.height;
-    }
-
-    // Chips height (single row; wrap may grow, but this is used as a
-    // best-effort expansion hint and safe camera offset).
-    final double chipsHeight = hasChips ? 24.0 : 0.0;
-
-    // Button height (content + padding * 2)
-    final buttonTextPainter = TextPainter(
-      text: TextSpan(
-        text: buttonLabel,
-        style: KubusTypography.textTheme.labelLarge
-            ?.copyWith(fontWeight: FontWeight.w700),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    const double buttonIconSize = 18;
-    const double buttonPaddingV = 10;
-    final buttonContentHeight =
-        math.max(buttonTextPainter.size.height, buttonIconSize);
-    final double buttonHeight = buttonContentHeight + (buttonPaddingV * 2);
-
-    // Spacing between sections
-    double spacing = 0;
-    spacing += 10; // after header
-    spacing += 10; // after image
-    if (descriptionHeight > 0) spacing += 10;
-    if (chipsHeight > 0) spacing += 10;
-    spacing += 12; // before button
-
-    final double containerHeight = verticalPadding * 2 +
-        headerHeight +
-        120 +
-        descriptionHeight +
-        chipsHeight +
-        buttonHeight +
-        spacing;
-
-    return containerHeight;
-  }
-
-  /// Check if marker has any metadata chips to display
-  bool _hasMetadataChips(ArtMarker marker, Artwork? artwork) {
-    return (artwork != null &&
-            artwork.category.isNotEmpty &&
-            artwork.category != 'General') ||
-        marker.metadata?['subjectCategory'] != null ||
-        marker.metadata?['subject_category'] != null ||
-        (artwork != null && artwork.rewards > 0);
   }
 
   Future<void> _openExhibitionFromMarker(
@@ -4447,9 +4281,12 @@ class _MapScreenState extends State<MapScreen>
     final l10n = AppLocalizations.of(context)!;
     final scheme = theme.colorScheme;
     final radius = KubusRadius.circular(KubusRadius.lg);
-    final isDark = theme.brightness == Brightness.dark;
     final accent = context.read<ThemeProvider>().accentColor;
-    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.46 : 0.58);
+    final surfaceStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.button,
+      tintBase: scheme.surface,
+    );
     final hintColor = scheme.onSurfaceVariant;
 
     return ListenableBuilder(
@@ -4461,7 +4298,7 @@ class _MapScreenState extends State<MapScreen>
         return CompositedTransformTarget(
           link: _mapSearchController.fieldLink,
           child: SizedBox(
-            height: 48,
+            height: KubusHeaderMetrics.searchBarHeight,
             child: KubusSearchBar(
               semanticsLabel: 'map_search_input',
               hintText: l10n.mapSearchHint,
@@ -4501,11 +4338,17 @@ class _MapScreenState extends State<MapScreen>
                       color: hintColor,
                     ),
                     style: IconButton.styleFrom(
-                      minimumSize: const Size(36, 36),
-                      maximumSize: const Size(36, 36),
+                      minimumSize: const Size(
+                        KubusHeaderMetrics.actionHitArea,
+                        KubusHeaderMetrics.actionHitArea,
+                      ),
+                      maximumSize: const Size(
+                        KubusHeaderMetrics.actionHitArea,
+                        KubusHeaderMetrics.actionHitArea,
+                      ),
                       padding: EdgeInsets.zero,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(KubusRadius.sm),
                       ),
                     ),
                     onPressed: () {
@@ -4518,34 +4361,46 @@ class _MapScreenState extends State<MapScreen>
               },
               style: KubusSearchBarStyle(
                 borderRadius: radius,
-                backgroundColor: glassTint,
+                backgroundColor: surfaceStyle.tintColor,
                 borderColor: accent.withValues(alpha: 0.22),
                 focusedBorderColor: accent,
                 borderWidth: 1,
                 focusedBorderWidth: 2,
-                blurSigma: null,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                blurSigma: surfaceStyle.blurSigma,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.md,
+                  vertical: KubusSpacing.md - KubusSpacing.xxs,
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color:
-                        scheme.shadow.withValues(alpha: isDark ? 0.22 : 0.14),
+                    color: scheme.shadow.withValues(
+                      alpha: theme.brightness == Brightness.dark
+                          ? KubusGlassEffects.shadowOpacityDark
+                          : KubusGlassEffects.shadowOpacityLight,
+                    ),
                     blurRadius: 18,
                     offset: const Offset(0, 10),
                   ),
                 ],
                 focusedBoxShadow: [
                   BoxShadow(
-                    color:
-                        scheme.shadow.withValues(alpha: isDark ? 0.26 : 0.16),
+                    color: scheme.shadow.withValues(
+                      alpha: theme.brightness == Brightness.dark
+                          ? KubusGlassEffects.shadowOpacityDark
+                          : KubusGlassEffects.shadowOpacityLight,
+                    ),
                     blurRadius: 20,
                     offset: const Offset(0, 12),
                   ),
                 ],
-                prefixIconConstraints:
-                    const BoxConstraints(minWidth: 44, minHeight: 44),
-                suffixIconConstraints:
-                    const BoxConstraints(minWidth: 44, minHeight: 44),
+                prefixIconConstraints: const BoxConstraints(
+                  minWidth: KubusHeaderMetrics.actionHitArea,
+                  minHeight: KubusHeaderMetrics.actionHitArea,
+                ),
+                suffixIconConstraints: const BoxConstraints(
+                  minWidth: KubusHeaderMetrics.actionHitArea,
+                  minHeight: KubusHeaderMetrics.actionHitArea,
+                ),
                 textStyle: KubusTypography.textTheme.bodyMedium?.copyWith(
                   color: scheme.onSurface,
                 ),
@@ -4593,11 +4448,7 @@ class _MapScreenState extends State<MapScreen>
       // Fallback: open detail screen directly if no marker found
       await openArtwork(context, suggestion.id!, source: 'map_search');
     } else if (suggestion.type == 'profile' && suggestion.id != null) {
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => UserProfileScreen(userId: suggestion.id!),
-        ),
-      );
+      await UserProfileNavigation.open(context, userId: suggestion.id!);
     }
   }
 
@@ -4690,9 +4541,14 @@ class _MapScreenState extends State<MapScreen>
     return KubusFilterPanel(
       title: l10n.mapFiltersTitle,
       margin: EdgeInsets.zero,
-      contentPadding: const EdgeInsets.all(14),
-      headerPadding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
-      borderRadius: 18,
+      contentPadding: const EdgeInsets.all(KubusSpacing.md),
+      headerPadding: const EdgeInsets.fromLTRB(
+        KubusSpacing.md,
+        KubusSpacing.md,
+        KubusSpacing.md,
+        0,
+      ),
+      borderRadius: KubusRadius.lg,
       showHeaderDivider: false,
       titleStyle: KubusTypography.textTheme.titleMedium?.copyWith(
         fontWeight: FontWeight.w700,
@@ -4702,8 +4558,8 @@ class _MapScreenState extends State<MapScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: KubusSpacing.sm,
+            runSpacing: KubusSpacing.sm,
             children: filters.map((filter) {
               final key = filter['key']!;
               final selected = _artworkFilter == key;
@@ -4712,7 +4568,7 @@ class _MapScreenState extends State<MapScreen>
                 icon: Icons.filter_alt_outlined,
                 active: selected,
                 accentColor: filterAccent(key),
-                borderRadius: 10,
+                borderRadius: KubusRadius.sm,
                 onPressed: () {
                   setState(() => _artworkFilter = key);
                   // Reload markers so the nearby panel reflects
@@ -4725,7 +4581,7 @@ class _MapScreenState extends State<MapScreen>
               );
             }).toList(),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: KubusSpacing.md),
           Text(
             l10n.mapLayersTitle,
             style: KubusTypography.textTheme.titleMedium?.copyWith(
@@ -4733,7 +4589,7 @@ class _MapScreenState extends State<MapScreen>
               color: scheme.onSurface,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: KubusSpacing.sm + KubusSpacing.xxs),
           KubusMapMarkerLayerChips(
             l10n: l10n,
             visibility: _markerLayerVisibility,
@@ -4771,13 +4627,13 @@ class _MapScreenState extends State<MapScreen>
         fontWeight: FontWeight.w700,
         color: scheme.onSurface,
       ),
-      percentStyle: KubusTypography.textTheme.bodySmall?.copyWith(
+      percentStyle: KubusTextStyles.sectionSubtitle.copyWith(
         color: scheme.onSurfaceVariant,
       ),
-      glassPadding: const EdgeInsets.all(14),
-      expandButtonSize: 36,
-      badgeGap: 10,
-      tasksTopGap: 10,
+      glassPadding: const EdgeInsets.all(KubusSpacing.md),
+      expandButtonSize: KubusHeaderMetrics.actionHitArea,
+      badgeGap: KubusSpacing.sm + KubusSpacing.xxs,
+      tasksTopGap: KubusSpacing.sm + KubusSpacing.xxs,
     );
   }
 
@@ -4791,7 +4647,7 @@ class _MapScreenState extends State<MapScreen>
     // Smaller bottom offset moves controls slightly down.
     final bottomOffset = 90.0 + KubusLayout.mainBottomNavBarHeight;
     return Positioned(
-      right: 12,
+      right: KubusSpacing.md - KubusSpacing.xxs,
       bottom: bottomOffset,
       child: MapOverlayBlocker(
         child: KubusMapControls(
@@ -4821,10 +4677,8 @@ class _MapScreenState extends State<MapScreen>
           onToggleIsometricView: () {
             unawaited(_setIsometricViewEnabled(!_isometricViewEnabled));
           },
-          isometricViewTooltipWhenActive:
-              l10n.mapIsometricViewDisableTooltip,
-          isometricViewTooltipWhenInactive:
-              l10n.mapIsometricViewEnableTooltip,
+          isometricViewTooltipWhenActive: l10n.mapIsometricViewDisableTooltip,
+          isometricViewTooltipWhenInactive: l10n.mapIsometricViewEnableTooltip,
         ),
       ),
     );
@@ -4832,7 +4686,7 @@ class _MapScreenState extends State<MapScreen>
 
   Widget _buildMobileAttributionButton() {
     return Positioned(
-      left: 12,
+      left: KubusSpacing.md - KubusSpacing.xxs,
       bottom: 0,
       child: ValueListenableBuilder<double>(
         valueListenable: _nearbySheetExtentNotifier,
@@ -4852,14 +4706,19 @@ class _MapScreenState extends State<MapScreen>
           return AnimatedPadding(
             duration: const Duration(milliseconds: 120),
             curve: Curves.easeOutCubic,
-            padding: EdgeInsets.only(bottom: bottomInset),
+            padding: EdgeInsets.only(
+              bottom: bottomInset +
+                  KubusHeaderMetrics.actionHitArea +
+                  KubusSpacing.sm,
+            ),
             child: MapOverlayBlocker(
               child: Tooltip(
                 message: 'Map attributions',
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: () => unawaited(showKubusMapAttributionDialog(context)),
+                    onTap: () =>
+                        unawaited(showKubusMapAttributionDialog(context)),
                     borderRadius: BorderRadius.circular(KubusRadius.sm),
                     child: SizedBox(
                       width: 42,

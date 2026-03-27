@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 
@@ -11,6 +10,7 @@ import '../../../providers/portfolio_provider.dart';
 import '../../../utils/artwork_media_resolver.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../utils/artwork_edit_navigation.dart';
+import '../../../utils/design_tokens.dart';
 import '../../art/collection_detail_screen.dart';
 import '../../events/exhibition_detail_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -127,9 +127,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
                   children: [
                     Text(
                       title,
-                      style: GoogleFonts.inter(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                      style: KubusTextStyles.screenTitle.copyWith(
                         color: scheme.onSurface,
                       ),
                       maxLines: 1,
@@ -138,8 +136,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
                     const SizedBox(height: 4),
                     Text(
                       countLabel,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
+                      style: KubusTextStyles.screenSubtitle.copyWith(
                         color: scheme.onSurface.withValues(alpha: 0.7),
                       ),
                       maxLines: 1,
@@ -159,10 +156,8 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
             const SizedBox(height: 8),
             Text(
               error,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: scheme.error,
-              ),
+              style:
+                  KubusTextStyles.sectionSubtitle.copyWith(color: scheme.error),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -267,8 +262,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
               const SizedBox(height: 16),
               Text(
                 l10n.artistGalleryEmptyTitle,
-                style: GoogleFonts.inter(
-                  fontSize: 18,
+                style: KubusTextStyles.sectionTitle.copyWith(
                   color: scheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
@@ -276,8 +270,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
               Text(
                 l10n.artistGalleryEmptyDescription,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
-                  fontSize: 14,
+                style: KubusTextStyles.sectionSubtitle.copyWith(
                   color: scheme.onSurface.withValues(alpha: 0.5),
                 ),
               ),
@@ -360,9 +353,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
                         Expanded(
                           child: Text(
                             entry.title,
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
+                            style: KubusTextStyles.sectionTitle.copyWith(
                               color: scheme.onSurface,
                             ),
                             maxLines: 1,
@@ -379,9 +370,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
                           ),
                           child: Text(
                             statusLabel(),
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
+                            style: KubusTextStyles.compactBadge.copyWith(
                               color: statusColor,
                             ),
                           ),
@@ -393,8 +382,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
                       children: [
                         Text(
                           typeLabel(),
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
+                          style: KubusTextStyles.sectionSubtitle.copyWith(
                             color: scheme.onSurface.withValues(alpha: 0.65),
                           ),
                         ),
@@ -402,16 +390,14 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
                             entry.subtitle!.trim().isNotEmpty) ...[
                           Text(
                             ' • ',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
+                            style: KubusTextStyles.navMetaLabel.copyWith(
                               color: scheme.onSurface.withValues(alpha: 0.45),
                             ),
                           ),
                           Expanded(
                             child: Text(
                               entry.subtitle!.trim(),
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
+                              style: KubusTextStyles.navMetaLabel.copyWith(
                                 color: scheme.onSurface.withValues(alpha: 0.65),
                               ),
                               maxLines: 1,

@@ -28,6 +28,7 @@ import '../../models/exhibition.dart';
 import '../../models/map_marker_subject.dart';
 import '../../config/config.dart';
 import '../../core/app_route_observer.dart';
+import '../../services/map_attribution_helper.dart';
 import '../../services/map_style_service.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/search_service.dart';
@@ -46,6 +47,7 @@ import '../../utils/map_search_suggestion.dart';
 import '../../utils/presence_marker_visit.dart';
 import '../../utils/map_viewport_utils.dart';
 import '../../utils/geo_bounds.dart';
+import '../../utils/user_profile_navigation.dart';
 import '../../widgets/map_marker_style_config.dart';
 import '../../widgets/artwork_creator_byline.dart';
 import '../../widgets/art_map_view.dart';
@@ -63,11 +65,12 @@ import 'components/desktop_widgets.dart';
 import 'desktop_shell.dart';
 import 'art/desktop_artwork_detail_screen.dart';
 import '../events/exhibition_detail_screen.dart';
-import 'community/desktop_user_profile_screen.dart';
 import '../../features/map/controller/map_view_preferences_controller.dart';
 import '../../features/map/shared/map_marker_collision_config.dart';
 import '../../features/map/shared/map_screen_constants.dart';
 import '../../features/map/shared/map_artwork_filtering.dart';
+import '../../features/map/shared/map_marker_overlay_actions.dart';
+import '../../features/map/shared/map_overlay_sizing.dart';
 import '../../features/map/map_layers_manager.dart';
 import '../../features/map/map_overlay_stack.dart';
 import '../../features/map/controller/kubus_map_controller.dart';
@@ -384,9 +387,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           if (tokenChanged) {
             _renderCoordinator.startSelectionPopAnimation();
             _maybeRecordPresenceVisitForMarker(marker);
-            final stackToPrefetch = nextStack.isNotEmpty
-                ? nextStack
-                : <ArtMarker>[marker];
+            final stackToPrefetch =
+                nextStack.isNotEmpty ? nextStack : <ArtMarker>[marker];
             unawaited(_prefetchStackArtworkData(stackToPrefetch));
           } else if (stackChanged) {
             unawaited(_prefetchStackArtworkData(nextStack));
@@ -535,6 +537,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _autoFollow = widget.autoFollow;
     _cameraCenter = widget.initialCenter ?? const LatLng(46.0569, 14.5058);
     _cameraZoom = widget.initialZoom ?? _cameraZoom;
+    MapAttributionHelper.setDesktopMapEnabled(true);
+    MapAttributionHelper.setDesktopMapAttributionBottomPx(
+      KubusSpacing.xl.toDouble(),
+    );
 
     final bindingName = WidgetsBinding.instance.runtimeType.toString();
     final isWidgetTest = bindingName.contains('TestWidgetsFlutterBinding') ||
@@ -1460,6 +1466,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   @override
   void dispose() {
+    MapAttributionHelper.setDesktopMapEnabled(false);
     if (_subscribedRoute != null) {
       appRouteObserver.unsubscribe(this);
       _subscribedRoute = null;
@@ -1647,7 +1654,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 // No active tasks: show attribution icon standalone in bottom-left
                 return Positioned(
                   left: 24,
-                  bottom: 24,
+                  bottom: KubusSpacing.xl +
+                      KubusHeaderMetrics.actionHitArea +
+                      KubusSpacing.sm,
                   child: MapOverlayBlocker(
                     child: _buildDesktopAttributionButton(),
                   ),
@@ -1666,9 +1675,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildDesktopAttributionButton(),
-                        const SizedBox(height: 10),
                         _buildDiscoveryCard(taskProvider),
+                        const SizedBox(height: KubusSpacing.sm),
+                        _buildDesktopAttributionButton(),
                       ],
                     ),
                   ),
@@ -1716,6 +1725,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           maxZoom: 24.0,
           isDarkMode: isDark,
           styleAsset: styleAsset,
+          attributionButtonPosition: ml.AttributionButtonPosition.bottomLeft,
+          attributionButtonMargins: math.Point<double>(
+            24.0,
+            KubusSpacing.xl.toDouble(),
+          ),
           webResizeRecoveryToken: _webResizeRecoveryToken,
           onMapCreated: _handleMapCreated,
           onStyleLoaded: () {
@@ -1723,7 +1737,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               'DesktopMapScreen: onStyleLoadedCallback (dark=$isDark, style="$styleAsset")',
             );
             unawaited(
-              _handleMapStyleLoaded(themeProvider).then((_) => _handleMapReady()),
+              _handleMapStyleLoaded(themeProvider)
+                  .then((_) => _handleMapReady()),
             );
           },
           onCameraMove: (position) {
@@ -1945,9 +1960,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
               Text(
                 l10n.desktopMapTitleDiscover,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
+                style: KubusTextStyles.screenTitle.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
             ],
           ),
@@ -2089,11 +2104,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 const SizedBox(width: 6),
                 Text(
                   AppLocalizations.of(context)!.mapArReadyChipLabel,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: accent,
-                      ),
+                  style: KubusTextStyles.navMetaLabel.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: accent,
+                  ),
                 ),
               ],
             ),
@@ -2120,23 +2134,21 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       ),
       sections: [
         Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(KubusSpacing.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 artwork.title,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
+                style: KubusTextStyles.screenTitle.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
               const SizedBox(height: 8),
               ArtworkCreatorByline(
                 artwork: artwork,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontSize: 14,
+                      fontSize: KubusHeaderMetrics.screenSubtitle,
                       color: scheme.onSurfaceVariant,
                       fontWeight: FontWeight.w500,
                     ),
@@ -2147,7 +2159,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 Text(
                   artwork.description,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: 14,
+                        fontSize: KubusHeaderMetrics.screenSubtitle,
                         height: 1.6,
                         color: Theme.of(context)
                             .colorScheme
@@ -2371,11 +2383,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         const SizedBox(width: 6),
         Text(
           value,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+          style: KubusTextStyles.navLabel.copyWith(
+            fontWeight: FontWeight.w500,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
         ),
       ],
     );
@@ -2427,11 +2438,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           const SizedBox(width: 6),
           Text(
             'Exhibition',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: exhibitionAccent,
-                ),
+            style: KubusTextStyles.navMetaLabel.copyWith(
+              fontWeight: FontWeight.w600,
+              color: exhibitionAccent,
+            ),
           ),
         ],
       ),
@@ -2457,24 +2467,22 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       ),
       sections: [
         Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(KubusSpacing.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 exhibition.title,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: scheme.onSurface,
-                    ),
+                style: KubusTextStyles.screenTitle.copyWith(
+                  color: scheme.onSurface,
+                ),
               ),
               if (exhibition.host != null) ...[
                 const SizedBox(height: 8),
                 Text(
                   'Hosted by ${exhibition.host!.displayName ?? exhibition.host!.username ?? 'Unknown'}',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: 14,
+                        fontSize: KubusHeaderMetrics.screenSubtitle,
                         color: exhibitionAccent,
                         fontWeight: FontWeight.w500,
                       ),
@@ -2501,7 +2509,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 Text(
                   exhibition.description!,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: 14,
+                        fontSize: KubusHeaderMetrics.screenSubtitle,
                         height: 1.6,
                         color: scheme.onSurface.withValues(alpha: 0.7),
                       ),
@@ -2612,13 +2620,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       title: l10n.mapFiltersTitle,
       onClose: () => setState(() => _showFiltersPanel = false),
       closeTooltip: l10n.commonClose,
-      margin: const EdgeInsets.only(left: 24),
-      contentPadding: const EdgeInsets.all(24),
+      margin: const EdgeInsets.only(left: KubusSpacing.lg),
+      contentPadding: const EdgeInsets.all(KubusSpacing.lg),
       expandContent: true,
       absorbPointer: true,
       showFooterDivider: true,
       footer: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
         child: Row(
           children: [
             Expanded(
@@ -2679,13 +2687,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         children: [
           Text(
             l10n.mapNearbyRadiusTitle,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontSize: 14,
+            style: KubusTextStyles.navLabel.copyWith(
               fontWeight: FontWeight.w600,
               color: scheme.onSurface,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: KubusSpacing.md),
           Row(
             children: [
               Expanded(
@@ -2730,8 +2737,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   l10n.commonDistanceKm(
                     _searchRadius.toStringAsFixed(1),
                   ),
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontSize: 14,
+                  style: KubusTextStyles.navLabel.copyWith(
                     fontWeight: FontWeight.w600,
                     color: scheme.onSurface,
                   ),
@@ -2739,16 +2745,15 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: KubusSpacing.lg),
           Text(
             l10n.mapLayersTitle,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontSize: 14,
+            style: KubusTextStyles.navLabel.copyWith(
               fontWeight: FontWeight.w600,
               color: scheme.onSurface,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: KubusSpacing.md),
           KubusMapMarkerLayerChips(
             l10n: l10n,
             visibility: _markerLayerVisibility,
@@ -2762,16 +2767,15 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               _requestMarkerVisualSync(force: true);
             },
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: KubusSpacing.lg),
           Text(
             l10n.desktopMapSortByTitle,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontSize: 14,
+            style: KubusTextStyles.navLabel.copyWith(
               fontWeight: FontWeight.w600,
               color: scheme.onSurface,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: KubusSpacing.md),
           KubusSortOption(
             label: l10n.desktopMapSortDistance,
             icon: Icons.near_me,
@@ -2847,8 +2851,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           onToggleIsometricView: () =>
               unawaited(_setIsometricViewEnabled(!_isometricViewEnabled)),
           isometricViewTooltipWhenActive: l10n.mapIsometricViewDisableTooltip,
-          isometricViewTooltipWhenInactive:
-              l10n.mapIsometricViewEnableTooltip,
+          isometricViewTooltipWhenInactive: l10n.mapIsometricViewEnableTooltip,
           showNearbyToggle: true,
           nearbyActive: _isNearbyPanelOpen,
           onToggleNearby:
@@ -3251,21 +3254,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         openDetail: true,
       ));
     } else if (suggestion.type == 'profile' && suggestion.id != null) {
-      final shellScope = DesktopShellScope.of(context);
-      if (shellScope != null) {
-        shellScope.pushScreen(
-          DesktopSubScreen(
-            title: suggestion.subtitle ?? suggestion.label,
-            child: UserProfileScreen(userId: suggestion.id!),
-          ),
-        );
-      } else {
-        unawaited(Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => UserProfileScreen(userId: suggestion.id!),
-          ),
-        ));
-      }
+      unawaited(UserProfileNavigation.open(context, userId: suggestion.id!));
     }
   }
 
@@ -3664,7 +3653,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
     if (existingIndex >= 0 &&
         scope != _MarkerSocketScope.outOfScope &&
-        _markersHaveEquivalentVisibleState(_artMarkers[existingIndex], marker)) {
+        _markersHaveEquivalentVisibleState(
+            _artMarkers[existingIndex], marker)) {
       return;
     }
 
@@ -3792,6 +3782,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     ArtMarker marker,
     Artwork? artwork,
     ThemeProvider themeProvider, {
+    required double cardHeight,
+    required double maxCardHeight,
     required int stackCount,
     required int stackIndex,
     VoidCallback? onNextStacked,
@@ -3800,7 +3792,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     ValueChanged<DragEndDetails>? onHorizontalDragEnd,
   }) {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
     final baseColor = _resolveArtMarkerColor(marker, themeProvider);
     final primaryExhibition = marker.resolvedExhibitionSummary;
     final exhibitionsFeatureEnabled = AppConfig.isFeatureEnabled('exhibitions');
@@ -3821,103 +3812,52 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             ? marker.description
             : (artwork?.description ?? ''))
         .trim();
-    final viewportHeight = MediaQuery.of(context).size.height;
-    final safeVerticalPadding = MediaQuery.of(context).padding.vertical;
-    final double maxCardHeight =
-        math.max(240.0, viewportHeight - safeVerticalPadding - 24).toDouble();
+    final overlayActions = buildMarkerOverlayActions(
+      context: context,
+      artwork: artwork,
+      canPresentExhibition: canPresentExhibition,
+      baseColor: baseColor,
+      sourceScreen: 'desktop_map_marker',
+    );
 
-    final artworkProvider = context.read<ArtworkProvider>();
-    final overlayActions = <MarkerOverlayActionSpec>[];
-    if (artwork != null && !canPresentExhibition) {
-      overlayActions.addAll([
-        MarkerOverlayActionSpec(
-          icon: artwork.isLikedByCurrentUser
-              ? Icons.favorite
-              : Icons.favorite_border,
-          label: '${artwork.likesCount}',
-          isActive: artwork.isLikedByCurrentUser,
-          activeColor: scheme.error,
-          tooltip: l10n.commonLikes,
-          semanticsLabel: 'marker_like',
-          onTap: () {
-            unawaited(artworkProvider.toggleLike(artwork.id));
-          },
-        ),
-        MarkerOverlayActionSpec(
-          icon: artwork.isFavoriteByCurrentUser || artwork.isFavorite
-              ? Icons.bookmark
-              : Icons.bookmark_border,
-          label: l10n.commonSave,
-          isActive: artwork.isFavoriteByCurrentUser || artwork.isFavorite,
-          activeColor: baseColor,
-          tooltip: l10n.commonSave,
-          semanticsLabel: 'marker_save',
-          onTap: () {
-            unawaited(artworkProvider.toggleFavorite(artwork.id));
-          },
-        ),
-        MarkerOverlayActionSpec(
-          icon: Icons.share_outlined,
-          label: l10n.commonShare,
-          isActive: false,
-          activeColor: baseColor,
-          tooltip: l10n.commonShare,
-          semanticsLabel: 'marker_share',
-          onTap: () {
-            ShareService().showShareSheet(
-              context,
-              target: ShareTarget.artwork(
-                artworkId: artwork.id,
-                title: artwork.title,
-              ),
-              sourceScreen: 'desktop_map_marker',
-            );
-          },
-        ),
-      ]);
-    }
-
-    // Keep the card height stable (matches the positioning estimate) so the
-    // shared overlay widget can reserve space for its sticky footer.
-    final estimatedCardHeight = math.min(360.0, maxCardHeight);
+    final openDetails = canPresentExhibition
+        ? () => _openExhibitionFromMarker(
+              marker,
+              primaryExhibition,
+              artwork,
+            )
+        : () => _openMarkerDetail(marker, artwork);
 
     return ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: 280, maxHeight: maxCardHeight),
-      child: AnimatedSize(
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-        alignment: Alignment.topCenter,
-        child: SizedBox(
-          height: estimatedCardHeight,
-          child: KubusMarkerOverlayCard(
-            marker: marker,
-            artwork: artwork,
-            baseColor: baseColor,
-            displayTitle: displayTitle,
-            canPresentExhibition: canPresentExhibition,
-            distanceText: distanceText,
-            description: rawDescription,
-            onClose: _kubusMapController.dismissSelection,
-            onPrimaryAction: canPresentExhibition
-                ? () => _openExhibitionFromMarker(
-                      marker,
-                      primaryExhibition,
-                      artwork,
-                    )
-                : () => _openMarkerDetail(marker, artwork),
-            primaryActionIcon: canPresentExhibition
-                ? Icons.museum_outlined
-                : Icons.arrow_forward,
-            primaryActionLabel: l10n.commonViewDetails,
-            actions: overlayActions,
-            stackCount: stackCount,
-            stackIndex: stackIndex,
-            onNextStacked: onNextStacked,
-            onPreviousStacked: onPreviousStacked,
-            onSelectStackIndex: onSelectStackIndex,
-            onHorizontalDragEnd: onHorizontalDragEnd,
-            maxHeight: estimatedCardHeight,
-          ),
+      constraints: BoxConstraints(
+        maxWidth: MapOverlaySizing.maxCardWidth,
+        maxHeight: maxCardHeight,
+      ),
+      child: SizedBox(
+        height: cardHeight,
+        child: KubusMarkerOverlayCard(
+          marker: marker,
+          artwork: artwork,
+          baseColor: baseColor,
+          displayTitle: displayTitle,
+          canPresentExhibition: canPresentExhibition,
+          distanceText: distanceText,
+          description: rawDescription,
+          onClose: _kubusMapController.dismissSelection,
+          onPrimaryAction: openDetails,
+          onCardTap: openDetails,
+          onTitleTap: openDetails,
+          primaryActionIcon:
+              canPresentExhibition ? Icons.museum_outlined : Icons.arrow_forward,
+          primaryActionLabel: l10n.commonViewDetails,
+          actions: overlayActions,
+          stackCount: stackCount,
+          stackIndex: stackIndex,
+          onNextStacked: onNextStacked,
+          onPreviousStacked: onPreviousStacked,
+          onSelectStackIndex: onSelectStackIndex,
+          onHorizontalDragEnd: onHorizontalDragEnd,
+          maxHeight: cardHeight,
         ),
       ),
     );
@@ -3965,54 +3905,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         : <ArtMarker>[marker];
     final count = stack.length;
 
-    final media = MediaQuery.of(context);
-    final viewportHeight = media.size.height;
-    final safeVerticalPadding = media.padding.vertical;
-    final double maxCardHeight =
-        math.max(240.0, viewportHeight - safeVerticalPadding - 24).toDouble();
-    final double estimatedCardHeight = math.min(360.0, maxCardHeight);
-
     final int stackIndex =
         selection.stackIndex.clamp(0, math.max(0, count - 1));
     final ArtMarker visibleMarker = stack[stackIndex];
     final Artwork? visibleArtwork = visibleMarker.isExhibitionMarker
         ? null
         : artworkProvider.getArtworkById(visibleMarker.artworkId ?? '');
-
-    final card = SizedBox(
-      height: estimatedCardHeight,
-      width: 280,
-      child: RepaintBoundary(
-        child: _buildMarkerOverlayCard(
-          visibleMarker,
-          visibleArtwork,
-          themeProvider,
-          stackCount: count,
-          stackIndex: stackIndex,
-          onPreviousStacked:
-              count > 1 ? () => unawaited(_animateMarkerStackToIndex(stackIndex - 1)) : null,
-          onNextStacked:
-              count > 1 ? () => unawaited(_animateMarkerStackToIndex(stackIndex + 1)) : null,
-          onSelectStackIndex: count > 1
-              ? (i) {
-                  unawaited(_animateMarkerStackToIndex(i));
-                }
-              : null,
-          onHorizontalDragEnd: count > 1
-              ? (details) {
-                  final velocityX =
-                      details.primaryVelocity ?? details.velocity.pixelsPerSecond.dx;
-                  if (!velocityX.isFinite || velocityX.abs() < 120) return;
-                  if (velocityX < 0) {
-                    unawaited(_animateMarkerStackToIndex(stackIndex + 1));
-                  } else {
-                    unawaited(_animateMarkerStackToIndex(stackIndex - 1));
-                  }
-                }
-              : null,
-        ),
-      ),
-    );
 
     const baseOffset = 32.0;
     final zoomFactor = (_cameraZoom / 15.0).clamp(0.5, 1.5);
@@ -4023,20 +3921,28 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       placementStrategy: _markerOverlayMode == _MarkerOverlayMode.centered
           ? KubusMarkerOverlayPlacementStrategy.centered
           : KubusMarkerOverlayPlacementStrategy.anchored,
-      widthResolver: (constraints, mediaQuery) => 280,
+      widthResolver: (constraints, mediaQuery) {
+        return MapOverlaySizing.resolveCardWidth(
+          constraints,
+          preferred: MapOverlaySizing.preferredCardWidth,
+          horizontalPadding: KubusSpacing.md,
+        );
+      },
       maxHeightResolver: (constraints, mediaQuery) {
-        return math
-            .max(
-                240.0, constraints.maxHeight - mediaQuery.padding.vertical - 24)
-            .toDouble();
+        return MapOverlaySizing.resolveMaxCardHeight(
+          constraints: constraints,
+          media: mediaQuery,
+        );
       },
       heightResolver: (constraints, mediaQuery, maxHeight) {
-        return math.min(360.0, maxHeight);
+        return MapOverlaySizing.resolveFixedCardHeight(
+          maxCardHeight: maxHeight,
+        );
       },
       markerOffset: verticalOffset,
-      horizontalPadding: 16,
-      topPadding: 16,
-      bottomPadding: 16,
+      horizontalPadding: KubusSpacing.md,
+      topPadding: KubusSpacing.md,
+      bottomPadding: KubusSpacing.md,
       animation: const KubusMarkerOverlayAnimationConfig(
         duration: Duration(milliseconds: 220),
         curve: Curves.easeOutCubic,
@@ -4045,7 +3951,42 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         return SizedBox(
           width: layout.cardWidth,
           height: layout.cardHeight,
-          child: card,
+          child: RepaintBoundary(
+            child: _buildMarkerOverlayCard(
+              visibleMarker,
+              visibleArtwork,
+              themeProvider,
+              cardHeight: layout.cardHeight,
+              maxCardHeight: layout.maxCardHeight,
+              stackCount: count,
+              stackIndex: stackIndex,
+              onPreviousStacked: count > 1
+                  ? () => unawaited(_animateMarkerStackToIndex(stackIndex - 1))
+                  : null,
+              onNextStacked: count > 1
+                  ? () => unawaited(_animateMarkerStackToIndex(stackIndex + 1))
+                  : null,
+              onSelectStackIndex: count > 1
+                  ? (i) {
+                      unawaited(_animateMarkerStackToIndex(i));
+                    }
+                  : null,
+              onHorizontalDragEnd: count > 1
+                  ? (details) {
+                      final velocityX = details.primaryVelocity ??
+                          details.velocity.pixelsPerSecond.dx;
+                      if (!velocityX.isFinite || velocityX.abs() < 120) {
+                        return;
+                      }
+                      if (velocityX < 0) {
+                        unawaited(_animateMarkerStackToIndex(stackIndex + 1));
+                      } else {
+                        unawaited(_animateMarkerStackToIndex(stackIndex - 1));
+                      }
+                    }
+                  : null,
+            ),
+          ),
         );
       },
     );
@@ -4196,7 +4137,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     for (final marker in markers) {
       if (marker.isExhibitionMarker) continue;
       final artworkId = (marker.artworkId ?? '').trim();
-      if (artworkId.isEmpty || artworkProvider.getArtworkById(artworkId) != null) {
+      if (artworkId.isEmpty ||
+          artworkProvider.getArtworkById(artworkId) != null) {
         continue;
       }
       tasks.add(
@@ -4341,18 +4283,19 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       if (subjectData.delegates.isNotEmpty) MarkerSubjectType.group,
     };
 
-    final initialSubjectType = allowedSubjectTypes
-            .contains(MarkerSubjectType.artwork)
-        ? MarkerSubjectType.artwork
-      : allowedSubjectTypes.contains(MarkerSubjectType.streetArt)
-        ? MarkerSubjectType.streetArt
-        : allowedSubjectTypes.contains(MarkerSubjectType.exhibition)
-            ? MarkerSubjectType.exhibition
-            : allowedSubjectTypes.contains(MarkerSubjectType.event)
-                ? MarkerSubjectType.event
-                : allowedSubjectTypes.contains(MarkerSubjectType.institution)
-                    ? MarkerSubjectType.institution
-                    : MarkerSubjectType.misc;
+    final initialSubjectType =
+        allowedSubjectTypes.contains(MarkerSubjectType.artwork)
+            ? MarkerSubjectType.artwork
+            : allowedSubjectTypes.contains(MarkerSubjectType.streetArt)
+                ? MarkerSubjectType.streetArt
+                : allowedSubjectTypes.contains(MarkerSubjectType.exhibition)
+                    ? MarkerSubjectType.exhibition
+                    : allowedSubjectTypes.contains(MarkerSubjectType.event)
+                        ? MarkerSubjectType.event
+                        : allowedSubjectTypes
+                                .contains(MarkerSubjectType.institution)
+                            ? MarkerSubjectType.institution
+                            : MarkerSubjectType.misc;
 
     _safeSetState(() {
       _createMarkerSubjectData = subjectData;

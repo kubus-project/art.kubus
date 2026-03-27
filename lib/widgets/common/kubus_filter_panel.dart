@@ -14,9 +14,14 @@ class KubusFilterPanel extends StatelessWidget {
     this.closeTooltip = '',
     this.footer,
     this.margin = EdgeInsets.zero,
-    this.headerPadding = const EdgeInsets.fromLTRB(20, 20, 16, 16),
-    this.contentPadding = const EdgeInsets.all(20),
-    this.borderRadius = 20,
+    this.headerPadding = const EdgeInsets.fromLTRB(
+      KubusSpacing.md,
+      KubusSpacing.md,
+      KubusSpacing.md,
+      KubusSpacing.md,
+    ),
+    this.contentPadding = const EdgeInsets.all(KubusSpacing.md),
+    this.borderRadius = KubusRadius.lg,
     this.showHeaderDivider = true,
     this.showFooterDivider = false,
     this.expandContent = false,
@@ -45,7 +50,11 @@ class KubusFilterPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
+    final surfaceStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.panelBackground,
+      tintBase: scheme.surface,
+    );
 
     final content = SingleChildScrollView(
       padding: contentPadding,
@@ -56,8 +65,9 @@ class KubusFilterPanel extends StatelessWidget {
       margin: margin,
       padding: EdgeInsets.zero,
       borderRadius: BorderRadius.circular(borderRadius),
-      blurSigma: KubusGlassEffects.blurSigmaLight,
-      backgroundColor: scheme.surface.withValues(alpha: isDark ? 0.20 : 0.14),
+      blurSigma: surfaceStyle.blurSigma,
+      backgroundColor: surfaceStyle.tintColor,
+      fallbackMinOpacity: surfaceStyle.fallbackMinOpacity,
       showBorder: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -70,9 +80,7 @@ class KubusFilterPanel extends StatelessWidget {
                   child: Text(
                     title,
                     style: titleStyle ??
-                        theme.textTheme.bodyMedium?.copyWith(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                        KubusTextStyles.sectionTitle.copyWith(
                           color: scheme.onSurface,
                         ),
                   ),

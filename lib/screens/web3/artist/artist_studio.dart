@@ -4,6 +4,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
+import 'package:art_kubus/widgets/common/kubus_screen_header.dart';
 import '../../onboarding/web3/web3_onboarding.dart';
 import '../../onboarding/web3/onboarding_data.dart';
 import 'artist_portfolio_screen.dart';
@@ -997,17 +998,16 @@ class _ArtistStudioState extends State<ArtistStudio> {
         final scheme = Theme.of(context).colorScheme;
         return BackdropGlassSheet(
           padding: const EdgeInsets.all(KubusSpacing.lg),
+          showHandle: false,
           backgroundColor:
               scheme.surfaceContainerHighest.withValues(alpha: 0.18),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                l10n.artistStudioSettingsTitle,
-                style: KubusTextStyles.screenTitle
-                    .copyWith(color: scheme.onSurface),
+              KubusSheetHeader(
+                title: l10n.artistStudioSettingsTitle,
+                showHandle: false,
               ),
-              const SizedBox(height: KubusSpacing.lg),
               // Add settings options here
             ],
           ),
@@ -1053,6 +1053,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
               child: SingleChildScrollView(
                 child: BackdropGlassSheet(
                   padding: const EdgeInsets.all(KubusSpacing.lg),
+                  showHandle: false,
                   backgroundColor: colorScheme.surfaceContainerHighest
                       .withValues(alpha: 0.18),
                   child: Form(
@@ -1061,19 +1062,12 @@ class _ArtistStudioState extends State<ArtistStudio> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          l10n.artistStudioApplicationModalTitle,
-                          style: KubusTextStyles.screenTitle
-                              .copyWith(color: colorScheme.onSurface),
+                        KubusSheetHeader(
+                          title: l10n.artistStudioApplicationModalTitle,
+                          subtitle: l10n.artistStudioApplicationModalSubtitle,
+                          showHandle: false,
                         ),
                         const SizedBox(height: KubusSpacing.sm),
-                        Text(
-                          l10n.artistStudioApplicationModalSubtitle,
-                          style: KubusTextStyles.actionTileTitle.copyWith(
-                            color: colorScheme.onSurface.withValues(alpha: 0.7),
-                          ),
-                        ),
-                        const SizedBox(height: KubusSpacing.lg),
                         TextFormField(
                           controller: portfolioController,
                           decoration: InputDecoration(

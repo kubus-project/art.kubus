@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../../models/collab_invite.dart';
 import '../../providers/collab_provider.dart';
+import '../../utils/design_tokens.dart';
 import '../../utils/artwork_navigation.dart';
 import '../art/collection_detail_screen.dart';
 import '../events/event_detail_screen.dart';
@@ -42,52 +43,51 @@ class _InvitesInboxScreenState extends State<InvitesInboxScreen> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final provider = context.watch<CollabProvider>();
 
-    final invites = provider.invitesInbox.where((i) => i.isPending).toList(growable: false);
+    final invites =
+        provider.invitesInbox.where((i) => i.isPending).toList(growable: false);
     final content = Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 860),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(KubusSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Collaboration invites',
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: scheme.onSurface,
-                      ),
-                    ),
+              if (!widget.embedded) ...[
+                Text(
+                  l10n.profileInvitesTooltip,
+                  style: KubusTextStyles.screenTitle.copyWith(
+                    color: scheme.onSurface,
                   ),
-                  if (widget.embedded)
-                    IconButton(
-                      tooltip: 'Refresh',
-                      onPressed: _refresh,
-                      icon: const Icon(Icons.refresh),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Accept an invite to help manage an event, exhibition, artwork, or collection.',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  color: scheme.onSurface.withValues(alpha: 0.7),
                 ),
-              ),
-              const SizedBox(height: 12),
+                const SizedBox(height: KubusSpacing.xs),
+                Text(
+                  'Accept an invite to help manage an event, exhibition, artwork, or collection.',
+                  style: KubusTextStyles.screenSubtitle.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+                const SizedBox(height: KubusSpacing.md),
+              ] else
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: IconButton(
+                    tooltip: l10n.commonRefresh,
+                    onPressed: _refresh,
+                    icon: const Icon(Icons.refresh),
+                  ),
+                ),
               if ((provider.error ?? '').isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
                   child: Text(
                     'Could not load invites.',
-                    style: GoogleFonts.inter(color: scheme.error, fontSize: 12),
+                    style: KubusTextStyles.statChange.copyWith(
+                      color: scheme.error,
+                    ),
                   ),
                 ),
               Expanded(
@@ -99,7 +99,8 @@ class _InvitesInboxScreenState extends State<InvitesInboxScreen> {
                         ? _EmptyState(onRefresh: _refresh)
                         : ListView.separated(
                             itemCount: invites.length,
-                            separatorBuilder: (_, __) => const SizedBox(height: 10),
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 10),
                             itemBuilder: (context, index) {
                               final invite = invites[index];
                               return _InviteCard(
@@ -123,10 +124,15 @@ class _InvitesInboxScreenState extends State<InvitesInboxScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Invites', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        title: Text(
+          l10n.profileInvitesTooltip,
+          style: KubusTextStyles.screenTitle.copyWith(
+            color: scheme.onSurface,
+          ),
+        ),
         actions: [
           IconButton(
-            tooltip: 'Refresh',
+            tooltip: l10n.commonRefresh,
             onPressed: _refresh,
             icon: const Icon(Icons.refresh),
           ),
@@ -143,9 +149,11 @@ class _InvitesInboxScreenState extends State<InvitesInboxScreen> {
     try {
       await provider.acceptInvite(invite.id);
       if (!mounted) return;
-      messenger.showKubusSnackBar(const SnackBar(content: Text('Invite accepted.')));
+      messenger
+          .showKubusSnackBar(const SnackBar(content: Text('Invite accepted.')));
     } catch (_) {
-      messenger.showKubusSnackBar(const SnackBar(content: Text('Could not accept invite.')));
+      messenger.showKubusSnackBar(
+          const SnackBar(content: Text('Could not accept invite.')));
     }
   }
 
@@ -156,9 +164,11 @@ class _InvitesInboxScreenState extends State<InvitesInboxScreen> {
     try {
       await provider.declineInvite(invite.id);
       if (!mounted) return;
-      messenger.showKubusSnackBar(const SnackBar(content: Text('Invite declined.')));
+      messenger
+          .showKubusSnackBar(const SnackBar(content: Text('Invite declined.')));
     } catch (_) {
-      messenger.showKubusSnackBar(const SnackBar(content: Text('Could not decline invite.')));
+      messenger.showKubusSnackBar(
+          const SnackBar(content: Text('Could not decline invite.')));
     }
   }
 
@@ -182,19 +192,21 @@ class _InvitesInboxScreenState extends State<InvitesInboxScreen> {
 
     if (type == 'exhibitions' || type == 'exhibition') {
       Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => ExhibitionDetailScreen(exhibitionId: id)),
+        MaterialPageRoute(
+            builder: (_) => ExhibitionDetailScreen(exhibitionId: id)),
       );
       return;
     }
 
-      if (type == 'artworks' || type == 'artwork') {
-        openArtwork(context, id, source: 'collab_invite');
-        return;
-      }
+    if (type == 'artworks' || type == 'artwork') {
+      openArtwork(context, id, source: 'collab_invite');
+      return;
+    }
 
     if (type == 'collections' || type == 'collection') {
       Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => CollectionDetailScreen(collectionId: id)),
+        MaterialPageRoute(
+            builder: (_) => CollectionDetailScreen(collectionId: id)),
       );
       return;
     }
@@ -225,21 +237,30 @@ class _InviteCard extends StatelessWidget {
 
     final inviterName = (invitedBy?.displayName ?? '').trim().isNotEmpty
         ? invitedBy!.displayName!
-        : ((invitedBy?.username ?? '').trim().isNotEmpty ? '@${invitedBy!.username}' : 'Someone');
+        : ((invitedBy?.username ?? '').trim().isNotEmpty
+            ? '@${invitedBy!.username}'
+            : 'Someone');
 
-    final inviterHandle = (invitedBy?.username ?? '').trim().isNotEmpty ? '@${invitedBy!.username}' : null;
+    final inviterHandle = (invitedBy?.username ?? '').trim().isNotEmpty
+        ? '@${invitedBy!.username}'
+        : null;
 
-    final seed = (invitedBy?.walletAddress ?? invitedBy?.username ?? invitedBy?.id ?? inviterName).toString();
+    final seed = (invitedBy?.walletAddress ??
+            invitedBy?.username ??
+            invitedBy?.id ??
+            inviterName)
+        .toString();
 
     return InkWell(
       onTap: onOpen,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(KubusRadius.lg),
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         decoration: BoxDecoration(
           color: scheme.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.7)),
+          borderRadius: BorderRadius.circular(KubusRadius.lg),
+          border:
+              Border.all(color: scheme.outlineVariant.withValues(alpha: 0.7)),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,43 +279,56 @@ class _InviteCard extends StatelessWidget {
                 children: [
                   Text(
                     inviterName,
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                    style: KubusTextStyles.sectionTitle.copyWith(
+                      color: scheme.onSurface,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                   if (inviterHandle != null)
                     Padding(
-                      padding: const EdgeInsets.only(top: 2),
+                      padding: const EdgeInsets.only(top: KubusSpacing.xxs),
                       child: Text(
                         inviterHandle,
-                        style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.65)),
+                        style: KubusTextStyles.navMetaLabel.copyWith(
+                          color: scheme.onSurface.withValues(alpha: 0.65),
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: KubusSpacing.sm),
                   Text(
                     'Invited you to: ${_labelForEntity(invite.entityType)}',
-                    style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface),
+                    style: KubusTextStyles.sectionSubtitle.copyWith(
+                      color: scheme.onSurface,
+                    ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: KubusSpacing.xs + KubusSpacing.xxs),
                   Text(
                     'Role: ${_labelForRole(invite.role)}',
-                    style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.7)),
+                    style: KubusTextStyles.navMetaLabel.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.7),
+                    ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: KubusSpacing.sm + KubusSpacing.xxs),
             Column(
               children: [
                 ElevatedButton(
                   onPressed: onAccept,
                   style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(KubusRadius.md),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: KubusSpacing.sm + KubusSpacing.xxs,
+                      vertical: KubusSpacing.sm + KubusSpacing.xxs,
+                    ),
                   ),
                   child: const Text('Accept'),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: KubusSpacing.sm),
                 TextButton(
                   onPressed: onDecline,
                   child: const Text('Decline'),
@@ -355,23 +389,30 @@ class _EmptyState extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(KubusSpacing.lg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.inbox_outlined, size: 44, color: scheme.onSurface.withValues(alpha: 0.35)),
-            const SizedBox(height: 10),
+            Icon(
+              Icons.inbox_outlined,
+              size: KubusHeaderMetrics.searchBarHeight - KubusSpacing.xs,
+              color: scheme.onSurface.withValues(alpha: 0.35),
+            ),
+            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xxs),
             Text(
               'No invites right now',
-              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
+              style: KubusTextStyles.sectionTitle,
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: KubusSpacing.xs + KubusSpacing.xxs),
             Text(
               'When someone invites you, it will show up here.',
-              style: GoogleFonts.inter(color: scheme.onSurface.withValues(alpha: 0.65)),
+              style: KubusTextStyles.sectionSubtitle.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.65),
+              ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 14),
+            const SizedBox(
+                height: KubusSpacing.sm + KubusSpacing.xxs + KubusSpacing.xxs),
             OutlinedButton.icon(
               onPressed: () => onRefresh(),
               icon: const Icon(Icons.refresh),

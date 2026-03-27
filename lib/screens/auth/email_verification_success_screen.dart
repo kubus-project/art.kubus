@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
+import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/gradient_icon_card.dart';
@@ -121,6 +121,11 @@ class _EmailVerificationSuccessScreenState
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final roles = KubusColorRoles.of(context);
+    final cardGlassStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.card,
+      tintBase: scheme.surface,
+    );
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -170,9 +175,7 @@ class _EmailVerificationSuccessScreenState
                         const SizedBox(height: 24),
                         Text(
                           'Verifying...',
-                          style: GoogleFonts.inter(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w800,
+                          style: KubusTextStyles.heroTitle.copyWith(
                             color: scheme.onSurface,
                           ),
                         ),
@@ -191,17 +194,17 @@ class _EmailVerificationSuccessScreenState
                         const SizedBox(height: 24),
                         Text(
                           'Email Verified!',
-                          style: GoogleFonts.inter(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w800,
+                          style: KubusTextStyles.heroTitle.copyWith(
                             color: scheme.onSurface,
                           ),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 16),
                         LiquidGlassPanel(
-                          blurSigma: 12,
-                          padding: const EdgeInsets.all(20),
+                          blurSigma: cardGlassStyle.blurSigma,
+                          fallbackMinOpacity: cardGlassStyle.fallbackMinOpacity,
+                          backgroundColor: cardGlassStyle.tintColor,
+                          padding: const EdgeInsets.all(KubusSpacing.lg),
                           child: Column(
                             children: [
                               Icon(
@@ -212,8 +215,7 @@ class _EmailVerificationSuccessScreenState
                               const SizedBox(height: 16),
                               Text(
                                 'Your email has been successfully verified!',
-                                style: GoogleFonts.inter(
-                                  fontSize: 16,
+                                style: KubusTextStyles.sectionTitle.copyWith(
                                   color: scheme.onSurface,
                                 ),
                                 textAlign: TextAlign.center,
@@ -233,8 +235,8 @@ class _EmailVerificationSuccessScreenState
                                     children: [
                                       Text(
                                         'Closing in',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 14,
+                                        style: KubusTextStyles.screenSubtitle
+                                            .copyWith(
                                           color: scheme.onSurface
                                               .withValues(alpha: 0.7),
                                         ),
@@ -243,9 +245,10 @@ class _EmailVerificationSuccessScreenState
                                       const SizedBox(height: 8),
                                       Text(
                                         '$_countdown',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 32,
-                                          fontWeight: FontWeight.w800,
+                                        style:
+                                            KubusTextStyles.statValue.copyWith(
+                                          fontSize: KubusTypography
+                                              .textTheme.displayLarge!.fontSize,
                                           color: roles.positiveAction,
                                         ),
                                       ),
@@ -255,9 +258,7 @@ class _EmailVerificationSuccessScreenState
                                 const SizedBox(height: 16),
                                 Text(
                                   'Go back to your app and sign in to continue',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
+                                  style: KubusTextStyles.sectionTitle.copyWith(
                                     color: scheme.onSurface
                                         .withValues(alpha: 0.85),
                                   ),
@@ -275,9 +276,8 @@ class _EmailVerificationSuccessScreenState
                                   ),
                                   child: Text(
                                     'You may now close this tab',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
+                                    style:
+                                        KubusTextStyles.sectionTitle.copyWith(
                                       color: scheme.onSurface,
                                     ),
                                     textAlign: TextAlign.center,
@@ -286,9 +286,7 @@ class _EmailVerificationSuccessScreenState
                                 const SizedBox(height: 16),
                                 Text(
                                   'Go back to your app and sign in to continue',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
+                                  style: KubusTextStyles.sectionTitle.copyWith(
                                     color: scheme.onSurface
                                         .withValues(alpha: 0.85),
                                   ),
@@ -305,8 +303,7 @@ class _EmailVerificationSuccessScreenState
                                 .pushReplacementNamed('/sign-in'),
                             child: Text(
                               'Or sign in manually →',
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
+                              style: KubusTextStyles.sectionSubtitle.copyWith(
                                 color: scheme.primary,
                               ),
                             ),
@@ -325,20 +322,19 @@ class _EmailVerificationSuccessScreenState
                         const SizedBox(height: 24),
                         Text(
                           'Verification Failed',
-                          style: GoogleFonts.inter(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w800,
+                          style: KubusTextStyles.heroTitle.copyWith(
                             color: scheme.onSurface,
                           ),
                         ),
                         const SizedBox(height: 16),
                         LiquidGlassPanel(
-                          blurSigma: 12,
-                          padding: const EdgeInsets.all(20),
+                          blurSigma: cardGlassStyle.blurSigma,
+                          fallbackMinOpacity: cardGlassStyle.fallbackMinOpacity,
+                          backgroundColor: cardGlassStyle.tintColor,
+                          padding: const EdgeInsets.all(KubusSpacing.lg),
                           child: Text(
                             _error!,
-                            style: GoogleFonts.inter(
-                              fontSize: 16,
+                            style: KubusTextStyles.sectionTitle.copyWith(
                               color: scheme.error,
                             ),
                             textAlign: TextAlign.center,
@@ -350,8 +346,7 @@ class _EmailVerificationSuccessScreenState
                               .pushReplacementNamed('/sign-in'),
                           child: Text(
                             'Go to Sign In',
-                            style: GoogleFonts.inter(
-                              fontSize: 16,
+                            style: KubusTextStyles.sectionTitle.copyWith(
                               color: scheme.primary,
                             ),
                           ),

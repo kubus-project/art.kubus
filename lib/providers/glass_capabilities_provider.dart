@@ -101,7 +101,8 @@ class GlassCapabilitiesProvider with ChangeNotifier {
     // 3. Run platform capability heuristic.
     _heuristicTriggered = _evaluateHeuristic();
     if (kDebugMode) {
-      debugPrint('GlassCapabilitiesProvider: _heuristicTriggered=$_heuristicTriggered');
+      debugPrint(
+          'GlassCapabilitiesProvider: _heuristicTriggered=$_heuristicTriggered');
     }
 
     _recomputeMode();
@@ -118,21 +119,18 @@ class GlassCapabilitiesProvider with ChangeNotifier {
   }
 
   bool _shouldRunRuntimePerfProbe() {
-    // Desktop map startup can cause temporary frame spikes (shader/style warmup)
-    // that are not representative of sustained capability. Running the
-    // automatic jank probe on desktop can therefore incorrectly disable blur
-    // globally for the session. Keep auto-probing on web/mobile, where we
-    // primarily need this safeguard.
+    // Use the same centralized runtime probe on desktop as well so blur can
+    // degrade automatically on slower machines. The warmup delay and jank
+    // threshold already make the switch conservative.
     if (kIsWeb) return true;
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
       case TargetPlatform.iOS:
-        return true;
       case TargetPlatform.fuchsia:
       case TargetPlatform.linux:
       case TargetPlatform.macOS:
       case TargetPlatform.windows:
-        return false;
+        return true;
     }
   }
 
@@ -225,8 +223,7 @@ class GlassCapabilitiesProvider with ChangeNotifier {
     if (explicitOffForcesBlur) {
       _mode = GlassMode.blur;
       if (kDebugMode) {
-        debugPrint(
-            'GlassCapabilitiesProvider: mode=blur (explicit user off)');
+        debugPrint('GlassCapabilitiesProvider: mode=blur (explicit user off)');
       }
       return;
     }
@@ -339,6 +336,19 @@ class GlassCapabilitiesProvider with ChangeNotifier {
   static bool allowBlurEnabled(BuildContext context) {
     try {
       return context.read<GlassCapabilitiesProvider>().allowBlur;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  /// Watch the current blur policy and rebuild when it changes.
+  ///
+  /// Falls back to [GlassMode.blur] if the provider is not in the tree.
+  static bool watchAllowBlurEnabled(BuildContext context) {
+    try {
+      return context.select<GlassCapabilitiesProvider, bool>(
+        (provider) => provider.allowBlur,
+      );
     } catch (_) {
       return true;
     }

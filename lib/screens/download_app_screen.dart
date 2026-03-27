@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../providers/themeprovider.dart';
+import '../utils/design_tokens.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
@@ -122,9 +122,11 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
                         // Title
                         Text(
                           l10n.downloadAppExperienceInArTitle(featureName),
-                          style: GoogleFonts.inter(
-                            fontSize: isLargeScreen ? 40 : 28,
-                            fontWeight: FontWeight.bold,
+                          style: KubusTextStyles.heroTitle.copyWith(
+                            fontSize: isLargeScreen
+                                ? KubusTypography
+                                    .textTheme.displayLarge!.fontSize
+                                : KubusTextStyles.heroTitle.fontSize,
                             color: Theme.of(context).colorScheme.onSurface,
                           ),
                           textAlign: TextAlign.center,
@@ -135,8 +137,11 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
                         Text(
                           widget.description ??
                               l10n.downloadAppDefaultDescription,
-                          style: GoogleFonts.inter(
-                            fontSize: isLargeScreen ? 18 : 16,
+                          style: KubusTextStyles.heroSubtitle.copyWith(
+                            fontSize: isLargeScreen
+                                ? KubusTypography
+                                    .textTheme.headlineSmall!.fontSize
+                                : KubusTypography.textTheme.bodyLarge!.fontSize,
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurface
@@ -219,8 +224,8 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.green,
-              borderRadius: BorderRadius.circular(20),
+              color: Theme.of(context).colorScheme.tertiary,
+              borderRadius: BorderRadius.circular(KubusRadius.xl),
               border: Border.all(
                 color: Theme.of(context).colorScheme.surface,
                 width: 3,
@@ -228,9 +233,7 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
             ),
             child: Text(
               'AR',
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
+              style: KubusTextStyles.compactBadge.copyWith(
                 color: Colors.white,
               ),
             ),
@@ -246,7 +249,10 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
       {'icon': Icons.view_in_ar, 'text': l10n.downloadAppFeatureViewInAr},
       {'icon': Icons.camera_alt, 'text': l10n.downloadAppFeatureScanArtworks},
       {'icon': Icons.touch_app, 'text': l10n.downloadAppFeatureInteractive3d},
-      {'icon': Icons.location_on, 'text': l10n.downloadAppFeatureLocationDiscovery},
+      {
+        'icon': Icons.location_on,
+        'text': l10n.downloadAppFeatureLocationDiscovery
+      },
     ];
 
     return Wrap(
@@ -266,9 +272,14 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
               const SizedBox(height: 12),
               Text(
                 feature['text'] as String,
-                style: GoogleFonts.inter(
-                  fontSize: isLargeScreen ? 14 : 12,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                style: KubusTextStyles.sectionSubtitle.copyWith(
+                  fontSize: isLargeScreen
+                      ? KubusTextStyles.screenSubtitle.fontSize
+                      : KubusTextStyles.navMetaLabel.fontSize,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.8),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -279,15 +290,17 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
     );
   }
 
-  Widget _buildDownloadButtons(ThemeProvider themeProvider, bool isLargeScreen) {
+  Widget _buildDownloadButtons(
+      ThemeProvider themeProvider, bool isLargeScreen) {
     final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         Text(
           l10n.downloadAppDownloadForLabel,
-          style: GoogleFonts.inter(
-            fontSize: isLargeScreen ? 18 : 16,
-            fontWeight: FontWeight.w600,
+          style: KubusTextStyles.sectionTitle.copyWith(
+            fontSize: isLargeScreen
+                ? KubusTypography.textTheme.headlineSmall!.fontSize
+                : KubusTextStyles.sectionTitle.fontSize,
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
@@ -302,7 +315,8 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
               label: l10n.commonIosLabel,
               icon: Icons.apple,
               color: Colors.black,
-              onTap: () => _launchURL('https://github.com/kubus-project/art.kubus/releases'),
+              onTap: () => _launchURL(
+                  'https://github.com/kubus-project/art.kubus/releases'),
               isLargeScreen: isLargeScreen,
             ),
             // Android Play Store button
@@ -310,7 +324,8 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
               label: l10n.commonAndroidLabel,
               icon: Icons.android,
               color: const Color(0xFF01875F),
-              onTap: () => _launchURL('https://github.com/kubus-project/art.kubus/releases'),
+              onTap: () => _launchURL(
+                  'https://github.com/kubus-project/art.kubus/releases'),
               isLargeScreen: isLargeScreen,
             ),
           ],
@@ -353,9 +368,10 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
             const SizedBox(width: 12),
             Text(
               label,
-              style: GoogleFonts.inter(
-                fontSize: isLargeScreen ? 16 : 14,
-                fontWeight: FontWeight.w600,
+              style: KubusTextStyles.sectionTitle.copyWith(
+                fontSize: isLargeScreen
+                    ? KubusTypography.textTheme.bodyLarge!.fontSize
+                    : KubusTextStyles.sectionTitle.fontSize,
                 color: Colors.white,
               ),
             ),
@@ -370,7 +386,10 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
     return Container(
       padding: EdgeInsets.all(isLargeScreen ? 32 : 24),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+        color: Theme.of(context)
+            .colorScheme
+            .primaryContainer
+            .withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: themeProvider.accentColor.withValues(alpha: 0.2),
@@ -386,18 +405,24 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
           const SizedBox(height: 16),
           Text(
             l10n.downloadAppScanQrTitle,
-            style: GoogleFonts.inter(
-              fontSize: isLargeScreen ? 18 : 16,
-              fontWeight: FontWeight.w600,
+            style: KubusTextStyles.sectionTitle.copyWith(
+              fontSize: isLargeScreen
+                  ? KubusTypography.textTheme.headlineSmall!.fontSize
+                  : KubusTextStyles.sectionTitle.fontSize,
               color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             l10n.downloadAppScanQrSubtitle,
-            style: GoogleFonts.inter(
-              fontSize: isLargeScreen ? 14 : 12,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            style: KubusTextStyles.sectionSubtitle.copyWith(
+              fontSize: isLargeScreen
+                  ? KubusTextStyles.screenSubtitle.fontSize
+                  : KubusTextStyles.navMetaLabel.fontSize,
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.6),
             ),
             textAlign: TextAlign.center,
           ),
@@ -420,10 +445,8 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
           const SizedBox(width: 8),
           Text(
             l10n.downloadAppContinueBrowsingButton,
-            style: GoogleFonts.inter(
-              fontSize: 16,
+            style: KubusTextStyles.sectionTitle.copyWith(
               color: themeProvider.accentColor,
-              fontWeight: FontWeight.w500,
             ),
           ),
         ],

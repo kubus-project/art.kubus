@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../config/config.dart';
@@ -7,6 +6,7 @@ import '../../models/exhibition.dart';
 import '../../providers/exhibitions_provider.dart';
 import '../../providers/themeprovider.dart';
 import '../../utils/media_url_resolver.dart';
+import '../../utils/design_tokens.dart';
 import 'exhibition_creator_screen.dart';
 import 'exhibition_detail_screen.dart';
 
@@ -107,7 +107,7 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Exhibitions', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        title: Text('Exhibitions', style: KubusTypography.inter(fontWeight: FontWeight.w600)),
         actions: [
           IconButton(
             tooltip: 'Refresh',
@@ -121,7 +121,7 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
           ? FloatingActionButton.extended(
               onPressed: _createExhibition,
               icon: const Icon(Icons.add),
-              label: Text('Create', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+              label: Text('Create', style: KubusTypography.inter(fontWeight: FontWeight.w600)),
             )
           : null,
     );
@@ -131,7 +131,7 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
     final scheme = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(KubusSpacing.lg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -139,12 +139,12 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
             const SizedBox(height: 16),
             Text(
               'Exhibitions are not enabled',
-              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
+              style: KubusTypography.inter(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
               'This feature is currently disabled.',
-              style: GoogleFonts.inter(color: scheme.onSurface.withValues(alpha: 0.7)),
+              style: KubusTypography.inter(color: scheme.onSurface.withValues(alpha: 0.7)),
               textAlign: TextAlign.center,
             ),
           ],
@@ -179,8 +179,8 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
             indicatorSize: TabBarIndicatorSize.tab,
             labelColor: Colors.white,
             unselectedLabelColor: scheme.onSurface.withValues(alpha: 0.7),
-            labelStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13),
-            unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 13),
+            labelStyle: KubusTypography.inter(fontWeight: FontWeight.w600, fontSize: 13),
+            unselectedLabelStyle: KubusTypography.inter(fontWeight: FontWeight.w500, fontSize: 13),
             dividerColor: Colors.transparent,
             tabs: const [
               Tab(text: 'My Exhibitions'),
@@ -251,7 +251,7 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
               children: [
                 Text(
                   'Create Exhibition',
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
                     color: scheme.onSurface,
@@ -260,7 +260,7 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
                 const SizedBox(height: 2),
                 Text(
                   'Curate artworks and invite collaborators',
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 12,
                     color: scheme.onSurface.withValues(alpha: 0.6),
                   ),
@@ -272,7 +272,7 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
           FilledButton.icon(
             onPressed: _createExhibition,
             icon: const Icon(Icons.add, size: 18),
-            label: Text('New', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+            label: Text('New', style: KubusTypography.inter(fontWeight: FontWeight.w600)),
             style: FilledButton.styleFrom(
               backgroundColor: themeProvider.accentColor,
               foregroundColor: Colors.white,
@@ -504,7 +504,7 @@ class _ExhibitionCard extends StatelessWidget {
                       children: [
                         Text(
                           exhibition.title,
-                          style: GoogleFonts.inter(
+                          style: KubusTypography.inter(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
                             color: scheme.onSurface,
@@ -551,7 +551,7 @@ class _ExhibitionCard extends StatelessWidget {
                           const SizedBox(width: 4),
                           Text(
                             dateRange,
-                            style: GoogleFonts.inter(
+                            style: KubusTypography.inter(
                               fontSize: 12,
                               color: scheme.onSurface.withValues(alpha: 0.7),
                             ),
@@ -566,7 +566,7 @@ class _ExhibitionCard extends StatelessWidget {
                           const SizedBox(width: 4),
                           Text(
                             location,
-                            style: GoogleFonts.inter(
+                            style: KubusTypography.inter(
                               fontSize: 12,
                               color: scheme.onSurface.withValues(alpha: 0.7),
                             ),
@@ -586,7 +586,7 @@ class _ExhibitionCard extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       'Hosted by ${exhibition.host!.displayName ?? exhibition.host!.username ?? 'Unknown'}',
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 11,
                         color: scheme.onSurface.withValues(alpha: 0.6),
                       ),
@@ -624,7 +624,7 @@ class _StatusChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: GoogleFonts.inter(
+        style: KubusTypography.inter(
           fontSize: 10,
           fontWeight: FontWeight.w600,
           color: color,
@@ -674,13 +674,13 @@ class _EmptyExhibitionsState extends StatelessWidget {
             const SizedBox(height: 20),
             Text(
               title,
-              style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w600),
+              style: KubusTypography.inter(fontSize: 18, fontWeight: FontWeight.w600),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
               subtitle,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 14,
                 color: scheme.onSurface.withValues(alpha: 0.65),
               ),
@@ -691,13 +691,13 @@ class _EmptyExhibitionsState extends StatelessWidget {
               ElevatedButton.icon(
                 onPressed: onAction,
                 icon: const Icon(Icons.add),
-                label: Text(actionLabel!, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                label: Text(actionLabel!, style: KubusTypography.inter(fontWeight: FontWeight.w600)),
               ),
             if (actionLabel == null)
               OutlinedButton.icon(
                 onPressed: onRefresh,
                 icon: const Icon(Icons.refresh),
-                label: Text('Refresh', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                label: Text('Refresh', style: KubusTypography.inter(fontWeight: FontWeight.w600)),
               ),
           ],
         ),
@@ -705,3 +705,4 @@ class _EmptyExhibitionsState extends StatelessWidget {
     );
   }
 }
+

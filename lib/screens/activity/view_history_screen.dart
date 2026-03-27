@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../../l10n/app_localizations.dart';
 import '../../providers/artwork_provider.dart';
+import '../../utils/design_tokens.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../utils/artwork_navigation.dart';
 
 class ViewHistoryScreen extends StatefulWidget {
-  const ViewHistoryScreen({super.key});
+  const ViewHistoryScreen({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   State<ViewHistoryScreen> createState() => _ViewHistoryScreenState();
@@ -24,19 +27,24 @@ class _ViewHistoryScreenState extends State<ViewHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        title: Text(
-          'View History',
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        scrolledUnderElevation: 0,
-        elevation: 0,
-        foregroundColor: scheme.onSurface,
-      ),
+      appBar: widget.embedded
+          ? null
+          : AppBar(
+              title: Text(
+                l10n.profileMenuViewHistoryTitle,
+                style: KubusTextStyles.screenTitle.copyWith(
+                  color: scheme.onSurface,
+                ),
+              ),
+              backgroundColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              scrolledUnderElevation: 0,
+              elevation: 0,
+              foregroundColor: scheme.onSurface,
+            ),
       body: Consumer<ArtworkProvider>(
         builder: (context, artworkProvider, child) {
           final entries = artworkProvider.viewHistoryEntries;
@@ -44,19 +52,21 @@ class _ViewHistoryScreenState extends State<ViewHistoryScreen> {
 
           if (entries.isEmpty || items.isEmpty) {
             return Padding(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(KubusSpacing.lg),
               child: EmptyStateCard(
                 icon: Icons.history,
                 title: 'No views yet',
-                description: 'Start exploring artworks, AR markers, and collections to see your history here.',
+                description:
+                    'Start exploring artworks, AR markers, and collections to see your history here.',
               ),
             );
           }
 
           return ListView.separated(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(KubusSpacing.md),
             itemCount: entries.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            separatorBuilder: (_, __) =>
+                const SizedBox(height: KubusSpacing.sm + KubusSpacing.xxs),
             itemBuilder: (context, index) {
               final entry = entries[index];
               final artwork = artworkProvider.getArtworkById(entry.artworkId);
@@ -64,47 +74,70 @@ class _ViewHistoryScreenState extends State<ViewHistoryScreen> {
                 return const SizedBox.shrink();
               }
               return ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.sm + KubusSpacing.xxs,
+                  vertical: KubusSpacing.sm,
+                ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2)),
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
+                  side: BorderSide(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .outline
+                        .withValues(alpha: 0.2),
+                  ),
                 ),
                 leading: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: artwork.imageUrl != null && artwork.imageUrl!.isNotEmpty
-                      ? Image.network(
-                          artwork.imageUrl!,
-                          width: 52,
-                          height: 52,
-                          fit: BoxFit.cover,
-                        )
-                      : Container(
-                          width: 52,
-                          height: 52,
-                          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                          alignment: Alignment.center,
-                          child: Icon(Icons.image_not_supported, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                        ),
+                  borderRadius:
+                      BorderRadius.circular(KubusRadius.sm + KubusSpacing.xxs),
+                  child:
+                      artwork.imageUrl != null && artwork.imageUrl!.isNotEmpty
+                          ? Image.network(
+                              artwork.imageUrl!,
+                              width: 52,
+                              height: 52,
+                              fit: BoxFit.cover,
+                            )
+                          : Container(
+                              width: 52,
+                              height: 52,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest,
+                              alignment: Alignment.center,
+                              child: Icon(Icons.image_not_supported,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant),
+                            ),
                 ),
                 title: Text(
                   artwork.title,
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                  style: KubusTextStyles.sectionTitle.copyWith(
+                    color: scheme.onSurface,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
                 subtitle: Text(
                   entry.markerId != null && entry.markerId!.isNotEmpty
                       ? 'Linked marker: ${entry.markerId}'
                       : 'Viewed ${_formatRelative(entry.viewedAt)}',
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  style: KubusTextStyles.sectionSubtitle.copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.7),
                   ),
                 ),
-                trailing: Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurface),
-                  onTap: () {
-                    openArtwork(context, artwork.id, source: 'view_history');
-                  },
-                );
+                trailing: Icon(
+                  Icons.chevron_right,
+                  size: KubusSizes.trailingChevron,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                onTap: () {
+                  openArtwork(context, artwork.id, source: 'view_history');
+                },
+              );
             },
           );
         },

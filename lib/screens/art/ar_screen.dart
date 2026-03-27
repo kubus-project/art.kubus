@@ -1,7 +1,6 @@
-﻿import 'package:file_picker/file_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../utils/app_animations.dart';
 import '../../widgets/app_loading.dart';
@@ -432,7 +431,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                 const SizedBox(height: 4),
                                 Text(
                                   _modeName(l10n, modeId),
-                                  style: GoogleFonts.inter(
+                                  style: KubusTypography.inter(
                                     color: isSelected
                                         ? AppColorUtils.cyanAccent
                                         : Theme.of(context)
@@ -472,7 +471,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             const SizedBox(height: 24),
             Text(
               l10n.arInitializingTitle,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: AppColorUtils.cyanAccent,
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
@@ -483,7 +482,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
               _arManager.isInitialized
                   ? l10n.arReadyStatus
                   : l10n.arSettingUpStatus,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Theme.of(context)
                     .colorScheme
                     .onSurface
@@ -514,7 +513,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   const SizedBox(height: 16),
                   Text(
                     l10n.arNoArtworksYetTitle,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -525,7 +524,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                     padding: const EdgeInsets.symmetric(horizontal: 40),
                     child: Text(
                       l10n.arNoArtworksYetDescription,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 16,
                         color: Theme.of(context)
                             .colorScheme
@@ -565,13 +564,13 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                     ),
                     title: Text(
                       artwork['title'] ?? l10n.commonUnknown,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     subtitle: Text(
                       artwork['artist'] ?? l10n.commonUnknown,
-                      style: GoogleFonts.inter(),
+                      style: KubusTypography.inter(),
                     ),
                     trailing: IconButton(
                       icon: Icon(
@@ -659,7 +658,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   children: [
                     Text(
                       l10n.arPlacingTitle('${_selectedArtwork!['title']}'),
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         color: Colors.white,
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -668,7 +667,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                     const SizedBox(height: 8),
                     Text(
                       l10n.arPlacingInstruction,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         color: Colors.white70,
                         fontSize: 14,
                       ),
@@ -700,7 +699,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             const SizedBox(height: 16),
             Text(
               l10n.arModePreviewTitle(_modeName(l10n, modeId)),
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Colors.white,
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -711,7 +710,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
               padding: const EdgeInsets.symmetric(horizontal: 40),
               child: Text(
                 _modeDescription(l10n, modeId),
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   color: Colors.white70,
                   fontSize: 16,
                 ),
@@ -808,7 +807,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   const SizedBox(width: 8),
                   Text(
                     _modeName(l10n, currentModeId),
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -939,7 +938,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       icon: Icon(buttonIcon, color: buttonTextColor),
       label: Text(
         buttonText,
-        style: GoogleFonts.inter(
+        style: KubusTypography.inter(
           fontSize: 16,
           fontWeight: FontWeight.w600,
           color: buttonTextColor,
@@ -1033,10 +1032,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(KubusSpacing.lg),
                 child: Text(
                   l10n.arNearbyArtworksTitle,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -1066,11 +1065,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                         ),
                         title: Text(artwork['title'],
                             style:
-                                GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                                KubusTypography.inter(fontWeight: FontWeight.w600)),
                         subtitle: Text(
                             l10n.commonByArtist(artwork['artist']?.toString() ??
                                 l10n.commonUnknown),
-                            style: GoogleFonts.inter(fontSize: 12)),
+                            style: KubusTypography.inter(fontSize: 12)),
                         trailing: Icon(Icons.arrow_forward_ios, size: 16),
                         onTap: () {
                           setState(() {
@@ -1168,10 +1167,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(KubusSpacing.lg),
                 child: Text(
                   l10n.arPlacedArtworksTitle(_placedObjects.length),
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -1504,7 +1503,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           Expanded(
                             child: Text(
                               l10n.arCreateUploadTitle,
-                              style: GoogleFonts.inter(
+                              style: KubusTypography.inter(
                                 fontSize: 22,
                                 fontWeight: FontWeight.w700,
                                 color: Theme.of(context).colorScheme.onSurface,
@@ -1522,7 +1521,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                       const SizedBox(height: 12),
                       Text(
                         l10n.arCreateUploadSubtitle,
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 13,
                           color: Theme.of(context)
                               .colorScheme
@@ -1570,12 +1569,12 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(option.title,
-                                              style: GoogleFonts.inter(
+                                              style: KubusTypography.inter(
                                                   fontWeight: FontWeight.w600)),
                                           if (option.subtitle.isNotEmpty)
                                             Text(
                                               option.subtitle,
-                                              style: GoogleFonts.inter(
+                                              style: KubusTypography.inter(
                                                 fontSize: 12,
                                                 color: Theme.of(context)
                                                     .colorScheme
@@ -1618,7 +1617,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                             l10n.arCreateNoSubjectsAvailable(
                               selectedSubjectType.label.toLowerCase(),
                             ),
-                            style: GoogleFonts.inter(fontSize: 13),
+                            style: KubusTypography.inter(fontSize: 13),
                           ),
                         ),
                       const SizedBox(height: 16),
@@ -1673,7 +1672,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                       const SizedBox(height: 16),
                       Text(
                         l10n.arCreateAttach3dAssetTitle,
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: Theme.of(context).colorScheme.onSurface,
@@ -1720,13 +1719,13 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                   children: [
                                     Text(
                                       selectedModelName!,
-                                      style: GoogleFonts.inter(
+                                      style: KubusTypography.inter(
                                           fontWeight: FontWeight.w600),
                                     ),
                                     if (selectedModelSize != null)
                                       Text(
                                         formatFileSize(selectedModelSize!),
-                                        style: GoogleFonts.inter(fontSize: 12),
+                                        style: KubusTypography.inter(fontSize: 12),
                                       ),
                                   ],
                                 ),
@@ -1749,7 +1748,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                         const SizedBox(height: 8),
                         Text(
                           fileError!,
-                          style: GoogleFonts.inter(
+                          style: KubusTypography.inter(
                             color: Theme.of(context).colorScheme.error,
                             fontSize: 12,
                           ),
@@ -1760,7 +1759,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                         l10n.arModelScaleLabel(
                           (selectedScale * 100).toStringAsFixed(0),
                         ),
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: Theme.of(context).colorScheme.onSurface,
@@ -1805,7 +1804,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                             Expanded(
                               child: Text(
                                 '${location.latitude.toStringAsFixed(6)}, ${location.longitude.toStringAsFixed(6)}',
-                                style: GoogleFonts.inter(fontSize: 13),
+                                style: KubusTypography.inter(fontSize: 13),
                               ),
                             ),
                           ],
@@ -1843,7 +1842,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                 ? l10n.arCreateUploadingLabel
                                 : l10n.arCreateUploadAndCreateButton,
                             style:
-                                GoogleFonts.inter(fontWeight: FontWeight.w600),
+                                KubusTypography.inter(fontWeight: FontWeight.w600),
                           ),
                         ),
                       ),
@@ -1904,7 +1903,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   const BorderRadius.vertical(top: Radius.circular(20)),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(KubusSpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1913,7 +1912,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                       Expanded(
                         child: Text(
                           title,
-                          style: GoogleFonts.inter(
+                          style: KubusTypography.inter(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
                             color: Theme.of(context).colorScheme.onSurface,
@@ -1929,7 +1928,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   const SizedBox(height: 8),
                   Text(
                     l10n.commonByArtist(artist),
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 16,
                       color: Theme.of(context)
                           .colorScheme
@@ -1949,7 +1948,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   const SizedBox(height: 16),
                   Text(
                     l10n.commonActions,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -2018,7 +2017,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             width: 80,
             child: Text(
               label,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: Theme.of(context)
@@ -2031,7 +2030,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           Expanded(
             child: Text(
               value,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 14,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
@@ -2110,7 +2109,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             AnimatedDefaultTextStyle(
               duration: animationTheme.short,
               curve: animationTheme.defaultCurve,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 13,
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
                 color: isActive
@@ -2302,7 +2301,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   const BorderRadius.vertical(top: Radius.circular(20)),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(KubusSpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -2311,7 +2310,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                       Expanded(
                         child: Text(
                           l10n.arSettingsTitle,
-                          style: GoogleFonts.inter(
+                          style: KubusTypography.inter(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
                             color: Theme.of(context).colorScheme.onSurface,
@@ -2329,7 +2328,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   if (_currentMode == 'scan') ...[
                     Text(
                       l10n.arScannerSettingsTitle,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         color: Theme.of(context).colorScheme.onSurface,
@@ -2340,12 +2339,12 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                       leading: Icon(Icons.flash_on,
                           color: Theme.of(context).colorScheme.primary),
                       title: Text(l10n.arFlashControlTitle,
-                          style: GoogleFonts.inter(fontSize: 14)),
+                          style: KubusTypography.inter(fontSize: 14)),
                       subtitle: Text(
                           _flashEnabled
                               ? l10n.commonCurrentlyOn
                               : l10n.commonCurrentlyOff,
-                          style: GoogleFonts.inter(fontSize: 12)),
+                          style: KubusTypography.inter(fontSize: 12)),
                       trailing: Switch(
                         value: _flashEnabled,
                         onChanged: (value) async {
@@ -2375,9 +2374,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                       leading: Icon(Icons.qr_code_scanner,
                           color: Theme.of(context).colorScheme.primary),
                       title: Text(l10n.arScannerOverlayTitle,
-                          style: GoogleFonts.inter(fontSize: 14)),
+                          style: KubusTypography.inter(fontSize: 14)),
                       subtitle: Text(l10n.arScannerOverlaySubtitle,
-                          style: GoogleFonts.inter(fontSize: 12)),
+                          style: KubusTypography.inter(fontSize: 12)),
                       onTap: () {
                         Navigator.pop(context);
                         messenger.showKubusSnackBar(
@@ -2393,7 +2392,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   ],
                   Text(
                     l10n.arDisplayTitle,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -2402,9 +2401,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   const SizedBox(height: 12),
                   SwitchListTile(
                     title: Text(l10n.arShowFeaturePointsTitle,
-                        style: GoogleFonts.inter(fontSize: 14)),
+                        style: KubusTypography.inter(fontSize: 14)),
                     subtitle: Text(l10n.arShowFeaturePointsSubtitle,
-                        style: GoogleFonts.inter(fontSize: 12)),
+                        style: KubusTypography.inter(fontSize: 12)),
                     value: _showFeaturePoints,
                     onChanged: (value) {
                       setModalState(() => _showFeaturePoints = value);
@@ -2413,9 +2412,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   ),
                   SwitchListTile(
                     title: Text(l10n.arShowPlanesTitle,
-                        style: GoogleFonts.inter(fontSize: 14)),
+                        style: KubusTypography.inter(fontSize: 14)),
                     subtitle: Text(l10n.arShowPlanesSubtitle,
-                        style: GoogleFonts.inter(fontSize: 12)),
+                        style: KubusTypography.inter(fontSize: 12)),
                     value: _showPlanes,
                     onChanged: (value) {
                       setModalState(() => _showPlanes = value);
@@ -2424,9 +2423,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   ),
                   SwitchListTile(
                     title: Text(l10n.arAutoDetectSurfacesTitle,
-                        style: GoogleFonts.inter(fontSize: 14)),
+                        style: KubusTypography.inter(fontSize: 14)),
                     subtitle: Text(l10n.arAutoDetectSurfacesSubtitle,
-                        style: GoogleFonts.inter(fontSize: 12)),
+                        style: KubusTypography.inter(fontSize: 12)),
                     value: _autoDetectSurfaces,
                     onChanged: (value) {
                       setModalState(() => _autoDetectSurfaces = value);
@@ -2435,9 +2434,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   ),
                   SwitchListTile(
                     title: Text(l10n.arDebugInfoTitle,
-                        style: GoogleFonts.inter(fontSize: 14)),
+                        style: KubusTypography.inter(fontSize: 14)),
                     subtitle: Text(l10n.arDebugInfoSubtitle,
-                        style: GoogleFonts.inter(fontSize: 12)),
+                        style: KubusTypography.inter(fontSize: 12)),
                     value: _showDebugInfo,
                     onChanged: (value) {
                       setModalState(() => _showDebugInfo = value);
@@ -2449,7 +2448,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                     l10n.arModelScaleLabel(
                       (_modelScale * 100).toStringAsFixed(0),
                     ),
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -2471,7 +2470,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   const SizedBox(height: 16),
                   Text(
                     l10n.commonActions,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -2481,9 +2480,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   ListTile(
                     leading: const Icon(Icons.delete_sweep),
                     title: Text(l10n.arClearAllArtworksTitle,
-                        style: GoogleFonts.inter(fontSize: 14)),
+                        style: KubusTypography.inter(fontSize: 14)),
                     subtitle: Text(l10n.arClearAllArtworksSubtitle,
-                        style: GoogleFonts.inter(fontSize: 12)),
+                        style: KubusTypography.inter(fontSize: 12)),
                     onTap: () {
                       setState(() => _placedObjects.clear());
                       Navigator.pop(context);
@@ -2495,9 +2494,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   ListTile(
                     leading: const Icon(Icons.refresh),
                     title: Text(l10n.arResetSessionTitle,
-                        style: GoogleFonts.inter(fontSize: 14)),
+                        style: KubusTypography.inter(fontSize: 14)),
                     subtitle: Text(l10n.arResetSessionSubtitle,
-                        style: GoogleFonts.inter(fontSize: 12)),
+                        style: KubusTypography.inter(fontSize: 12)),
                     onTap: () {
                       Navigator.pop(context);
                       _initializeAR();

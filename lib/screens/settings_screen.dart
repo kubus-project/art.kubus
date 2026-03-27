@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/themeprovider.dart';
@@ -20,12 +19,14 @@ import '../providers/email_preferences_provider.dart';
 import '../models/email_preferences.dart';
 import '../models/user_profile.dart';
 import '../models/wallet.dart';
+import '../utils/design_tokens.dart';
 import '../services/backend_api_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/settings_service.dart';
 import '../widgets/platform_aware_widgets.dart';
 import '../widgets/glass_components.dart';
 import '../widgets/email_verification_status_badge.dart';
+import '../widgets/common/kubus_screen_header.dart';
 import 'onboarding/onboarding_flow_screen.dart';
 import 'web3/wallet/wallet_home.dart' as web3_wallet;
 import 'web3/wallet/connectwallet_screen.dart';
@@ -209,7 +210,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   slivers: [
                     _buildAppBar(l10n),
                     SliverPadding(
-                      padding: const EdgeInsets.all(24),
+                      padding: const EdgeInsets.all(KubusSpacing.lg),
                       sliver: SliverList(
                         delegate: SliverChildListDelegate([
                           _buildUserSection(l10n),
@@ -251,17 +252,16 @@ class _SettingsScreenState extends State<SettingsScreen>
       snap: true,
       backgroundColor: Colors.transparent,
       elevation: 0,
-      title: Text(
-        l10n.settingsTitle,
-        style: GoogleFonts.inter(
-          fontSize: 28,
-          fontWeight: FontWeight.bold,
-          color: Theme.of(context).colorScheme.onSurface,
-        ),
+      title: KubusHeaderText(
+        title: l10n.settingsTitle,
+        kind: KubusHeaderKind.screen,
+        titleColor: Theme.of(context).colorScheme.onSurface,
+        maxTitleLines: 1,
       ),
       leading: IconButton(
         icon: Icon(
           Icons.arrow_back,
+          size: KubusHeaderMetrics.actionIcon,
           color: Theme.of(context).colorScheme.onSurface,
         ),
         onPressed: () => Navigator.pop(context),
@@ -277,7 +277,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     final headerColor = scheme.secondary;
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -323,7 +323,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     Text(
                       profileProvider.currentUser?.displayName ??
                           l10n.settingsGuestUserName,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).colorScheme.onPrimary,
@@ -334,7 +334,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         web3Provider.formatAddress(
                           walletProvider.currentWalletAddress ?? '',
                         ),
-                        style: GoogleFonts.robotoMono(
+                        style: KubusTypography.inter(
                           fontSize: 14,
                           color: Colors.white.withValues(alpha: 0.8),
                         ),
@@ -342,7 +342,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       if (walletProvider.isReadOnlySession)
                         Text(
                           'Read-only wallet session',
-                          style: GoogleFonts.inter(
+                          style: KubusTypography.inter(
                             fontSize: 12,
                             color: Colors.white.withValues(alpha: 0.75),
                           ),
@@ -350,7 +350,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     ] else ...[
                       Text(
                         l10n.settingsNoWalletConnected,
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 14,
                           color: Colors.white.withValues(alpha: 0.8),
                         ),
@@ -437,7 +437,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           children: [
             Text(
               amount,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Theme.of(context).colorScheme.onPrimary,
@@ -445,7 +445,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             Text(
               symbol,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 12,
                 color: Colors.white.withValues(alpha: 0.8),
               ),
@@ -498,7 +498,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   children: [
                     Text(
                       l10n.settingsLanguageTitle,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         color: Theme.of(context).colorScheme.onSurface,
@@ -507,7 +507,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     const SizedBox(height: 6),
                     Text(
                       l10n.settingsLanguageDescription,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 14,
                         color: Theme.of(context)
                             .colorScheme
@@ -570,7 +570,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               const SizedBox(width: 12),
               Text(
                 l10n.settingsThemeModeTitle,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: Theme.of(context).colorScheme.onSurface,
@@ -689,7 +689,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   const SizedBox(width: 12),
                   Text(
                     label,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 14,
                       fontWeight:
                           isSelected ? FontWeight.w600 : FontWeight.normal,
@@ -712,7 +712,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   const SizedBox(height: 4),
                   Text(
                     label,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 12,
                       fontWeight:
                           isSelected ? FontWeight.w600 : FontWeight.normal,
@@ -755,7 +755,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               const SizedBox(width: 12),
               Text(
                 l10n.settingsAccentColorTitle,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: Theme.of(context).colorScheme.onSurface,
@@ -832,7 +832,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               children: [
                 Text(
                   'Reduce effects',
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: scheme.onSurface,
@@ -843,7 +843,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   autoDetected
                       ? 'Automatically enabled for this device'
                       : 'Disable blur, animations and other effects',
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 13,
                     color: scheme.onSurface.withValues(alpha: 0.6),
                   ),
@@ -911,7 +911,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                               .split('.')
                               .last,
                         ),
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: Theme.of(context).colorScheme.onSurface,
@@ -922,7 +922,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   const SizedBox(height: 16),
                   Text(
                     l10n.settingsAvailableFeaturesLabel,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: Theme.of(context).colorScheme.outline,
@@ -945,7 +945,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                           Expanded(
                             child: Text(
                               _getCapabilityDisplayName(l10n, entry.key),
-                              style: GoogleFonts.inter(
+                              style: KubusTypography.inter(
                                 fontSize: 14,
                                 color: entry.value
                                     ? Colors.white
@@ -1221,7 +1221,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 const SizedBox(height: 16),
                 Text(
                   l10n.settingsRoleSimulationSheetTitle,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -1230,7 +1230,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 const SizedBox(height: 8),
                 Text(
                   l10n.settingsRoleSimulationSheetSubtitle,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 14,
                     color: Theme.of(context)
                         .colorScheme
@@ -1241,10 +1241,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                 const SizedBox(height: 16),
                 SwitchListTile(
                   title: Text(l10n.settingsRoleArtistTitle,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                           fontSize: 16, fontWeight: FontWeight.w600)),
                   subtitle: Text(l10n.settingsRoleArtistSubtitle,
-                      style: GoogleFonts.inter(fontSize: 13)),
+                      style: KubusTypography.inter(fontSize: 13)),
                   value: artist,
                   activeThumbColor: Theme.of(context).colorScheme.secondary,
                   onChanged: (val) {
@@ -1255,10 +1255,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                 ),
                 SwitchListTile(
                   title: Text(l10n.settingsRoleInstitutionTitle,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                           fontSize: 16, fontWeight: FontWeight.w600)),
                   subtitle: Text(l10n.settingsRoleInstitutionSubtitle,
-                      style: GoogleFonts.inter(fontSize: 13)),
+                      style: KubusTypography.inter(fontSize: 13)),
                   value: institution,
                   activeThumbColor: Theme.of(context).colorScheme.secondary,
                   onChanged: (val) {
@@ -1274,7 +1274,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     TextButton(
                       onPressed: () => Navigator.pop(context),
                       child: Text(l10n.commonClose,
-                          style: GoogleFonts.inter(
+                          style: KubusTypography.inter(
                               color: Theme.of(context).colorScheme.outline)),
                     ),
                   ],
@@ -1608,7 +1608,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             const SizedBox(width: 12),
             Text(
               title,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: Theme.of(context).colorScheme.onSurface,
@@ -1654,7 +1654,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         ),
         title: Text(
           title,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 16,
             fontWeight: FontWeight.w600,
             color: isDestructive
@@ -1664,7 +1664,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         ),
         subtitle: Text(
           subtitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 14,
             color:
                 Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -1698,7 +1698,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsSelectNetworkDialogTitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 18,
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.onSurface,
@@ -1779,7 +1779,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             onPressed: () => Navigator.pop(context),
             child: Text(
               l10n.commonCancel,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Theme.of(context).colorScheme.outline,
               ),
             ),
@@ -1825,7 +1825,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 children: [
                   Text(
                     name,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -1833,7 +1833,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ),
                   Text(
                     description,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 12,
                       color: Theme.of(context)
                           .colorScheme
@@ -1876,7 +1876,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             const SizedBox(width: 8),
             Text(
               l10n.settingsBackupWalletDialogTitle,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Theme.of(context).colorScheme.onSurface,
@@ -1890,7 +1890,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           children: [
             Text(
               l10n.settingsBackupWalletDialogIntro,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 14,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
@@ -1918,7 +1918,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       const SizedBox(width: 6),
                       Text(
                         l10n.settingsSecurityWarningTitle,
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                           color: Theme.of(context).colorScheme.error,
@@ -1929,7 +1929,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   const SizedBox(height: 4),
                   Text(
                     l10n.settingsSecurityWarningBullets,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 11,
                       color: Theme.of(context).colorScheme.error,
                     ),
@@ -1944,7 +1944,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             onPressed: () => Navigator.pop(context),
             child: Text(
               l10n.commonCancel,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Theme.of(context).colorScheme.outline,
               ),
             ),
@@ -1959,7 +1959,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             },
             child: Text(
               l10n.commonContinue,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Theme.of(context).colorScheme.onPrimary,
                 fontWeight: FontWeight.w600,
               ),
@@ -2057,7 +2057,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsAutoLockTimerDialogTitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
@@ -2071,7 +2071,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             return ListTile(
               title: Text(
                 displayLabel,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
@@ -2215,7 +2215,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 color: Theme.of(context).colorScheme.error),
             const SizedBox(width: 8),
             Text(l10n.settingsExportRecoveryPhraseDialogTitle,
-                style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                style: KubusTypography.inter(fontWeight: FontWeight.bold)),
           ],
         ),
         content: Column(
@@ -2224,7 +2224,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           children: [
             Text(
               l10n.settingsExportRecoveryPhraseDialogBody,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                   color: Theme.of(context)
                       .colorScheme
                       .onSurface
@@ -2239,7 +2239,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 Expanded(
                   child: Text(
                     l10n.settingsExportRecoveryPhraseDialogConfirm,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                         color: Theme.of(context)
                             .colorScheme
                             .onSurface
@@ -2282,7 +2282,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 color: Theme.of(context).colorScheme.error),
             const SizedBox(width: 8),
             Text(l10n.settingsImportWalletDialogTitle,
-                style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                style: KubusTypography.inter(fontWeight: FontWeight.bold)),
           ],
         ),
         content: Column(
@@ -2291,7 +2291,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           children: [
             Text(
               l10n.settingsImportWalletDialogBody,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                   color: Theme.of(context)
                       .colorScheme
                       .onSurface
@@ -2306,7 +2306,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 Expanded(
                   child: Text(
                     l10n.settingsImportWalletDialogConfirm,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                         color: Theme.of(context)
                             .colorScheme
                             .onSurface
@@ -2347,7 +2347,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsSetPinDialogTitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
@@ -2378,7 +2378,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(l10n.commonCancel,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                     color: Theme.of(context).colorScheme.outline)),
           ),
           TextButton(
@@ -2408,7 +2408,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   SnackBar(content: Text(l10n.settingsPinClearedToast)));
             },
             child: Text(l10n.settingsClearPinButton,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                     color: Theme.of(context).colorScheme.error)),
           ),
           ElevatedButton(
@@ -2453,7 +2453,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               }
             },
             child: Text(l10n.commonSave,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                     color: Theme.of(context).colorScheme.onPrimary)),
           ),
         ],
@@ -2469,14 +2469,14 @@ class _SettingsScreenState extends State<SettingsScreen>
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsClearCacheDialogTitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
           l10n.settingsClearCacheDialogBody,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
@@ -2485,7 +2485,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             onPressed: () => Navigator.pop(context),
             child: Text(
               l10n.commonCancel,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Theme.of(context).colorScheme.outline,
               ),
             ),
@@ -2524,14 +2524,14 @@ class _SettingsScreenState extends State<SettingsScreen>
         backgroundColor: Theme.of(dialogContext).colorScheme.surface,
         title: Text(
           l10n.settingsResetPermissionFlagsDialogTitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             color: Theme.of(dialogContext).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
           l10n.settingsResetPermissionFlagsDialogBody,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             color: Theme.of(dialogContext).colorScheme.onSurface,
           ),
         ),
@@ -2539,7 +2539,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
             child: Text(l10n.commonCancel,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                     color: Theme.of(dialogContext).colorScheme.outline)),
           ),
           ElevatedButton(
@@ -2557,7 +2557,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               );
             },
             child: Text(l10n.settingsResetButton,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                     color: Theme.of(dialogContext).colorScheme.onPrimary)),
           ),
         ],
@@ -2581,14 +2581,14 @@ class _SettingsScreenState extends State<SettingsScreen>
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsExportDataDialogTitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
           l10n.settingsExportDataDialogBody,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
@@ -2597,7 +2597,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             onPressed: () => Navigator.pop(context),
             child: Text(
               l10n.commonCancel,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Theme.of(context).colorScheme.outline,
               ),
             ),
@@ -2655,14 +2655,14 @@ class _SettingsScreenState extends State<SettingsScreen>
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsResetAppDialogTitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
           l10n.settingsResetAppDialogBody,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
@@ -2671,7 +2671,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             onPressed: () => Navigator.pop(context),
             child: Text(
               l10n.commonCancel,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Theme.of(context).colorScheme.outline,
               ),
             ),
@@ -2722,14 +2722,14 @@ class _SettingsScreenState extends State<SettingsScreen>
         backgroundColor: Theme.of(dialogContext).colorScheme.surface,
         title: Text(
           l10n.settingsDeleteAccountDialogTitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             color: Theme.of(dialogContext).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
           l10n.settingsDeleteAccountDialogBody,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             color: Theme.of(dialogContext).colorScheme.onSurface,
           ),
         ),
@@ -2738,7 +2738,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             onPressed: () => Navigator.pop(dialogContext),
             child: Text(
               l10n.commonCancel,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Theme.of(dialogContext).colorScheme.outline,
               ),
             ),
@@ -2759,14 +2759,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                   backgroundColor: Theme.of(confirmContext).colorScheme.surface,
                   title: Text(
                     l10n.settingsFinalConfirmationTitle,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       color: Theme.of(confirmContext).colorScheme.onSurface,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   content: Text(
                     l10n.settingsDeleteAccountFinalConfirmationBody,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       color: Theme.of(confirmContext).colorScheme.onSurface,
                     ),
                   ),
@@ -2774,13 +2774,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                     TextButton(
                       onPressed: () => Navigator.pop(confirmContext, false),
                       child:
-                          Text(l10n.commonCancel, style: GoogleFonts.inter()),
+                          Text(l10n.commonCancel, style: KubusTypography.inter()),
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(confirmContext, true),
                       child: Text(
                         l10n.settingsConfirmButton,
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                             color: Theme.of(confirmContext).colorScheme.error),
                       ),
                     ),
@@ -2946,14 +2946,14 @@ class _SettingsScreenState extends State<SettingsScreen>
         backgroundColor: Theme.of(dialogContext).colorScheme.surface,
         title: Text(
           l10n.settingsLogoutDialogTitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             color: Theme.of(dialogContext).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
           l10n.settingsLogoutDialogBody,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             color: Theme.of(dialogContext).colorScheme.onSurface,
           ),
         ),
@@ -2962,7 +2962,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             onPressed: () => Navigator.pop(dialogContext, false),
             child: Text(
               l10n.commonCancel,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Theme.of(dialogContext).colorScheme.outline,
               ),
             ),
@@ -3095,7 +3095,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsTransactionHistoryDialogTitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 18,
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.onSurface,
@@ -3109,7 +3109,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   children: [
                     Text(
                       l10n.settingsRecentTransactionsTitle,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 14,
                         color: Theme.of(context)
                             .colorScheme
@@ -3142,7 +3142,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             onPressed: () => Navigator.pop(context),
             child: Text(
               l10n.commonClose,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Theme.of(context).colorScheme.outline,
               ),
             ),
@@ -3199,7 +3199,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   isIncoming
                       ? l10n.settingsTxReceivedLabel
                       : l10n.settingsTxSentLabel,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -3212,7 +3212,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         : l10n.settingsTxToLabel,
                     (isIncoming ? from : to).substring(0, 8),
                   ),
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 10,
                     color: Theme.of(context)
                         .colorScheme
@@ -3222,7 +3222,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 ),
                 Text(
                   timestamp,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 9,
                     color: Theme.of(context)
                         .colorScheme
@@ -3235,7 +3235,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
           Text(
             '${isIncoming ? '+' : '-'}$amount $token',
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 11,
               fontWeight: FontWeight.w600,
               color: isIncoming
@@ -3257,7 +3257,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsAppVersionDialogTitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
@@ -3267,7 +3267,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           children: [
             Text(
               'art.kubus',
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Theme.of(context).colorScheme.onSurface,
@@ -3276,20 +3276,20 @@ class _SettingsScreenState extends State<SettingsScreen>
             const SizedBox(height: 8),
             Text(
               l10n.settingsVersionValue(AppInfo.version),
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             Text(
               l10n.settingsBuildValue(AppInfo.buildNumber),
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 16),
             Text(
               'Â© 2025 kubus',
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Theme.of(context)
                     .colorScheme
                     .onSurface
@@ -3298,7 +3298,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             Text(
               l10n.settingsAllRightsReserved,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Theme.of(context)
                     .colorScheme
                     .onSurface
@@ -3312,7 +3312,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             onPressed: () => Navigator.pop(context),
             child: Text(
               l10n.commonClose,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Theme.of(context).colorScheme.outline,
               ),
             ),
@@ -3330,7 +3330,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsTermsDialogTitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
@@ -3338,7 +3338,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         content: SingleChildScrollView(
           child: Text(
             l10n.settingsTermsDialogBody,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               height: 1.5,
               color: Theme.of(context).colorScheme.onSurface,
             ),
@@ -3349,7 +3349,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             onPressed: () => Navigator.pop(context),
             child: Text(
               l10n.commonClose,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Theme.of(context).colorScheme.outline,
               ),
             ),
@@ -3367,7 +3367,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsPrivacyPolicyDialogTitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
@@ -3375,7 +3375,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         content: SingleChildScrollView(
           child: Text(
             l10n.settingsPrivacyPolicyDialogBody,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               height: 1.5,
               color: Theme.of(context).colorScheme.onSurface,
             ),
@@ -3386,7 +3386,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             onPressed: () => Navigator.pop(context),
             child: Text(
               l10n.commonClose,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Theme.of(context).colorScheme.outline,
               ),
             ),
@@ -3405,7 +3405,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         backgroundColor: Theme.of(dialogContext).colorScheme.surface,
         title: Text(
           l10n.settingsSupportDialogTitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             color: Theme.of(dialogContext).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
@@ -3415,7 +3415,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           children: [
             Text(
               l10n.settingsSupportDialogBody,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Theme.of(dialogContext).colorScheme.onSurface,
               ),
             ),
@@ -3471,7 +3471,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             onPressed: () => Navigator.pop(dialogContext),
             child: Text(
               l10n.commonClose,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Theme.of(dialogContext).colorScheme.outline,
               ),
             ),
@@ -3498,7 +3498,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsRateAppDialogTitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
@@ -3508,14 +3508,14 @@ class _SettingsScreenState extends State<SettingsScreen>
           children: [
             Text(
               l10n.settingsRateAppDialogBodyTitle,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               l10n.settingsRateAppDialogBodySubtitle,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
@@ -3547,7 +3547,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             onPressed: () => Navigator.pop(context),
             child: Text(
               l10n.settingsMaybeLaterButton,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Theme.of(context).colorScheme.outline,
               ),
             ),
@@ -3588,14 +3588,14 @@ class _SettingsScreenState extends State<SettingsScreen>
         key: tileKey,
         title: Text(
           title,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontWeight: FontWeight.w500,
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         subtitle: Text(
           subtitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 12,
             color:
                 Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -3624,14 +3624,14 @@ class _SettingsScreenState extends State<SettingsScreen>
       child: ListTile(
         title: Text(
           title,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontWeight: FontWeight.w500,
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         subtitle: Text(
           subtitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 12,
             color:
                 Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -3641,7 +3641,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           value: value,
           underline: Container(),
           dropdownColor: Theme.of(context).colorScheme.surface,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             color: Theme.of(context).colorScheme.onSurface,
           ),
           items: options.map((String option) {
@@ -3665,14 +3665,14 @@ class _SettingsScreenState extends State<SettingsScreen>
       child: ListTile(
         title: Text(
           title,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontWeight: FontWeight.w500,
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         subtitle: Text(
           subtitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 12,
             color:
                 Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -3752,7 +3752,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 children: [
                   Text(
                     option.label,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontWeight: FontWeight.w600,
                       color: theme.colorScheme.onSurface,
                     ),
@@ -3760,7 +3760,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   const SizedBox(height: 4),
                   Text(
                     option.description,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 13,
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -3794,7 +3794,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           backgroundColor: Theme.of(innerContext).colorScheme.surface,
           title: Text(
             l10n.settingsProfileVisibilityDialogTitle,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               color: Theme.of(innerContext).colorScheme.onSurface,
               fontWeight: FontWeight.bold,
             ),
@@ -3822,7 +3822,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               onPressed: () => Navigator.pop(dialogContext),
               child: Text(
                 l10n.commonCancel,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   color: Theme.of(innerContext).colorScheme.outline,
                 ),
               ),
@@ -3883,7 +3883,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           backgroundColor: Theme.of(innerContext).colorScheme.surface,
           title: Text(
             l10n.settingsPrivacySettingsDialogTitle,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               color: Theme.of(innerContext).colorScheme.onSurface,
               fontWeight: FontWeight.bold,
             ),
@@ -3941,7 +3941,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     alignment: Alignment.centerLeft,
                     child: Text(
                       l10n.settingsProfilePrivacySectionTitle,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontWeight: FontWeight.w600,
                         color: Theme.of(innerContext).colorScheme.onSurface,
                       ),
@@ -3998,7 +3998,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               onPressed: () => Navigator.pop(dialogContext),
               child: Text(
                 l10n.commonCancel,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   color: Theme.of(innerContext).colorScheme.outline,
                 ),
               ),
@@ -4048,7 +4048,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           backgroundColor: Theme.of(innerContext).colorScheme.surface,
           title: Text(
             l10n.settingsSecuritySettingsDialogTitle,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               color: Theme.of(innerContext).colorScheme.onSurface,
               fontWeight: FontWeight.bold,
             ),
@@ -4125,7 +4125,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               onPressed: () => Navigator.pop(dialogContext),
               child: Text(
                 l10n.commonCancel,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   color: Theme.of(innerContext).colorScheme.outline,
                 ),
               ),
@@ -4196,7 +4196,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               backgroundColor: Theme.of(context).colorScheme.surface,
               title: Text(
                 l10n.settingsAccountManagementDialogTitle,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.bold,
                 ),
@@ -4210,7 +4210,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     children: [
                       Text(
                         l10n.settingsEmailPreferencesSectionTitle,
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: Theme.of(context).colorScheme.onSurface,
@@ -4219,7 +4219,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       const SizedBox(height: 6),
                       Text(
                         l10n.settingsEmailPreferencesTransactionalNote,
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 12,
                           color: Theme.of(context)
                               .colorScheme
@@ -4375,7 +4375,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       const SizedBox(height: 16),
                       Text(
                         l10n.permissionsNotificationsTitle,
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: Theme.of(context).colorScheme.onSurface,
@@ -4531,7 +4531,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   onPressed: () => Navigator.pop(context),
                   child: Text(
                     l10n.commonCancel,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       color: Theme.of(context).colorScheme.outline,
                     ),
                   ),
@@ -4577,7 +4577,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsChangePasswordDialogTitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
@@ -4615,7 +4615,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             onPressed: () => Navigator.pop(context),
             child: Text(
               l10n.commonCancel,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Theme.of(context).colorScheme.outline,
               ),
             ),
@@ -4648,7 +4648,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsDeactivateAccountDialogTitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
@@ -4661,7 +4661,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             const SizedBox(height: 16),
             Text(
               l10n.settingsDeactivateAccountDialogBodyTitle,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 16,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
@@ -4670,7 +4670,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             const SizedBox(height: 8),
             Text(
               l10n.settingsDeactivateAccountDialogBodySubtitle,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 14,
                 color: Theme.of(context)
                     .colorScheme
@@ -4686,7 +4686,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             onPressed: () => Navigator.pop(context),
             child: Text(
               l10n.commonCancel,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Theme.of(context).colorScheme.outline,
               ),
             ),

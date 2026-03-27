@@ -1,9 +1,8 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:async';
 import 'package:art_kubus/widgets/glass_components.dart';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -22,12 +21,14 @@ import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
 import '../../../utils/artwork_media_resolver.dart';
 import '../../../utils/wallet_utils.dart';
+import '../../../utils/design_tokens.dart';
 import '../../../widgets/artwork_gallery_view.dart';
 import '../../../widgets/artwork_creator_byline.dart';
 import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/detail/detail_shell_components.dart';
 import '../../web3/artist/artwork_ar_manager_screen.dart';
+import '../../../widgets/common/kubus_screen_header.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class DesktopArtworkDetailScreen extends StatefulWidget {
@@ -135,8 +136,12 @@ class _DesktopArtworkDetailScreenState
             backgroundColor: scheme.surface,
             appBar: widget.showAppBar
                 ? AppBar(
-                    title: Text(l10n.artDetailLoadingTitle,
-                        style: GoogleFonts.inter()))
+                    title: KubusHeaderText(
+                      title: l10n.artDetailLoadingTitle,
+                      kind: KubusHeaderKind.screen,
+                      compact: true,
+                    ),
+                  )
                 : null,
             body: const Center(child: InlineLoading()),
           );
@@ -147,8 +152,12 @@ class _DesktopArtworkDetailScreenState
             backgroundColor: scheme.surface,
             appBar: widget.showAppBar
                 ? AppBar(
-                    title:
-                        Text(l10n.artDetailTitle, style: GoogleFonts.inter()))
+                    title: KubusHeaderText(
+                      title: l10n.artDetailTitle,
+                      kind: KubusHeaderKind.screen,
+                      compact: true,
+                    ),
+                  )
                 : null,
             body: Center(
               child: Column(
@@ -156,7 +165,9 @@ class _DesktopArtworkDetailScreenState
                 children: [
                   Text(
                     _artworkError!,
-                    style: GoogleFonts.inter(color: scheme.onSurface),
+                    style: KubusTextStyles.sectionSubtitle.copyWith(
+                      color: scheme.onSurface,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
@@ -175,11 +186,19 @@ class _DesktopArtworkDetailScreenState
             backgroundColor: scheme.surface,
             appBar: widget.showAppBar
                 ? AppBar(
-                    title:
-                        Text(l10n.artworkNotFound, style: GoogleFonts.inter()))
+                    title: KubusHeaderText(
+                      title: l10n.artworkNotFound,
+                      kind: KubusHeaderKind.screen,
+                      compact: true,
+                    ),
+                  )
                 : null,
             body: Center(
-                child: Text(l10n.artworkNotFound, style: GoogleFonts.inter())),
+              child: Text(
+                l10n.artworkNotFound,
+                style: KubusTextStyles.screenTitle,
+              ),
+            ),
           );
         }
 
@@ -192,8 +211,11 @@ class _DesktopArtworkDetailScreenState
           backgroundColor: Colors.transparent,
           appBar: widget.showAppBar
               ? AppBar(
-                  title: Text(artwork.title,
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                  title: KubusHeaderText(
+                    title: artwork.title,
+                    kind: KubusHeaderKind.screen,
+                    compact: true,
+                  ),
                 )
               : null,
           body: Padding(
@@ -270,7 +292,8 @@ class _DesktopArtworkDetailScreenState
         _buildHeader(artwork),
         const SizedBox(height: DetailSpacing.md),
         _buildActionsRow(artwork, artworkProvider, isSignedIn),
-        _buildAttendanceConfirmSection(artwork: artwork, isSignedIn: isSignedIn),
+        _buildAttendanceConfirmSection(
+            artwork: artwork, isSignedIn: isSignedIn),
         _buildArSetupSection(artwork),
         const SizedBox(height: DetailSpacing.lg),
         _buildDescription(artwork),
@@ -307,7 +330,8 @@ class _DesktopArtworkDetailScreenState
           aspectRatio: 16 / 9,
           child: Container(
             color: scheme.surfaceContainerHighest,
-            child: Icon(Icons.image_not_supported, color: scheme.onSurfaceVariant),
+            child:
+                Icon(Icons.image_not_supported, color: scheme.onSurfaceVariant),
           ),
         ),
       );
@@ -322,7 +346,8 @@ class _DesktopArtworkDetailScreenState
     final scheme = Theme.of(context).colorScheme;
     final profileProvider = context.read<ProfileProvider>();
     final walletProvider = context.read<WalletProvider>();
-    final currentWallet = profileProvider.currentUser?.walletAddress ?? walletProvider.currentWalletAddress;
+    final currentWallet = profileProvider.currentUser?.walletAddress ??
+        walletProvider.currentWalletAddress;
     final isOwner = (currentWallet != null &&
         (artwork.walletAddress ?? '').isNotEmpty &&
         currentWallet.toLowerCase() == artwork.walletAddress!.toLowerCase());
@@ -371,10 +396,11 @@ class _DesktopArtworkDetailScreenState
               children: [
                 Icon(Icons.view_in_ar_rounded, color: color),
                 const SizedBox(width: 8),
-                Text('AR experience', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                Text('AR experience', style: KubusTextStyles.sectionTitle),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(999),
@@ -382,7 +408,10 @@ class _DesktopArtworkDetailScreenState
                   ),
                   child: Text(
                     statusLabel(),
-                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: color),
+                    style: KubusTextStyles.navMetaLabel.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: color,
+                    ),
                   ),
                 ),
               ],
@@ -390,7 +419,9 @@ class _DesktopArtworkDetailScreenState
             const SizedBox(height: 8),
             Text(
               'Print or share a marker so people can scan and unlock AR.',
-              style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.7)),
+              style: KubusTextStyles.sectionSubtitle.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.7),
+              ),
             ),
             const SizedBox(height: 10),
             if (ready)
@@ -405,7 +436,8 @@ class _DesktopArtworkDetailScreenState
                   final navigator = Navigator.of(context);
                   await navigator.push(
                     MaterialPageRoute(
-                      builder: (_) => ArtworkArManagerScreen(artworkId: artwork.id),
+                      builder: (_) =>
+                          ArtworkArManagerScreen(artworkId: artwork.id),
                     ),
                   );
                 },
@@ -424,11 +456,7 @@ class _DesktopArtworkDetailScreenState
       children: [
         Text(
           artwork.title,
-          style: GoogleFonts.inter(
-            fontSize: 24,
-            fontWeight: FontWeight.w700,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
+          style: KubusTextStyles.screenTitle,
         ),
         const SizedBox(height: DetailSpacing.sm),
         ArtworkCreatorByline(
@@ -464,13 +492,15 @@ class _DesktopArtworkDetailScreenState
             ?.toString()
             .trim();
     final rewardAmount = poap['rewardAmount'] ?? poap['poapRewardAmount'];
-    final validFromRaw = (poap['validFrom'] ?? poap['poapValidFrom'])?.toString();
+    final validFromRaw =
+        (poap['validFrom'] ?? poap['poapValidFrom'])?.toString();
     final validToRaw = (poap['validTo'] ?? poap['poapValidTo'])?.toString();
-    final validFrom = validFromRaw != null ? DateTime.tryParse(validFromRaw) : null;
+    final validFrom =
+        validFromRaw != null ? DateTime.tryParse(validFromRaw) : null;
     final validTo = validToRaw != null ? DateTime.tryParse(validToRaw) : null;
 
-    final hasReference =
-        (eventId != null && eventId.isNotEmpty) || (claimUrl != null && claimUrl.isNotEmpty);
+    final hasReference = (eventId != null && eventId.isNotEmpty) ||
+        (claimUrl != null && claimUrl.isNotEmpty);
     if (!enabled && !hasReference) return const SizedBox.shrink();
 
     final scheme = Theme.of(context).colorScheme;
@@ -482,7 +512,9 @@ class _DesktopArtworkDetailScreenState
       if (eventId != null && eventId.isNotEmpty) 'Event ID: $eventId',
     ];
 
-    final uri = (claimUrl != null && claimUrl.isNotEmpty) ? Uri.tryParse(claimUrl) : null;
+    final uri = (claimUrl != null && claimUrl.isNotEmpty)
+        ? Uri.tryParse(claimUrl)
+        : null;
     final canOpenClaim =
         uri != null && (uri.scheme == 'https' || uri.scheme == 'http');
 
@@ -494,7 +526,7 @@ class _DesktopArtworkDetailScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('POAP', style: DetailTypography.sectionTitle(context)),
+            Text('POAP', style: KubusTextStyles.sectionTitle),
             const SizedBox(height: DetailSpacing.sm),
             Text(infoLines.join('\n'), style: DetailTypography.body(context)),
             if (canOpenClaim) ...[
@@ -527,7 +559,7 @@ class _DesktopArtworkDetailScreenState
       messenger.showKubusSnackBar(
         SnackBar(
           content: Text(l10n.communityCommentAuthRequiredToast,
-              style: GoogleFonts.inter()),
+              style: KubusTypography.inter()),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -609,9 +641,8 @@ class _DesktopArtworkDetailScreenState
       return const SizedBox.shrink();
     }
 
-    final markerIdCandidate = (widget.attendanceMarkerId ?? artwork.arMarkerId)
-        ?.toString()
-        .trim();
+    final markerIdCandidate =
+        (widget.attendanceMarkerId ?? artwork.arMarkerId)?.toString().trim();
     if (markerIdCandidate == null || markerIdCandidate.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -685,7 +716,9 @@ class _DesktopArtworkDetailScreenState
     final state = attendanceProvider.stateFor(markerId);
     final proximity = state.proximity;
 
-    if (proximity == null || !state.hasFreshProximity || !proximity.withinRadius) {
+    if (proximity == null ||
+        !state.hasFreshProximity ||
+        !proximity.withinRadius) {
       messenger.showKubusSnackBar(
         const SnackBar(content: Text('Move closer to confirm attendance.')),
         tone: KubusSnackBarTone.warning,
@@ -707,18 +740,27 @@ class _DesktopArtworkDetailScreenState
 
       final kub8 = result.kub8;
       final rawAmount = kub8?['awardedAmount'] ?? kub8?['awarded_amount'];
-      final awarded = rawAmount is num ? rawAmount.toDouble() : double.tryParse('${rawAmount ?? ''}');
+      final awarded = rawAmount is num
+          ? rawAmount.toDouble()
+          : double.tryParse('${rawAmount ?? ''}');
 
       final poap = result.poap;
       final poapStatus = (poap?['status'] ?? '').toString().trim();
-      final claimUrl = (poap?['claimUrl'] ?? poap?['claim_url'])?.toString().trim();
+      final claimUrl =
+          (poap?['claimUrl'] ?? poap?['claim_url'])?.toString().trim();
 
-      final wasIdempotent = result.attendanceRecorded != true && result.viewedAdded != true;
-      final parts = <String>[wasIdempotent ? 'Already checked in.' : 'Attendance confirmed.'];
+      final wasIdempotent =
+          result.attendanceRecorded != true && result.viewedAdded != true;
+      final parts = <String>[
+        wasIdempotent ? 'Already checked in.' : 'Attendance confirmed.'
+      ];
       if (awarded != null && awarded > 0) {
-        parts.add('+${awarded.toStringAsFixed(awarded % 1 == 0 ? 0 : 1)} KUB8 (pending)');
+        parts.add(
+            '+${awarded.toStringAsFixed(awarded % 1 == 0 ? 0 : 1)} KUB8 (pending)');
       }
-      if (poapStatus.isNotEmpty && poapStatus != 'none' && poapStatus != 'not_configured') {
+      if (poapStatus.isNotEmpty &&
+          poapStatus != 'none' &&
+          poapStatus != 'not_configured') {
         parts.add('POAP: $poapStatus');
       }
 
@@ -737,7 +779,7 @@ class _DesktopArtworkDetailScreenState
 
       messenger.showKubusSnackBar(
         SnackBar(
-          content: Text(parts.join(' · '), style: GoogleFonts.inter()),
+          content: Text(parts.join(' · '), style: KubusTypography.inter()),
           action: action,
           duration: const Duration(seconds: 4),
         ),
@@ -745,7 +787,10 @@ class _DesktopArtworkDetailScreenState
       );
 
       unawaited(
-        context.read<ArtworkProvider>().refreshArtwork(artwork.id).catchError((e) {
+        context
+            .read<ArtworkProvider>()
+            .refreshArtwork(artwork.id)
+            .catchError((e) {
           AppConfig.debugPrint(
             'DesktopArtworkDetailScreen: refreshArtwork failed: $e',
           );
@@ -766,7 +811,9 @@ class _DesktopArtworkDetailScreenState
           if (raw.isNotEmpty) {
             final decoded = jsonDecode(raw);
             if (decoded is Map<String, dynamic>) {
-              final msg = (decoded['error'] ?? decoded['message'] ?? '').toString().trim();
+              final msg = (decoded['error'] ?? decoded['message'] ?? '')
+                  .toString()
+                  .trim();
               if (msg.isNotEmpty) backendMessage = msg;
             }
           }
@@ -780,8 +827,9 @@ class _DesktopArtworkDetailScreenState
           content: Text(
             authRequired
                 ? l10n.communityCommentAuthRequiredToast
-                : (backendMessage ?? '${l10n.commonSomethingWentWrong} (${e.statusCode})'),
-            style: GoogleFonts.inter(),
+                : (backendMessage ??
+                    '${l10n.commonSomethingWentWrong} (${e.statusCode})'),
+            style: KubusTypography.inter(),
           ),
           action: authRequired
               ? SnackBarAction(
@@ -801,12 +849,15 @@ class _DesktopArtworkDetailScreenState
                 )
               : null,
         ),
-        tone: authRequired ? KubusSnackBarTone.warning : KubusSnackBarTone.error,
+        tone:
+            authRequired ? KubusSnackBarTone.warning : KubusSnackBarTone.error,
       );
     } catch (_) {
       if (!mounted) return;
       messenger.showKubusSnackBar(
-        SnackBar(content: Text(l10n.commonSomethingWentWrong, style: GoogleFonts.inter())),
+        SnackBar(
+            content: Text(l10n.commonSomethingWentWrong,
+                style: KubusTypography.inter())),
         tone: KubusSnackBarTone.error,
       );
     }
@@ -931,8 +982,7 @@ class _DesktopArtworkDetailScreenState
         children: [
           Text(
             l10n.postDetailNoCommentsTitle,
-            style: GoogleFonts.inter(
-              fontWeight: FontWeight.w700,
+            style: KubusTextStyles.sectionTitle.copyWith(
               color: scheme.onSurface.withValues(alpha: 0.8),
             ),
             textAlign: TextAlign.center,
@@ -940,8 +990,9 @@ class _DesktopArtworkDetailScreenState
           const SizedBox(height: 6),
           Text(
             l10n.postDetailNoCommentsDescription,
-            style: GoogleFonts.inter(
-                color: scheme.onSurface.withValues(alpha: 0.65)),
+            style: KubusTextStyles.sectionSubtitle.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.65),
+            ),
             textAlign: TextAlign.center,
           ),
         ],
@@ -960,8 +1011,9 @@ class _DesktopArtworkDetailScreenState
           children: [
             Text(
               message,
-              style: GoogleFonts.inter(
-                  color: scheme.onSurface.withValues(alpha: 0.8)),
+              style: KubusTextStyles.sectionSubtitle.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.8),
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
@@ -1018,12 +1070,14 @@ class _DesktopArtworkDetailScreenState
     final walletProvider = context.read<WalletProvider>();
 
     final currentWallet = WalletUtils.canonical(
-      (profile?.walletAddress ?? walletProvider.currentWalletAddress ?? '').toString(),
+      (profile?.walletAddress ?? walletProvider.currentWalletAddress ?? '')
+          .toString(),
     );
     final currentId = WalletUtils.canonical((profile?.id ?? '').toString());
     final authorKey = WalletUtils.canonical(comment.userId);
     final canModify = authorKey.isNotEmpty &&
-        (authorKey == currentWallet || (currentId.isNotEmpty && authorKey == currentId));
+        (authorKey == currentWallet ||
+            (currentId.isNotEmpty && authorKey == currentId));
 
     Future<void> showHistory() async {
       if (!comment.isEdited || comment.originalContent == null) return;
@@ -1036,13 +1090,25 @@ class _DesktopArtworkDetailScreenState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(l10n.commentHistoryCurrentLabel, style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                  Text(
+                    l10n.commentHistoryCurrentLabel,
+                    style: KubusTextStyles.sectionTitle,
+                  ),
                   const SizedBox(height: 8),
-                  SelectableText(comment.content, style: GoogleFonts.inter()),
+                  SelectableText(
+                    comment.content,
+                    style: KubusTextStyles.detailBody,
+                  ),
                   const SizedBox(height: 16),
-                  Text(l10n.commentHistoryOriginalLabel, style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                  Text(
+                    l10n.commentHistoryOriginalLabel,
+                    style: KubusTextStyles.sectionTitle,
+                  ),
                   const SizedBox(height: 8),
-                  SelectableText(comment.originalContent ?? '', style: GoogleFonts.inter()),
+                  SelectableText(
+                    comment.originalContent ?? '',
+                    style: KubusTextStyles.detailBody,
+                  ),
                 ],
               ),
             ),
@@ -1073,11 +1139,13 @@ class _DesktopArtworkDetailScreenState
                   controller: controller,
                   maxLines: null,
                   autofocus: true,
-                  decoration: InputDecoration(hintText: l10n.postDetailWriteCommentHint),
+                  decoration: InputDecoration(
+                      hintText: l10n.postDetailWriteCommentHint),
                 ),
                 actions: [
                   TextButton(
-                    onPressed: saving ? null : () => Navigator.of(dialogContext).pop(),
+                    onPressed:
+                        saving ? null : () => Navigator.of(dialogContext).pop(),
                     child: Text(l10n.commonCancel),
                   ),
                   FilledButton(
@@ -1096,7 +1164,8 @@ class _DesktopArtworkDetailScreenState
                               if (!mounted) return;
                               if (!dialogContext.mounted) return;
                               Navigator.of(dialogContext).pop();
-                              messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commentUpdatedToast)));
+                              messenger.showKubusSnackBar(SnackBar(
+                                  content: Text(l10n.commentUpdatedToast)));
                             } catch (_) {
                               if (!mounted) return;
                               messenger.showKubusSnackBar(
@@ -1149,9 +1218,11 @@ class _DesktopArtworkDetailScreenState
       );
       if (confirmed != true) return;
       try {
-        await provider.deleteArtworkComment(artworkId: artwork.id, commentId: comment.id);
+        await provider.deleteArtworkComment(
+            artworkId: artwork.id, commentId: comment.id);
         if (!mounted) return;
-        messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commentDeletedToast)));
+        messenger.showKubusSnackBar(
+            SnackBar(content: Text(l10n.commentDeletedToast)));
       } catch (_) {
         if (!mounted) return;
         messenger.showKubusSnackBar(
@@ -1192,15 +1263,16 @@ class _DesktopArtworkDetailScreenState
                       Expanded(
                         child: Text(
                           comment.userName,
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13),
+                          style: KubusTextStyles.actionTileTitle.copyWith(
+                            fontSize: KubusHeaderMetrics.sectionSubtitle,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       const SizedBox(width: 8),
                       Text(
                         comment.timeAgo,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
+                        style: KubusTextStyles.navMetaLabel.copyWith(
                           color: scheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
@@ -1208,8 +1280,7 @@ class _DesktopArtworkDetailScreenState
                         const SizedBox(width: 8),
                         Text(
                           l10n.commonEditedTag,
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
+                          style: KubusTextStyles.compactBadge.copyWith(
                             color: scheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
@@ -1225,8 +1296,11 @@ class _DesktopArtworkDetailScreenState
                             }
                           },
                           itemBuilder: (context) => [
-                            PopupMenuItem(value: 'edit', child: Text(l10n.commonEdit)),
-                            PopupMenuItem(value: 'delete', child: Text(l10n.commonDelete)),
+                            PopupMenuItem(
+                                value: 'edit', child: Text(l10n.commonEdit)),
+                            PopupMenuItem(
+                                value: 'delete',
+                                child: Text(l10n.commonDelete)),
                           ],
                         ),
                     ],
@@ -1234,19 +1308,27 @@ class _DesktopArtworkDetailScreenState
                   const SizedBox(height: 6),
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
-                    onTap: (comment.isEdited && comment.originalContent != null) ? showHistory : null,
+                    onTap: (comment.isEdited && comment.originalContent != null)
+                        ? showHistory
+                        : null,
                     child: Text(
                       comment.content,
-                      style: GoogleFonts.inter(fontSize: 13, height: 1.35),
+                      style: KubusTextStyles.detailBody.copyWith(
+                        fontSize: KubusHeaderMetrics.sectionSubtitle,
+                        height: 1.35,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
                       IconButton(
-                        onPressed: () => provider.toggleCommentLike(artwork.id, comment.id),
+                        onPressed: () =>
+                            provider.toggleCommentLike(artwork.id, comment.id),
                         icon: Icon(
-                          comment.isLikedByCurrentUser ? Icons.favorite : Icons.favorite_border,
+                          comment.isLikedByCurrentUser
+                              ? Icons.favorite
+                              : Icons.favorite_border,
                           size: 16,
                           color: comment.isLikedByCurrentUser
                               ? scheme.error
@@ -1258,8 +1340,7 @@ class _DesktopArtworkDetailScreenState
                       if (comment.likesCount > 0)
                         Text(
                           comment.likesCount.toString(),
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
+                          style: KubusTextStyles.navMetaLabel.copyWith(
                             color: scheme.onSurface.withValues(alpha: 0.7),
                           ),
                         ),
@@ -1271,12 +1352,18 @@ class _DesktopArtworkDetailScreenState
                             _replyToAuthorName = comment.userName;
                           });
                           _commentController.text = '@${comment.userName} ';
-                          _commentController.selection = TextSelection.fromPosition(
-                            TextPosition(offset: _commentController.text.length),
+                          _commentController.selection =
+                              TextSelection.fromPosition(
+                            TextPosition(
+                                offset: _commentController.text.length),
                           );
-                          FocusScope.of(context).requestFocus(_commentFocusNode);
+                          FocusScope.of(context)
+                              .requestFocus(_commentFocusNode);
                         },
-                        child: Text(l10n.commonReply, style: GoogleFonts.inter(fontSize: 12)),
+                        child: Text(
+                          l10n.commonReply,
+                          style: KubusTextStyles.navMetaLabel,
+                        ),
                       ),
                     ],
                   ),
@@ -1306,8 +1393,7 @@ class _DesktopArtworkDetailScreenState
                 Expanded(
                   child: Text(
                     l10n.postDetailReplyingToLabel(_replyToAuthorName!),
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
+                    style: KubusTextStyles.sectionSubtitle.copyWith(
                       color: scheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
@@ -1337,8 +1423,10 @@ class _DesktopArtworkDetailScreenState
                 decoration: InputDecoration(
                   hintText: l10n.artworkCommentAddHint,
                   filled: true,
-                  fillColor: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  fillColor:
+                      scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
             ),
@@ -1348,14 +1436,17 @@ class _DesktopArtworkDetailScreenState
                   ? null
                   : () => _submitComment(artwork, provider, isSignedIn),
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
               child: isSubmitting
                   ? const SizedBox(
                       width: 18,
                       height: 18,
-                      child: InlineLoading(shape: BoxShape.circle, tileSize: 3.5),
+                      child:
+                          InlineLoading(shape: BoxShape.circle, tileSize: 3.5),
                     )
                   : Icon(Icons.send, size: 18, color: scheme.onPrimary),
             ),
@@ -1378,7 +1469,7 @@ class _DesktopArtworkDetailScreenState
       messenger.showKubusSnackBar(
         SnackBar(
           content: Text(l10n.communityCommentAuthRequiredToast,
-              style: GoogleFonts.inter()),
+              style: KubusTypography.inter()),
           action: SnackBarAction(
             label: l10n.commonSignIn,
             onPressed: () {
@@ -1423,43 +1514,47 @@ class _DesktopArtworkDetailScreenState
       });
       messenger.showKubusSnackBar(
         SnackBar(
-          content:
-              Text(l10n.artworkCommentAddedToast, style: GoogleFonts.inter()),
+          content: Text(l10n.artworkCommentAddedToast,
+              style: KubusTypography.inter()),
           backgroundColor: Theme.of(context).colorScheme.primary,
           duration: const Duration(seconds: 2),
         ),
       );
-      } on BackendApiRequestException catch (e) {
-        if (!mounted) return;
-        final authRequired = e.statusCode == 401 || e.statusCode == 403;
-        String? backendMessage;
-        if (!authRequired) {
-          try {
-            final raw = (e.body ?? '').trim();
-            if (raw.isNotEmpty) {
-              final decoded = jsonDecode(raw);
-              if (decoded is Map<String, dynamic>) {
-                final msg = (decoded['error'] ?? decoded['message'] ?? '').toString().trim();
-                if (msg.isNotEmpty) {
-                  backendMessage = msg.length > 140 ? '${msg.substring(0, 140)}â€¦' : msg;
-                }
+    } on BackendApiRequestException catch (e) {
+      if (!mounted) return;
+      final authRequired = e.statusCode == 401 || e.statusCode == 403;
+      String? backendMessage;
+      if (!authRequired) {
+        try {
+          final raw = (e.body ?? '').trim();
+          if (raw.isNotEmpty) {
+            final decoded = jsonDecode(raw);
+            if (decoded is Map<String, dynamic>) {
+              final msg = (decoded['error'] ?? decoded['message'] ?? '')
+                  .toString()
+                  .trim();
+              if (msg.isNotEmpty) {
+                backendMessage =
+                    msg.length > 140 ? '${msg.substring(0, 140)}â€¦' : msg;
               }
             }
-          } catch (_) {
-            // Ignore body parse failures and fall back to a generic message.
           }
+        } catch (_) {
+          // Ignore body parse failures and fall back to a generic message.
         }
-        backendMessage = backendMessage?.replaceAll('Ã¢â‚¬Â¦', 'â€¦');
-        messenger.showKubusSnackBar(
-          SnackBar(
-            content: Text(
-              authRequired
-                  ? l10n.communityCommentAuthRequiredToast
-                  : (backendMessage ?? '${l10n.commonSomethingWentWrong} (${e.statusCode})'),
-              style: GoogleFonts.inter(),
-            ),
-            action: authRequired
-                ? SnackBarAction(
+      }
+      backendMessage = backendMessage?.replaceAll('Ã¢â‚¬Â¦', 'â€¦');
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(
+            authRequired
+                ? l10n.communityCommentAuthRequiredToast
+                : (backendMessage ??
+                    '${l10n.commonSomethingWentWrong} (${e.statusCode})'),
+            style: KubusTypography.inter(),
+          ),
+          action: authRequired
+              ? SnackBarAction(
                   label: l10n.commonSignIn,
                   onPressed: () {
                     navigator.pushNamed(
@@ -1479,7 +1574,7 @@ class _DesktopArtworkDetailScreenState
       messenger.showKubusSnackBar(
         SnackBar(
             content: Text(l10n.commonSomethingWentWrong,
-                style: GoogleFonts.inter())),
+                style: KubusTypography.inter())),
       );
     }
   }

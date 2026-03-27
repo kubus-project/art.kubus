@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/artwork_provider.dart';
@@ -13,6 +12,7 @@ import '../../../providers/web3provider.dart';
 import '../../../models/artwork.dart';
 import '../../../models/stats/stats_models.dart';
 import '../../../utils/app_animations.dart';
+import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../widgets/charts/stats_interactive_line_chart.dart';
 
@@ -149,17 +149,14 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
       children: [
         Text(
           'Analytics Dashboard',
-          style: GoogleFonts.inter(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
+          style: KubusTextStyles.screenTitle.copyWith(
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           'Track your artwork performance',
-          style: GoogleFonts.inter(
-            fontSize: 12,
+          style: KubusTextStyles.screenSubtitle.copyWith(
             color:
                 Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
@@ -188,8 +185,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
         underline: const SizedBox(),
         isExpanded: true,
         dropdownColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-        style: GoogleFonts.inter(
-          fontSize: 12,
+        style: KubusTextStyles.sectionSubtitle.copyWith(
           color: Theme.of(context).colorScheme.onSurface,
         ),
         icon: Icon(Icons.arrow_drop_down,
@@ -759,22 +755,19 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                 ),
                 child: Text(
                   change,
-                  style: GoogleFonts.inter(
-                    fontSize: 8,
+                  style: KubusTextStyles.compactBadge.copyWith(
+                    fontSize: KubusChromeMetrics.navBadgeLabel - 1,
                     color: chipColor,
-                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: KubusSpacing.sm - KubusSpacing.xxs),
           Flexible(
             child: Text(
               value,
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+              style: KubusTextStyles.sectionTitle.copyWith(
                 color: Theme.of(context).colorScheme.onSurface,
               ),
               overflow: TextOverflow.ellipsis,
@@ -783,8 +776,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
           Flexible(
             child: Text(
               title,
-              style: GoogleFonts.inter(
-                fontSize: 10,
+              style: KubusTextStyles.badgeCount.copyWith(
                 color: Theme.of(context)
                     .colorScheme
                     .onSurface
@@ -793,12 +785,12 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: KubusSpacing.xxs),
           Flexible(
             child: Text(
               subtitle,
-              style: GoogleFonts.inter(
-                fontSize: 9,
+              style: KubusTextStyles.navMetaLabel.copyWith(
+                fontSize: KubusChromeMetrics.navBadgeLabel,
                 color: Theme.of(context)
                     .colorScheme
                     .onSurface
@@ -964,7 +956,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
         final averageLineColor = scheme.tertiary;
 
         return Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
           decoration: BoxDecoration(
             color:
                 Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
@@ -988,13 +980,12 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                       children: [
                         Text(
                           'Performance Overview',
-                          style: GoogleFonts.inter(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                          style: KubusTextStyles.sectionTitle.copyWith(
                             color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(
+                            height: KubusSpacing.sm + KubusSpacing.xs),
                         _buildChartSelector(),
                       ],
                     );
@@ -1003,9 +994,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                       children: [
                         Text(
                           'Performance Overview',
-                          style: GoogleFonts.inter(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                          style: KubusTextStyles.sectionTitle.copyWith(
                             color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
@@ -1016,15 +1005,14 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                   }
                 },
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
               SizedBox(
                 height: 200,
                 child: walletAddress.isEmpty
                     ? Center(
                         child: Text(
                           'Connect wallet to view analytics.',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
+                          style: KubusTextStyles.sectionSubtitle.copyWith(
                             color: scheme.onSurface.withValues(alpha: 0.7),
                           ),
                           textAlign: TextAlign.center,
@@ -1034,8 +1022,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                         ? Center(
                             child: Text(
                               'Analytics is disabled in settings.',
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
+                              style: KubusTextStyles.sectionSubtitle.copyWith(
                                 color: scheme.onSurface.withValues(alpha: 0.7),
                               ),
                               textAlign: TextAlign.center,
@@ -1062,11 +1049,11 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                                           Icons.error_outline,
                                           color: scheme.error,
                                         ),
-                                        const SizedBox(height: 8),
+                                        const SizedBox(height: KubusSpacing.sm),
                                         Text(
                                           'Unable to load analytics right now.',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 12,
+                                          style: KubusTextStyles.sectionSubtitle
+                                              .copyWith(
                                             color: scheme.onSurface
                                                 .withValues(alpha: 0.7),
                                           ),
@@ -1104,8 +1091,8 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                                           },
                                           child: Text(
                                             'Retry',
-                                            style: GoogleFonts.inter(
-                                              fontSize: 12,
+                                            style: KubusTextStyles.navMetaLabel
+                                                .copyWith(
                                               fontWeight: FontWeight.w600,
                                               color: themeProvider.accentColor,
                                             ),
@@ -1118,8 +1105,8 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                                     ? Center(
                                         child: Text(
                                           'No analytics data yet.',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 12,
+                                          style: KubusTextStyles.navMetaLabel
+                                              .copyWith(
                                             color: scheme.onSurface
                                                 .withValues(alpha: 0.7),
                                           ),
@@ -1207,15 +1194,13 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                   ),
                   child: Text(
                     option,
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
+                    style: KubusTextStyles.navMetaLabel.copyWith(
                       color: isSelected
                           ? Theme.of(context).colorScheme.onPrimary
                           : Theme.of(context)
                               .colorScheme
                               .onSurface
                               .withValues(alpha: 0.7),
-                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
@@ -1253,15 +1238,13 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                     ),
                     child: Text(
                       option,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
+                      style: KubusTextStyles.navMetaLabel.copyWith(
                         color: isSelected
                             ? Theme.of(context).colorScheme.onPrimary
                             : Theme.of(context)
                                 .colorScheme
                                 .onSurface
                                 .withValues(alpha: 0.7),
-                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
@@ -1310,8 +1293,8 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                   const SizedBox(width: 4),
                   Text(
                     label,
-                    style: GoogleFonts.inter(
-                      fontSize: 9,
+                    style: KubusTextStyles.navMetaLabel.copyWith(
+                      fontSize: KubusChromeMetrics.navMetaLabel - 3,
                       color: Theme.of(context)
                           .colorScheme
                           .onSurface
@@ -1345,8 +1328,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                     const SizedBox(width: 6),
                     Text(
                       label,
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
+                      style: KubusTextStyles.badgeCount.copyWith(
                         color: Theme.of(context)
                             .colorScheme
                             .onSurface
@@ -1388,9 +1370,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
           children: [
             Text(
               'Detailed Metrics',
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+              style: KubusTextStyles.sectionTitle.copyWith(
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
@@ -1452,16 +1432,14 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
             children: [
               Text(
                 value,
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                style: KubusTextStyles.statValue.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               Text(
                 label,
-                style: GoogleFonts.inter(
-                  fontSize: 10,
+                style: KubusTextStyles.navMetaLabel.copyWith(
+                  fontSize: KubusChromeMetrics.navMetaLabel - 2,
                   color: Theme.of(context)
                       .colorScheme
                       .onSurface
@@ -1498,9 +1476,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
           children: [
             Text(
               'Top Performing Artworks',
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+              style: KubusTextStyles.sectionTitle.copyWith(
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
@@ -1536,9 +1512,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                       child: Center(
                         child: Text(
                           '${index + 1}',
-                          style: GoogleFonts.inter(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                          style: KubusTextStyles.statValue.copyWith(
                             color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
@@ -1551,16 +1525,13 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                         children: [
                           Text(
                             artworkData['title'] as String,
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
+                            style: KubusTextStyles.sectionTitle.copyWith(
                               color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           Text(
                             '${artworkData['views']} views',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
+                            style: KubusTextStyles.sectionSubtitle.copyWith(
                               color: Theme.of(context)
                                   .colorScheme
                                   .onSurface
@@ -1572,9 +1543,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                     ),
                     Text(
                       artworkData['revenue'] as String,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                      style: KubusTextStyles.sectionTitle.copyWith(
                         color: Provider.of<ThemeProvider>(context).accentColor,
                       ),
                     ),
@@ -1631,9 +1600,7 @@ Widget _buildRecentActivity() {
         children: [
           Text(
             'Recent Activity',
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+            style: KubusTextStyles.sectionTitle.copyWith(
               color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
@@ -1658,8 +1625,7 @@ Widget _buildRecentActivity() {
                         padding: const EdgeInsets.all(16),
                         child: Text(
                           'No recent activity',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
+                          style: KubusTextStyles.sectionSubtitle.copyWith(
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurface
@@ -1704,8 +1670,8 @@ Widget _buildRecentActivity() {
                                 children: [
                                   Text(
                                     activity['action'] as String,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
+                                    style: KubusTextStyles.actionTileTitle
+                                        .copyWith(
                                       color: Theme.of(context)
                                           .colorScheme
                                           .onSurface,
@@ -1713,8 +1679,8 @@ Widget _buildRecentActivity() {
                                   ),
                                   Text(
                                     _relativeTime(activity['time'] as DateTime),
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
+                                    style:
+                                        KubusTextStyles.navMetaLabel.copyWith(
                                       color: Theme.of(context)
                                           .colorScheme
                                           .onSurface

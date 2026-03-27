@@ -1969,7 +1969,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     final stepNumber = _currentIndex + 1;
     final viewportSize = MediaQuery.sizeOf(context);
     final headerCompact = compact && viewportSize.height < 680;
-    final skipLabel = headerCompact ? l10n.commonSkip : l10n.commonSkipForNow;
+    final skipLabel = l10n.commonSkip;
+    final iconBoxSize = headerCompact ? 42.0 : 48.0;
+    final iconGlyphSize = headerCompact ? 20.0 : 24.0;
     return Padding(
       padding: EdgeInsets.only(
         top: headerCompact ? KubusSpacing.xs : KubusSpacing.sm,
@@ -1978,91 +1980,108 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Row(
-              children: [
-                Container(
-                  width: headerCompact ? 42 : 48,
-                  height: headerCompact ? 42 : 48,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        _paletteForStep(_currentStep).start,
-                        _paletteForStep(_currentStep).end,
-                      ],
-                    ),
-                  ),
-                  child: Icon(
-                    _stepIcon(_currentStep),
-                    color: Colors.white,
-                    size: headerCompact ? 20 : 24,
-                  ),
-                ),
-                const SizedBox(width: KubusSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            l10n.onboardingFlowTitle,
-                            maxLines: 1,
-                            softWrap: false,
-                            style: (headerCompact
-                                    ? Theme.of(context).textTheme.titleMedium
-                                    : Theme.of(context).textTheme.titleLarge)
-                                ?.copyWith(
-                              color: scheme.onSurface,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: KubusSpacing.xs),
-                      Text(
-                        l10n.commonStepOfTotal(stepNumber, _steps.length),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: scheme.onSurface.withValues(alpha: 0.66),
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+          Container(
+            width: iconBoxSize,
+            height: iconBoxSize,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  _paletteForStep(_currentStep).start,
+                  _paletteForStep(_currentStep).end,
+                ],
+              ),
+            ),
+            child: Icon(
+              _stepIcon(_currentStep),
+              color: Colors.white,
+              size: iconGlyphSize,
             ),
           ),
           const SizedBox(width: KubusSpacing.md),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextButton(
-                onPressed: _isSkippingFlow ? null : _skipForNow,
-                style: TextButton.styleFrom(
-                  foregroundColor: scheme.onSurface,
-                  backgroundColor: scheme.surface
-                      .withValues(alpha: headerCompact ? 0.78 : 0.7),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(999),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      l10n.onboardingFlowTitle,
+                      maxLines: 1,
+                      softWrap: false,
+                      style: (headerCompact
+                              ? Theme.of(context).textTheme.titleMedium
+                              : Theme.of(context).textTheme.titleLarge)
+                          ?.copyWith(
+                        color: scheme.onSurface,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
                   ),
-                  padding: EdgeInsets.symmetric(
-                    horizontal:
-                        headerCompact ? KubusSpacing.sm : KubusSpacing.md,
-                    vertical: headerCompact ? 8 : 10,
-                  ),
-                  minimumSize: Size(headerCompact ? 56 : 72, 40),
                 ),
-                child: Text(skipLabel),
-              ),
-              const SizedBox(width: KubusSpacing.xs),
-              AuthEntryControls(compact: headerCompact),
-            ],
+                const SizedBox(height: KubusSpacing.xs),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: KubusSpacing.sm,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: scheme.surface.withValues(alpha: 0.36),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: scheme.outline.withValues(alpha: 0.18),
+                    ),
+                  ),
+                  child: Text(
+                    l10n.commonStepOfTotal(stepNumber, _steps.length),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurface.withValues(alpha: 0.72),
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                ),
+                const SizedBox(height: KubusSpacing.sm),
+                Wrap(
+                  spacing: KubusSpacing.xs,
+                  runSpacing: KubusSpacing.xs,
+                  alignment: WrapAlignment.start,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    const AuthEntryControls(compact: true),
+                    TextButton(
+                      onPressed: _isSkippingFlow ? null : _skipForNow,
+                      style: TextButton.styleFrom(
+                        foregroundColor: scheme.onSurface,
+                        backgroundColor: scheme.surface.withValues(alpha: 0.72),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: KubusSpacing.sm,
+                          vertical: 6,
+                        ),
+                        minimumSize: const Size(50, 32),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      child: Text(
+                        skipLabel,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: scheme.onSurface,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -4655,25 +4674,10 @@ class _DoneStep extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final compact = constraints.maxHeight < 320;
         final isWide = constraints.maxWidth > 500;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (!compact) ...[
-              Center(
-                child: GradientIconCard(
-                  start: const Color(0xFFF57F17),
-                  end: const Color(0xFFFFD54F),
-                  icon: Icons.rocket_launch_outlined,
-                  iconSize: isWide ? 36 : 28,
-                  width: isWide ? 72 : 56,
-                  height: isWide ? 72 : 56,
-                  radius: isWide ? 18 : 14,
-                ),
-              ),
-              SizedBox(height: isWide ? KubusSpacing.md : 10),
-            ],
             Text(title,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w700,

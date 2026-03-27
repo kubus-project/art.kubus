@@ -177,6 +177,7 @@ class ProfileHeaderShell extends StatelessWidget {
 
   Widget _buildAvatar(BuildContext context, Color accentColor) {
     final scheme = Theme.of(context).colorScheme;
+    final avatarRadius = BorderRadius.circular(avatarSize * 0.22);
     final resolvedAvatarUrl = avatarUrl == null
         ? null
         : (MediaUrlResolver.resolveDisplayUrl(avatarUrl) ??
@@ -187,7 +188,7 @@ class ProfileHeaderShell extends StatelessWidget {
       width: avatarSize,
       height: avatarSize,
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
+        borderRadius: avatarRadius,
         border: Border.all(
           color: scheme.surface,
           width: DetailSpacing.xs,
@@ -200,7 +201,8 @@ class ProfileHeaderShell extends StatelessWidget {
           ),
         ],
       ),
-      child: ClipOval(
+      child: ClipRRect(
+        borderRadius: avatarRadius,
         child: resolvedAvatarUrl != null && resolvedAvatarUrl.isNotEmpty
             ? Image.network(
                 resolvedAvatarUrl,

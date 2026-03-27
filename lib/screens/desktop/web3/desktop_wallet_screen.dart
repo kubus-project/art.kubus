@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../config/config.dart';
@@ -19,6 +18,8 @@ import '../../web3/wallet/send_token_screen.dart';
 import '../../web3/wallet/receive_token_screen.dart';
 import '../../web3/wallet/connectwallet_screen.dart';
 import '../../../widgets/glass_components.dart';
+import '../../../utils/design_tokens.dart';
+import '../../../widgets/common/kubus_screen_header.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 /// Desktop wallet screen with professional dashboard layout
@@ -64,12 +65,14 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     final themeProvider = Provider.of<ThemeProvider>(context);
     final animationTheme = context.animationTheme;
     final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final screenWidth = MediaQuery.of(context).size.width;
     final isLarge = screenWidth >= 1200;
 
-    final sidebarGlassTint =
-        scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
+    final sidebarGlassStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.sidebarBackground,
+      tintBase: scheme.surface,
+    );
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -114,7 +117,10 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                             padding: EdgeInsets.zero,
                             borderRadius: BorderRadius.zero,
                             showBorder: false,
-                            backgroundColor: sidebarGlassTint,
+                            blurSigma: sidebarGlassStyle.blurSigma,
+                            fallbackMinOpacity:
+                                sidebarGlassStyle.fallbackMinOpacity,
+                            backgroundColor: sidebarGlassStyle.tintColor,
                             child: _buildRightPanel(themeProvider),
                           ),
                         ),
@@ -314,38 +320,22 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
       padding: EdgeInsets.all(DetailSpacing.xxl),
       child: Row(
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Wallet',
-                style: DetailTypography.screenTitle(context),
+          Expanded(
+            child: KubusScreenHeaderBar(
+              title: 'Wallet',
+              subtitle: canTransact
+                  ? 'Connected to $network'
+                  : 'Read-only on $network',
+              padding: EdgeInsets.zero,
+              minHeight: KubusHeaderMetrics.headerMinHeight,
+              subtitleStyle: KubusTextStyles.screenSubtitle.copyWith(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.72),
               ),
-              SizedBox(height: DetailSpacing.xs),
-              Row(
-                children: [
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: canTransact
-                          ? const Color(0xFF4ADE80)
-                          : Theme.of(context).colorScheme.primary,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  SizedBox(width: DetailSpacing.sm),
-                  Text(
-                    canTransact
-                        ? 'Connected to $network'
-                        : 'Read-only on $network',
-                    style: DetailTypography.caption(context),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
-          const Spacer(),
           // Network selector
           Container(
             padding: EdgeInsets.symmetric(
@@ -436,8 +426,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
               children: [
                 Text(
                   'Total Balance',
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
+                  style: KubusTextStyles.sectionSubtitle.copyWith(
                     color: Colors.white.withValues(alpha: 0.8),
                   ),
                 ),
@@ -471,7 +460,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                         children: [
                           Text(
                             _truncateAddress(walletAddress),
-                            style: GoogleFonts.robotoMono(
+                            style: KubusTypography.inter(
                               fontSize: 13,
                               color: Colors.white,
                             ),
@@ -491,7 +480,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
               children: [
                 Text(
                   solBalance.toStringAsFixed(4),
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 52,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
@@ -502,9 +491,8 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                   padding: EdgeInsets.only(bottom: DetailSpacing.md),
                   child: Text(
                     'SOL',
-                    style: GoogleFonts.inter(
+                    style: KubusTextStyles.sectionTitle.copyWith(
                       fontSize: 22,
-                      fontWeight: FontWeight.w500,
                       color: Colors.white.withValues(alpha: 0.8),
                     ),
                   ),
@@ -514,8 +502,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             SizedBox(height: DetailSpacing.sm),
             Text(
               '≈ \$${(solBalance * 150).toStringAsFixed(2)} USD',
-              style: GoogleFonts.inter(
-                fontSize: 16,
+              style: KubusTextStyles.sectionSubtitle.copyWith(
                 color: Colors.white.withValues(alpha: 0.7),
               ),
             ),
@@ -539,9 +526,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                     child: Center(
                       child: Text(
                         'K',
-                        style: GoogleFonts.inter(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                        style: KubusTextStyles.sectionTitle.copyWith(
                           color: themeProvider.accentColor,
                         ),
                       ),
@@ -570,9 +555,8 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                     onPressed: _openSwapScreen,
                     child: Text(
                       'Buy KUB8',
-                      style: GoogleFonts.inter(
+                      style: KubusTextStyles.sectionTitle.copyWith(
                         color: Colors.white,
-                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
@@ -816,8 +800,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             ),
             child: Text(
               token.formattedChange,
-              style: GoogleFonts.inter(
-                fontSize: 13,
+              style: KubusTextStyles.navMetaLabel.copyWith(
                 fontWeight: FontWeight.w600,
                 color: isPositive
                     ? const Color(0xFF4ADE80)

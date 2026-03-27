@@ -1,9 +1,8 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/artwork_creator_byline.dart';
@@ -36,6 +35,7 @@ import '../../services/share/share_types.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import '../../utils/design_tokens.dart';
  
 
 class ArtDetailScreen extends StatefulWidget {
@@ -144,7 +144,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
               appBar: AppBar(
                 title: Text(
                   l10n.artDetailLoadingTitle,
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                  style: KubusTypography.inter(fontWeight: FontWeight.w600),
                 ),
                 backgroundColor: Theme.of(context).colorScheme.surface,
                 elevation: 0,
@@ -159,7 +159,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
             backgroundColor: Theme.of(context).colorScheme.surface,
             appBar: AppBar(
               title: Text(l10n.artDetailTitle,
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                  style: KubusTypography.inter(fontWeight: FontWeight.w600)),
               backgroundColor: Theme.of(context).colorScheme.surface,
               elevation: 0,
             ),
@@ -177,7 +177,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                     const SizedBox(height: DetailSpacing.lg),
                     Text(
                       _artworkError!,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 15,
                         color: Theme.of(context)
                             .colorScheme
@@ -192,7 +192,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                       icon: const Icon(Icons.refresh, size: 18),
                       label: Text(l10n.commonRetry,
                           style:
-                              GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                              KubusTypography.inter(fontWeight: FontWeight.w600)),
                     ),
                   ],
                 ),
@@ -206,7 +206,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
             backgroundColor: Theme.of(context).colorScheme.surface,
             appBar: AppBar(
               title: Text(l10n.artworkNotFound,
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                  style: KubusTypography.inter(fontWeight: FontWeight.w600)),
               backgroundColor: Theme.of(context).colorScheme.surface,
               elevation: 0,
             ),
@@ -227,7 +227,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                     const SizedBox(height: DetailSpacing.lg),
                     Text(
                       l10n.artworkNotFound,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         color: Theme.of(context)
@@ -462,7 +462,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       children: [
         Text(
           artwork.title,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 24,
             fontWeight: FontWeight.w700,
             height: 1.2,
@@ -1547,7 +1547,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       icon: const Icon(Icons.add_comment),
       label: Text(
         l10n.artworkCommentAddButton,
-        style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+        style: KubusTypography.inter(fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -1571,7 +1571,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(KubusSpacing.lg),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1593,7 +1593,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                 const SizedBox(height: 20),
                 Text(
                   l10n.artworkCommentAddTitle,
-                  style: GoogleFonts.outfit(
+                  style: KubusTypography.inter(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
@@ -1608,7 +1608,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                         Expanded(
                           child: Text(
                             l10n.postDetailReplyingToLabel(_replyToAuthorName!),
-                            style: GoogleFonts.outfit(
+                            style: KubusTypography.inter(
                               fontSize: 13,
                               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                             ),
@@ -1632,12 +1632,12 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                   maxLines: 4,
                   decoration: InputDecoration(
                     hintText: l10n.artworkCommentAddHint,
-                    hintStyle: GoogleFonts.outfit(),
+                    hintStyle: KubusTypography.inter(),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  style: GoogleFonts.outfit(),
+                  style: KubusTypography.inter(),
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -1655,7 +1655,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                         child: Text(
                           l10n.commonCancel,
                           style:
-                              GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                              KubusTypography.inter(fontWeight: FontWeight.w600),
                         ),
                       ),
                     ),
@@ -1682,7 +1682,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                                   )
                                 : Text(
                                     l10n.artworkCommentPostButton,
-                                    style: GoogleFonts.outfit(
+                                    style: KubusTypography.inter(
                                         fontWeight: FontWeight.w600),
                                   ),
                           );
@@ -1712,7 +1712,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       messenger.showKubusSnackBar(
         SnackBar(
           content: Text(l10n.communityCommentAuthRequiredToast,
-              style: GoogleFonts.outfit()),
+              style: KubusTypography.inter()),
           action: SnackBarAction(
             label: l10n.commonSignIn,
             onPressed: () {
@@ -1751,7 +1751,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       messenger.showKubusSnackBar(
         SnackBar(
           content:
-              Text(l10n.artworkCommentAddedToast, style: GoogleFonts.outfit()),
+              Text(l10n.artworkCommentAddedToast, style: KubusTypography.inter()),
           backgroundColor: Theme.of(context).colorScheme.primary,
           duration: const Duration(seconds: 2),
         ),
@@ -1790,7 +1790,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         SnackBar(
           content: Text(
             fallbackMessage,
-            style: GoogleFonts.outfit(),
+            style: KubusTypography.inter(),
           ),
           action: authRequired
               ? SnackBarAction(
@@ -1826,7 +1826,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
             looksLikeNetwork
                 ? l10n.commonNetworkErrorToast
                 : l10n.commonSomethingWentWrong,
-            style: GoogleFonts.outfit(),
+            style: KubusTypography.inter(),
           ),
           duration: const Duration(seconds: 4),
         ),
@@ -1869,13 +1869,13 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(KubusSpacing.lg),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
                       'Navigate to $artTitle',
-                      style: GoogleFonts.outfit(
+                      style: KubusTypography.inter(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
@@ -1924,7 +1924,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                       onPressed: () => Navigator.pop(context),
                       child: Text(
                         'Cancel',
-                        style: GoogleFonts.outfit(
+                        style: KubusTypography.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
@@ -1967,7 +1967,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
             const SizedBox(width: 16),
             Text(
               title,
-              style: GoogleFonts.outfit(
+              style: KubusTypography.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
@@ -2059,7 +2059,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         SnackBar(
           content: Text(
             'Coordinates copied to clipboard: $coordinates',
-            style: GoogleFonts.outfit(),
+            style: KubusTypography.inter(),
           ),
           duration: const Duration(seconds: 2),
           backgroundColor: Theme.of(context).colorScheme.primary,
@@ -2075,14 +2075,14 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           'Navigation Error',
-          style: GoogleFonts.outfit(
+          style: KubusTypography.inter(
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         content: Text(
           message,
-          style: GoogleFonts.outfit(
+          style: KubusTypography.inter(
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
@@ -2091,7 +2091,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
             onPressed: () => Navigator.pop(context),
             child: Text(
               'OK',
-              style: GoogleFonts.outfit(
+              style: KubusTypography.inter(
                 fontWeight: FontWeight.w600,
                 color: Theme.of(context).colorScheme.primary,
               ),
@@ -2112,7 +2112,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         ScaffoldMessenger.of(context).showKubusSnackBar(
           SnackBar(
             content: Text('Please connect your wallet first',
-                style: GoogleFonts.outfit()),
+                style: KubusTypography.inter()),
             backgroundColor: Colors.red,
           ),
         );
@@ -2136,7 +2136,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           backgroundColor: Theme.of(context).colorScheme.surface,
           title: Text(
             'Mint NFT Series',
-            style: GoogleFonts.outfit(
+            style: KubusTypography.inter(
               fontWeight: FontWeight.bold,
               color: Theme.of(context).colorScheme.onSurface,
             ),
@@ -2148,7 +2148,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
               children: [
                 Text(
                   'Create an NFT series for this artwork',
-                  style: GoogleFonts.outfit(
+                  style: KubusTypography.inter(
                     fontSize: 14,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
@@ -2158,20 +2158,20 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                   controller: nameController,
                   decoration: InputDecoration(
                     labelText: 'Series Name',
-                    labelStyle: GoogleFonts.outfit(),
+                    labelStyle: KubusTypography.inter(),
                     border: const OutlineInputBorder(),
                   ),
-                  style: GoogleFonts.outfit(),
+                  style: KubusTypography.inter(),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: descController,
                   decoration: InputDecoration(
                     labelText: 'Description',
-                    labelStyle: GoogleFonts.outfit(),
+                    labelStyle: KubusTypography.inter(),
                     border: const OutlineInputBorder(),
                   ),
-                  style: GoogleFonts.outfit(),
+                  style: KubusTypography.inter(),
                   maxLines: 3,
                 ),
                 const SizedBox(height: 12),
@@ -2179,10 +2179,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                   controller: supplyController,
                   decoration: InputDecoration(
                     labelText: 'Total Supply',
-                    labelStyle: GoogleFonts.outfit(),
+                    labelStyle: KubusTypography.inter(),
                     border: const OutlineInputBorder(),
                   ),
-                  style: GoogleFonts.outfit(),
+                  style: KubusTypography.inter(),
                   keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 12),
@@ -2190,10 +2190,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                   controller: priceController,
                   decoration: InputDecoration(
                     labelText: 'Mint Price (SOL)',
-                    labelStyle: GoogleFonts.outfit(),
+                    labelStyle: KubusTypography.inter(),
                     border: const OutlineInputBorder(),
                   ),
-                  style: GoogleFonts.outfit(),
+                  style: KubusTypography.inter(),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                 ),
@@ -2202,12 +2202,12 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                   controller: royaltyController,
                   decoration: InputDecoration(
                     labelText: 'Royalty %',
-                    labelStyle: GoogleFonts.outfit(),
+                    labelStyle: KubusTypography.inter(),
                     border: const OutlineInputBorder(),
                     helperText: 'Creator royalty on secondary sales (0-100)',
-                    helperStyle: GoogleFonts.outfit(fontSize: 12),
+                    helperStyle: KubusTypography.inter(fontSize: 12),
                   ),
-                  style: GoogleFonts.outfit(),
+                  style: KubusTypography.inter(),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                 ),
@@ -2216,10 +2216,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                   initialValue: selectedType,
                   decoration: InputDecoration(
                     labelText: 'NFT Type',
-                    labelStyle: GoogleFonts.outfit(),
+                    labelStyle: KubusTypography.inter(),
                     border: const OutlineInputBorder(),
                   ),
-                  style: GoogleFonts.outfit(
+                  style: KubusTypography.inter(
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                   dropdownColor: Theme.of(context).colorScheme.surface,
@@ -2228,7 +2228,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                       value: type,
                       child: Text(
                         type.toString().split('.').last.toUpperCase(),
-                        style: GoogleFonts.outfit(
+                        style: KubusTypography.inter(
                           color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
@@ -2248,7 +2248,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
               onPressed: () => Navigator.pop(context),
               child: Text(
                 'Cancel',
-                style: GoogleFonts.outfit(
+                style: KubusTypography.inter(
                   color: Theme.of(context).colorScheme.outline,
                 ),
               ),
@@ -2272,7 +2272,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                 );
               },
               child: Text('Mint NFT',
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                  style: KubusTypography.inter(fontWeight: FontWeight.w600)),
             ),
           ],
         ),
@@ -2311,7 +2311,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
             const SizedBox(height: 16),
             Text(
               'Minting NFT...',
-              style: GoogleFonts.outfit(
+              style: KubusTypography.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: Theme.of(context).colorScheme.onSurface,
@@ -2320,7 +2320,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
             const SizedBox(height: 8),
             Text(
               'This may take a few moments',
-              style: GoogleFonts.outfit(
+              style: KubusTypography.inter(
                 fontSize: 14,
                 color: Theme.of(context)
                     .colorScheme
@@ -2363,7 +2363,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                   Expanded(
                     child: Text(
                       'NFT minted successfully!',
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                      style: KubusTypography.inter(fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
@@ -2377,7 +2377,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
             SnackBar(
               content: Text(
                 'Failed to mint NFT: ${result.error}',
-                style: GoogleFonts.outfit(),
+                style: KubusTypography.inter(),
               ),
               backgroundColor: Colors.red,
               duration: const Duration(seconds: 3),
@@ -2392,7 +2392,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           SnackBar(
             content: Text(
               'Error minting NFT: $e',
-              style: GoogleFonts.outfit(),
+              style: KubusTypography.inter(),
             ),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 3),

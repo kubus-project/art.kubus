@@ -38,82 +38,23 @@ class KubusGlassStyle {
     final isDark = theme.brightness == Brightness.dark;
     final base = tintBase ?? scheme.surface;
 
-    final _GlassSurfaceProfile profile;
-    switch (surfaceType) {
-      case KubusGlassSurfaceType.header:
-        profile = const _GlassSurfaceProfile(
-          blurSigma: KubusGlassEffects.blurSigmaLight,
-          tintAlphaDark: 0.20,
-          tintAlphaLight: 0.14,
-          fallbackMinOpacityDark: 0.18,
-          fallbackMinOpacityLight: 0.14,
-        );
-        break;
-      case KubusGlassSurfaceType.sidebarBackground:
-        profile = const _GlassSurfaceProfile(
-          blurSigma: KubusGlassEffects.blurSigmaLight,
-          tintAlphaDark: 0.16,
-          tintAlphaLight: 0.10,
-          fallbackMinOpacityDark: 0.14,
-          fallbackMinOpacityLight: 0.10,
-        );
-        break;
-      case KubusGlassSurfaceType.panelBackground:
-        profile = const _GlassSurfaceProfile(
-          blurSigma: KubusGlassEffects.blurSigmaLight,
-          tintAlphaDark: 0.18,
-          tintAlphaLight: 0.12,
-          fallbackMinOpacityDark: 0.16,
-          fallbackMinOpacityLight: 0.12,
-        );
-        break;
-      case KubusGlassSurfaceType.card:
-        profile = const _GlassSurfaceProfile(
-          blurSigma: KubusGlassEffects.blurSigmaLight,
-          tintAlphaDark: 0.22,
-          tintAlphaLight: 0.16,
-          fallbackMinOpacityDark: 0.30,
-          fallbackMinOpacityLight: 0.24,
-        );
-        break;
-      case KubusGlassSurfaceType.button:
-        profile = const _GlassSurfaceProfile(
-          blurSigma: KubusGlassEffects.blurSigmaLight,
-          tintAlphaDark: 0.20,
-          tintAlphaLight: 0.14,
-          fallbackMinOpacityDark: 0.24,
-          fallbackMinOpacityLight: 0.18,
-        );
-        break;
-    }
+    final profile = switch (surfaceType) {
+      KubusGlassSurfaceType.header => KubusGlassSurfaceTokens.header,
+      KubusGlassSurfaceType.sidebarBackground =>
+        KubusGlassSurfaceTokens.sidebar,
+      KubusGlassSurfaceType.panelBackground => KubusGlassSurfaceTokens.panel,
+      KubusGlassSurfaceType.card => KubusGlassSurfaceTokens.card,
+      KubusGlassSurfaceType.button => KubusGlassSurfaceTokens.button,
+    };
 
     return KubusGlassStyle(
       tintColor: base.withValues(
         alpha: isDark ? profile.tintAlphaDark : profile.tintAlphaLight,
       ),
       blurSigma: profile.blurSigma,
-      fallbackMinOpacity: isDark
-          ? profile.fallbackMinOpacityDark
-          : profile.fallbackMinOpacityLight,
+      fallbackMinOpacity: KubusGlassEffects.fallbackOpaqueOpacity,
     );
   }
-}
-
-@immutable
-class _GlassSurfaceProfile {
-  final double blurSigma;
-  final double tintAlphaDark;
-  final double tintAlphaLight;
-  final double fallbackMinOpacityDark;
-  final double fallbackMinOpacityLight;
-
-  const _GlassSurfaceProfile({
-    required this.blurSigma,
-    required this.tintAlphaDark,
-    required this.tintAlphaLight,
-    required this.fallbackMinOpacityDark,
-    required this.fallbackMinOpacityLight,
-  });
 }
 
 class KubusGlassAppBarBackdrop extends StatelessWidget {
@@ -321,7 +262,7 @@ class LiquidGlassPanel extends StatelessWidget {
     this.showBorder = true,
     this.backgroundColor,
     this.onTap,
-    this.fallbackMinOpacity = 0.14,
+    this.fallbackMinOpacity = KubusGlassEffects.fallbackOpaqueOpacity,
   });
 
   @override
@@ -384,7 +325,7 @@ class LiquidGlassCard extends StatelessWidget {
     this.showBorder = true,
     this.backgroundColor,
     this.onTap,
-    this.fallbackMinOpacity = 0.24,
+    this.fallbackMinOpacity = KubusGlassEffects.fallbackOpaqueOpacity,
   });
 
   @override
@@ -426,7 +367,7 @@ class FrostedContainer extends StatelessWidget {
     this.showBorder = true,
     this.backgroundColor,
     this.onTap,
-    this.fallbackMinOpacity = 0.26,
+    this.fallbackMinOpacity = KubusGlassEffects.fallbackOpaqueOpacity,
   });
 
   @override
@@ -468,7 +409,7 @@ class BackdropGlassSheet extends StatelessWidget {
     this.backgroundColor,
     this.showBorder = true,
     this.showHandle = true,
-    this.fallbackMinOpacity = 0.24,
+    this.fallbackMinOpacity = KubusGlassEffects.fallbackOpaqueOpacity,
   });
 
   @override

@@ -2,11 +2,11 @@ import 'dart:async';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/locale_provider.dart';
 import '../../../widgets/glass_components.dart';
+import '../../../widgets/common/kubus_screen_header.dart';
 
 class DesktopAuthShell extends StatelessWidget {
   final String title;
@@ -47,22 +47,24 @@ class DesktopAuthShell extends StatelessWidget {
     final bgStart = baseStart.withValues(alpha: isDark ? 0.42 : 0.55);
     final bgEnd = baseEnd.withValues(alpha: isDark ? 0.38 : 0.50);
     final bgMid = (Color.lerp(bgStart, bgEnd, 0.55) ?? bgEnd)
-      .withValues(alpha: isDark ? 0.40 : 0.52);
+        .withValues(alpha: isDark ? 0.40 : 0.52);
 
     final basePalette = <Color>[bgStart, bgMid, bgEnd, bgStart];
     final bgColors = isDark
-      ? List<Color>.generate(
-        basePalette.length,
-        (i) {
-          final darkBase = KubusGradients.authDark.colors;
-          final fallback = Colors.black.withValues(alpha: 0.55);
-          final d = (darkBase.isNotEmpty ? darkBase[i % darkBase.length] : fallback)
-            .withValues(alpha: 0.55);
-          return Color.lerp(d, basePalette[i], 0.55) ?? basePalette[i];
-        },
-        growable: false,
-        )
-      : basePalette;
+        ? List<Color>.generate(
+            basePalette.length,
+            (i) {
+              final darkBase = KubusGradients.authDark.colors;
+              final fallback = Colors.black.withValues(alpha: 0.55);
+              final d = (darkBase.isNotEmpty
+                      ? darkBase[i % darkBase.length]
+                      : fallback)
+                  .withValues(alpha: 0.55);
+              return Color.lerp(d, basePalette[i], 0.55) ?? basePalette[i];
+            },
+            growable: false,
+          )
+        : basePalette;
 
     return AnimatedGradientBackground(
       duration: const Duration(seconds: 12),
@@ -72,7 +74,7 @@ class DesktopAuthShell extends StatelessWidget {
         backgroundColor: Colors.transparent,
         appBar: showHeaderControls ? _buildHeaderAppBar(context) : null,
         body: Padding(
-          padding: const EdgeInsets.all(32),
+          padding: const EdgeInsets.all(KubusSpacing.xl),
           child: Align(
             alignment: const Alignment(0, -0.382),
             child: ConstrainedBox(
@@ -84,8 +86,8 @@ class DesktopAuthShell extends StatelessWidget {
                     children: [
                       Expanded(
                         child: LiquidGlassPanel(
-                          padding: const EdgeInsets.all(24),
-                          borderRadius: BorderRadius.circular(20),
+                          padding: const EdgeInsets.all(KubusSpacing.lg),
+                          borderRadius: BorderRadius.circular(KubusRadius.lg),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
@@ -95,28 +97,24 @@ class DesktopAuthShell extends StatelessWidget {
                                   if (icon != null) icon!,
                                 ],
                               ),
-                              const SizedBox(height: 24),
-                              Text(
-                                title,
-                                style: GoogleFonts.inter(
-                                  fontSize: 32,
+                              const SizedBox(height: KubusSpacing.lg),
+                              KubusHeaderText(
+                                title: title,
+                                subtitle: subtitle,
+                                kind: KubusHeaderKind.screen,
+                                titleStyle:
+                                    KubusTextStyles.screenTitle.copyWith(
                                   fontWeight: FontWeight.w800,
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface,
                                 ),
+                                titleColor:
+                                    Theme.of(context).colorScheme.onSurface,
+                                subtitleColor: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.7),
+                                maxTitleLines: 3,
                               ),
-                              const SizedBox(height: 8),
-                              Text(
-                                subtitle,
-                                style: GoogleFonts.inter(
-                                  fontSize: 16,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.7),
-                                ),
-                              ),
-                              const SizedBox(height: 24),
+                              const SizedBox(height: KubusSpacing.lg),
                               if (highlights.isNotEmpty)
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -149,8 +147,8 @@ class DesktopAuthShell extends StatelessWidget {
                                               Expanded(
                                                 child: Text(
                                                   item,
-                                                  style: GoogleFonts.inter(
-                                                    fontSize: 14,
+                                                  style: KubusTextStyles.navLabel
+                                                      .copyWith(
                                                     color: Theme.of(context)
                                                         .colorScheme
                                                         .onSurface,
@@ -170,8 +168,8 @@ class DesktopAuthShell extends StatelessWidget {
                       const SizedBox(width: 24),
                       Expanded(
                         child: LiquidGlassPanel(
-                          padding: const EdgeInsets.all(24),
-                          borderRadius: BorderRadius.circular(20),
+                          padding: const EdgeInsets.all(KubusSpacing.lg),
+                          borderRadius: BorderRadius.circular(KubusRadius.lg),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
@@ -207,7 +205,7 @@ class DesktopAuthShell extends StatelessWidget {
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
-      titleSpacing: 32,
+      titleSpacing: KubusHeaderMetrics.appBarHorizontalPaddingLg,
       title: const SizedBox.shrink(),
       actions: [
         // Language selector
@@ -248,7 +246,7 @@ class DesktopAuthShell extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Icon(
               Icons.language,
-              size: 24,
+              size: KubusHeaderMetrics.actionIcon,
               color: scheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
@@ -257,9 +255,11 @@ class DesktopAuthShell extends StatelessWidget {
         IconButton(
           icon: Icon(
             themeProvider.isDarkMode ? Icons.brightness_7 : Icons.brightness_4,
-            size: 24,
+            size: KubusHeaderMetrics.actionIcon,
           ),
-          tooltip: themeProvider.isDarkMode ? l10n.settingsThemeModeLight : l10n.settingsThemeModeDark,
+          tooltip: themeProvider.isDarkMode
+              ? l10n.settingsThemeModeLight
+              : l10n.settingsThemeModeDark,
           color: scheme.onSurface.withValues(alpha: 0.7),
           onPressed: () {
             final currentMode = themeProvider.themeMode;

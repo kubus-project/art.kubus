@@ -48,12 +48,13 @@ import '../utils/kubus_color_roles.dart';
 import '../utils/artwork_media_resolver.dart';
 import '../utils/design_tokens.dart';
 import '../utils/kubus_labs_feature.dart';
+import '../utils/user_profile_navigation.dart';
 import '../widgets/staggered_fade_slide.dart';
 import '../utils/artwork_navigation.dart';
 import '../widgets/glass_components.dart';
 import '../widgets/common/kubus_labs_adornment.dart';
+import '../widgets/common/kubus_screen_header.dart';
 import '../widgets/support/support_section.dart';
-import 'community/user_profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -186,9 +187,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.18 : 0.12);
-
     return SliverAppBar(
       floating: true,
       snap: true,
@@ -199,96 +197,94 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         builder: (context, constraints) {
           final isSmallScreen = constraints.maxWidth < 375;
 
-          return GlassSurface(
-            borderRadius: BorderRadius.zero,
-            blurSigma: KubusGlassEffects.blurSigmaLight,
-            showBorder: false,
-            border: Border(
-              bottom: BorderSide(
-                color: scheme.outline.withValues(alpha: isDark ? 0.16 : 0.12),
-                width: 1,
-              ),
-            ),
-            child: Container(
-              // Add an extra tint layer to keep the bar readable over bright
-              // parts of the gradient.
-              color: glassTint,
-              child: SafeArea(
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              KubusGlassAppBarBackdrop(showBottomDivider: true),
+              SafeArea(
                 bottom: false,
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(
-                    isSmallScreen ? 16 : 24,
-                    8,
-                    isSmallScreen ? 16 : 24,
-                    8,
+                    isSmallScreen
+                        ? KubusHeaderMetrics.appBarHorizontalPadding
+                        : KubusHeaderMetrics.appBarHorizontalPaddingLg,
+                    KubusHeaderMetrics.appBarVerticalPadding,
+                    isSmallScreen
+                        ? KubusHeaderMetrics.appBarHorizontalPadding
+                        : KubusHeaderMetrics.appBarHorizontalPaddingLg,
+                    KubusHeaderMetrics.appBarVerticalPadding,
                   ),
                   child: Row(
                     children: [
-                      // Logo and app name
                       AppLogo(
-                        width: isSmallScreen ? 36 : 40,
-                        height: isSmallScreen ? 36 : 40,
+                        width: isSmallScreen
+                            ? KubusHeaderMetrics.compactLogo
+                            : KubusHeaderMetrics.logo,
+                        height: isSmallScreen
+                            ? KubusHeaderMetrics.compactLogo
+                            : KubusHeaderMetrics.logo,
                       ),
-                      SizedBox(width: isSmallScreen ? 8 : 12),
+                      SizedBox(
+                          width: isSmallScreen
+                              ? KubusSpacing.sm
+                              : KubusSpacing.md),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text(
-                              'art.kubus',
-                              style: GoogleFonts.inter(
-                                fontSize: isSmallScreen ? 16 : 18,
-                                fontWeight: FontWeight.bold,
-                                color: scheme.onSurface,
+                            KubusHeaderText(
+                              title: 'art.kubus',
+                              kind: KubusHeaderKind.section,
+                              compact: true,
+                              titleColor: scheme.onSurface,
+                              maxTitleLines: 1,
+                              subtitle: web3Provider.isConnected
+                                  ? web3Provider.formatAddress(
+                                      web3Provider.walletAddress,
+                                    )
+                                  : null,
+                              subtitleStyle: GoogleFonts.robotoMono(
+                                fontSize: KubusHeaderMetrics.sectionSubtitle,
+                                color: scheme.onSurface.withValues(alpha: 0.6),
                               ),
                             ),
-                            if (web3Provider.isConnected) ...[
-                              Text(
-                                web3Provider
-                                    .formatAddress(web3Provider.walletAddress),
-                                style: GoogleFonts.robotoMono(
-                                  fontSize: isSmallScreen ? 10 : 12,
-                                  color:
-                                      scheme.onSurface.withValues(alpha: 0.6),
-                                ),
-                              ),
+                            if (web3Provider.isConnected)
                               Container(
-                                margin:
-                                    EdgeInsets.only(top: isSmallScreen ? 2 : 4),
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: isSmallScreen ? 6 : 8,
-                                  vertical: 2,
+                                margin: const EdgeInsets.only(
+                                    top: KubusSpacing.xxs),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: KubusSpacing.sm,
+                                  vertical: KubusSpacing.xxs,
                                 ),
                                 decoration: BoxDecoration(
                                   color: Colors.orange.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(8),
+                                  borderRadius:
+                                      BorderRadius.circular(KubusRadius.sm),
                                   border: Border.all(
                                     color: Colors.orange.withValues(alpha: 0.3),
-                                    width: 1,
+                                    width: KubusSizes.hairline,
                                   ),
                                 ),
                                 child: Text(
                                   'DEVNET',
-                                  style: GoogleFonts.inter(
-                                    fontSize: isSmallScreen ? 8 : 10,
-                                    fontWeight: FontWeight.w600,
+                                  style: KubusTypography.textTheme.labelSmall
+                                      ?.copyWith(
+                                    fontWeight: FontWeight.w700,
                                     color: Colors.orange,
                                   ),
                                 ),
                               ),
-                            ],
                           ],
                         ),
                       ),
-                      // Notification bell
                       Consumer<NotificationProvider>(
                         builder: (context, np, _) => TopBarIcon(
                           tooltip: l10n.commonNotifications,
                           icon: Icon(
                             Icons.notifications_outlined,
                             color: scheme.onSurface,
-                            size: isSmallScreen ? 22 : 26,
+                            size: KubusHeaderMetrics.actionIcon,
                           ),
                           onPressed: () {
                             _showNotificationsBottomSheet(context);
@@ -302,7 +298,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                 ),
               ),
-            ),
+            ],
           );
         },
       ),
@@ -321,10 +317,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isSmallScreen = constraints.maxWidth < 375;
-        final padding = isSmallScreen ? 16.0 : 24.0;
-        final titleSize = isSmallScreen ? 20.0 : 24.0;
-        final descriptionSize = isSmallScreen ? 12.0 : 14.0;
-        final iconSize = isSmallScreen ? 50.0 : 60.0;
+        final padding = isSmallScreen
+            ? KubusChromeMetrics.compactCardPadding
+            : KubusSpacing.lg;
+        final iconBox = isSmallScreen
+            ? KubusChromeMetrics.heroIconBox - KubusSpacing.sm
+            : KubusChromeMetrics.heroIconBox;
+        final iconSize = isSmallScreen
+            ? KubusChromeMetrics.heroIcon - KubusSpacing.xs
+            : KubusChromeMetrics.heroIcon;
 
         return Container(
           padding: EdgeInsets.all(padding),
@@ -363,11 +364,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             Flexible(
                               child: Text(
                                 '$greeting ${profileProvider.currentUser?.displayName ?? l10n.homeDefaultDisplayName}',
-                                style: GoogleFonts.inter(
-                                  fontSize: titleSize,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
+                                style: KubusTextStyles.heroTitle
+                                    .copyWith(color: Colors.white),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
@@ -390,8 +388,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         SizedBox(height: isSmallScreen ? 6 : 8),
                         Text(
                           l10n.homeWelcomeSubtitle,
-                          style: GoogleFonts.inter(
-                            fontSize: descriptionSize,
+                          style: KubusTextStyles.heroSubtitle.copyWith(
                             color: Colors.white.withValues(alpha: 0.9),
                           ),
                         ),
@@ -399,21 +396,25 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                   ),
                   Container(
-                    width: iconSize,
-                    height: iconSize,
+                    width: iconBox,
+                    height: iconBox,
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(15),
+                      borderRadius: BorderRadius.circular(KubusRadius.lg),
                     ),
                     child: Icon(
                       Icons.view_in_ar,
                       color: Colors.white,
-                      size: isSmallScreen ? 25 : 30,
+                      size: iconSize,
                     ),
                   ),
                 ],
               ),
-              SizedBox(height: isSmallScreen ? 16 : 20),
+              SizedBox(
+                height: isSmallScreen
+                    ? KubusSpacing.md
+                    : KubusChromeMetrics.cardPadding,
+              ),
               if (web3Provider.isConnected) ...[
                 Consumer<WalletProvider>(
                   builder: (context, walletProvider, child) {
@@ -468,9 +469,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                   label: Text(
                     l10n.homeExploreWeb3Button,
-                    style: GoogleFonts.inter(
-                      fontSize: isSmallScreen ? 12 : 14,
-                      fontWeight: FontWeight.w600,
+                    style: KubusTextStyles.actionTileTitle.copyWith(
+                      fontSize: isSmallScreen
+                          ? KubusChromeMetrics.navMetaLabel
+                          : KubusChromeMetrics.navLabel,
                     ),
                   ),
                 ),
@@ -491,7 +493,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         );
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(
+          horizontal: KubusSpacing.sm + KubusSpacing.xs,
+          vertical: KubusSpacing.xs + KubusSpacing.xxs,
+        ),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(8),
@@ -509,9 +514,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               child: Center(
                 child: Text(
                   symbol == 'KUB8' ? 'K' : 'S',
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
+                  style: KubusTextStyles.badgeCount.copyWith(
                     color: Provider.of<ThemeProvider>(context).accentColor,
                   ),
                 ),
@@ -520,10 +523,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             const SizedBox(width: 6),
             Text(
               '$amount $symbol',
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+              style: KubusTextStyles.navMetaLabel.copyWith(
                 color: Colors.white,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],
@@ -560,17 +562,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               children: [
                 Text(
                   l10n.homeQuickActionsTitle,
-                  style: GoogleFonts.inter(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                  style: KubusTextStyles.screenTitle.copyWith(
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 if (frequentScreens.isNotEmpty)
                   Text(
                     l10n.homeRecentlyUsedLabel,
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
+                    style: KubusTextStyles.screenSubtitle.copyWith(
                       color: Theme.of(context)
                           .colorScheme
                           .onSurface
@@ -585,7 +584,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   LiquidGlassPanel(
-                    padding: const EdgeInsets.all(20),
+                    padding:
+                        const EdgeInsets.all(KubusChromeMetrics.cardPadding),
                     margin: EdgeInsets.zero,
                     borderRadius: BorderRadius.circular(16),
                     blurSigma: KubusGlassEffects.blurSigmaLight,
@@ -601,8 +601,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         Expanded(
                           child: Text(
                             l10n.homeQuickActionsEmptyDescription,
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
+                            style: KubusTextStyles.sectionSubtitle.copyWith(
                               color: scheme.onSurface.withValues(alpha: 0.7),
                             ),
                           ),
@@ -752,6 +751,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         showBorder: false,
         backgroundColor: glassTint,
         child: Stack(
+          fit: StackFit.expand,
           children: [
             Positioned.fill(
               child: IgnorePointer(
@@ -769,73 +769,74 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
               ),
             ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      width: isSmallScreen ? 32 : 40,
-                      height: isSmallScreen ? 32 : 40,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            color.withValues(alpha: 0.26),
-                            color.withValues(alpha: 0.10),
-                          ],
+            Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        width: isSmallScreen ? 32 : 40,
+                        height: isSmallScreen ? 32 : 40,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              color.withValues(alpha: 0.26),
+                              color.withValues(alpha: 0.10),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: color.withValues(alpha: 0.25),
+                            width: 1,
+                          ),
                         ),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: color.withValues(alpha: 0.25),
-                          width: 1,
+                        child: Icon(
+                          icon,
+                          color: color,
+                          size: isSmallScreen ? 16 : 20,
                         ),
                       ),
-                      child: Icon(
-                        icon,
-                        color: color,
-                        size: isSmallScreen ? 16 : 20,
-                      ),
-                    ),
-                    if (visitCount > 0)
-                      Positioned(
-                        top: -4,
-                        right: -4,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: color,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          constraints: const BoxConstraints(
-                            minWidth: 16,
-                            minHeight: 16,
-                          ),
-                          child: Text(
-                            visitCount.toString(),
-                            style: GoogleFonts.inter(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                      if (visitCount > 0)
+                        Positioned(
+                          top: -4,
+                          right: -4,
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: color,
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                            textAlign: TextAlign.center,
+                            constraints: const BoxConstraints(
+                              minWidth: 16,
+                              minHeight: 16,
+                            ),
+                            child: Text(
+                              visitCount.toString(),
+                              style: KubusTextStyles.badgeCount.copyWith(
+                                color: Colors.white,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
                           ),
                         ),
-                      ),
-                  ],
-                ),
-                SizedBox(width: isSmallScreen ? 10 : 14),
-                Text(
-                  title,
-                  style: GoogleFonts.inter(
-                    fontSize: isSmallScreen ? 14 : 16,
-                    fontWeight: FontWeight.w600,
-                    color: scheme.onSurface,
+                    ],
                   ),
-                ),
-              ],
+                  SizedBox(width: isSmallScreen ? 10 : 14),
+                  Text(
+                    title,
+                    style: KubusTextStyles.sectionTitle.copyWith(
+                      fontSize: isSmallScreen
+                          ? KubusHeaderMetrics.screenSubtitle
+                          : KubusHeaderMetrics.sectionTitle,
+                      color: scheme.onSurface,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -856,9 +857,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             children: [
               Text(
                 l10n.homeYourStatsTitle,
-                style: GoogleFonts.inter(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                style: KubusTextStyles.screenTitle.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
@@ -926,13 +925,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               children: [
                 Text(
                   l10n.homeYourStatsTitle,
-                  style: GoogleFonts.inter(
-                    fontSize: isSmallScreen ? 18 : 20,
-                    fontWeight: FontWeight.bold,
+                  style: KubusTextStyles.screenTitle.copyWith(
+                    fontSize: isSmallScreen
+                        ? KubusHeaderMetrics.sectionTitle + KubusSpacing.xxs
+                        : KubusHeaderMetrics.screenTitle,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
-                SizedBox(height: isSmallScreen ? 12 : 16),
+                SizedBox(
+                  height: isSmallScreen
+                      ? KubusSpacing.sm + KubusSpacing.xs
+                      : KubusSpacing.md,
+                ),
                 if (isVerySmallScreen)
                   // Stack vertically on very small screens - show full details
                   Column(
@@ -957,7 +961,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       final stat = entry.value;
                       return Expanded(
                         child: Padding(
-                          padding: const EdgeInsets.only(right: 12),
+                          padding: EdgeInsets.only(
+                            right: entry.key < stats.length - 1
+                                ? KubusSpacing.sm
+                                : KubusSpacing.none,
+                          ),
                           child: _buildStatCard(stat.$1, stat.$2, stat.$3,
                               color: AppColorUtils.statColor(
                                   entry.key, Theme.of(context).colorScheme),
@@ -1031,6 +1039,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             showBorder: false,
             backgroundColor: glassTint,
             child: Stack(
+              fit: StackFit.expand,
               children: [
                 Positioned.fill(
                   child: IgnorePointer(
@@ -1050,37 +1059,40 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
                 showIconOnly
                     ? Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
                             icon,
                             color: statColor,
                             size: 28,
                           ),
-                          if (isSmallScreen) ...[
-                            SizedBox(height: isSmallScreen ? 4 : 6),
-                            Text(
-                              value,
-                              style: GoogleFonts.inter(
-                                fontSize: isSmallScreen ? 10 : 12,
-                                fontWeight: FontWeight.bold,
-                                color: scheme.onSurface,
-                              ),
+                          SizedBox(height: isSmallScreen ? 4 : 6),
+                          Text(
+                            value,
+                            style: KubusTextStyles.badgeCount.copyWith(
+                              fontSize: isSmallScreen
+                                  ? KubusChromeMetrics.navBadgeLabel
+                                  : KubusChromeMetrics.navMetaLabel,
+                              color: scheme.onSurface,
                             ),
-                            Text(
-                              displayTitle,
-                              style: GoogleFonts.inter(
-                                fontSize: isSmallScreen ? 7 : 8,
-                                color: scheme.onSurface.withValues(alpha: 0.65),
-                              ),
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            displayTitle,
+                            style: KubusTextStyles.compactBadge.copyWith(
+                              fontSize: isSmallScreen
+                                  ? KubusChromeMetrics.navBadgeLabel - 2
+                                  : KubusChromeMetrics.navBadgeLabel - 1,
+                              color: scheme.onSurface.withValues(alpha: 0.65),
                             ),
-                          ],
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ],
                       )
                     : isVerticalLayout
                         ? Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Icon(
                                 icon,
@@ -1091,19 +1103,23 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Text(
                                       value,
-                                      style: GoogleFonts.inter(
-                                        fontSize: isSmallScreen ? 10 : 12,
-                                        fontWeight: FontWeight.bold,
+                                      style: KubusTextStyles.badgeCount.copyWith(
+                                        fontSize: isSmallScreen
+                                            ? KubusChromeMetrics.navBadgeLabel
+                                            : KubusChromeMetrics.navMetaLabel,
                                         color: scheme.onSurface,
                                       ),
                                     ),
                                     Text(
                                       displayTitle,
-                                      style: GoogleFonts.inter(
-                                        fontSize: isSmallScreen ? 7 : 8,
+                                      style: KubusTextStyles.compactBadge.copyWith(
+                                        fontSize: isSmallScreen
+                                            ? KubusChromeMetrics.navBadgeLabel - 2
+                                            : KubusChromeMetrics.navBadgeLabel - 1,
                                         color: scheme.onSurface
                                             .withValues(alpha: 0.65),
                                       ),
@@ -1116,6 +1132,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             ],
                           )
                         : Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
                                 icon,
@@ -1125,16 +1142,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               SizedBox(height: isSmallScreen ? 4 : 6),
                               Text(
                                 value,
-                                style: GoogleFonts.inter(
-                                  fontSize: isSmallScreen ? 10 : 12,
-                                  fontWeight: FontWeight.bold,
+                                style: KubusTextStyles.badgeCount.copyWith(
+                                  fontSize: isSmallScreen
+                                      ? KubusChromeMetrics.navBadgeLabel
+                                      : KubusChromeMetrics.navMetaLabel,
                                   color: scheme.onSurface,
                                 ),
                               ),
                               Text(
                                 displayTitle,
-                                style: GoogleFonts.inter(
-                                  fontSize: isSmallScreen ? 7 : 8,
+                                style: KubusTextStyles.compactBadge.copyWith(
+                                  fontSize: isSmallScreen
+                                      ? KubusChromeMetrics.navBadgeLabel - 2
+                                      : KubusChromeMetrics.navBadgeLabel - 1,
                                   color:
                                       scheme.onSurface.withValues(alpha: 0.65),
                                 ),
@@ -1174,9 +1194,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               children: [
                 Text(
                   l10n.homeWeb3SectionTitle,
-                  style: GoogleFonts.inter(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                  style: KubusTextStyles.screenTitle.copyWith(
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
@@ -1186,7 +1204,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       final roles = KubusColorRoles.of(context);
                       return Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
+                          horizontal: KubusSpacing.sm,
+                          vertical: KubusSpacing.xs,
+                        ),
                         decoration: BoxDecoration(
                           color: roles.lockedFeature.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
@@ -1201,8 +1221,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 size: 12, color: roles.lockedFeature),
                             Text(
                               l10n.homeAccountRequiredLabel,
-                              style: GoogleFonts.inter(
-                                fontSize: 10,
+                              style: KubusTextStyles.badgeCount.copyWith(
                                 color: roles.lockedFeature,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -1353,18 +1372,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     const SizedBox(height: 8),
                     Text(
                       title,
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                      style: KubusTextStyles.navLabel.copyWith(
+                        fontSize: KubusChromeMetrics.navMetaLabel + 1,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: KubusSpacing.xxs),
                     Text(
                       subtitle,
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
+                      style: KubusTextStyles.compactBadge.copyWith(
+                        fontSize: KubusChromeMetrics.navBadgeLabel + 2,
                         color: Theme.of(context)
                             .colorScheme
                             .onSurface
@@ -1400,9 +1418,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       const SizedBox(height: 8),
                       Text(
                         title,
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                        style: KubusTextStyles.navLabel.copyWith(
+                          fontSize: KubusChromeMetrics.navMetaLabel + 1,
                           color: Theme.of(context)
                               .colorScheme
                               .onSurface
@@ -1410,11 +1427,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: KubusSpacing.xxs),
                       Text(
                         subtitle,
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
+                        style: KubusTextStyles.compactBadge.copyWith(
+                          fontSize: KubusChromeMetrics.navBadgeLabel + 2,
                           color: Theme.of(context)
                               .colorScheme
                               .onSurface
@@ -1487,9 +1504,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               children: [
                 Text(
                   l10n.homeRecentActivityTitle,
-                  style: GoogleFonts.inter(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                  style: KubusTextStyles.screenTitle.copyWith(
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
@@ -1497,8 +1512,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   onPressed: _showFullActivity,
                   child: Text(
                     l10n.commonViewAll,
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
+                    style: KubusTextStyles.navLabel.copyWith(
                       color: Theme.of(context).colorScheme.tertiary,
                     ),
                   ),
@@ -1577,9 +1591,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               children: [
                 Text(
                   l10n.homeFeaturedArtworksTitle,
-                  style: GoogleFonts.inter(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                  style: KubusTextStyles.screenTitle.copyWith(
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
@@ -1589,8 +1601,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   },
                   child: Text(
                     l10n.commonExplore,
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
+                    style: KubusTextStyles.navLabel.copyWith(
                       color: Provider.of<ThemeProvider>(context).accentColor,
                     ),
                   ),
@@ -1634,9 +1645,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           children: [
             Text(
               'Featured Artists & Institutions',
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+              style: KubusTextStyles.screenTitle.copyWith(
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
@@ -1704,9 +1713,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 children: [
                   Text(
                     artwork.title,
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+                    style: KubusTextStyles.sectionTitle.copyWith(
+                      fontSize: KubusHeaderMetrics.screenSubtitle,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
                     maxLines: 1,
@@ -1715,8 +1723,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   const SizedBox(height: 4),
                   ArtworkCreatorByline(
                     artwork: artwork,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
+                    style: KubusTextStyles.navMetaLabel.copyWith(
                       color: Theme.of(context)
                           .colorScheme
                           .onSurface
@@ -1742,11 +1749,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         final wallet = (item.walletAddress ?? '').trim();
         final target = wallet.isNotEmpty ? wallet : item.id;
         if (target.trim().isEmpty) return;
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => UserProfileScreen(userId: target),
-          ),
-        );
+        unawaited(UserProfileNavigation.open(context, userId: target));
       },
       child: Container(
         width: 180,
@@ -1755,7 +1758,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         decoration: BoxDecoration(
           color: scheme.primaryContainer,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+          border:
+              Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1781,9 +1785,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               item.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+              style: KubusTextStyles.actionTileTitle.copyWith(
                 color: scheme.onSurface,
               ),
             ),
@@ -1793,8 +1795,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 subtitle,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.inter(
-                  fontSize: 12,
+                style: KubusTextStyles.navMetaLabel.copyWith(
                   color: scheme.onSurface.withValues(alpha: 0.65),
                 ),
               ),
@@ -2051,7 +2052,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           child: Center(
                             child: Text(
                               l10n.commonNotAvailable,
-                              style: GoogleFonts.inter(
+                              style: KubusTextStyles.navLabel.copyWith(
                                 fontWeight: FontWeight.w600,
                                 color: Theme.of(dialogContext)
                                     .colorScheme
@@ -2135,7 +2136,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   )
                                 : Text(
                                     l10n.commonNotAvailable,
-                                    style: GoogleFonts.inter(
+                                    style: KubusTextStyles.navLabel.copyWith(
                                       fontWeight: FontWeight.w600,
                                       color: Theme.of(dialogContext)
                                           .colorScheme
@@ -2242,8 +2243,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       children: [
         Text(
           l10n.homeRecentMilestonesTitle,
-          style: GoogleFonts.inter(
-            fontWeight: FontWeight.w600,
+          style: KubusTextStyles.sectionTitle.copyWith(
             color: scheme.onSurface,
           ),
         ),
@@ -2264,8 +2264,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   Expanded(
                     child: Text(
                       milestone,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
+                      style: KubusTextStyles.navMetaLabel.copyWith(
                         color: scheme.onSurface.withValues(alpha: 0.8),
                       ),
                     ),
@@ -2349,34 +2348,12 @@ class _NotificationsBottomSheet extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Container(
-            width: 40,
-            height: 4,
-            margin: const EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(
-              color: colorScheme.outline,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            child: Row(
-              children: [
-                Text(
-                  l10n.commonNotifications,
-                  style: GoogleFonts.inter(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.onSurface,
-                  ),
-                ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.refresh),
-                  tooltip: l10n.commonRefresh,
-                  onPressed: () => provider.refresh(force: true),
-                ),
-              ],
+          KubusSheetHeader(
+            title: l10n.commonNotifications,
+            trailing: IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: l10n.commonRefresh,
+              onPressed: () => provider.refresh(force: true),
             ),
           ),
           Expanded(
@@ -2473,9 +2450,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
       appBar: AppBar(
         title: Text(
           l10n.homeActivityTitle,
-          style: GoogleFonts.inter(
-            fontWeight: FontWeight.bold,
-          ),
+          style: KubusTextStyles.screenTitle,
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -2497,7 +2472,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
               onRefresh: () => activityProvider.refresh(force: true),
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(KubusSpacing.lg),
                 children: [
                   EmptyStateCard(
                     icon: Icons.wifi_off,
@@ -2519,7 +2494,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
               onRefresh: () => activityProvider.refresh(force: true),
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(KubusSpacing.lg),
                 children: [
                   EmptyStateCard(
                     icon: Icons.timeline,
@@ -2535,7 +2510,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
             onRefresh: () => activityProvider.refresh(force: true),
             child: ListView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(KubusSpacing.lg),
               itemCount: activities.length,
               itemBuilder: (context, index) => RecentActivityTile(
                 activity: activities[index],

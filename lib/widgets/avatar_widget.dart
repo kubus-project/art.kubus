@@ -6,10 +6,9 @@ import '../config/config.dart';
 import '../models/user_presence.dart';
 import '../providers/presence_provider.dart';
 import '../services/user_service.dart';
-import '../screens/community/user_profile_screen.dart' as mobile;
-import '../screens/desktop/community/desktop_user_profile_screen.dart' as desktop;
-import '../utils/wallet_utils.dart';
 import '../utils/media_url_resolver.dart';
+import '../utils/user_profile_navigation.dart';
+import '../utils/wallet_utils.dart';
 
 class AvatarWidget extends StatefulWidget {
   final String? avatarUrl;
@@ -299,19 +298,12 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
           // Generate unique hero tag for this navigation
           final newTag = 'avatar_${WalletUtils.normalize(widget.wallet)}_${DateTime.now().microsecondsSinceEpoch}';
           setState(() { _currentHeroTag = newTag; });
-          
-          // Detect if we're on desktop and route to desktop profile screen
-          final screenWidth = MediaQuery.of(context).size.width;
-          final isDesktop = screenWidth >= 900;
-          
-          final profileScreen = isDesktop
-              ? desktop.UserProfileScreen(userId: widget.wallet, heroTag: newTag)
-              : mobile.UserProfileScreen(userId: widget.wallet, heroTag: newTag);
-          
-          Navigator.push(
+
+          UserProfileNavigation.open(
             context,
-            MaterialPageRoute(builder: (context) => profileScreen),
-          ).then((_) {
+            userId: widget.wallet,
+            heroTag: newTag,
+          ).whenComplete(() {
             // clear temporary hero tag after return
             if (mounted) setState(() { _currentHeroTag = null; });
           });

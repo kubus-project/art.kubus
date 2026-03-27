@@ -15,7 +15,6 @@ import 'package:art_kubus/widgets/kubus_card.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 class SecureAccountScreen extends StatefulWidget {
@@ -285,9 +284,7 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
         Text(
           l10n.authSecureAccountVerificationSentTitle,
           textAlign: TextAlign.center,
-          style: GoogleFonts.inter(
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
+          style: KubusTextStyles.sheetTitle.copyWith(
             color: scheme.onSurface,
           ),
         ),
@@ -295,9 +292,7 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
         Text(
           l10n.authSecureAccountVerificationSentSubtitle,
           textAlign: TextAlign.center,
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            height: 1.35,
+          style: KubusTextStyles.sheetSubtitle.copyWith(
             color: scheme.onSurface.withValues(alpha: 0.82),
           ),
         ),
@@ -314,9 +309,8 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
             _isResending
                 ? l10n.commonWorking
                 : l10n.authVerifyEmailResendButton,
-            style: GoogleFonts.inter(
+            style: KubusTextStyles.sectionTitle.copyWith(
               color: scheme.onSurface.withValues(alpha: 0.72),
-              fontWeight: FontWeight.w600,
             ),
           ),
         ),
@@ -335,9 +329,7 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
         Text(
           l10n.authSecureAccountSecuredTitle,
           textAlign: TextAlign.center,
-          style: GoogleFonts.inter(
-            fontSize: 22,
-            fontWeight: FontWeight.w800,
+          style: KubusTextStyles.sheetTitle.copyWith(
             color: scheme.onSurface,
           ),
         ),
@@ -347,9 +339,7 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
               ? l10n.authSecureAccountSecuredVerifiedSubtitle
               : l10n.authSecureAccountSecuredUnverifiedSubtitle,
           textAlign: TextAlign.center,
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            height: 1.35,
+          style: KubusTextStyles.sheetSubtitle.copyWith(
             color: scheme.onSurface.withValues(alpha: 0.82),
           ),
         ),
@@ -371,9 +361,8 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
               _isResending
                   ? l10n.commonWorking
                   : l10n.authVerifyEmailResendButton,
-              style: GoogleFonts.inter(
+              style: KubusTextStyles.sectionTitle.copyWith(
                 color: scheme.onSurface.withValues(alpha: 0.72),
-                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -408,8 +397,7 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
           Expanded(
             child: Text(
               email,
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.w600,
+              style: KubusTextStyles.sectionTitle.copyWith(
                 color: scheme.onSurface,
               ),
             ),
@@ -433,9 +421,8 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
               ? l10n.authSecureAccountAddPasswordTitle
               : l10n.authSecureAccountTitle,
           textAlign: TextAlign.center,
-          style: GoogleFonts.inter(
-            fontSize: 24,
-            fontWeight: FontWeight.w800,
+          style: KubusTextStyles.sheetTitle.copyWith(
+            fontSize: KubusChromeMetrics.heroTitle,
             color: scheme.onSurface,
           ),
         ),
@@ -445,9 +432,7 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
               ? l10n.authSecureAccountFormAddPasswordSubtitle
               : l10n.authSecureAccountFormDefaultSubtitle,
           textAlign: TextAlign.center,
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            height: 1.35,
+          style: KubusTextStyles.sheetSubtitle.copyWith(
             color: scheme.onSurface.withValues(alpha: 0.82),
           ),
         ),
@@ -479,8 +464,7 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
           Text(
             _inlineError!,
             textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
-              fontSize: 13,
+            style: KubusTextStyles.sectionSubtitle.copyWith(
               color: scheme.error,
               fontWeight: FontWeight.w600,
             ),
@@ -491,9 +475,8 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
           onPressed: _isSubmitting ? null : _close,
           child: Text(
             l10n.commonSkipForNow,
-            style: GoogleFonts.inter(
+            style: KubusTextStyles.sectionTitle.copyWith(
               color: scheme.onSurface.withValues(alpha: 0.72),
-              fontWeight: FontWeight.w600,
             ),
           ),
         ),

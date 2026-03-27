@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:art_kubus/utils/design_tokens.dart';
 
 class PromotionCheckoutReturnScreen extends StatelessWidget {
   const PromotionCheckoutReturnScreen({
@@ -45,10 +46,10 @@ class PromotionCheckoutReturnScreen extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 520),
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(KubusSpacing.lg),
             child: Card(
               child: Padding(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(KubusSpacing.lg),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [

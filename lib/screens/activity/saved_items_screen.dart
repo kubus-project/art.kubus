@@ -1,5 +1,5 @@
-﻿import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/material.dart';
+import 'package:art_kubus/utils/design_tokens.dart';
 import '../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
 import '../../providers/saved_items_provider.dart';
@@ -40,7 +40,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
       appBar: AppBar(
         title: Text(
           'Saved Items',
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+          style: KubusTypography.inter(fontWeight: FontWeight.bold),
         ),
         backgroundColor: theme.colorScheme.surface,
         surfaceTintColor: Colors.transparent,
@@ -120,7 +120,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(KubusSpacing.lg),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
@@ -147,7 +147,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                     children: [
                       Text(
                         'Your saved collection',
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                           color: theme.colorScheme.onSurface,
@@ -156,7 +156,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                       const SizedBox(height: 4),
                       Text(
                         lastSavedLabel,
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 13,
                           color: captionColor,
                         ),
@@ -173,7 +173,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                   ),
                   child: Text(
                     '${savedProvider.totalSavedCount} items',
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontWeight: FontWeight.w600,
                       color: AppColorUtils.tealAccent,
                     ),
@@ -275,7 +275,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                   children: [
                     Text(
                       label,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                         color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -283,7 +283,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                     ),
                     Text(
                       value,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
                         color: theme.colorScheme.onSurface,
@@ -366,7 +366,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                 const SizedBox(height: 12),
                 Text(
                   'Failed to load posts',
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -470,7 +470,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
           const SizedBox(height: 16),
           Text(
             message,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 18,
               fontWeight: FontWeight.w600,
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -533,7 +533,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                   children: [
                     Text(
                       artwork.title,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).colorScheme.onSurface,
@@ -544,7 +544,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                     const SizedBox(height: 4),
                     Text(
                       artwork.artist,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 14,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
@@ -562,7 +562,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                         const SizedBox(width: 4),
                         Text(
                           '${artwork.likesCount}',
-                          style: GoogleFonts.inter(
+                          style: KubusTypography.inter(
                             fontSize: 12,
                             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                           ),
@@ -576,7 +576,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                         const SizedBox(width: 4),
                         Text(
                           '${artwork.viewsCount}',
-                          style: GoogleFonts.inter(
+                          style: KubusTypography.inter(
                             fontSize: 12,
                             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                           ),
@@ -587,7 +587,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                       const SizedBox(height: 4),
                       Text(
                         'Saved ${_formatTimestamp(savedTimestamp)}',
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 11,
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                         ),
@@ -648,7 +648,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                 children: [
                   Text(
                     'Saved Artwork',
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -657,7 +657,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                   const SizedBox(height: 4),
                   Text(
                     'Loading details...',
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 14,
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                     ),
@@ -666,7 +666,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                     const SizedBox(height: 8),
                     Text(
                       'Saved ${_formatTimestamp(savedTimestamp)}',
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 11,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                       ),
@@ -713,7 +713,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                   backgroundColor: scheme.secondary.withValues(alpha: 0.2),
                   child: Text(
                     post.authorName[0].toUpperCase(),
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontWeight: FontWeight.bold,
                       color: scheme.secondary,
                     ),
@@ -726,7 +726,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                     children: [
                       Text(
                         post.authorName,
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
                           color: scheme.onSurface,
@@ -734,7 +734,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                       ),
                       Text(
                         _formatTimestamp(post.timestamp),
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 12,
                           color: scheme.onSurface.withValues(alpha: 0.5),
                         ),
@@ -754,7 +754,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
             const SizedBox(height: 12),
             Text(
               post.content,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 14,
                 color: scheme.onSurface,
               ),
@@ -792,7 +792,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                 const SizedBox(width: 4),
                 Text(
                   '${post.likeCount}',
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 12,
                     color: scheme.onSurface.withValues(alpha: 0.6),
                   ),
@@ -806,7 +806,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                 const SizedBox(width: 4),
                 Text(
                   '${post.commentCount}',
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 12,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
@@ -815,7 +815,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                 if (savedTimestamp != null)
                   Text(
                     'Saved ${_formatTimestamp(savedTimestamp)}',
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 11,
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                     ),
@@ -865,7 +865,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                 children: [
                   Text(
                     'Saved Post',
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: scheme.onSurface,
@@ -874,7 +874,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                   const SizedBox(height: 4),
                   Text(
                     'Community post',
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 14,
                       color: scheme.onSurface.withValues(alpha: 0.5),
                     ),
@@ -883,7 +883,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                     const SizedBox(height: 8),
                     Text(
                       'Saved ${_formatTimestamp(savedTimestamp)}',
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 11,
                         color: scheme.onSurface.withValues(alpha: 0.4),
                       ),
@@ -928,18 +928,18 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
       builder: (context) => KubusAlertDialog(
         title: Text(
           'Remove from Saved?',
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+          style: KubusTypography.inter(fontWeight: FontWeight.bold),
         ),
         content: Text(
           'Are you sure you want to remove this $type from your saved items?',
-          style: GoogleFonts.inter(),
+          style: KubusTypography.inter(),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
               'Cancel',
-              style: GoogleFonts.inter(),
+              style: KubusTypography.inter(),
             ),
           ),
           TextButton(
@@ -960,7 +960,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
             },
             child: Text(
               'Remove',
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Colors.red,
                 fontWeight: FontWeight.w600,
               ),
@@ -977,18 +977,18 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
       builder: (context) => KubusAlertDialog(
         title: Text(
           'Clear All Saved Items?',
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+          style: KubusTypography.inter(fontWeight: FontWeight.bold),
         ),
         content: Text(
           'This will remove all saved artworks and posts. This action cannot be undone.',
-          style: GoogleFonts.inter(),
+          style: KubusTypography.inter(),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
               'Cancel',
-              style: GoogleFonts.inter(),
+              style: KubusTypography.inter(),
             ),
           ),
           TextButton(
@@ -1006,7 +1006,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
             },
             child: Text(
               'Clear All',
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Colors.red,
                 fontWeight: FontWeight.w600,
               ),

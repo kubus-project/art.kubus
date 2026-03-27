@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../config/api_keys.dart';
@@ -9,6 +8,7 @@ import '../../../models/swap_quote.dart';
 import '../../../models/wallet.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../utils/app_color_utils.dart';
+import '../../../utils/design_tokens.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/utils/wallet_reconnect_action.dart';
 
@@ -100,7 +100,7 @@ class _TokenSwapState extends State<TokenSwap> {
         scrolledUnderElevation: 0,
         title: Text(
           'Token Swap',
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 22,
             fontWeight: FontWeight.bold,
             color: theme.colorScheme.onSurface,
@@ -162,7 +162,7 @@ class _TokenSwapState extends State<TokenSwap> {
         scrolledUnderElevation: 0,
         title: Text(
           'Token Swap',
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 22,
             fontWeight: FontWeight.bold,
             color: theme.colorScheme.onSurface,
@@ -184,7 +184,7 @@ class _TokenSwapState extends State<TokenSwap> {
                 const SizedBox(height: 20),
                 Text(
                   'Read-only wallet session',
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
                     color: theme.colorScheme.onSurface,
@@ -194,7 +194,7 @@ class _TokenSwapState extends State<TokenSwap> {
                 Text(
                   'Reconnect to enable signing and transfers.',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
@@ -226,7 +226,7 @@ class _TokenSwapState extends State<TokenSwap> {
             const SizedBox(height: 20),
             Text(
               'No tradable tokens yet',
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
                 color: theme.colorScheme.onSurface,
@@ -236,7 +236,7 @@ class _TokenSwapState extends State<TokenSwap> {
             Text(
               'Add funds or receive tokens to enable swaps. Once you hold supported assets they will appear here automatically.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
@@ -253,7 +253,7 @@ class _TokenSwapState extends State<TokenSwap> {
     List<Token> tokens,
   ) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
@@ -318,7 +318,7 @@ class _TokenSwapState extends State<TokenSwap> {
             children: [
               Text(
                 label,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 14,
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
@@ -341,14 +341,14 @@ class _TokenSwapState extends State<TokenSwap> {
                   readOnly: !isFrom,
                   showCursor: isFrom,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 28,
                     fontWeight: FontWeight.w600,
                     color: theme.colorScheme.onSurface,
                   ),
                   decoration: InputDecoration(
                     hintText: '0.0',
-                    hintStyle: GoogleFonts.inter(
+                    hintStyle: KubusTypography.inter(
                       fontSize: 28,
                       fontWeight: FontWeight.w600,
                       color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
@@ -374,7 +374,7 @@ class _TokenSwapState extends State<TokenSwap> {
                       const SizedBox(width: 8),
                       Text(
                         symbol ?? 'Select',
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                           color: theme.colorScheme.onSurface,
@@ -394,7 +394,7 @@ class _TokenSwapState extends State<TokenSwap> {
             children: [
               Text(
                 'Balance: $balance',
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 13,
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
@@ -402,7 +402,7 @@ class _TokenSwapState extends State<TokenSwap> {
               if (token?.value != null)
                 Text(
                   token!.formattedValue,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 13,
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
@@ -450,7 +450,7 @@ class _TokenSwapState extends State<TokenSwap> {
             const SizedBox(width: 12),
             Text(
               'Searching best route on Jupiter…',
-              style: GoogleFonts.inter(color: theme.colorScheme.onSurface),
+              style: KubusTypography.inter(color: theme.colorScheme.onSurface),
             ),
           ],
         ),
@@ -474,7 +474,7 @@ class _TokenSwapState extends State<TokenSwap> {
       ((ApiKeys.kubusTeamFeePct + ApiKeys.kubusTreasuryFeePct) * 100).toStringAsFixed(2);
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: _infoDecoration(theme),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -485,7 +485,7 @@ class _TokenSwapState extends State<TokenSwap> {
               const SizedBox(width: 10),
               Text(
                 'Quote preview',
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: theme.colorScheme.onSurface,
@@ -511,7 +511,7 @@ class _TokenSwapState extends State<TokenSwap> {
               children: _quote!.routePlan.map((step) {
                 final label = step['label']?.toString() ?? 'Route';
                 return Chip(
-                  label: Text(label, style: GoogleFonts.inter(fontSize: 12)),
+                  label: Text(label, style: KubusTypography.inter(fontSize: 12)),
                   backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
                 );
               }).toList(),
@@ -531,7 +531,7 @@ class _TokenSwapState extends State<TokenSwap> {
     required String subtitle,
   }) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: _infoDecoration(theme),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -544,7 +544,7 @@ class _TokenSwapState extends State<TokenSwap> {
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontWeight: FontWeight.w600,
                     color: theme.colorScheme.onSurface,
                   ),
@@ -552,7 +552,7 @@ class _TokenSwapState extends State<TokenSwap> {
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
@@ -578,11 +578,11 @@ class _TokenSwapState extends State<TokenSwap> {
       children: [
         Text(
           label,
-          style: GoogleFonts.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
+          style: KubusTypography.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
         ),
         Text(
           value,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontWeight: FontWeight.w600,
             color: theme.colorScheme.onSurface,
           ),
@@ -603,9 +603,9 @@ class _TokenSwapState extends State<TokenSwap> {
             children: [
               Text(
                 'Slippage tolerance',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
+                style: KubusTypography.inter(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
               ),
-              Text('${_slippagePercent.toStringAsFixed(2)}%', style: GoogleFonts.inter(color: swapColor)),
+              Text('${_slippagePercent.toStringAsFixed(2)}%', style: KubusTypography.inter(color: swapColor)),
             ],
           ),
           Slider(
@@ -650,7 +650,7 @@ class _TokenSwapState extends State<TokenSwap> {
               )
             : Text(
                 _quote == null ? 'Enter amount' : 'Swap ${_fromTokenSymbol ?? ''} → ${_toTokenSymbol ?? ''}',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                style: KubusTypography.inter(fontWeight: FontWeight.w600),
               ),
       ),
     );
@@ -694,19 +694,19 @@ class _TokenSwapState extends State<TokenSwap> {
                   children: [
                     Text(
                       tx.token,
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
+                      style: KubusTypography.inter(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       tx.timeAgo,
-                      style: GoogleFonts.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+                      style: KubusTypography.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                     ),
                   ],
                 ),
               ),
               Text(
                 tx.amount.toStringAsFixed(4),
-                style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
+                style: KubusTypography.inter(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
               ),
             ],
           ),
@@ -855,7 +855,7 @@ class _TokenSwapState extends State<TokenSwap> {
                   : token.symbol == otherSymbol;
                 return ListTile(
                   enabled: !isDisabled,
-                  title: Text(token.name, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                  title: Text(token.name, style: KubusTypography.inter(fontWeight: FontWeight.w600)),
                   subtitle: Text('${token.symbol} • Balance ${token.balance.toStringAsFixed(4)}'),
                   trailing: token.symbol == currentSymbol
                       ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
@@ -928,7 +928,7 @@ class _TokenAvatar extends StatelessWidget {
       child: Center(
         child: Text(
           (symbol ?? '?').substring(0, 1),
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 13,
             fontWeight: FontWeight.bold,
             color: theme.colorScheme.onSurface,

@@ -1,9 +1,8 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:art_kubus/widgets/glass_components.dart';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
@@ -21,6 +20,7 @@ import '../../utils/wallet_utils.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../config/config.dart';
+import '../../utils/design_tokens.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class CollectionDetailScreen extends StatefulWidget {
@@ -104,7 +104,7 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                     Text(
                       l10n.collectionDetailLoadFailedMessage,
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 14,
                         color: scheme.onSurface.withValues(alpha: 0.75),
                       ),
@@ -174,7 +174,7 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                 flexibleSpace: FlexibleSpaceBar(
                   title: Text(
                     name,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontWeight: FontWeight.w700,
                       color: scheme.onSurface,
                     ),
@@ -255,7 +255,7 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                               const EdgeInsets.only(bottom: DetailSpacing.md),
                           child: Text(
                             l10n.collectionDetailLoadFailedMessage,
-                            style: GoogleFonts.inter(
+                            style: KubusTypography.inter(
                                 fontSize: 12, color: scheme.error),
                           ),
                         ),
@@ -560,7 +560,7 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
             return KubusAlertDialog(
               title: Text(
                 l10n.collectionDetailAddArtwork,
-                style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+                style: KubusTypography.inter(fontWeight: FontWeight.w700),
               ),
               content: SizedBox(
                 width: 520,
@@ -585,11 +585,11 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
                       },
                       title: Text(
                         art.title,
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                        style: KubusTypography.inter(fontWeight: FontWeight.w600),
                       ),
                       subtitle: Text(
                         art.artist.isNotEmpty ? art.artist : art.id,
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 12,
                           color: Theme.of(context)
                               .colorScheme
@@ -724,7 +724,7 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
               children: [
                 Text(
                   l10n.collectionSettingsTitle,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontWeight: FontWeight.w700,
                     fontSize: 16,
                     color: scheme.onSurface,
@@ -740,7 +740,7 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
             const SizedBox(height: DetailSpacing.md),
             Text(
               l10n.commonCoverImage,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: scheme.onSurface,
@@ -784,7 +784,7 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
                     )
                   : const Icon(Icons.image_outlined, size: 18),
               label: Text(l10n.commonChangeCover,
-                  style: GoogleFonts.inter(fontSize: 13)),
+                  style: KubusTypography.inter(fontSize: 13)),
             ),
             const SizedBox(height: DetailSpacing.md),
             Form(
@@ -794,7 +794,7 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
                 children: [
                   Text(
                     l10n.collectionSettingsName,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: scheme.onSurface,
@@ -819,7 +819,7 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
                   const SizedBox(height: DetailSpacing.md),
                   Text(
                     l10n.collectionSettingsDescriptionLabel,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: scheme.onSurface,
@@ -841,11 +841,11 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
                     contentPadding: EdgeInsets.zero,
                     title: Text(
                       l10n.collectionSettingsPublic,
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                      style: KubusTypography.inter(fontWeight: FontWeight.w600),
                     ),
                     subtitle: Text(
                       l10n.collectionSettingsPublicSubtitle,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 12,
                         color: scheme.onSurface.withValues(alpha: 0.65),
                       ),
@@ -861,7 +861,7 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
               children: [
                 Text(
                   l10n.collectionDetailArtworks,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: scheme.onSurface,
@@ -883,7 +883,7 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
                         )
                       : const Icon(Icons.add, size: 18),
                   label: Text(l10n.collectionDetailAddArtwork,
-                      style: GoogleFonts.inter(fontSize: 13)),
+                      style: KubusTypography.inter(fontSize: 13)),
                 ),
               ],
             ),
@@ -891,7 +891,7 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
             if (collection.artworks.isEmpty)
               Text(
                 l10n.collectionDetailNoArtworksYet,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 13,
                   color: scheme.onSurface.withValues(alpha: 0.65),
                 ),
@@ -940,14 +940,14 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
                       ),
                       title: Text(
                         art.title,
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                        style: KubusTypography.inter(fontWeight: FontWeight.w600),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       subtitle: Text(
                         (art.artistName ?? art.artistWallet ?? art.id)
                             .toString(),
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 12,
                           color: scheme.onSurface.withValues(alpha: 0.65),
                         ),
@@ -993,3 +993,4 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
     );
   }
 }
+

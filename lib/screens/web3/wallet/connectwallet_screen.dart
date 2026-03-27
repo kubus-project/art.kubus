@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../../../services/event_bus.dart';
@@ -343,7 +342,7 @@ class _ConnectWalletState extends State<ConnectWallet>
               ),
         title: Text(
           _getStepTitle(l10n),
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.onSurface,
@@ -439,7 +438,7 @@ class _ConnectWalletState extends State<ConnectWallet>
                       const SizedBox(height: 10),
                       Text(
                         l10n.connectWalletChooseTitle,
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: isSmallScreen ? 22 : 24,
                           fontWeight: FontWeight.w800,
                           color: colorScheme.onSurface,
@@ -449,7 +448,7 @@ class _ConnectWalletState extends State<ConnectWallet>
                       const SizedBox(height: 8),
                       Text(
                         l10n.connectWalletChooseDescription,
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: isSmallScreen ? 13 : 14,
                           color: colorScheme.onSurface.withValues(alpha: 0.85),
                           height: 1.4,
@@ -491,11 +490,10 @@ class _ConnectWalletState extends State<ConnectWallet>
                   onTap: () => _showWeb3Guide(),
                   child: Text(
                     l10n.connectWalletHybridHelpLink,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 13,
                       color: accent,
-                      decoration: TextDecoration.underline,
-                    ),
+                    ).copyWith(decoration: TextDecoration.underline),
                   ),
                 ),
                 SizedBox(height: isSmallScreen ? 16 : 24),
@@ -684,7 +682,7 @@ class _ConnectWalletState extends State<ConnectWallet>
                     SizedBox(height: isSmallScreen ? 14 : 18),
                     Text(
                       l10n.connectWalletImportTitle,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: isSmallScreen ? 22 : 26,
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).colorScheme.onSurface,
@@ -696,7 +694,7 @@ class _ConnectWalletState extends State<ConnectWallet>
               SizedBox(height: isSmallScreen ? 12 : 16),
               Text(
                 l10n.connectWalletImportDescription,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: isSmallScreen ? 14 : 15,
                   color: Theme.of(context)
                       .colorScheme
@@ -760,7 +758,7 @@ class _ConnectWalletState extends State<ConnectWallet>
                     Expanded(
                       child: Text(
                         l10n.connectWalletImportWarning,
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: isSmallScreen ? 11 : 12,
                           color: Theme.of(context)
                               .colorScheme
@@ -952,7 +950,7 @@ class _ConnectWalletState extends State<ConnectWallet>
                     SizedBox(height: isSmallScreen ? 14 : 18),
                     Text(
                       l10n.connectWalletCreateTitle,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: isSmallScreen ? 22 : 26,
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).colorScheme.onSurface,
@@ -964,7 +962,7 @@ class _ConnectWalletState extends State<ConnectWallet>
               SizedBox(height: isSmallScreen ? 12 : 16),
               Text(
                 l10n.connectWalletCreateDescription,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: isSmallScreen ? 14 : 15,
                   color: Theme.of(context)
                       .colorScheme
@@ -994,7 +992,7 @@ class _ConnectWalletState extends State<ConnectWallet>
                         SizedBox(width: isSmallScreen ? 10 : 12),
                         Text(
                           l10n.connectWalletCreateInfoTitle,
-                          style: GoogleFonts.inter(
+                          style: KubusTypography.inter(
                             fontSize: isSmallScreen ? 14 : 15,
                             fontWeight: FontWeight.w600,
                             color: Theme.of(context).colorScheme.onSurface,
@@ -1005,7 +1003,7 @@ class _ConnectWalletState extends State<ConnectWallet>
                     SizedBox(height: isSmallScreen ? 10 : 12),
                     Text(
                       l10n.connectWalletCreateInfoBody,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: isSmallScreen ? 12 : 13,
                         color: Theme.of(context)
                             .colorScheme
@@ -1037,7 +1035,7 @@ class _ConnectWalletState extends State<ConnectWallet>
                     Expanded(
                       child: Text(
                         l10n.connectWalletCreateWarning,
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: isSmallScreen ? 11 : 12,
                           color: Theme.of(context)
                               .colorScheme
@@ -1401,7 +1399,7 @@ class _ConnectWalletState extends State<ConnectWallet>
           appBar: AppBar(
             title: Text(
               l10n.connectWalletWalletConnectScanQrTitle,
-              style: GoogleFonts.inter(),
+              style: KubusTypography.inter(),
             ),
             backgroundColor: Colors.black,
           ),
@@ -1443,7 +1441,7 @@ class _ConnectWalletState extends State<ConnectWallet>
                     ),
                     child: Text(
                       l10n.connectWalletWalletConnectScanQrHint,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         color: Colors.white,
                         fontSize: 14,
                       ),
@@ -1780,7 +1778,7 @@ class _ConnectWalletState extends State<ConnectWallet>
             SizedBox(height: isSmallScreen ? 28 : 32),
             Text(
               l10n.connectWalletConnectedTitle,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: isSmallScreen ? 26 : 30,
                 fontWeight: FontWeight.bold,
                 color: Theme.of(context).colorScheme.onSurface,
@@ -1792,7 +1790,7 @@ class _ConnectWalletState extends State<ConnectWallet>
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Text(
                 l10n.connectWalletConnectedDescription,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: isSmallScreen ? 14 : 15,
                   color: Theme.of(context)
                       .colorScheme
@@ -1818,7 +1816,7 @@ class _ConnectWalletState extends State<ConnectWallet>
                 ),
                 child: Text(
                   l10n.connectWalletConnectedStartExploringButton,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: isSmallScreen ? 17 : 18,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
@@ -1836,7 +1834,7 @@ class _ConnectWalletState extends State<ConnectWallet>
               },
               child: Text(
                 l10n.connectWalletConnectedDisconnectButton,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: isSmallScreen ? 14 : 15,
                   color: Theme.of(context)
                       .colorScheme
@@ -1860,7 +1858,7 @@ class _ConnectWalletState extends State<ConnectWallet>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           l10n.connectWalletWeb3GuideTitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
@@ -1872,7 +1870,7 @@ class _ConnectWalletState extends State<ConnectWallet>
             children: [
               Text(
                 l10n.connectWalletWeb3GuideDescription,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                     color: Theme.of(context)
                         .colorScheme
                         .onSurface
@@ -1906,7 +1904,7 @@ class _ConnectWalletState extends State<ConnectWallet>
             ),
             child: Text(
               l10n.connectWalletWeb3GuideGotItButton,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                   color: Theme.of(context).colorScheme.onPrimary),
             ),
           ),
@@ -1932,7 +1930,7 @@ class _ConnectWalletState extends State<ConnectWallet>
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -1940,7 +1938,7 @@ class _ConnectWalletState extends State<ConnectWallet>
                 ),
                 Text(
                   description,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 14,
                     color: Theme.of(context)
                         .colorScheme

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../utils/design_tokens.dart';
 import '../../widgets/glass_components.dart';
+import '../../widgets/common/kubus_screen_header.dart';
 
 /// Provides in-shell navigation for subscreens that should appear in the main
 /// content area instead of pushing a fullscreen route.
@@ -42,10 +43,47 @@ class DesktopShellScope extends InheritedWidget {
     return context.dependOnInheritedWidgetOfExactType<DesktopShellScope>();
   }
 
+  void pushSubScreen({
+    required String title,
+    required Widget child,
+    List<Widget>? actions,
+    Key? key,
+  }) {
+    pushScreen(
+      DesktopSubScreen(
+        key: key,
+        title: title,
+        actions: actions,
+        child: child,
+      ),
+    );
+  }
+
   @override
   bool updateShouldNotify(DesktopShellScope oldWidget) {
     return canPop != oldWidget.canPop;
   }
+}
+
+bool openInDesktopShell(
+  BuildContext context, {
+  required String title,
+  required Widget child,
+  List<Widget>? actions,
+}) {
+  final shellScope = DesktopShellScope.of(context);
+  if (shellScope == null) return false;
+  shellScope.pushSubScreen(title: title, child: child, actions: actions);
+  return true;
+}
+
+void popDesktopShellAware(BuildContext context) {
+  final shellScope = DesktopShellScope.of(context);
+  if (shellScope?.canPop ?? false) {
+    shellScope!.popScreen();
+    return;
+  }
+  Navigator.of(context).maybePop();
 }
 
 enum DesktopFunctionsPanel {
@@ -80,7 +118,6 @@ class DesktopSubScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shellScope = DesktopShellScope.of(context);
     final scheme = Theme.of(context).colorScheme;
     final headerStyle = KubusGlassStyle.resolve(
       context,
@@ -92,37 +129,39 @@ class DesktopSubScreen extends StatelessWidget {
       children: [
         // Header with back button
         SizedBox(
-          height: KubusSpacing.xl + KubusSpacing.lg,
+          height: KubusHeaderMetrics.actionHitArea +
+              (KubusHeaderMetrics.appBarVerticalPadding * 2),
           child: LiquidGlassPanel(
-            padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
+            padding: const EdgeInsets.symmetric(
+              horizontal: KubusHeaderMetrics.appBarHorizontalPadding,
+            ),
             margin: EdgeInsets.zero,
             borderRadius: BorderRadius.zero,
             blurSigma: headerStyle.blurSigma,
             fallbackMinOpacity: headerStyle.fallbackMinOpacity,
             showBorder: false,
             backgroundColor: headerStyle.tintColor,
-            child: Row(
-              children: [
-                if (shellScope?.canPop ?? false) ...[
-                  IconButton(
-                    onPressed: () => shellScope?.popScreen(),
-                    icon: Icon(
-                      Icons.arrow_back,
-                      color: scheme.onSurface,
-                    ),
-                    tooltip: 'Back',
-                  ),
-                  const SizedBox(width: KubusSpacing.sm),
-                ],
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            child: KubusScreenHeaderBar(
+              title: title,
+              compact: true,
+              minHeight: KubusHeaderMetrics.actionHitArea,
+              titleStyle: KubusTextStyles.screenTitle,
+              titleColor: scheme.onSurface,
+              leading: (DesktopShellScope.of(context)?.canPop ?? false)
+                  ? IconButton(
+                      onPressed: () => popDesktopShellAware(context),
+                      icon: Icon(
+                        Icons.arrow_back,
+                        size: KubusHeaderMetrics.actionIcon,
                         color: scheme.onSurface,
                       ),
-                ),
-                const Spacer(),
-                if (actions != null) ...actions!,
-              ],
+                      tooltip: 'Back',
+                    )
+                  : null,
+              actions: actions,
+              padding: const EdgeInsets.symmetric(
+                horizontal: KubusHeaderMetrics.appBarHorizontalPadding,
+              ),
             ),
           ),
         ),

@@ -1,8 +1,8 @@
-﻿import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/app_color_utils.dart';
+import '../../utils/design_tokens.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 
@@ -124,7 +124,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
         ),
         title: Text(
           l10n.collectionSettingsTitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 18,
             fontWeight: FontWeight.w600,
             color: Theme.of(context).colorScheme.onSurface,
@@ -135,7 +135,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
             onPressed: _saveSettings,
             child: Text(
               l10n.commonSave,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: collectionColor,
@@ -150,7 +150,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
           return FadeTransition(
             opacity: _fadeAnimation,
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(KubusSpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -180,7 +180,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
       children: [
         Text(
           l10n.collectionSettingsBasicInfo,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 20,
             fontWeight: FontWeight.w600,
             color: Theme.of(context).colorScheme.onSurface,
@@ -191,7 +191,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
         // Collection Name
         Text(
           l10n.collectionSettingsName,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 14,
             fontWeight: FontWeight.w500,
             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
@@ -228,7 +228,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
         // Description
         Text(
           l10n.collectionSettingsDescriptionLabel,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 14,
             fontWeight: FontWeight.w500,
             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
@@ -266,7 +266,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
         // Category
         Text(
           l10n.collectionSettingsCategory,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 14,
             fontWeight: FontWeight.w500,
             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
@@ -312,7 +312,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
       children: [
         Text(
           l10n.collectionSettingsPrivacy,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 20,
             fontWeight: FontWeight.w600,
             color: Theme.of(context).colorScheme.onSurface,
@@ -337,7 +337,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
       children: [
         Text(
           l10n.collectionSettingsCollaboration,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 20,
             fontWeight: FontWeight.w600,
             color: Theme.of(context).colorScheme.onSurface,
@@ -362,7 +362,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
       children: [
         Text(
           l10n.collectionSettingsNotifications,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 20,
             fontWeight: FontWeight.w600,
             color: Theme.of(context).colorScheme.onSurface,
@@ -398,7 +398,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -407,7 +407,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 14,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
@@ -432,7 +432,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
       children: [
         Text(
           l10n.collectionSettingsDangerZone,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 20,
             fontWeight: FontWeight.w600,
             color: Colors.red,
@@ -455,7 +455,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
             children: [
               Text(
                 l10n.collectionSettingsDeleteTitle,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: Colors.red,
@@ -464,7 +464,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
               const SizedBox(height: 8),
               Text(
                 l10n.collectionSettingsDeleteWarning,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 14,
                   color: Colors.red.withValues(alpha: 0.8),
                 ),
@@ -540,3 +540,4 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
     );
   }
 }
+

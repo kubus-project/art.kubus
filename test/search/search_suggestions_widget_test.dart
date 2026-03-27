@@ -36,7 +36,8 @@ class _SearchHarness extends StatelessWidget {
                 if (snapshot.connectionState != ConnectionState.done) {
                   return const SizedBox.shrink();
                 }
-                final suggestions = snapshot.data ?? const <MapSearchSuggestion>[];
+                final suggestions =
+                    snapshot.data ?? const <MapSearchSuggestion>[];
                 if (suggestions.isEmpty) {
                   return const Center(child: Text('No results found'));
                 }
@@ -61,7 +62,8 @@ class _SearchHarness extends StatelessWidget {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  BackendApiService buildBackendWithSuggestions(List<Map<String, dynamic>> suggestions) {
+  BackendApiService buildBackendWithSuggestions(
+      List<Map<String, dynamic>> suggestions) {
     final backend = BackendApiService();
     backend.setHttpClient(
       MockClient((request) async {
@@ -100,7 +102,7 @@ void main() {
         {
           'label': 'Ocean Light',
           'type': 'artwork',
-          'id': null,
+          'id': 'artwork-1',
         },
       ]),
     );

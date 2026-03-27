@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../providers/themeprovider.dart';
@@ -7,8 +6,10 @@ import '../../../providers/dao_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
+import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../widgets/kubus_action_sidebar.dart';
+import '../../../widgets/common/kubus_screen_header.dart';
 import '../../../widgets/glass_components.dart';
 import '../components/desktop_widgets.dart';
 import '../desktop_shell.dart';
@@ -82,7 +83,8 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                         ),
                       ),
                     ),
-                    child: GovernanceHub(selectedIndexNotifier: _hubSelectedIndex),
+                    child:
+                        GovernanceHub(selectedIndexNotifier: _hubSelectedIndex),
                   ),
                 ),
 
@@ -105,6 +107,10 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
+    final panelGlassStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.sidebarBackground,
+    );
 
     return Container(
       decoration: BoxDecoration(
@@ -122,89 +128,74 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
         margin: EdgeInsets.zero,
         borderRadius: BorderRadius.zero,
         showBorder: false,
-        backgroundColor: scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10),
+        backgroundColor: panelGlassStyle.tintColor,
+        blurSigma: panelGlassStyle.blurSigma,
+        fallbackMinOpacity: panelGlassStyle.fallbackMinOpacity,
         child: ListView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(KubusSpacing.lg),
           children: [
-          // Header
-           Text(
-             l10n.desktopGovernanceSidebarOverviewTitle,
-             style: GoogleFonts.inter(
-               fontSize: 20,
-               fontWeight: FontWeight.bold,
-               color: Theme.of(context).colorScheme.onSurface,
-             ),
-           ),
-          const SizedBox(height: 24),
+            KubusHeaderText(
+              title: l10n.desktopGovernanceSidebarOverviewTitle,
+              kind: KubusHeaderKind.section,
+            ),
+            const SizedBox(height: KubusSpacing.lg),
 
-          // Voting power card
-          _buildVotingPowerCard(themeProvider),
-          const SizedBox(height: 20),
+            // Voting power card
+            _buildVotingPowerCard(themeProvider),
+            const SizedBox(height: KubusSpacing.md + KubusSpacing.xs),
 
-          // Quick actions
-           Text(
-             l10n.desktopGovernanceSidebarQuickActionsTitle,
-             style: GoogleFonts.inter(
-               fontSize: 16,
-               fontWeight: FontWeight.w600,
-               color: Theme.of(context).colorScheme.onSurface,
-             ),
-           ),
-           const SizedBox(height: 12),
-           KubusActionSidebarTile(
-             title: l10n.desktopGovernanceQuickActionCreateProposalTitle,
-             subtitle: l10n.desktopGovernanceQuickActionCreateProposalSubtitle,
-             icon: Icons.add_box_outlined,
-             semantic: KubusActionSemantic.create,
-             onTap: () => _hubSelectedIndex.value = 2,
-           ),
-           KubusActionSidebarTile(
-             title: l10n.desktopGovernanceQuickActionVoteTitle,
-             subtitle: l10n.desktopGovernanceQuickActionVoteSubtitle,
-             icon: Icons.how_to_vote_outlined,
-             semantic: KubusActionSemantic.manage,
-             onTap: () => _hubSelectedIndex.value = 0,
-           ),
-           KubusActionSidebarTile(
-             title: l10n.desktopGovernanceQuickActionAnalyticsTitle,
-             subtitle: l10n.desktopGovernanceQuickActionAnalyticsSubtitle,
-             icon: Icons.analytics_outlined,
-             semantic: KubusActionSemantic.analytics,
-             onTap: () {
-               DesktopShellScope.of(context)?.pushScreen(
-                 DesktopSubScreen(
-                   title: l10n.desktopGovernanceAnalyticsScreenTitle,
-                   child: const DAOAnalytics(),
-                 ),
-               );
-             },
-           ),
-           const SizedBox(height: 24),
+            // Quick actions
+            KubusHeaderText(
+              title: l10n.desktopGovernanceSidebarQuickActionsTitle,
+              kind: KubusHeaderKind.section,
+            ),
+            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+            KubusActionSidebarTile(
+              title: l10n.desktopGovernanceQuickActionCreateProposalTitle,
+              subtitle: l10n.desktopGovernanceQuickActionCreateProposalSubtitle,
+              icon: Icons.add_box_outlined,
+              semantic: KubusActionSemantic.create,
+              onTap: () => _hubSelectedIndex.value = 2,
+            ),
+            KubusActionSidebarTile(
+              title: l10n.desktopGovernanceQuickActionVoteTitle,
+              subtitle: l10n.desktopGovernanceQuickActionVoteSubtitle,
+              icon: Icons.how_to_vote_outlined,
+              semantic: KubusActionSemantic.manage,
+              onTap: () => _hubSelectedIndex.value = 0,
+            ),
+            KubusActionSidebarTile(
+              title: l10n.desktopGovernanceQuickActionAnalyticsTitle,
+              subtitle: l10n.desktopGovernanceQuickActionAnalyticsSubtitle,
+              icon: Icons.analytics_outlined,
+              semantic: KubusActionSemantic.analytics,
+              onTap: () {
+                DesktopShellScope.of(context)?.pushScreen(
+                  DesktopSubScreen(
+                    title: l10n.desktopGovernanceAnalyticsScreenTitle,
+                    child: const DAOAnalytics(),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: KubusSpacing.lg),
 
-          // DAO Stats
-           Text(
-             l10n.desktopGovernanceSidebarStatisticsTitle,
-             style: GoogleFonts.inter(
-               fontSize: 16,
-               fontWeight: FontWeight.w600,
-               color: Theme.of(context).colorScheme.onSurface,
-             ),
-           ),
-          const SizedBox(height: 12),
-          _buildDAOStatsGrid(themeProvider),
-          const SizedBox(height: 24),
+            // DAO Stats
+            KubusHeaderText(
+              title: l10n.desktopGovernanceSidebarStatisticsTitle,
+              kind: KubusHeaderKind.section,
+            ),
+            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+            _buildDAOStatsGrid(themeProvider),
+            const SizedBox(height: KubusSpacing.lg),
 
-          // Recent governance activity
-           Text(
-             l10n.desktopGovernanceSidebarRecentActivityTitle,
-             style: GoogleFonts.inter(
-               fontSize: 16,
-               fontWeight: FontWeight.w600,
-               color: Theme.of(context).colorScheme.onSurface,
-             ),
-           ),
-          const SizedBox(height: 12),
-          _buildRecentActivity(themeProvider),
+            // Recent governance activity
+            KubusHeaderText(
+              title: l10n.desktopGovernanceSidebarRecentActivityTitle,
+              kind: KubusHeaderKind.section,
+            ),
+            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+            _buildRecentActivity(themeProvider),
           ],
         ),
       ),
@@ -219,6 +210,10 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
         final roles = KubusColorRoles.of(context);
         final votingPower = web3Provider.kub8Balance;
         final hasVotingPower = votingPower > 0;
+        final cardGlassStyle = KubusGlassStyle.resolve(
+          context,
+          surfaceType: KubusGlassSurfaceType.card,
+        );
 
         return DesktopCard(
           child: Column(
@@ -227,27 +222,26 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
               Row(
                 children: [
                   Container(
-                    width: 48,
-                    height: 48,
+                    width: KubusChromeMetrics.heroIconBox - KubusSpacing.xs,
+                    height: KubusChromeMetrics.heroIconBox - KubusSpacing.xs,
                     decoration: BoxDecoration(
                       color: daoAccent.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(KubusRadius.md),
                     ),
                     child: Icon(
                       Icons.how_to_vote,
                       color: daoAccent,
-                      size: 24,
+                      size: KubusChromeMetrics.heroIcon,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: KubusSpacing.md),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'Your Voting Power',
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
+                          style: KubusTextStyles.statLabel.copyWith(
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurface
@@ -257,9 +251,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                         const SizedBox(height: 4),
                         Text(
                           '${votingPower.toStringAsFixed(2)} KUB8',
-                          style: GoogleFonts.inter(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
+                          style: KubusTextStyles.heroTitle.copyWith(
                             color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
@@ -269,26 +261,28 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                 ],
               ),
               if (!hasVotingPower) ...[
-                const SizedBox(height: 16),
+                const SizedBox(height: KubusSpacing.md),
                 LiquidGlassPanel(
-                  padding: const EdgeInsets.all(12),
-                  borderRadius: BorderRadius.circular(10),
+                  padding:
+                      const EdgeInsets.all(KubusSpacing.md - KubusSpacing.xs),
+                  borderRadius:
+                      BorderRadius.circular(KubusRadius.sm + KubusSpacing.xs),
                   showBorder: false,
-                  backgroundColor:
-                      roles.lockedFeature.withValues(alpha: 0.12),
+                  backgroundColor: cardGlassStyle.tintColor,
+                  blurSigma: cardGlassStyle.blurSigma,
+                  fallbackMinOpacity: cardGlassStyle.fallbackMinOpacity,
                   child: Row(
                     children: [
                       Icon(
                         Icons.info_outline,
                         color: roles.lockedFeature,
-                        size: 20,
+                        size: KubusHeaderMetrics.actionIcon,
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: KubusSpacing.md),
                       Expanded(
                         child: Text(
                           l10n.desktopGovernanceAcquireKub8Hint,
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
+                          style: KubusTextStyles.actionTileSubtitle.copyWith(
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurface
@@ -368,9 +362,12 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
 
   Widget _buildStatCard(
       String label, String value, IconData icon, Color color) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final radius = BorderRadius.circular(12);
-    final glassTint = color.withValues(alpha: isDark ? 0.12 : 0.08);
+    final glassStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.card,
+      tintBase: color,
+    );
 
     return Container(
       clipBehavior: Clip.antiAlias,
@@ -382,28 +379,27 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
         ),
       ),
       child: LiquidGlassPanel(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         margin: EdgeInsets.zero,
         borderRadius: radius,
         showBorder: false,
-        backgroundColor: glassTint,
+        backgroundColor: glassStyle.tintColor,
+        blurSigma: glassStyle.blurSigma,
+        fallbackMinOpacity: glassStyle.fallbackMinOpacity,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(height: 8),
+            Icon(icon, color: color, size: KubusHeaderMetrics.actionIcon),
+            const SizedBox(height: KubusSpacing.sm),
             Text(
               value,
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+              style: KubusTextStyles.statValue.copyWith(
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             Text(
               label,
-              style: GoogleFonts.inter(
-                fontSize: 12,
+              style: KubusTextStyles.statLabel.copyWith(
                 color: Theme.of(context)
                     .colorScheme
                     .onSurface
@@ -420,29 +416,37 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
     return Consumer<DAOProvider>(
       builder: (context, daoProvider, _) {
         final recentProposals = daoProvider.proposals.take(3).toList();
+        final activityGlassStyle = KubusGlassStyle.resolve(
+          context,
+          surfaceType: KubusGlassSurfaceType.card,
+        );
 
         if (recentProposals.isEmpty) {
-          final theme = Theme.of(context);
-          final scheme = theme.colorScheme;
-          final isDark = theme.brightness == Brightness.dark;
           return LiquidGlassPanel(
-            padding: const EdgeInsets.all(16),
-            borderRadius: BorderRadius.circular(12),
+            padding: const EdgeInsets.all(KubusSpacing.md),
+            borderRadius: BorderRadius.circular(KubusRadius.md),
             showBorder: false,
-            backgroundColor: scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10),
+            backgroundColor: activityGlassStyle.tintColor,
+            blurSigma: activityGlassStyle.blurSigma,
+            fallbackMinOpacity: activityGlassStyle.fallbackMinOpacity,
             child: Column(
               children: [
                 Icon(
                   Icons.inbox_outlined,
-                  size: 40,
-                  color: scheme.onSurface.withValues(alpha: 0.3),
+                  size: KubusChromeMetrics.heroIcon,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.3),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: KubusSpacing.sm),
                 Text(
                   'No recent activity',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: scheme.onSurface.withValues(alpha: 0.6),
+                  style: KubusTextStyles.detailBody.copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -454,20 +458,21 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
           children: recentProposals.map((proposal) {
             final scheme = Theme.of(context).colorScheme;
             return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(
+                  bottom: KubusSpacing.md - KubusSpacing.xs),
+              padding: const EdgeInsets.all(KubusSpacing.md - KubusSpacing.xs),
               decoration: BoxDecoration(
                 color: Theme.of(context)
                     .colorScheme
                     .primaryContainer
                     .withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(KubusRadius.sm),
               ),
               child: Row(
                 children: [
                   Container(
-                    width: 8,
-                    height: 8,
+                    width: KubusChromeMetrics.navBadgeDot,
+                    height: KubusChromeMetrics.navBadgeDot,
                     decoration: BoxDecoration(
                       color: proposal.status == ProposalStatus.active
                           ? scheme.tertiary
@@ -475,16 +480,14 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                       shape: BoxShape.circle,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: KubusSpacing.md),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           proposal.title,
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
+                          style: KubusTextStyles.detailCardTitle.copyWith(
                             color: Theme.of(context).colorScheme.onSurface,
                           ),
                           maxLines: 1,
@@ -492,8 +495,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                         ),
                         Text(
                           proposal.status.name,
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
+                          style: KubusTextStyles.detailLabel.copyWith(
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurface

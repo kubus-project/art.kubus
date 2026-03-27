@@ -3,10 +3,10 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
+import '../../utils/design_tokens.dart';
 import '../../providers/security_gate_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../services/settings_service.dart';
@@ -197,7 +197,7 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
       children: [
         Text(
           l10n.settingsSetPinTileTitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 20,
             fontWeight: FontWeight.w800,
             color: scheme.onSurface,
@@ -206,7 +206,7 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
         const SizedBox(height: 8),
         Text(
           l10n.settingsSetPinTileSubtitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 14,
             color: scheme.onSurface.withValues(alpha: 0.8),
           ),
@@ -237,7 +237,7 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
           const SizedBox(height: 12),
           Text(
             _inlineError!,
-            style: GoogleFonts.inter(color: scheme.error),
+            style: KubusTypography.inter(color: scheme.error),
           ),
         ],
         const SizedBox(height: 16),
@@ -253,7 +253,7 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
           onPressed: _busy ? null : () => context.read<SecurityGateProvider>().logout(),
           child: Text(
             l10n.settingsLogoutButton,
-            style: GoogleFonts.inter(color: scheme.onSurface.withValues(alpha: 0.7)),
+            style: KubusTypography.inter(color: scheme.onSurface.withValues(alpha: 0.7)),
           ),
         ),
       ],
@@ -266,7 +266,7 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
       children: [
         Text(
           l10n.settingsBiometricTileTitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 20,
             fontWeight: FontWeight.w800,
             color: scheme.onSurface,
@@ -275,7 +275,7 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
         const SizedBox(height: 8),
         Text(
           l10n.settingsBiometricTileSubtitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 14,
             color: scheme.onSurface.withValues(alpha: 0.8),
           ),
@@ -284,7 +284,7 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
           const SizedBox(height: 12),
           Text(
             _inlineError!,
-            style: GoogleFonts.inter(color: scheme.error),
+            style: KubusTypography.inter(color: scheme.error),
           ),
         ],
         const SizedBox(height: 16),
@@ -322,7 +322,7 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
           elevation: 0,
           title: Text(
             l10n.settingsSecuritySettingsDialogTitle,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontWeight: FontWeight.w700,
               color: scheme.onSurface,
             ),

@@ -24,12 +24,12 @@ class KubusDetailPanel extends StatelessWidget {
     required this.header,
     required this.sections,
     this.margin = EdgeInsets.zero,
-    this.borderRadius = 20,
+    this.borderRadius = KubusRadius.lg,
     this.blurSigma = KubusGlassEffects.blurSigmaLight,
     this.expandContent = true,
     this.sectionSpacing = 0,
-    this.backgroundAlphaDark = 0.20,
-    this.backgroundAlphaLight = 0.14,
+    this.backgroundAlphaDark = KubusGlassEffects.blurTintOpacityDark,
+    this.backgroundAlphaLight = KubusGlassEffects.blurTintOpacityLight,
   });
 
   final DetailPanelKind kind;
@@ -50,7 +50,6 @@ class KubusDetailPanel extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-
     final panelBody = SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -72,6 +71,7 @@ class KubusDetailPanel extends StatelessWidget {
       backgroundColor: scheme.surface.withValues(
         alpha: isDark ? backgroundAlphaDark : backgroundAlphaLight,
       ),
+      fallbackMinOpacity: KubusGlassEffects.fallbackOpaqueOpacity,
       showBorder: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -93,7 +93,7 @@ class DetailHeader extends StatelessWidget {
     this.imageUrl,
     this.imageVersion,
     this.height = 220,
-    this.borderRadius = 20,
+    this.borderRadius = KubusRadius.lg,
     this.badge,
     this.fallbackIcon = Icons.image_outlined,
     this.closeAccentColor,
@@ -171,8 +171,8 @@ class DetailHeader extends StatelessWidget {
               ),
             ),
             Positioned(
-              top: 12,
-              right: 12,
+              top: KubusSpacing.sm + KubusSpacing.xxs,
+              right: KubusSpacing.sm + KubusSpacing.xxs,
               child: KubusGlassIconButton(
                 icon: Icons.close,
                 accentColor: closeAccentColor ?? accentColor,
@@ -183,8 +183,8 @@ class DetailHeader extends StatelessWidget {
             ),
             if (badge != null)
               Positioned(
-                top: 12,
-                left: 12,
+                top: KubusSpacing.sm + KubusSpacing.xxs,
+                left: KubusSpacing.sm + KubusSpacing.xxs,
                 child: badge!,
               ),
           ],
@@ -213,7 +213,7 @@ class DetailHeader extends StatelessWidget {
         child: Icon(
           icon,
           color: iconColor,
-          size: 40,
+          size: KubusHeaderMetrics.actionHitArea - KubusSpacing.xs,
         ),
       ),
     );

@@ -2,7 +2,6 @@
 import 'package:art_kubus/widgets/glass_components.dart';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../services/share/share_service.dart';
@@ -25,7 +24,9 @@ import '../../utils/media_url_resolver.dart';
 import '../../utils/wallet_utils.dart';
 import '../../utils/creator_display_format.dart';
 import '../../utils/search_suggestions.dart';
+import '../../utils/user_profile_navigation.dart';
 import '../../widgets/app_loading.dart';
+import '../../utils/design_tokens.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/community/community_post_card.dart';
 import '../../widgets/community/community_post_options_sheet.dart';
@@ -33,7 +34,6 @@ import '../../widgets/community/community_subject_picker.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/inline_loading.dart';
 import 'post_detail_screen.dart';
-import 'user_profile_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class GroupFeedScreen extends StatefulWidget {
@@ -102,7 +102,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                     child: Center(
                       child: Text(
                         label,
-                        style: GoogleFonts.inter(fontSize: 13),
+                        style: KubusTypography.inter(fontSize: 13),
                       ),
                     ),
                   ),
@@ -127,7 +127,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
             onRefresh: () => hub.loadGroupPosts(summary.id, refresh: true),
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(KubusSpacing.lg),
               children: [
                 _buildGroupHeader(summary),
                 const SizedBox(height: 16),
@@ -151,7 +151,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                         Expanded(
                           child: Text(
                             error,
-                            style: GoogleFonts.inter(
+                            style: KubusTypography.inter(
                               color: Theme.of(context)
                                   .colorScheme
                                   .onErrorContainer,
@@ -225,7 +225,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
             Expanded(
               child: Text(
                 l10n.groupFeedSignInToPostLabel,
-                style: GoogleFonts.inter(color: scheme.onSurface.withValues(alpha: 0.8)),
+                style: KubusTypography.inter(color: scheme.onSurface.withValues(alpha: 0.8)),
               ),
             ),
             TextButton(
@@ -251,7 +251,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
             Expanded(
               child: Text(
                 l10n.groupFeedJoinToPostLabel,
-                style: GoogleFonts.inter(color: scheme.onSurface.withValues(alpha: 0.8)),
+                style: KubusTypography.inter(color: scheme.onSurface.withValues(alpha: 0.8)),
               ),
             ),
             TextButton(
@@ -457,7 +457,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
       decoration: BoxDecoration(
         color: scheme.primaryContainer,
         borderRadius: BorderRadius.circular(18),
@@ -467,7 +467,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
         children: [
           Text(
             summary.name,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 20,
               fontWeight: FontWeight.w700,
             ),
@@ -477,7 +477,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
             summary.description?.isNotEmpty == true
                 ? summary.description!
                 : l10n.communityGroupNoDescription,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 13,
               color: scheme.onSurface.withValues(alpha: 0.7),
             ),
@@ -617,7 +617,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                 children: [
                   Text(
                     title,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),
@@ -625,7 +625,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                   const SizedBox(height: 4),
                   Text(
                     label,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 12,
                       color: scheme.onSurface.withValues(alpha: 0.6),
                     ),
@@ -723,12 +723,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
   }
 
   void _viewUserProfile(String userId) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => UserProfileScreen(userId: userId),
-      ),
-    );
+    UserProfileNavigation.open(context, userId: userId);
   }
 
   String? _currentWalletAddress() {
@@ -881,7 +876,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                   children: [
                     Text(
                       title,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: theme.colorScheme.onSurface,
@@ -917,7 +912,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                     if (snapshot.hasError) {
                       return Center(
                         child: Padding(
-                          padding: const EdgeInsets.all(24),
+                          padding: const EdgeInsets.all(KubusSpacing.lg),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -929,7 +924,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                               const SizedBox(height: 12),
                               Text(
                                 l10n.postDetailLoadLikesFailedMessage,
-                                style: GoogleFonts.inter(
+                                style: KubusTypography.inter(
                                   fontSize: 14,
                                   color: theme.colorScheme.onSurface,
                                 ),
@@ -938,7 +933,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                               Text(
                                 '${snapshot.error}',
                                 textAlign: TextAlign.center,
-                                style: GoogleFonts.inter(
+                                style: KubusTypography.inter(
                                   fontSize: 13,
                                   color:
                                       theme.colorScheme.onSurface.withValues(alpha: 0.7),
@@ -994,13 +989,13 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                           ),
                           title: Text(
                             formatted.primary,
-                            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                            style: KubusTypography.inter(fontWeight: FontWeight.w600),
                           ),
                           subtitle: subtitle == null
                               ? null
                               : Text(
                                   subtitle,
-                                  style: GoogleFonts.inter(fontSize: 12),
+                                  style: KubusTypography.inter(fontSize: 12),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -1050,7 +1045,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                 children: [
                   Text(
                     l10n.communityRepostedByTitle,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: theme.colorScheme.onSurface,
@@ -1076,7 +1071,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                     return Center(
                       child: Text(
                         l10n.communityRepostsLoadFailedMessage,
-                        style: GoogleFonts.inter(),
+                        style: KubusTypography.inter(),
                       ),
                     );
                   }
@@ -1131,22 +1126,22 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                         ),
                         title: Text(
                           formatted.primary,
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                          style: KubusTypography.inter(fontWeight: FontWeight.w600),
                         ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             if (formatted.secondary != null)
                               Text(formatted.secondary!,
-                                  style: GoogleFonts.inter(fontSize: 12))
+                                  style: KubusTypography.inter(fontSize: 12))
                             else if (wallet.isNotEmpty)
                               Text(maskWallet(wallet),
-                                  style: GoogleFonts.inter(fontSize: 12)),
+                                  style: KubusTypography.inter(fontSize: 12)),
                             if (comment != null && comment.isNotEmpty) ...[
                               const SizedBox(height: 4),
                               Text(
                                 comment,
-                                style: GoogleFonts.inter(fontSize: 12),
+                                style: KubusTypography.inter(fontSize: 12),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -1156,7 +1151,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                         trailing: createdAt != null
                             ? Text(
                                 _getTimeAgo(createdAt),
-                                style: GoogleFonts.inter(
+                                style: KubusTypography.inter(
                                   fontSize: 12,
                                   color: theme.colorScheme.onSurface
                                       .withValues(alpha: 0.6),
@@ -1212,7 +1207,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                   children: [
                     Text(
                       l10n.postDetailRepostTitle,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: theme.colorScheme.onSurface,
@@ -1223,7 +1218,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                         TextButton(
                           onPressed: () => Navigator.pop(sheetContext),
                           child: Text(l10n.commonCancel,
-                              style: GoogleFonts.inter()),
+                              style: KubusTypography.inter()),
                         ),
                         const SizedBox(width: 8),
                         ElevatedButton(
@@ -1272,7 +1267,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                           },
                           child: Text(
                             l10n.postDetailRepostButton,
-                            style: GoogleFonts.inter(),
+                            style: KubusTypography.inter(),
                           ),
                         ),
                       ],
@@ -1324,7 +1319,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) => Container(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(KubusSpacing.lg),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -1345,7 +1340,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
               leading: Icon(Icons.delete_outline, color: theme.colorScheme.error),
               title: Text(
                 l10n.communityUnrepostAction,
-                style: GoogleFonts.inter(color: theme.colorScheme.error),
+                style: KubusTypography.inter(color: theme.colorScheme.error),
               ),
               onTap: () {
                 Navigator.pop(sheetContext);
@@ -1365,21 +1360,21 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
-        title: Text(l10n.communityUnrepostTitle, style: GoogleFonts.inter()),
+        title: Text(l10n.communityUnrepostTitle, style: KubusTypography.inter()),
         content: Text(
           l10n.communityUnrepostConfirmBody,
-          style: GoogleFonts.inter(),
+          style: KubusTypography.inter(),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(l10n.commonCancel, style: GoogleFonts.inter()),
+            child: Text(l10n.commonCancel, style: KubusTypography.inter()),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             child: Text(
               l10n.communityUnrepostAction,
-              style: GoogleFonts.inter(),
+              style: KubusTypography.inter(),
             ),
           ),
         ],
@@ -1431,3 +1426,5 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     }
   }
 }
+
+

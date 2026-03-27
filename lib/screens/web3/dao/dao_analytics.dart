@@ -1,5 +1,5 @@
 import "package:flutter/material.dart";
-import 'package:google_fonts/google_fonts.dart';
+import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../providers/dao_provider.dart';
@@ -41,7 +41,7 @@ class DAOAnalytics extends StatelessWidget {
         scrolledUnderElevation: 0,
         title: Text(
           l10n.daoAnalyticsTitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 22,
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.onSurface,
@@ -90,7 +90,7 @@ class DAOAnalytics extends StatelessWidget {
           return RefreshIndicator(
             onRefresh: daoProvider.refreshData,
             child: ListView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(KubusSpacing.lg),
               children: [
                 _metricsGrid(context, daoProvider, active: active, votes: votes, avgVotingPower: avgVotingPower),
                 const SizedBox(height: 20),
@@ -104,7 +104,7 @@ class DAOAnalytics extends StatelessWidget {
                         ? [
                             Text(
                               l10n.daoAnalyticsNoProposalsYetLabel,
-                              style: GoogleFonts.inter(
+                              style: KubusTypography.inter(
                                 fontSize: 13,
                                 color: scheme.onSurface.withValues(alpha: 0.7),
                               ),
@@ -138,7 +138,7 @@ class DAOAnalytics extends StatelessWidget {
                         ? [
                             Text(
                               l10n.daoAnalyticsNoProposalsYetLabel,
-                              style: GoogleFonts.inter(
+                              style: KubusTypography.inter(
                                 fontSize: 13,
                                 color: scheme.onSurface.withValues(alpha: 0.7),
                               ),
@@ -243,7 +243,7 @@ class DAOAnalytics extends StatelessWidget {
               const Spacer(),
               Text(
                 value,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
                   color: Theme.of(context).colorScheme.onSurface,
@@ -254,7 +254,7 @@ class DAOAnalytics extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             title,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 12,
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
@@ -277,7 +277,7 @@ class DAOAnalytics extends StatelessWidget {
         children: [
           Text(
             title,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 16,
               fontWeight: FontWeight.w700,
               color: Theme.of(context).colorScheme.onSurface,
@@ -298,7 +298,7 @@ class DAOAnalytics extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 13,
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
               ),
@@ -306,7 +306,7 @@ class DAOAnalytics extends StatelessWidget {
           ),
           Text(
             value,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 13,
               fontWeight: FontWeight.w700,
               color: Theme.of(context).colorScheme.onSurface,

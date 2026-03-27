@@ -78,7 +78,7 @@ void main() {
   });
 
   testWidgets(
-    'constrained marker overlay card keeps cover image and scrollable body',
+    'constrained marker overlay card keeps cover image and non-scrollable body',
     (tester) async {
       final marker = _marker();
       final artwork = _artwork();
@@ -113,15 +113,15 @@ void main() {
               onPreviousStacked: () {},
               onSelectStackIndex: (_) {},
               maxWidth: 340,
-              maxHeight: 260,
+              maxHeight: 360,
             ),
           ),
         ),
       );
 
       expect(find.byType(FittedBox), findsNothing);
-      expect(find.byType(SingleChildScrollView), findsOneWidget);
-      expect(find.byType(GlassSurface), findsOneWidget);
+      expect(find.byType(SingleChildScrollView), findsNothing);
+      expect(find.byType(GlassSurface), findsWidgets);
 
       final imageWidget = tester.widget<KubusCachedImage>(
         find.byType(KubusCachedImage),
@@ -130,13 +130,49 @@ void main() {
 
       expect(find.text('More info'), findsOneWidget);
 
-      await tester.drag(
-        find.byType(SingleChildScrollView),
-        const Offset(0, -160),
-      );
-      await tester.pump();
-
       expect(find.text('More info'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'title and card area taps can trigger detail callbacks',
+    (tester) async {
+      final marker = _marker();
+      final artwork = _artwork();
+      var titleTapCount = 0;
+      var cardTapCount = 0;
+
+      await tester.pumpWidget(
+        _wrap(
+          SizedBox(
+            width: 340,
+            child: KubusMarkerOverlayCard(
+              marker: marker,
+              artwork: artwork,
+              baseColor: Colors.teal,
+              displayTitle: artwork.title,
+              canPresentExhibition: false,
+              description: marker.description,
+              onClose: () {},
+              onPrimaryAction: () {},
+              onCardTap: () => cardTapCount += 1,
+              onTitleTap: () => titleTapCount += 1,
+              primaryActionIcon: Icons.arrow_forward,
+              primaryActionLabel: 'More info',
+              maxWidth: 340,
+              maxHeight: 360,
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Artwork'));
+      await tester.pump();
+      expect(titleTapCount, 1);
+
+      await tester.tap(find.byType(KubusCachedImage));
+      await tester.pump();
+      expect(cardTapCount, 1);
     },
   );
 }

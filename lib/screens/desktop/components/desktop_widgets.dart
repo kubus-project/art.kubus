@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../utils/app_animations.dart';
+import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../widgets/glass_components.dart';
+import '../../../widgets/common/kubus_screen_header.dart';
 import '../../../widgets/search/kubus_search_bar.dart';
 
 /// Desktop content card with hover effects and animations
@@ -48,13 +49,17 @@ class _DesktopCardState extends State<DesktopCard> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
     final animationTheme = context.animationTheme;
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final glassStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.card,
+      tintBase: widget.backgroundColor ?? scheme.surface,
+    );
 
-    final radius = widget.borderRadius ?? BorderRadius.circular(16);
-    final glassTint = widget.backgroundColor ??
-        scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
+    final radius =
+        widget.borderRadius ?? BorderRadius.circular(KubusRadius.lg);
+    final glassTint = widget.backgroundColor ?? glassStyle.tintColor;
 
     Widget content = AnimatedContainer(
       duration: animationTheme.short,
@@ -86,9 +91,12 @@ class _DesktopCardState extends State<DesktopCard> {
       ),
       child: widget.isGlass
           ? LiquidGlassPanel(
-              padding: widget.padding ?? const EdgeInsets.all(20),
+              padding: widget.padding ??
+                  const EdgeInsets.all(KubusChromeMetrics.cardPadding),
               margin: EdgeInsets.zero,
               borderRadius: radius,
+              blurSigma: glassStyle.blurSigma,
+              fallbackMinOpacity: glassStyle.fallbackMinOpacity,
               showBorder: false,
               backgroundColor: glassTint,
               onTap: widget.onTap,
@@ -101,7 +109,8 @@ class _DesktopCardState extends State<DesktopCard> {
                 onTap: widget.onTap,
                 borderRadius: radius,
                 child: Padding(
-                  padding: widget.padding ?? const EdgeInsets.all(20),
+                  padding: widget.padding ??
+                      const EdgeInsets.all(KubusChromeMetrics.cardPadding),
                   child: widget.child,
                 ),
               ),
@@ -143,50 +152,35 @@ class DesktopSectionHeader extends StatelessWidget {
     final effectiveColor = iconColor ?? themeProvider.accentColor;
 
     return Padding(
-      padding: padding ?? const EdgeInsets.symmetric(vertical: 10),
+      padding: padding ??
+          const EdgeInsets.symmetric(
+            vertical: KubusSpacing.sm + KubusSpacing.xxs,
+          ),
       child: Row(
         children: [
           if (icon != null) ...[
             Container(
-              padding: const EdgeInsets.all(6),
+              width: KubusHeaderMetrics.actionHitArea,
+              height: KubusHeaderMetrics.actionHitArea,
               decoration: BoxDecoration(
                 color: effectiveColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(KubusRadius.sm),
               ),
-              child: Icon(
-                icon,
-                color: effectiveColor,
-                size: 18,
+              child: Center(
+                child: Icon(
+                  icon,
+                  color: effectiveColor,
+                  size: KubusHeaderMetrics.actionIcon,
+                ),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: KubusSpacing.sm + KubusSpacing.xxs),
           ],
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle!,
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
-                    ),
-                  ),
-                ],
-              ],
+            child: KubusHeaderText(
+              title: title,
+              subtitle: subtitle,
+              kind: KubusHeaderKind.section,
             ),
           ),
           if (action != null) action!,
@@ -273,12 +267,15 @@ class _DesktopStatCardState extends State<DesktopStatCard> {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final color = widget.color ?? themeProvider.accentColor;
     final animationTheme = context.animationTheme;
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
+    final glassStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.card,
+      tintBase: color,
+    );
 
-    final radius = BorderRadius.circular(14);
-    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
+    final radius = BorderRadius.circular(KubusRadius.md);
+    final glassTint = glassStyle.tintColor;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -304,9 +301,11 @@ class _DesktopStatCardState extends State<DesktopStatCard> {
               : null,
         ),
         child: LiquidGlassPanel(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(KubusChromeMetrics.compactCardPadding),
           margin: EdgeInsets.zero,
           borderRadius: radius,
+          blurSigma: glassStyle.blurSigma,
+          fallbackMinOpacity: glassStyle.fallbackMinOpacity,
           showBorder: false,
           backgroundColor: glassTint,
           onTap: widget.onTap,
@@ -325,7 +324,7 @@ class _DesktopStatCardState extends State<DesktopStatCard> {
                     child: Icon(
                       widget.icon,
                       color: color,
-                      size: 20,
+                      size: KubusSizes.sidebarActionIcon,
                     ),
                   ),
                   if (widget.change != null)
@@ -351,15 +350,13 @@ class _DesktopStatCardState extends State<DesktopStatCard> {
                                 widget.isPositive
                                     ? Icons.arrow_upward
                                     : Icons.arrow_downward,
-                                size: 14,
+                                size: KubusHeaderMetrics.sectionSubtitle,
                                 color: changeColor,
                               ),
                               const SizedBox(width: 2),
                               Text(
                                 widget.change!,
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
+                                style: KubusTextStyles.statChange.copyWith(
                                   color: changeColor,
                                 ),
                               ),
@@ -373,17 +370,14 @@ class _DesktopStatCardState extends State<DesktopStatCard> {
               const Spacer(),
               Text(
                 widget.value,
-                style: GoogleFonts.inter(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+                style: KubusTextStyles.statValue.copyWith(
                   color: scheme.onSurface,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 widget.label,
-                style: GoogleFonts.inter(
-                  fontSize: 13,
+                style: KubusTextStyles.statLabel.copyWith(
                   color: scheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
@@ -425,13 +419,14 @@ class _DesktopActionButtonState extends State<DesktopActionButton> {
     final animationTheme = context.animationTheme;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
+    final glassStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.button,
+      tintBase: widget.isPrimary ? themeProvider.accentColor : scheme.surface,
+    );
 
-    final radius = BorderRadius.circular(12);
-    // Buttons should stay more opaque (retain their color), but still get blur/edge treatment.
-    final glassTint = widget.isPrimary
-        ? themeProvider.accentColor.withValues(alpha: isDark ? 0.82 : 0.88)
-        : scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
+    final radius = BorderRadius.circular(KubusRadius.md);
+    final glassTint = glassStyle.tintColor;
 
     final outlineColor = widget.isPrimary
         ? themeProvider.accentColor.withValues(alpha: _isHovered ? 0.34 : 0.28)
@@ -470,6 +465,8 @@ class _DesktopActionButtonState extends State<DesktopActionButton> {
             padding: EdgeInsets.zero,
             margin: EdgeInsets.zero,
             borderRadius: radius,
+            blurSigma: glassStyle.blurSigma,
+            fallbackMinOpacity: glassStyle.fallbackMinOpacity,
             showBorder: false,
             backgroundColor: glassTint,
             child: ElevatedButton.icon(
@@ -485,12 +482,10 @@ class _DesktopActionButtonState extends State<DesktopActionButton> {
                             : themeProvider.accentColor,
                       ),
                     )
-                  : Icon(widget.icon, size: 20),
+                  : Icon(widget.icon, size: KubusHeaderMetrics.actionIcon),
               label: Text(
                 widget.label,
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.w600,
-                ),
+                style: KubusTextStyles.actionTileTitle,
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.transparent,
@@ -501,8 +496,10 @@ class _DesktopActionButtonState extends State<DesktopActionButton> {
                 disabledForegroundColor: widget.isPrimary
                     ? Colors.white.withValues(alpha: 0.55)
                     : scheme.onSurface.withValues(alpha: 0.55),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.lg,
+                  vertical: KubusSpacing.md - KubusSpacing.xxs,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: radius,
                 ),
@@ -546,10 +543,14 @@ class DesktopSearchBar extends StatelessWidget {
     final animationTheme = context.animationTheme;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
+    final glassStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.card,
+      tintBase: scheme.surface,
+    );
 
-    final radius = BorderRadius.circular(12);
-    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
+    final radius = BorderRadius.circular(KubusRadius.md);
+    final glassTint = glassStyle.tintColor;
 
     return KubusSearchBar(
       hintText: hintText ?? l10n.commonSearchHint,
@@ -565,9 +566,12 @@ class DesktopSearchBar extends StatelessWidget {
         focusedBorderColor: themeProvider.accentColor,
         borderWidth: 1,
         focusedBorderWidth: 2,
-        blurSigma: null,
+        blurSigma: glassStyle.blurSigma,
         contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            const EdgeInsets.symmetric(
+              horizontal: KubusSpacing.md,
+              vertical: KubusSpacing.sm + KubusSpacing.xs,
+            ),
         boxShadow: null,
         focusedBoxShadow: [
           BoxShadow(
@@ -577,8 +581,10 @@ class DesktopSearchBar extends StatelessWidget {
         ],
         prefixIconConstraints: null,
         suffixIconConstraints: null,
-        textStyle: GoogleFonts.inter(color: scheme.onSurface),
-        hintStyle: GoogleFonts.inter(
+        textStyle: KubusTypography.textTheme.bodyMedium?.copyWith(
+          color: scheme.onSurface,
+        ),
+        hintStyle: KubusTypography.textTheme.bodyMedium?.copyWith(
           color: scheme.onSurface.withValues(alpha: 0.5),
         ),
       ),
@@ -614,10 +620,14 @@ class _DesktopTabBarState extends State<DesktopTabBar> {
     final animationTheme = context.animationTheme;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
+    final glassStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.card,
+      tintBase: scheme.surface,
+    );
 
-    final radius = BorderRadius.circular(12);
-    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
+    final radius = BorderRadius.circular(KubusRadius.md);
+    final glassTint = glassStyle.tintColor;
 
     return Container(
       decoration: BoxDecoration(
@@ -630,6 +640,8 @@ class _DesktopTabBarState extends State<DesktopTabBar> {
         padding: const EdgeInsets.all(4),
         margin: EdgeInsets.zero,
         borderRadius: radius,
+        blurSigma: glassStyle.blurSigma,
+        fallbackMinOpacity: glassStyle.fallbackMinOpacity,
         showBorder: false,
         backgroundColor: glassTint,
         child: Row(
@@ -653,8 +665,8 @@ class _DesktopTabBarState extends State<DesktopTabBar> {
                     child: AnimatedContainer(
                       duration: animationTheme.short,
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 10,
+                        horizontal: KubusSpacing.md + KubusSpacing.sm,
+                        vertical: KubusSpacing.sm + KubusSpacing.xxs,
                       ),
                       decoration: BoxDecoration(
                         color: isSelected
@@ -666,8 +678,7 @@ class _DesktopTabBarState extends State<DesktopTabBar> {
                       ),
                       child: Text(
                         widget.tabs[index],
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
+                        style: KubusTextStyles.navLabel.copyWith(
                           fontWeight:
                               isSelected ? FontWeight.w600 : FontWeight.w500,
                           color: isSelected

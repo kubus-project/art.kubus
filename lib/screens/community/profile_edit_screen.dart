@@ -1,5 +1,5 @@
 ﻿import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../../utils/design_tokens.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
@@ -617,7 +617,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         ),
         title: Text(
           l10n.profileEditTitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.onSurface,
@@ -640,7 +640,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               onPressed: _saveProfile,
               child: Text(
                 l10n.commonSave,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: themeProvider.accentColor,
@@ -658,7 +658,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             padding: EdgeInsets.only(bottom: keyboardInset),
             child: SingleChildScrollView(
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(KubusSpacing.lg),
               child: ConstrainedBox(
                 constraints: BoxConstraints(
                   minHeight: constraints.maxHeight - 48,
@@ -712,7 +712,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                             const SizedBox(height: 8),
                             Text(
                               l10n.profileEditCoverImageTapToAdd,
-                              style: GoogleFonts.inter(
+                              style: KubusTypography.inter(
                                 fontSize: 14,
                                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                               ),
@@ -737,7 +737,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                     const SizedBox(width: 4),
                                     Text(
                                       l10n.commonChange,
-                                      style: GoogleFonts.inter(
+                                      style: KubusTypography.inter(
                                         fontSize: 12,
                                         color: Colors.white,
                                       ),
@@ -811,7 +811,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                     const SizedBox(height: 12),
                     Text(
                       l10n.profileEditAvatarTapToChange,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 14,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
@@ -831,7 +831,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               // Username
               Text(
                 l10n.profileEditUsernameLabel,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: Theme.of(context).colorScheme.onSurface,
@@ -864,7 +864,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               // Display Name
               Text(
                 l10n.profileEditDisplayNameLabel,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: Theme.of(context).colorScheme.onSurface,
@@ -894,7 +894,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               // Bio
               Text(
                 l10n.profileEditBioLabel,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: Theme.of(context).colorScheme.onSurface,
@@ -920,7 +920,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               // Social Links Section
               Text(
                 l10n.profileEditSocialLinksTitle,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).colorScheme.onSurface,
@@ -995,7 +995,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 // Specialty
                 Text(
                   l10n.profileEditArtistSpecialtiesLabel,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -1020,7 +1020,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 // Years Active
                 Text(
                   l10n.profileEditArtistYearsActiveLabel,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -1062,7 +1062,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 
                 Text(
                   l10n.profileEditInstitutionAboutTitle,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 14,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
@@ -1087,7 +1087,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                       Expanded(
                         child: Text(
                           l10n.profileEditInstitutionAboutBody,
-                          style: GoogleFonts.inter(
+                          style: KubusTypography.inter(
                             fontSize: 13,
                             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
                           ),
@@ -1210,7 +1210,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                               _isInstitution
                                   ? l10n.profileEditVerifiedInstitutionTitle
                                   : l10n.profileEditVerifiedArtistTitle,
-                              style: GoogleFonts.inter(
+                              style: KubusTypography.inter(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 color: Theme.of(context).colorScheme.onSurface,
@@ -1221,7 +1221,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                               _isInstitution 
                                   ? l10n.profileEditVerifiedInstitutionSubtitle
                                   : l10n.profileEditVerifiedArtistSubtitle,
-                              style: GoogleFonts.inter(
+                              style: KubusTypography.inter(
                                 fontSize: 13,
                                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                               ),
@@ -1262,7 +1262,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         const SizedBox(width: 8),
         Text(
           title,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 18,
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.onSurface,
@@ -1300,7 +1300,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -1309,7 +1309,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 12,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
@@ -1342,3 +1342,5 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     return MediaUrlResolver.resolve(url);
   }
 }
+
+

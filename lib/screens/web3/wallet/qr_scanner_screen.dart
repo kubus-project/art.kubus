@@ -4,7 +4,7 @@ import 'package:art_kubus/models/qr_scan_result.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../../../utils/design_tokens.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
@@ -90,7 +90,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
         ),
         title: Text(
           l10n.qrScannerTitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             color: theme.colorScheme.onSurface,
             fontWeight: FontWeight.w600,
           ),
@@ -138,7 +138,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
             const SizedBox(height: 24),
             Text(
               l10n.qrScannerWebUnavailableTitle,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: theme.colorScheme.onSurface,
                 fontSize: 24,
                 fontWeight: FontWeight.w600,
@@ -147,7 +147,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
             const SizedBox(height: 16),
             Text(
               l10n.qrScannerWebUnavailableDescription,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 fontSize: 16,
                 height: 1.4,
@@ -165,7 +165,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
               ),
               child: Text(
                 l10n.qrScannerGoBackButton,
-                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                style: KubusTypography.inter(fontWeight: FontWeight.w600),
               ),
             ),
           ],
@@ -215,7 +215,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
           const SizedBox(height: 16),
           Text(
             l10n.qrScannerPreparingCameraLabel,
-            style: GoogleFonts.inter(color: theme.colorScheme.onSurface),
+            style: KubusTypography.inter(color: theme.colorScheme.onSurface),
           ),
         ],
       ),
@@ -246,7 +246,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
             Text(
               l10n.qrScannerPermissionNeededTitle,
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: theme.colorScheme.onSurface,
                 fontSize: 22,
                 fontWeight: FontWeight.w600,
@@ -256,7 +256,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
             Text(
               l10n.qrScannerPermissionNeededDescription,
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
@@ -284,7 +284,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     }
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(KubusSpacing.lg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -292,7 +292,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
             const SizedBox(height: 16),
             Text(
               l10n.qrScannerCameraErrorTitle,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: theme.colorScheme.error,
                 fontWeight: FontWeight.w600,
               ),
@@ -301,7 +301,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
             Text(
               l10n.qrScannerCameraErrorDescription,
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
@@ -392,7 +392,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
           const SizedBox(height: 12),
           Text(
             title,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               color: theme.colorScheme.onSurface,
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -402,7 +402,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
           Text(
             description,
             textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
@@ -428,7 +428,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       ),
       child: Text(
         '$label: $value',
-        style: GoogleFonts.inter(
+        style: KubusTypography.inter(
           color: theme.colorScheme.onSurface,
           fontSize: 13,
         ),
@@ -550,5 +550,6 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     }
   }
 }
+
 
 

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/themeprovider.dart';
@@ -161,12 +160,18 @@ class _DesktopNavigationState extends State<DesktopNavigation>
     // When collapsed, use a column layout to prevent overflow
     if (!widget.isExpanded) {
       return Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        padding: const EdgeInsets.symmetric(
+          vertical: KubusSpacing.md - KubusSpacing.xxs,
+          horizontal: KubusSpacing.sm,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const AppLogo(width: 28, height: 28),
-            const SizedBox(height: 4),
+            const AppLogo(
+              width: KubusChromeMetrics.railCompactLogo,
+              height: KubusChromeMetrics.railCompactLogo,
+            ),
+            const SizedBox(height: KubusSpacing.xs),
             IconButton(
               onPressed: widget.onToggleExpand,
               icon: Icon(
@@ -175,10 +180,13 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                     .colorScheme
                     .onSurface
                     .withValues(alpha: 0.6),
-                size: 20,
+                size: KubusChromeMetrics.navCompactIcon,
               ),
               tooltip: l10n.desktopNavigationExpandTooltip,
-              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+              constraints: const BoxConstraints(
+                minWidth: KubusHeaderMetrics.actionHitArea,
+                minHeight: KubusHeaderMetrics.actionHitArea,
+              ),
               padding: EdgeInsets.zero,
             ),
           ],
@@ -187,10 +195,16 @@ class _DesktopNavigationState extends State<DesktopNavigation>
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      padding: const EdgeInsets.symmetric(
+        horizontal: KubusSpacing.md - KubusSpacing.xxs,
+        vertical: KubusSpacing.md - KubusSpacing.xxs,
+      ),
       child: Row(
         children: [
-          const AppLogo(width: 32, height: 32),
+          const AppLogo(
+            width: KubusChromeMetrics.railExpandedLogo,
+            height: KubusChromeMetrics.railExpandedLogo,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: AnimatedOpacity(
@@ -201,14 +215,14 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                 children: [
                   Text(
                     'art.kubus',
-                    style: KubusTypography.textTheme.titleMedium?.copyWith(
+                    style: KubusTextStyles.sectionTitle.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   Text(
                     l10n.desktopNavigationSubtitle,
-                    style: KubusTypography.textTheme.bodySmall?.copyWith(
+                    style: KubusTextStyles.navMetaLabel.copyWith(
                       color: Theme.of(context)
                           .colorScheme
                           .onSurface
@@ -227,10 +241,13 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                   .colorScheme
                   .onSurface
                   .withValues(alpha: 0.6),
-              size: 20,
+              size: KubusChromeMetrics.navCompactIcon,
             ),
             tooltip: l10n.desktopNavigationCollapseTooltip,
-            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+            constraints: const BoxConstraints(
+              minWidth: KubusHeaderMetrics.actionHitArea,
+              minHeight: KubusHeaderMetrics.actionHitArea,
+            ),
             padding: EdgeInsets.zero,
           ),
         ],
@@ -293,8 +310,8 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                       duration: animationTheme.short,
                       child: SizedBox(
                         key: ValueKey('${item.route}_$isSelected'),
-                        width: 24,
-                        height: 24,
+                        width: KubusChromeMetrics.navIcon,
+                        height: KubusChromeMetrics.navIcon,
                         child: Stack(
                           clipBehavior: Clip.none,
                           children: [
@@ -308,12 +325,12 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                                         .colorScheme
                                         .onSurface
                                         .withValues(alpha: 0.7),
-                                size: 24,
+                                size: KubusChromeMetrics.navIcon,
                               ),
                             ),
                             if (showCompactLabs && labsFeature != null)
                               Positioned(
-                                top: -4,
+                                top: -KubusSpacing.xs,
                                 right: -6,
                                 child: KubusLabsAdornment.compactOverlay(
                                   feature: labsFeature,
@@ -332,8 +349,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                           duration: const Duration(milliseconds: 150),
                           child: Text(
                             item.labelKey.resolve(l10n),
-                            style:
-                                KubusTypography.textTheme.bodyMedium?.copyWith(
+                            style: KubusTextStyles.navLabel.copyWith(
                               fontWeight: isSelected
                                   ? FontWeight.w600
                                   : FontWeight.w500,
@@ -370,11 +386,11 @@ class _DesktopNavigationState extends State<DesktopNavigation>
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: themeProvider.accentColor,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
       ),
       child: Text(
         count > 99 ? '99+' : count.toString(),
-        style: KubusTypography.textTheme.labelSmall?.copyWith(
+        style: KubusTextStyles.badgeCount.copyWith(
           fontWeight: FontWeight.bold,
           color: Colors.white,
         ),
@@ -537,7 +553,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                       .colorScheme
                       .onSurface
                       .withValues(alpha: 0.7),
-                  size: 24,
+                  size: KubusChromeMetrics.navIcon,
                 ),
                 // Generic badge with count (for collab invites, etc.)
                 if (showBadge && badgeCount > 0)
@@ -560,9 +576,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                       child: Center(
                         child: Text(
                           badgeCount > 99 ? '99+' : badgeCount.toString(),
-                          style: KubusTypography.textTheme.labelSmall?.copyWith(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w700,
+                          style: KubusTextStyles.compactBadge.copyWith(
                             color: Theme.of(context).colorScheme.onError,
                           ),
                         ),
@@ -578,8 +592,8 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                         right: -2,
                         top: -2,
                         child: Container(
-                          width: 8,
-                          height: 8,
+                          width: KubusChromeMetrics.navBadgeDot,
+                          height: KubusChromeMetrics.navBadgeDot,
                           decoration: BoxDecoration(
                             color: themeProvider.accentColor,
                             shape: BoxShape.circle,
@@ -612,7 +626,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
         child: Padding(
           padding: EdgeInsets.all(collapsedButtonPadding),
           child: Stack(
@@ -624,7 +638,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                     .colorScheme
                     .onSurface
                     .withValues(alpha: 0.7),
-                size: 24,
+                size: KubusChromeMetrics.navIcon,
               ),
               // Generic badge with count (for collab invites, etc.)
               if (showBadge && badgeCount > 0)
@@ -647,9 +661,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                     child: Center(
                       child: Text(
                         badgeCount > 99 ? '99+' : badgeCount.toString(),
-                        style: KubusTypography.textTheme.labelSmall?.copyWith(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
+                        style: KubusTextStyles.compactBadge.copyWith(
                           color: Theme.of(context).colorScheme.onError,
                         ),
                       ),
@@ -665,8 +677,8 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                       right: -2,
                       top: -2,
                       child: Container(
-                        width: 8,
-                        height: 8,
+                        width: KubusChromeMetrics.navBadgeDot,
+                        height: KubusChromeMetrics.navBadgeDot,
                         decoration: BoxDecoration(
                           color: themeProvider.accentColor,
                           shape: BoxShape.circle,
@@ -739,13 +751,12 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                                 Icon(
                                   Icons.account_balance_wallet,
                                   color: Colors.white,
-                                  size: 16,
+                                  size: KubusSizes.trailingChevron,
                                 ),
                                 const SizedBox(width: 5),
                                 Text(
                                   AppLocalizations.of(context)!.walletHomeTitle,
-                                  style: KubusTypography.textTheme.labelSmall
-                                      ?.copyWith(
+                                  style: KubusTextStyles.navMetaLabel.copyWith(
                                     fontWeight: FontWeight.w600,
                                     color: Colors.white.withValues(alpha: 0.9),
                                   ),
@@ -767,7 +778,8 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                                         style: KubusTypography
                                             .textTheme.bodySmall
                                             ?.copyWith(
-                                          fontSize: 10,
+                                          fontSize:
+                                              KubusChromeMetrics.navMetaLabel,
                                           color: Colors.white
                                               .withValues(alpha: 0.7),
                                         ),
@@ -777,7 +789,8 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                                         style: KubusTypography
                                             .textTheme.bodySmall
                                             ?.copyWith(
-                                          fontSize: 11,
+                                          fontSize:
+                                              KubusChromeMetrics.profileHandle,
                                           fontWeight: FontWeight.bold,
                                           color: Colors.white,
                                         ),
@@ -794,7 +807,8 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                                         style: KubusTypography
                                             .textTheme.bodySmall
                                             ?.copyWith(
-                                          fontSize: 10,
+                                          fontSize:
+                                              KubusChromeMetrics.navMetaLabel,
                                           color: Colors.white
                                               .withValues(alpha: 0.7),
                                         ),
@@ -804,7 +818,8 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                                         style: KubusTypography
                                             .textTheme.bodySmall
                                             ?.copyWith(
-                                          fontSize: 11,
+                                          fontSize:
+                                              KubusChromeMetrics.profileHandle,
                                           fontWeight: FontWeight.bold,
                                           color: Colors.white,
                                         ),
@@ -820,7 +835,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                           child: Icon(
                             Icons.account_balance_wallet,
                             color: Colors.white,
-                            size: 22,
+                            size: KubusHeaderMetrics.actionIcon,
                           ),
                         ))
                   : Center(
@@ -854,7 +869,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                     .colorScheme
                     .primaryContainer
                     .withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
               ),
               child: Row(
                 mainAxisAlignment: widget.isExpanded
@@ -883,9 +898,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                               user?.displayName ??
                                   AppLocalizations.of(context)!
                                       .profilePersonaArtEnthusiast,
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
+                              style: KubusTextStyles.profileName.copyWith(
                                 color: Theme.of(context).colorScheme.onSurface,
                               ),
                               overflow: TextOverflow.ellipsis,
@@ -894,8 +907,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                             if (user?.username != null)
                               Text(
                                 '@${user!.username}',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
+                                style: KubusTextStyles.profileHandle.copyWith(
                                   color: Theme.of(context)
                                       .colorScheme
                                       .onSurface
@@ -914,7 +926,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                           .colorScheme
                           .onSurface
                           .withValues(alpha: 0.6),
-                      size: 20,
+                      size: KubusHeaderMetrics.actionIcon,
                     ),
                   ],
                 ],

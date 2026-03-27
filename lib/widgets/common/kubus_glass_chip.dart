@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../providers/glass_capabilities_provider.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/design_tokens.dart';
 import '../glass_components.dart';
@@ -28,13 +29,28 @@ class KubusGlassChip extends StatelessWidget {
     final animationTheme = context.animationTheme;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
     final accent = accentColor ?? scheme.primary;
+    final idleStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.button,
+      tintBase: scheme.surface,
+    );
+    final activeStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.button,
+      tintBase: accent,
+    );
+    final allowBlur =
+        GlassCapabilitiesProvider.watchAllowBlurEnabled(context);
 
     final resolvedRadius = borderRadius.clamp(0.0, 999.0).toDouble();
     final radius = BorderRadius.circular(resolvedRadius);
-    final idleTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.12);
-    final selectedTint = accent.withValues(alpha: isDark ? 0.14 : 0.16);
+    final idleTint = idleStyle.tintColor;
+    final selectedTint = activeStyle.tintColor.withValues(
+      alpha: allowBlur
+          ? activeStyle.tintColor.a
+          : KubusGlassEffects.fallbackOpaqueOpacity,
+    );
 
     return MouseRegion(
       cursor: onPressed == null
@@ -48,7 +64,9 @@ class KubusGlassChip extends StatelessWidget {
           border: Border.all(
             color: active
                 ? accent.withValues(alpha: 0.85)
-                : scheme.outline.withValues(alpha: 0.18),
+                : scheme.outline.withValues(
+                    alpha: KubusGlassEffects.glassBorderOpacitySubtle,
+                  ),
             width: active ? 1.25 : 1,
           ),
           boxShadow: active
@@ -77,13 +95,16 @@ class KubusGlassChip extends StatelessWidget {
             children: [
               Icon(
                 icon,
-                size: 16,
-                color: active ? accent : scheme.onSurface.withValues(alpha: 0.65),
+                size: KubusHeaderMetrics.actionIcon - KubusSpacing.xxs,
+                color:
+                    active ? accent : scheme.onSurface.withValues(alpha: 0.65),
               ),
               const SizedBox(width: 8),
               Text(
                 label,
-                style: (active ? theme.textTheme.labelLarge : theme.textTheme.labelMedium)
+                style: (active
+                        ? theme.textTheme.labelLarge
+                        : theme.textTheme.labelMedium)
                     ?.copyWith(color: active ? accent : scheme.onSurface),
               ),
             ],

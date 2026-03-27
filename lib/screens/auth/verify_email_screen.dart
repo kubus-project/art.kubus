@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/utils/design_tokens.dart';
 import '../../config/config.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/keyboard_inset_resolver.dart';
@@ -155,7 +155,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
         if (tokenPresent) ...[
           Text(
             statusText,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 14,
               fontWeight: FontWeight.w600,
               color: _verified
@@ -177,7 +177,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
         if (_inlineError != null) ...[
           Text(
             _inlineError!,
-            style: GoogleFonts.inter(color: scheme.error),
+            style: KubusTypography.inter(color: scheme.error),
           ),
           const SizedBox(height: 12),
         ],
@@ -202,7 +202,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
             onPressed: _goToSignIn,
             child: Text(
               l10n.commonSignIn,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: scheme.onSurface.withValues(alpha: 0.7),
                 fontWeight: FontWeight.w600,
               ),
@@ -250,7 +250,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
             onPressed: _goToMain,
             child: Text(
               l10n.commonBack,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: scheme.onSurface.withValues(alpha: 0.7),
                 fontWeight: FontWeight.w600,
               ),
@@ -332,7 +332,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                                   ],
                                   Text(
                                     l10n.authVerifyEmailTitle,
-                                    style: GoogleFonts.inter(
+                                    style: KubusTypography.inter(
                                       fontSize: compact ? 22 : 26,
                                       fontWeight: FontWeight.w800,
                                       color: scheme.onSurface,
@@ -342,7 +342,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                                   SizedBox(height: compact ? 4 : 8),
                                   Text(
                                     l10n.authVerifyEmailSubtitle,
-                                    style: GoogleFonts.inter(
+                                    style: KubusTypography.inter(
                                       fontSize: 14,
                                       color: scheme.onSurface
                                           .withValues(alpha: 0.85),

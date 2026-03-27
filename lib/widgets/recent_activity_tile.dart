@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-
 import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../models/recent_activity.dart';
 import '../utils/app_color_utils.dart';
+import '../utils/design_tokens.dart';
 import 'glass_components.dart';
 
 /// Shared tile UI for both mobile and desktop notification/activity surfaces.
@@ -42,101 +41,129 @@ class RecentActivityTile extends StatelessWidget {
         : (isDark ? 0.28 : 0.36),
     );
 
+    final radius = BorderRadius.circular(KubusRadius.md);
+
     return Container(
       margin: margin,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: radius,
           onTap: onTap,
           child: Container(
+            clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: radius,
               border: Border.all(
                 color: isUnread
                     ? tileColor.withValues(alpha: 0.38)
                     : scheme.outline.withValues(alpha: 0.20),
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: tileColor.withValues(alpha: isDark ? 0.10 : 0.08),
+                  blurRadius: 14,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
             child: LiquidGlassPanel(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(KubusSpacing.md),
               margin: EdgeInsets.zero,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: radius,
               showBorder: false,
               backgroundColor: glassTint,
-              child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: tileColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    AppColorUtils.activityIcon(activity.category),
-                    color: tileColor,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              activity.title,
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: isUnread
-                                    ? FontWeight.w700
-                                    : FontWeight.w600,
-                                color: theme.colorScheme.onSurface,
-                              ),
-                            ),
-                          ),
-                          if (isUnread)
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: tileColor,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                        ],
-                      ),
-                      if (description.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          description,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: theme.colorScheme.onSurface
-                                .withValues(alpha: 0.7),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              tileColor.withValues(alpha: 0.10),
+                              Colors.transparent,
+                            ],
                           ),
                         ),
-                      ],
-                      const SizedBox(height: 4),
-                      Text(
-                        formatActivityTime(context, activity.timestamp),
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          color: scheme.onSurface
-                              .withValues(alpha: 0.5),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: KubusChromeMetrics.heroIconBox,
+                        height: KubusChromeMetrics.heroIconBox,
+                        decoration: BoxDecoration(
+                          color: tileColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(KubusRadius.sm),
+                        ),
+                        child: Icon(
+                          AppColorUtils.activityIcon(activity.category),
+                          color: tileColor,
+                          size: KubusHeaderMetrics.actionIcon,
+                        ),
+                      ),
+                      const SizedBox(width: KubusSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    activity.title,
+                                    style: KubusTextStyles.sectionTitle.copyWith(
+                                      color: theme.colorScheme.onSurface,
+                                      fontWeight: isUnread
+                                          ? FontWeight.w700
+                                          : FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                if (isUnread)
+                                  Container(
+                                    width: KubusSpacing.xs,
+                                    height: KubusSpacing.xs,
+                                    decoration: BoxDecoration(
+                                      color: tileColor,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            if (description.isNotEmpty) ...[
+                              const SizedBox(height: KubusSpacing.xxs),
+                              Text(
+                                description,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: KubusTextStyles.navMetaLabel.copyWith(
+                                  color: theme.colorScheme.onSurface
+                                      .withValues(alpha: 0.7),
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: KubusSpacing.xxs),
+                            Text(
+                              formatActivityTime(context, activity.timestamp),
+                              style: KubusTextStyles.compactBadge.copyWith(
+                                color: scheme.onSurface.withValues(alpha: 0.5),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                ),
-              ],
+                ],
               ),
             ),
           ),
@@ -156,4 +183,3 @@ String formatActivityTime(BuildContext context, DateTime timestamp) {
   if (diff.inDays < 7) return l10n.commonTimeAgoDays(diff.inDays);
   return MaterialLocalizations.of(context).formatShortDate(timestamp);
 }
-

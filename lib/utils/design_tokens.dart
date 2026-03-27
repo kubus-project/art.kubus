@@ -150,6 +150,57 @@ class KubusSizes {
   static const double dialogWidthLg = 520.0;
 }
 
+/// Canonical sizing for screen headers, app bars, and section chrome.
+class KubusHeaderMetrics {
+  KubusHeaderMetrics._();
+
+  static const double screenTitle = 20.0;
+  static const double screenSubtitle = 14.0;
+  static const double sectionTitle = 16.0;
+  static const double sectionSubtitle = 13.0;
+  static const double actionIcon = 20.0;
+  static const double actionHitArea = 44.0;
+  static const double headerMinHeight = 56.0;
+  static const double compactLogo = 36.0;
+  static const double logo = 40.0;
+  static const double searchBarHeight = 48.0;
+  static const double compactHeaderMinHeight = 48.0;
+  static const double subtitleGap = KubusSpacing.xs;
+  static const double sectionSubtitleGap = 2.0;
+  static const double appBarVerticalPadding = KubusSpacing.sm;
+  static const double appBarHorizontalPadding = KubusSpacing.md;
+  static const double appBarHorizontalPaddingLg = KubusSpacing.lg;
+}
+
+/// Shared metrics for body chrome that sits below the main app bar/header.
+class KubusChromeMetrics {
+  KubusChromeMetrics._();
+
+  static const double cardPadding = 20.0;
+  static const double compactCardPadding = 16.0;
+  static const double statValue = 24.0;
+  static const double statLabel = 13.0;
+  static const double statChange = 12.0;
+  static const double heroTitle = 24.0;
+  static const double heroSubtitle = 14.0;
+  static const double heroIconBox = 56.0;
+  static const double heroIcon = 28.0;
+  static const double sheetTitle = 20.0;
+  static const double sheetSubtitle = 14.0;
+  static const double sheetHandleWidth = 40.0;
+  static const double sheetHandleHeight = 4.0;
+  static const double navLabel = 14.0;
+  static const double navMetaLabel = 12.0;
+  static const double navIcon = 24.0;
+  static const double navCompactIcon = 20.0;
+  static const double navBadgeDot = 8.0;
+  static const double navBadgeLabel = 9.0;
+  static const double railExpandedLogo = 32.0;
+  static const double railCompactLogo = 28.0;
+  static const double profileName = 14.0;
+  static const double profileHandle = 12.0;
+}
+
 class KubusTypography {
   KubusTypography._();
 
@@ -181,9 +232,9 @@ class KubusTypography {
       displayLarge:
           GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 32),
       displayMedium:
-        GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 28),
+          GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 28),
       displaySmall:
-        GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 24),
+          GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 24),
       headlineMedium:
           GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 20),
       headlineSmall:
@@ -207,13 +258,32 @@ class KubusTextStyles {
   KubusTextStyles._();
 
   static TextStyle get screenTitle =>
-      KubusTypography.textTheme.headlineMedium!;
+      KubusTypography.textTheme.headlineMedium!.copyWith(
+        fontSize: KubusHeaderMetrics.screenTitle,
+        fontWeight: FontWeight.w700,
+      );
+
+  static TextStyle get screenSubtitle =>
+      KubusTypography.textTheme.bodyMedium!.copyWith(
+        fontSize: KubusHeaderMetrics.screenSubtitle,
+        fontWeight: FontWeight.w500,
+        height: 1.45,
+      );
 
   static TextStyle get sectionTitle =>
-      KubusTypography.textTheme.titleMedium!;
+      KubusTypography.textTheme.titleMedium!.copyWith(
+        fontSize: KubusHeaderMetrics.sectionTitle,
+        fontWeight: FontWeight.w700,
+      );
 
-  static TextStyle get actionTileTitle =>
-      KubusTypography.textTheme.labelLarge!;
+  static TextStyle get sectionSubtitle =>
+      KubusTypography.textTheme.bodyMedium!.copyWith(
+        fontSize: KubusHeaderMetrics.sectionSubtitle,
+        fontWeight: FontWeight.w400,
+        height: 1.35,
+      );
+
+  static TextStyle get actionTileTitle => KubusTypography.textTheme.labelLarge!;
 
   static TextStyle get actionTileSubtitle =>
       KubusTypography.textTheme.labelMedium!;
@@ -223,37 +293,106 @@ class KubusTextStyles {
         fontWeight: FontWeight.w700,
       );
 
-  static TextStyle get detailScreenTitle =>
-      KubusTypography.textTheme.titleLarge!;
-
-  static TextStyle get detailSectionTitle => GoogleFonts.inter(
-        fontSize: 16,
+  static TextStyle get compactBadge => GoogleFonts.inter(
+        fontSize: KubusChromeMetrics.navBadgeLabel,
         fontWeight: FontWeight.w700,
       );
 
-  static TextStyle get detailCardTitle => GoogleFonts.inter(
+  static TextStyle get heroTitle =>
+      KubusTypography.textTheme.displaySmall!.copyWith(
+        fontSize: KubusChromeMetrics.heroTitle,
+        fontWeight: FontWeight.w700,
+      );
+
+  static TextStyle get heroSubtitle =>
+      KubusTypography.textTheme.bodyMedium!.copyWith(
+        fontSize: KubusChromeMetrics.heroSubtitle,
+        fontWeight: FontWeight.w500,
+        height: 1.45,
+      );
+
+  static TextStyle get statValue =>
+      KubusTypography.textTheme.displaySmall!.copyWith(
+        fontSize: KubusChromeMetrics.statValue,
+        fontWeight: FontWeight.w700,
+      );
+
+  static TextStyle get statLabel =>
+      KubusTypography.textTheme.labelMedium!.copyWith(
+        fontSize: KubusChromeMetrics.statLabel,
+        fontWeight: FontWeight.w500,
+      );
+
+  static TextStyle get statChange =>
+      KubusTypography.textTheme.labelMedium!.copyWith(
+        fontSize: KubusChromeMetrics.statChange,
+        fontWeight: FontWeight.w600,
+      );
+
+  static TextStyle get sheetTitle =>
+      KubusTypography.textTheme.headlineMedium!.copyWith(
+        fontSize: KubusChromeMetrics.sheetTitle,
+        fontWeight: FontWeight.w700,
+      );
+
+  static TextStyle get sheetSubtitle =>
+      KubusTypography.textTheme.bodyMedium!.copyWith(
+        fontSize: KubusChromeMetrics.sheetSubtitle,
+        fontWeight: FontWeight.w400,
+        height: 1.45,
+      );
+
+  static TextStyle get navLabel =>
+      KubusTypography.textTheme.bodyMedium!.copyWith(
+        fontSize: KubusChromeMetrics.navLabel,
+        fontWeight: FontWeight.w500,
+      );
+
+  static TextStyle get navMetaLabel =>
+      KubusTypography.textTheme.labelMedium!.copyWith(
+        fontSize: KubusChromeMetrics.navMetaLabel,
+        fontWeight: FontWeight.w500,
+      );
+
+  static TextStyle get profileName =>
+      KubusTypography.textTheme.labelLarge!.copyWith(
+        fontSize: KubusChromeMetrics.profileName,
+        fontWeight: FontWeight.w600,
+      );
+
+  static TextStyle get profileHandle =>
+      KubusTypography.textTheme.labelMedium!.copyWith(
+        fontSize: KubusChromeMetrics.profileHandle,
+        fontWeight: FontWeight.w500,
+      );
+
+  static TextStyle get detailScreenTitle => screenTitle;
+
+  static TextStyle get detailSectionTitle =>
+      sectionTitle.copyWith(fontWeight: FontWeight.w700);
+
+  static TextStyle get detailCardTitle =>
+      KubusTypography.textTheme.bodyMedium!.copyWith(
         fontSize: 15,
         fontWeight: FontWeight.w600,
       );
 
-  static TextStyle get detailBody => GoogleFonts.inter(
-        fontSize: 14,
+  static TextStyle get detailBody =>
+      KubusTypography.textTheme.bodyMedium!.copyWith(
         height: 1.5,
         fontWeight: FontWeight.w400,
       );
 
-  static TextStyle get detailCaption => GoogleFonts.inter(
-        fontSize: 13,
-        fontWeight: FontWeight.w400,
-      );
+  static TextStyle get detailCaption =>
+      screenSubtitle.copyWith(fontSize: 13, fontWeight: FontWeight.w400);
 
-  static TextStyle get detailLabel => GoogleFonts.inter(
-        fontSize: 12,
+  static TextStyle get detailLabel =>
+      KubusTypography.textTheme.labelMedium!.copyWith(
         fontWeight: FontWeight.w500,
       );
 
-  static TextStyle get detailButton => GoogleFonts.inter(
-        fontSize: 13,
+  static TextStyle get detailButton =>
+      KubusTypography.textTheme.labelLarge!.copyWith(
         fontWeight: FontWeight.w600,
       );
 }
@@ -331,7 +470,8 @@ class KubusGradients {
   static const LinearGradient lightBackground = LinearGradient(
     colors: [
       Color(0xFFFFFFFF),
-      Color(0xFFE6F0FF), // Subtle blue-white wash (prevents flat whitinstancee look)
+      Color(
+          0xFFE6F0FF), // Subtle blue-white wash (prevents flat whitinstancee look)
     ],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
@@ -411,4 +551,85 @@ class KubusGlassEffects {
 
   /// Backdrop dimming for modals
   static const double backdropDimming = 0.4;
+
+  /// Blur-disabled glass should stay intentionally opaque to preserve legibility.
+  static const double fallbackOpaqueOpacity = 0.85;
+
+  /// Shared tint opacity when blur is enabled.
+  static const double blurTintOpacityDark = 0.20;
+  static const double blurTintOpacityLight = 0.14;
+
+  /// Shared border opacity roles for tokenized glass shells.
+  static const double glassBorderOpacityStrong = 0.30;
+  static const double glassBorderOpacityMedium = 0.22;
+  static const double glassBorderOpacitySubtle = 0.18;
+
+  /// Shared shadow roles for glass surfaces.
+  static const double shadowOpacityDark = 0.16;
+  static const double shadowOpacityLight = 0.10;
+
+  /// Accent blend amount used to preserve intent in blur-disabled mode while
+  /// keeping the resulting surface opaque and theme-aligned.
+  static const double fallbackTintBlend = 0.14;
+}
+
+@immutable
+class KubusGlassSurfaceProfile {
+  const KubusGlassSurfaceProfile({
+    required this.blurSigma,
+    required this.tintAlphaDark,
+    required this.tintAlphaLight,
+    required this.shadowBlurRadius,
+    required this.shadowOffset,
+  });
+
+  final double blurSigma;
+  final double tintAlphaDark;
+  final double tintAlphaLight;
+  final double shadowBlurRadius;
+  final Offset shadowOffset;
+}
+
+class KubusGlassSurfaceTokens {
+  KubusGlassSurfaceTokens._();
+
+  static const header = KubusGlassSurfaceProfile(
+    blurSigma: KubusGlassEffects.blurSigmaLight,
+    tintAlphaDark: 0.18,
+    tintAlphaLight: 0.14,
+    shadowBlurRadius: 14.0,
+    shadowOffset: Offset(0, 4),
+  );
+
+  static const sidebar = KubusGlassSurfaceProfile(
+    blurSigma: KubusGlassEffects.blurSigmaLight,
+    tintAlphaDark: 0.16,
+    tintAlphaLight: 0.12,
+    shadowBlurRadius: 16.0,
+    shadowOffset: Offset(0, 4),
+  );
+
+  static const panel = KubusGlassSurfaceProfile(
+    blurSigma: KubusGlassEffects.blurSigmaLight,
+    tintAlphaDark: 0.18,
+    tintAlphaLight: 0.14,
+    shadowBlurRadius: 18.0,
+    shadowOffset: Offset(0, 4),
+  );
+
+  static const card = KubusGlassSurfaceProfile(
+    blurSigma: KubusGlassEffects.blurSigmaLight,
+    tintAlphaDark: 0.22,
+    tintAlphaLight: 0.18,
+    shadowBlurRadius: 14.0,
+    shadowOffset: Offset(0, 3),
+  );
+
+  static const button = KubusGlassSurfaceProfile(
+    blurSigma: KubusGlassEffects.blurSigmaLight,
+    tintAlphaDark: 0.20,
+    tintAlphaLight: 0.16,
+    shadowBlurRadius: 12.0,
+    shadowOffset: Offset(0, 2),
+  );
 }

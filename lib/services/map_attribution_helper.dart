@@ -14,5 +14,12 @@ abstract class MapAttributionHelper {
   static void setMobileMapAttributionBottomPx(double bottomPx) {
     MapAttributionHelperImpl.setMobileMapAttributionBottomPx(bottomPx);
   }
-}
 
+  static void setDesktopMapEnabled(bool enabled) {
+    MapAttributionHelperImpl.setDesktopMapEnabled(enabled);
+  }
+
+  static void setDesktopMapAttributionBottomPx(double bottomPx) {
+    MapAttributionHelperImpl.setDesktopMapAttributionBottomPx(bottomPx);
+  }
+}

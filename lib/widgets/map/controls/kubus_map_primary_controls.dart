@@ -198,8 +198,8 @@ class KubusMapPrimaryControls extends StatelessWidget {
   }
 
   Widget _buildMobileRightRail(BuildContext context) {
-    final resolvedGap = gap ?? 10.0;
-    final resolvedButtonSize = buttonSize ?? 44.0;
+    final resolvedGap = gap ?? KubusSpacing.sm + KubusSpacing.xxs;
+    final resolvedButtonSize = buttonSize ?? KubusHeaderMetrics.actionHitArea;
     final hasModeControls =
         (showTravelModeToggle && onToggleTravelMode != null) ||
             (showIsometricViewToggle && onToggleIsometricView != null);
@@ -351,10 +351,13 @@ class KubusMapPrimaryControls extends StatelessWidget {
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    final resolvedButtonSize = buttonSize ?? 42.0;
+    final resolvedButtonSize = buttonSize ?? KubusHeaderMetrics.actionHitArea;
     final resolvedPadding = desktopToolbarPadding ??
-        const EdgeInsets.symmetric(horizontal: 8, vertical: 6);
-    final resolvedRadius = desktopToolbarRadius ?? 14.0;
+        const EdgeInsets.symmetric(
+          horizontal: KubusSpacing.sm,
+          vertical: KubusSpacing.xs + KubusSpacing.xxs,
+        );
+    final resolvedRadius = desktopToolbarRadius ?? KubusRadius.md;
 
     final accent = accentColor ?? scheme.primary;
     final hasModeControls =
@@ -658,7 +661,11 @@ class _KubusSquareControlButton extends StatelessWidget {
           width: size,
           height: size,
           child: Center(
-            child: Icon(icon, size: 20, color: iconCol),
+            child: Icon(
+              icon,
+              size: KubusHeaderMetrics.actionIcon,
+              color: iconCol,
+            ),
           ),
         );
 
@@ -691,7 +698,6 @@ class _KubusSquareControlButton extends StatelessWidget {
             child: buildKubusMapGlassSurface(
               context: context,
               kind: KubusMapGlassSurfaceKind.button,
-              useBlur: false,
               borderRadius: radius,
               tintBase: resolvedTintBase,
               showBorder: false,

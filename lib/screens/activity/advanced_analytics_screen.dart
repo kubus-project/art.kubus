@@ -3,7 +3,6 @@ import 'dart:math' as math;
 
 import 'package:art_kubus/config/config.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -171,7 +170,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           ),
           title: Text(
             definition.title,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: scheme.onSurface,
@@ -385,7 +384,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           if (!compact) ...[
             Text(
               definition.scopeLabel,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 color: scheme.primary,
@@ -394,7 +393,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
             const SizedBox(height: KubusSpacing.xs),
             Text(
               definition.subtitle,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 13,
                 height: 1.35,
                 color: scheme.onSurface.withValues(alpha: 0.72),
@@ -454,7 +453,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
                         definition.scopeLabel,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           color: scheme.primary,
@@ -465,7 +464,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
                         '${timeframe.toUpperCase()} / ${selectedMetric?.label ?? selectedMetricId}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: scheme.onSurface.withValues(alpha: 0.82),
@@ -710,7 +709,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       labelColor: scheme.primary,
       unselectedLabelColor: scheme.onSurface.withValues(alpha: 0.6),
       indicatorColor: scheme.primary,
-      labelStyle: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
+      labelStyle: KubusTypography.inter(fontSize: 14, fontWeight: FontWeight.w600),
       tabs: [
         Tab(text: l10n.analyticsTabOverview),
         Tab(text: l10n.analyticsTabTrends),
@@ -791,7 +790,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
         : '${change.abs().toStringAsFixed(1)}%';
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -811,7 +810,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
         children: [
           Text(
             l10n.analyticsThisPeriodLabel,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 16,
               color: Colors.white.withValues(alpha: 0.8),
             ),
@@ -821,7 +820,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
             children: [
               Text(
                 _formatValue(currentValue),
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
@@ -856,7 +855,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
                       const SizedBox(width: 4),
                       Text(
                         changeLabel,
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: isPositive ? Colors.green : Colors.red,
@@ -870,7 +869,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           const SizedBox(height: 8),
           Text(
             l10n.analyticsVsPreviousPeriod(analytics.periodLabel),
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 14,
               color: Colors.white.withValues(alpha: 0.6),
             ),
@@ -931,7 +930,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
 
     return Container(
       height: 300,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
@@ -942,7 +941,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
         children: [
           Text(
             l10n.analyticsChartOverTimeTitle(analytics.metricLabel),
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.white,
@@ -962,7 +961,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
                     ? Center(
                         child: Text(
                           l10n.analyticsNoDataYetDescription,
-                          style: GoogleFonts.inter(
+                          style: KubusTypography.inter(
                             fontSize: 14,
                             color: Colors.white.withValues(alpha: 0.6),
                           ),
@@ -998,7 +997,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       children: [
         Text(
           l10n.analyticsSectionKeyMetrics,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 18,
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -1035,7 +1034,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
                   const Spacer(),
                   Text(
                     metric['value'] as String,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
@@ -1043,7 +1042,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
                   ),
                   Text(
                     metric['label'] as String,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 12,
                       color: Colors.white.withValues(alpha: 0.7),
                     ),
@@ -1064,7 +1063,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     final scheme = Theme.of(context).colorScheme;
     
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
@@ -1075,7 +1074,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
         children: [
           Text(
             l10n.analyticsSectionGoalProgress,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.white,
@@ -1100,7 +1099,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
             children: [
               Text(
                 l10n.analyticsPercentComplete('${(progress * 100).toInt()}%'),
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
@@ -1108,7 +1107,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
               ),
               Text(
                 l10n.analyticsTargetValue(analytics.goalTargetLabel),
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 14,
                   color: Colors.white.withValues(alpha: 0.7),
                 ),
@@ -1123,7 +1122,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
   Widget _buildTrendAnalysis(_AnalyticsContext analytics) {
     final l10n = AppLocalizations.of(context)!;
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
@@ -1134,7 +1133,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
         children: [
           Text(
             l10n.analyticsSectionTrendAnalysis,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.white,
@@ -1180,7 +1179,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           Expanded(
             child: Text(
               label,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 14,
                 color: Colors.white.withValues(alpha: 0.8),
               ),
@@ -1188,7 +1187,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           ),
           Text(
             value,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 14,
               fontWeight: FontWeight.w600,
               color: Colors.white,
@@ -1204,7 +1203,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     final scheme = Theme.of(context).colorScheme;
     return Container(
       height: 200,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: scheme.onSurface.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
@@ -1215,7 +1214,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
         children: [
           Text(
             l10n.analyticsSectionSeasonalityPattern,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 16,
               fontWeight: FontWeight.bold,
               color: scheme.onSurface,
@@ -1276,7 +1275,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
   Widget _buildGrowthProjections(_AnalyticsContext analytics) {
     final l10n = AppLocalizations.of(context)!;
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
@@ -1287,7 +1286,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
         children: [
           Text(
             l10n.analyticsSectionGrowthProjections,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.white,
@@ -1318,7 +1317,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
         children: [
           Text(
             period,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 14,
               color: Colors.white.withValues(alpha: 0.8),
             ),
@@ -1331,7 +1330,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
             ),
             child: Text(
               growth,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: color,
@@ -1347,7 +1346,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -1369,7 +1368,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
                const SizedBox(width: 8),
                Text(
                 l10n.analyticsSectionInsights,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                    fontSize: 18,
                    fontWeight: FontWeight.bold,
                    color: Colors.white,
@@ -1404,7 +1403,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           Expanded(
             child: Text(
               text,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 14,
                 color: Colors.white.withValues(alpha: 0.9),
                 height: 1.4,
@@ -1419,7 +1418,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
   Widget _buildPerformanceBreakdown(_AnalyticsContext analytics) {
     final l10n = AppLocalizations.of(context)!;
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
@@ -1430,7 +1429,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
         children: [
           Text(
             l10n.analyticsSectionPerformanceBreakdown,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.white,
@@ -1457,14 +1456,14 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
             children: [
               Text(
                 label,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 14,
                   color: Colors.white.withValues(alpha: 0.8),
                 ),
               ),
               Text(
                 '${(value * 100).toInt()}%',
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
@@ -1493,7 +1492,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
   Widget _buildRecommendations(_AnalyticsContext analytics) {
     final l10n = AppLocalizations.of(context)!;
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
@@ -1504,7 +1503,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
         children: [
           Text(
             l10n.analyticsSectionRecommendations,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.white,
@@ -1553,7 +1552,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
@@ -1562,7 +1561,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
                 const SizedBox(height: 4),
                 Text(
                   description,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 12,
                     color: Colors.white.withValues(alpha: 0.7),
                     height: 1.3,
@@ -1579,7 +1578,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
   Widget _buildBenchmarkComparison(_AnalyticsContext analytics) {
     final l10n = AppLocalizations.of(context)!;
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
@@ -1590,7 +1589,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
         children: [
           Text(
             l10n.analyticsSectionPeriodComparison,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.white,
@@ -1627,7 +1626,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
             flex: 2,
             child: Text(
               metric,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 14,
                 color: Colors.white.withValues(alpha: 0.8),
               ),
@@ -1636,7 +1635,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           Expanded(
             child: Text(
               yourValue,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: isGood ? Colors.green : Colors.red,
@@ -1646,7 +1645,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           Expanded(
             child: Text(
               benchmarkValue,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 14,
                 color: Colors.white.withValues(alpha: 0.6),
               ),
@@ -1665,7 +1664,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
   Widget _buildPeerAnalysis(_AnalyticsContext analytics) {
     final l10n = AppLocalizations.of(context)!;
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
@@ -1676,7 +1675,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
         children: [
           Text(
             l10n.analyticsSectionPeerAnalysis,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.white,
@@ -1697,7 +1696,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
   Widget _buildMarketPosition(_AnalyticsContext analytics) {
     final l10n = AppLocalizations.of(context)!;
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
@@ -1708,7 +1707,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
         children: [
           Text(
             l10n.analyticsSectionMarketPosition,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.white,

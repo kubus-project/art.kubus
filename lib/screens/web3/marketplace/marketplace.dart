@@ -1,6 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../config/config.dart';
 import '../../../widgets/inline_loading.dart';
@@ -107,7 +106,7 @@ class _MarketplaceState extends State<Marketplace>
             Flexible(
               child: Text(
                 'NFT Marketplace',
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).colorScheme.onSurface,
@@ -165,7 +164,7 @@ class _MarketplaceState extends State<Marketplace>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           'Marketplace Settings',
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 16,
             fontWeight: FontWeight.w700,
             color: colorScheme.onSurface,
@@ -184,7 +183,7 @@ class _MarketplaceState extends State<Marketplace>
                 activeThumbColor: themeProvider.accentColor,
                 title: Text(
                   'Show AR-only collections',
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: colorScheme.onSurface,
@@ -192,7 +191,7 @@ class _MarketplaceState extends State<Marketplace>
                 ),
                 subtitle: Text(
                   'Filter collections that require AR interaction.',
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 11,
                     color: colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
@@ -209,7 +208,7 @@ class _MarketplaceState extends State<Marketplace>
                     child: Text(
                       AppLocalizations.of(context)!
                           .marketplaceNetworkLabel(web3Provider.currentNetwork),
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 12,
                         color: colorScheme.onSurface.withValues(alpha: 0.8),
                       ),
@@ -230,7 +229,7 @@ class _MarketplaceState extends State<Marketplace>
                       child: Text(
                         AppLocalizations.of(context)!
                             .marketplaceWalletLabel(web3Provider.walletAddress),
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 12,
                           color: colorScheme.onSurface.withValues(alpha: 0.8),
                         ),
@@ -248,7 +247,7 @@ class _MarketplaceState extends State<Marketplace>
             onPressed: () => Navigator.of(context).pop(),
             child: Text(
               AppLocalizations.of(context)!.commonClose,
-              style: GoogleFonts.inter(color: themeProvider.accentColor),
+              style: KubusTypography.inter(color: themeProvider.accentColor),
             ),
           ),
         ],
@@ -306,7 +305,7 @@ class _MarketplaceState extends State<Marketplace>
                   children: [
                     Text(
                       'NFT Marketplace',
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).colorScheme.onSurface,
@@ -321,7 +320,7 @@ class _MarketplaceState extends State<Marketplace>
                 const SizedBox(height: 4),
                 Text(
                   'Discover, buy, and sell unique digital artworks',
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 10,
                     color: Theme.of(context)
                         .colorScheme
@@ -386,7 +385,7 @@ class _MarketplaceState extends State<Marketplace>
             const SizedBox(height: 4),
             Text(
               label,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 10,
                 fontWeight: FontWeight.w500,
                 color: isSelected
@@ -426,7 +425,7 @@ class _MarketplaceState extends State<Marketplace>
                   Expanded(
                     child: Text(
                       'Featured NFT Collections',
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).colorScheme.onSurface,
@@ -455,7 +454,7 @@ class _MarketplaceState extends State<Marketplace>
                         const SizedBox(width: 4),
                         Text(
                           'AR',
-                          style: GoogleFonts.inter(
+                          style: KubusTypography.inter(
                             fontSize: 10,
                             fontWeight: FontWeight.w500,
                             color: AppColorUtils.tealAccent,
@@ -529,7 +528,7 @@ class _MarketplaceState extends State<Marketplace>
             children: [
               Text(
                 'Trending This Week',
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).colorScheme.onSurface,
@@ -608,7 +607,7 @@ class _MarketplaceState extends State<Marketplace>
                 const SizedBox(height: 24),
                 Text(
                   AppLocalizations.of(context)!.marketplaceConnectWalletTitle,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -618,7 +617,7 @@ class _MarketplaceState extends State<Marketplace>
                 Text(
                   AppLocalizations.of(context)!
                       .marketplaceConnectWalletDescription,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 14,
                     color: Theme.of(context)
                         .colorScheme
@@ -676,7 +675,7 @@ class _MarketplaceState extends State<Marketplace>
                   Expanded(
                     child: Text(
                       'My NFT Collection',
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).colorScheme.onSurface,
@@ -696,7 +695,7 @@ class _MarketplaceState extends State<Marketplace>
                     ),
                     child: Text(
                       '${myCollectibles.length} NFTs',
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                         color: AppColorUtils.amberAccent,
@@ -711,7 +710,7 @@ class _MarketplaceState extends State<Marketplace>
               if (myCollectiblesForSale.isNotEmpty) ...[
                 Text(
                   'Listed for Sale',
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -851,7 +850,7 @@ class _MarketplaceState extends State<Marketplace>
                           ),
                           child: Text(
                             'FOR SALE',
-                            style: GoogleFonts.inter(
+                            style: KubusTypography.inter(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                               color: Theme.of(context).colorScheme.onSurface,
@@ -876,7 +875,7 @@ class _MarketplaceState extends State<Marketplace>
                         ),
                         child: Text(
                           '#${collectible.tokenId}',
-                          style: GoogleFonts.inter(
+                          style: KubusTypography.inter(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                             color: Theme.of(context).colorScheme.onSurface,
@@ -897,7 +896,7 @@ class _MarketplaceState extends State<Marketplace>
                   children: [
                     Text(
                       entry.title,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: Theme.of(context).colorScheme.onSurface,
@@ -908,7 +907,7 @@ class _MarketplaceState extends State<Marketplace>
                     const SizedBox(height: 2),
                     Text(
                       'Token #${collectible.tokenId}',
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 10,
                         color: Theme.of(context)
                             .colorScheme
@@ -930,7 +929,7 @@ class _MarketplaceState extends State<Marketplace>
                               children: [
                                 Text(
                                   'Listed for',
-                                  style: GoogleFonts.inter(
+                                  style: KubusTypography.inter(
                                     fontSize: 9,
                                     color: Theme.of(context)
                                         .colorScheme
@@ -944,7 +943,7 @@ class _MarketplaceState extends State<Marketplace>
                                     fallback:
                                         '${collectible.currentListingPrice} KUB8',
                                   ),
-                                  style: GoogleFonts.inter(
+                                  style: KubusTypography.inter(
                                     fontSize: 9,
                                     fontWeight: FontWeight.bold,
                                     color: roles.warningAction,
@@ -979,7 +978,7 @@ class _MarketplaceState extends State<Marketplace>
                               children: [
                                 Text(
                                   value?.label ?? 'Owned',
-                                  style: GoogleFonts.inter(
+                                  style: KubusTypography.inter(
                                     fontSize: 9,
                                     color: AppColorUtils.amberAccent,
                                     fontWeight: FontWeight.w500,
@@ -989,7 +988,7 @@ class _MarketplaceState extends State<Marketplace>
                                   MarketplaceValueFormatter.formatDisplayValue(
                                     value,
                                   ),
-                                  style: GoogleFonts.inter(
+                                  style: KubusTypography.inter(
                                     fontSize: 9,
                                     fontWeight: FontWeight.bold,
                                     color:
@@ -1064,7 +1063,7 @@ class _MarketplaceState extends State<Marketplace>
                   const SizedBox(height: 16),
                   Text(
                     '${entry.title} #${collectible.tokenId}',
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -1074,7 +1073,7 @@ class _MarketplaceState extends State<Marketplace>
                   Text(
                     'Owned NFT ${collectible.isForSale ? '• Listed for Sale' : ''}',
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 14,
                       color: Theme.of(context)
                           .colorScheme
@@ -1095,7 +1094,7 @@ class _MarketplaceState extends State<Marketplace>
                     if (collectible.properties.isNotEmpty) ...[
                       Text(
                         'Properties',
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: Theme.of(context).colorScheme.onSurface,
@@ -1119,7 +1118,7 @@ class _MarketplaceState extends State<Marketplace>
                               children: [
                                 Text(
                                   entry.key.replaceAll('_', ' ').toUpperCase(),
-                                  style: GoogleFonts.inter(
+                                  style: KubusTypography.inter(
                                     fontSize: 10,
                                     color: Theme.of(context)
                                         .colorScheme
@@ -1130,7 +1129,7 @@ class _MarketplaceState extends State<Marketplace>
                                 const SizedBox(height: 4),
                                 Text(
                                   entry.value.toString(),
-                                  style: GoogleFonts.inter(
+                                  style: KubusTypography.inter(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w500,
                                     color:
@@ -1148,7 +1147,7 @@ class _MarketplaceState extends State<Marketplace>
                     // Details
                     Text(
                       'Details',
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).colorScheme.onSurface,
@@ -1189,7 +1188,7 @@ class _MarketplaceState extends State<Marketplace>
         children: [
           Text(
             label,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 14,
               color: Theme.of(context)
                   .colorScheme
@@ -1199,7 +1198,7 @@ class _MarketplaceState extends State<Marketplace>
           ),
           Text(
             value,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 14,
               fontWeight: FontWeight.w500,
               color: Theme.of(context).colorScheme.onSurface,
@@ -1227,7 +1226,7 @@ class _MarketplaceState extends State<Marketplace>
         ),
         title: Text(
           'List NFT for Sale',
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
@@ -1240,18 +1239,18 @@ class _MarketplaceState extends State<Marketplace>
               entryTitle.isEmpty
                   ? 'Token #${collectible.tokenId}'
                   : '$entryTitle #${collectible.tokenId}',
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Colors.grey[300],
               ),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: priceController,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                   color: Theme.of(context).colorScheme.onPrimary),
               decoration: InputDecoration(
                 labelText: 'Price (KUB8)',
-                labelStyle: GoogleFonts.inter(
+                labelStyle: KubusTypography.inter(
                     color: Theme.of(context)
                         .colorScheme
                         .onSurface
@@ -1278,7 +1277,7 @@ class _MarketplaceState extends State<Marketplace>
             onPressed: () => Navigator.of(context).pop(),
             child: Text(
               AppLocalizations.of(context)!.commonCancel,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Theme.of(context)
                     .colorScheme
                     .onSurface
@@ -1301,7 +1300,7 @@ class _MarketplaceState extends State<Marketplace>
             ),
             child: Text(
               AppLocalizations.of(context)!.marketplaceListForSaleButton,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -1355,14 +1354,14 @@ class _MarketplaceState extends State<Marketplace>
         ),
         title: Text(
           l10n.marketplaceRemoveFromSaleTitle,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             color: scheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
           l10n.marketplaceRemoveFromSaleConfirmBody,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             color: scheme.onSurface.withValues(alpha: 0.8),
           ),
         ),
@@ -1371,7 +1370,7 @@ class _MarketplaceState extends State<Marketplace>
             onPressed: () => Navigator.of(context).pop(),
             child: Text(
               l10n.commonCancel,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: scheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
@@ -1393,7 +1392,7 @@ class _MarketplaceState extends State<Marketplace>
             ),
             child: Text(
               l10n.commonRemove,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -1479,7 +1478,7 @@ class _MarketplaceState extends State<Marketplace>
                               const SizedBox(width: 4),
                               Text(
                                 'AR',
-                                style: GoogleFonts.inter(
+                                style: KubusTypography.inter(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                   color:
@@ -1503,7 +1502,7 @@ class _MarketplaceState extends State<Marketplace>
                           ),
                           child: Text(
                             'SOLD OUT',
-                            style: GoogleFonts.inter(
+                            style: KubusTypography.inter(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                               color: Theme.of(context).colorScheme.onSurface,
@@ -1527,7 +1526,7 @@ class _MarketplaceState extends State<Marketplace>
                           ),
                           child: Text(
                             entry.rarity!.name.toUpperCase(),
-                            style: GoogleFonts.inter(
+                            style: KubusTypography.inter(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                               color: RarityUi.collectibleColor(
@@ -1550,7 +1549,7 @@ class _MarketplaceState extends State<Marketplace>
                   children: [
                     Text(
                       entry.title,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: Theme.of(context).colorScheme.onSurface,
@@ -1561,7 +1560,7 @@ class _MarketplaceState extends State<Marketplace>
                     const SizedBox(height: 2),
                     Text(
                       'by ${entry.artistName}',
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 9,
                         color: Theme.of(context)
                             .colorScheme
@@ -1582,7 +1581,7 @@ class _MarketplaceState extends State<Marketplace>
                               Flexible(
                                 child: Text(
                                   '${entry.mintedCount}/${entry.totalSupply}',
-                                  style: GoogleFonts.inter(
+                                  style: KubusTypography.inter(
                                     fontSize: 8,
                                     color: Theme.of(context)
                                         .colorScheme
@@ -1594,7 +1593,7 @@ class _MarketplaceState extends State<Marketplace>
                               ),
                               Text(
                                 '$progressPercentage%',
-                                style: GoogleFonts.inter(
+                                style: KubusTypography.inter(
                                   fontSize: 8,
                                   fontWeight: FontWeight.w500,
                                   color: isNearSoldOut
@@ -1635,7 +1634,7 @@ class _MarketplaceState extends State<Marketplace>
                             children: [
                               Text(
                                 value?.label ?? 'Status',
-                                style: GoogleFonts.inter(
+                                style: KubusTypography.inter(
                                   fontSize: 7,
                                   color: Theme.of(context)
                                       .colorScheme
@@ -1647,7 +1646,7 @@ class _MarketplaceState extends State<Marketplace>
                                 MarketplaceValueFormatter.formatDisplayValue(
                                   value,
                                 ),
-                                style: GoogleFonts.inter(
+                                style: KubusTypography.inter(
                                   fontSize: 9,
                                   fontWeight: FontWeight.bold,
                                   color:
@@ -1679,7 +1678,7 @@ class _MarketplaceState extends State<Marketplace>
                                 : (series != null && !entry.isSoldOut
                                     ? 'Mint'
                                     : 'View'),
-                            style: GoogleFonts.inter(
+                            style: KubusTypography.inter(
                               fontSize: 8,
                               fontWeight: FontWeight.w600,
                               color: Theme.of(context).colorScheme.onSurface,
@@ -1712,7 +1711,7 @@ class _MarketplaceState extends State<Marketplace>
           const SizedBox(height: 8),
           Text(
             entry.title,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 12,
               fontWeight: FontWeight.w500,
               color: Theme.of(context)
@@ -1773,7 +1772,7 @@ class _MarketplaceState extends State<Marketplace>
                   const SizedBox(height: 16),
                   Text(
                     entry.title,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -1783,7 +1782,7 @@ class _MarketplaceState extends State<Marketplace>
                   Text(
                     'NFT Artwork${entry.requiresArInteraction ? ' • AR Enabled' : ''}',
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 14,
                       color: Theme.of(context)
                           .colorScheme
@@ -1802,7 +1801,7 @@ class _MarketplaceState extends State<Marketplace>
                   children: [
                     Text(
                       'Description',
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).colorScheme.onSurface,
@@ -1813,7 +1812,7 @@ class _MarketplaceState extends State<Marketplace>
                       series != null && series.description.isNotEmpty
                           ? series.description
                           : entry.artwork.description,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 14,
                         color: Colors.grey[300],
                         height: 1.5,
@@ -1890,7 +1889,7 @@ class _MarketplaceState extends State<Marketplace>
                                   : (series.isSoldOut
                                       ? 'Sold Out'
                                       : 'Mint NFT'),
-                              style: GoogleFonts.inter(
+                              style: KubusTypography.inter(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -1945,7 +1944,7 @@ class _MarketplaceState extends State<Marketplace>
         children: [
           Text(
             value,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 16,
               fontWeight: FontWeight.bold,
               color: Theme.of(context).colorScheme.onSurface,
@@ -1954,7 +1953,7 @@ class _MarketplaceState extends State<Marketplace>
           const SizedBox(height: 4),
           Text(
             label,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 12,
               color: Theme.of(context)
                   .colorScheme
@@ -1981,7 +1980,7 @@ class _MarketplaceState extends State<Marketplace>
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(
             AppLocalizations.of(context)!.marketplaceMintConnectWalletTitle,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               color: colorScheme.onSurface,
               fontWeight: FontWeight.bold,
             ),
@@ -1989,7 +1988,7 @@ class _MarketplaceState extends State<Marketplace>
           content: Text(
             AppLocalizations.of(context)!
                 .marketplaceMintConnectWalletDescription,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               color: colorScheme.onSurface.withValues(alpha: 0.8),
               height: 1.5,
             ),
@@ -1999,7 +1998,7 @@ class _MarketplaceState extends State<Marketplace>
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
                 AppLocalizations.of(context)!.commonCancel,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                     color: colorScheme.onSurface.withValues(alpha: 0.7)),
               ),
             ),
@@ -2039,7 +2038,7 @@ class _MarketplaceState extends State<Marketplace>
               const SizedBox(width: 8),
               Text(
                 'AR Required',
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.bold,
                 ),
@@ -2048,7 +2047,7 @@ class _MarketplaceState extends State<Marketplace>
           ),
           content: Text(
             'This NFT requires AR interaction with the physical artwork. Please visit the artwork location and use the AR scanner to mint your NFT.',
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               color: Theme.of(context)
                   .colorScheme
                   .onSurface
@@ -2061,7 +2060,7 @@ class _MarketplaceState extends State<Marketplace>
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
                 'Cancel',
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   color: Theme.of(context)
                       .colorScheme
                       .onSurface
@@ -2081,7 +2080,7 @@ class _MarketplaceState extends State<Marketplace>
               ),
               child: Text(
                 'Go to AR',
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -2105,7 +2104,7 @@ class _MarketplaceState extends State<Marketplace>
         ),
         title: Text(
           'Mint NFT',
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
@@ -2116,7 +2115,7 @@ class _MarketplaceState extends State<Marketplace>
           children: [
             Text(
               'You are about to mint an NFT from "${series.name}" collection.',
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Colors.grey[300],
                 height: 1.5,
               ),
@@ -2133,7 +2132,7 @@ class _MarketplaceState extends State<Marketplace>
                 children: [
                   Text(
                     'Mint Price:',
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       color: Theme.of(context)
                           .colorScheme
                           .onSurface
@@ -2142,7 +2141,7 @@ class _MarketplaceState extends State<Marketplace>
                   ),
                   Text(
                     '${series.mintPrice.toInt()} KUB8',
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       color: Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.bold,
                     ),
@@ -2157,7 +2156,7 @@ class _MarketplaceState extends State<Marketplace>
             onPressed: () => Navigator.of(context).pop(),
             child: Text(
               'Cancel',
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 color: Theme.of(context)
                     .colorScheme
                     .onSurface
@@ -2177,7 +2176,7 @@ class _MarketplaceState extends State<Marketplace>
               ),
               child: Text(
                 'Confirm Mint',
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -2249,7 +2248,7 @@ class _MarketplaceState extends State<Marketplace>
               const SizedBox(width: 8),
               Text(
                 l10n.marketplaceMintSuccessTitle,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.bold,
                 ),
@@ -2258,7 +2257,7 @@ class _MarketplaceState extends State<Marketplace>
           ),
           content: Text(
             l10n.marketplaceMintSuccessDescription,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               color: Theme.of(context)
                   .colorScheme
                   .onSurface
@@ -2281,7 +2280,7 @@ class _MarketplaceState extends State<Marketplace>
                 ),
                 child: Text(
                   l10n.marketplaceViewInWalletButton,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -2318,7 +2317,7 @@ class _MarketplaceState extends State<Marketplace>
               const SizedBox(width: 8),
               Text(
                 l10n.marketplaceMintFailedTitle,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.bold,
                 ),
@@ -2327,7 +2326,7 @@ class _MarketplaceState extends State<Marketplace>
           ),
           content: Text(
             l10n.marketplaceMintFailedDescription,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               color: Theme.of(context)
                   .colorScheme
                   .onSurface
@@ -2347,7 +2346,7 @@ class _MarketplaceState extends State<Marketplace>
               ),
               child: Text(
                 l10n.commonClose,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -2358,3 +2357,4 @@ class _MarketplaceState extends State<Marketplace>
     }
   }
 }
+

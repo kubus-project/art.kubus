@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+﻿import 'package:flutter/material.dart';
 import '../../widgets/app_loading.dart';
+import '../../utils/design_tokens.dart';
 import '../../widgets/avatar_widget.dart';
 import 'package:provider/provider.dart';
 import '../../providers/artwork_provider.dart';
@@ -9,10 +9,10 @@ import '../../providers/wallet_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/user_service.dart';
-import 'user_profile_screen.dart';
 import '../../utils/artwork_navigation.dart';
 import '../../utils/creator_display_format.dart';
 import '../../utils/search_suggestions.dart';
+import '../../utils/user_profile_navigation.dart';
 
 // Helper methods for ProfileScreen
 class ProfileScreenMethods {
@@ -169,7 +169,7 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
               children: [
                 Text(
                   'Followers${_followers != null ? ' (${_followers!.length})' : ''}',
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: theme.colorScheme.onSurface,
@@ -230,14 +230,10 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
           child: ListTile(
             onTap: () {
               Navigator.pop(context);
-              Navigator.push(
+              UserProfileNavigation.open(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => UserProfileScreen(
-                    userId: walletAddress,
-                    username: username,
-                  ),
-                ),
+                userId: walletAddress,
+                username: username,
               );
             },
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -252,7 +248,7 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
                   child: Text(
                     formatted.primary,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontWeight: FontWeight.w600,
                       color: theme.colorScheme.onSurface,
                     ),
@@ -268,7 +264,7 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
                 ? null
                 : Text(
                     subtitle,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                       fontSize: 12,
                     ),
@@ -284,7 +280,7 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
   Widget _buildEmptyState(ThemeData theme, String title, String subtitle) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(KubusSpacing.lg),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -292,7 +288,7 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
             const SizedBox(height: 16),
             Text(
               title,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -301,7 +297,7 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
             const SizedBox(height: 8),
             Text(
               subtitle,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 14,
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
               ),
@@ -316,7 +312,7 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
   Widget _buildErrorState(ThemeData theme, String error) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(KubusSpacing.lg),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -324,7 +320,7 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
             const SizedBox(height: 16),
             Text(
               error,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 16,
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
@@ -335,7 +331,7 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
               onPressed: _loadFollowers,
               child: Text(
                 'Retry',
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   color: Provider.of<ThemeProvider>(context, listen: false).accentColor,
                 ),
               ),
@@ -440,13 +436,13 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
           ),
           
           Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   'Following${_following != null ? ' (${_following!.length})' : ''}',
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: theme.colorScheme.onSurface,
@@ -507,14 +503,10 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
           child: ListTile(
             onTap: () {
               Navigator.pop(context);
-              Navigator.push(
+              UserProfileNavigation.open(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => UserProfileScreen(
-                    userId: walletAddress,
-                    username: username,
-                  ),
-                ),
+                userId: walletAddress,
+                username: username,
               );
             },
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -529,7 +521,7 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
                   child: Text(
                     formatted.primary,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontWeight: FontWeight.w600,
                       color: theme.colorScheme.onSurface,
                     ),
@@ -545,7 +537,7 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
                 ? null
                 : Text(
                     subtitle,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                       fontSize: 12,
                     ),
@@ -561,7 +553,7 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
   Widget _buildEmptyState(ThemeData theme, String title, String subtitle) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(KubusSpacing.lg),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -569,7 +561,7 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
             const SizedBox(height: 16),
             Text(
               title,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -578,7 +570,7 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
             const SizedBox(height: 8),
             Text(
               subtitle,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 14,
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
               ),
@@ -593,7 +585,7 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
   Widget _buildErrorState(ThemeData theme, String error) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(KubusSpacing.lg),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -601,7 +593,7 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
             const SizedBox(height: 16),
             Text(
               error,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 16,
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
@@ -612,7 +604,7 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
               onPressed: _loadFollowing,
               child: Text(
                 'Retry',
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   color: Provider.of<ThemeProvider>(context, listen: false).accentColor,
                 ),
               ),
@@ -662,13 +654,13 @@ class _ArtworksBottomSheet extends StatelessWidget {
               ),
               
               Padding(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       'My Artworks (${userArtworks.length})',
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: theme.colorScheme.onSurface,
@@ -696,7 +688,7 @@ class _ArtworksBottomSheet extends StatelessWidget {
                           const SizedBox(height: 16),
                           Text(
                             'No artworks yet',
-                            style: GoogleFonts.inter(
+                            style: KubusTypography.inter(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
                               color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -760,7 +752,7 @@ class _ArtworksBottomSheet extends StatelessWidget {
                                   children: [
                                     Text(
                                       artwork.title,
-                                      style: GoogleFonts.inter(
+                                      style: KubusTypography.inter(
                                         fontWeight: FontWeight.w600,
                                         fontSize: 14,
                                         color: theme.colorScheme.onSurface,
@@ -770,7 +762,7 @@ class _ArtworksBottomSheet extends StatelessWidget {
                                     ),
                                     Text(
                                       '${artwork.likesCount} likes',
-                                      style: GoogleFonts.inter(
+                                      style: KubusTypography.inter(
                                         fontSize: 12,
                                         color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                                       ),
@@ -835,7 +827,7 @@ class _CollectionsBottomSheet extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             'No Collections Yet',
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -844,7 +836,7 @@ class _CollectionsBottomSheet extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Your NFT collections will appear here',
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 14,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
             ),
@@ -855,3 +847,5 @@ class _CollectionsBottomSheet extends StatelessWidget {
     );
   }
 }
+
+

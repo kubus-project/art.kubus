@@ -1,8 +1,8 @@
-﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../utils/category_accent_color.dart';
+import '../../../utils/design_tokens.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
@@ -387,9 +387,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               Flexible(
                 child: Text(
                   user!.name,
-                  style: GoogleFonts.inter(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
+                  style: KubusTextStyles.heroTitle.copyWith(
                     color: Theme.of(context).colorScheme.onSurface,
                     letterSpacing: -0.5,
                   ),
@@ -457,7 +455,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           backgroundColor: scheme.surface,
           title: Text(
             l10n.navigationScreenAnalytics,
-            style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+            style: KubusTypography.inter(fontWeight: FontWeight.w700),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -465,7 +463,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             children: [
               Text(
                 'Open the unified analytics experience and choose the context to land on first.',
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 13,
                   color: scheme.onSurface.withValues(alpha: 0.75),
                   height: 1.4,
@@ -477,11 +475,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                 leading: Icon(Icons.person_outline, color: scheme.primary),
                 title: Text(
                   l10n.profileAnalyticsProfileTitle,
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                  style: KubusTypography.inter(fontWeight: FontWeight.w600),
                 ),
                 subtitle: Text(
                   'Profile reach, follower growth, views, and public signals.',
-                  style: GoogleFonts.inter(fontSize: 12),
+                  style: KubusTypography.inter(fontSize: 12),
                 ),
                 onTap: () {
                   Navigator.pop(dialogContext);
@@ -506,11 +504,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                 leading: Icon(Icons.forum_outlined, color: scheme.secondary),
                 title: Text(
                   l10n.profileAnalyticsCommunityTitle,
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                  style: KubusTypography.inter(fontWeight: FontWeight.w600),
                 ),
                 subtitle: Text(
                   'Community posting and engagement metrics in the same analytics surface.',
-                  style: GoogleFonts.inter(fontSize: 12),
+                  style: KubusTypography.inter(fontSize: 12),
                 ),
                 onTap: () {
                   Navigator.pop(dialogContext);
@@ -537,7 +535,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               onPressed: () => Navigator.pop(dialogContext),
               child: Text(
                 l10n.commonClose,
-                style: GoogleFonts.inter(color: scheme.primary),
+                style: KubusTypography.inter(color: scheme.primary),
               ),
             ),
           ],
@@ -625,8 +623,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                 // Avatar
                 Container(
                   padding: const EdgeInsets.all(3),
+                  clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(
+                      avatarRadius + KubusSpacing.sm,
+                    ),
                     color: Theme.of(context).colorScheme.surface,
                     boxShadow: [
                       BoxShadow(
@@ -655,7 +656,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                           Flexible(
                             child: Text(
                               user!.name,
-                              style: GoogleFonts.inter(
+                              style: KubusTypography.inter(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
                                 color: Theme.of(context).colorScheme.onSurface,
@@ -676,7 +677,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                       const SizedBox(height: 4),
                       Text(
                         user!.username,
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 14,
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
@@ -685,7 +686,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                       UserActivityStatusLine(
                         walletAddress: user!.id,
                         textAlign: TextAlign.start,
-                        textStyle: GoogleFonts.inter(
+                        textStyle: KubusTypography.inter(
                           fontSize: 13,
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
@@ -694,7 +695,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                         const SizedBox(height: 10),
                         Text(
                           user!.bio,
-                          style: GoogleFonts.inter(
+                          style: KubusTypography.inter(
                             fontSize: 14,
                             height: 1.4,
                             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
@@ -712,7 +713,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                       const SizedBox(height: 8),
                       Text(
                         l10n.userProfileJoinedLabel(user!.joinedDate),
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 12,
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                         ),
@@ -828,7 +829,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               children: [
                 Text(
                   l10n.profilePerformancePublicStreetArtAddedTitle,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -837,7 +838,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                 const SizedBox(height: 4),
                 Text(
                   l10n.userProfileArtistHighlightsSubtitle(user!.name),
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 12,
                     color: Theme.of(context)
                         .colorScheme
@@ -850,7 +851,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           ),
           Text(
             _formatCount(_publicStreetArtAddedCount),
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 24,
               fontWeight: FontWeight.bold,
               color: Theme.of(context).colorScheme.onSurface,
@@ -976,7 +977,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               if (_artistArtworks.isNotEmpty) ...[
                 Text(
                   'Featured Works',
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -997,7 +998,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               if (_artistCollections.isNotEmpty) ...[
                 Text(
                   'Collections',
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -1060,7 +1061,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                     children: [
                       Text(
                         title,
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                           color: Theme.of(context).colorScheme.onSurface,
@@ -1071,7 +1072,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                       const SizedBox(height: 4),
                       Text(
                         category,
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 13,
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
@@ -1087,7 +1088,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                           const SizedBox(width: 4),
                           Text(
                             '$likesCount',
-                            style: GoogleFonts.inter(
+                            style: KubusTypography.inter(
                               fontSize: 12,
                               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                             ),
@@ -1159,7 +1160,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                 children: [
                   Text(
                     title,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -1170,7 +1171,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                   const SizedBox(height: 4),
                   Text(
                     l10n.userProfileArtworksCountLabel(count as int),
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 12,
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
@@ -1179,7 +1180,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                     const SizedBox(height: 4),
                     Text(
                       description,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 11,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
@@ -1396,7 +1397,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                 ),
                 child: Text(
                   '+${achievement.tokenReward}',
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.onSecondaryContainer,
@@ -1408,7 +1409,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           const SizedBox(height: 16),
           Text(
             achievement.title,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 15,
               fontWeight: FontWeight.w600,
               color: Theme.of(context).colorScheme.onSurface,
@@ -1419,7 +1420,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           const SizedBox(height: 8),
           Text(
             isCompleted ? l10n.userProfileAchievementCompletedLabel : '${progress.currentProgress}/$required',
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 13,
               fontWeight: FontWeight.w600,
               color: isCompleted
@@ -1497,7 +1498,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                   alignment: Alignment.center,
                   child: Text(
                     l10n.userProfileNoMorePostsLabel,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
@@ -1540,7 +1541,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                           Expanded(
                             child: Text(
                               post.authorName,
-                              style: GoogleFonts.inter(
+                              style: KubusTypography.inter(
                                 fontWeight: FontWeight.w600,
                                 color: Theme.of(context).colorScheme.onSurface,
                               ),
@@ -1560,7 +1561,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                       const SizedBox(height: 4),
                       Text(
                         _formatPostTime(AppLocalizations.of(context)!, post.timestamp),
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: 12,
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                         ),
@@ -1573,7 +1574,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             const SizedBox(height: 16),
             Text(
               post.content,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 14,
                 height: 1.5,
                 color: Theme.of(context).colorScheme.onSurface,
@@ -1607,7 +1608,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                 const SizedBox(width: 6),
                 Text(
                   post.likeCount.toString(),
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 14,
                     color: post.isLiked
                         ? themeProvider.accentColor
@@ -1623,7 +1624,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                 const SizedBox(width: 6),
                 Text(
                   post.commentCount.toString(),
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 14,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
@@ -1921,7 +1922,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(KubusSpacing.lg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1986,14 +1987,14 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           l10n.userProfileBlockDialogTitle(user?.name ?? targetWallet),
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         content: Text(
           l10n.userProfileBlockDialogDescription,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
           ),
         ),
@@ -2043,7 +2044,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           l10n.userProfileReportDialogTitle(user?.name ?? ''),
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface),
+          style: KubusTypography.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,

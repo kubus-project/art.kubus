@@ -3,7 +3,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../../config/config.dart';
@@ -38,6 +37,7 @@ import '../../../utils/media_url_resolver.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/creator_display_format.dart';
 import '../../../utils/search_suggestions.dart';
+import '../../../utils/user_profile_navigation.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../utils/user_identity_display.dart';
 import '../../../utils/community_subject_navigation.dart';
@@ -50,12 +50,12 @@ import '../../../widgets/community/community_group_picker_content.dart';
 import '../../../widgets/community/community_likes_sheet.dart';
 import '../../community/group_feed_screen.dart';
 import '../../community/conversation_screen.dart';
-import 'desktop_user_profile_screen.dart';
 import '../../community/post_detail_screen.dart';
 import '../../download_app_screen.dart';
 import '../../map_screen.dart';
 import '../../season0/season0_screen.dart';
 import '../../../widgets/community/community_season0_banner.dart';
+import '../../../widgets/common/kubus_screen_header.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class _ComposerImagePayload {
@@ -667,19 +667,21 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final isLarge = screenWidth >= 1200;
     final isMedium = screenWidth >= 900 && screenWidth < 1200;
 
-    return PopScope(
-      canPop: _paneStack.isEmpty,
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
-        if (_paneStack.isNotEmpty) {
-          _popPane();
-        }
-      },
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: Stack(
-          children: [
-            Row(
+    return DesktopProfilePresentationScope(
+      presentation: DesktopProfilePresentation.communityOverlay,
+      child: PopScope(
+        canPop: _paneStack.isEmpty,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) return;
+          if (_paneStack.isNotEmpty) {
+            _popPane();
+          }
+        },
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Stack(
+            children: [
+              Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Main feed
@@ -717,11 +719,12 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               ],
             ),
 
-            if (_showSearchOverlay) _buildSearchOverlay(themeProvider),
+              if (_showSearchOverlay) _buildSearchOverlay(themeProvider),
 
-            // Compose dialog
-            if (_showComposeDialog) _buildComposeDialog(themeProvider),
-          ],
+              // Compose dialog
+              if (_showComposeDialog) _buildComposeDialog(themeProvider),
+            ],
+          ),
         ),
       ),
     );
@@ -946,17 +949,13 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               children: [
                 Text(
                   l10n.desktopCommunityTagFeedTopPostsTitle(sanitized),
-                  style: GoogleFonts.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onSurface,
-                  ),
+                  style: KubusTextStyles.sectionTitle
+                      .copyWith(color: scheme.onSurface),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   l10n.desktopCommunityTagFeedSortedByPopularityDescription,
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
+                  style: KubusTextStyles.sectionSubtitle.copyWith(
                     color: scheme.onSurface.withValues(alpha: 0.65),
                   ),
                 ),
@@ -966,8 +965,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     l10n.desktopCommunityTagFeedTaggedPostsAcrossCommunityLabel(
                       taggedCount.toInt(),
                     ),
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
+                    style: KubusTextStyles.navMetaLabel.copyWith(
                       color: scheme.onSurface.withValues(alpha: 0.55),
                     ),
                   ),
@@ -991,8 +989,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     ),
                     child: Text(
                       '#$rank',
-                      style: GoogleFonts.inter(
-                        fontWeight: FontWeight.w700,
+                      style: KubusTextStyles.compactBadge.copyWith(
                         color: themeProvider.accentColor,
                       ),
                     ),
@@ -1000,8 +997,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   const SizedBox(width: 8),
                   Text(
                     l10n.desktopCommunityPopularForTagTitle(sanitized),
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
+                    style: KubusTextStyles.navMetaLabel.copyWith(
                       color: scheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
@@ -1085,9 +1081,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               children: [
                 Text(
                   displayTag,
-                  style: GoogleFonts.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
+                  style: KubusTextStyles.sectionTitle.copyWith(
                     color: scheme.onSurface,
                   ),
                   maxLines: 1,
@@ -1098,8 +1092,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   children: [
                     Text(
                       sortLabel,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
+                      style: KubusTextStyles.navMetaLabel.copyWith(
                         color: scheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
@@ -1115,8 +1108,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       Text(
                         l10n.desktopCommunityTaggedPostsLabel(
                             tagCount.toInt().toString()),
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
+                        style: KubusTextStyles.navMetaLabel.copyWith(
                           color: scheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
@@ -1322,25 +1314,13 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                l10n.desktopCommunityHeaderTitle,
-                style: GoogleFonts.inter(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
+              KubusHeaderText(
+                title: l10n.desktopCommunityHeaderTitle,
+                subtitle: l10n.desktopCommunityHeaderSubtitle,
+                titleStyle: KubusTextStyles.heroTitle.copyWith(
                   letterSpacing: -0.5,
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                l10n.desktopCommunityHeaderSubtitle,
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.5),
-                ),
+                subtitleStyle: KubusTextStyles.sectionSubtitle,
               ),
             ],
           ),
@@ -1411,8 +1391,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   ),
                 Text(
                   label,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
+                  style: KubusTextStyles.navMetaLabel.copyWith(
                     fontWeight: FontWeight.w600,
                     color: active
                         ? themeProvider.accentColor
@@ -1469,8 +1448,11 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   Widget _buildSearchOverlay(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.22 : 0.26);
+    final glassStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.card,
+      tintBase: scheme.surface,
+    );
     final trimmedQuery = _searchQuery.trim();
     if (!_isFetchingSearch &&
         _searchResults.isEmpty &&
@@ -1492,8 +1474,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             padding: const EdgeInsets.symmetric(vertical: 8),
             margin: EdgeInsets.zero,
             borderRadius: BorderRadius.circular(12),
-            blurSigma: KubusGlassEffects.blurSigmaLight,
-            backgroundColor: glassTint,
+            blurSigma: glassStyle.blurSigma,
+            fallbackMinOpacity: glassStyle.fallbackMinOpacity,
+            backgroundColor: glassStyle.tintColor,
             child: Builder(
               builder: (context) {
                 if (trimmedQuery.length < 2) {
@@ -1501,7 +1484,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     padding: const EdgeInsets.all(16),
                     child: Text(
                       l10n.desktopCommunitySearchMinCharsHint,
-                      style: GoogleFonts.inter(
+                      style: KubusTextStyles.sectionSubtitle.copyWith(
                         color: scheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
@@ -1527,7 +1510,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         const SizedBox(width: 12),
                         Text(
                           l10n.desktopCommunitySearchNoResults,
-                          style: GoogleFonts.inter(
+                          style: KubusTextStyles.sectionSubtitle.copyWith(
                             color: scheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
@@ -1569,13 +1552,13 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       ),
                       title: Text(
                         identity.name,
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                        style: KubusTextStyles.sectionTitle,
                       ),
                       subtitle: subtitleText == null
                           ? null
                           : Text(
                               subtitleText,
-                              style: GoogleFonts.inter(
+                              style: KubusTextStyles.navMetaLabel.copyWith(
                                 color: scheme.onSurface.withValues(alpha: 0.6),
                               ),
                             ),
@@ -1619,16 +1602,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         labelColor: Colors.white,
         unselectedLabelColor:
             Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65),
-        labelStyle: GoogleFonts.inter(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          letterSpacing: -0.2,
-        ),
-        unselectedLabelStyle: GoogleFonts.inter(
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-          letterSpacing: -0.2,
-        ),
+        labelStyle: KubusTextStyles.navLabel,
+        unselectedLabelStyle: KubusTextStyles.navLabel,
         indicator: BoxDecoration(
           gradient: LinearGradient(
             colors: [
@@ -1696,9 +1671,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         },
         selectedColor: themeProvider.accentColor,
         backgroundColor: scheme.surfaceContainerHighest,
-        labelStyle: GoogleFonts.inter(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
+        labelStyle: KubusTextStyles.navMetaLabel.copyWith(
           color: selected ? scheme.onPrimary : scheme.onSurface,
         ),
         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -1715,9 +1688,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           const SizedBox(width: 8),
           Text(
             l10n.desktopCommunitySortTitle,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
+            style: KubusTextStyles.sectionSubtitle.copyWith(
               color: scheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
@@ -2200,8 +2171,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       onPressed: single.onTap,
       backgroundColor: themeProvider.accentColor,
       icon: Icon(single.icon, color: scheme.onSurface),
-      label: Text(single.label,
-          style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+      label: Text(single.label, style: KubusTextStyles.navLabel),
     );
   }
 
@@ -2412,7 +2382,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           l10n.desktopCommunityCreateOptionCreateGroup,
-          style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+          style: KubusTextStyles.sectionTitle,
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -2536,8 +2506,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     children: [
                       Text(
                         group.name,
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
+                        style: KubusTextStyles.sectionTitle.copyWith(
                           fontWeight: FontWeight.w600,
                           color: Theme.of(context).colorScheme.onSurface,
                         ),
@@ -2548,8 +2517,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         const SizedBox(height: 4),
                         Text(
                           group.description!,
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
+                          style: KubusTextStyles.sectionSubtitle.copyWith(
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurface
@@ -2575,8 +2543,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                             AppLocalizations.of(context)!
                                 .desktopCommunityGroupMembersLabel(
                                     group.memberCount),
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
+                            style: KubusTextStyles.navMetaLabel.copyWith(
                               color: Theme.of(context)
                                   .colorScheme
                                   .onSurface
@@ -2600,8 +2567,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                     .desktopCommunityLatestLabel(
                                   _formatTimeAgo(group.latestPost!.createdAt!),
                                 ),
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
+                                style: KubusTextStyles.navMetaLabel.copyWith(
                                   color: Theme.of(context)
                                       .colorScheme
                                       .onSurface
@@ -2673,11 +2639,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               color: themeProvider.accentColor,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
           Text(
             message,
-            style: GoogleFonts.inter(
-              fontSize: 14,
+            style: KubusTextStyles.sectionSubtitle.copyWith(
               color: Theme.of(context)
                   .colorScheme
                   .onSurface
@@ -2711,9 +2676,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           const SizedBox(height: 20),
           Text(
             AppLocalizations.of(context)!.commonFailedToLoadLabel,
-            style: GoogleFonts.inter(
-              fontSize: 17,
-              fontWeight: FontWeight.w600,
+            style: KubusTextStyles.sectionTitle.copyWith(
               color: Theme.of(context)
                   .colorScheme
                   .onSurface
@@ -2725,8 +2688,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Text(
               error,
-              style: GoogleFonts.inter(
-                fontSize: 14,
+              style: KubusTextStyles.sectionSubtitle.copyWith(
                 color: Theme.of(context)
                     .colorScheme
                     .onSurface
@@ -2774,11 +2736,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               color: themeProvider.accentColor.withValues(alpha: 0.7),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: KubusSpacing.lg),
           Text(
             title,
-            style: GoogleFonts.inter(
-              fontSize: 17,
+            style: KubusTextStyles.sectionTitle.copyWith(
               fontWeight: FontWeight.w600,
               color: Theme.of(context)
                   .colorScheme
@@ -2789,18 +2750,17 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 40),
-            child: Text(
-              subtitle,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.5),
-                height: 1.4,
+              child: Text(
+                subtitle,
+                style: KubusTextStyles.sectionSubtitle.copyWith(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.5),
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
           ),
         ],
       ),
@@ -3124,8 +3084,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 fit: FlexFit.loose,
                 child: Text(
                   displayPost.authorName,
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.w600,
+                  style: KubusTextStyles.actionTileTitle.copyWith(
                     color: scheme.onSurface,
                   ),
                   overflow: TextOverflow.ellipsis,
@@ -3141,8 +3100,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           const SizedBox(height: 4),
           Text(
             displayPost.content,
-            style: GoogleFonts.inter(
-              fontSize: 13,
+            style: KubusTextStyles.detailBody.copyWith(
               color: scheme.onSurface.withValues(alpha: 0.8),
               height: 1.4,
             ),
@@ -3261,7 +3219,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 icon: Icons.delete_outline,
                 label: l10n.communityUnrepostAction,
                 iconColor: scheme.error,
-                textStyle: GoogleFonts.inter(color: scheme.error),
+                textStyle: KubusTextStyles.navLabel.copyWith(color: scheme.error),
                 onTap: () => unawaited(_unrepostPost(post)),
               ),
               const SizedBox(height: KubusSpacing.md),
@@ -3286,21 +3244,28 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
-        title: Text(l10n.communityUnrepostTitle, style: GoogleFonts.inter()),
-        content:
-            Text(l10n.communityUnrepostConfirmBody, style: GoogleFonts.inter()),
+        title: Text(
+          l10n.communityUnrepostTitle,
+          style: KubusTextStyles.sectionTitle,
+        ),
+        content: Text(
+          l10n.communityUnrepostConfirmBody,
+          style: KubusTextStyles.sectionSubtitle,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(l10n.commonCancel, style: GoogleFonts.inter()),
+            child: Text(l10n.commonCancel, style: KubusTextStyles.navLabel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             style: TextButton.styleFrom(
               foregroundColor: Theme.of(dialogContext).colorScheme.error,
             ),
-            child:
-                Text(l10n.communityUnrepostAction, style: GoogleFonts.inter()),
+            child: Text(
+              l10n.communityUnrepostAction,
+              style: KubusTextStyles.navLabel,
+            ),
           ),
         ],
       ),
@@ -3386,11 +3351,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 children: [
                   Text(
                     l10n.communityRepostedByTitle,
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.onSurface,
-                    ),
+                    style: KubusTextStyles.sectionTitle
+                        .copyWith(color: theme.colorScheme.onSurface),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close),
@@ -3411,7 +3373,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     return Center(
                       child: Text(
                         l10n.communityRepostsLoadFailedMessage,
-                        style: GoogleFonts.inter(),
+                        style: KubusTextStyles.sectionSubtitle,
                       ),
                     );
                   }
@@ -3472,22 +3434,26 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         ),
                         title: Text(
                           formatted.primary,
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                          style: KubusTextStyles.sectionTitle,
                         ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             if (formatted.secondary != null)
-                              Text(formatted.secondary!,
-                                  style: GoogleFonts.inter(fontSize: 12))
+                              Text(
+                                formatted.secondary!,
+                                style: KubusTextStyles.navMetaLabel,
+                              )
                             else if (wallet.isNotEmpty)
-                              Text(maskWallet(wallet),
-                                  style: GoogleFonts.inter(fontSize: 12)),
+                              Text(
+                                maskWallet(wallet),
+                                style: KubusTextStyles.navMetaLabel,
+                              ),
                             if (comment != null && comment.isNotEmpty) ...[
                               const SizedBox(height: 4),
                               Text(
                                 comment,
-                                style: GoogleFonts.inter(fontSize: 12),
+                                style: KubusTextStyles.navMetaLabel,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -3497,8 +3463,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         trailing: createdAt != null
                             ? Text(
                                 _formatTimeAgo(createdAt),
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
+                                style: KubusTextStyles.compactBadge.copyWith(
                                   color: theme.colorScheme.onSurface
                                       .withValues(alpha: 0.5),
                                 ),
@@ -3580,7 +3545,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           child: _showMessagesPanel
               ? _buildMessagesPanel(themeProvider)
               : ListView(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(KubusSpacing.lg),
                   children: [
                     _buildCreatePostPrompt(themeProvider),
                     const SizedBox(height: 24),
@@ -3661,8 +3626,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               const SizedBox(width: 8),
               Text(
                 label,
-                style: GoogleFonts.inter(
-                  fontSize: 13,
+                style: KubusTextStyles.navMetaLabel.copyWith(
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                   color: isSelected
                       ? themeProvider.accentColor
@@ -3742,8 +3706,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                 vertical: 12,
                               ),
                               hintText: l10n.desktopCommunitySearchMessagesHint,
-                              hintStyle: GoogleFonts.inter(
-                                fontSize: 14,
+                              hintStyle: KubusTextStyles.screenSubtitle.copyWith(
                                 color: scheme.onSurface.withValues(alpha: 0.5),
                               ),
                               border: InputBorder.none,
@@ -3771,7 +3734,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                 minHeight: 40,
                               ),
                             ),
-                            style: GoogleFonts.inter(fontSize: 14),
+                            style: KubusTextStyles.navLabel,
                           ),
                         ),
                       ),
@@ -3804,8 +3767,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       filteredConversations.length,
                       trimmedQuery,
                     ),
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
+                    style: KubusTextStyles.navMetaLabel.copyWith(
                       fontWeight: FontWeight.w600,
                       color: scheme.secondary,
                     ),
@@ -3872,8 +3834,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         UserActivityStatusLine(
           walletAddress: otherWallet,
           textAlign: TextAlign.start,
-          textStyle: GoogleFonts.inter(
-            fontSize: 12,
+          textStyle: KubusTextStyles.navMetaLabel.copyWith(
             color: scheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
@@ -3887,8 +3848,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       subtitleLines.add(
         Text(
           searchHighlight!,
-          style: GoogleFonts.inter(
-            fontSize: 12,
+          style: KubusTextStyles.navMetaLabel.copyWith(
             fontWeight: FontWeight.w600,
             color: scheme.secondary,
           ),
@@ -3903,8 +3863,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       subtitleLines.add(
         Text(
           conversation.lastMessage!,
-          style: GoogleFonts.inter(
-            fontSize: 13,
+          style: KubusTextStyles.detailCaption.copyWith(
             color: scheme.onSurface.withValues(alpha: 0.6),
           ),
           maxLines: 1,
@@ -3980,8 +3939,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     Text(
                       conversation.title ??
                           l10n.messagesFallbackConversationTitle,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
+                      style: KubusTextStyles.navLabel.copyWith(
                         fontWeight:
                             hasUnread ? FontWeight.w600 : FontWeight.w500,
                         color: Theme.of(context).colorScheme.onSurface,
@@ -3996,8 +3954,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               const SizedBox(width: 8),
               Text(
                 _formatTimeAgo(conversation.lastMessageAt),
-                style: GoogleFonts.inter(
-                  fontSize: 12,
+                style: KubusTextStyles.navMetaLabel.copyWith(
                   color: Theme.of(context)
                       .colorScheme
                       .onSurface
@@ -4050,17 +4007,14 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           const SizedBox(height: 16),
           Text(
             l10n.desktopCommunityMessagesEmptyTitle,
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
+            style: KubusTextStyles.sectionTitle.copyWith(
               color: scheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
           const SizedBox(height: 8),
           Text(
             l10n.desktopCommunityMessagesEmptySubtitle,
-            style: GoogleFonts.inter(
-              fontSize: 14,
+            style: KubusTextStyles.sectionSubtitle.copyWith(
               color: scheme.onSurface.withValues(alpha: 0.45),
             ),
           ),
@@ -4085,21 +4039,18 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           Text(
             AppLocalizations.of(context)!
                 .desktopCommunityMessagesNoMatchesTitle,
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
+            style: KubusTextStyles.sectionTitle.copyWith(
               color: scheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
           if (queryLabel.isNotEmpty) ...[
             const SizedBox(height: 8),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
+              padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.xl),
               child: Text(
                 AppLocalizations.of(context)!
                     .desktopCommunityMessagesNoResultsBody(queryLabel),
-                style: GoogleFonts.inter(
-                  fontSize: 13,
+                style: KubusTextStyles.detailCaption.copyWith(
                   color: scheme.onSurface.withValues(alpha: 0.55),
                   height: 1.4,
                 ),
@@ -4201,7 +4152,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final title = (conversation.title ?? conversation.rawTitle ?? '').trim();
     final titlePreview = _matchField(title, queryVariants);
     if (titlePreview != null) {
-      register(4.0, 'Title match � $titlePreview');
+      register(4.0, 'Title match • $titlePreview');
     }
 
     final preloaded =
@@ -4251,7 +4202,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     for (final name in memberNames) {
       final snippet = _matchField(name, queryVariants);
       if (snippet != null) {
-        register(3.2, 'Member � $snippet');
+        register(3.2, 'Member • $snippet');
         break;
       }
     }
@@ -4267,7 +4218,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final lastMessageSnippet =
         _matchField(conversation.lastMessage, queryVariants);
     if (lastMessageSnippet != null) {
-      register(2.6, 'Latest message � “$lastMessageSnippet”');
+      register(2.6, 'Latest message • “$lastMessageSnippet”');
     }
 
     final cachedMessages = chatProvider.messages[conversation.id];
@@ -4279,8 +4230,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   message.senderUsername ??
                   message.senderWallet)
               .trim();
-          final prefix = sender.isNotEmpty ? '$sender � ' : '';
-          register(2.4, 'Message � $prefix“$snippet”');
+          final prefix = sender.isNotEmpty ? '$sender • ' : '';
+          register(2.4, 'Message • $prefix“$snippet”');
           break;
         }
       }
@@ -4318,7 +4269,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     for (final variant in queryVariants) {
       if (variant.isEmpty) continue;
       if (lower.contains(variant)) {
-        return 'Wallet match � ${_shortenWallet(normalized)}';
+        return 'Wallet match • ${_shortenWallet(normalized)}';
       }
     }
     return null;
@@ -4470,8 +4421,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           child: Text(
                             AppLocalizations.of(context)!
                                 .desktopCommunityComposerWhatsHappeningHint,
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
+                            style: KubusTextStyles.sectionSubtitle.copyWith(
                               color: Theme.of(context)
                                   .colorScheme
                                   .onSurface
@@ -4482,9 +4432,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         secondChild: Text(
                           AppLocalizations.of(context)!
                               .desktopCommunityCreatePostTitle,
-                          style: GoogleFonts.inter(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
+                          style: KubusTextStyles.detailCardTitle.copyWith(
                             color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
@@ -4571,8 +4519,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             decoration: InputDecoration(
               hintText: AppLocalizations.of(context)!
                   .desktopCommunityComposerPromptHint,
-              hintStyle: GoogleFonts.inter(
-                fontSize: 14,
+              hintStyle: KubusTextStyles.navLabel.copyWith(
                 color: Theme.of(context)
                     .colorScheme
                     .onSurface
@@ -4587,10 +4534,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   .colorScheme
                   .primaryContainer
                   .withValues(alpha: 0.3),
-              contentPadding: const EdgeInsets.all(12),
+              contentPadding: const EdgeInsets.all(KubusSpacing.md),
             ),
-            style: GoogleFonts.inter(
-              fontSize: 14,
+            style: KubusTextStyles.detailBody.copyWith(
               color: Theme.of(context).colorScheme.onSurface,
               height: 1.4,
             ),
@@ -4686,8 +4632,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   Flexible(
                     child: Text(
                       _selectedLocation!,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
+                      style: KubusTextStyles.navMetaLabel.copyWith(
                         color: themeProvider.accentColor,
                       ),
                       overflow: TextOverflow.ellipsis,
@@ -4740,8 +4685,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               // Character count
               Text(
                 '$remainingChars',
-                style: GoogleFonts.inter(
-                  fontSize: 12,
+                style: KubusTextStyles.navMetaLabel.copyWith(
                   fontWeight: FontWeight.w500,
                   color: remainingChars < 0
                       ? Theme.of(context).colorScheme.error
@@ -4782,8 +4726,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       )
                     : Text(
                         AppLocalizations.of(context)!.commonPost,
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
+                        style: KubusTextStyles.navLabel.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -4808,11 +4751,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         children: [
           Text(
             label,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: themeProvider.accentColor,
-              fontWeight: FontWeight.w500,
-            ),
+                style: KubusTextStyles.navMetaLabel.copyWith(
+                  color: themeProvider.accentColor,
+                  fontWeight: FontWeight.w500,
+                ),
           ),
           const SizedBox(width: 4),
           GestureDetector(
@@ -4863,7 +4805,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(
             l10n.desktopCommunityAddTagDialogTitle,
-            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+            style: KubusTextStyles.sectionTitle.copyWith(
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
           ),
           content: TextField(
             controller: controller,
@@ -4901,91 +4845,15 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     );
   }
 
-  Future<T?> _showDesktopModal<T>({
-    required WidgetBuilder builder,
-    double maxWidth = 900,
-    double maxHeight = 880,
-    double minWidth = 420,
-    bool barrierDismissible = true,
-    bool wrapWithSurface = true,
-  }) {
-    final theme = Theme.of(context);
-    final radius = BorderRadius.circular(28);
-
-    return showGeneralDialog<T>(
-      context: context,
-      barrierDismissible: barrierDismissible,
-      barrierLabel: AppLocalizations.of(context)!.commonDialogSemanticLabel,
-      barrierColor: Colors.black.withValues(alpha: 0.55),
-      transitionDuration: const Duration(milliseconds: 220),
-      pageBuilder: (modalContext, _, __) {
-        final modalShell = Container(
-          decoration: BoxDecoration(
-            color: wrapWithSurface
-                ? theme.colorScheme.surface
-                : Colors.transparent,
-            borderRadius: radius,
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x2F000000),
-                blurRadius: 32,
-                offset: Offset(0, 18),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: radius,
-            child: builder(modalContext),
-          ),
-        );
-
-        return SafeArea(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minWidth: minWidth,
-                  maxWidth: maxWidth,
-                  maxHeight: maxHeight,
-                ),
-                child: Material(
-                  type: MaterialType.transparency,
-                  child: modalShell,
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-      transitionBuilder: (context, animation, secondaryAnimation, child) {
-        final curved = CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeOutCubic,
-          reverseCurve: Curves.easeInCubic,
-        );
-        return FadeTransition(
-          opacity: curved,
-          child: ScaleTransition(
-            scale: Tween<double>(begin: 0.96, end: 1).animate(curved),
-            child: child,
-          ),
-        );
-      },
-    );
-  }
-
   Future<void> _openUserProfileModal({
     required String userId,
     String? username,
   }) async {
     if (userId.isEmpty) return;
-    await _showDesktopModal(
-      builder: (_) => UserProfileScreen(userId: userId, username: username),
-      maxWidth: 920,
-      maxHeight: 920,
-      minWidth: 520,
-      wrapWithSurface: false,
+    await UserProfileNavigation.openCommunityOverlay(
+      context,
+      userId: userId,
+      username: username,
     );
   }
 
@@ -5122,7 +4990,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               title: Text(
                 AppLocalizations.of(context)!
                     .desktopCommunityMentionDialogTitle,
-                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                style: KubusTextStyles.sectionTitle.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
               content: SizedBox(
                 width: 420,
@@ -5180,7 +5050,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                         : (errorMessage ??
                                             AppLocalizations.of(context)!
                                                 .desktopCommunitySearchNoResults),
-                                    style: GoogleFonts.inter(
+                                    style: KubusTextStyles.sectionSubtitle.copyWith(
                                       color: Theme.of(context)
                                           .colorScheme
                                           .onSurface
@@ -5233,19 +5103,23 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                       ),
                                       title: Text(
                                         identity.name,
-                                        style: GoogleFonts.inter(
-                                            fontWeight: FontWeight.w600),
+                                        style: KubusTextStyles.navLabel.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface,
+                                        ),
                                       ),
                                       subtitle: identity.handle == null
                                           ? null
                                           : Text(
                                               identity.handle!,
-                                              style: GoogleFonts.inter(
+                                              style: KubusTextStyles.navMetaLabel
+                                                  .copyWith(
                                                 color: Theme.of(context)
                                                     .colorScheme
                                                     .onSurface
                                                     .withValues(alpha: 0.6),
-                                                fontSize: 12,
                                               ),
                                             ),
                                       trailing: Icon(
@@ -5394,9 +5268,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           children: [
             Text(
               l10n.desktopCommunityTrendingTitle,
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+              style: KubusTextStyles.sectionTitle.copyWith(
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
@@ -5435,7 +5307,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 Expanded(
                   child: Text(
                     l10n.desktopCommunityTrendingLoadFailedTapToRetry,
-                    style: GoogleFonts.inter(
+                    style: KubusTextStyles.sectionSubtitle.copyWith(
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
@@ -5458,7 +5330,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 Expanded(
                   child: Text(
                     l10n.desktopCommunityTrendingEmptyLabel,
-                    style: GoogleFonts.inter(
+                    style: KubusTextStyles.sectionSubtitle.copyWith(
                       color: Theme.of(context)
                           .colorScheme
                           .onSurface
@@ -5475,11 +5347,14 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             children: [
               if (_trendingFromFeed)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 8, left: 4, right: 4),
+                  padding: const EdgeInsets.only(
+                    bottom: KubusSpacing.sm,
+                    left: KubusSpacing.xs,
+                    right: KubusSpacing.xs,
+                  ),
                   child: Text(
                     l10n.desktopCommunityTrendingBasedOnRecentPostsLabel,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
+                    style: KubusTextStyles.navMetaLabel.copyWith(
                       color: Theme.of(context)
                           .colorScheme
                           .onSurface
@@ -5513,7 +5388,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           child: Center(
                             child: Text(
                               '#$rank',
-                              style: GoogleFonts.inter(
+                              style: KubusTextStyles.compactBadge.copyWith(
                                 fontWeight: FontWeight.w700,
                                 color: _getTrendingRankColor(rank),
                               ),
@@ -5527,8 +5402,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                             children: [
                               Text(
                                 displayTag,
-                                style: GoogleFonts.inter(
-                                  fontSize: 15,
+                                style: KubusTextStyles.detailCardTitle.copyWith(
                                   fontWeight: FontWeight.w600,
                                   color:
                                       Theme.of(context).colorScheme.onSurface,
@@ -5541,8 +5415,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                 AppLocalizations.of(context)!
                                     .desktopCommunityTaggedPostsLabel(
                                         count.toInt().toString()),
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
+                                style: KubusTextStyles.navMetaLabel.copyWith(
                                   color: Theme.of(context)
                                       .colorScheme
                                       .onSurface
@@ -5787,9 +5660,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           children: [
             Text(
               l10n.desktopCommunityWhoToFollowTitle,
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+              style: KubusTextStyles.sectionTitle.copyWith(
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
@@ -5828,7 +5699,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 Expanded(
                   child: Text(
                     l10n.desktopCommunitySuggestionsLoadFailedTapToRetry,
-                    style: GoogleFonts.inter(
+                    style: KubusTextStyles.sectionSubtitle.copyWith(
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
@@ -5851,7 +5722,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 Expanded(
                   child: Text(
                     l10n.desktopCommunitySuggestionsEmptyLabel,
-                    style: GoogleFonts.inter(
+                    style: KubusTextStyles.sectionSubtitle.copyWith(
                       color: Theme.of(context)
                           .colorScheme
                           .onSurface
@@ -5919,8 +5790,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           children: [
                             Text(
                               displayName,
-                              style: GoogleFonts.inter(
-                                fontSize: 15,
+                              style: KubusTextStyles.detailCardTitle.copyWith(
                                 fontWeight: FontWeight.w600,
                                 color: Theme.of(context).colorScheme.onSurface,
                               ),
@@ -5929,8 +5799,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                             if (handle.isNotEmpty)
                               Text(
                                 '@$handle',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
+                                style: KubusTextStyles.navMetaLabel.copyWith(
                                   color: Theme.of(context)
                                       .colorScheme
                                       .onSurface
@@ -5954,7 +5823,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                   .desktopCommunityFollowingButton
                               : AppLocalizations.of(context)!
                                   .desktopCommunityFollowButton,
-                          style: GoogleFonts.inter(
+                          style: KubusTextStyles.navLabel.copyWith(
                             color: isFollowing
                                 ? Theme.of(context)
                                     .colorScheme
@@ -5990,9 +5859,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               children: [
                 Text(
                   l10n.desktopCommunityActiveCommunitiesTitle,
-                  style: GoogleFonts.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                  style: KubusTextStyles.sectionTitle.copyWith(
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
@@ -6013,8 +5880,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 child: Text(
                   l10n.desktopCommunityNoCommunitiesFoundLabel,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
+                  style: KubusTextStyles.sectionSubtitle.copyWith(
                     color: Theme.of(context)
                         .colorScheme
                         .onSurface
@@ -6034,8 +5900,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 child: Text(
                   l10n.desktopCommunityViewAllCommunitiesButtonLabel(
                       groups.length),
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
+                  style: KubusTextStyles.detailCaption.copyWith(
                     color: themeProvider.accentColor,
                     fontWeight: FontWeight.w500,
                   ),
@@ -6117,8 +5982,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   children: [
                     Text(
                       group.name,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
+                      style: KubusTextStyles.navLabel.copyWith(
                         fontWeight: FontWeight.w600,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
@@ -6128,8 +5992,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     Text(
                       AppLocalizations.of(context)!
                           .desktopCommunityGroupMembersLabel(group.memberCount),
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
+                      style: KubusTextStyles.navMetaLabel.copyWith(
                         color: Theme.of(context)
                             .colorScheme
                             .onSurface
@@ -6150,8 +6013,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   child: Text(
                     AppLocalizations.of(context)!
                         .desktopCommunityGroupJoinedLabel,
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
+                    style: KubusTextStyles.compactBadge.copyWith(
                       color: themeProvider.accentColor,
                       fontWeight: FontWeight.w600,
                     ),
@@ -6239,9 +6101,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         Text(
                           AppLocalizations.of(context)!
                               .desktopCommunityCreatePostTitle,
-                          style: GoogleFonts.inter(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
+                          style: KubusTextStyles.sectionTitle.copyWith(
                             color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
@@ -6275,8 +6135,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                 )
                               : Text(
                                   AppLocalizations.of(context)!.commonPost,
-                                  style: GoogleFonts.inter(
-                                      fontWeight: FontWeight.w600),
+                                  style: KubusTextStyles.navLabel.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                         ),
                       ],
@@ -6286,7 +6147,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   // Content
                   Flexible(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(24),
+                      padding: const EdgeInsets.all(KubusSpacing.lg),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -6311,8 +6172,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                   decoration: InputDecoration(
                                     hintText: AppLocalizations.of(context)!
                                         .desktopCommunityComposerWhatsHappeningHint,
-                                    hintStyle: GoogleFonts.inter(
-                                      fontSize: 18,
+                                    hintStyle:
+                                        KubusTextStyles.sectionTitle.copyWith(
                                       color: Theme.of(context)
                                           .colorScheme
                                           .onSurface
@@ -6320,8 +6181,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                     ),
                                     border: InputBorder.none,
                                   ),
-                                  style: GoogleFonts.inter(
-                                    fontSize: 18,
+                                  style: KubusTextStyles.sectionTitle.copyWith(
                                     color:
                                         Theme.of(context).colorScheme.onSurface,
                                   ),
@@ -6452,8 +6312,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         const Spacer(),
                         Text(
                           '$remainingChars',
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
+                          style: KubusTextStyles.navLabel.copyWith(
                             color: remainingChars < 0
                                 ? Theme.of(context).colorScheme.error
                                 : remainingChars < 20
@@ -6520,8 +6379,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           backgroundColor: Theme.of(context).colorScheme.surface,
           title: Text(
             l10n.desktopCommunityTagLocationDialogTitle,
-            style: GoogleFonts.inter(
-              fontWeight: FontWeight.w700,
+            style: KubusTextStyles.sectionTitle.copyWith(
               color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
@@ -6541,7 +6399,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               onPressed: () => Navigator.pop(context, controller.text.trim()),
               child: Text(
                 l10n.commonSave,
-                style: GoogleFonts.inter(
+                style: KubusTextStyles.navLabel.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -6587,7 +6445,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 child: Center(
                   child: Text(
                     emoji,
-                    style: const TextStyle(fontSize: 22),
+                    style: TextStyle(
+                      fontSize: KubusChromeMetrics.heroTitle - KubusSpacing.xxs,
+                    ),
                   ),
                 ),
               ),
@@ -6889,13 +6749,15 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       children: [
                         Text(
                           label,
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                          style: KubusTextStyles.navLabel.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: scheme.onSurface,
+                          ),
                         ),
                         if (location?.lat != null && location?.lng != null)
                           Text(
                             '${location!.lat!.toStringAsFixed(4)}, ${location.lng!.toStringAsFixed(4)}',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
+                            style: KubusTextStyles.navMetaLabel.copyWith(
                               color: scheme.onSurface.withValues(alpha: 0.6),
                             ),
                           ),
@@ -6996,8 +6858,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       backgroundColor: themeProvider.accentColor.withValues(alpha: 0.1),
       label: Text(
         label,
-        style: GoogleFonts.inter(
-          fontWeight: FontWeight.w600,
+        style: KubusTextStyles.actionTileTitle.copyWith(
           color: themeProvider.accentColor,
         ),
       ),
@@ -7022,8 +6883,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               const SizedBox(width: 8),
               Text(
                 l10n.desktopCommunityArAttachmentsTitle,
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.w700,
+                style: KubusTextStyles.sectionTitle.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
@@ -7031,7 +6891,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           ),
           content: Text(
             l10n.desktopCommunityArAttachmentsBody,
-            style: GoogleFonts.inter(
+            style: KubusTextStyles.detailBody.copyWith(
               color: Theme.of(context)
                   .colorScheme
                   .onSurface
@@ -7065,7 +6925,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               },
               child: Text(
                 l10n.desktopCommunityDownloadAppButtonLabel,
-                style: GoogleFonts.inter(
+                style: KubusTextStyles.navLabel.copyWith(
                   color: Provider.of<ThemeProvider>(context, listen: false)
                       .accentColor,
                   fontWeight: FontWeight.w700,
@@ -7369,7 +7229,7 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
       child: Container(
         width: 400,
         constraints: const BoxConstraints(maxHeight: 500),
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(KubusSpacing.lg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -7377,12 +7237,11 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  AppLocalizations.of(context)!.desktopCommunityNewMessageTitle,
-                  style: GoogleFonts.inter(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
+                Expanded(
+                  child: KubusHeaderText(
+                    title: AppLocalizations.of(context)!
+                        .desktopCommunityNewMessageTitle,
+                    kind: KubusHeaderKind.section,
                   ),
                 ),
                 IconButton(
@@ -7406,13 +7265,22 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
                 padding: EdgeInsets.zero,
                 margin: EdgeInsets.zero,
                 borderRadius: BorderRadius.circular(12),
+                blurSigma: KubusGlassStyle.resolve(
+                  context,
+                  surfaceType: KubusGlassSurfaceType.card,
+                  tintBase: Theme.of(context).colorScheme.surface,
+                ).blurSigma,
+                fallbackMinOpacity: KubusGlassStyle.resolve(
+                  context,
+                  surfaceType: KubusGlassSurfaceType.card,
+                  tintBase: Theme.of(context).colorScheme.surface,
+                ).fallbackMinOpacity,
                 showBorder: false,
-                backgroundColor:
-                    Theme.of(context).colorScheme.surface.withValues(
-                          alpha: Theme.of(context).brightness == Brightness.dark
-                              ? 0.22
-                              : 0.26,
-                        ),
+                backgroundColor: KubusGlassStyle.resolve(
+                  context,
+                  surfaceType: KubusGlassSurfaceType.card,
+                  tintBase: Theme.of(context).colorScheme.surface,
+                ).tintColor,
                 child: SizedBox(
                   height: 44,
                   child: TextField(
@@ -7425,8 +7293,7 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
                       ),
                       hintText: AppLocalizations.of(context)!
                           .desktopCommunitySearchUsersHint,
-                      hintStyle: GoogleFonts.inter(
-                        fontSize: 14,
+                      hintStyle: KubusTextStyles.sectionSubtitle.copyWith(
                         color: Theme.of(context)
                             .colorScheme
                             .onSurface
@@ -7446,7 +7313,7 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
                         minHeight: 40,
                       ),
                     ),
-                    style: GoogleFonts.inter(fontSize: 14),
+                    style: KubusTextStyles.sectionSubtitle,
                     onChanged: _onSearchChanged,
                   ),
                 ),
@@ -7473,8 +7340,7 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
                               Text(
                                 AppLocalizations.of(context)!
                                     .desktopCommunitySearchUsersToMessageHint,
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
+                                style: KubusTextStyles.sectionSubtitle.copyWith(
                                   color: Theme.of(context)
                                       .colorScheme
                                       .onSurface

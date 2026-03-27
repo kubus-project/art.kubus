@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../widgets/gradient_icon_card.dart';
 import '../../../utils/app_animations.dart';
+import '../../../utils/design_tokens.dart';
 import '../../../widgets/glass_components.dart';
 import '../desktop_shell.dart';
 
@@ -168,8 +168,7 @@ class _DesktopWeb3OnboardingScreenState
               onPressed: _skipOnboarding,
               child: Text(
                 l10n.commonSkip,
-                style: GoogleFonts.inter(
-                  fontSize: 16,
+                style: KubusTextStyles.navLabel.copyWith(
                   color: Theme.of(context)
                       .colorScheme
                       .onSurface
@@ -243,9 +242,8 @@ class _DesktopWeb3OnboardingScreenState
                 // Title
                 Text(
                   page.title,
-                  style: GoogleFonts.inter(
+                  style: KubusTextStyles.heroTitle.copyWith(
                     fontSize: 48,
-                    fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.onSurface,
                     height: 1.1,
                   ),
@@ -256,8 +254,7 @@ class _DesktopWeb3OnboardingScreenState
                   constraints: const BoxConstraints(maxWidth: 600),
                   child: Text(
                     page.description,
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
+                    style: KubusTextStyles.heroSubtitle.copyWith(
                       color: Theme.of(context)
                           .colorScheme
                           .onSurface
@@ -269,22 +266,18 @@ class _DesktopWeb3OnboardingScreenState
                 const SizedBox(height: 40),
                 // Features list
                 LiquidGlassPanel(
-                  padding: const EdgeInsets.all(28),
+                  padding: const EdgeInsets.all(KubusSpacing.xl),
                   borderRadius: BorderRadius.circular(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         l10n.web3OnboardingKeyFeaturesTitle,
-                        style: GoogleFonts.inter(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
+                        style: KubusTextStyles.sectionTitle,
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: KubusSpacing.lg),
                       ...page.features.map((feature) => Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
+                            padding: const EdgeInsets.only(bottom: KubusSpacing.md),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -306,12 +299,12 @@ class _DesktopWeb3OnboardingScreenState
                                     color: Colors.white,
                                   ),
                                 ),
-                                const SizedBox(width: 16),
+                                const SizedBox(width: KubusSpacing.md),
                                 Expanded(
                                   child: Text(
                                     feature,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 16,
+                                    style: KubusTextStyles.detailBody.copyWith(
+                                      fontSize: KubusHeaderMetrics.screenSubtitle,
                                       color: Theme.of(context)
                                           .colorScheme
                                           .onSurface
@@ -347,7 +340,10 @@ class _DesktopWeb3OnboardingScreenState
           const Spacer(),
           // Feature name badge
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: const EdgeInsets.symmetric(
+              horizontal: KubusSpacing.lg,
+              vertical: KubusSpacing.md,
+            ),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: widget.pages[_currentPage].gradientColors,
@@ -358,15 +354,14 @@ class _DesktopWeb3OnboardingScreenState
             ),
             child: Text(
               widget.featureTitle,
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+              style: KubusTextStyles.navLabel.copyWith(
                 color: Colors.white,
+                fontWeight: FontWeight.bold,
               ),
               textAlign: TextAlign.center,
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: KubusSpacing.xl),
           // Page indicators
           ...widget.pages.asMap().entries.map((entry) {
             final index = entry.key;
@@ -428,8 +423,7 @@ class _DesktopWeb3OnboardingScreenState
                         Expanded(
                           child: Text(
                             page.title,
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
+                            style: KubusTextStyles.navLabel.copyWith(
                               fontWeight: FontWeight.w600,
                               color: Theme.of(context).colorScheme.onSurface,
                             ),
@@ -442,9 +436,7 @@ class _DesktopWeb3OnboardingScreenState
                         Expanded(
                           child: Text(
                             page.title,
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              fontWeight: FontWeight.normal,
+                            style: KubusTextStyles.navMetaLabel.copyWith(
                               color: Theme.of(context)
                                   .colorScheme
                                   .onSurface
@@ -461,7 +453,7 @@ class _DesktopWeb3OnboardingScreenState
               ),
             );
           }),
-          const SizedBox(height: 32),
+          const SizedBox(height: KubusSpacing.xl),
           // Navigation buttons
           if (_currentPage > 0)
             SizedBox(
@@ -471,8 +463,7 @@ class _DesktopWeb3OnboardingScreenState
                 icon: const Icon(Icons.arrow_back),
                 label: Text(
                   l10n.commonBack,
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
+                  style: KubusTextStyles.navLabel.copyWith(
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -485,7 +476,7 @@ class _DesktopWeb3OnboardingScreenState
                         .withValues(alpha: 0.3),
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(KubusRadius.md),
                   ),
                 ),
               ),
@@ -506,9 +497,8 @@ class _DesktopWeb3OnboardingScreenState
               ),
               child: Text(
                 isLastPage ? l10n.commonGetStarted : l10n.commonContinue,
-                style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
+                style: KubusTextStyles.sectionTitle.copyWith(
+                  fontSize: KubusHeaderMetrics.screenSubtitle,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
@@ -521,8 +511,7 @@ class _DesktopWeb3OnboardingScreenState
             children: [
               Text(
                 l10n.commonStepOfTotal(_currentPage + 1, widget.pages.length),
-                style: GoogleFonts.inter(
-                  fontSize: 14,
+                style: KubusTextStyles.navMetaLabel.copyWith(
                   color: Theme.of(context)
                       .colorScheme
                       .onSurface

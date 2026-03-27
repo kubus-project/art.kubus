@@ -25,12 +25,14 @@ import '../../widgets/email_verification_status_badge.dart';
 import '../../widgets/support/support_ticket_dialog.dart';
 import '../../utils/app_animations.dart';
 import 'components/desktop_widgets.dart';
+import 'desktop_shell_scope.dart';
 import '../web3/wallet/wallet_home.dart';
 import '../web3/wallet/wallet_backup_protection_screen.dart';
 import '../onboarding/onboarding_flow_screen.dart';
 import '../../../config/config.dart';
 import '../../providers/locale_provider.dart';
 import '../../utils/app_color_utils.dart';
+import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/glass_components.dart';
 import '../../utils/design_tokens.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -39,7 +41,12 @@ import 'package:art_kubus/utils/wallet_reconnect_action.dart';
 /// Desktop profile and settings screen
 /// Clean dashboard layout with account info and settings
 class DesktopSettingsScreen extends StatefulWidget {
-  const DesktopSettingsScreen({super.key});
+  const DesktopSettingsScreen({
+    super.key,
+    this.embeddedInShell = false,
+  });
+
+  final bool embeddedInShell;
 
   @override
   State<DesktopSettingsScreen> createState() => _DesktopSettingsScreenState();
@@ -282,62 +289,78 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     final animationTheme = context.animationTheme;
     final screenWidth = MediaQuery.of(context).size.width;
     final isLarge = screenWidth >= 1200;
-
-    return AnimatedGradientBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: AnimatedBuilder(
-          animation: _animationController,
-          builder: (context, child) {
-            return FadeTransition(
-              opacity: CurvedAnimation(
-                parent: _animationController,
-                curve: animationTheme.fadeCurve,
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Settings sidebar
-                  if (isLarge)
-                    SizedBox(
-                      width: 280,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border(
-                            right: BorderSide(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .outline
-                                  .withValues(alpha: 0.1),
-                            ),
-                          ),
-                        ),
-                        child: LiquidGlassPanel(
-                          padding: EdgeInsets.zero,
-                          margin: EdgeInsets.zero,
-                          borderRadius: BorderRadius.zero,
-                          blurSigma: KubusGlassEffects.blurSigmaLight,
-                          showBorder: false,
-                          backgroundColor:
-                              Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.black.withValues(alpha: 0.20)
-                                  : Colors.white.withValues(alpha: 0.24),
-                          child: _buildSettingsSidebar(themeProvider),
+    final scheme = Theme.of(context).colorScheme;
+    final sidebarStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.sidebarBackground,
+      tintBase: scheme.surface,
+    );
+    final content = AnimatedBuilder(
+      animation: _animationController,
+      builder: (context, child) {
+        return FadeTransition(
+          opacity: CurvedAnimation(
+            parent: _animationController,
+            curve: animationTheme.fadeCurve,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (isLarge)
+                SizedBox(
+                  width: 280,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        right: BorderSide(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .outline
+                              .withValues(alpha: 0.1),
                         ),
                       ),
                     ),
-
-                  // Main content
-                  Expanded(
-                    child: _buildMainContent(themeProvider, isLarge),
+                    child: widget.embeddedInShell
+                        ? DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: scheme.surface.withValues(
+                                alpha: themeProvider.isDarkMode ? 0.94 : 0.90,
+                              ),
+                            ),
+                            child: _buildSettingsSidebar(themeProvider),
+                          )
+                        : LiquidGlassPanel(
+                            padding: EdgeInsets.zero,
+                            margin: EdgeInsets.zero,
+                            borderRadius: BorderRadius.zero,
+                            blurSigma: sidebarStyle.blurSigma,
+                            fallbackMinOpacity:
+                                sidebarStyle.fallbackMinOpacity,
+                            showBorder: false,
+                            backgroundColor: sidebarStyle.tintColor,
+                            child: _buildSettingsSidebar(themeProvider),
+                          ),
                   ),
-                ],
+                ),
+              Expanded(
+                child: _buildMainContent(themeProvider, isLarge),
               ),
-            );
-          },
-        ),
-      ),
+            ],
+          ),
+        );
+      },
     );
+
+    final scaffold = Scaffold(
+      backgroundColor: Colors.transparent,
+      body: content,
+    );
+
+    if (widget.embeddedInShell) {
+      return scaffold;
+    }
+
+    return AnimatedGradientBackground(child: scaffold);
   }
 
   Widget _buildSettingsSidebar(ThemeProvider themeProvider) {
@@ -364,42 +387,37 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     ];
 
     return ListView(
-      padding: EdgeInsets.all(DetailSpacing.lg),
+      padding: const EdgeInsets.all(KubusSpacing.lg),
       children: [
-        // Header with back button
-        Padding(
-          padding: EdgeInsets.all(DetailSpacing.lg),
-          child: Row(
-            children: [
-              IconButton(
-                onPressed: () => Navigator.of(context).pop(),
+        if (!widget.embeddedInShell) ...[
+          Padding(
+            padding: const EdgeInsets.all(KubusSpacing.lg),
+            child: KubusScreenHeaderBar(
+              title: l10n.settingsTitle,
+              compact: true,
+              minHeight: KubusHeaderMetrics.actionHitArea,
+              leading: IconButton(
+                onPressed: () => popDesktopShellAware(context),
                 icon: Icon(
                   Icons.arrow_back,
+                  size: KubusHeaderMetrics.actionIcon,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
                 tooltip: l10n.commonBack,
               ),
-              SizedBox(width: DetailSpacing.sm),
-              Expanded(
-                child: Text(
-                  l10n.settingsTitle,
-                  style: DetailTypography.sectionTitle(context),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
+              padding: EdgeInsets.zero,
+            ),
           ),
-        ),
-        SizedBox(height: DetailSpacing.sm),
+          const SizedBox(height: KubusSpacing.sm),
+        ],
 
         // Settings items
         ...settingsItems
             .map((item) => _buildSettingsSidebarItem(item, themeProvider)),
 
-        SizedBox(height: DetailSpacing.xl),
+        const SizedBox(height: KubusSpacing.xl),
         const Divider(),
-        SizedBox(height: DetailSpacing.lg),
+        const SizedBox(height: KubusSpacing.lg),
 
         // Logout button
         Material(
@@ -408,18 +426,18 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             onTap: _handleLogout,
             borderRadius: BorderRadius.circular(DetailRadius.md),
             child: Padding(
-              padding: EdgeInsets.all(DetailSpacing.lg),
+              padding: const EdgeInsets.all(KubusSpacing.lg),
               child: Row(
                 children: [
                   Icon(
                     Icons.logout,
-                    size: 22,
+                    size: KubusHeaderMetrics.actionIcon,
                     color: errorColor,
                   ),
-                  SizedBox(width: DetailSpacing.lg),
+                  const SizedBox(width: KubusSpacing.lg),
                   Text(
                     l10n.settingsLogoutButton,
-                    style: DetailTypography.label(context).copyWith(
+                    style: KubusTextStyles.sectionTitle.copyWith(
                       color: errorColor,
                     ),
                   ),
@@ -574,7 +592,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             isLoading ? '\u2026' : value.toString();
 
         return Container(
-          padding: EdgeInsets.all(DetailSpacing.xxl),
+          padding: const EdgeInsets.all(KubusSpacing.xxl),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -583,7 +601,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                 padding: EdgeInsets.zero,
                 showBorder: false,
                 child: Container(
-                  padding: EdgeInsets.all(DetailSpacing.xxl),
+                  padding: const EdgeInsets.all(KubusSpacing.xxl),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
@@ -600,44 +618,42 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                       AvatarWidget(
                         avatarUrl: user?.avatar,
                         wallet: user?.walletAddress ?? '',
-                        radius: 52,
+                        radius:
+                            KubusChromeMetrics.heroIconBox - KubusSpacing.xxs,
                         allowFabricatedFallback: true,
                       ),
-                      SizedBox(width: DetailSpacing.xl),
+                      const SizedBox(width: KubusSpacing.xl),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               user?.displayName ?? l10n.settingsGuestUserName,
-                              style: GoogleFonts.inter(
-                                fontSize: 26,
-                                fontWeight: FontWeight.bold,
+                              style: KubusTextStyles.heroTitle.copyWith(
                                 color: Colors.white,
                               ),
                             ),
                             if (user?.bio != null) ...[
-                              SizedBox(height: DetailSpacing.xs),
+                              const SizedBox(height: KubusSpacing.xs),
                               Text(
                                 user!.bio,
-                                style: GoogleFonts.inter(
-                                  fontSize: 15,
+                                style: KubusTextStyles.heroSubtitle.copyWith(
                                   color: Colors.white.withValues(alpha: 0.8),
                                 ),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ],
-                            SizedBox(height: DetailSpacing.md),
+                            const SizedBox(height: KubusSpacing.md),
                             Row(
                               children: [
                                 _buildProfileStat(l10n.userProfileArtworksTitle,
                                     displayCount(artworks)),
-                                SizedBox(width: DetailSpacing.xl),
+                                const SizedBox(width: KubusSpacing.xl),
                                 _buildProfileStat(
                                     l10n.userProfileFollowersStatLabel,
                                     displayCount(followers)),
-                                SizedBox(width: DetailSpacing.xl),
+                                const SizedBox(width: KubusSpacing.xl),
                                 _buildProfileStat(
                                     l10n.userProfileFollowingStatLabel,
                                     displayCount(following)),
@@ -663,17 +679,14 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       children: [
         Text(
           value,
-          style: GoogleFonts.inter(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
+          style: KubusTextStyles.statValue.copyWith(
             color: Colors.white,
           ),
         ),
-        SizedBox(height: DetailSpacing.xs),
+        const SizedBox(height: KubusSpacing.xs),
         Text(
           label,
-          style: GoogleFonts.inter(
-            fontSize: 13,
+          style: KubusTextStyles.statLabel.copyWith(
             color: Colors.white.withValues(alpha: 0.7),
           ),
         ),
@@ -727,31 +740,16 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             : Theme.of(context).colorScheme.secondary;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
+      padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.xl),
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              l10n.settingsWalletSectionTitle,
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+            KubusHeaderText(
+              title: l10n.settingsWalletSectionTitle,
+              subtitle: l10n.desktopSettingsWalletSectionSubtitle,
             ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.desktopSettingsWalletSectionSubtitle,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.6),
-              ),
-            ),
-            const SizedBox(height: 24),
+            const SizedBox(height: KubusSpacing.lg),
 
             // Connection status
             DesktopCard(
@@ -782,9 +780,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                           children: [
                             Text(
                               walletStatusLabel,
-                              style: GoogleFonts.inter(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
+                              style: KubusTextStyles.sectionTitle.copyWith(
                                 color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
@@ -792,7 +788,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                               Text(
                                 web3Provider.formatAddress(walletAddress),
                                 style: GoogleFonts.robotoMono(
-                                  fontSize: 13,
+                                  fontSize: KubusChromeMetrics.navMetaLabel,
                                   color: Theme.of(context)
                                       .colorScheme
                                       .onSurface
@@ -802,8 +798,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                             if (walletProvider.isReadOnlySession)
                               Text(
                                 'Reconnect to enable signing and transfers.',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
+                                style: KubusTextStyles.navMetaLabel.copyWith(
                                   color: Theme.of(context)
                                       .colorScheme
                                       .onSurface
@@ -871,9 +866,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                 children: [
                   Text(
                     l10n.settingsNetworkTileTitle,
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                    style: KubusTextStyles.sectionTitle.copyWith(
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
@@ -897,7 +890,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                         },
                         selectedColor:
                             AppColorUtils.amberAccent.withValues(alpha: 0.2),
-                        labelStyle: GoogleFonts.inter(
+                        labelStyle: KubusTextStyles.navLabel.copyWith(
                           color: isSelected
                               ? AppColorUtils.amberAccent
                               : Theme.of(context).colorScheme.onSurface,
@@ -917,9 +910,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             if (web3Provider.isConnected) ...[
               Text(
                 l10n.desktopSettingsSecuritySectionTitle,
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+                style: KubusTextStyles.sectionTitle.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
@@ -964,8 +955,12 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             Icon(Icons.warning_amber,
                 color: Theme.of(context).colorScheme.error),
             const SizedBox(width: 12),
-            Text(l10n.settingsSecurityWarningTitle,
-                style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+            Text(
+              l10n.settingsSecurityWarningTitle,
+              style: KubusTextStyles.sheetTitle.copyWith(
+                fontSize: KubusHeaderMetrics.sectionTitle + KubusSpacing.xxs,
+              ),
+            ),
           ],
         ),
         content: Column(
@@ -974,7 +969,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           children: [
             Text(
               l10n.settingsExportRecoveryPhraseDialogBody,
-              style: GoogleFonts.inter(
+              style: KubusTextStyles.detailBody.copyWith(
                 color: Theme.of(context)
                     .colorScheme
                     .onSurface
@@ -984,8 +979,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             const SizedBox(height: 12),
             Text(
               l10n.settingsSecurityWarningBullets,
-              style: GoogleFonts.inter(
-                fontSize: 13,
+              style: KubusTextStyles.detailCaption.copyWith(
                 color: Theme.of(context)
                     .colorScheme
                     .onSurface
@@ -1030,11 +1024,13 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(l10n.desktopSettingsDisconnectWalletDialogTitle,
-            style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+        title: Text(
+          l10n.desktopSettingsDisconnectWalletDialogTitle,
+          style: KubusTextStyles.sheetTitle,
+        ),
         content: Text(
           l10n.desktopSettingsDisconnectWalletDialogBody,
-          style: GoogleFonts.inter(
+          style: KubusTextStyles.detailBody.copyWith(
             color:
                 Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
           ),
@@ -1074,38 +1070,53 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       context: context,
       builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(l10n.settingsAppVersionDialogTitle,
-            style: GoogleFonts.inter(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface)),
+        title: Text(
+          l10n.settingsAppVersionDialogTitle,
+          style: KubusTextStyles.sectionTitle.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(l10n.appTitle,
-                style: GoogleFonts.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface)),
+            Text(
+              l10n.appTitle,
+              style: KubusTextStyles.sheetTitle.copyWith(
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
             const SizedBox(height: 8),
-            Text(l10n.settingsVersionValue(AppInfo.version),
-                style: GoogleFonts.inter(
-                    color: Theme.of(context).colorScheme.onSurface)),
-            Text(l10n.settingsBuildValue(AppInfo.buildNumber),
-                style: GoogleFonts.inter(
-                    color: Theme.of(context).colorScheme.onSurface)),
+            Text(
+              l10n.settingsVersionValue(AppInfo.version),
+              style: KubusTextStyles.sectionSubtitle.copyWith(
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            Text(
+              l10n.settingsBuildValue(AppInfo.buildNumber),
+              style: KubusTextStyles.sectionSubtitle.copyWith(
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
             const SizedBox(height: 16),
-            Text(l10n.settingsCopyright(DateTime.now().year),
-                style: GoogleFonts.inter(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.7))),
-            Text(l10n.settingsAllRightsReserved,
-                style: GoogleFonts.inter(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.7))),
+            Text(
+              l10n.settingsCopyright(DateTime.now().year),
+              style: KubusTextStyles.sectionSubtitle.copyWith(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.7),
+              ),
+            ),
+            Text(
+              l10n.settingsAllRightsReserved,
+              style: KubusTextStyles.sectionSubtitle.copyWith(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.7),
+              ),
+            ),
           ],
         ),
         actions: [
@@ -1123,14 +1134,16 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       context: context,
       builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(l10n.settingsTermsDialogTitle,
-            style: GoogleFonts.inter(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface)),
+        title: Text(
+          l10n.settingsTermsDialogTitle,
+          style: KubusTextStyles.sheetTitle.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
         content: SingleChildScrollView(
           child: Text(
             l10n.settingsTermsDialogBody,
-            style: GoogleFonts.inter(
+            style: KubusTextStyles.detailBody.copyWith(
                 height: 1.5, color: Theme.of(context).colorScheme.onSurface),
           ),
         ),
@@ -1149,14 +1162,16 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       context: context,
       builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(l10n.settingsPrivacyPolicyDialogTitle,
-            style: GoogleFonts.inter(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface)),
+        title: Text(
+          l10n.settingsPrivacyPolicyDialogTitle,
+          style: KubusTextStyles.sheetTitle.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
         content: SingleChildScrollView(
           child: Text(
             l10n.settingsPrivacyPolicyDialogBody,
-            style: GoogleFonts.inter(
+            style: KubusTextStyles.detailBody.copyWith(
                 height: 1.5, color: Theme.of(context).colorScheme.onSurface),
           ),
         ),
@@ -1176,16 +1191,21 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
         backgroundColor: Theme.of(dialogContext).colorScheme.surface,
-        title: Text(l10n.settingsSupportDialogTitle,
-            style: GoogleFonts.inter(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(dialogContext).colorScheme.onSurface)),
+        title: Text(
+          l10n.settingsSupportDialogTitle,
+          style: KubusTextStyles.sheetTitle.copyWith(
+            color: Theme.of(dialogContext).colorScheme.onSurface,
+          ),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(l10n.settingsSupportDialogBody,
-                style: GoogleFonts.inter(
-                    color: Theme.of(dialogContext).colorScheme.onSurface)),
+            Text(
+              l10n.settingsSupportDialogBody,
+              style: KubusTextStyles.detailBody.copyWith(
+                color: Theme.of(dialogContext).colorScheme.onSurface,
+              ),
+            ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
@@ -1250,22 +1270,29 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       context: context,
       builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(l10n.settingsRateAppDialogTitle,
-            style: GoogleFonts.inter(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface)),
+        title: Text(
+          l10n.settingsRateAppDialogTitle,
+          style: KubusTextStyles.sheetTitle.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.settingsRateAppDialogBodyTitle,
-                style: GoogleFonts.inter(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontWeight: FontWeight.w600)),
+            Text(
+              l10n.settingsRateAppDialogBodyTitle,
+              style: KubusTextStyles.sectionTitle.copyWith(
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
             const SizedBox(height: 8),
-            Text(l10n.settingsRateAppDialogBodySubtitle,
-                style: GoogleFonts.inter(
-                    color: Theme.of(context).colorScheme.onSurface)),
+            Text(
+              l10n.settingsRateAppDialogBodySubtitle,
+              style: KubusTextStyles.detailBody.copyWith(
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
           ],
         ),
         actions: [
@@ -1296,9 +1323,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
         backgroundColor: Theme.of(dialogContext).colorScheme.surface,
         title: Text(
           l10n.settingsChangePasswordDialogTitle,
-          style: GoogleFonts.inter(
+          style: KubusTextStyles.sheetTitle.copyWith(
             color: Theme.of(dialogContext).colorScheme.onSurface,
-            fontWeight: FontWeight.bold,
           ),
         ),
         content: Column(
@@ -1334,7 +1360,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             onPressed: () => Navigator.pop(dialogContext),
             child: Text(
               l10n.commonCancel,
-              style: GoogleFonts.inter(
+              style: KubusTextStyles.navLabel.copyWith(
                 color: Theme.of(dialogContext).colorScheme.outline,
               ),
             ),
@@ -1363,13 +1389,18 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       context: context,
       builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(l10n.settingsResetAppDialogTitle,
-            style: GoogleFonts.inter(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface)),
-        content: Text(l10n.settingsResetAppDialogBody,
-            style: GoogleFonts.inter(
-                color: Theme.of(context).colorScheme.onSurface)),
+        title: Text(
+          l10n.settingsResetAppDialogTitle,
+          style: KubusTextStyles.sheetTitle.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        content: Text(
+          l10n.settingsResetAppDialogBody,
+          style: KubusTextStyles.detailBody.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
@@ -1413,14 +1444,17 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       context: context,
       builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(l10n.settingsDeleteAccountDialogTitle,
-            style: GoogleFonts.inter(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface)),
+        title: Text(
+          l10n.settingsDeleteAccountDialogTitle,
+          style: KubusTextStyles.sheetTitle.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
         content: Text(
           l10n.settingsDeleteAccountDialogBody,
-          style:
-              GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface),
+          style: KubusTextStyles.detailBody.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
         ),
         actions: [
           TextButton(
@@ -1479,13 +1513,18 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       context: context,
       builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(l10n.settingsExportDataDialogTitle,
-            style: GoogleFonts.inter(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface)),
-        content: Text(l10n.settingsExportDataDialogBody,
-            style: GoogleFonts.inter(
-                color: Theme.of(context).colorScheme.onSurface)),
+        title: Text(
+          l10n.settingsExportDataDialogTitle,
+          style: KubusTextStyles.sheetTitle.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        content: Text(
+          l10n.settingsExportDataDialogBody,
+          style: KubusTextStyles.detailBody.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
@@ -1514,13 +1553,18 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       context: context,
       builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(l10n.settingsClearCacheDialogTitle,
-            style: GoogleFonts.inter(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface)),
-        content: Text(l10n.settingsClearCacheDialogBody,
-            style: GoogleFonts.inter(
-                color: Theme.of(context).colorScheme.onSurface)),
+        title: Text(
+          l10n.settingsClearCacheDialogTitle,
+          style: KubusTextStyles.sheetTitle.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        content: Text(
+          l10n.settingsClearCacheDialogBody,
+          style: KubusTextStyles.detailBody.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
@@ -1556,15 +1600,16 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
         backgroundColor: Theme.of(dialogContext).colorScheme.surface,
         title: Text(
           l10n.settingsResetPermissionFlagsDialogTitle,
-          style: GoogleFonts.inter(
+          style: KubusTextStyles.sheetTitle.copyWith(
             fontWeight: FontWeight.bold,
             color: Theme.of(dialogContext).colorScheme.onSurface,
           ),
         ),
         content: Text(
           l10n.settingsResetPermissionFlagsDialogBody,
-          style: GoogleFonts.inter(
-              color: Theme.of(dialogContext).colorScheme.onSurface),
+          style: KubusTextStyles.detailBody.copyWith(
+            color: Theme.of(dialogContext).colorScheme.onSurface,
+          ),
         ),
         actions: [
           TextButton(
@@ -1604,36 +1649,21 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     return Consumer<PlatformProvider>(
       builder: (context, platformProvider, child) {
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
+          padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.xl),
           child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  l10n.settingsPlatformFeaturesSectionTitle,
-                  style: GoogleFonts.inter(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
+                KubusHeaderText(
+                  title: l10n.settingsPlatformFeaturesSectionTitle,
+                  subtitle: l10n.desktopSettingsPlatformSubtitle,
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  l10n.desktopSettingsPlatformSubtitle,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
-                  ),
-                ),
-                const SizedBox(height: 24),
+                const SizedBox(height: KubusSpacing.lg),
                 ...platformProvider.capabilities.entries.map((entry) {
                   final capability = entry.key;
                   final isAvailable = entry.value;
                   return Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.only(bottom: KubusSpacing.md),
                     child: Row(
                       children: [
                         Icon(
@@ -1650,9 +1680,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                             children: [
                               Text(
                                 _getCapabilityDisplayName(l10n, capability),
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
+                                style: KubusTextStyles.sectionTitle.copyWith(
+                                  fontSize: KubusHeaderMetrics.screenSubtitle,
                                   color:
                                       Theme.of(context).colorScheme.onSurface,
                                 ),
@@ -1661,8 +1690,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                                 isAvailable
                                     ? l10n.commonAvailable
                                     : l10n.commonNotAvailable,
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
+                                style: KubusTextStyles.navMetaLabel.copyWith(
                                   color: isAvailable
                                       ? Theme.of(context).colorScheme.tertiary
                                       : Theme.of(context).colorScheme.error,
@@ -1848,9 +1876,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           l10n.settingsSetPinDialogTitle,
-          style: GoogleFonts.inter(
+          style: KubusTextStyles.sheetTitle.copyWith(
             color: Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.bold,
           ),
         ),
         content: Column(
@@ -1880,8 +1907,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             onPressed: () => Navigator.pop(context),
             child: Text(
               l10n.commonCancel,
-              style: GoogleFonts.inter(
-                  color: Theme.of(context).colorScheme.outline),
+              style: KubusTextStyles.navLabel.copyWith(
+                color: Theme.of(context).colorScheme.outline,
+              ),
             ),
           ),
           TextButton(
@@ -1912,7 +1940,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             child: Text(
               l10n.settingsClearPinButton,
               style:
-                  GoogleFonts.inter(color: Theme.of(context).colorScheme.error),
+                  KubusTextStyles.navLabel.copyWith(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
             ),
           ),
           ElevatedButton(
@@ -1954,9 +1984,12 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                     SnackBar(content: Text(l10n.settingsPinSetFailedToast)));
               }
             },
-            child: Text(l10n.commonSave,
-                style: GoogleFonts.inter(
-                    color: Theme.of(context).colorScheme.onPrimary)),
+            child: Text(
+              l10n.commonSave,
+              style: KubusTextStyles.navLabel.copyWith(
+                color: Theme.of(context).colorScheme.onPrimary,
+              ),
+            ),
           ),
         ],
       ),
@@ -1971,23 +2004,25 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
         backgroundColor: Theme.of(dialogContext).colorScheme.surface,
         title: Text(
           l10n.settingsLogoutDialogTitle,
-          style: GoogleFonts.inter(
+          style: KubusTextStyles.sheetTitle.copyWith(
             fontWeight: FontWeight.bold,
             color: Theme.of(dialogContext).colorScheme.onSurface,
           ),
         ),
         content: Text(
           l10n.settingsLogoutDialogBody,
-          style: GoogleFonts.inter(
-              color: Theme.of(dialogContext).colorScheme.onSurface),
+          style: KubusTextStyles.detailBody.copyWith(
+            color: Theme.of(dialogContext).colorScheme.onSurface,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
             child: Text(
               l10n.commonCancel,
-              style: GoogleFonts.inter(
-                  color: Theme.of(dialogContext).colorScheme.outline),
+              style: KubusTextStyles.navLabel.copyWith(
+                color: Theme.of(dialogContext).colorScheme.outline,
+              ),
             ),
           ),
           ElevatedButton(
@@ -2029,31 +2064,17 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   Widget _buildDangerZoneSettings() {
     final l10n = AppLocalizations.of(context)!;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
+      padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.xl),
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              l10n.settingsDangerZoneSectionTitle,
-              style: GoogleFonts.inter(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.error,
-              ),
+            KubusHeaderText(
+              title: l10n.settingsDangerZoneSectionTitle,
+              subtitle: l10n.desktopSettingsDangerZoneSubtitle,
+              titleColor: Theme.of(context).colorScheme.error,
             ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.desktopSettingsDangerZoneSubtitle,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.6),
-              ),
-            ),
-            const SizedBox(height: 24),
+            const SizedBox(height: KubusSpacing.lg),
             _buildSettingsRow(
               l10n.settingsClearCacheTileTitle,
               l10n.settingsClearCacheTileSubtitle,
@@ -2104,30 +2125,15 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     final localeProvider = context.watch<LocaleProvider>();
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
+      padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            l10n.settingsAppearanceSectionTitle,
-            style: GoogleFonts.inter(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+          KubusHeaderText(
+            title: l10n.settingsAppearanceSectionTitle,
+            subtitle: l10n.desktopSettingsAppearanceSubtitle,
           ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.desktopSettingsAppearanceSubtitle,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.6),
-            ),
-          ),
-          const SizedBox(height: 24),
+          const SizedBox(height: KubusSpacing.lg),
 
           // Theme mode
           DesktopCard(
@@ -2136,13 +2142,11 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
               children: [
                 Text(
                   l10n.settingsThemeModeTitle,
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                  style: KubusTextStyles.sectionTitle.copyWith(
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: KubusSpacing.md),
                 Row(
                   children: [
                     _buildThemeModeOption(
@@ -2171,7 +2175,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             ),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: KubusSpacing.lg),
 
           // Accent color
           DesktopCard(
@@ -2180,13 +2184,11 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
               children: [
                 Text(
                   l10n.settingsAccentColorTitle,
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                  style: KubusTextStyles.sectionTitle.copyWith(
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: KubusSpacing.md),
                 Wrap(
                   spacing: 12,
                   runSpacing: 12,
@@ -2238,17 +2240,14 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                     children: [
                       Text(
                         l10n.settingsLanguageTitle,
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                        style: KubusTextStyles.sectionTitle.copyWith(
                           color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: KubusSpacing.sm - KubusSpacing.xxs),
                       Text(
                         l10n.settingsLanguageDescription,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
+                        style: KubusTextStyles.sectionSubtitle.copyWith(
                           color: Theme.of(context)
                               .colorScheme
                               .onSurface
@@ -2282,7 +2281,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             ),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: KubusSpacing.lg),
 
           // Reduce effects
           Builder(
@@ -2306,19 +2305,16 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                         children: [
                           Text(
                             'Reduce effects',
-                            style: GoogleFonts.inter(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                            style: KubusTextStyles.sectionTitle.copyWith(
                               color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: KubusSpacing.xs),
                           Text(
                             autoDetected
                                 ? 'Automatically enabled for this device'
                                 : 'Disable blur, animations and other effects',
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
+                            style: KubusTextStyles.detailCaption.copyWith(
                               color: Theme.of(context)
                                   .colorScheme
                                   .onSurface
@@ -2368,7 +2364,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
           child: Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
             decoration: BoxDecoration(
               color: isSelected
                   ? themeColor.withValues(alpha: 0.1)
@@ -2391,8 +2387,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                 const SizedBox(height: 8),
                 Text(
                   label,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
+                  style: KubusTextStyles.navLabel.copyWith(
                     fontWeight:
                         isSelected ? FontWeight.w600 : FontWeight.normal,
                     color: isSelected ? themeColor : scheme.onSurface,
@@ -2436,15 +2431,13 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
     return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
+        padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.xl),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               l10n.permissionsNotificationsTitle,
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+              style: KubusTextStyles.screenTitle.copyWith(
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
@@ -2467,9 +2460,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                     alignment: Alignment.centerLeft,
                     child: Text(
                       l10n.settingsEmailPreferencesSectionTitle,
-                      style: GoogleFonts.inter(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
+                      style: KubusTextStyles.detailCardTitle.copyWith(
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
@@ -2479,8 +2470,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                     alignment: Alignment.centerLeft,
                     child: Text(
                       l10n.settingsEmailPreferencesTransactionalNote,
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
+                      style: KubusTextStyles.detailCaption.copyWith(
                         color: Theme.of(context)
                             .colorScheme
                             .onSurface
@@ -2656,16 +2646,14 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                           children: [
                             Text(
                               l10n.settingsEmailPreferencesTransactionalTitle,
-                              style: GoogleFonts.inter(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
+                              style: KubusTextStyles.sectionTitle.copyWith(
+                                fontSize: KubusChromeMetrics.profileName + 1,
                                 color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
                             Text(
                               l10n.settingsEmailPreferencesTransactionalSubtitle,
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
+                              style: KubusTextStyles.detailCaption.copyWith(
                                 color: Theme.of(context)
                                     .colorScheme
                                     .onSurface
@@ -2817,15 +2805,13 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     final prefs = profileProvider.preferences;
     final bool privateProfile = prefs.privacy.toLowerCase() == 'private';
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
+      padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             l10n.settingsPrivacySettingsTileTitle,
-            style: GoogleFonts.inter(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
+            style: KubusTextStyles.screenTitle.copyWith(
               color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
@@ -2939,15 +2925,13 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   Widget _buildSecuritySettings(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
+      padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             l10n.settingsSecuritySettingsDialogTitle,
-            style: GoogleFonts.inter(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
+            style: KubusTextStyles.screenTitle.copyWith(
               color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
@@ -3064,33 +3048,18 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   Widget _buildAchievementsSettings() {
     final l10n = AppLocalizations.of(context)!;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(KubusSpacing.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            l10n.desktopSettingsAchievementsTitle,
-            style: GoogleFonts.inter(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+          KubusHeaderText(
+            title: l10n.desktopSettingsAchievementsTitle,
+            subtitle: l10n.desktopSettingsAchievementsSubtitle,
           ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.desktopSettingsAchievementsSubtitle,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.6),
-            ),
-          ),
-          const SizedBox(height: 32),
+          const SizedBox(height: KubusSpacing.xl),
           // Stats Overview
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(KubusSpacing.lg),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
@@ -3167,9 +3136,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           const SizedBox(height: 32),
           Text(
             l10n.userProfileAchievementsTitle,
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+            style: KubusTextStyles.sectionTitle.copyWith(
               color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
@@ -3229,22 +3196,19 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       children: [
         Icon(
           icon,
-          size: 28,
+          size: KubusChromeMetrics.heroIcon,
           color: Provider.of<ThemeProvider>(context).accentColor,
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: KubusSpacing.sm),
         Text(
           value,
-          style: GoogleFonts.inter(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
+          style: KubusTextStyles.statValue.copyWith(
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         Text(
           label,
-          style: GoogleFonts.inter(
-            fontSize: 12,
+          style: KubusTextStyles.statLabel.copyWith(
             color:
                 Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
@@ -3305,9 +3269,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   children: [
                     Text(
                       title,
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                      style: KubusTextStyles.sectionTitle.copyWith(
                         color: scheme.onSurface,
                       ),
                     ),
@@ -3321,11 +3283,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                     ],
                   ],
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: KubusSpacing.xs),
                 Text(
                   description,
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
+                  style: KubusTextStyles.detailCaption.copyWith(
                     color: scheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
@@ -3336,11 +3297,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                     backgroundColor: scheme.surfaceContainerHighest,
                     valueColor: AlwaysStoppedAnimation<Color>(achievementColor),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: KubusSpacing.xs),
                   Text(
                     '$progress / $total',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
+                    style: KubusTextStyles.navMetaLabel.copyWith(
                       color: scheme.onSurface.withValues(alpha: 0.5),
                     ),
                   ),
@@ -3369,9 +3329,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                 const SizedBox(width: 4),
                 Text(
                   '+$reward',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                  style: KubusTextStyles.navLabel.copyWith(
                     color: isUnlocked
                         ? achievementColor
                         : scheme.onSurface.withValues(alpha: 0.5),
@@ -3388,28 +3346,13 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   Widget _buildHelpSettings() {
     final l10n = AppLocalizations.of(context)!;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(KubusSpacing.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            l10n.desktopSettingsHelpSupportTitle,
-            style: GoogleFonts.inter(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.desktopSettingsHelpSupportSubtitle,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.6),
-            ),
+          KubusHeaderText(
+            title: l10n.desktopSettingsHelpSupportTitle,
+            subtitle: l10n.desktopSettingsHelpSupportSubtitle,
           ),
           const SizedBox(height: 32),
           _buildSettingsRow(
@@ -3446,28 +3389,13 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   Widget _buildAboutSettings() {
     final l10n = AppLocalizations.of(context)!;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(KubusSpacing.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            l10n.settingsAboutSectionTitle,
-            style: GoogleFonts.inter(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.desktopSettingsAboutSubtitle,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.6),
-            ),
+          KubusHeaderText(
+            title: l10n.settingsAboutSectionTitle,
+            subtitle: l10n.desktopSettingsAboutSubtitle,
           ),
           const SizedBox(height: 32),
 
@@ -3483,51 +3411,47 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           // Features Section
           Text(
             l10n.desktopSettingsFeaturesSectionTitle,
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+            style: KubusTextStyles.sectionTitle.copyWith(
               color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: KubusSpacing.md),
 
           _buildFeatureItem(
               Icons.view_in_ar,
               l10n.desktopSettingsFeatureArDiscoveryTitle,
               l10n.desktopSettingsFeatureArDiscoveryDescription),
-          const SizedBox(height: 16),
+          const SizedBox(height: KubusSpacing.md),
           _buildFeatureItem(
               Icons.account_balance_wallet,
               l10n.desktopSettingsFeatureWeb3IntegrationTitle,
               l10n.desktopSettingsFeatureWeb3IntegrationDescription),
-          const SizedBox(height: 16),
+          const SizedBox(height: KubusSpacing.md),
           _buildFeatureItem(
               Icons.auto_awesome,
               l10n.desktopSettingsFeatureNftMintingTitle,
               l10n.desktopSettingsFeatureNftMintingDescription),
-          const SizedBox(height: 16),
+          const SizedBox(height: KubusSpacing.md),
           _buildFeatureItem(
               Icons.groups,
               l10n.desktopSettingsFeatureCommunityTitle,
               l10n.desktopSettingsFeatureCommunityDescription),
-          const SizedBox(height: 16),
+          const SizedBox(height: KubusSpacing.md),
           _buildFeatureItem(
               Icons.museum,
               l10n.desktopSettingsFeatureInstitutionsTitle,
               l10n.desktopSettingsFeatureInstitutionsDescription),
 
-          const SizedBox(height: 32),
+          const SizedBox(height: KubusSpacing.xl),
 
           // Legal Links
           Text(
             l10n.desktopSettingsLegalSectionTitle,
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+            style: KubusTextStyles.sectionTitle.copyWith(
               color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: KubusSpacing.md),
 
           _buildSettingsRow(
             l10n.settingsAboutTermsTileTitle,
@@ -3557,13 +3481,11 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           // Support Section
           Text(
             l10n.settingsSupportDialogTitle,
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+            style: KubusTextStyles.sectionTitle.copyWith(
               color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: KubusSpacing.md),
 
           _buildSettingsRow(
             l10n.settingsAboutSupportTileTitle,
@@ -3580,14 +3502,13 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             onTap: _showRateAppDialog,
           ),
 
-          const SizedBox(height: 32),
+          const SizedBox(height: KubusSpacing.xl),
 
           // Copyright
           Center(
             child: Text(
               'Â© 2025 kubus • ${l10n.settingsAllRightsReserved}',
-              style: GoogleFonts.inter(
-                fontSize: 12,
+              style: KubusTextStyles.navMetaLabel.copyWith(
                 color: Theme.of(context)
                     .colorScheme
                     .onSurface
@@ -3595,7 +3516,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
               ),
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: KubusSpacing.xl),
         ],
       ),
     );
@@ -3605,37 +3526,34 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     return Row(
       children: [
         Container(
-          width: 48,
-          height: 48,
+          width: KubusHeaderMetrics.searchBarHeight,
+          height: KubusHeaderMetrics.searchBarHeight,
           decoration: BoxDecoration(
             color: Provider.of<ThemeProvider>(context)
                 .accentColor
                 .withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(KubusRadius.md),
           ),
           child: Icon(
             icon,
-            size: 24,
+            size: KubusHeaderMetrics.actionIcon,
             color: Provider.of<ThemeProvider>(context).accentColor,
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: KubusSpacing.md),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 title,
-                style: GoogleFonts.inter(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
+                style: KubusTextStyles.sectionTitle.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               Text(
                 description,
-                style: GoogleFonts.inter(
-                  fontSize: 13,
+                style: KubusTextStyles.sectionSubtitle.copyWith(
                   color: Theme.of(context)
                       .colorScheme
                       .onSurface
@@ -3664,22 +3582,23 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       child: InkWell(
         key: tileKey,
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(KubusRadius.sm),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsets.symmetric(vertical: KubusSpacing.xs),
           child: Row(
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: KubusHeaderMetrics.actionHitArea,
+                height: KubusHeaderMetrics.actionHitArea,
                 decoration: BoxDecoration(
                   color: isDestructive
                       ? errorColor.withValues(alpha: 0.1)
                       : Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
                 ),
                 child: Icon(
                   icon,
+                  size: KubusHeaderMetrics.actionIcon,
                   color: isDestructive
                       ? errorColor
                       : Theme.of(context)
@@ -3688,16 +3607,14 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                           .withValues(alpha: 0.7),
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: KubusSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
-                      style: GoogleFonts.inter(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
+                      style: KubusTextStyles.sectionTitle.copyWith(
                         color: isDestructive
                             ? errorColor
                             : Theme.of(context).colorScheme.onSurface,
@@ -3705,8 +3622,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                     ),
                     Text(
                       subtitle,
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
+                      style: KubusTextStyles.sectionSubtitle.copyWith(
                         color: Theme.of(context)
                             .colorScheme
                             .onSurface
@@ -3718,11 +3634,11 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
               ),
               if (trailing != null) ...[
                 trailing,
-                const SizedBox(width: 12),
+                const SizedBox(width: KubusSpacing.sm + KubusSpacing.xxs),
               ],
               Icon(
                 Icons.arrow_forward_ios,
-                size: 16,
+                size: KubusSizes.trailingChevron,
                 color: Theme.of(context)
                     .colorScheme
                     .onSurface
@@ -3753,16 +3669,13 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             children: [
               Text(
                 title,
-                style: GoogleFonts.inter(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
+                style: KubusTextStyles.sectionTitle.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               Text(
                 subtitle,
-                style: GoogleFonts.inter(
-                  fontSize: 13,
+                style: KubusTextStyles.sectionSubtitle.copyWith(
                   color: Theme.of(context)
                       .colorScheme
                       .onSurface
@@ -3884,16 +3797,14 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       ),
       title: Text(
         l10n.settingsAutoLockTimeTitle,
-        style: GoogleFonts.inter(
-          fontSize: 15,
-          fontWeight: FontWeight.w600,
+        style: KubusTextStyles.sectionTitle.copyWith(
+          fontSize: KubusChromeMetrics.profileName + 1,
           color: Theme.of(context).colorScheme.onSurface,
         ),
       ),
       subtitle: Text(
         displayLabelForStored(_autoLockTime),
-        style: GoogleFonts.inter(
-          fontSize: 13,
+        style: KubusTextStyles.detailCaption.copyWith(
           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
         ),
       ),

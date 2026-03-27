@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'common/kubus_screen_header.dart';
+import '../utils/design_tokens.dart';
+
 class AuthTitleRow extends StatelessWidget {
   const AuthTitleRow({
     super.key,
@@ -18,9 +21,7 @@ class AuthTitleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final textTheme = theme.textTheme;
-    final scheme = theme.colorScheme;
+    final scheme = Theme.of(context).colorScheme;
     final resolvedSubtitle = subtitle?.trim();
     final resolvedForeground = foregroundColor ?? scheme.onSurface;
     final resolvedSubtitleColor =
@@ -28,36 +29,18 @@ class AuthTitleRow extends StatelessWidget {
 
     return ConstrainedBox(
       constraints: BoxConstraints(
-        minHeight: compact ? 48 : 56,
+        minHeight: KubusHeaderMetrics.actionHitArea +
+            (compact ? KubusSpacing.xs : KubusSpacing.sm),
       ),
       child: SizedBox(
         width: double.infinity,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              title,
-              style: textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-                fontSize: compact ? 22 : 28,
-                color: resolvedForeground,
-                height: 1.02,
-              ),
-              maxLines: compact ? 3 : 2,
-              overflow: TextOverflow.visible,
-            ),
-            if (resolvedSubtitle != null && resolvedSubtitle.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(
-                resolvedSubtitle,
-                style: textTheme.bodyLarge?.copyWith(
-                  color: resolvedSubtitleColor,
-                  height: 1.45,
-                ),
-              ),
-            ],
-          ],
+        child: KubusHeaderText(
+          title: title,
+          subtitle: resolvedSubtitle,
+          kind: KubusHeaderKind.screen,
+          titleColor: resolvedForeground,
+          subtitleColor: resolvedSubtitleColor,
+          maxTitleLines: compact ? 3 : 2,
         ),
       ),
     );

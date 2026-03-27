@@ -8,13 +8,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../config/config.dart';
 import '../../utils/wallet_utils.dart';
 import '../../utils/user_identity_display.dart';
 import '../../utils/creator_display_format.dart';
 import '../../utils/search_suggestions.dart';
+import '../../utils/user_profile_navigation.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/app_loading.dart';
 import '../../widgets/topbar_icon.dart';
@@ -46,7 +47,6 @@ import '../../services/share/share_types.dart';
 import '../../services/block_list_service.dart';
 import '../../services/push_notification_service.dart';
 import '../map_screen.dart';
-import 'user_profile_screen.dart';
 import 'post_detail_screen.dart';
 import 'group_feed_screen.dart';
 import '../../community/community_interactions.dart';
@@ -67,8 +67,8 @@ import '../../widgets/community/community_group_picker_content.dart';
 import '../../widgets/community/community_likes_sheet.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/community_subject_navigation.dart';
-import '../../utils/design_tokens.dart';
 import '../../utils/media_url_resolver.dart';
+import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/community/community_season0_banner.dart';
 import '../season0/season0_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -1144,29 +1144,28 @@ class _CommunityScreenState extends State<CommunityScreen>
     final isSmallScreen = MediaQuery.of(context).size.width < 375;
     final animationTheme = context.animationTheme;
     return Container(
-      padding: const EdgeInsets.all(KubusSpacing.xl),
+      padding:
+          const EdgeInsets.all(KubusHeaderMetrics.appBarHorizontalPaddingLg),
       child: Row(
         children: [
-          Text(
-            l10n.communityScreenTitle,
-            style: KubusTypography.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
+          Expanded(
+            child: KubusHeaderText(
+              title: l10n.communityScreenTitle,
+              kind: KubusHeaderKind.screen,
+              titleColor: Theme.of(context).colorScheme.onSurface,
+              maxTitleLines: 1,
             ),
           ),
-          const Spacer(),
-          // Search icon - unified TopBarIcon
           TopBarIcon(
             tooltip: l10n.commonSearch,
             icon: Icon(
               Icons.search,
               color: Theme.of(context).colorScheme.onSurface,
-              size: isSmallScreen ? 20 : 24,
+              size: KubusHeaderMetrics.actionIcon,
             ),
             onPressed: _showSearchBottomSheet,
           ),
-          const SizedBox(width: 8),
-          // Bell icon - unified TopBarIcon
+          const SizedBox(width: KubusSpacing.sm),
           TopBarIcon(
             tooltip: l10n.commonNotifications,
             icon: AnimatedBuilder(
@@ -1180,7 +1179,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                         ? Icons.notifications
                         : Icons.notifications_outlined,
                     color: Theme.of(context).colorScheme.onSurface,
-                    size: isSmallScreen ? 20 : 24,
+                    size: KubusHeaderMetrics.actionIcon,
                   ),
                 );
               },
@@ -1462,7 +1461,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                       AppLocalizations.of(context)!.communityNewPostsBanner(
                         _bufferedIncomingPosts.length,
                       ),
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                           color: Theme.of(context).colorScheme.onPrimary,
                           fontWeight: FontWeight.w700),
                     ),
@@ -1666,7 +1665,7 @@ class _CommunityScreenState extends State<CommunityScreen>
 
     return Container(
       margin: const EdgeInsets.only(bottom: 18),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: scheme.primaryContainer,
         borderRadius: KubusRadius.circular(18),
@@ -1917,14 +1916,14 @@ class _CommunityScreenState extends State<CommunityScreen>
                   await showModalBottomSheet(
                     context: context,
                     builder: (ctx) => Padding(
-                      padding: const EdgeInsets.all(24),
+                      padding: const EdgeInsets.all(KubusSpacing.lg),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             l10n.communityArtFeedAboutTitle,
-                            style: GoogleFonts.inter(
+                            style: KubusTypography.inter(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),
@@ -1932,7 +1931,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                           const SizedBox(height: 12),
                           Text(
                             l10n.communityArtFeedAboutBody,
-                            style: GoogleFonts.inter(fontSize: 14),
+                            style: KubusTypography.inter(fontSize: 14),
                           ),
                         ],
                       ),
@@ -2135,7 +2134,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                         side: BorderSide.none,
                         label: Text(
                           '#$tag',
-                          style: GoogleFonts.inter(
+                          style: KubusTypography.inter(
                             color: roles.tagChipBackground,
                             fontWeight: FontWeight.w500,
                           ),
@@ -2456,14 +2455,14 @@ class _CommunityScreenState extends State<CommunityScreen>
                             contentPadding: EdgeInsets.zero,
                             title: Text(
                               l10n.communityCreateGroupPublicLabel,
-                              style: GoogleFonts.inter(
+                              style: KubusTypography.inter(
                                   fontWeight: FontWeight.w600),
                             ),
                             subtitle: Text(
                               isPublic
                                   ? l10n.communityCreateGroupPublicHint
                                   : l10n.communityCreateGroupPrivateHint,
-                              style: GoogleFonts.inter(fontSize: 13),
+                              style: KubusTypography.inter(fontSize: 13),
                             ),
                             value: isPublic,
                             onChanged: (val) =>
@@ -2812,12 +2811,12 @@ class _CommunityScreenState extends State<CommunityScreen>
                       : results.isEmpty
                           ? Center(
                               child: Padding(
-                                padding: const EdgeInsets.all(24),
+                                padding: const EdgeInsets.all(KubusSpacing.lg),
                                 child: Text(
                                   sheetSearchController.text.trim().isEmpty
                                       ? l10n.communitySearchEmptyStartTyping
                                       : l10n.communitySearchEmptyNoResults,
-                                  style: GoogleFonts.inter(
+                                  style: KubusTypography.inter(
                                     fontSize: 14,
                                     color: scheme.onSurface
                                         .withValues(alpha: 0.45),
@@ -2870,7 +2869,7 @@ class _CommunityScreenState extends State<CommunityScreen>
         selected: selected,
         onSelected: (_) => onTap(),
         selectedColor: themeProvider.accentColor.withValues(alpha: 0.2),
-        labelStyle: GoogleFonts.inter(
+        labelStyle: KubusTypography.inter(
           fontSize: 12,
           fontWeight: FontWeight.w600,
           color: selected
@@ -2890,10 +2889,7 @@ class _CommunityScreenState extends State<CommunityScreen>
               ?.toString() ??
           '';
       if (walletAddr.isNotEmpty) {
-        Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (_) => UserProfileScreen(userId: walletAddr)));
+        unawaited(UserProfileNavigation.open(context, userId: walletAddr));
       }
       return;
     }
@@ -3037,12 +3033,12 @@ class _CommunityScreenState extends State<CommunityScreen>
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(KubusSpacing.lg),
                 child: Row(
                   children: [
                     Text(
                       'Community Notifications',
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).colorScheme.onSurface,
@@ -3068,7 +3064,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                             height: MediaQuery.of(context).size.height * 0.4,
                             child: Center(
                               child: Padding(
-                                padding: const EdgeInsets.all(24),
+                                padding: const EdgeInsets.all(KubusSpacing.lg),
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
@@ -3083,7 +3079,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     const SizedBox(height: 16),
                                     Text(
                                       'No Notifications',
-                                      style: GoogleFonts.inter(
+                                      style: KubusTypography.inter(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
                                         color: Theme.of(context)
@@ -3095,7 +3091,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     const SizedBox(height: 8),
                                     Text(
                                       'You\'re all caught up!',
-                                      style: GoogleFonts.inter(
+                                      style: KubusTypography.inter(
                                         fontSize: 14,
                                         color: Theme.of(context)
                                             .colorScheme
@@ -3210,14 +3206,14 @@ class _CommunityScreenState extends State<CommunityScreen>
                                                             : (n['type'] ??
                                                                     'Notification')
                                                                 .toString(),
-                                            style: GoogleFonts.inter(
+                                            style: KubusTypography.inter(
                                                 fontWeight: FontWeight.w600),
                                           ),
                                           const SizedBox(height: 6),
                                           Text(body,
                                               maxLines: 2,
                                               overflow: TextOverflow.ellipsis,
-                                              style: GoogleFonts.inter(
+                                              style: KubusTypography.inter(
                                                   color: Theme.of(context)
                                                       .colorScheme
                                                       .onSurface
@@ -3456,7 +3452,7 @@ class _CommunityScreenState extends State<CommunityScreen>
             const SizedBox(height: 8),
             Text(
               label,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 12,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
@@ -3531,7 +3527,7 @@ class _CommunityScreenState extends State<CommunityScreen>
         children: [
           Text(
             l10n.communityComposerTitle,
-            style: GoogleFonts.inter(
+            style: KubusTypography.inter(
               fontSize: 20,
               fontWeight: FontWeight.w700,
               color: scheme.onSurface,
@@ -3559,7 +3555,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       maxLines: null,
       decoration: InputDecoration(
         hintText: l10n.communityComposerTextHint,
-        hintStyle: GoogleFonts.inter(fontSize: isCompact ? 14 : 16),
+        hintStyle: KubusTypography.inter(fontSize: isCompact ? 14 : 16),
         filled: true,
         fillColor: scheme.primaryContainer.withValues(alpha: 0.4),
         border: OutlineInputBorder(
@@ -3571,7 +3567,7 @@ class _CommunityScreenState extends State<CommunityScreen>
           vertical: isCompact ? 12 : 18,
         ),
       ),
-      style: GoogleFonts.inter(fontSize: isCompact ? 14 : 16, height: 1.4),
+      style: KubusTypography.inter(fontSize: isCompact ? 14 : 16, height: 1.4),
       textInputAction: TextInputAction.newline,
     );
   }
@@ -3634,7 +3630,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
                       _selectedPostVideo!.name,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 13,
                         color: scheme.onSurface,
                       ),
@@ -3926,7 +3922,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                 Expanded(
                   child: Text(
                     label ?? l10n.communityComposerAttachedLocationLabel,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
                     ),
@@ -3945,7 +3941,7 @@ class _CommunityScreenState extends State<CommunityScreen>
               const SizedBox(height: 4),
               Text(
                 '${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)}',
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 12,
                   color: scheme.onSurface.withValues(alpha: 0.6),
                 ),
@@ -4028,7 +4024,7 @@ class _CommunityScreenState extends State<CommunityScreen>
           children: [
             Text(
               label,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
@@ -4070,7 +4066,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                   size: 18, color: themeProvider.accentColor),
               label: Text(
                 'Search',
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 13,
                   color: themeProvider.accentColor,
                 ),
@@ -4101,7 +4097,7 @@ class _CommunityScreenState extends State<CommunityScreen>
               : Text(
                   'No $label yet',
                   key: ValueKey('${label}_chips_empty'),
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: 12,
                     color: scheme.onSurface.withValues(alpha: 0.5),
                   ),
@@ -4227,7 +4223,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                       children: [
                         Text(
                           title,
-                          style: GoogleFonts.inter(
+                          style: KubusTypography.inter(
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
                             color: scheme.onSurface,
@@ -4377,7 +4373,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                                   .communitySearchEmptyStartTyping
                                               : l10n
                                                   .communitySearchEmptyNoResults,
-                                          style: GoogleFonts.inter(
+                                          style: KubusTypography.inter(
                                             color: scheme.onSurface
                                                 .withValues(alpha: 0.5),
                                           ),
@@ -4458,7 +4454,7 @@ class _CommunityScreenState extends State<CommunityScreen>
             padding: const EdgeInsets.only(bottom: 12),
             child: Text(
               searchType == 'tags' ? 'Popular Tags' : 'Suggestions',
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: scheme.onSurface.withValues(alpha: 0.6),
@@ -4530,12 +4526,12 @@ class _CommunityScreenState extends State<CommunityScreen>
         ),
         title: Text(
           '#$tag',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          style: KubusTypography.inter(fontWeight: FontWeight.w600),
         ),
         subtitle: isCustom
             ? Text(
                 'Add as new tag',
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 12,
                   color: scheme.onSurface.withValues(alpha: 0.6),
                 ),
@@ -4543,7 +4539,7 @@ class _CommunityScreenState extends State<CommunityScreen>
             : count > 0
                 ? Text(
                     '$count uses',
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: 12,
                       color: scheme.onSurface.withValues(alpha: 0.6),
                     ),
@@ -4568,13 +4564,13 @@ class _CommunityScreenState extends State<CommunityScreen>
         ),
         title: Text(
           identity.name,
-          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          style: KubusTypography.inter(fontWeight: FontWeight.w600),
         ),
         subtitle: identity.handle == null
             ? null
             : Text(
                 identity.handle!,
-                style: GoogleFonts.inter(
+                style: KubusTypography.inter(
                   fontSize: 12,
                   color: scheme.onSurface.withValues(alpha: 0.6),
                 ),
@@ -4618,12 +4614,12 @@ class _CommunityScreenState extends State<CommunityScreen>
         ),
         title: Text(
           title,
-          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          style: KubusTypography.inter(fontWeight: FontWeight.w600),
           overflow: TextOverflow.ellipsis,
         ),
         subtitle: Text(
           'by $artist',
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 12,
             color: scheme.onSurface.withValues(alpha: 0.6),
           ),
@@ -4653,14 +4649,14 @@ class _CommunityScreenState extends State<CommunityScreen>
         ),
         title: Text(
           name.toString(),
-          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          style: KubusTypography.inter(fontWeight: FontWeight.w600),
           overflow: TextOverflow.ellipsis,
         ),
         subtitle: Text(
           [type, address]
               .where((e) => e.toString().trim().isNotEmpty)
               .join(' � '),
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 12,
             color: scheme.onSurface.withValues(alpha: 0.6),
           ),
@@ -4687,12 +4683,12 @@ class _CommunityScreenState extends State<CommunityScreen>
         ),
         title: Text(
           name.toString(),
-          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          style: KubusTypography.inter(fontWeight: FontWeight.w600),
           overflow: TextOverflow.ellipsis,
         ),
         subtitle: Text(
           'Open screen',
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 12,
             color: scheme.onSurface.withValues(alpha: 0.6),
           ),
@@ -4725,13 +4721,13 @@ class _CommunityScreenState extends State<CommunityScreen>
         ),
         title: Text(
           snippet,
-          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          style: KubusTypography.inter(fontWeight: FontWeight.w600),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
         subtitle: Text(
           author,
-          style: GoogleFonts.inter(
+          style: KubusTypography.inter(
             fontSize: 12,
             color: scheme.onSurface.withValues(alpha: 0.6),
           ),
@@ -5293,12 +5289,12 @@ class _CommunityScreenState extends State<CommunityScreen>
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(KubusSpacing.lg),
                 child: Row(
                   children: [
                     Text(
                       l10n.commonComments,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).colorScheme.onSurface,
@@ -5311,7 +5307,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                             commentsProvider.totalCountForPost(post.id);
                         return Text(
                           l10n.commonCommentsCount(count),
-                          style: GoogleFonts.inter(
+                          style: KubusTypography.inter(
                             fontSize: 14,
                             color: Theme.of(context)
                                 .colorScheme
@@ -5356,18 +5352,18 @@ class _CommunityScreenState extends State<CommunityScreen>
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(l10n.commentHistoryCurrentLabel,
-                                      style: GoogleFonts.inter(
+                                      style: KubusTypography.inter(
                                           fontWeight: FontWeight.w700)),
                                   const SizedBox(height: 8),
                                   SelectableText(c.content,
-                                      style: GoogleFonts.inter()),
+                                      style: KubusTypography.inter()),
                                   const SizedBox(height: 16),
                                   Text(l10n.commentHistoryOriginalLabel,
-                                      style: GoogleFonts.inter(
+                                      style: KubusTypography.inter(
                                           fontWeight: FontWeight.w700)),
                                   const SizedBox(height: 8),
                                   SelectableText(c.originalContent ?? '',
-                                      style: GoogleFonts.inter()),
+                                      style: KubusTypography.inter()),
                                 ],
                               ),
                             ),
@@ -5543,7 +5539,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                       Expanded(
                                         child: Text(
                                           c.authorName,
-                                          style: GoogleFonts.inter(
+                                          style: KubusTypography.inter(
                                             fontSize: isReply ? 13 : 14,
                                             fontWeight: FontWeight.w600,
                                             color: bubbleTextColor,
@@ -5576,7 +5572,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     children: [
                                       Text(
                                         _getTimeAgo(c.timestamp),
-                                        style: GoogleFonts.inter(
+                                        style: KubusTypography.inter(
                                           fontSize: 12,
                                           color: bubbleTextColor.withValues(
                                               alpha: 0.55),
@@ -5586,7 +5582,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                         const SizedBox(width: 8),
                                         Text(
                                           l10n.commonEditedTag,
-                                          style: GoogleFonts.inter(
+                                          style: KubusTypography.inter(
                                             fontSize: 12,
                                             color: bubbleTextColor.withValues(
                                                 alpha: 0.55),
@@ -5604,7 +5600,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                         : null,
                                     child: Text(
                                       c.content,
-                                      style: GoogleFonts.inter(
+                                      style: KubusTypography.inter(
                                         fontSize: 13,
                                         color: bubbleTextColor.withValues(
                                             alpha: 0.85),
@@ -5665,7 +5661,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                         onTap: () => _showCommentLikes(c.id),
                                         child: Text(
                                           '${c.likeCount}',
-                                          style: GoogleFonts.inter(
+                                          style: KubusTypography.inter(
                                             fontSize: 12,
                                             color: bubbleTextColor.withValues(
                                                 alpha: 0.6),
@@ -5709,7 +5705,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                             const SizedBox(width: 6),
                                             Text(
                                               l10n.commonReply,
-                                              style: GoogleFonts.inter(
+                                              style: KubusTypography.inter(
                                                   fontSize: 12,
                                                   color: bubbleTextColor
                                                       .withValues(alpha: 0.6)),
@@ -5818,7 +5814,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                               child: Text(
                                 AppLocalizations.of(context)!
                                     .communityReplyingToCommentLabel,
-                                style: GoogleFonts.inter(
+                                style: KubusTypography.inter(
                                   fontSize: 13,
                                   color: Provider.of<ThemeProvider>(context)
                                       .accentColor,
@@ -5882,7 +5878,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                             controller: commentController,
                             decoration: InputDecoration(
                               hintText: l10n.postDetailWriteCommentHint,
-                              hintStyle: GoogleFonts.inter(
+                              hintStyle: KubusTypography.inter(
                                 fontSize: 14,
                                 color: Theme.of(context)
                                     .colorScheme
@@ -6142,7 +6138,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(l10n.postDetailRepostButton,
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: theme.colorScheme.onSurface)),
@@ -6151,7 +6147,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                         TextButton(
                             onPressed: () => Navigator.pop(sheetContext),
                             child: Text(l10n.commonCancel,
-                                style: GoogleFonts.inter())),
+                                style: KubusTypography.inter())),
                         const SizedBox(width: 8),
                         ElevatedButton(
                           onPressed: () async {
@@ -6200,7 +6196,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                             }
                           },
                           child: Text(l10n.postDetailRepostButton,
-                              style: GoogleFonts.inter()),
+                              style: KubusTypography.inter()),
                         ),
                       ],
                     ),
@@ -6210,7 +6206,7 @@ class _CommunityScreenState extends State<CommunityScreen>
               const Divider(),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(KubusSpacing.lg),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -6227,7 +6223,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                       ),
                       const SizedBox(height: 16),
                       Text(l10n.postDetailRepostingLabel,
-                          style: GoogleFonts.inter(
+                          style: KubusTypography.inter(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: theme.colorScheme.onSurface
@@ -6259,11 +6255,11 @@ class _CommunityScreenState extends State<CommunityScreen>
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(post.authorName,
-                                          style: GoogleFonts.inter(
+                                          style: KubusTypography.inter(
                                               fontWeight: FontWeight.w600,
                                               fontSize: 14)),
                                       Text(_getTimeAgo(post.timestamp),
-                                          style: GoogleFonts.inter(
+                                          style: KubusTypography.inter(
                                               fontSize: 11,
                                               color: theme.colorScheme.onSurface
                                                   .withValues(alpha: 0.5))),
@@ -6274,7 +6270,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                             ),
                             const SizedBox(height: 8),
                             Text(post.content,
-                                style: GoogleFonts.inter(fontSize: 14),
+                                style: KubusTypography.inter(fontSize: 14),
                                 maxLines: 5,
                                 overflow: TextOverflow.ellipsis),
                             if (post.imageUrl != null &&
@@ -6321,14 +6317,7 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 
   void _viewUserProfile(String userId) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => UserProfileScreen(
-          userId: userId,
-        ),
-      ),
-    );
+    unawaited(UserProfileNavigation.open(context, userId: userId));
   }
 
   void _viewRepostsList(CommunityPost post) async {
@@ -6361,7 +6350,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(l10n.communityRepostedByTitle,
-                      style: GoogleFonts.inter(
+                      style: KubusTypography.inter(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: theme.colorScheme.onSurface)),
@@ -6382,7 +6371,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                   if (snapshot.hasError) {
                     return Center(
                         child: Text(l10n.communityRepostsLoadFailedMessage,
-                            style: GoogleFonts.inter()));
+                            style: KubusTypography.inter()));
                   }
                   final reposts = snapshot.data ?? [];
                   if (reposts.isEmpty) {
@@ -6440,20 +6429,20 @@ class _CommunityScreenState extends State<CommunityScreen>
                             allowFabricatedFallback: false),
                         title: Text(formatted.primary,
                             style:
-                                GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                                KubusTypography.inter(fontWeight: FontWeight.w600)),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             if (formatted.secondary != null)
                               Text(formatted.secondary!,
-                                  style: GoogleFonts.inter(fontSize: 12))
+                                  style: KubusTypography.inter(fontSize: 12))
                             else if (wallet.isNotEmpty)
                               Text(maskWallet(wallet),
-                                  style: GoogleFonts.inter(fontSize: 12)),
+                                  style: KubusTypography.inter(fontSize: 12)),
                             if (comment != null && comment.isNotEmpty) ...[
                               const SizedBox(height: 4),
                               Text(comment,
-                                  style: GoogleFonts.inter(fontSize: 12),
+                                  style: KubusTypography.inter(fontSize: 12),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis),
                             ],
@@ -6461,7 +6450,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                         ),
                         trailing: createdAt != null
                             ? Text(_getTimeAgo(createdAt),
-                                style: GoogleFonts.inter(
+                                style: KubusTypography.inter(
                                     fontSize: 11,
                                     color: theme.colorScheme.onSurface
                                         .withValues(alpha: 0.5)))
@@ -6505,7 +6494,7 @@ class _CommunityScreenState extends State<CommunityScreen>
               leading:
                   Icon(Icons.delete_outline, color: theme.colorScheme.error),
               title: Text(l10n.communityUnrepostAction,
-                  style: GoogleFonts.inter(color: theme.colorScheme.error)),
+                  style: KubusTypography.inter(color: theme.colorScheme.error)),
               onTap: () {
                 Navigator.pop(sheetContext);
                 _unrepostPost(post);
@@ -6514,7 +6503,7 @@ class _CommunityScreenState extends State<CommunityScreen>
             ListTile(
               leading: Icon(Icons.cancel,
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
-              title: Text(l10n.commonCancel, style: GoogleFonts.inter()),
+              title: Text(l10n.commonCancel, style: KubusTypography.inter()),
               onTap: () => Navigator.pop(sheetContext),
             ),
             const SizedBox(height: 16),
@@ -6533,20 +6522,20 @@ class _CommunityScreenState extends State<CommunityScreen>
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
-        title: Text(l10n.communityUnrepostTitle, style: GoogleFonts.inter()),
+        title: Text(l10n.communityUnrepostTitle, style: KubusTypography.inter()),
         content:
-            Text(l10n.communityUnrepostConfirmBody, style: GoogleFonts.inter()),
+            Text(l10n.communityUnrepostConfirmBody, style: KubusTypography.inter()),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(l10n.commonCancel, style: GoogleFonts.inter()),
+            child: Text(l10n.commonCancel, style: KubusTypography.inter()),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             style: TextButton.styleFrom(
                 foregroundColor: Theme.of(dialogContext).colorScheme.error),
             child:
-                Text(l10n.communityUnrepostAction, style: GoogleFonts.inter()),
+                Text(l10n.communityUnrepostAction, style: KubusTypography.inter()),
           ),
         ],
       ),

@@ -834,6 +834,7 @@ class _DesktopShellState extends State<DesktopShell>
   void _showProfileMenu(BuildContext context) {
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
+    final shellScope = DesktopShellScope.of(context);
 
     if (!profileProvider.isSignedIn) {
       Navigator.of(context).push(
@@ -844,27 +845,37 @@ class _DesktopShellState extends State<DesktopShell>
       return;
     }
 
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const ProfileScreen(),
-      ),
-    );
+    if (shellScope != null) {
+      shellScope.pushSubScreen(
+        title: AppLocalizations.of(context)!.navigationScreenProfile,
+        child: const ProfileScreen(),
+      );
+      return;
+    }
+
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (context) => const ProfileScreen()));
   }
 
   void _showSettingsScreen(BuildContext context) {
+    final shellScope = DesktopShellScope.of(context);
+    if (shellScope != null) {
+      shellScope.pushScreen(const DesktopSettingsScreen(embeddedInShell: true));
+      return;
+    }
+
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const DesktopSettingsScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const DesktopSettingsScreen()),
     );
   }
 
   // Notifications are handled in the functions sidebar via [_toggleNotificationsPanel].
 
   void _showCollabInvites() {
+    final l10n = AppLocalizations.of(context)!;
     _pushScreenToStack(
       DesktopSubScreen(
-        title: 'Collaboration Invites',
+        title: l10n.profileInvitesTooltip,
         child: const InvitesInboxScreen(embedded: true),
       ),
     );
@@ -962,51 +973,68 @@ class _NotificationsPanel extends StatelessWidget {
             showBorder: false,
             backgroundColor:
                 scheme.surface.withValues(alpha: isDark ? 0.18 : 0.12),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  l10n.commonNotifications,
-                  style: KubusTextStyles.screenTitle.copyWith(
-                    color: scheme.onSurface,
-                  ),
-                ),
-                const Spacer(),
-                IconButton(
-                  tooltip: l10n.commonRefresh,
-                  onPressed: () => unawaited(context
-                      .read<RecentActivityProvider>()
-                      .refresh(force: true)),
-                  icon: Icon(
-                    Icons.refresh,
-                    color: scheme.onSurface.withValues(alpha: 0.8),
-                  ),
-                ),
-                TextButton(
-                  onPressed: !hasUnread
-                      ? null
-                      : () async {
-                          final activityProvider =
-                              context.read<RecentActivityProvider>();
-                          await context
-                              .read<NotificationProvider>()
-                              .markViewed(syncServer: true);
-                          activityProvider.markAllReadLocally();
-                        },
-                  child: Text(
-                    l10n.homeMarkAllReadButton,
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: hasUnread
-                          ? themeProvider.accentColor
-                          : scheme.onSurface.withValues(alpha: 0.4),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        l10n.commonNotifications,
+                        style: KubusTextStyles.screenTitle.copyWith(
+                          color: scheme.onSurface,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
+                    IconButton(
+                      tooltip: l10n.commonClose,
+                      onPressed: onClose,
+                      icon: Icon(
+                        Icons.close,
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                  ],
                 ),
-                IconButton(
-                  onPressed: onClose,
-                  icon: Icon(
-                    Icons.close,
-                    color: scheme.onSurface,
-                  ),
+                const SizedBox(height: KubusSpacing.xs),
+                Wrap(
+                  spacing: KubusSpacing.xs,
+                  runSpacing: KubusSpacing.xs,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    IconButton(
+                      tooltip: l10n.commonRefresh,
+                      onPressed: () => unawaited(context
+                          .read<RecentActivityProvider>()
+                          .refresh(force: true)),
+                      icon: Icon(
+                        Icons.refresh,
+                        color: scheme.onSurface.withValues(alpha: 0.8),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: !hasUnread
+                          ? null
+                          : () async {
+                              final activityProvider =
+                                  context.read<RecentActivityProvider>();
+                              await context
+                                  .read<NotificationProvider>()
+                                  .markViewed(syncServer: true);
+                              activityProvider.markAllReadLocally();
+                            },
+                      child: Text(
+                        l10n.homeMarkAllReadButton,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: hasUnread
+                              ? themeProvider.accentColor
+                              : scheme.onSurface.withValues(alpha: 0.4),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

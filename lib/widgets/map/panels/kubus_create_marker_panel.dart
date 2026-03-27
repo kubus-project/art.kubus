@@ -4,9 +4,9 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../models/map_marker_subject.dart';
 import '../../../utils/map_marker_subject_loader.dart';
-import '../../glass_components.dart';
 import '../../map_marker_dialog.dart';
 import '../../map_overlay_blocker.dart';
+import '../kubus_map_glass_surface.dart';
 import 'kubus_marker_form_content.dart';
 
 /// Desktop sidebar panel for creating a map marker.
@@ -44,11 +44,6 @@ class KubusCreateMarkerPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.46 : 0.56);
-
     Widget content = Padding(
       padding: const EdgeInsets.fromLTRB(
         KubusSpacing.md,
@@ -72,36 +67,44 @@ class KubusCreateMarkerPanel extends StatelessWidget {
     );
 
     // Glass panel surface matching nearby art sidebar style.
-    content = Container(
-      decoration: BoxDecoration(
-        border: Border(
-          left: BorderSide(
-            color: scheme.outlineVariant.withValues(alpha: 0.30),
-          ),
-          top: BorderSide(
-            color: scheme.outlineVariant.withValues(alpha: 0.30),
-          ),
-          bottom: BorderSide(
-            color: scheme.outlineVariant.withValues(alpha: 0.30),
+    content = buildKubusMapGlassSurface(
+      context: context,
+      kind: KubusMapGlassSurfaceKind.panel,
+      borderRadius: BorderRadius.zero,
+      tintBase: Theme.of(context).colorScheme.surface,
+      padding: EdgeInsets.zero,
+      margin: EdgeInsets.zero,
+      showBorder: false,
+      boxShadow: [
+        BoxShadow(
+          color: Theme.of(context).colorScheme.shadow.withValues(
+                alpha: KubusGlassEffects.shadowOpacityLight,
+              ),
+          blurRadius: 16,
+          offset: const Offset(-4, 0),
+        ),
+      ],
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(
+            left: BorderSide(
+              color: Theme.of(context).colorScheme.outlineVariant.withValues(
+                    alpha: KubusGlassEffects.glassBorderOpacityStrong,
+                  ),
+            ),
+            top: BorderSide(
+              color: Theme.of(context).colorScheme.outlineVariant.withValues(
+                    alpha: KubusGlassEffects.glassBorderOpacityStrong,
+                  ),
+            ),
+            bottom: BorderSide(
+              color: Theme.of(context).colorScheme.outlineVariant.withValues(
+                    alpha: KubusGlassEffects.glassBorderOpacityStrong,
+                  ),
+            ),
           ),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: scheme.shadow.withValues(alpha: 0.10),
-            blurRadius: 16,
-            offset: const Offset(-4, 0),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        child: LiquidGlassPanel(
-          padding: EdgeInsets.zero,
-          margin: EdgeInsets.zero,
-          borderRadius: BorderRadius.zero,
-          showBorder: false,
-          backgroundColor: glassTint,
-          child: content,
-        ),
+        child: content,
       ),
     );
 

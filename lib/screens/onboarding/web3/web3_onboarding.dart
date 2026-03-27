@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../config/config.dart';
 import '../../../services/onboarding_state_service.dart';
 import 'package:provider/provider.dart';
+import '../../../utils/design_tokens.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../widgets/gradient_icon_card.dart';
 import '../../../widgets/glass_components.dart';
@@ -215,7 +215,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
               Flexible(
                 child: Text(
                   widget.featureTitle,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: isWideScreen ? 28 : isTablet ? 26 : isSmallScreen ? 20 : 24,
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -227,7 +227,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                 onPressed: _skipOnboarding,
                 child: Text(
                   l10n.commonSkip,
-                  style: GoogleFonts.inter(
+                  style: KubusTypography.inter(
                     fontSize: isWideScreen ? 18 : isTablet ? 17 : isSmallScreen ? 14 : 16,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
@@ -274,7 +274,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                   SizedBox(height: isVerySmallScreen ? 20 : isSmallScreen ? 30 : isTablet ? 48 : isWideScreen ? 56 : 40),
                   Text(
                     page.title,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: isVerySmallScreen ? 20 : isSmallScreen ? 24 : isTablet ? 32 : isWideScreen ? 36 : 28,
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -284,7 +284,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                   SizedBox(height: isVerySmallScreen ? 8 : isSmallScreen ? 12 : isTablet ? 20 : isWideScreen ? 24 : 16),
                   Text(
                     page.description,
-                    style: GoogleFonts.inter(
+                    style: KubusTypography.inter(
                       fontSize: isVerySmallScreen ? 14 : isSmallScreen ? 15 : isTablet ? 18 : isWideScreen ? 20 : 16,
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
                       height: 1.5,
@@ -325,7 +325,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
           Expanded(
             child: Text(
               feature,
-              style: GoogleFonts.inter(
+              style: KubusTypography.inter(
                 fontSize: isSmallScreen ? 13 : isTablet ? 16 : isWideScreen ? 18 : 14,
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9),
               ),
@@ -388,7 +388,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                         ),
                         child: Text(
                           l10n.commonBack,
-                          style: GoogleFonts.inter(
+                          style: KubusTypography.inter(
                             fontSize: isWideScreen ? 18 : isTablet ? 17 : isSmallScreen ? 14 : 16,
                             fontWeight: FontWeight.w600,
                           ),
@@ -413,7 +413,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                       ),
                       child: Text(
                         _currentPage == widget.pages.length - 1 ? l10n.commonGetStarted : l10n.commonNext,
-                        style: GoogleFonts.inter(
+                        style: KubusTypography.inter(
                           fontSize: isWideScreen ? 18 : isTablet ? 17 : isSmallScreen ? 14 : 16,
                           fontWeight: FontWeight.w600,
                         ),
@@ -462,5 +462,4 @@ Future<bool> isOnboardingNeeded(String featureKey) async {
   // Otherwise, check if this specific feature onboarding was completed
   return !(prefs.getBool('${featureKey}_onboarding_completed') ?? false);
 }
-
 

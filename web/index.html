@@ -97,6 +97,7 @@
   <style id="kubus-maplibre-attribution-style">
     :root {
       --kubus-mobile-map-attrib-bottom: 0px;
+      --kubus-desktop-map-attrib-bottom: 0px;
     }
 
     /*
@@ -114,9 +115,31 @@
       user-select: none;
     }
 
-    body.kubus-mobile-map .maplibregl-ctrl-bottom-left {
+    body.kubus-mobile-map .maplibregl-ctrl-bottom-left,
+    body.kubus-mobile-map .maplibregl-ctrl-bottom-right {
       left: 12px !important;
+      right: auto !important;
       bottom: var(--kubus-mobile-map-attrib-bottom) !important;
+    }
+
+    body.kubus-desktop-map .maplibregl-ctrl-bottom-left,
+    body.kubus-desktop-map .maplibregl-ctrl-bottom-right {
+      left: 24px !important;
+      right: auto !important;
+      bottom: var(--kubus-desktop-map-attrib-bottom) !important;
+    }
+
+    body.kubus-mobile-map .maplibregl-ctrl-attrib,
+    body.kubus-mobile-map .maplibregl-ctrl-attrib-button,
+    body.kubus-desktop-map .maplibregl-ctrl-attrib,
+    body.kubus-desktop-map .maplibregl-ctrl-attrib-button {
+      background: transparent !important;
+      box-shadow: none !important;
+      border: 0 !important;
+      opacity: 0.42;
+      font-size: 11px !important;
+      line-height: 1.25 !important;
+      backdrop-filter: none !important;
     }
   </style>
   <script>
