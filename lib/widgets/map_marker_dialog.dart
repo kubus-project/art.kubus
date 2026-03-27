@@ -7,6 +7,7 @@ import '../models/artwork.dart';
 import '../models/map_marker_subject.dart';
 import '../utils/map_marker_subject_loader.dart';
 import 'glass_components.dart';
+import 'common/keyboard_inset_padding.dart';
 import 'map/panels/kubus_marker_form_content.dart';
 
 class MapMarkerFormResult {
@@ -62,7 +63,8 @@ class MapMarkerDialog extends StatelessWidget {
   static Future<MapMarkerFormResult?> show({
     required BuildContext context,
     required MarkerSubjectData subjectData,
-    required Future<MarkerSubjectData?> Function({bool force}) onRefreshSubjects,
+    required Future<MarkerSubjectData?> Function({bool force})
+        onRefreshSubjects,
     required LatLng initialPosition,
     bool allowManualPosition = false,
     LatLng? mapCenter,
@@ -77,15 +79,13 @@ class MapMarkerDialog extends StatelessWidget {
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
-        builder: (_) => Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
+        builder: (_) => KeyboardInsetPadding(
           child: Align(
             alignment: Alignment.centerLeft,
-              child: ConstrainedBox(
+            child: ConstrainedBox(
               constraints: BoxConstraints(
-                maxWidth: KubusSizes.dialogWidthMd + KubusSizes.sidebarActionIconBox,
+                maxWidth:
+                    KubusSizes.dialogWidthMd + KubusSizes.sidebarActionIconBox,
                 maxHeight: MediaQuery.of(context).size.height * 0.9,
               ),
               child: Material(

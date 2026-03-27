@@ -22,6 +22,7 @@ import 'screens/auth/sign_in_screen.dart';
 import 'screens/desktop/desktop_shell.dart';
 import 'utils/app_animations.dart';
 import 'utils/design_tokens.dart';
+import 'utils/keyboard_inset_resolver.dart';
 import 'widgets/glass_components.dart';
 import 'widgets/mobile_shell_exit_scope.dart';
 import 'widgets/user_persona_onboarding_gate.dart';
@@ -128,7 +129,7 @@ class _MainAppState extends State<MainApp> {
     MobileShellRegistry.instance.register(context);
 
     final currentIndex = context.watch<MainTabProvider>().currentIndex;
-    final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
+    final keyboardVisible = KeyboardInsetResolver.isKeyboardVisible(context);
 
     // Ensure the currently visible tab is mounted.
     _mountedTabs.add(currentIndex);
@@ -145,8 +146,7 @@ class _MainAppState extends State<MainApp> {
         // Keep heavy AR resources out of the tree unless the AR tab is active.
         children: _buildScreens(currentIndex),
       ),
-      bottomNavigationBar:
-          keyboardVisible ? null : _buildBottomNavigationBar(),
+      bottomNavigationBar: keyboardVisible ? null : _buildBottomNavigationBar(),
     );
 
     // On web, MapLibre is rendered via a platform view (MapLibre GL JS).

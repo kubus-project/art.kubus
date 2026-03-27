@@ -91,6 +91,7 @@ import '../../widgets/map/controls/kubus_map_primary_controls.dart'
 import '../../widgets/map/cards/kubus_discovery_card.dart';
 import '../../widgets/map/filters/kubus_map_marker_layer_chips.dart';
 import '../../widgets/map/dialogs/kubus_map_attribution_dialog.dart';
+import '../../widgets/map/kubus_map_glass_surface.dart';
 import '../../widgets/common/kubus_filter_panel.dart';
 import '../../widgets/common/kubus_glass_chip.dart';
 import '../../widgets/common/kubus_glass_icon_button.dart';
@@ -1932,6 +1933,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     return ListenableBuilder(
       listenable: _mapSearchController,
       builder: (context, _) {
+        final useMapBlur = kubusMapBlurEnabled(context);
         final state = _mapSearchController.state;
         final trimmed = state.query.trim();
         final shouldShow = state.isOverlayVisible &&
@@ -1978,7 +1980,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               active: _showFiltersPanel,
               accentColor: themeProvider.accentColor,
               borderRadius: 10,
-              enableBlur: !kIsWeb,
+              enableBlur: useMapBlur,
               onPressed: () {
                 setState(() {
                   _showFiltersPanel = !_showFiltersPanel;
@@ -2008,6 +2010,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Widget _buildDesktopSearchField(AppLocalizations l10n) {
+    final useMapBlur = kubusMapBlurEnabled(context);
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 480),
       child: CompositedTransformTarget(
@@ -2023,7 +2026,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 controller: _mapSearchController.textController,
                 focusNode: _mapSearchController.focusNode,
                 hintText: l10n.mapSearchHint,
-                enableBlur: !kIsWeb,
+                enableBlur: useMapBlur,
                 onChanged: (value) {
                   _mapSearchController.onQueryChanged(
                     context,
@@ -2040,6 +2043,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Widget _buildDesktopFilterChipRow(ThemeProvider themeProvider) {
+    final useMapBlur = kubusMapBlurEnabled(context);
     return KeyedSubtree(
       key: _tutorialFilterChipsKey,
       child: Row(
@@ -2053,7 +2057,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 active: isActive,
                 accentColor: themeProvider.accentColor,
                 borderRadius: 10,
-                enableBlur: !kIsWeb,
+                enableBlur: useMapBlur,
                 onPressed: () {
                 setState(() => _selectedFilter = filter);
                 // Reload markers so the nearby panel reflects the new filter.
@@ -2083,6 +2087,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final scheme = Theme.of(context).colorScheme;
     final accent = themeProvider.accentColor;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final useMapBlur = kubusMapBlurEnabled(context);
     final coverUrl = ArtworkMediaResolver.resolveCover(
       artwork: artwork,
       metadata:
@@ -2327,7 +2332,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     accentColor: themeProvider.accentColor,
                     activeTint: scheme.error.withValues(alpha: 0.18),
                     activeIconColor: scheme.error,
-                    enableBlur: !kIsWeb,
+                    enableBlur: useMapBlur,
                     onPressed: () {
                       unawaited(artworkProvider.toggleLike(artwork.id));
                     },
@@ -2336,7 +2341,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     icon: Icons.share,
                     accentColor: themeProvider.accentColor,
                     tooltip: AppLocalizations.of(context)!.commonShare,
-                    enableBlur: !kIsWeb,
+                    enableBlur: useMapBlur,
                     onPressed: () {
                       ShareService().showShareSheet(
                         context,
@@ -2621,6 +2626,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
+    final useMapBlur = kubusMapBlurEnabled(context);
     return KubusFilterPanel(
       title: l10n.mapFiltersTitle,
       onClose: () => setState(() => _showFiltersPanel = false),
@@ -2738,7 +2744,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 backgroundColor:
                     scheme.surface.withValues(alpha: isDark ? 0.16 : 0.12),
                 showBorder: true,
-                enableBlur: !kIsWeb,
+                enableBlur: useMapBlur,
                 child: Text(
                   l10n.commonDistanceKm(
                     _searchRadius.toStringAsFixed(1),
@@ -2874,12 +2880,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Widget _buildDesktopAttributionButton() {
+    final useMapBlur = kubusMapBlurEnabled(context);
     return KubusGlassIconButton(
       icon: Icons.info_outline,
       tooltip: 'Map attributions',
       borderRadius: KubusRadius.sm,
       iconColor: Theme.of(context).colorScheme.primary,
-      enableBlur: !kIsWeb,
+      enableBlur: useMapBlur,
       onPressed: () => unawaited(showKubusMapAttributionDialog(context)),
     );
   }

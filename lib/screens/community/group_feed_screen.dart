@@ -1,4 +1,4 @@
-﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 
 import 'package:flutter/material.dart';
@@ -28,6 +28,7 @@ import '../../utils/user_profile_navigation.dart';
 import '../../widgets/app_loading.dart';
 import '../../utils/design_tokens.dart';
 import '../../widgets/avatar_widget.dart';
+import '../../widgets/common/keyboard_inset_padding.dart';
 import '../../widgets/community/community_post_card.dart';
 import '../../widgets/community/community_post_options_sheet.dart';
 import '../../widgets/community/community_subject_picker.dart';
@@ -90,7 +91,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                       ? l10n.commonJoined
                       : l10n.commonJoin;
               return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 child: ElevatedButton(
                   onPressed: isOwner
                       ? null
@@ -144,9 +146,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                     child: Row(
                       children: [
                         Icon(Icons.warning,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onErrorContainer),
+                            color:
+                                Theme.of(context).colorScheme.onErrorContainer),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
@@ -203,7 +204,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     return match;
   }
 
-  Widget _buildComposer(CommunityGroupSummary summary, CommunityHubProvider hub) {
+  Widget _buildComposer(
+      CommunityGroupSummary summary, CommunityHubProvider hub) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final profileProvider = context.watch<ProfileProvider>();
@@ -225,7 +227,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
             Expanded(
               child: Text(
                 l10n.groupFeedSignInToPostLabel,
-                style: KubusTypography.inter(color: scheme.onSurface.withValues(alpha: 0.8)),
+                style: KubusTypography.inter(
+                    color: scheme.onSurface.withValues(alpha: 0.8)),
               ),
             ),
             TextButton(
@@ -246,16 +249,20 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
         ),
         child: Row(
           children: [
-            Icon(Icons.lock_outline, color: scheme.onSurface.withValues(alpha: 0.7)),
+            Icon(Icons.lock_outline,
+                color: scheme.onSurface.withValues(alpha: 0.7)),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 l10n.groupFeedJoinToPostLabel,
-                style: KubusTypography.inter(color: scheme.onSurface.withValues(alpha: 0.8)),
+                style: KubusTypography.inter(
+                    color: scheme.onSurface.withValues(alpha: 0.8)),
               ),
             ),
             TextButton(
-              onPressed: _membershipInFlight ? null : () => _toggleMembership(hub, summary),
+              onPressed: _membershipInFlight
+                  ? null
+                  : () => _toggleMembership(hub, summary),
               child: Text(l10n.commonJoin),
             ),
           ],
@@ -330,7 +337,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
               ),
               const Spacer(),
               ElevatedButton(
-                onPressed: _posting ? null : () => _submitGroupPost(summary, hub),
+                onPressed:
+                    _posting ? null : () => _submitGroupPost(summary, hub),
                 child: _posting
                     ? const SizedBox(
                         width: 18,
@@ -363,13 +371,15 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     });
   }
 
-  Future<void> _submitGroupPost(CommunityGroupSummary summary, CommunityHubProvider hub) async {
+  Future<void> _submitGroupPost(
+      CommunityGroupSummary summary, CommunityHubProvider hub) async {
     if (_posting) return;
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final content = _composerController.text.trim();
     if (content.isEmpty) {
-      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.communityComposerAddContentToast)));
+      messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.communityComposerAddContentToast)));
       return;
     }
 
@@ -496,7 +506,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                   summary.isPublic ? Icons.public : Icons.lock,
                   size: 16,
                 ),
-                label: Text(summary.isPublic ? l10n.commonPublic : l10n.commonPrivate),
+                label: Text(
+                    summary.isPublic ? l10n.commonPublic : l10n.commonPrivate),
               ),
             ],
           ),
@@ -505,7 +516,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     );
   }
 
-  Widget _buildComposerSubjectSelector(CommunityPostDraft draft, CommunityHubProvider hub) {
+  Widget _buildComposerSubjectSelector(
+      CommunityPostDraft draft, CommunityHubProvider hub) {
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final subjectProvider = context.read<CommunitySubjectProvider>();
@@ -523,7 +535,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       preview = CommunitySubjectPreview(
         ref: CommunitySubjectRef(type: 'artwork', id: draft.artwork!.id),
         title: draft.artwork!.title,
-        imageUrl: MediaUrlResolver.resolve(draft.artwork!.imageUrl) ?? draft.artwork!.imageUrl,
+        imageUrl: MediaUrlResolver.resolve(draft.artwork!.imageUrl) ??
+            draft.artwork!.imageUrl,
       );
     }
 
@@ -550,8 +563,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     return InkWell(
       borderRadius: BorderRadius.circular(18),
       onTap: () async {
-        final selection =
-            await CommunitySubjectPicker.pick(context, initialType: draft.subjectType);
+        final selection = await CommunitySubjectPicker.pick(context,
+            initialType: draft.subjectType);
         if (selection == null) return;
         if (selection.cleared) {
           hub.setDraftSubject();
@@ -561,7 +574,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
         final selected = selection.preview;
         if (selected == null) return;
         subjectProvider.upsertPreview(selected);
-        hub.setDraftSubject(type: selected.ref.normalizedType, id: selected.ref.id);
+        hub.setDraftSubject(
+            type: selected.ref.normalizedType, id: selected.ref.id);
         if (selected.ref.normalizedType == 'artwork') {
           hub.setDraftArtwork(
             CommunityArtworkReference(
@@ -683,7 +697,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       onToggleLike: () => _toggleLike(post),
       onOpenComments: () => _openPostDetail(post),
       onRepost: () {
-        final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+        final walletProvider =
+            Provider.of<WalletProvider>(context, listen: false);
         final currentWallet = walletProvider.currentWalletAddress;
         if (post.postType == 'repost' && post.authorWallet == currentWallet) {
           _showRepostOptions(post);
@@ -704,7 +719,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     );
   }
 
-  void _openPostDetail(CommunityPost post, {PostDetailInitialAction? initialAction}) {
+  void _openPostDetail(CommunityPost post,
+      {PostDetailInitialAction? initialAction}) {
     final hub = Provider.of<CommunityHubProvider>(context, listen: false);
     final groupId = post.groupId ?? _group.id;
     Navigator.push(
@@ -728,7 +744,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
 
   String? _currentWalletAddress() {
     try {
-      return Provider.of<WalletProvider>(context, listen: false).currentWalletAddress;
+      return Provider.of<WalletProvider>(context, listen: false)
+          .currentWalletAddress;
     } catch (_) {
       return null;
     }
@@ -738,24 +755,27 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     if (!mounted) return;
     final currentWallet = _currentWalletAddress();
     final authorWallet = post.authorWallet ?? post.authorId;
-    final isOwner =
-        currentWallet != null && WalletUtils.equals(authorWallet, currentWallet);
+    final isOwner = currentWallet != null &&
+        WalletUtils.equals(authorWallet, currentWallet);
 
     showCommunityPostOptionsSheet(
       context: context,
       post: post,
       isOwner: isOwner,
-      onReport: () => _openPostDetail(post, initialAction: PostDetailInitialAction.report),
-      onEdit: () => _openPostDetail(post, initialAction: PostDetailInitialAction.edit),
-      onDelete: () => _openPostDetail(post, initialAction: PostDetailInitialAction.delete),
+      onReport: () =>
+          _openPostDetail(post, initialAction: PostDetailInitialAction.report),
+      onEdit: () =>
+          _openPostDetail(post, initialAction: PostDetailInitialAction.edit),
+      onDelete: () =>
+          _openPostDetail(post, initialAction: PostDetailInitialAction.delete),
     );
   }
 
   Future<void> _toggleLike(CommunityPost post) async {
     final wasLiked = post.isLiked;
     final l10n = AppLocalizations.of(context)!;
-    final walletAddress =
-        Provider.of<WalletProvider>(context, listen: false).currentWalletAddress;
+    final walletAddress = Provider.of<WalletProvider>(context, listen: false)
+        .currentWalletAddress;
 
     try {
       await CommunityService.togglePostLike(
@@ -769,7 +789,9 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(
-            !wasLiked ? l10n.postDetailPostLikedToast : l10n.postDetailLikeRemovedToast,
+            !wasLiked
+                ? l10n.postDetailPostLikedToast
+                : l10n.postDetailLikeRemovedToast,
           ),
           duration: const Duration(seconds: 1),
         ),
@@ -870,7 +892,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -935,8 +958,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                                 textAlign: TextAlign.center,
                                 style: KubusTypography.inter(
                                   fontSize: 13,
-                                  color:
-                                      theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                                  color: theme.colorScheme.onSurface
+                                      .withValues(alpha: 0.7),
                                 ),
                               ),
                             ],
@@ -968,8 +991,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                             : rawUsername;
                         final walletAddress = (user.walletAddress ?? '').trim();
                         final wallet = walletAddress.isNotEmpty
-                          ? walletAddress
-                          : user.userId.trim();
+                            ? walletAddress
+                            : user.userId.trim();
 
                         final formatted = CreatorDisplayFormat.format(
                           fallbackLabel: l10n.commonUnknown,
@@ -989,7 +1012,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                           ),
                           title: Text(
                             formatted.primary,
-                            style: KubusTypography.inter(fontWeight: FontWeight.w600),
+                            style: KubusTypography.inter(
+                                fontWeight: FontWeight.w600),
                           ),
                           subtitle: subtitle == null
                               ? null
@@ -1062,11 +1086,11 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
             Expanded(
               child: FutureBuilder<List<Map<String, dynamic>>>(
                 future: BackendApiService().getPostReposts(postId: post.id),
-                  builder: (context, snapshot) {
-                    final l10n = AppLocalizations.of(context)!;
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
+                builder: (context, snapshot) {
+                  final l10n = AppLocalizations.of(context)!;
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
                   if (snapshot.hasError) {
                     return Center(
                       child: Text(
@@ -1091,18 +1115,22 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                     itemBuilder: (ctx, idx) {
                       final repost = reposts[idx];
                       final user = repost['user'] as Map<String, dynamic>?;
-                      final rawUsername = (user?['username'] ?? '').toString().trim();
+                      final rawUsername =
+                          (user?['username'] ?? '').toString().trim();
                       final username = rawUsername.startsWith('@')
                           ? rawUsername.substring(1).trim()
                           : rawUsername;
                       final wallet = WalletUtils.coalesce(
                         walletAddress: user?['walletAddress']?.toString(),
-                        wallet: user?['wallet_address']?.toString() ?? user?['wallet']?.toString(),
+                        wallet: user?['wallet_address']?.toString() ??
+                            user?['wallet']?.toString(),
                         userId: user?['id']?.toString(),
                         fallback: '',
                       );
                       final displayName =
-                          (user?['displayName'] ?? user?['display_name'])?.toString().trim();
+                          (user?['displayName'] ?? user?['display_name'])
+                              ?.toString()
+                              .trim();
                       final avatar = user?['avatar'];
                       final comment = repost['repostComment'] as String?;
                       final createdAt =
@@ -1119,14 +1147,17 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                         leading: AvatarWidget(
                           wallet: wallet.isNotEmpty
                               ? wallet
-                              : (username.isNotEmpty ? username : l10n.commonUnknown),
+                              : (username.isNotEmpty
+                                  ? username
+                                  : l10n.commonUnknown),
                           avatarUrl: avatar,
                           radius: 20,
                           allowFabricatedFallback: false,
                         ),
                         title: Text(
                           formatted.primary,
-                          style: KubusTypography.inter(fontWeight: FontWeight.w600),
+                          style: KubusTypography.inter(
+                              fontWeight: FontWeight.w600),
                         ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1181,8 +1212,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (sheetContext) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      builder: (sheetContext) => KeyboardInsetPadding(
         child: Container(
           height: MediaQuery.of(context).size.height * 0.75,
           decoration: BoxDecoration(
@@ -1201,7 +1231,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -1248,13 +1279,15 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                                   content: Text(
                                     content.isEmpty
                                         ? l10n.postDetailRepostSuccessToast
-                                        : l10n.postDetailRepostWithCommentSuccessToast,
+                                        : l10n
+                                            .postDetailRepostWithCommentSuccessToast,
                                   ),
                                 ),
                               );
                             } catch (e) {
                               if (kDebugMode) {
-                                debugPrint('GroupFeedScreen: repost failed: $e');
+                                debugPrint(
+                                    'GroupFeedScreen: repost failed: $e');
                               }
                               if (!mounted) return;
                               messenger.showKubusSnackBar(
@@ -1337,7 +1370,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
               ),
             ),
             ListTile(
-              leading: Icon(Icons.delete_outline, color: theme.colorScheme.error),
+              leading:
+                  Icon(Icons.delete_outline, color: theme.colorScheme.error),
               title: Text(
                 l10n.communityUnrepostAction,
                 style: KubusTypography.inter(color: theme.colorScheme.error),
@@ -1360,7 +1394,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
-        title: Text(l10n.communityUnrepostTitle, style: KubusTypography.inter()),
+        title:
+            Text(l10n.communityUnrepostTitle, style: KubusTypography.inter()),
         content: Text(
           l10n.communityUnrepostConfirmBody,
           style: KubusTypography.inter(),
@@ -1426,5 +1461,3 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     }
   }
 }
-
-

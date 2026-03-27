@@ -276,19 +276,38 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
             continue;
           }
 
-          final username = (s['text'] ?? '').toString();
+          final username =
+              (s['username'] ?? s['text'] ?? s['label'] ?? '').toString();
           if (username.isEmpty) continue;
           profiles.add(_ProfileSuggestion(
             username: username,
-            displayName: (s['secondaryText'] ?? s['secondary_text'] ?? '')
+            displayName: (s['displayName'] ??
+                        s['display_name'] ??
+                        s['subtitle'] ??
+                        s['secondaryText'] ??
+                        s['secondary_text'] ??
+                        '')
                     .toString()
                     .trim()
                     .isEmpty
                 ? null
-                : (s['secondaryText'] ?? s['secondary_text']).toString(),
-            avatarUrl: (s['icon'] ?? '').toString().trim().isEmpty
+                : (s['displayName'] ??
+                        s['display_name'] ??
+                        s['subtitle'] ??
+                        s['secondaryText'] ??
+                        s['secondary_text'])
+                    .toString(),
+            avatarUrl: (s['avatarUrl'] ?? s['avatar_url'] ?? s['imageUrl'] ?? s['image_url'] ?? s['icon'] ?? '')
+                    .toString()
+                    .trim()
+                    .isEmpty
                 ? null
-                : (s['icon']).toString(),
+                : (s['avatarUrl'] ??
+                        s['avatar_url'] ??
+                        s['imageUrl'] ??
+                        s['image_url'] ??
+                        s['icon'])
+                    .toString(),
           ));
         }
 

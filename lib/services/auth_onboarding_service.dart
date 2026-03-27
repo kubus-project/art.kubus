@@ -21,6 +21,7 @@ class AuthOnboardingService {
     'verifyEmail',
     'role',
     'profile',
+    'walletBackupIntro',
     'walletBackup',
     'daoReview',
     'accountPermissions',
@@ -32,6 +33,7 @@ class AuthOnboardingService {
     'verifyEmail',
     'role',
     'profile',
+    'walletBackupIntro',
     'walletBackup',
     'daoReview',
     'accountPermissions',
@@ -87,6 +89,13 @@ class AuthOnboardingService {
         .where(isAccountStepId)
         .map((step) => step.trim())
         .toSet();
+    if (completedSteps.contains('walletBackup')) {
+      completedSteps.add('walletBackupIntro');
+    }
+    if (deferredSteps.contains('walletBackup') &&
+        !completedSteps.contains('walletBackupIntro')) {
+      deferredSteps.add('walletBackupIntro');
+    }
     final hasSavedProgress =
         completedSteps.isNotEmpty || deferredSteps.isNotEmpty;
 
@@ -95,8 +104,12 @@ class AuthOnboardingService {
     String? normalizedHeuristic = isAccountStepId(heuristicNextStepId)
         ? heuristicNextStepId!.trim()
         : null;
-    if (!walletBackupOnboardingEnabled && normalizedHeuristic == 'walletBackup') {
+    if (!walletBackupOnboardingEnabled &&
+        normalizedHeuristic == 'walletBackup') {
       normalizedHeuristic = null;
+    } else if (normalizedHeuristic == 'walletBackup' &&
+        walletBackupOnboardingEnabled) {
+      normalizedHeuristic = 'walletBackupIntro';
     }
     final normalizedPersona = (persona ?? '').trim().toLowerCase();
     final requiresDaoReview = completedSteps.contains('daoReview') ||
@@ -133,7 +146,7 @@ class AuthOnboardingService {
 
     if (hasAuthenticatedSession && hasHydratedProfile) {
       final nextStepId = requiresWalletBackupStep
-          ? 'walletBackup'
+          ? 'walletBackupIntro'
           : (requiresDaoReview ? 'daoReview' : 'accountPermissions');
       return StructuredOnboardingResumeState(
         requiresStructuredOnboarding: true,
@@ -170,6 +183,7 @@ class AuthOnboardingService {
       if (requiresVerifyEmail) 'verifyEmail',
       'role',
       'profile',
+      if (requiresWalletBackup) 'walletBackupIntro',
       if (requiresWalletBackup) 'walletBackup',
       if (requiresDaoReview) 'daoReview',
       'accountPermissions',

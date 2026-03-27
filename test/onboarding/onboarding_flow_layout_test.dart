@@ -13,6 +13,7 @@ import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/http_client_factory.dart';
 import 'package:art_kubus/widgets/auth_title_row.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
+import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -129,8 +130,8 @@ void main() {
 
     expect(find.byType(PageView), findsNothing);
     expect(find.text('Welcome to art.kubus'), findsOneWidget);
-    expect(find.text('Create an account'), findsOneWidget);
-    expect(find.text('Discover art'), findsOneWidget);
+    expect(find.text('Create an account'), findsWidgets);
+    expect(find.text('Discover art'), findsWidgets);
     expect(find.text('Sign in'), findsOneWidget);
   });
 
@@ -149,8 +150,8 @@ void main() {
 
     final createAccountButton = find.text('Create an account');
     final discoverArtButton = find.text('Discover art');
-    expect(createAccountButton, findsOneWidget);
-    expect(discoverArtButton, findsOneWidget);
+    expect(createAccountButton, findsWidgets);
+    expect(discoverArtButton, findsWidgets);
     expect(find.text('Welcome to art.kubus'), findsOneWidget);
   });
 
@@ -168,7 +169,7 @@ void main() {
     await _pumpOnboardingReady(tester);
 
     // Tap "Discover art" to enter guest branch
-    await tester.tap(find.text('Discover art'));
+    await tester.tap(find.widgetWithText(KubusButton, 'Discover art'));
     await tester.pumpAndSettle();
 
     // Should show permissions step
@@ -191,14 +192,15 @@ void main() {
     await _pumpOnboardingReady(tester);
 
     // Tap "Create an account" to enter account branch
-    await tester.tap(find.text('Create an account'));
+    await tester
+        .tap(find.widgetWithText(KubusOutlineButton, 'Create an account'));
     await tester.pumpAndSettle();
 
     // Should show account step with auth panel
     expect(find.text('Create your account'), findsOneWidget);
   });
 
-  testWidgets('wallet backup step renders when backup is required',
+  testWidgets('wallet backup intro step renders when backup is required',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() async => tester.binding.setSurfaceSize(null));
@@ -212,13 +214,21 @@ void main() {
 
     await tester.pumpWidget(
       _buildTestApp(
-        child: const OnboardingFlowScreen(initialStepId: 'walletBackup'),
+        child: const OnboardingFlowScreen(initialStepId: 'walletBackupIntro'),
         locale: const Locale('en'),
       ),
     );
     await _pumpOnboardingReady(tester);
 
-    expect(find.text('Back up your recovery phrase'), findsOneWidget);
+    expect(find.text('Protect your wallet access'), findsOneWidget);
+    expect(find.text('Reveal and copy phrase'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Encrypted server backup'),
+      250,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(find.text('Encrypted server backup'), findsOneWidget);
   });
 
   testWidgets(
@@ -379,7 +389,9 @@ void main() {
     await _pumpOnboardingReady(tester);
 
     expect(find.text('DAO review'), findsOneWidget);
-    expect(find.text('Submit your practice for DAO review before the account setup is completed.'),
+    expect(
+        find.text(
+            'Submit your practice for DAO review before the account setup is completed.'),
         findsOneWidget);
   });
 
@@ -436,7 +448,8 @@ void main() {
     await _pumpOnboardingReady(tester);
 
     // Enter account branch to get the header with AuthTitleRow
-    await tester.tap(find.text('Create an account'));
+    await tester
+        .tap(find.widgetWithText(KubusOutlineButton, 'Create an account'));
     await tester.pumpAndSettle();
 
     final titleSize = tester.getSize(find.byType(AuthTitleRow).first);
@@ -460,8 +473,8 @@ void main() {
     expect(tester.takeException(), isNull);
 
     // Unified welcome screen should render without overflow on small heights
-    expect(find.text('Create an account'), findsOneWidget);
-    expect(find.text('Discover art'), findsOneWidget);
+    expect(find.text('Create an account'), findsWidgets);
+    expect(find.text('Discover art'), findsWidgets);
   });
 
   testWidgets(

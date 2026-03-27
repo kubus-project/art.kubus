@@ -1101,146 +1101,146 @@ class _InstitutionHubState extends State<InstitutionHub> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
-        final viewInsets = MediaQuery.of(sheetContext).viewInsets.bottom;
         final scheme = Theme.of(context).colorScheme;
         final roles = KubusColorRoles.of(context);
-        return Padding(
-          padding: EdgeInsets.only(bottom: viewInsets),
-          child: SingleChildScrollView(
-            child: BackdropGlassSheet(
-              padding: const EdgeInsets.all(KubusSpacing.lg),
-              showHandle: false,
-              backgroundColor:
-                  scheme.surfaceContainerHighest.withValues(alpha: 0.18),
-              child: Form(
-                key: _applicationFormKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    KubusSheetHeader(
-                      title: 'Institution application',
-                      subtitle:
-                          'Share your mission, programming focus, and how you plan to collaborate with the DAO.',
-                      showHandle: false,
+        return SingleChildScrollView(
+          child: BackdropGlassSheet(
+            padding: const EdgeInsets.all(KubusSpacing.lg),
+            showHandle: false,
+            backgroundColor:
+                scheme.surfaceContainerHighest.withValues(alpha: 0.18),
+            child: Form(
+              key: _applicationFormKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  KubusSheetHeader(
+                    title: 'Institution application',
+                    subtitle:
+                        'Share your mission, programming focus, and how you plan to collaborate with the DAO.',
+                    showHandle: false,
+                  ),
+                  const SizedBox(height: KubusSpacing.sm),
+                  TextFormField(
+                    controller: _organizationController,
+                    decoration: const InputDecoration(
+                      labelText: 'Organization name',
+                      border: OutlineInputBorder(),
                     ),
-                    const SizedBox(height: KubusSpacing.sm),
-                    TextFormField(
-                      controller: _organizationController,
-                      decoration: const InputDecoration(
-                        labelText: 'Organization name',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) =>
-                          (value == null || value.trim().isEmpty)
-                              ? 'Please provide your organization name'
-                              : null,
+                    validator: (value) =>
+                        (value == null || value.trim().isEmpty)
+                            ? 'Please provide your organization name'
+                            : null,
+                  ),
+                  const SizedBox(height: KubusSpacing.md),
+                  TextFormField(
+                    controller: _contactController,
+                    decoration: const InputDecoration(
+                      labelText: 'Website or contact email',
+                      border: OutlineInputBorder(),
                     ),
-                    const SizedBox(height: KubusSpacing.md),
-                    TextFormField(
-                      controller: _contactController,
-                      decoration: const InputDecoration(
-                        labelText: 'Website or contact email',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) =>
-                          (value == null || value.trim().isEmpty)
-                              ? 'Share a website or contact email'
-                              : null,
+                    validator: (value) =>
+                        (value == null || value.trim().isEmpty)
+                            ? 'Share a website or contact email'
+                            : null,
+                  ),
+                  const SizedBox(height: KubusSpacing.md),
+                  TextFormField(
+                    controller: _focusController,
+                    decoration: const InputDecoration(
+                      labelText: 'Curation focus',
+                      border: OutlineInputBorder(),
                     ),
-                    const SizedBox(height: KubusSpacing.md),
-                    TextFormField(
-                      controller: _focusController,
-                      decoration: const InputDecoration(
-                        labelText: 'Curation focus',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) =>
-                          (value == null || value.trim().isEmpty)
-                              ? 'Let us know your programming focus'
-                              : null,
+                    validator: (value) =>
+                        (value == null || value.trim().isEmpty)
+                            ? 'Let us know your programming focus'
+                            : null,
+                  ),
+                  const SizedBox(height: KubusSpacing.md),
+                  TextFormField(
+                    controller: _missionController,
+                    maxLines: 4,
+                    decoration: const InputDecoration(
+                      labelText: 'Mission and goals',
+                      alignLabelWithHint: true,
+                      border: OutlineInputBorder(),
                     ),
-                    const SizedBox(height: KubusSpacing.md),
-                    TextFormField(
-                      controller: _missionController,
-                      maxLines: 4,
-                      decoration: const InputDecoration(
-                        labelText: 'Mission and goals',
-                        alignLabelWithHint: true,
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) => (value == null ||
-                              value.trim().length < 20)
-                          ? 'Describe your mission in at least 20 characters'
-                          : null,
-                    ),
-                    const SizedBox(height: KubusSpacing.lg),
-                    SizedBox(
-                      width: double.infinity,
-                      child: KubusButton(
-                        onPressed: () async {
-                          if (!_applicationFormKey.currentState!.validate()) {
-                            return;
-                          }
-                          final profileProvider =
-                              context.read<ProfileProvider>();
-                          final web3Provider = context.read<Web3Provider>();
-                          final daoProvider = context.read<DAOProvider>();
-                          final wallet =
-                              profileProvider.currentUser?.walletAddress ??
-                                  web3Provider.walletAddress;
-                          if (wallet.isEmpty) {
-                            scaffold.showKubusSnackBar(
-                              const SnackBar(
-                                  content: Text(
-                                      'Connect your wallet before submitting.')),
+                    validator: (value) =>
+                        (value == null || value.trim().length < 20)
+                            ? 'Describe your mission in at least 20 characters'
+                            : null,
+                  ),
+                  const SizedBox(height: KubusSpacing.lg),
+                  SizedBox(
+                    width: double.infinity,
+                    child: KubusButton(
+                      onPressed: () async {
+                        if (!_applicationFormKey.currentState!.validate()) {
+                          return;
+                        }
+                        final profileProvider = context.read<ProfileProvider>();
+                        final web3Provider = context.read<Web3Provider>();
+                        final daoProvider = context.read<DAOProvider>();
+                        final wallet =
+                            profileProvider.currentUser?.walletAddress ??
+                                web3Provider.walletAddress;
+                        if (wallet.isEmpty) {
+                          scaffold.showKubusSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Connect your wallet before submitting.',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+                        Navigator.pop(sheetContext);
+                        try {
+                          final review =
+                              await daoProvider.submitInstitutionReview(
+                            walletAddress: wallet,
+                            organization: _organizationController.text.trim(),
+                            contact: _contactController.text.trim(),
+                            focus: _focusController.text.trim(),
+                            mission: _missionController.text.trim(),
+                          );
+                          if (!mounted) return;
+                          if (review != null) {
+                            await _loadInstitutionReviewStatus(
+                              forceRefresh: true,
                             );
-                            return;
                           }
-                          Navigator.pop(sheetContext);
-                          try {
-                            final review =
-                                await daoProvider.submitInstitutionReview(
-                              walletAddress: wallet,
-                              organization: _organizationController.text.trim(),
-                              contact: _contactController.text.trim(),
-                              focus: _focusController.text.trim(),
-                              mission: _missionController.text.trim(),
-                            );
-                            if (!mounted) return;
-                            if (review != null) {
-                              await _loadInstitutionReviewStatus(
-                                  forceRefresh: true);
-                            }
-                            if (!mounted) return;
-                            scaffold.showKubusSnackBar(
-                              SnackBar(
-                                content: Text(review != null
+                          if (!mounted) return;
+                          scaffold.showKubusSnackBar(
+                            SnackBar(
+                              content: Text(
+                                review != null
                                     ? 'Application submitted to DAO reviewers.'
-                                    : 'Unable to submit application right now.'),
-                                backgroundColor: review != null
-                                    ? roles.positiveAction
-                                    : roles.negativeAction,
+                                    : 'Unable to submit application right now.',
                               ),
-                            );
-                          } catch (e) {
-                            if (!mounted) return;
-                            scaffold.showKubusSnackBar(
-                              SnackBar(
-                                content: Text('Submission failed: $e'),
-                                backgroundColor: roles.negativeAction,
-                              ),
-                            );
-                          }
-                        },
-                        label: 'Submit application',
-                        isFullWidth: true,
-                        backgroundColor: scheme.primary,
-                        foregroundColor: scheme.onPrimary,
-                      ),
+                              backgroundColor: review != null
+                                  ? roles.positiveAction
+                                  : roles.negativeAction,
+                            ),
+                          );
+                        } catch (e) {
+                          if (!mounted) return;
+                          scaffold.showKubusSnackBar(
+                            SnackBar(
+                              content: Text('Submission failed: $e'),
+                              backgroundColor: roles.negativeAction,
+                            ),
+                          );
+                        }
+                      },
+                      label: 'Submit application',
+                      isFullWidth: true,
+                      backgroundColor: scheme.primary,
+                      foregroundColor: scheme.onPrimary,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),

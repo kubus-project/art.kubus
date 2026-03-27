@@ -14,6 +14,7 @@ import '../../services/backend_api_service.dart';
 import '../../utils/creator_display_format.dart';
 import '../../utils/search_suggestions.dart';
 import '../../utils/media_url_resolver.dart';
+import '../common/keyboard_inset_padding.dart';
 import '../inline_loading.dart';
 
 class CommunitySubjectSelection {
@@ -51,8 +52,7 @@ class CommunitySubjectPicker {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (sheetContext) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(sheetContext).viewInsets.bottom),
+      builder: (sheetContext) => KeyboardInsetPadding(
         child: Container(
           height: MediaQuery.of(sheetContext).size.height * 0.75,
           decoration: BoxDecoration(
@@ -79,7 +79,8 @@ class _CommunitySubjectPickerContent extends StatefulWidget {
 class _CommunitySubjectPickerContentState
     extends State<_CommunitySubjectPickerContent> {
   late final List<String> _types;
-  final Map<String, Future<List<Map<String, dynamic>>>> _institutionSearchCache = {};
+  final Map<String, Future<List<Map<String, dynamic>>>>
+      _institutionSearchCache = {};
 
   late String _selectedType;
   String _query = '';
@@ -208,7 +209,8 @@ class _CommunitySubjectPickerContentState
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.link_off, color: scheme.onSurface.withValues(alpha: 0.5)),
+            Icon(Icons.link_off,
+                color: scheme.onSurface.withValues(alpha: 0.5)),
             const SizedBox(height: 8),
             Text(
               l10n.communitySubjectNoneLabel,
@@ -220,7 +222,8 @@ class _CommunitySubjectPickerContentState
             const SizedBox(height: 12),
             ElevatedButton(
               onPressed: () {
-                Navigator.of(context).pop(const CommunitySubjectSelection(cleared: true));
+                Navigator.of(context)
+                    .pop(const CommunitySubjectSelection(cleared: true));
               },
               child: Text(l10n.commonRemove),
             ),
@@ -302,9 +305,7 @@ class _CommunitySubjectPickerContentState
               ref: ref,
               title: (raw['title'] ?? 'Artwork').toString(),
               imageUrl: MediaUrlResolver.resolve(
-                    raw['imageUrl'] ??
-                        raw['coverImage'] ??
-                        raw['cover_image'],
+                    raw['imageUrl'] ?? raw['coverImage'] ?? raw['cover_image'],
                   ) ??
                   raw['imageUrl']?.toString(),
             );
@@ -312,7 +313,8 @@ class _CommunitySubjectPickerContentState
               preview: preview,
               onTap: () {
                 subjectProvider.upsertPreview(preview);
-                Navigator.of(ctx).pop(CommunitySubjectSelection(preview: preview));
+                Navigator.of(ctx)
+                    .pop(CommunitySubjectSelection(preview: preview));
               },
             );
           },
@@ -351,7 +353,8 @@ class _CommunitySubjectPickerContentState
           ref: CommunitySubjectRef(type: 'exhibition', id: exhibition.id),
           title: exhibition.title,
           subtitle: exhibition.locationName,
-          imageUrl: MediaUrlResolver.resolve(exhibition.coverUrl) ?? exhibition.coverUrl,
+          imageUrl: MediaUrlResolver.resolve(exhibition.coverUrl) ??
+              exhibition.coverUrl,
         );
         return _SubjectListTile(
           preview: preview,
@@ -392,7 +395,8 @@ class _CommunitySubjectPickerContentState
         final preview = CommunitySubjectPreview(
           ref: CommunitySubjectRef(type: 'collection', id: collection.id),
           title: collection.name,
-          imageUrl: MediaUrlResolver.resolve(collection.thumbnailUrl) ?? collection.thumbnailUrl,
+          imageUrl: MediaUrlResolver.resolve(collection.thumbnailUrl) ??
+              collection.thumbnailUrl,
         );
         return _SubjectListTile(
           preview: preview,
@@ -431,7 +435,11 @@ class _CommunitySubjectPickerContentState
         final results = snapshot.data ?? const [];
         final filtered = _filterByQuery(
           results,
-          (profile) => (profile['displayName'] ?? profile['username'] ?? profile['walletAddress'] ?? '').toString(),
+          (profile) => (profile['displayName'] ??
+                  profile['username'] ??
+                  profile['walletAddress'] ??
+                  '')
+              .toString(),
         );
         if (filtered.isEmpty) {
           return _buildEmptyList(l10n.communitySubjectPickerEmptyInstitution);
@@ -442,20 +450,24 @@ class _CommunitySubjectPickerContentState
           separatorBuilder: (_, __) => const Divider(height: 1),
           itemBuilder: (ctx, index) {
             final profile = filtered[index];
-            final wallet = (profile['walletAddress'] ?? profile['wallet'] ?? '').toString();
+            final wallet = (profile['walletAddress'] ?? profile['wallet'] ?? '')
+                .toString();
             if (wallet.isEmpty) {
               return const SizedBox.shrink();
             }
-              final rawUsername = (profile['username'] ?? '').toString().trim();
-              final formatted = CreatorDisplayFormat.format(
-                fallbackLabel: maskWallet(wallet),
-                displayName: (profile['displayName'] ?? profile['display_name'])?.toString(),
-                username: rawUsername,
-                wallet: wallet,
-              );
-              final title = formatted.primary;
-              final subtitle = formatted.secondary;
-            final image = profile['coverImageUrl'] ?? profile['cover_image_url'] ?? profile['avatar'];
+            final rawUsername = (profile['username'] ?? '').toString().trim();
+            final formatted = CreatorDisplayFormat.format(
+              fallbackLabel: maskWallet(wallet),
+              displayName: (profile['displayName'] ?? profile['display_name'])
+                  ?.toString(),
+              username: rawUsername,
+              wallet: wallet,
+            );
+            final title = formatted.primary;
+            final subtitle = formatted.secondary;
+            final image = profile['coverImageUrl'] ??
+                profile['cover_image_url'] ??
+                profile['avatar'];
             final preview = CommunitySubjectPreview(
               ref: CommunitySubjectRef(type: 'institution', id: wallet),
               title: title,
@@ -466,7 +478,8 @@ class _CommunitySubjectPickerContentState
               preview: preview,
               onTap: () {
                 subjectProvider.upsertPreview(preview);
-                Navigator.of(ctx).pop(CommunitySubjectSelection(preview: preview));
+                Navigator.of(ctx)
+                    .pop(CommunitySubjectSelection(preview: preview));
               },
             );
           },
@@ -491,7 +504,9 @@ class _CommunitySubjectPickerContentState
           return profiles
               .whereType<Map>()
               .map((entry) => Map<String, dynamic>.from(entry))
-              .where((entry) => entry['isInstitution'] == true || entry['is_institution'] == true)
+              .where((entry) =>
+                  entry['isInstitution'] == true ||
+                  entry['is_institution'] == true)
               .toList();
         }
       }

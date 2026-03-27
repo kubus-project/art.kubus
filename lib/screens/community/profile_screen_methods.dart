@@ -13,6 +13,9 @@ import '../../utils/artwork_navigation.dart';
 import '../../utils/creator_display_format.dart';
 import '../../utils/search_suggestions.dart';
 import '../../utils/user_profile_navigation.dart';
+import '../../widgets/common/kubus_glass_icon_button.dart';
+import '../../widgets/common/kubus_screen_header.dart';
+import '../../widgets/glass_components.dart';
 
 // Helper methods for ProfileScreen
 class ProfileScreenMethods {
@@ -144,55 +147,35 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
     final theme = Theme.of(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
 
-    return Container(
+    return SizedBox(
       height: MediaQuery.of(context).size.height * 0.7,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
-        children: [
-          Container(
-            margin: const EdgeInsets.only(top: 12),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
+      child: BackdropGlassSheet(
+        showBorder: false,
+        padding: EdgeInsets.zero,
+        backgroundColor: theme.colorScheme.surface,
+        child: Column(
+          children: [
+            KubusSheetHeader(
+              title:
                   'Followers${_followers != null ? ' (${_followers!.length})' : ''}',
-                  style: KubusTypography.inter(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: Icon(Icons.close, color: theme.colorScheme.onSurface),
-                ),
-              ],
+              trailing: KubusGlassIconButton(
+                icon: Icons.close,
+                tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                onPressed: () => Navigator.pop(context),
+              ),
             ),
-          ),
-
-          Expanded(
-            child: _isLoading
-              ? const AppLoading()
-                : _error != null
-                    ? _buildErrorState(theme, _error!)
-                    : _followers!.isEmpty
-                        ? _buildEmptyState(theme, 'No Followers Yet', 'Share your profile to gain followers')
-                        : _buildFollowersList(theme, themeProvider),
-          ),
-        ],
+            Expanded(
+              child: _isLoading
+                  ? const AppLoading()
+                  : _error != null
+                      ? _buildErrorState(theme, _error!)
+                      : _followers!.isEmpty
+                          ? _buildEmptyState(theme, 'No Followers Yet',
+                              'Share your profile to gain followers')
+                          : _buildFollowersList(theme, themeProvider),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -218,59 +201,64 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
         );
         final subtitle = formatted.secondary ?? (walletAddress.isNotEmpty ? maskWallet(walletAddress) : null);
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.06),
+        return Padding(
+          padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
+          child: LiquidGlassCard(
+            borderRadius: BorderRadius.circular(KubusRadius.md),
+            padding: const EdgeInsets.symmetric(
+              horizontal: KubusSpacing.md,
+              vertical: KubusSpacing.xs,
             ),
-          ),
-          child: ListTile(
-            onTap: () {
-              Navigator.pop(context);
-              UserProfileNavigation.open(
-                context,
-                userId: walletAddress,
-                username: username,
-              );
-            },
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            leading: AvatarWidget(
-              wallet: walletAddress,
-              avatarUrl: avatarUrl,
-              radius: 28,
-            ),
-            title: Row(
-              children: [
-                Flexible(
-                  child: Text(
-                    formatted.primary,
-                    overflow: TextOverflow.ellipsis,
-                    style: KubusTypography.inter(
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onSurface,
+            child: ListTile(
+              onTap: () {
+                Navigator.pop(context);
+                UserProfileNavigation.open(
+                  context,
+                  userId: walletAddress,
+                  username: username,
+                );
+              },
+              contentPadding: EdgeInsets.zero,
+              leading: AvatarWidget(
+                wallet: walletAddress,
+                avatarUrl: avatarUrl,
+                radius: 28,
+              ),
+              title: Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      formatted.primary,
+                      overflow: TextOverflow.ellipsis,
+                      style: KubusTypography.inter(
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurface,
+                      ),
                     ),
                   ),
-                ),
-                if (isVerified) ...[
-                  const SizedBox(width: 6),
-                  Icon(Icons.verified, size: 16, color: themeProvider.accentColor),
+                  if (isVerified) ...[
+                    const SizedBox(width: 6),
+                    Icon(
+                      Icons.verified,
+                      size: 16,
+                      color: themeProvider.accentColor,
+                    ),
+                  ],
                 ],
-              ],
-            ),
-            subtitle: subtitle == null
-                ? null
-                : Text(
-                    subtitle,
-                    style: KubusTypography.inter(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                      fontSize: 12,
+              ),
+              subtitle: subtitle == null
+                  ? null
+                  : Text(
+                      subtitle,
+                      style: KubusTypography.inter(
+                        color:
+                            theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                        fontSize: 12,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+            ),
           ),
         );
       },
@@ -410,62 +398,35 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
     final theme = Theme.of(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
 
-    return Container(
+    return SizedBox(
       height: MediaQuery.of(context).size.height * 0.7,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            margin: const EdgeInsets.only(top: 12),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          
-          Padding(
-            padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
+      child: BackdropGlassSheet(
+        showBorder: false,
+        padding: EdgeInsets.zero,
+        backgroundColor: theme.colorScheme.surface,
+        child: Column(
+          children: [
+            KubusSheetHeader(
+              title:
                   'Following${_following != null ? ' (${_following!.length})' : ''}',
-                  style: KubusTypography.inter(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: Icon(Icons.close, color: theme.colorScheme.onSurface),
-                ),
-              ],
+              trailing: KubusGlassIconButton(
+                icon: Icons.close,
+                tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                onPressed: () => Navigator.pop(context),
+              ),
             ),
-          ),
-
-          Expanded(
-            child: _isLoading
-              ? const AppLoading()
-                : _error != null
-                    ? _buildErrorState(theme, _error!)
-                    : _following!.isEmpty
-                        ? _buildEmptyState(theme, 'Not Following Anyone', 'Discover artists in the Community tab')
-                        : _buildFollowingList(theme, themeProvider),
-          ),
-        ],
+            Expanded(
+              child: _isLoading
+                  ? const AppLoading()
+                  : _error != null
+                      ? _buildErrorState(theme, _error!)
+                      : _following!.isEmpty
+                          ? _buildEmptyState(theme, 'Not Following Anyone',
+                              'Discover artists in the Community tab')
+                          : _buildFollowingList(theme, themeProvider),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -491,59 +452,64 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
         );
         final subtitle = formatted.secondary ?? (walletAddress.isNotEmpty ? maskWallet(walletAddress) : null);
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.06),
+        return Padding(
+          padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
+          child: LiquidGlassCard(
+            borderRadius: BorderRadius.circular(KubusRadius.md),
+            padding: const EdgeInsets.symmetric(
+              horizontal: KubusSpacing.md,
+              vertical: KubusSpacing.xs,
             ),
-          ),
-          child: ListTile(
-            onTap: () {
-              Navigator.pop(context);
-              UserProfileNavigation.open(
-                context,
-                userId: walletAddress,
-                username: username,
-              );
-            },
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            leading: AvatarWidget(
-              wallet: walletAddress,
-              avatarUrl: avatarUrl,
-              radius: 28,
-            ),
-            title: Row(
-              children: [
-                Flexible(
-                  child: Text(
-                    formatted.primary,
-                    overflow: TextOverflow.ellipsis,
-                    style: KubusTypography.inter(
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onSurface,
+            child: ListTile(
+              onTap: () {
+                Navigator.pop(context);
+                UserProfileNavigation.open(
+                  context,
+                  userId: walletAddress,
+                  username: username,
+                );
+              },
+              contentPadding: EdgeInsets.zero,
+              leading: AvatarWidget(
+                wallet: walletAddress,
+                avatarUrl: avatarUrl,
+                radius: 28,
+              ),
+              title: Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      formatted.primary,
+                      overflow: TextOverflow.ellipsis,
+                      style: KubusTypography.inter(
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurface,
+                      ),
                     ),
                   ),
-                ),
-                if (isVerified) ...[
-                  const SizedBox(width: 6),
-                  Icon(Icons.verified, size: 16, color: themeProvider.accentColor),
+                  if (isVerified) ...[
+                    const SizedBox(width: 6),
+                    Icon(
+                      Icons.verified,
+                      size: 16,
+                      color: themeProvider.accentColor,
+                    ),
+                  ],
                 ],
-              ],
-            ),
-            subtitle: subtitle == null
-                ? null
-                : Text(
-                    subtitle,
-                    style: KubusTypography.inter(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                      fontSize: 12,
+              ),
+              subtitle: subtitle == null
+                  ? null
+                  : Text(
+                      subtitle,
+                      style: KubusTypography.inter(
+                        color:
+                            theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                        fontSize: 12,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+            ),
           ),
         );
       },
@@ -628,53 +594,23 @@ class _ArtworksBottomSheet extends StatelessWidget {
       builder: (context, artworkProvider, child) {
         final userArtworks = artworkProvider.userArtworks;
           
-        return Container(
+        return SizedBox(
           height: MediaQuery.of(context).size.height * 0.8,
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 10,
-                offset: const Offset(0, -2),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              Container(
-                margin: const EdgeInsets.only(top: 12),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
+          child: BackdropGlassSheet(
+            showBorder: false,
+            padding: EdgeInsets.zero,
+            backgroundColor: theme.colorScheme.surface,
+            child: Column(
+              children: [
+                KubusSheetHeader(
+                  title: 'My Artworks (${userArtworks.length})',
+                  trailing: KubusGlassIconButton(
+                    icon: Icons.close,
+                    tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                    onPressed: () => Navigator.pop(context),
+                  ),
                 ),
-              ),
-              
-              Padding(
-                padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'My Artworks (${userArtworks.length})',
-                      style: KubusTypography.inter(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: Icon(Icons.close, color: theme.colorScheme.onSurface),
-                    ),
-                  ],
-                ),
-              ),
-              
-              Expanded(
+                Expanded(
                 child: userArtworks.isEmpty
                   ? Center(
                       child: Column(
@@ -710,74 +646,84 @@ class _ArtworksBottomSheet extends StatelessWidget {
                         final artwork = userArtworks[index];
                         return GestureDetector(
                           onTap: () {
-                              openArtwork(context, artwork.id, source: 'profile_methods');
-                            },
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surface,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.05),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
+                            openArtwork(context, artwork.id,
+                                source: 'profile_methods');
+                          },
+                          child: LiquidGlassCard(
+                            borderRadius:
+                                BorderRadius.circular(KubusRadius.lg),
+                            padding: EdgeInsets.zero,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(KubusRadius.lg),
+                                      ),
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: [
+                                          theme.colorScheme.primaryContainer
+                                              .withValues(alpha: 0.34),
+                                          theme.colorScheme.surfaceContainerHigh
+                                              .withValues(alpha: 0.18),
+                                        ],
+                                      ),
+                                      border: Border.all(
+                                        color: theme.colorScheme.outline
+                                            .withValues(alpha: 0.12),
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: Icon(
+                                        Icons.image_outlined,
+                                        size: 32,
+                                        color: theme.colorScheme.onSurface
+                                            .withValues(alpha: 0.58),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(KubusSpacing.sm),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        artwork.title,
+                                        style: KubusTypography.inter(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14,
+                                          color: theme.colorScheme.onSurface,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: KubusSpacing.xxs),
+                                      Text(
+                                        '${artwork.likesCount} likes',
+                                        style: KubusTypography.inter(
+                                          fontSize: 12,
+                                          color: theme.colorScheme.onSurface
+                                              .withValues(alpha: 0.6),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
-                            child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                                    color: theme.colorScheme.surfaceContainerHighest,
-                                  ),
-                                  child: Center(
-                                    child: Icon(
-                                      Icons.image,
-                                      size: 32,
-                                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(8),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      artwork.title,
-                                      style: KubusTypography.inter(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
-                                        color: theme.colorScheme.onSurface,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    Text(
-                                      '${artwork.likesCount} likes',
-                                      style: KubusTypography.inter(
-                                        fontSize: 12,
-                                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
                           ),
-                        ),
-                      );
+                        );
                       },
                     ),
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -793,56 +739,62 @@ class _CollectionsBottomSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Container(
+    return SizedBox(
       height: MediaQuery.of(context).size.height * 0.6,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(2),
+      child: BackdropGlassSheet(
+        showBorder: false,
+        padding: EdgeInsets.zero,
+        backgroundColor: theme.colorScheme.surface,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            KubusSheetHeader(
+              title: 'Collections',
+              trailing: KubusGlassIconButton(
+                icon: Icons.close,
+                tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                onPressed: () => Navigator.pop(context),
+              ),
             ),
-          ),
-          const SizedBox(height: 32),
-          Icon(
-            Icons.collections_outlined,
-            size: 64,
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No Collections Yet',
-            style: KubusTypography.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            Padding(
+              padding: const EdgeInsets.all(KubusSpacing.xl),
+              child: LiquidGlassCard(
+                borderRadius: BorderRadius.circular(KubusRadius.lg),
+                padding: const EdgeInsets.all(KubusSpacing.lg),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.collections_outlined,
+                      size: 64,
+                      color:
+                          theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No Collections Yet',
+                      style: KubusTypography.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color:
+                            theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Your NFT collections will appear here',
+                      style: KubusTypography.inter(
+                        fontSize: 14,
+                        color:
+                            theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Your NFT collections will appear here',
-            style: KubusTypography.inter(
-              fontSize: 14,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

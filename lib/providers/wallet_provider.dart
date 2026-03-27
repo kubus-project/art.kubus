@@ -940,7 +940,6 @@ class WalletProvider extends ChangeNotifier {
         definition,
       );
       _setEncryptedWalletBackupDefinition(savedDefinition);
-      await markMnemonicBackedUp(walletAddress: targetWallet);
       return savedDefinition;
     } catch (e) {
       _encryptedWalletBackupError = e.toString();

@@ -734,6 +734,51 @@ class AppLocalizationsSl extends AppLocalizations {
   String get onboardingFlowProfileBody => 'Dodaj ime in fotografijo, da te drugi lažje prepoznajo.';
 
   @override
+  String get onboardingFlowWalletBackupIntroTitle => 'Zaščiti dostop do denarnice';
+
+  @override
+  String get onboardingFlowWalletBackupIntroBody => 'Registracija z e-pošto ali Google računom je že ustvarila pravo signer-backed denarnico za tvoj art.kubus račun. Varnostno jo shrani zdaj, da ne izgubiš dostopa do funkcij, zbirateljskih predmetov in točk.';
+
+  @override
+  String get onboardingFlowWalletBackupIntroWeb3Warning => 'art.kubus je Web3 projekt. Tvoja denarnica je del dostopa do računa, ne le dodatna možnost.';
+
+  @override
+  String get onboardingFlowWalletBackupIntroSecretWarning => 'Če uporabiš šifrirano varnostno kopijo, shrani obe skrivnosti ločeno: obnovitvena fraza obnovi denarnico, recovery password pa odklene šifrirano strežniško varnostno kopijo.';
+
+  @override
+  String get onboardingFlowWalletBackupIntroRecoveryPhraseLabel => 'Obnovitvena fraza';
+
+  @override
+  String get onboardingFlowWalletBackupIntroRecoveryPhraseBody => 'Kopiraj obnovitveno frazo in jo brez povezave shrani na varno mesto. To je najpomembnejši način za obnovitev te denarnice.';
+
+  @override
+  String get onboardingFlowWalletBackupIntroEncryptedBackupLabel => 'Šifrirana strežniška varnostna kopija';
+
+  @override
+  String get onboardingFlowWalletBackupIntroEncryptedBackupBody => 'Ustvari šifrirano strežniško varnostno kopijo kot dodatno pot za obnovitev in recovery password shrani na varno mesto.';
+
+  @override
+  String get onboardingFlowWalletBackupIntroPasskeyLabel => 'Zaščita s passkeyem';
+
+  @override
+  String get onboardingFlowWalletBackupIntroPasskeyBody => 'Na podprtih spletnih napravah po ustvarjeni šifrirani kopiji dodaj passkey za dodatno zaščito dostopa.';
+
+  @override
+  String get onboardingFlowWalletBackupIntroRevealAction => 'Prikaži in kopiraj frazo';
+
+  @override
+  String get onboardingFlowWalletBackupIntroEncryptedAction => 'Ustvari šifrirano kopijo';
+
+  @override
+  String get onboardingFlowWalletBackupIntroEncryptedDone => 'Šifrirana kopija je pripravljena';
+
+  @override
+  String get onboardingFlowWalletBackupIntroPasskeyAction => 'Dodaj passkey';
+
+  @override
+  String get onboardingFlowWalletBackupIntroPasskeyDone => 'Passkey je dodan';
+
+  @override
   String get onboardingFlowWalletBackupTitle => 'Varnostno shrani obnovitveno frazo';
 
   @override
@@ -1421,12 +1466,30 @@ class AppLocalizationsSl extends AppLocalizations {
   String get settingsTransactionHistoryTileSubtitle => 'Ogled vseh transakcij';
 
   @override
-  String get settingsBackupSettingsTileTitle => 'Nastavitve varnostnega kopiranja';
+  String get settingsBackupSettingsTileTitle => 'Zaščita varnostnih kopij';
 
   @override
   String settingsAutoBackupSummary(Object status) {
     return 'Samodejna varnostna kopija: $status';
   }
+
+  @override
+  String get settingsBackupStatusNoWallet => 'Denarnica še ni povezana';
+
+  @override
+  String get settingsBackupStatusNoBackup => 'Zaščita varnostne kopije še ni nastavljena';
+
+  @override
+  String get settingsBackupStatusRecoveryPhraseRequired => 'Obnovitveno frazo je še treba varnostno shraniti';
+
+  @override
+  String get settingsBackupStatusEncryptedServerBackup => 'Šifrirana strežniška varnostna kopija je nastavljena';
+
+  @override
+  String get settingsBackupStatusPasskeyProtection => 'Šifrirana strežniška varnostna kopija je zaščitena s passkeyem';
+
+  @override
+  String get settingsBackupStatusReadOnly => 'Na tej napravi je seja denarnice samo za branje';
 
   @override
   String get settingsExportRecoveryPhraseTileTitle => 'Izvozi obnovitveno frazo';
@@ -6075,7 +6138,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get communitySearchTypeInstitutions => 'Institucije';
 
   @override
-  String get communitySearchTypeScreens => 'Zasloni';
+  String get communitySearchTypeScreens => 'Strani';
 
   @override
   String get communitySearchTypePosts => 'Objave';
@@ -6577,7 +6640,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopHomeQuickActionsSubtitle => 'Na podlagi tvojih nedavnih obiskov';
 
   @override
-  String get desktopHomeQuickActionsEmptySubtitle => 'Začni raziskovati, da se tu prikažejo nedavni zasloni';
+  String get desktopHomeQuickActionsEmptySubtitle => 'Začni raziskovati, da se tu prikažejo nedavne strani';
 
   @override
   String get desktopHomeQuickActionsEmptyTitle => 'Za zdaj ni nedavnih obiskov';
@@ -6775,6 +6838,42 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get walletBackupMarkedCompleteToast => 'Varnostna kopija obnovitvene fraze je označena kot zaključena.';
+
+  @override
+  String get walletBackupProtectionNoWalletHeadline => 'Na tej napravi še ni povezane denarnice.';
+
+  @override
+  String get walletBackupProtectionNoWalletBody => 'Pred upravljanjem zaščite varnostnih kopij na tej napravi poveži ali obnovi denarnico.';
+
+  @override
+  String get walletBackupProtectionNoBackupHeadline => 'Šifrirana strežniška varnostna kopija še ni nastavljena.';
+
+  @override
+  String get walletBackupProtectionNoBackupBody => 'Če želiš dodatno možnost obnove prek strežnika, ustvari šifrirano strežniško kopijo in njen recovery password shrani ločeno od obnovitvene fraze.';
+
+  @override
+  String get walletBackupProtectionRecoveryPhraseHeadline => 'Obnovitveno frazo je še treba varnostno shraniti.';
+
+  @override
+  String get walletBackupProtectionRecoveryPhraseBody => 'Obnovitveno frazo shrani brez povezave, da ne izgubiš dostopa do Web3 funkcij, zbirateljskih predmetov in točk, vezanih na to denarnico.';
+
+  @override
+  String get walletBackupProtectionEncryptedHeadline => 'Šifrirana strežniška varnostna kopija je nastavljena.';
+
+  @override
+  String get walletBackupProtectionEncryptedBody => 'Recovery password za šifrirano kopijo hrani ločeno od obnovitvene fraze, da obe poti za obnovitev ostaneta uporabni.';
+
+  @override
+  String get walletBackupProtectionPasskeyHeadline => 'Šifrirana strežniška kopija, zaščitena s passkeyem, je nastavljena.';
+
+  @override
+  String get walletBackupProtectionPasskeyBody => 'Ta šifrirana strežniška kopija je na spletu zaščitena s passkeyem. Recovery password še vedno shrani ločeno od obnovitvene fraze.';
+
+  @override
+  String get walletBackupProtectionReadOnlyHeadline => 'Ta naprava ima le read-only dostop do denarnice.';
+
+  @override
+  String get walletBackupProtectionReadOnlyBody => 'Pred upravljanjem prenosov in drugih funkcij, vezanih na denarnico, na tej napravi obnovi signer z obnovitveno frazo ali šifrirano strežniško kopijo.';
 
   @override
   String get walletBackupBannerTitle => 'Varnostno shrani obnovitveno frazo denarnice';

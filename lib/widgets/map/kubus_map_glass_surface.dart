@@ -11,6 +11,20 @@ enum KubusMapGlassSurfaceKind {
   button,
 }
 
+/// Shared blur policy for map chrome.
+///
+/// Mobile web still uses the opaque fallback because backdrop blur over the
+/// embedded web map is unstable there. Desktop-class layouts can use real blur
+/// again when the global glass policy allows it.
+bool kubusMapBlurEnabled(BuildContext context) {
+  final allowBlur = GlassCapabilitiesProvider.watchAllowBlurEnabled(context);
+  if (!allowBlur) return false;
+  if (!kIsWeb) return true;
+
+  final width = MediaQuery.maybeOf(context)?.size.width ?? 0;
+  return width >= 900;
+}
+
 @immutable
 class KubusMapGlassSurfacePreset {
   const KubusMapGlassSurfacePreset({
@@ -54,9 +68,7 @@ KubusMapGlassSurfacePreset resolveKubusMapGlassSurfacePreset(
     tintBase: tintBase,
   );
 
-  final resolvedBlur = useBlur &&
-      !kIsWeb &&
-      GlassCapabilitiesProvider.watchAllowBlurEnabled(context);
+  final resolvedBlur = useBlur && kubusMapBlurEnabled(context);
   final borderColor = scheme.outlineVariant.withValues(
     alpha: switch (kind) {
       KubusMapGlassSurfaceKind.panel =>

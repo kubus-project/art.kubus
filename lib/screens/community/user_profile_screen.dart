@@ -717,14 +717,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               left: 0,
               right: 0,
               child: Center(
-                child: Container(
-                  clipBehavior: Clip.antiAlias,
+                child: DecoratedBox(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(90 * 0.22),
-                    border: Border.all(
-                      color: Theme.of(context).colorScheme.surface,
-                      width: 5,
-                    ),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.15),
@@ -737,6 +732,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                     wallet: user!.id,
                     avatarUrl: user!.profileImageUrl,
                     radius: 45,
+                    borderWidth: 5,
+                    borderColor: Theme.of(context).colorScheme.surface,
+                    cornerRadiusFactor: 0.22,
                     enableProfileNavigation: false,
                     heroTag: widget.heroTag,
                   ),

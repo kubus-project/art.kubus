@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../features/map/controller/kubus_map_controller.dart';
@@ -649,7 +648,7 @@ class _KubusSquareControlButton extends StatelessWidget {
           activeIconColor: mobileActiveIconColor,
           activeTint: mobileAccent.withValues(alpha: 0.20),
           borderRadius: KubusRadius.md,
-          enableBlur: !kIsWeb,
+          enableBlur: kubusMapBlurEnabled(context),
         );
 
       case _KubusSquareControlVariant.desktop:

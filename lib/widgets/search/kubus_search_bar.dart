@@ -50,6 +50,7 @@ class KubusSearchBar extends StatefulWidget {
     required this.hintText,
     this.controller,
     this.focusNode,
+    this.readOnly = false,
     this.autofocus = false,
     this.enabled = true,
     this.semanticsLabel,
@@ -72,6 +73,7 @@ class KubusSearchBar extends StatefulWidget {
   final String hintText;
   final TextEditingController? controller;
   final FocusNode? focusNode;
+  final bool readOnly;
   final bool autofocus;
   final bool enabled;
   final String? semanticsLabel;
@@ -321,6 +323,7 @@ class _KubusSearchBarState extends State<KubusSearchBar> {
     final textField = TextField(
       controller: _controller,
       focusNode: _focusNode,
+      readOnly: widget.readOnly,
       autofocus: widget.autofocus,
       enabled: widget.enabled,
       onTap: widget.onTap,

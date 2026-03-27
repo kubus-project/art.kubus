@@ -7,6 +7,7 @@ import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/web3/wallet/mnemonic_reveal_screen.dart';
 import 'package:art_kubus/services/wallet_backup_passkey_service.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:art_kubus/utils/wallet_backup_status.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/wallet_backup_prompts.dart';
@@ -15,7 +16,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 class WalletBackupProtectionScreen extends StatefulWidget {
-  const WalletBackupProtectionScreen({super.key});
+  const WalletBackupProtectionScreen({
+    super.key,
+    this.onBackupStateChanged,
+  });
+
+  final Future<void> Function()? onBackupStateChanged;
 
   @override
   State<WalletBackupProtectionScreen> createState() =>
@@ -67,6 +73,7 @@ class _WalletBackupProtectionScreenState
       await action();
       if (!mounted) return;
       await _refresh();
+      await widget.onBackupStateChanged?.call();
     } catch (e) {
       if (!mounted) return;
       messenger.showKubusSnackBar(
@@ -194,6 +201,7 @@ class _WalletBackupProtectionScreenState
     );
     if (!mounted) return;
     await _refresh();
+    await widget.onBackupStateChanged?.call();
   }
 
   Future<void> _enrollPasskey() async {
@@ -225,6 +233,43 @@ class _WalletBackupProtectionScreenState
     });
   }
 
+  Future<void> _restoreSignerFromBackup() async {
+    final walletProvider = context.read<WalletProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+
+    await _runProtectedAction(() async {
+      if (kIsWeb &&
+          AppConfig.isFeatureEnabled('walletBackupPasskeyWeb') &&
+          walletProvider.encryptedWalletBackupPasskeys.isNotEmpty) {
+        await walletProvider.authenticateEncryptedWalletBackupPasskey();
+      }
+      if (!mounted) return;
+      final recoveryPassword = await showWalletBackupPasswordPrompt(
+        context: context,
+        title: 'Restore wallet signer',
+        description:
+            'Enter the recovery password for the encrypted server backup to restore signing access on this device.',
+        actionLabel: 'Restore signer',
+      );
+      if (!mounted || recoveryPassword == null) return;
+      final restored =
+          await walletProvider.restoreSignerFromEncryptedWalletBackup(
+        recoveryPassword: recoveryPassword,
+      );
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(
+            restored
+                ? 'Wallet signer restored on this device.'
+                : 'Unable to restore wallet signer.',
+          ),
+        ),
+        tone: restored ? KubusSnackBarTone.success : KubusSnackBarTone.error,
+      );
+    });
+  }
+
   String _walletLabel(String? walletAddress) {
     final value = (walletAddress ?? '').trim();
     if (value.length <= 14) return value;
@@ -233,6 +278,7 @@ class _WalletBackupProtectionScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final walletProvider = context.watch<WalletProvider>();
     final walletAddress = walletProvider.currentWalletAddress;
@@ -245,6 +291,17 @@ class _WalletBackupProtectionScreenState
         AppConfig.isFeatureEnabled('walletBackupPasskeyWeb') &&
         hasEncryptedBackup &&
         _passkeysSupported;
+    final backupStatus = WalletBackupStatusSnapshot(
+      walletAddress: walletAddress,
+      hasWalletIdentity: walletProvider.hasWalletIdentity,
+      hasSigner: walletProvider.hasSigner,
+      isReadOnlySession: walletProvider.isReadOnlySession,
+      mnemonicBackupRequired: _backupRequired,
+      hasEncryptedServerBackup: hasEncryptedBackup,
+      hasPasskeyProtection: passkeysEnabled &&
+          walletProvider.encryptedWalletBackupPasskeys.isNotEmpty,
+    );
+    final needsSignerRestore = backupStatus.needsSignerRestore;
 
     return Scaffold(
       appBar: AppBar(
@@ -275,18 +332,25 @@ class _WalletBackupProtectionScreenState
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    hasEncryptedBackup
-                        ? 'Encrypted backup is configured for this wallet.'
-                        : 'No encrypted server backup is configured yet.',
+                    backupStatus.protectionHeadline(l10n),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: scheme.onSurface.withValues(alpha: 0.82),
+                          fontWeight: FontWeight.w700,
                           height: 1.4,
                         ),
                   ),
-                  if (_backupRequired) ...<Widget>[
+                  const SizedBox(height: 8),
+                  Text(
+                    backupStatus.protectionBody(l10n),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: scheme.onSurface.withValues(alpha: 0.78),
+                          height: 1.4,
+                        ),
+                  ),
+                  if (_backupRequired && !hasEncryptedBackup) ...<Widget>[
                     const SizedBox(height: 10),
                     Text(
-                      'This wallet still needs a recovery backup. Create the encrypted backup or copy the phrase and store it offline.',
+                      'Back up the recovery phrase offline and store the encrypted backup recovery password separately.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: scheme.primary,
                             fontWeight: FontWeight.w700,
@@ -307,13 +371,21 @@ class _WalletBackupProtectionScreenState
               ),
             ),
             const SizedBox(height: KubusSpacing.lg),
+            if (needsSignerRestore && hasEncryptedBackup) ...<Widget>[
+              FilledButton.tonalIcon(
+                onPressed: isBusy ? null : _restoreSignerFromBackup,
+                icon: const Icon(Icons.login_outlined),
+                label: const Text('Restore wallet signer'),
+              ),
+              const SizedBox(height: KubusSpacing.sm),
+            ],
             FilledButton.icon(
               onPressed: isBusy ? null : _createOrUpdateBackup,
               icon: const Icon(Icons.cloud_upload_outlined),
               label: Text(
                 hasEncryptedBackup
-                    ? 'Update encrypted backup'
-                    : 'Create encrypted backup',
+                    ? 'Update encrypted server backup'
+                    : 'Create encrypted server backup',
               ),
             ),
             const SizedBox(height: KubusSpacing.sm),

@@ -46,7 +46,7 @@ class AppConfig {
   static const bool enableMultiAuthEntry = true;
   static const bool enforceWalletOnboarding =
       false; // Don't force wallet during onboarding - let users set it up when needed
-  static const bool enableWalletBackupOnboarding = false;
+  static const bool enableWalletBackupOnboarding = true;
   static const bool enableEncryptedWalletBackup = true;
   static const bool enableWalletBackupPasskeyWeb = true;
 
@@ -441,7 +441,7 @@ class AppConfig {
 /// App version and build information
 class AppInfo {
   static const String appName = 'art.kubus';
-  static const String version = '0.5.0';
+  static const String version = '0.5.1';
   static const int buildNumber = 2603271;
   static const String buildDate = '2026-03-27';
 

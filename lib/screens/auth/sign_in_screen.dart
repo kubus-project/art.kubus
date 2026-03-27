@@ -28,6 +28,7 @@ import '../../widgets/auth_entry_shell.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/auth_google_wallet.dart';
+import '../../utils/keyboard_inset_resolver.dart';
 import '../../utils/wallet_utils.dart';
 import '../web3/wallet/connectwallet_screen.dart';
 import '../desktop/desktop_shell.dart';
@@ -825,8 +826,12 @@ class _SignInScreenState extends State<SignInScreen> {
     final roles = KubusColorRoles.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final showEmailForm = _showCompactEmailForm;
-    final compactLayout =
-        widget.embedded || MediaQuery.sizeOf(context).height < 820;
+    final viewportSize = MediaQuery.sizeOf(context);
+    final keyboardVisible = KeyboardInsetResolver.isKeyboardVisible(context);
+    final compactLayout = widget.embedded ||
+        keyboardVisible ||
+        viewportSize.height < 820 ||
+        viewportSize.width < 430;
     final showSectionCopy = !widget.embedded && !compactLayout;
     final emailSurface = Color.lerp(
         colorScheme.surface, colorScheme.primary, isDark ? 0.18 : 0.10)!;
@@ -983,7 +988,11 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   Widget _buildEmailForm() {
-    final compact = widget.embedded || MediaQuery.sizeOf(context).height < 820;
+    final viewportSize = MediaQuery.sizeOf(context);
+    final compact = widget.embedded ||
+        KeyboardInsetResolver.isKeyboardVisible(context) ||
+        viewportSize.height < 820 ||
+        viewportSize.width < 430;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1070,14 +1079,19 @@ class _SignInScreenState extends State<SignInScreen> {
             height: 1,
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.sm),
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: scheme.onSurface.withValues(alpha: 0.56),
-                  fontWeight: FontWeight.w600,
-                ),
+        Flexible(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.sm),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.56),
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
           ),
         ),
         Expanded(

@@ -1529,6 +1529,96 @@ abstract class AppLocalizations {
   /// **'Add a name and a photo so people can recognize you.'**
   String get onboardingFlowProfileBody;
 
+  /// No description provided for @onboardingFlowWalletBackupIntroTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Protect your wallet access'**
+  String get onboardingFlowWalletBackupIntroTitle;
+
+  /// No description provided for @onboardingFlowWalletBackupIntroBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Email and Google sign-up already created a real signer-backed wallet for your art.kubus account. Back it up now so you do not lose access to wallet-based features, collectibles, and points.'**
+  String get onboardingFlowWalletBackupIntroBody;
+
+  /// No description provided for @onboardingFlowWalletBackupIntroWeb3Warning.
+  ///
+  /// In en, this message translates to:
+  /// **'art.kubus is a Web3 project. Your wallet is part of your account access, not just an optional extra.'**
+  String get onboardingFlowWalletBackupIntroWeb3Warning;
+
+  /// No description provided for @onboardingFlowWalletBackupIntroSecretWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Save both secrets separately when you use encrypted backup: the recovery phrase restores the wallet, and the recovery password unlocks the encrypted server backup.'**
+  String get onboardingFlowWalletBackupIntroSecretWarning;
+
+  /// No description provided for @onboardingFlowWalletBackupIntroRecoveryPhraseLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery phrase'**
+  String get onboardingFlowWalletBackupIntroRecoveryPhraseLabel;
+
+  /// No description provided for @onboardingFlowWalletBackupIntroRecoveryPhraseBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy the recovery phrase and store it somewhere safe offline. It is the most important way to restore this wallet.'**
+  String get onboardingFlowWalletBackupIntroRecoveryPhraseBody;
+
+  /// No description provided for @onboardingFlowWalletBackupIntroEncryptedBackupLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypted server backup'**
+  String get onboardingFlowWalletBackupIntroEncryptedBackupLabel;
+
+  /// No description provided for @onboardingFlowWalletBackupIntroEncryptedBackupBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Create an encrypted server backup for another recovery path, then store the recovery password in a safe location too.'**
+  String get onboardingFlowWalletBackupIntroEncryptedBackupBody;
+
+  /// No description provided for @onboardingFlowWalletBackupIntroPasskeyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Passkey protection'**
+  String get onboardingFlowWalletBackupIntroPasskeyLabel;
+
+  /// No description provided for @onboardingFlowWalletBackupIntroPasskeyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'On supported web clients, add a passkey after the encrypted server backup is created for stronger access protection.'**
+  String get onboardingFlowWalletBackupIntroPasskeyBody;
+
+  /// No description provided for @onboardingFlowWalletBackupIntroRevealAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Reveal and copy phrase'**
+  String get onboardingFlowWalletBackupIntroRevealAction;
+
+  /// No description provided for @onboardingFlowWalletBackupIntroEncryptedAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Create encrypted backup'**
+  String get onboardingFlowWalletBackupIntroEncryptedAction;
+
+  /// No description provided for @onboardingFlowWalletBackupIntroEncryptedDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypted backup ready'**
+  String get onboardingFlowWalletBackupIntroEncryptedDone;
+
+  /// No description provided for @onboardingFlowWalletBackupIntroPasskeyAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add passkey'**
+  String get onboardingFlowWalletBackupIntroPasskeyAction;
+
+  /// No description provided for @onboardingFlowWalletBackupIntroPasskeyDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Passkey added'**
+  String get onboardingFlowWalletBackupIntroPasskeyDone;
+
   /// No description provided for @onboardingFlowWalletBackupTitle.
   ///
   /// In en, this message translates to:
@@ -2870,7 +2960,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsBackupSettingsTileTitle.
   ///
   /// In en, this message translates to:
-  /// **'Backup settings'**
+  /// **'Backup protection'**
   String get settingsBackupSettingsTileTitle;
 
   /// No description provided for @settingsAutoBackupSummary.
@@ -2878,6 +2968,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Auto-backup: {status}'**
   String settingsAutoBackupSummary(Object status);
+
+  /// No description provided for @settingsBackupStatusNoWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'No wallet connected yet'**
+  String get settingsBackupStatusNoWallet;
+
+  /// No description provided for @settingsBackupStatusNoBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'No backup protection configured yet'**
+  String get settingsBackupStatusNoBackup;
+
+  /// No description provided for @settingsBackupStatusRecoveryPhraseRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery phrase backup still required'**
+  String get settingsBackupStatusRecoveryPhraseRequired;
+
+  /// No description provided for @settingsBackupStatusEncryptedServerBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypted server backup configured'**
+  String get settingsBackupStatusEncryptedServerBackup;
+
+  /// No description provided for @settingsBackupStatusPasskeyProtection.
+  ///
+  /// In en, this message translates to:
+  /// **'Passkey-protected server backup configured'**
+  String get settingsBackupStatusPasskeyProtection;
+
+  /// No description provided for @settingsBackupStatusReadOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Read-only wallet session on this device'**
+  String get settingsBackupStatusReadOnly;
 
   /// No description provided for @settingsExportRecoveryPhraseTileTitle.
   ///
@@ -12826,6 +12952,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Recovery phrase backup marked as complete.'**
   String get walletBackupMarkedCompleteToast;
+
+  /// No description provided for @walletBackupProtectionNoWalletHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'No wallet is connected on this device yet.'**
+  String get walletBackupProtectionNoWalletHeadline;
+
+  /// No description provided for @walletBackupProtectionNoWalletBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect or restore the wallet on this device before managing backup protection.'**
+  String get walletBackupProtectionNoWalletBody;
+
+  /// No description provided for @walletBackupProtectionNoBackupHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'No encrypted server backup is configured yet.'**
+  String get walletBackupProtectionNoBackupHeadline;
+
+  /// No description provided for @walletBackupProtectionNoBackupBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Create an encrypted server backup if you want a server-side recovery option, and store its recovery password separately from the recovery phrase.'**
+  String get walletBackupProtectionNoBackupBody;
+
+  /// No description provided for @walletBackupProtectionRecoveryPhraseHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery phrase backup is still required.'**
+  String get walletBackupProtectionRecoveryPhraseHeadline;
+
+  /// No description provided for @walletBackupProtectionRecoveryPhraseBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Store the recovery phrase offline to avoid losing access to Web3 features, collectibles, and points tied to this wallet.'**
+  String get walletBackupProtectionRecoveryPhraseBody;
+
+  /// No description provided for @walletBackupProtectionEncryptedHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypted server backup is configured.'**
+  String get walletBackupProtectionEncryptedHeadline;
+
+  /// No description provided for @walletBackupProtectionEncryptedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the encrypted backup recovery password stored separately from the recovery phrase so both recovery paths remain usable.'**
+  String get walletBackupProtectionEncryptedBody;
+
+  /// No description provided for @walletBackupProtectionPasskeyHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Passkey-protected server backup is configured.'**
+  String get walletBackupProtectionPasskeyHeadline;
+
+  /// No description provided for @walletBackupProtectionPasskeyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This encrypted server backup is protected with a passkey on web. Keep the recovery password stored separately from the recovery phrase.'**
+  String get walletBackupProtectionPasskeyBody;
+
+  /// No description provided for @walletBackupProtectionReadOnlyHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'This device only has read-only wallet access.'**
+  String get walletBackupProtectionReadOnlyHeadline;
+
+  /// No description provided for @walletBackupProtectionReadOnlyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore the wallet signer with your encrypted server backup or recovery phrase before managing transfers and other wallet-gated features on this device.'**
+  String get walletBackupProtectionReadOnlyBody;
 
   /// No description provided for @walletBackupBannerTitle.
   ///

@@ -1044,181 +1044,180 @@ class _ArtistStudioState extends State<ArtistStudio> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
-        final viewInsets = MediaQuery.of(sheetContext).viewInsets.bottom;
         return StatefulBuilder(
           builder: (context, setModalState) {
             final colorScheme = Theme.of(context).colorScheme;
-            return Padding(
-              padding: EdgeInsets.only(bottom: viewInsets),
-              child: SingleChildScrollView(
-                child: BackdropGlassSheet(
-                  padding: const EdgeInsets.all(KubusSpacing.lg),
-                  showHandle: false,
-                  backgroundColor: colorScheme.surfaceContainerHighest
-                      .withValues(alpha: 0.18),
-                  child: Form(
-                    key: formKey,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        KubusSheetHeader(
-                          title: l10n.artistStudioApplicationModalTitle,
-                          subtitle: l10n.artistStudioApplicationModalSubtitle,
-                          showHandle: false,
+            return SingleChildScrollView(
+              child: BackdropGlassSheet(
+                padding: const EdgeInsets.all(KubusSpacing.lg),
+                showHandle: false,
+                backgroundColor:
+                    colorScheme.surfaceContainerHighest.withValues(alpha: 0.18),
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      KubusSheetHeader(
+                        title: l10n.artistStudioApplicationModalTitle,
+                        subtitle: l10n.artistStudioApplicationModalSubtitle,
+                        showHandle: false,
+                      ),
+                      const SizedBox(height: KubusSpacing.sm),
+                      TextFormField(
+                        controller: portfolioController,
+                        decoration: InputDecoration(
+                          labelText:
+                              l10n.artistStudioApplicationFieldPortfolioLabel,
+                          border: const OutlineInputBorder(),
                         ),
-                        const SizedBox(height: KubusSpacing.sm),
-                        TextFormField(
-                          controller: portfolioController,
-                          decoration: InputDecoration(
-                            labelText:
-                                l10n.artistStudioApplicationFieldPortfolioLabel,
-                            border: const OutlineInputBorder(),
-                          ),
-                          validator: (value) => (value == null ||
-                                  value.trim().isEmpty)
-                              ? l10n.artistStudioApplicationValidationPortfolio
-                              : null,
+                        validator: (value) => (value == null ||
+                                value.trim().isEmpty)
+                            ? l10n.artistStudioApplicationValidationPortfolio
+                            : null,
+                      ),
+                      const SizedBox(height: KubusSpacing.md),
+                      TextFormField(
+                        controller: mediumController,
+                        decoration: InputDecoration(
+                          labelText:
+                              l10n.artistStudioApplicationFieldMediumLabel,
+                          border: const OutlineInputBorder(),
                         ),
-                        const SizedBox(height: KubusSpacing.md),
-                        TextFormField(
-                          controller: mediumController,
-                          decoration: InputDecoration(
-                            labelText:
-                                l10n.artistStudioApplicationFieldMediumLabel,
-                            border: const OutlineInputBorder(),
-                          ),
-                          validator: (value) =>
-                              (value == null || value.trim().isEmpty)
-                                  ? l10n.artistStudioApplicationValidationMedium
-                                  : null,
+                        validator: (value) =>
+                            (value == null || value.trim().isEmpty)
+                                ? l10n.artistStudioApplicationValidationMedium
+                                : null,
+                      ),
+                      const SizedBox(height: KubusSpacing.md),
+                      TextFormField(
+                        controller: statementController,
+                        maxLines: 4,
+                        decoration: InputDecoration(
+                          labelText:
+                              l10n.artistStudioApplicationFieldStatementLabel,
+                          alignLabelWithHint: true,
+                          border: const OutlineInputBorder(),
                         ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: statementController,
-                          maxLines: 4,
-                          decoration: InputDecoration(
-                            labelText:
-                                l10n.artistStudioApplicationFieldStatementLabel,
-                            alignLabelWithHint: true,
-                            border: const OutlineInputBorder(),
-                          ),
-                          validator: (value) => (value == null ||
-                                  value.trim().length < 20)
-                              ? l10n
-                                  .artistStudioApplicationValidationStatementMinChars(
-                                      20)
-                              : null,
-                        ),
-                        const SizedBox(height: 24),
-                        SizedBox(
-                          width: double.infinity,
-                          child: KubusButton(
-                            onPressed: isSubmitting
-                                ? null
-                                : () async {
-                                    if (!formKey.currentState!.validate()) {
-                                      return;
-                                    }
-                                    final profileProvider =
-                                        context.read<ProfileProvider>();
-                                    final web3Provider =
-                                        context.read<Web3Provider>();
-                                    final daoProvider =
-                                        context.read<DAOProvider>();
-                                    final navigator =
-                                        Navigator.of(sheetContext);
-                                    final roles = KubusColorRoles.of(context);
-                                    final successColor = roles.positiveAction;
-                                    final errorColor = roles.negativeAction;
-                                    final wallet = profileProvider
-                                            .currentUser?.walletAddress ??
-                                        web3Provider.walletAddress;
-                                    if (wallet.isEmpty) {
-                                      scaffold.showKubusSnackBar(
-                                        SnackBar(
-                                            content: Text(l10n
-                                                .artistStudioApplicationWalletRequiredToast)),
-                                      );
-                                      return;
-                                    }
-                                    setModalState(() => isSubmitting = true);
-                                    try {
-                                      final review =
-                                          await daoProvider.submitReview(
-                                        walletAddress: wallet,
-                                        portfolioUrl:
-                                            portfolioController.text.trim(),
-                                        medium: mediumController.text.trim(),
-                                        statement:
-                                            statementController.text.trim(),
-                                        title: l10n
-                                            .artistStudioApplicationReviewTitle,
-                                        metadata: {
-                                          'role': 'artist',
-                                          'source': 'artist_studio',
-                                        },
-                                      );
-                                      if (!mounted) return;
-                                      if (review != null) {
-                                        await _loadArtistReviewStatus(
-                                            forceRefresh: true);
-                                        if (!mounted) return;
-                                      }
-                                      if (!mounted) return;
-                                      navigator.pop();
-                                      if (!mounted) return;
-                                      scaffold.showKubusSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            review != null
-                                                ? l10n
-                                                    .artistStudioApplicationSubmittedToast
-                                                : l10n
-                                                    .artistStudioApplicationUnableToSubmitToast,
-                                          ),
-                                          backgroundColor: review != null
-                                              ? successColor
-                                              : errorColor,
+                        validator: (value) => (value == null ||
+                                value.trim().length < 20)
+                            ? l10n
+                                .artistStudioApplicationValidationStatementMinChars(
+                                    20)
+                            : null,
+                      ),
+                      const SizedBox(height: KubusSpacing.lg),
+                      SizedBox(
+                        width: double.infinity,
+                        child: KubusButton(
+                          onPressed: isSubmitting
+                              ? null
+                              : () async {
+                                  if (!formKey.currentState!.validate()) {
+                                    return;
+                                  }
+                                  final profileProvider =
+                                      context.read<ProfileProvider>();
+                                  final web3Provider =
+                                      context.read<Web3Provider>();
+                                  final daoProvider =
+                                      context.read<DAOProvider>();
+                                  final navigator = Navigator.of(sheetContext);
+                                  final roles = KubusColorRoles.of(context);
+                                  final successColor = roles.positiveAction;
+                                  final errorColor = roles.negativeAction;
+                                  final wallet = profileProvider
+                                          .currentUser?.walletAddress ??
+                                      web3Provider.walletAddress;
+                                  if (wallet.isEmpty) {
+                                    scaffold.showKubusSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          l10n.artistStudioApplicationWalletRequiredToast,
                                         ),
+                                      ),
+                                    );
+                                    return;
+                                  }
+                                  setModalState(() => isSubmitting = true);
+                                  try {
+                                    final review =
+                                        await daoProvider.submitReview(
+                                      walletAddress: wallet,
+                                      portfolioUrl:
+                                          portfolioController.text.trim(),
+                                      medium: mediumController.text.trim(),
+                                      statement:
+                                          statementController.text.trim(),
+                                      title: l10n
+                                          .artistStudioApplicationReviewTitle,
+                                      metadata: const {
+                                        'role': 'artist',
+                                        'source': 'artist_studio',
+                                      },
+                                    );
+                                    if (!mounted) return;
+                                    if (review != null) {
+                                      await _loadArtistReviewStatus(
+                                        forceRefresh: true,
                                       );
-                                    } catch (err) {
-                                      if (kDebugMode) {
-                                        debugPrint(
-                                            'ArtistStudio: submission failed: $err');
-                                      }
                                       if (!mounted) return;
-                                      scaffold.showKubusSnackBar(
-                                        SnackBar(
-                                          content: Text(l10n
-                                              .artistStudioApplicationSubmissionFailedToast),
-                                          backgroundColor: errorColor,
-                                        ),
-                                      );
-                                    } finally {
-                                      if (mounted) {
-                                        setModalState(
-                                            () => isSubmitting = false);
-                                      }
                                     }
-                                  },
-                            label: l10n.artistStudioApplicationSubmitButton,
-                            icon: Icons.send_rounded,
-                            isLoading: isSubmitting,
-                            isFullWidth: true,
-                            backgroundColor: KubusColorRoles.of(context)
-                                .web3ArtistStudioAccent,
-                            foregroundColor:
-                                ThemeData.estimateBrightnessForColor(
-                                            KubusColorRoles.of(context)
-                                                .web3ArtistStudioAccent) ==
-                                        Brightness.dark
-                                    ? KubusColors.textPrimaryDark
-                                    : KubusColors.textPrimaryLight,
-                          ),
+                                    navigator.pop();
+                                    if (!mounted) return;
+                                    scaffold.showKubusSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          review != null
+                                              ? l10n
+                                                  .artistStudioApplicationSubmittedToast
+                                              : l10n
+                                                  .artistStudioApplicationUnableToSubmitToast,
+                                        ),
+                                        backgroundColor: review != null
+                                            ? successColor
+                                            : errorColor,
+                                      ),
+                                    );
+                                  } catch (err) {
+                                    if (kDebugMode) {
+                                      debugPrint(
+                                        'ArtistStudio: submission failed: $err',
+                                      );
+                                    }
+                                    if (!mounted) return;
+                                    scaffold.showKubusSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          l10n.artistStudioApplicationSubmissionFailedToast,
+                                        ),
+                                        backgroundColor: errorColor,
+                                      ),
+                                    );
+                                  } finally {
+                                    if (mounted) {
+                                      setModalState(
+                                        () => isSubmitting = false,
+                                      );
+                                    }
+                                  }
+                                },
+                          label: l10n.artistStudioApplicationSubmitButton,
+                          icon: Icons.send_rounded,
+                          isLoading: isSubmitting,
+                          isFullWidth: true,
+                          backgroundColor: KubusColorRoles.of(context)
+                              .web3ArtistStudioAccent,
+                          foregroundColor: ThemeData.estimateBrightnessForColor(
+                                      KubusColorRoles.of(context)
+                                          .web3ArtistStudioAccent) ==
+                                  Brightness.dark
+                              ? KubusColors.textPrimaryDark
+                              : KubusColors.textPrimaryLight,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),

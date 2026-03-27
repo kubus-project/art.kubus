@@ -1,10 +1,10 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../glass_components.dart';
 import '../../inline_progress.dart';
+import '../kubus_map_glass_surface.dart';
 
 /// Shared UI for the "Discovery path" module shown on both mobile and desktop
 /// map screens.
@@ -94,7 +94,7 @@ class KubusDiscoveryPathCard extends StatelessWidget {
           borderRadius: radius,
           showBorder: false,
           backgroundColor: glassTint,
-          enableBlur: !kIsWeb,
+          enableBlur: kubusMapBlurEnabled(context),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,

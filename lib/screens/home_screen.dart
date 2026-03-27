@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/themeprovider.dart';
@@ -41,6 +41,7 @@ import '../widgets/enhanced_stats_chart.dart';
 import '../widgets/empty_state_card.dart';
 import '../widgets/recent_activity_tile.dart';
 import 'activity/advanced_analytics_screen.dart';
+import 'map_screen.dart';
 import '../services/stats_api_service.dart';
 import '../models/stats/stats_models.dart';
 import '../utils/app_animations.dart';
@@ -48,14 +49,21 @@ import '../utils/app_color_utils.dart';
 import '../utils/kubus_color_roles.dart';
 import '../utils/artwork_media_resolver.dart';
 import '../utils/design_tokens.dart';
+import '../utils/keyboard_inset_resolver.dart';
 import '../utils/kubus_labs_feature.dart';
 import '../utils/user_profile_navigation.dart';
+import '../utils/home_search_destination.dart';
 import '../widgets/staggered_fade_slide.dart';
 import '../utils/artwork_navigation.dart';
+import '../services/search_service.dart';
 import '../widgets/glass_components.dart';
 import '../widgets/common/kubus_labs_adornment.dart';
 import '../widgets/common/kubus_screen_header.dart';
+import '../widgets/search/kubus_search_bar.dart';
 import '../widgets/support/support_section.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import '../features/map/search/map_search_controller.dart';
+import '../utils/map_search_suggestion.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -66,10 +74,16 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _animationController;
+  late final MapSearchController _homeSearchController;
 
   @override
   void initState() {
     super.initState();
+    _homeSearchController = MapSearchController(
+      scope: SearchScope.home,
+      limit: 8,
+      showOverlayOnFocus: false,
+    );
     _animationController = AnimationController(
       duration: AppAnimationTheme.defaults.long,
       vsync: this,
@@ -86,6 +100,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    _homeSearchController.dispose();
     _animationController.dispose();
     super.dispose();
   }
@@ -93,7 +108,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final animationTheme = context.animationTheme;
-    final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
+    final keyboardVisible = KeyboardInsetResolver.isKeyboardVisible(context);
     final bottomSafeInset = MediaQuery.of(context).padding.bottom;
     final fadeAnimation = CurvedAnimation(
       parent: _animationController,
@@ -111,51 +126,65 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       backgroundColor: Colors.transparent,
       body: SafeArea(
         bottom: false,
-        child: AnimatedBuilder(
-          animation: _animationController,
-          builder: (context, child) {
-            return FadeTransition(
-              opacity: fadeAnimation,
-              child: SlideTransition(
-                position: slideAnimation,
-                child: CustomScrollView(
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  slivers: [
-                    _buildAppBar(),
-                    SliverLayoutBuilder(
-                      builder: (context, constraints) {
-                        final screenWidth = constraints.crossAxisExtent;
-                        final isSmallScreen = screenWidth < 375;
-                        final padding = isSmallScreen ? 16.0 : 24.0;
-                        final spacing = isSmallScreen ? 16.0 : 24.0;
+        child: Stack(
+          children: [
+            AnimatedBuilder(
+              animation: _animationController,
+              builder: (context, child) {
+                return FadeTransition(
+                  opacity: fadeAnimation,
+                  child: SlideTransition(
+                    position: slideAnimation,
+                    child: CustomScrollView(
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      slivers: [
+                        _buildAppBar(),
+                        SliverLayoutBuilder(
+                          builder: (context, constraints) {
+                            final screenWidth = constraints.crossAxisExtent;
+                            final isSmallScreen = screenWidth < 375;
+                            final padding = isSmallScreen ? 16.0 : 24.0;
+                            final spacing = isSmallScreen ? 16.0 : 24.0;
 
-                        return SliverPadding(
-                          padding: EdgeInsets.fromLTRB(
-                            padding,
-                            padding,
-                            padding,
-                            padding +
-                                (keyboardVisible
-                                    ? 0
-                                    : KubusLayout.mainBottomNavBarHeight +
-                                        bottomSafeInset),
-                          ),
-                          sliver: SliverList(
-                            delegate: SliverChildListDelegate(
-                              _buildAnimatedSections(spacing),
-                            ),
-                          ),
-                        );
-                      },
+                            return SliverPadding(
+                              padding: EdgeInsets.fromLTRB(
+                                padding,
+                                padding,
+                                padding,
+                                padding +
+                                    (keyboardVisible
+                                        ? 0
+                                        : KubusLayout.mainBottomNavBarHeight +
+                                            bottomSafeInset),
+                              ),
+                              sliver: SliverList(
+                                delegate: SliverChildListDelegate(
+                                  _buildAnimatedSections(spacing),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-            );
-          },
+                  ),
+                );
+              },
+            ),
+            _buildHomeSearchOverlay(),
+          ],
         ),
       ),
+    );
+  }
+
+  Future<void> _copyWalletAddress(String walletAddress) async {
+    if (walletAddress.trim().isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: walletAddress.trim()));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showKubusSnackBar(
+      const SnackBar(content: Text('Wallet address copied')),
     );
   }
 
@@ -201,7 +230,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       snap: true,
       backgroundColor: Colors.transparent,
       elevation: 0,
-      expandedHeight: 80,
+      expandedHeight: 148,
       flexibleSpace: LayoutBuilder(
         builder: (context, constraints) {
           final isSmallScreen = constraints.maxWidth < 375;
@@ -223,86 +252,148 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         : KubusHeaderMetrics.appBarHorizontalPaddingLg,
                     KubusHeaderMetrics.appBarVerticalPadding,
                   ),
-                  child: Row(
+                  child: Column(
                     children: [
-                      AppLogo(
-                        width: isSmallScreen
-                            ? KubusHeaderMetrics.compactLogo
-                            : KubusHeaderMetrics.logo,
-                        height: isSmallScreen
-                            ? KubusHeaderMetrics.compactLogo
-                            : KubusHeaderMetrics.logo,
-                      ),
-                      SizedBox(
-                          width: isSmallScreen
-                              ? KubusSpacing.sm
-                              : KubusSpacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            KubusHeaderText(
-                              title: 'art.kubus',
-                              kind: KubusHeaderKind.section,
-                              compact: true,
-                              titleColor: scheme.onSurface,
-                              maxTitleLines: 1,
-                              subtitle: web3Provider.isConnected
-                                  ? web3Provider.formatAddress(
-                                      web3Provider.walletAddress,
-                                    )
-                                  : null,
-                              subtitleStyle: GoogleFonts.robotoMono(
-                                fontSize: KubusHeaderMetrics.sectionSubtitle,
-                                color: scheme.onSurface.withValues(alpha: 0.6),
-                              ),
-                            ),
-                            if (web3Provider.isConnected)
-                              Container(
-                                margin: const EdgeInsets.only(
-                                    top: KubusSpacing.xxs),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: KubusSpacing.sm,
-                                  vertical: KubusSpacing.xxs,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.orange.withValues(alpha: 0.1),
-                                  borderRadius:
-                                      BorderRadius.circular(KubusRadius.sm),
-                                  border: Border.all(
-                                    color: Colors.orange.withValues(alpha: 0.3),
-                                    width: KubusSizes.hairline,
-                                  ),
-                                ),
-                                child: Text(
-                                  'DEVNET',
-                                  style: KubusTypography.textTheme.labelSmall
-                                      ?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.orange,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      Consumer<NotificationProvider>(
-                        builder: (context, np, _) => TopBarIcon(
-                          tooltip: l10n.commonNotifications,
-                          icon: Icon(
-                            Icons.notifications_outlined,
-                            color: scheme.onSurface,
-                            size: KubusHeaderMetrics.actionIcon,
+                      Row(
+                        children: [
+                          AppLogo(
+                            width: isSmallScreen
+                                ? KubusHeaderMetrics.compactLogo
+                                : KubusHeaderMetrics.logo,
+                            height: isSmallScreen
+                                ? KubusHeaderMetrics.compactLogo
+                                : KubusHeaderMetrics.logo,
                           ),
-                          onPressed: () {
-                            _showNotificationsBottomSheet(context);
-                          },
-                          badgeCount: np.unreadCount,
-                          badgeColor:
-                              Provider.of<ThemeProvider>(context).accentColor,
-                        ),
+                          SizedBox(
+                              width: isSmallScreen
+                                  ? KubusSpacing.sm
+                                  : KubusSpacing.md),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                KubusHeaderText(
+                                  title: 'art.kubus',
+                                  kind: KubusHeaderKind.section,
+                                  compact: true,
+                                  titleColor: scheme.onSurface,
+                                  maxTitleLines: 1,
+                                ),
+                                if (web3Provider.isConnected)
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                      top: KubusSpacing.xxs,
+                                    ),
+                                    child: Wrap(
+                                      spacing: KubusSpacing.sm,
+                                      runSpacing: KubusSpacing.xxs,
+                                      crossAxisAlignment:
+                                          WrapCrossAlignment.center,
+                                      children: [
+                                        Material(
+                                          color: Colors.transparent,
+                                          child: InkWell(
+                                            borderRadius: BorderRadius.circular(
+                                              KubusRadius.sm,
+                                            ),
+                                            onTap: () => _copyWalletAddress(
+                                              web3Provider.walletAddress,
+                                            ),
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                horizontal: KubusSpacing.xxs,
+                                                vertical: KubusSpacing.xxs,
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Text(
+                                                    web3Provider.formatAddress(
+                                                      web3Provider
+                                                          .walletAddress,
+                                                    ),
+                                                    style:
+                                                        GoogleFonts.robotoMono(
+                                                      fontSize:
+                                                          KubusHeaderMetrics
+                                                              .sectionSubtitle,
+                                                      color: scheme.onSurface
+                                                          .withValues(
+                                                        alpha: 0.6,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(
+                                                    width: KubusSpacing.xxs,
+                                                  ),
+                                                  Icon(
+                                                    Icons.copy_rounded,
+                                                    size: KubusSpacing.md,
+                                                    color: scheme.onSurface
+                                                        .withValues(
+                                                      alpha: 0.45,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: KubusSpacing.sm,
+                                            vertical: KubusSpacing.xxs,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.orange
+                                                .withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(
+                                              KubusRadius.sm,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.orange
+                                                  .withValues(alpha: 0.3),
+                                              width: KubusSizes.hairline,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            'DEVNET',
+                                            style: KubusTypography
+                                                .textTheme.labelSmall
+                                                ?.copyWith(
+                                              fontWeight: FontWeight.w700,
+                                              color: Colors.orange,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          Consumer<NotificationProvider>(
+                            builder: (context, np, _) => TopBarIcon(
+                              tooltip: l10n.commonNotifications,
+                              icon: Icon(
+                                Icons.notifications_outlined,
+                                color: scheme.onSurface,
+                                size: KubusHeaderMetrics.actionIcon,
+                              ),
+                              onPressed: () {
+                                _showNotificationsBottomSheet(context);
+                              },
+                              badgeCount: np.unreadCount,
+                              badgeColor: Provider.of<ThemeProvider>(context)
+                                  .accentColor,
+                            ),
+                          ),
+                        ],
                       ),
+                      const SizedBox(height: KubusSpacing.md),
+                      _buildHomeSearchSection(),
                     ],
                   ),
                 ),
@@ -312,6 +403,165 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         },
       ),
     );
+  }
+
+  Widget _buildHomeSearchSection() {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final accent = Provider.of<ThemeProvider>(context).accentColor;
+    final surfaceStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.button,
+      tintBase: scheme.surface,
+    );
+
+    return ListenableBuilder(
+      listenable: _homeSearchController,
+      builder: (context, _) {
+        final query = _homeSearchController.state.query;
+        final hasText = query.trim().isNotEmpty;
+
+        return CompositedTransformTarget(
+          link: _homeSearchController.fieldLink,
+          child: SizedBox(
+            height: KubusHeaderMetrics.searchBarHeight,
+            child: KubusSearchBar(
+              semanticsLabel: 'home_search_input',
+              hintText: AppLocalizations.of(context)!.commonSearchHint,
+              controller: _homeSearchController.textController,
+              focusNode: _homeSearchController.focusNode,
+              onChanged: (value) =>
+                  _homeSearchController.onQueryChanged(context, value),
+              onSubmitted: (_) => _handleHomeSearchSubmit(),
+              trailingBuilder: (context, _) {
+                if (!hasText) return const SizedBox.shrink();
+                return IconButton(
+                  tooltip:
+                      MaterialLocalizations.of(context).deleteButtonTooltip,
+                  icon: Icon(
+                    Icons.close,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  onPressed: () {
+                    _homeSearchController.clearQueryWithContext(context);
+                  },
+                );
+              },
+              style: KubusSearchBarStyle(
+                borderRadius: BorderRadius.circular(KubusRadius.lg),
+                backgroundColor: surfaceStyle.tintColor,
+                borderColor: scheme.outline.withValues(alpha: 0.18),
+                focusedBorderColor: accent,
+                borderWidth: 1,
+                focusedBorderWidth: 2,
+                blurSigma: null,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.md,
+                  vertical: KubusSpacing.md - KubusSpacing.xxs,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: scheme.shadow.withValues(alpha: 0.08),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+                focusedBoxShadow: [
+                  BoxShadow(
+                    color: accent.withValues(alpha: 0.14),
+                    blurRadius: 14,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+                prefixIconConstraints: const BoxConstraints(
+                  minWidth: KubusHeaderMetrics.actionHitArea,
+                  minHeight: KubusHeaderMetrics.actionHitArea,
+                ),
+                suffixIconConstraints: const BoxConstraints(
+                  minWidth: KubusHeaderMetrics.actionHitArea,
+                  minHeight: KubusHeaderMetrics.actionHitArea,
+                ),
+                textStyle: KubusTypography.textTheme.bodyMedium?.copyWith(
+                  color: scheme.onSurface,
+                ),
+                hintStyle: KubusTypography.textTheme.bodyMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildHomeSearchOverlay() {
+    return ListenableBuilder(
+      listenable: _homeSearchController,
+      builder: (context, _) {
+        final state = _homeSearchController.state;
+        if (!state.isOverlayVisible) {
+          return const SizedBox.shrink();
+        }
+
+        return KubusSearchSuggestionsOverlay(
+          link: _homeSearchController.fieldLink,
+          query: state.query,
+          isFetching: state.isFetching,
+          suggestions: state.suggestions,
+          accentColor: Provider.of<ThemeProvider>(context).accentColor,
+          minCharsHint: AppLocalizations.of(context)!.mapSearchMinCharsHint,
+          noResultsText: AppLocalizations.of(context)!.commonNoSuggestions,
+          onDismiss: () => _homeSearchController.dismissOverlay(),
+          onSuggestionTap: (suggestion) {
+            unawaited(_handleHomeSearchSuggestionTap(suggestion));
+          },
+        );
+      },
+    );
+  }
+
+  void _handleHomeSearchSubmit() {
+    final query = _homeSearchController.state.query.trim();
+    final suggestions = _homeSearchController.state.suggestions;
+    _homeSearchController.onSubmitted();
+    if (query.isEmpty) return;
+    if (suggestions.isNotEmpty) {
+      unawaited(_handleHomeSearchSuggestionTap(suggestions.first));
+    }
+  }
+
+  Future<void> _handleHomeSearchSuggestionTap(
+    MapSearchSuggestion suggestion,
+  ) async {
+    _homeSearchController.textController.text = suggestion.label;
+    _homeSearchController.textController.selection =
+        TextSelection.collapsed(offset: suggestion.label.length);
+    _homeSearchController.onQueryChanged(context, suggestion.label);
+    _homeSearchController.dismissOverlay(unfocus: true);
+
+    final destination = HomeSearchDestination.fromSuggestion(suggestion);
+    switch (destination.kind) {
+      case HomeSearchDestinationKind.artwork:
+        await openArtwork(context, destination.id!, source: 'home_search');
+        return;
+      case HomeSearchDestinationKind.profile:
+        await UserProfileNavigation.open(context, userId: destination.id!);
+        return;
+      case HomeSearchDestinationKind.map:
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => MapScreen(
+              initialCenter: destination.position!,
+              initialZoom: 15,
+              autoFollow: false,
+            ),
+          ),
+        );
+        return;
+      case HomeSearchDestinationKind.none:
+        return;
+    }
   }
 
   Widget _buildWelcomeSection() {
@@ -562,6 +812,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             .where(
                 (key) => NavigationProvider.screenDefinitions.containsKey(key))
             .toList(growable: false);
+        final isCompactLayout = constraints.maxWidth < 640;
+        final compactCardWidth =
+            ((constraints.maxWidth - KubusSpacing.sm) / 2).clamp(140.0, 220.0);
+
+        Widget buildActionStrip(List<Widget> children) {
+          if (!isCompactLayout) {
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: children),
+            );
+          }
+
+          return Wrap(
+            spacing: KubusSpacing.sm,
+            runSpacing: KubusSpacing.sm,
+            children: children,
+          );
+        }
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -620,14 +888,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                   if (suggestedKeys.isNotEmpty) ...[
                     const SizedBox(height: 12),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: suggestedKeys.map((key) {
-                          final def =
-                              NavigationProvider.screenDefinitions[key]!;
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 12),
+                    buildActionStrip(
+                      suggestedKeys.map((key) {
+                        final def = NavigationProvider.screenDefinitions[key]!;
+                        return Padding(
+                          padding: EdgeInsets.only(
+                            right: isCompactLayout ? 0 : KubusSpacing.sm,
+                          ),
+                          child: SizedBox(
+                            width: isCompactLayout ? compactCardWidth : null,
                             child: _buildActionCard(
                               def.labelKey.resolve(l10n),
                               def.icon,
@@ -636,25 +905,29 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 scheme,
                                 roles: KubusColorRoles.of(context),
                               ),
-                              false,
+                              isCompactLayout,
                               onTap: () => navigationProvider.navigateToScreen(
-                                  context, key),
+                                context,
+                                key,
+                              ),
                               visitCount: 0,
                             ),
-                          );
-                        }).toList(growable: false),
-                      ),
+                          ),
+                        );
+                      }).toList(growable: false),
                     ),
                   ],
                 ],
               )
             else
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: frequentScreens.map((screen) {
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 12),
+              buildActionStrip(
+                frequentScreens.map((screen) {
+                  return Padding(
+                    padding: EdgeInsets.only(
+                      right: isCompactLayout ? 0 : KubusSpacing.sm,
+                    ),
+                    child: SizedBox(
+                      width: isCompactLayout ? compactCardWidth : null,
                       child: _buildActionCard(
                         screen.labelKey.resolve(l10n),
                         screen.icon,
@@ -663,14 +936,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           scheme,
                           roles: KubusColorRoles.of(context),
                         ),
-                        false,
+                        isCompactLayout,
                         onTap: () => navigationProvider.navigateToScreen(
                             context, screen.key),
                         visitCount: screen.visitCount,
                       ),
-                    );
-                  }).toList(),
-                ),
+                    ),
+                  );
+                }).toList(),
               ),
           ],
         );
@@ -735,7 +1008,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
     final radius = BorderRadius.circular(16);
     final cardWidth = isSmallScreen ? 176.0 : 192.0;
-    final cardHeight = isSmallScreen ? 88.0 : 96.0;
+    final cardHeight = isSmallScreen ? 116.0 : 96.0;
+    final iconSize = isSmallScreen ? 18.0 : 20.0;
+    final iconBoxSize = isSmallScreen ? 44.0 : 40.0;
 
     return SizedBox(
       width: cardWidth,
@@ -790,83 +1065,144 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   vertical: isSmallScreen ? KubusSpacing.sm : KubusSpacing.md,
                 ),
                 child: Center(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Container(
-                            width: isSmallScreen ? 36 : 40,
-                            height: isSmallScreen ? 36 : 40,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  color.withValues(alpha: 0.26),
-                                  color.withValues(alpha: 0.10),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: color.withValues(alpha: 0.25),
-                                width: 1,
-                              ),
-                            ),
-                            child: Icon(
-                              icon,
+                  child: isSmallScreen
+                      ? Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _buildQuickActionIconBadge(
                               color: color,
-                              size: isSmallScreen ? 16 : 20,
+                              icon: icon,
+                              iconBoxSize: iconBoxSize,
+                              iconSize: iconSize,
+                              visitCount: visitCount,
                             ),
-                          ),
-                          if (visitCount > 0)
-                            Positioned(
-                              top: -4,
-                              right: -4,
-                              child: Container(
-                                padding: const EdgeInsets.all(2),
-                                decoration: BoxDecoration(
-                                  color: color,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                constraints: const BoxConstraints(
-                                  minWidth: 16,
-                                  minHeight: 16,
-                                ),
-                                child: Text(
-                                  visitCount.toString(),
-                                  style: KubusTextStyles.badgeCount.copyWith(
-                                    color: Colors.white,
-                                  ),
-                                  textAlign: TextAlign.center,
+                            const SizedBox(height: KubusSpacing.sm),
+                            Text(
+                              title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: KubusTextStyles.sectionTitle.copyWith(
+                                fontSize: KubusHeaderMetrics.sectionSubtitle,
+                                color: scheme.onSurface,
+                              ),
+                            ),
+                          ],
+                        )
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _buildQuickActionIconBadge(
+                              color: color,
+                              icon: icon,
+                              iconBoxSize: iconBoxSize,
+                              iconSize: iconSize,
+                              visitCount: visitCount,
+                            ),
+                            const SizedBox(width: 14),
+                            Flexible(
+                              child: Text(
+                                title,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: KubusTextStyles.sectionTitle.copyWith(
+                                  fontSize: KubusHeaderMetrics.sectionTitle,
+                                  color: scheme.onSurface,
                                 ),
                               ),
                             ),
-                        ],
-                      ),
-                      SizedBox(width: isSmallScreen ? 10 : 14),
-                      Flexible(
-                        child: Text(
-                          title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: KubusTextStyles.sectionTitle.copyWith(
-                            fontSize: isSmallScreen
-                                ? KubusHeaderMetrics.screenSubtitle
-                                : KubusHeaderMetrics.sectionTitle,
-                            color: scheme.onSurface,
-                          ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
                 ),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildQuickActionIconBadge({
+    required Color color,
+    required IconData icon,
+    required double iconBoxSize,
+    required double iconSize,
+    required int visitCount,
+  }) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: iconBoxSize,
+          height: iconBoxSize,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                color.withValues(alpha: 0.26),
+                color.withValues(alpha: 0.10),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: color.withValues(alpha: 0.25),
+              width: 1,
+            ),
+          ),
+          child: Icon(
+            icon,
+            color: color,
+            size: iconSize,
+          ),
+        ),
+        if (visitCount > 0)
+          Positioned(
+            top: -4,
+            right: -4,
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              constraints: const BoxConstraints(
+                minWidth: 16,
+                minHeight: 16,
+              ),
+              child: Text(
+                visitCount.toString(),
+                style: KubusTextStyles.badgeCount.copyWith(
+                  color: Colors.white,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildStatIconBadge(Color statColor, IconData icon) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            statColor.withValues(alpha: 0.24),
+            statColor.withValues(alpha: 0.08),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
+        border: Border.all(
+          color: statColor.withValues(alpha: 0.22),
+          width: KubusSizes.hairline,
+        ),
+      ),
+      child: Icon(icon, color: statColor, size: 20),
     );
   }
 
@@ -1105,11 +1441,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         ? Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                icon,
-                                color: statColor,
-                                size: 28,
-                              ),
+                              _buildStatIconBadge(statColor, icon),
                               SizedBox(height: isSmallScreen ? 4 : 6),
                               Text(
                                 displayTitle,
@@ -1140,11 +1472,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             ? Row(
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  Icon(
-                                    icon,
-                                    color: statColor,
-                                    size: 20,
-                                  ),
+                                  _buildStatIconBadge(statColor, icon),
                                   SizedBox(width: isSmallScreen ? 8 : 12),
                                   Expanded(
                                     child: Column(
@@ -1190,11 +1518,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             : Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(
-                                    icon,
-                                    color: statColor,
-                                    size: 24,
-                                  ),
+                                  _buildStatIconBadge(statColor, icon),
                                   SizedBox(height: isSmallScreen ? 4 : 6),
                                   Text(
                                     displayTitle,

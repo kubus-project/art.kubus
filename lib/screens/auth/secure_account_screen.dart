@@ -13,6 +13,7 @@ import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:art_kubus/widgets/kubus_card.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/common/keyboard_inset_padding.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -532,18 +533,20 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
             child: const SizedBox.expand(),
           ),
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: KubusSpacing.lg,
-                vertical: KubusSpacing.md,
-              ),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 520),
-                  child: KubusCard(
-                    padding: const EdgeInsets.all(KubusSpacing.lg),
-                    color: scheme.surfaceContainerHigh,
-                    child: body,
+            child: KeyboardInsetPadding(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.lg,
+                  vertical: KubusSpacing.md,
+                ),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 520),
+                    child: KubusCard(
+                      padding: const EdgeInsets.all(KubusSpacing.lg),
+                      color: scheme.surfaceContainerHigh,
+                      child: body,
+                    ),
                   ),
                 ),
               ),

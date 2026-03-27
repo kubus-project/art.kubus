@@ -31,6 +31,7 @@ import '../../utils/marker_subject_utils.dart';
 import '../download_app_screen.dart';
 import '../community/profile_screen_methods.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/common/keyboard_inset_padding.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 
 /// AR Screen with seamless Android and iOS support
@@ -1064,8 +1065,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                               color: Theme.of(context).colorScheme.primary),
                         ),
                         title: Text(artwork['title'],
-                            style:
-                                KubusTypography.inter(fontWeight: FontWeight.w600)),
+                            style: KubusTypography.inter(
+                                fontWeight: FontWeight.w600)),
                         subtitle: Text(
                             l10n.commonByArtist(artwork['artist']?.toString() ??
                                 l10n.commonUnknown),
@@ -1475,134 +1476,318 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       builder: (sheetContext) => StatefulBuilder(
         builder: (context, setModalState) {
           final l10n = AppLocalizations.of(context)!;
-          final viewInsets = MediaQuery.of(context).viewInsets.bottom;
           return SafeArea(
-            child: Container(
-              margin: const EdgeInsets.all(12),
-              padding: EdgeInsets.only(
-                left: 20,
-                right: 20,
-                top: 20,
-                bottom: 20 + viewInsets,
-              ),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Form(
-                key: formKey,
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.create,
-                              color: Theme.of(context).colorScheme.primary),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              l10n.arCreateUploadTitle,
-                              style: KubusTypography.inter(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w700,
-                                color: Theme.of(context).colorScheme.onSurface,
+            child: KeyboardInsetPadding(
+              extraBottom: 20,
+              child: Container(
+                margin: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Form(
+                  key: formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.create,
+                                color: Theme.of(context).colorScheme.primary),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                l10n.arCreateUploadTitle,
+                                style: KubusTypography.inter(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w700,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
+                                ),
                               ),
                             ),
-                          ),
-                          IconButton(
-                            onPressed: isSubmitting
-                                ? null
-                                : () => Navigator.of(sheetContext).pop(),
-                            icon: const Icon(Icons.close),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        l10n.arCreateUploadSubtitle,
-                        style: KubusTypography.inter(
-                          fontSize: 13,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.7),
+                            IconButton(
+                              onPressed: isSubmitting
+                                  ? null
+                                  : () => Navigator.of(sheetContext).pop(),
+                              icon: const Icon(Icons.close),
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(height: 20),
-                      DropdownButtonFormField<MarkerSubjectType>(
-                        initialValue: selectedSubjectType,
-                        decoration: InputDecoration(
-                          labelText: l10n.arCreateSubjectTypeLabel,
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12)),
+                        const SizedBox(height: 12),
+                        Text(
+                          l10n.arCreateUploadSubtitle,
+                          style: KubusTypography.inter(
+                            fontSize: 13,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.7),
+                          ),
                         ),
-                        items: allowedSubjectTypes
-                            .map(
-                              (type) => DropdownMenuItem(
-                                value: type,
-                                child: Text(
-                                    '${type.label} (${l10n.commonRequired})'),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: null,
-                      ),
-                      const SizedBox(height: 16),
-                      if ((subjectOptionsByType[selectedSubjectType] ?? [])
-                          .isNotEmpty)
-                        DropdownButtonFormField<MarkerSubjectOption>(
-                          initialValue: selectedSubject,
+                        const SizedBox(height: 20),
+                        DropdownButtonFormField<MarkerSubjectType>(
+                          initialValue: selectedSubjectType,
                           decoration: InputDecoration(
-                            labelText: l10n.arCreateSubjectLabel(
-                                selectedSubjectType.label),
+                            labelText: l10n.arCreateSubjectTypeLabel,
                             border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12)),
                           ),
-                          items:
-                              (subjectOptionsByType[selectedSubjectType] ?? [])
-                                  .map(
-                                    (option) => DropdownMenuItem(
-                                      value: option,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(option.title,
-                                              style: KubusTypography.inter(
-                                                  fontWeight: FontWeight.w600)),
-                                          if (option.subtitle.isNotEmpty)
-                                            Text(
-                                              option.subtitle,
-                                              style: KubusTypography.inter(
-                                                fontSize: 12,
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .onSurface
-                                                    .withValues(alpha: 0.7),
-                                              ),
+                          items: allowedSubjectTypes
+                              .map(
+                                (type) => DropdownMenuItem(
+                                  value: type,
+                                  child: Text(
+                                      '${type.label} (${l10n.commonRequired})'),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: null,
+                        ),
+                        const SizedBox(height: 16),
+                        if ((subjectOptionsByType[selectedSubjectType] ?? [])
+                            .isNotEmpty)
+                          DropdownButtonFormField<MarkerSubjectOption>(
+                            initialValue: selectedSubject,
+                            decoration: InputDecoration(
+                              labelText: l10n.arCreateSubjectLabel(
+                                  selectedSubjectType.label),
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                            ),
+                            items: (subjectOptionsByType[selectedSubjectType] ??
+                                    [])
+                                .map(
+                                  (option) => DropdownMenuItem(
+                                    value: option,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(option.title,
+                                            style: KubusTypography.inter(
+                                                fontWeight: FontWeight.w600)),
+                                        if (option.subtitle.isNotEmpty)
+                                          Text(
+                                            option.subtitle,
+                                            style: KubusTypography.inter(
+                                              fontSize: 12,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface
+                                                  .withValues(alpha: 0.7),
                                             ),
-                                        ],
-                                      ),
+                                          ),
+                                      ],
                                     ),
-                                  )
-                                  .toList(),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: isSubmitting
+                                ? null
+                                : (value) {
+                                    if (value == null) return;
+                                    setModalState(() {
+                                      selectedSubject = value;
+                                      titleController.text = value.title;
+                                      descriptionController.text =
+                                          value.subtitle.isNotEmpty
+                                              ? value.subtitle
+                                              : l10n.arCreateDefaultDescription(
+                                                  value.title);
+                                    });
+                                  },
+                          )
+                        else
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest
+                                  .withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              l10n.arCreateNoSubjectsAvailable(
+                                selectedSubjectType.label.toLowerCase(),
+                              ),
+                              style: KubusTypography.inter(fontSize: 13),
+                            ),
+                          ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: titleController,
+                          enabled: !isSubmitting,
+                          decoration: InputDecoration(
+                            labelText: l10n.arCreateMarkerTitleLabel,
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return l10n.arCreateTitleRequiredError;
+                            }
+                            if (value.trim().length < 3) {
+                              return l10n.arCreateTitleMinLengthError;
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: descriptionController,
+                          enabled: !isSubmitting,
+                          maxLines: 4,
+                          decoration: InputDecoration(
+                            labelText: l10n.arCreateDescriptionLabel,
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return l10n.arCreateDescriptionRequiredError;
+                            }
+                            if (value.trim().length < 10) {
+                              return l10n.arCreateDescriptionMinLengthError;
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: categoryController,
+                          enabled: !isSubmitting,
+                          decoration: InputDecoration(
+                            labelText: l10n.arCreateCategoryLabel,
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          l10n.arCreateAttach3dAssetTitle,
+                          style: KubusTypography.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        OutlinedButton.icon(
+                          onPressed: isSubmitting
+                              ? null
+                              : () => pickModelFile(setModalState),
+                          icon: isPickingFile
+                              ? SizedBox(
+                                  height: 18,
+                                  width: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                  ),
+                                )
+                              : const Icon(Icons.upload_file),
+                          label: Text(selectedModelName == null
+                              ? l10n.arCreateSelectModelButton
+                              : l10n.arCreateReplaceModelButton),
+                        ),
+                        if (selectedModelName != null) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primaryContainer
+                                  .withValues(alpha: 0.4),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.insert_drive_file),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        selectedModelName!,
+                                        style: KubusTypography.inter(
+                                            fontWeight: FontWeight.w600),
+                                      ),
+                                      if (selectedModelSize != null)
+                                        Text(
+                                          formatFileSize(selectedModelSize!),
+                                          style: KubusTypography.inter(
+                                              fontSize: 12),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  onPressed: isSubmitting
+                                      ? null
+                                      : () => setModalState(() {
+                                            selectedModelBytes = null;
+                                            selectedModelName = null;
+                                            selectedModelSize = null;
+                                          }),
+                                  icon: const Icon(Icons.close),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        if (fileError != null) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            fileError!,
+                            style: KubusTypography.inter(
+                              color: Theme.of(context).colorScheme.error,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 16),
+                        Text(
+                          l10n.arModelScaleLabel(
+                            (selectedScale * 100).toStringAsFixed(0),
+                          ),
+                          style: KubusTypography.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                        Slider(
+                          value: selectedScale,
+                          min: 0.5,
+                          max: 2.0,
+                          divisions: 15,
+                          label: '${(selectedScale * 100).toStringAsFixed(0)}%',
                           onChanged: isSubmitting
                               ? null
-                              : (value) {
-                                  if (value == null) return;
-                                  setModalState(() {
-                                    selectedSubject = value;
-                                    titleController.text = value.title;
-                                    descriptionController.text =
-                                        value.subtitle.isNotEmpty
-                                            ? value.subtitle
-                                            : l10n.arCreateDefaultDescription(
-                                                value.title);
-                                  });
-                                },
-                        )
-                      else
+                              : (value) => setModalState(() {
+                                    selectedScale = value;
+                                  }),
+                        ),
+                        SwitchListTile(
+                          title: Text(l10n.arCreatePublicMarkerTitle),
+                          subtitle: Text(l10n.arCreatePublicMarkerSubtitle),
+                          value: isPublic,
+                          onChanged: isSubmitting
+                              ? null
+                              : (value) =>
+                                  setModalState(() => isPublic = value),
+                        ),
+                        const SizedBox(height: 8),
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(12),
@@ -1613,240 +1798,60 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                 .withValues(alpha: 0.5),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Text(
-                            l10n.arCreateNoSubjectsAvailable(
-                              selectedSubjectType.label.toLowerCase(),
-                            ),
-                            style: KubusTypography.inter(fontSize: 13),
-                          ),
-                        ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: titleController,
-                        enabled: !isSubmitting,
-                        decoration: InputDecoration(
-                          labelText: l10n.arCreateMarkerTitleLabel,
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return l10n.arCreateTitleRequiredError;
-                          }
-                          if (value.trim().length < 3) {
-                            return l10n.arCreateTitleMinLengthError;
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: descriptionController,
-                        enabled: !isSubmitting,
-                        maxLines: 4,
-                        decoration: InputDecoration(
-                          labelText: l10n.arCreateDescriptionLabel,
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return l10n.arCreateDescriptionRequiredError;
-                          }
-                          if (value.trim().length < 10) {
-                            return l10n.arCreateDescriptionMinLengthError;
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: categoryController,
-                        enabled: !isSubmitting,
-                        decoration: InputDecoration(
-                          labelText: l10n.arCreateCategoryLabel,
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        l10n.arCreateAttach3dAssetTitle,
-                        style: KubusTypography.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      OutlinedButton.icon(
-                        onPressed: isSubmitting
-                            ? null
-                            : () => pickModelFile(setModalState),
-                        icon: isPickingFile
-                            ? SizedBox(
-                                height: 18,
-                                width: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                              )
-                            : const Icon(Icons.upload_file),
-                        label: Text(selectedModelName == null
-                            ? l10n.arCreateSelectModelButton
-                            : l10n.arCreateReplaceModelButton),
-                      ),
-                      if (selectedModelName != null) ...[
-                        const SizedBox(height: 8),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .primaryContainer
-                                .withValues(alpha: 0.4),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
                           child: Row(
                             children: [
-                              const Icon(Icons.insert_drive_file),
+                              Icon(Icons.my_location,
+                                  color: Theme.of(context).colorScheme.primary),
                               const SizedBox(width: 12),
                               Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      selectedModelName!,
-                                      style: KubusTypography.inter(
-                                          fontWeight: FontWeight.w600),
-                                    ),
-                                    if (selectedModelSize != null)
-                                      Text(
-                                        formatFileSize(selectedModelSize!),
-                                        style: KubusTypography.inter(fontSize: 12),
-                                      ),
-                                  ],
+                                child: Text(
+                                  '${location.latitude.toStringAsFixed(6)}, ${location.longitude.toStringAsFixed(6)}',
+                                  style: KubusTypography.inter(fontSize: 13),
                                 ),
-                              ),
-                              IconButton(
-                                onPressed: isSubmitting
-                                    ? null
-                                    : () => setModalState(() {
-                                          selectedModelBytes = null;
-                                          selectedModelName = null;
-                                          selectedModelSize = null;
-                                        }),
-                                icon: const Icon(Icons.close),
                               ),
                             ],
                           ),
                         ),
-                      ],
-                      if (fileError != null) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          fileError!,
-                          style: KubusTypography.inter(
-                            color: Theme.of(context).colorScheme.error,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 16),
-                      Text(
-                        l10n.arModelScaleLabel(
-                          (selectedScale * 100).toStringAsFixed(0),
-                        ),
-                        style: KubusTypography.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      Slider(
-                        value: selectedScale,
-                        min: 0.5,
-                        max: 2.0,
-                        divisions: 15,
-                        label: '${(selectedScale * 100).toStringAsFixed(0)}%',
-                        onChanged: isSubmitting
-                            ? null
-                            : (value) => setModalState(() {
-                                  selectedScale = value;
-                                }),
-                      ),
-                      SwitchListTile(
-                        title: Text(l10n.arCreatePublicMarkerTitle),
-                        subtitle: Text(l10n.arCreatePublicMarkerSubtitle),
-                        value: isPublic,
-                        onChanged: isSubmitting
-                            ? null
-                            : (value) => setModalState(() => isPublic = value),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest
-                              .withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.my_location,
-                                color: Theme.of(context).colorScheme.primary),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                '${location.latitude.toStringAsFixed(6)}, ${location.longitude.toStringAsFixed(6)}',
-                                style: KubusTypography.inter(fontSize: 13),
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: isSubmitting
+                                ? null
+                                : () => submit(setModalState),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              backgroundColor:
+                                  Theme.of(context).colorScheme.primary,
+                              foregroundColor:
+                                  Theme.of(context).colorScheme.onPrimary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed:
-                              isSubmitting ? null : () => submit(setModalState),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            backgroundColor:
-                                Theme.of(context).colorScheme.primary,
-                            foregroundColor:
-                                Theme.of(context).colorScheme.onPrimary,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                            icon: isSubmitting
+                                ? SizedBox(
+                                    height: 18,
+                                    width: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onPrimary,
+                                    ),
+                                  )
+                                : const Icon(Icons.upload),
+                            label: Text(
+                              isSubmitting
+                                  ? l10n.arCreateUploadingLabel
+                                  : l10n.arCreateUploadAndCreateButton,
+                              style: KubusTypography.inter(
+                                  fontWeight: FontWeight.w600),
                             ),
                           ),
-                          icon: isSubmitting
-                              ? SizedBox(
-                                  height: 18,
-                                  width: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color:
-                                        Theme.of(context).colorScheme.onPrimary,
-                                  ),
-                                )
-                              : const Icon(Icons.upload),
-                          label: Text(
-                            isSubmitting
-                                ? l10n.arCreateUploadingLabel
-                                : l10n.arCreateUploadAndCreateButton,
-                            style:
-                                KubusTypography.inter(fontWeight: FontWeight.w600),
-                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -2129,7 +2134,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
   // Social interaction handlers
   Future<void> _handleShare(Map<String, dynamic> artwork) async {
-    final artworkId = (artwork['artworkId'] ?? artwork['id'])?.toString().trim();
+    final artworkId =
+        (artwork['artworkId'] ?? artwork['id'])?.toString().trim();
     if (artworkId == null || artworkId.isEmpty) return;
 
     await ShareService().showShareSheet(

@@ -86,6 +86,7 @@ class MapSearchController extends ChangeNotifier {
 
   Timer? _debounce;
   int _requestToken = 0;
+  bool _disposed = false;
 
   MapSearchState _state = const MapSearchState(
     query: '',
@@ -97,6 +98,7 @@ class MapSearchController extends ChangeNotifier {
   MapSearchState get state => _state;
 
   void _setState(MapSearchState next) {
+    if (_disposed) return;
     if (identical(next, _state)) return;
     _state = next;
     notifyListeners();
@@ -122,6 +124,8 @@ class MapSearchController extends ChangeNotifier {
   void onQueryChanged(BuildContext context, String value) {
     final nextQuery = value;
     final trimmed = nextQuery.trim();
+    final snapshot =
+        SearchContextSnapshot.capture(context, scope: scope);
 
     _debounce?.cancel();
     _debounce = null;
@@ -145,7 +149,7 @@ class MapSearchController extends ChangeNotifier {
 
     final myToken = ++_requestToken;
     _debounce = Timer(debounceDuration, () {
-      unawaited(_fetchSuggestions(context, trimmed, token: myToken));
+      unawaited(_fetchSuggestions(snapshot, trimmed, token: myToken));
     });
   }
 
@@ -186,24 +190,24 @@ class MapSearchController extends ChangeNotifier {
   }
 
   Future<void> _fetchSuggestions(
-    BuildContext context,
+    SearchContextSnapshot snapshot,
     String trimmedQuery, {
     required int token,
   }) async {
     // Drop if query changed since scheduling.
-    if (token != _requestToken) return;
+    if (_disposed || token != _requestToken) return;
 
     _setState(_state.copyWith(isFetching: true));
 
     try {
       final suggestions = await _searchService.fetchSuggestions(
-        context: context,
+        snapshot: snapshot,
         query: trimmedQuery,
         scope: scope,
         limit: limit,
       );
 
-      if (token != _requestToken) return;
+      if (_disposed || token != _requestToken) return;
 
       _setState(
         _state.copyWith(
@@ -213,7 +217,7 @@ class MapSearchController extends ChangeNotifier {
         ),
       );
     } catch (_) {
-      if (token != _requestToken) return;
+      if (_disposed || token != _requestToken) return;
       _setState(
         _state.copyWith(
           isFetching: false,
@@ -226,7 +230,9 @@ class MapSearchController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     _debounce?.cancel();
+    _requestToken += 1;
     focusNode.removeListener(_handleFocusChanged);
 
     if (_ownsTextController) {

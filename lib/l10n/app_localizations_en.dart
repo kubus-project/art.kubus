@@ -734,6 +734,51 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowProfileBody => 'Add a name and a photo so people can recognize you.';
 
   @override
+  String get onboardingFlowWalletBackupIntroTitle => 'Protect your wallet access';
+
+  @override
+  String get onboardingFlowWalletBackupIntroBody => 'Email and Google sign-up already created a real signer-backed wallet for your art.kubus account. Back it up now so you do not lose access to wallet-based features, collectibles, and points.';
+
+  @override
+  String get onboardingFlowWalletBackupIntroWeb3Warning => 'art.kubus is a Web3 project. Your wallet is part of your account access, not just an optional extra.';
+
+  @override
+  String get onboardingFlowWalletBackupIntroSecretWarning => 'Save both secrets separately when you use encrypted backup: the recovery phrase restores the wallet, and the recovery password unlocks the encrypted server backup.';
+
+  @override
+  String get onboardingFlowWalletBackupIntroRecoveryPhraseLabel => 'Recovery phrase';
+
+  @override
+  String get onboardingFlowWalletBackupIntroRecoveryPhraseBody => 'Copy the recovery phrase and store it somewhere safe offline. It is the most important way to restore this wallet.';
+
+  @override
+  String get onboardingFlowWalletBackupIntroEncryptedBackupLabel => 'Encrypted server backup';
+
+  @override
+  String get onboardingFlowWalletBackupIntroEncryptedBackupBody => 'Create an encrypted server backup for another recovery path, then store the recovery password in a safe location too.';
+
+  @override
+  String get onboardingFlowWalletBackupIntroPasskeyLabel => 'Passkey protection';
+
+  @override
+  String get onboardingFlowWalletBackupIntroPasskeyBody => 'On supported web clients, add a passkey after the encrypted server backup is created for stronger access protection.';
+
+  @override
+  String get onboardingFlowWalletBackupIntroRevealAction => 'Reveal and copy phrase';
+
+  @override
+  String get onboardingFlowWalletBackupIntroEncryptedAction => 'Create encrypted backup';
+
+  @override
+  String get onboardingFlowWalletBackupIntroEncryptedDone => 'Encrypted backup ready';
+
+  @override
+  String get onboardingFlowWalletBackupIntroPasskeyAction => 'Add passkey';
+
+  @override
+  String get onboardingFlowWalletBackupIntroPasskeyDone => 'Passkey added';
+
+  @override
   String get onboardingFlowWalletBackupTitle => 'Back up your recovery phrase';
 
   @override
@@ -1421,12 +1466,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTransactionHistoryTileSubtitle => 'View all transactions';
 
   @override
-  String get settingsBackupSettingsTileTitle => 'Backup settings';
+  String get settingsBackupSettingsTileTitle => 'Backup protection';
 
   @override
   String settingsAutoBackupSummary(Object status) {
     return 'Auto-backup: $status';
   }
+
+  @override
+  String get settingsBackupStatusNoWallet => 'No wallet connected yet';
+
+  @override
+  String get settingsBackupStatusNoBackup => 'No backup protection configured yet';
+
+  @override
+  String get settingsBackupStatusRecoveryPhraseRequired => 'Recovery phrase backup still required';
+
+  @override
+  String get settingsBackupStatusEncryptedServerBackup => 'Encrypted server backup configured';
+
+  @override
+  String get settingsBackupStatusPasskeyProtection => 'Passkey-protected server backup configured';
+
+  @override
+  String get settingsBackupStatusReadOnly => 'Read-only wallet session on this device';
 
   @override
   String get settingsExportRecoveryPhraseTileTitle => 'Export recovery phrase';
@@ -6753,6 +6816,42 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletBackupMarkedCompleteToast => 'Recovery phrase backup marked as complete.';
+
+  @override
+  String get walletBackupProtectionNoWalletHeadline => 'No wallet is connected on this device yet.';
+
+  @override
+  String get walletBackupProtectionNoWalletBody => 'Connect or restore the wallet on this device before managing backup protection.';
+
+  @override
+  String get walletBackupProtectionNoBackupHeadline => 'No encrypted server backup is configured yet.';
+
+  @override
+  String get walletBackupProtectionNoBackupBody => 'Create an encrypted server backup if you want a server-side recovery option, and store its recovery password separately from the recovery phrase.';
+
+  @override
+  String get walletBackupProtectionRecoveryPhraseHeadline => 'Recovery phrase backup is still required.';
+
+  @override
+  String get walletBackupProtectionRecoveryPhraseBody => 'Store the recovery phrase offline to avoid losing access to Web3 features, collectibles, and points tied to this wallet.';
+
+  @override
+  String get walletBackupProtectionEncryptedHeadline => 'Encrypted server backup is configured.';
+
+  @override
+  String get walletBackupProtectionEncryptedBody => 'Keep the encrypted backup recovery password stored separately from the recovery phrase so both recovery paths remain usable.';
+
+  @override
+  String get walletBackupProtectionPasskeyHeadline => 'Passkey-protected server backup is configured.';
+
+  @override
+  String get walletBackupProtectionPasskeyBody => 'This encrypted server backup is protected with a passkey on web. Keep the recovery password stored separately from the recovery phrase.';
+
+  @override
+  String get walletBackupProtectionReadOnlyHeadline => 'This device only has read-only wallet access.';
+
+  @override
+  String get walletBackupProtectionReadOnlyBody => 'Restore the wallet signer with your encrypted server backup or recovery phrase before managing transfers and other wallet-gated features on this device.';
 
   @override
   String get walletBackupBannerTitle => 'Back up your wallet recovery phrase';

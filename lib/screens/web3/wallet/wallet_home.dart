@@ -14,6 +14,7 @@ import 'send_token_screen.dart';
 import 'receive_token_screen.dart';
 import '../../settings_screen.dart';
 import '../../../widgets/empty_state_card.dart';
+import '../../../widgets/common/keyboard_inset_padding.dart';
 import '../../../utils/app_color_utils.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/utils/wallet_reconnect_action.dart';
@@ -977,105 +978,130 @@ class _WalletHomeState extends State<WalletHome> {
       ),
       builder: (context) {
         return SafeArea(
-          child: Padding(
-            padding: EdgeInsets.only(
-              left: 16,
-              right: 16,
-              top: 16,
-              bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-            ),
-            child: SizedBox(
-              height: MediaQuery.of(context).size.height * 0.75,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          l10n.settingsTransactionHistoryDialogTitle,
-                          style: KubusTypography.inter(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onSurface,
+          child: KeyboardInsetPadding(
+            extraBottom: 16,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: SizedBox(
+                height: MediaQuery.of(context).size.height * 0.75,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            l10n.settingsTransactionHistoryDialogTitle,
+                            style: KubusTypography.inter(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
                           ),
                         ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: Icon(Icons.close,
-                            color: Theme.of(context).colorScheme.onSurface),
-                        tooltip: l10n.commonClose,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  if (transactions.isEmpty)
-                    Expanded(
-                      child: Center(
-                        child: EmptyStateCard(
-                          icon: Icons.receipt_long,
-                          title: l10n.settingsNoTransactionsTitle,
-                          description: l10n.settingsNoTransactionsDescription,
+                        IconButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: Icon(
+                            Icons.close,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                          tooltip: l10n.commonClose,
                         ),
-                      ),
-                    )
-                  else
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: transactions.length,
-                        itemBuilder: (context, index) {
-                          final tx = transactions[index];
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    if (transactions.isEmpty)
+                      Expanded(
+                        child: Center(
+                          child: EmptyStateCard(
+                            icon: Icons.receipt_long,
+                            title: l10n.settingsNoTransactionsTitle,
+                            description: l10n.settingsNoTransactionsDescription,
+                          ),
+                        ),
+                      )
+                    else
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: transactions.length,
+                          itemBuilder: (context, index) {
+                            final tx = transactions[index];
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
                                 color: Theme.of(context)
                                     .colorScheme
-                                    .outline
-                                    .withValues(alpha: 0.2),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: _getTransactionColor(tx.type)
-                                        .withValues(alpha: 0.2),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Icon(
-                                    _getTransactionIcon(tx.type),
-                                    color: _getTransactionColor(tx.type),
-                                    size: 20,
-                                  ),
+                                    .surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .outline
+                                      .withValues(alpha: 0.2),
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: _getTransactionColor(tx.type)
+                                          .withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Icon(
+                                      _getTransactionIcon(tx.type),
+                                      color: _getTransactionColor(tx.type),
+                                      size: 20,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          _transactionTypeLabel(tx.type, l10n),
+                                          style: KubusTypography.inter(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          '${tx.txHash.substring(0, 10)}...',
+                                          style: KubusTypography.inter(
+                                            fontSize: 12,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withValues(alpha: 0.6),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
                                       Text(
-                                        _transactionTypeLabel(tx.type, l10n),
+                                        '${tx.amount.toStringAsFixed(4)} ${tx.token}',
                                         style: KubusTypography.inter(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w600,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface,
+                                          color: _getTransactionColor(tx.type),
                                         ),
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
-                                        '${tx.txHash.substring(0, 10)}...',
+                                        _formatTime(tx.timestamp),
                                         style: KubusTypography.inter(
                                           fontSize: 12,
                                           color: Theme.of(context)
@@ -1086,39 +1112,14 @@ class _WalletHomeState extends State<WalletHome> {
                                       ),
                                     ],
                                   ),
-                                ),
-                                const SizedBox(width: 12),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(
-                                      '${tx.amount.toStringAsFixed(4)} ${tx.token}',
-                                      style: KubusTypography.inter(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: _getTransactionColor(tx.type),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      _formatTime(tx.timestamp),
-                                      style: KubusTypography.inter(
-                                        fontSize: 12,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withValues(alpha: 0.6),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          );
-                        },
+                                ],
+                              ),
+                            );
+                          },
+                        ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -1127,4 +1128,3 @@ class _WalletHomeState extends State<WalletHome> {
     );
   }
 }
-

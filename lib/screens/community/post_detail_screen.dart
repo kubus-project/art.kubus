@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:art_kubus/widgets/glass_components.dart';
 
 import 'package:flutter/foundation.dart';
@@ -12,6 +12,7 @@ import '../../utils/creator_display_format.dart';
 import '../../utils/search_suggestions.dart';
 import '../../community/community_interactions.dart';
 import '../../widgets/avatar_widget.dart';
+import '../../widgets/common/keyboard_inset_padding.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
@@ -29,7 +30,6 @@ import '../../models/community_subject.dart';
 import '../../utils/community_subject_navigation.dart';
 import '../../utils/media_url_resolver.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
- 
 
 enum PostDetailInitialAction { edit, delete, report, options }
 
@@ -37,8 +37,10 @@ class PostDetailScreen extends StatefulWidget {
   final CommunityPost? post;
   final String? postId;
   final VoidCallback? onClose;
-  final Future<List<CommunityLikeUser>> Function(String postId)? postLikesLoader;
-  final Future<List<Map<String, dynamic>>> Function(String postId)? postRepostsLoader;
+  final Future<List<CommunityLikeUser>> Function(String postId)?
+      postLikesLoader;
+  final Future<List<Map<String, dynamic>>> Function(String postId)?
+      postRepostsLoader;
   final String? currentWalletAddressOverride;
   final PostDetailInitialAction? initialAction;
 
@@ -79,7 +81,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     final override = widget.currentWalletAddressOverride;
     if (override != null) return override;
     try {
-      return Provider.of<WalletProvider>(context, listen: false).currentWalletAddress;
+      return Provider.of<WalletProvider>(context, listen: false)
+          .currentWalletAddress;
     } catch (_) {
       return null;
     }
@@ -99,7 +102,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         try {
           context.read<CommunitySubjectProvider>().primeFromPosts([post]);
         } catch (_) {}
-        context.read<CommunityCommentsProvider>().loadComments(post.id, force: true);
+        context
+            .read<CommunityCommentsProvider>()
+            .loadComments(post.id, force: true);
       });
     } else if (widget.postId != null) {
       _fetchPost(widget.postId!);
@@ -166,7 +171,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       if (mounted) {
         // Load comments via provider so edited/original fields and nesting are
         // consistent and mutations can update UI without manual refresh.
-        unawaited(context.read<CommunityCommentsProvider>().loadComments(post.id, force: true));
+        unawaited(context
+            .read<CommunityCommentsProvider>()
+            .loadComments(post.id, force: true));
       }
       _maybeRunInitialAction();
     } catch (e) {
@@ -186,7 +193,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     final l10n = AppLocalizations.of(context)!;
     final now = DateTime.now();
     final diff = now.difference(timestamp);
-    if (diff.inDays > 7) return l10n.commonTimeAgoWeeks((diff.inDays / 7).floor());
+    if (diff.inDays > 7)
+      return l10n.commonTimeAgoWeeks((diff.inDays / 7).floor());
     if (diff.inDays > 0) return l10n.commonTimeAgoDays(diff.inDays);
     if (diff.inHours > 0) return l10n.commonTimeAgoHours(diff.inHours);
     if (diff.inMinutes > 0) return l10n.commonTimeAgoMinutes(diff.inMinutes);
@@ -240,7 +248,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       final roles = KubusColorRoles.of(context);
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
-          content: Text(_post!.isLiked ? l10n.postDetailPostLikedToast : l10n.postDetailLikeRemovedToast),
+          content: Text(_post!.isLiked
+              ? l10n.postDetailPostLikedToast
+              : l10n.postDetailLikeRemovedToast),
           action: SnackBarAction(
             label: l10n.commonUndo,
             textColor: roles.likeAction,
@@ -257,7 +267,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   debugPrint('PostDetailScreen: undo like failed: $e');
                 }
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showKubusSnackBar(SnackBar(content: Text(l10n.postDetailUndoLikeFailedToast)));
+                ScaffoldMessenger.of(context).showKubusSnackBar(SnackBar(
+                    content: Text(l10n.postDetailUndoLikeFailedToast)));
               }
             },
           ),
@@ -292,7 +303,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   debugPrint('PostDetailScreen: retry like failed: $e');
                 }
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showKubusSnackBar(SnackBar(content: Text(l10n.postDetailRetryLikeFailedToast)));
+                ScaffoldMessenger.of(context).showKubusSnackBar(SnackBar(
+                    content: Text(l10n.postDetailRetryLikeFailedToast)));
               }
             },
           ),
@@ -355,14 +367,28 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           ),
           child: Column(
             children: [
-              Container(width: 40, height: 4, margin: const EdgeInsets.symmetric(vertical: 12), decoration: BoxDecoration(color: theme.colorScheme.outline, borderRadius: BorderRadius.circular(2))),
+              Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                      color: theme.colorScheme.outline,
+                      borderRadius: BorderRadius.circular(2))),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(l10n.commonLikes, style: KubusTypography.inter(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
-                    IconButton(icon: const Icon(Icons.close), color: theme.colorScheme.onSurface, onPressed: () => Navigator.of(sheetContext).pop()),
+                    Text(l10n.commonLikes,
+                        style: KubusTypography.inter(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface)),
+                    IconButton(
+                        icon: const Icon(Icons.close),
+                        color: theme.colorScheme.onSurface,
+                        onPressed: () => Navigator.of(sheetContext).pop()),
                   ],
                 ),
               ),
@@ -377,38 +403,62 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       return Center(
                         child: Padding(
                           padding: const EdgeInsets.all(KubusSpacing.lg),
-                          child: Text(l10n.postDetailLoadLikesFailedMessage, style: KubusTypography.inter(color: theme.colorScheme.onSurface)),
+                          child: Text(l10n.postDetailLoadLikesFailedMessage,
+                              style: KubusTypography.inter(
+                                  color: theme.colorScheme.onSurface)),
                         ),
                       );
                     }
                     final likes = snapshot.data ?? <CommunityLikeUser>[];
                     if (likes.isEmpty) {
                       return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(KubusSpacing.lg),
-                        child: EmptyStateCard(
-                          icon: Icons.favorite_border,
-                          title: l10n.postDetailNoLikesTitle,
-                          description: l10n.postDetailNoLikesDescription,
+                        child: Padding(
+                          padding: const EdgeInsets.all(KubusSpacing.lg),
+                          child: EmptyStateCard(
+                            icon: Icons.favorite_border,
+                            title: l10n.postDetailNoLikesTitle,
+                            description: l10n.postDetailNoLikesDescription,
+                          ),
                         ),
-                      ),
-                    );
+                      );
                     }
                     return ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
                       itemCount: likes.length,
-                      separatorBuilder: (_, __) => Divider(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
+                      separatorBuilder: (_, __) => Divider(
+                          color:
+                              theme.colorScheme.outline.withValues(alpha: 0.3)),
                       itemBuilder: (context, index) {
                         final user = likes[index];
                         final subtitleParts = <String>[];
-                        if (user.username != null && user.username!.isNotEmpty) subtitleParts.add('@${user.username}');
-                        if (user.walletAddress != null && user.walletAddress!.isNotEmpty) subtitleParts.add(user.walletAddress!);
-                        if (user.likedAt != null) subtitleParts.add(user.likedAt!.toIso8601String());
+                        if (user.username != null && user.username!.isNotEmpty)
+                          subtitleParts.add('@${user.username}');
+                        if (user.walletAddress != null &&
+                            user.walletAddress!.isNotEmpty)
+                          subtitleParts.add(user.walletAddress!);
+                        if (user.likedAt != null)
+                          subtitleParts.add(user.likedAt!.toIso8601String());
                         return ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: AvatarWidget(wallet: user.walletAddress ?? user.userId, avatarUrl: user.avatarUrl, radius: 20, enableProfileNavigation: true),
-                          title: Text(user.displayName.isNotEmpty ? user.displayName : l10n.commonUnnamed, style: KubusTypography.inter(fontWeight: FontWeight.w600)),
-                          subtitle: subtitleParts.isNotEmpty ? Text(subtitleParts.join(' • '), style: KubusTypography.inter(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.6))) : null,
+                          leading: AvatarWidget(
+                              wallet: user.walletAddress ?? user.userId,
+                              avatarUrl: user.avatarUrl,
+                              radius: 20,
+                              enableProfileNavigation: true),
+                          title: Text(
+                              user.displayName.isNotEmpty
+                                  ? user.displayName
+                                  : l10n.commonUnnamed,
+                              style: KubusTypography.inter(
+                                  fontWeight: FontWeight.w600)),
+                          subtitle: subtitleParts.isNotEmpty
+                              ? Text(subtitleParts.join(' • '),
+                                  style: KubusTypography.inter(
+                                      fontSize: 12,
+                                      color: theme.colorScheme.onSurface
+                                          .withValues(alpha: 0.6)))
+                              : null,
                         );
                       },
                     );
@@ -454,7 +504,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -508,7 +559,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       );
                     }
                     return ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
                       itemCount: likes.length,
                       separatorBuilder: (_, __) => Divider(
                         color: theme.colorScheme.outline.withValues(alpha: 0.3),
@@ -516,7 +568,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       itemBuilder: (context, index) {
                         final user = likes[index];
                         final subtitleParts = <String>[];
-                        if (user.username != null && user.username!.isNotEmpty) {
+                        if (user.username != null &&
+                            user.username!.isNotEmpty) {
                           subtitleParts.add('@${user.username}');
                         }
                         if (user.walletAddress != null &&
@@ -538,11 +591,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             user.displayName.isNotEmpty
                                 ? user.displayName
                                 : l10n.commonUnnamed,
-                            style: KubusTypography.inter(fontWeight: FontWeight.w600),
+                            style: KubusTypography.inter(
+                                fontWeight: FontWeight.w600),
                           ),
                           subtitle: subtitleParts.isNotEmpty
                               ? Text(
-                                    subtitleParts.join(' • '),
+                                  subtitleParts.join(' • '),
                                   style: KubusTypography.inter(
                                     fontSize: 12,
                                     color: theme.colorScheme.onSurface
@@ -646,21 +700,26 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     itemBuilder: (ctx, idx) {
                       final repost = reposts[idx];
                       final user = repost['user'] as Map<String, dynamic>?;
-                      final rawUsername = (user?['username'] ?? '').toString().trim();
+                      final rawUsername =
+                          (user?['username'] ?? '').toString().trim();
                       final username = rawUsername.startsWith('@')
                           ? rawUsername.substring(1).trim()
                           : rawUsername;
-                      final wallet = WalletUtils.resolveFromMap(user, fallback: '');
+                      final wallet =
+                          WalletUtils.resolveFromMap(user, fallback: '');
                       final displayName =
-                          (user?['displayName'] ?? user?['display_name'])?.toString().trim();
+                          (user?['displayName'] ?? user?['display_name'])
+                              ?.toString()
+                              .trim();
                       final avatar = user?['avatar'];
                       final comment = repost['repostComment'] as String?;
                       final createdAt =
                           DateTime.tryParse(repost['createdAt'] ?? '');
 
                       final formatted = CreatorDisplayFormat.format(
-                        fallbackLabel:
-                            wallet.isNotEmpty ? maskWallet(wallet) : l10n.commonUnknown,
+                        fallbackLabel: wallet.isNotEmpty
+                            ? maskWallet(wallet)
+                            : l10n.commonUnknown,
                         displayName: displayName,
                         username: username,
                         wallet: wallet,
@@ -672,14 +731,17 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         leading: AvatarWidget(
                           wallet: wallet.isNotEmpty
                               ? wallet
-                              : (username.isNotEmpty ? username : l10n.commonUnknown),
+                              : (username.isNotEmpty
+                                  ? username
+                                  : l10n.commonUnknown),
                           avatarUrl: avatar,
                           radius: 20,
                           enableProfileNavigation: true,
                         ),
                         title: Text(
                           formatted.primary,
-                          style: KubusTypography.inter(fontWeight: FontWeight.w600),
+                          style: KubusTypography.inter(
+                              fontWeight: FontWeight.w600),
                         ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -767,10 +829,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
               style: KubusTypography.inter(),
             ),
             const SizedBox(height: 16),
-            _buildPostReportOption(dialogContext, post, l10n.userProfileReportReasonSpam),
-            _buildPostReportOption(dialogContext, post, l10n.userProfileReportReasonInappropriate),
-            _buildPostReportOption(dialogContext, post, l10n.userProfileReportReasonHarassment),
-            _buildPostReportOption(dialogContext, post, l10n.userProfileReportReasonOther),
+            _buildPostReportOption(
+                dialogContext, post, l10n.userProfileReportReasonSpam),
+            _buildPostReportOption(
+                dialogContext, post, l10n.userProfileReportReasonInappropriate),
+            _buildPostReportOption(
+                dialogContext, post, l10n.userProfileReportReasonHarassment),
+            _buildPostReportOption(
+                dialogContext, post, l10n.userProfileReportReasonOther),
           ],
         ),
         actions: [
@@ -830,13 +896,15 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       final type = (selectedSubjectType ?? '').trim();
       final id = (selectedSubjectId ?? '').trim();
       if (type.isNotEmpty && id.isNotEmpty) {
-        return subjectProvider.previewFor(CommunitySubjectRef(type: type, id: id));
+        return subjectProvider
+            .previewFor(CommunitySubjectRef(type: type, id: id));
       }
       if (post.artwork != null) {
         return CommunitySubjectPreview(
           ref: CommunitySubjectRef(type: 'artwork', id: post.artwork!.id),
           title: post.artwork!.title,
-          imageUrl: MediaUrlResolver.resolve(post.artwork!.imageUrl) ?? post.artwork!.imageUrl,
+          imageUrl: MediaUrlResolver.resolve(post.artwork!.imageUrl) ??
+              post.artwork!.imageUrl,
         );
       }
       return null;
@@ -847,7 +915,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (sheetContext) => StatefulBuilder(
-      builder: (context, setModalState) {
+        builder: (context, setModalState) {
           final preview = resolvePreview();
           final subjectSet = (selectedSubjectType ?? '').trim().isNotEmpty &&
               (selectedSubjectId ?? '').trim().isNotEmpty;
@@ -864,15 +932,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
               (hasSubject
                   ? _subjectTypeLabel(l10n, resolvedType)
                   : l10n.communitySubjectSelectTitle);
-          return Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
-            ),
+          return KeyboardInsetPadding(
             child: Container(
               height: MediaQuery.of(context).size.height * 0.6,
               decoration: BoxDecoration(
                 color: theme.colorScheme.surface,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(20)),
               ),
               child: Column(
                 children: [
@@ -886,7 +952,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -900,7 +967,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         ),
                         IconButton(
                           icon: const Icon(Icons.close),
-                          onPressed: saving ? null : () => Navigator.pop(sheetContext),
+                          onPressed:
+                              saving ? null : () => Navigator.pop(sheetContext),
                         ),
                       ],
                     ),
@@ -908,7 +976,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   const Divider(),
                   Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
                       child: TextField(
                         controller: controller,
                         maxLines: null,
@@ -956,22 +1025,27 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: hasSubject
-                                ? theme.colorScheme.primaryContainer.withValues(alpha: 0.2)
+                                ? theme.colorScheme.primaryContainer
+                                    .withValues(alpha: 0.2)
                                 : theme.colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
                               color: hasSubject
-                                  ? theme.colorScheme.primary.withValues(alpha: 0.3)
-                                  : theme.colorScheme.outline.withValues(alpha: 0.2),
+                                  ? theme.colorScheme.primary
+                                      .withValues(alpha: 0.3)
+                                  : theme.colorScheme.outline
+                                      .withValues(alpha: 0.2),
                             ),
                           ),
                           child: Row(
                             children: [
-                              if (preview?.imageUrl != null && preview!.imageUrl!.isNotEmpty)
+                              if (preview?.imageUrl != null &&
+                                  preview!.imageUrl!.isNotEmpty)
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(10),
                                   child: Image.network(
-                                    MediaUrlResolver.resolveDisplayUrl(preview.imageUrl) ??
+                                    MediaUrlResolver.resolveDisplayUrl(
+                                            preview.imageUrl) ??
                                         preview.imageUrl!,
                                     width: 44,
                                     height: 44,
@@ -984,7 +1058,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                 )
                               else
                                 Icon(
-                                  hasSubject ? _subjectTypeIcon(resolvedType) : Icons.link,
+                                  hasSubject
+                                      ? _subjectTypeIcon(resolvedType)
+                                      : Icons.link,
                                   color: theme.colorScheme.onSurface,
                                 ),
                               const SizedBox(width: 12),
@@ -1004,7 +1080,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                       label,
                                       style: KubusTypography.inter(
                                         fontSize: 12,
-                                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                        color: theme.colorScheme.onSurface
+                                            .withValues(alpha: 0.6),
                                       ),
                                     ),
                                   ],
@@ -1036,8 +1113,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       children: [
                         Expanded(
                           child: OutlinedButton(
-                            onPressed:
-                                saving ? null : () => Navigator.pop(sheetContext),
+                            onPressed: saving
+                                ? null
+                                : () => Navigator.pop(sheetContext),
                             child: Text(l10n.commonCancel),
                           ),
                         ),
@@ -1049,38 +1127,45 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                 : () async {
                                     final messenger =
                                         ScaffoldMessenger.of(context);
-                                    final navigator = Navigator.of(sheetContext);
+                                    final navigator =
+                                        Navigator.of(sheetContext);
                                     AppRefreshProvider? appRefresh;
                                     try {
-                                      appRefresh = Provider.of<AppRefreshProvider>(
+                                      appRefresh =
+                                          Provider.of<AppRefreshProvider>(
                                         context,
                                         listen: false,
                                       );
                                     } catch (_) {}
 
-                                    final content =
-                                        controller.text.trim();
-                                    final existingMediaUrls = post.mediaUrls.isNotEmpty
-                                        ? post.mediaUrls
-                                        : (post.imageUrl != null &&
-                                                post.imageUrl!.trim().isNotEmpty)
-                                            ? [post.imageUrl!.trim()]
-                                            : <String>[];
+                                    final content = controller.text.trim();
+                                    final existingMediaUrls =
+                                        post.mediaUrls.isNotEmpty
+                                            ? post.mediaUrls
+                                            : (post.imageUrl != null &&
+                                                    post.imageUrl!
+                                                        .trim()
+                                                        .isNotEmpty)
+                                                ? [post.imageUrl!.trim()]
+                                                : <String>[];
                                     final normalizedSubjectType =
                                         (selectedSubjectType ?? '').trim();
                                     final normalizedSubjectId =
                                         (selectedSubjectId ?? '').trim();
-                                    final subjectTypePayload = normalizedSubjectType.isNotEmpty
-                                        ? normalizedSubjectType
-                                        : null;
-                                    final subjectIdPayload = normalizedSubjectId.isNotEmpty
-                                        ? normalizedSubjectId
-                                        : null;
+                                    final subjectTypePayload =
+                                        normalizedSubjectType.isNotEmpty
+                                            ? normalizedSubjectType
+                                            : null;
+                                    final subjectIdPayload =
+                                        normalizedSubjectId.isNotEmpty
+                                            ? normalizedSubjectId
+                                            : null;
                                     final artworkIdPayload =
                                         subjectTypePayload == 'artwork'
                                             ? subjectIdPayload
                                             : null;
-                                    if (content.isEmpty && existingMediaUrls.isEmpty) {
+                                    if (content.isEmpty &&
+                                        existingMediaUrls.isEmpty) {
                                       messenger.showKubusSnackBar(
                                         SnackBar(
                                           content: Text(
@@ -1093,7 +1178,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
                                     setModalState(() => saving = true);
                                     try {
-                                      await BackendApiService().updateCommunityPost(
+                                      await BackendApiService()
+                                          .updateCommunityPost(
                                         postId: post.id,
                                         content: content,
                                         mediaUrls: existingMediaUrls,
@@ -1108,12 +1194,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                           subjectIdPayload != null &&
                                           subjectIdPayload.isNotEmpty) {
                                         if (selectedPreview != null) {
-                                          updatedArtwork = CommunityArtworkReference(
+                                          updatedArtwork =
+                                              CommunityArtworkReference(
                                             id: subjectIdPayload,
                                             title: selectedPreview!.title,
                                             imageUrl: selectedPreview!.imageUrl,
                                           );
-                                        } else if (post.artwork?.id == subjectIdPayload) {
+                                        } else if (post.artwork?.id ==
+                                            subjectIdPayload) {
                                           updatedArtwork = post.artwork;
                                         }
                                       }
@@ -1129,8 +1217,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                       navigator.pop();
                                       messenger.showKubusSnackBar(
                                         SnackBar(
-                                          content:
-                                              Text(l10n.postDetailPostUpdatedToast),
+                                          content: Text(
+                                              l10n.postDetailPostUpdatedToast),
                                         ),
                                       );
                                     } catch (e) {
@@ -1153,7 +1241,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                 ? const SizedBox(
                                     width: 18,
                                     height: 18,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
                                   )
                                 : Text(l10n.commonSave),
                           ),
@@ -1191,7 +1280,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: deleting ? null : () => Navigator.of(dialogContext).maybePop(),
+              onPressed: deleting
+                  ? null
+                  : () => Navigator.of(dialogContext).maybePop(),
               child: Text(l10n.commonCancel),
             ),
             TextButton(
@@ -1219,7 +1310,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         appRefresh?.triggerCommunity();
                         dialogNavigator.pop();
                         messenger.showKubusSnackBar(
-                          SnackBar(content: Text(l10n.postDetailPostDeletedToast)),
+                          SnackBar(
+                              content: Text(l10n.postDetailPostDeletedToast)),
                         );
                         if (onClose != null) {
                           onClose();
@@ -1228,12 +1320,15 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         }
                       } catch (e) {
                         if (kDebugMode) {
-                          debugPrint('PostDetailScreen: delete post failed: $e');
+                          debugPrint(
+                              'PostDetailScreen: delete post failed: $e');
                         }
                         if (!mounted) return;
                         setDialogState(() => deleting = false);
                         messenger.showKubusSnackBar(
-                          SnackBar(content: Text(l10n.postDetailDeletePostFailedToast)),
+                          SnackBar(
+                              content:
+                                  Text(l10n.postDetailDeletePostFailedToast)),
                         );
                       }
                     },
@@ -1273,8 +1368,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (sheetContext) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      builder: (sheetContext) => KeyboardInsetPadding(
         child: Container(
           height: MediaQuery.of(context).size.height * 0.75,
           decoration: BoxDecoration(
@@ -1283,30 +1377,43 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           ),
           child: Column(
             children: [
-              Container(width: 40, height: 4, margin: const EdgeInsets.symmetric(vertical: 12), decoration: BoxDecoration(color: theme.colorScheme.outline, borderRadius: BorderRadius.circular(2))),
+              Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                      color: theme.colorScheme.outline,
+                      borderRadius: BorderRadius.circular(2))),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(AppLocalizations.of(context)!.postDetailRepostTitle, style: KubusTypography.inter(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
+                    Text(AppLocalizations.of(context)!.postDetailRepostTitle,
+                        style: KubusTypography.inter(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface)),
                     Row(
                       children: [
                         TextButton(
                           onPressed: () => Navigator.pop(sheetContext),
-                          child: Text(AppLocalizations.of(context)!.commonCancel, style: KubusTypography.inter()),
+                          child: Text(
+                              AppLocalizations.of(context)!.commonCancel,
+                              style: KubusTypography.inter()),
                         ),
                         const SizedBox(width: 8),
                         ElevatedButton(
                           onPressed: () async {
                             final content = repostContentController.text.trim();
-                        Navigator.pop(sheetContext);
-                        
-                        try {
-                          await BackendApiService().createRepost(
-                            originalPostId: _post!.id,
-                            content: content.isNotEmpty ? content : null,
-                          );
+                            Navigator.pop(sheetContext);
+
+                            try {
+                              await BackendApiService().createRepost(
+                                originalPostId: _post!.id,
+                                content: content.isNotEmpty ? content : null,
+                              );
 
                               if (!mounted) return;
                               // Refresh post to potentially show updated share count
@@ -1318,23 +1425,32 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                 SnackBar(
                                   content: Text(
                                     content.isEmpty
-                                        ? AppLocalizations.of(context)!.postDetailRepostSuccessToast
-                                        : AppLocalizations.of(context)!.postDetailRepostWithCommentSuccessToast,
+                                        ? AppLocalizations.of(context)!
+                                            .postDetailRepostSuccessToast
+                                        : AppLocalizations.of(context)!
+                                            .postDetailRepostWithCommentSuccessToast,
                                   ),
                                 ),
                               );
-                        } catch (e) {
+                            } catch (e) {
                               if (kDebugMode) {
-                                debugPrint('PostDetailScreen: repost failed: $e');
+                                debugPrint(
+                                    'PostDetailScreen: repost failed: $e');
                               }
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showKubusSnackBar(
-                                  SnackBar(content: Text(AppLocalizations.of(context)!.postDetailRepostFailedToast)),
+                                  SnackBar(
+                                      content: Text(
+                                          AppLocalizations.of(context)!
+                                              .postDetailRepostFailedToast)),
                                 );
                               }
                             }
                           },
-                          child: Text(AppLocalizations.of(context)!.postDetailRepostButton, style: KubusTypography.inter()),
+                          child: Text(
+                              AppLocalizations.of(context)!
+                                  .postDetailRepostButton,
+                              style: KubusTypography.inter()),
                         ),
                       ],
                     ),
@@ -1352,8 +1468,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         controller: repostContentController,
                         maxLines: 3,
                         decoration: InputDecoration(
-                          hintText: AppLocalizations.of(context)!.postDetailRepostThoughtsHint,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          hintText: AppLocalizations.of(context)!
+                              .postDetailRepostThoughtsHint,
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12)),
                           filled: true,
                           fillColor: theme.colorScheme.primaryContainer,
                         ),
@@ -1361,13 +1479,19 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       const SizedBox(height: 16),
                       Text(
                         AppLocalizations.of(context)!.postDetailRepostingLabel,
-                        style: KubusTypography.inter(fontSize: 12, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
+                        style: KubusTypography.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.7)),
                       ),
                       const SizedBox(height: 8),
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
+                          border: Border.all(
+                              color: theme.colorScheme.outline
+                                  .withValues(alpha: 0.3)),
                           borderRadius: BorderRadius.circular(12),
                           color: theme.colorScheme.surface,
                         ),
@@ -1376,11 +1500,16 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           children: [
                             Row(
                               children: [
-                                AvatarWidget(wallet: _post!.authorId, avatarUrl: _post!.authorAvatar, radius: 16, enableProfileNavigation: false),
+                                AvatarWidget(
+                                    wallet: _post!.authorId,
+                                    avatarUrl: _post!.authorAvatar,
+                                    radius: 16,
+                                    enableProfileNavigation: false),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         children: [
@@ -1388,7 +1517,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                             fit: FlexFit.loose,
                                             child: Text(
                                               _post!.authorName,
-                                              style: KubusTypography.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                                              style: KubusTypography.inter(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 14),
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
@@ -1399,26 +1530,36 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                           ),
                                         ],
                                       ),
-                                      Text(_timeAgo(_post!.timestamp), style: KubusTypography.inter(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
+                                      Text(_timeAgo(_post!.timestamp),
+                                          style: KubusTypography.inter(
+                                              fontSize: 11,
+                                              color: theme.colorScheme.onSurface
+                                                  .withValues(alpha: 0.5))),
                                     ],
                                   ),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 8),
-                            Text(_post!.content, style: KubusTypography.inter(fontSize: 14), maxLines: 5, overflow: TextOverflow.ellipsis),
-                            if (_post!.imageUrl != null && _post!.imageUrl!.isNotEmpty) ...[
+                            Text(_post!.content,
+                                style: KubusTypography.inter(fontSize: 14),
+                                maxLines: 5,
+                                overflow: TextOverflow.ellipsis),
+                            if (_post!.imageUrl != null &&
+                                _post!.imageUrl!.isNotEmpty) ...[
                               const SizedBox(height: 8),
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
                                 child: Image.network(
-                                  MediaUrlResolver.resolveDisplayUrl(_post!.imageUrl) ??
+                                  MediaUrlResolver.resolveDisplayUrl(
+                                          _post!.imageUrl) ??
                                       _post!.imageUrl!,
                                   fit: BoxFit.cover,
                                   height: 120,
                                   width: double.infinity,
                                   errorBuilder: (context, error, stackTrace) {
-                                    final scheme = Theme.of(context).colorScheme;
+                                    final scheme =
+                                        Theme.of(context).colorScheme;
                                     return Container(
                                       height: 120,
                                       width: double.infinity,
@@ -1447,7 +1588,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     );
   }
 
-
   Future<void> _toggleBookmark() async {
     final post = _post;
     if (!mounted || post == null) return;
@@ -1471,7 +1611,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: widget.onClose ?? () => Navigator.of(context).maybePop(),
         ),
-        title: Text(l10n.commonPost, style: KubusTypography.inter(fontWeight: FontWeight.bold)),
+        title: Text(l10n.commonPost,
+            style: KubusTypography.inter(fontWeight: FontWeight.bold)),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -1499,7 +1640,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         onOpenAuthorProfile: () {},
                         onToggleLike: _toggleLike,
                         onOpenComments: () {
-                          FocusScope.of(context).requestFocus(_commentFocusNode);
+                          FocusScope.of(context)
+                              .requestFocus(_commentFocusNode);
                         },
                         onRepost: _showRepostModal,
                         onShare: _showShareModal,
@@ -1507,7 +1649,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         onMoreOptions: _showPostOptionsMenu,
                         onShowLikes: _showPostLikes,
                         onShowReposts: _showPostReposts,
-                        onOpenSubject: (preview) => CommunitySubjectNavigation.open(
+                        onOpenSubject: (preview) =>
+                            CommunitySubjectNavigation.open(
                           context,
                           subject: preview.ref,
                           titleOverride: preview.title,
@@ -1517,19 +1660,25 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       Consumer<CommunityCommentsProvider>(
                         builder: (context, commentsProvider, _) {
                           final post = _post;
-                          final count = post == null ? 0 : commentsProvider.totalCountForPost(post.id);
+                          final count = post == null
+                              ? 0
+                              : commentsProvider.totalCountForPost(post.id);
                           return Row(
                             children: [
                               Text(
                                 l10n.commonComments,
-                                style: KubusTypography.inter(fontWeight: FontWeight.bold),
+                                style: KubusTypography.inter(
+                                    fontWeight: FontWeight.bold),
                               ),
                               const Spacer(),
                               Text(
                                 l10n.commonCommentsCount(count),
                                 style: KubusTypography.inter(
                                   fontSize: 12,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.6),
                                 ),
                               ),
                             ],
@@ -1543,19 +1692,24 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           if (post == null) return const SizedBox.shrink();
 
                           final scheme = Theme.of(context).colorScheme;
-                          final currentWallet = WalletUtils.canonical(_currentWalletAddress() ?? '');
+                          final currentWallet = WalletUtils.canonical(
+                              _currentWalletAddress() ?? '');
                           final loading = commentsProvider.isLoading(post.id);
                           final error = commentsProvider.errorForPost(post.id);
-                          final comments = commentsProvider.commentsForPost(post.id);
+                          final comments =
+                              commentsProvider.commentsForPost(post.id);
 
                           bool canModify(Comment c) {
                             if (currentWallet.isEmpty) return false;
-                            final authorKey = WalletUtils.canonical((c.authorWallet ?? c.authorId).toString());
-                            return authorKey.isNotEmpty && authorKey == currentWallet;
+                            final authorKey = WalletUtils.canonical(
+                                (c.authorWallet ?? c.authorId).toString());
+                            return authorKey.isNotEmpty &&
+                                authorKey == currentWallet;
                           }
 
                           Future<void> showHistory(Comment c) async {
-                            if (!c.isEdited || c.originalContent == null) return;
+                            if (!c.isEdited || c.originalContent == null)
+                              return;
                             await showKubusDialog<void>(
                               context: context,
                               builder: (dialogContext) {
@@ -1563,21 +1717,29 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                   title: Text(l10n.commentHistoryTitle),
                                   content: SingleChildScrollView(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Text(l10n.commentHistoryCurrentLabel, style: KubusTypography.inter(fontWeight: FontWeight.w700)),
+                                        Text(l10n.commentHistoryCurrentLabel,
+                                            style: KubusTypography.inter(
+                                                fontWeight: FontWeight.w700)),
                                         const SizedBox(height: 8),
-                                        SelectableText(c.content, style: KubusTypography.inter()),
+                                        SelectableText(c.content,
+                                            style: KubusTypography.inter()),
                                         const SizedBox(height: 16),
-                                        Text(l10n.commentHistoryOriginalLabel, style: KubusTypography.inter(fontWeight: FontWeight.w700)),
+                                        Text(l10n.commentHistoryOriginalLabel,
+                                            style: KubusTypography.inter(
+                                                fontWeight: FontWeight.w700)),
                                         const SizedBox(height: 8),
-                                        SelectableText(c.originalContent ?? '', style: KubusTypography.inter()),
+                                        SelectableText(c.originalContent ?? '',
+                                            style: KubusTypography.inter()),
                                       ],
                                     ),
                                   ),
                                   actions: [
                                     TextButton(
-                                      onPressed: () => Navigator.of(dialogContext).pop(),
+                                      onPressed: () =>
+                                          Navigator.of(dialogContext).pop(),
                                       child: Text(l10n.commonClose),
                                     ),
                                   ],
@@ -1588,7 +1750,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
                           Future<void> promptEdit(Comment c) async {
                             final messenger = ScaffoldMessenger.of(context);
-                            final controller = TextEditingController(text: c.content);
+                            final controller =
+                                TextEditingController(text: c.content);
                             bool saving = false;
                             await showKubusDialog<void>(
                               context: context,
@@ -1602,41 +1765,58 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                         controller: controller,
                                         maxLines: null,
                                         autofocus: true,
-                                        decoration: InputDecoration(hintText: l10n.postDetailWriteCommentHint),
+                                        decoration: InputDecoration(
+                                            hintText: l10n
+                                                .postDetailWriteCommentHint),
                                       ),
                                       actions: [
                                         TextButton(
-                                          onPressed: saving ? null : () => Navigator.of(dialogContext).pop(),
+                                          onPressed: saving
+                                              ? null
+                                              : () =>
+                                                  Navigator.of(dialogContext)
+                                                      .pop(),
                                           child: Text(l10n.commonCancel),
                                         ),
                                         FilledButton(
                                           onPressed: saving
                                               ? null
                                               : () async {
-                                                  final next = controller.text.trim();
+                                                  final next =
+                                                      controller.text.trim();
                                                   if (next.isEmpty) return;
-                                                  setDialogState(() => saving = true);
+                                                  setDialogState(
+                                                      () => saving = true);
                                                   try {
-                                                    await commentsProvider.editComment(
+                                                    await commentsProvider
+                                                        .editComment(
                                                       postId: post.id,
                                                       commentId: c.id,
                                                       content: next,
                                                     );
                                                     if (!mounted) return;
-                                                    if (!dialogContext.mounted) return;
-                                                    Navigator.of(dialogContext).pop();
-                                                    messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commentUpdatedToast)));
+                                                    if (!dialogContext.mounted)
+                                                      return;
+                                                    Navigator.of(dialogContext)
+                                                        .pop();
+                                                    messenger.showKubusSnackBar(
+                                                        SnackBar(
+                                                            content: Text(l10n
+                                                                .commentUpdatedToast)));
                                                   } catch (_) {
                                                     if (!mounted) return;
                                                     messenger.showKubusSnackBar(
                                                       SnackBar(
-                                                        content: Text(l10n.commentEditFailedToast),
-                                                        backgroundColor: scheme.errorContainer,
+                                                        content: Text(l10n
+                                                            .commentEditFailedToast),
+                                                        backgroundColor: scheme
+                                                            .errorContainer,
                                                       ),
                                                     );
                                                   } finally {
                                                     if (dialogContext.mounted) {
-                                                      setDialogState(() => saving = false);
+                                                      setDialogState(
+                                                          () => saving = false);
                                                     }
                                                   }
                                                 },
@@ -1658,14 +1838,18 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               builder: (dialogContext) {
                                 return KubusAlertDialog(
                                   title: Text(l10n.commentDeleteConfirmTitle),
-                                  content: Text(l10n.commentDeleteConfirmMessage),
+                                  content:
+                                      Text(l10n.commentDeleteConfirmMessage),
                                   actions: [
                                     TextButton(
-                                      onPressed: () => Navigator.of(dialogContext).pop(false),
+                                      onPressed: () =>
+                                          Navigator.of(dialogContext)
+                                              .pop(false),
                                       child: Text(l10n.commonCancel),
                                     ),
                                     FilledButton(
-                                      onPressed: () => Navigator.of(dialogContext).pop(true),
+                                      onPressed: () =>
+                                          Navigator.of(dialogContext).pop(true),
                                       style: FilledButton.styleFrom(
                                         backgroundColor: scheme.error,
                                         foregroundColor: scheme.onError,
@@ -1678,9 +1862,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             );
                             if (confirmed != true) return;
                             try {
-                              await commentsProvider.deleteComment(postId: post.id, commentId: c.id);
+                              await commentsProvider.deleteComment(
+                                  postId: post.id, commentId: c.id);
                               if (!mounted) return;
-                              messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commentDeletedToast)));
+                              messenger.showKubusSnackBar(SnackBar(
+                                  content: Text(l10n.commentDeletedToast)));
                             } catch (_) {
                               if (!mounted) return;
                               messenger.showKubusSnackBar(
@@ -1694,7 +1880,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
                           Widget buildComment(Comment c, {required int depth}) {
                             final isReply = depth > 0;
-                            final avatar = (c.authorAvatar != null && c.authorAvatar!.isNotEmpty)
+                            final avatar = (c.authorAvatar != null &&
+                                    c.authorAvatar!.isNotEmpty)
                                 ? NetworkImage(c.authorAvatar!)
                                 : null;
 
@@ -1704,7 +1891,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                   _timeAgo(c.timestamp),
                                   style: KubusTypography.inter(
                                     fontSize: 11,
-                                    color: scheme.onSurface.withValues(alpha: 0.55),
+                                    color: scheme.onSurface
+                                        .withValues(alpha: 0.55),
                                   ),
                                 ),
                                 if (c.isEdited) ...[
@@ -1713,7 +1901,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                     l10n.commonEditedTag,
                                     style: KubusTypography.inter(
                                       fontSize: 11,
-                                      color: scheme.onSurface.withValues(alpha: 0.55),
+                                      color: scheme.onSurface
+                                          .withValues(alpha: 0.55),
                                     ),
                                   ),
                                 ],
@@ -1723,7 +1912,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             final canEditDelete = canModify(c);
 
                             return Padding(
-                              padding: EdgeInsets.only(left: depth * 56.0, bottom: 8),
+                              padding: EdgeInsets.only(
+                                  left: depth * 56.0, bottom: 8),
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -1732,15 +1922,19 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                     backgroundImage: avatar,
                                     child: avatar == null
                                         ? Text(
-                                            c.authorName.isNotEmpty ? c.authorName[0] : '?',
-                                            style: KubusTypography.inter(fontSize: isReply ? 12 : 14),
+                                            c.authorName.isNotEmpty
+                                                ? c.authorName[0]
+                                                : '?',
+                                            style: KubusTypography.inter(
+                                                fontSize: isReply ? 12 : 14),
                                           )
                                         : null,
                                   ),
                                   const SizedBox(width: 10),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Row(
                                           children: [
@@ -1759,13 +1953,20 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                                 onSelected: (value) async {
                                                   if (value == 'edit') {
                                                     await promptEdit(c);
-                                                  } else if (value == 'delete') {
+                                                  } else if (value ==
+                                                      'delete') {
                                                     await promptDelete(c);
                                                   }
                                                 },
                                                 itemBuilder: (context) => [
-                                                  PopupMenuItem(value: 'edit', child: Text(l10n.commonEdit)),
-                                                  PopupMenuItem(value: 'delete', child: Text(l10n.commonDelete)),
+                                                  PopupMenuItem(
+                                                      value: 'edit',
+                                                      child: Text(
+                                                          l10n.commonEdit)),
+                                                  PopupMenuItem(
+                                                      value: 'delete',
+                                                      child: Text(
+                                                          l10n.commonDelete)),
                                                 ],
                                               ),
                                           ],
@@ -1775,10 +1976,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                         const SizedBox(height: 6),
                                         GestureDetector(
                                           behavior: HitTestBehavior.opaque,
-                                          onTap: (c.isEdited && c.originalContent != null) ? () => showHistory(c) : null,
+                                          onTap: (c.isEdited &&
+                                                  c.originalContent != null)
+                                              ? () => showHistory(c)
+                                              : null,
                                           child: Text(
                                             c.content,
-                                            style: KubusTypography.inter(fontSize: isReply ? 14 : 14),
+                                            style: KubusTypography.inter(
+                                                fontSize: isReply ? 14 : 14),
                                           ),
                                         ),
                                         const SizedBox(height: 6),
@@ -1786,25 +1991,39 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                           children: [
                                             IconButton(
                                               padding: EdgeInsets.zero,
-                                              constraints: const BoxConstraints(),
+                                              constraints:
+                                                  const BoxConstraints(),
                                               icon: Icon(
-                                                c.isLiked ? Icons.favorite : Icons.favorite_border,
+                                                c.isLiked
+                                                    ? Icons.favorite
+                                                    : Icons.favorite_border,
                                                 size: isReply ? 14 : 18,
-                                                color: c.isLiked ? scheme.error : Theme.of(context).iconTheme.color,
+                                                color: c.isLiked
+                                                    ? scheme.error
+                                                    : Theme.of(context)
+                                                        .iconTheme
+                                                        .color,
                                               ),
                                               onPressed: () async {
-                                                final messenger = ScaffoldMessenger.of(context);
+                                                final messenger =
+                                                    ScaffoldMessenger.of(
+                                                        context);
                                                 final prevLiked = c.isLiked;
                                                 final prevCount = c.likeCount;
                                                 setState(() {
                                                   c.isLiked = !c.isLiked;
-                                                  c.likeCount = (c.likeCount + (c.isLiked ? 1 : -1)).clamp(0, 1 << 30);
+                                                  c.likeCount = (c.likeCount +
+                                                          (c.isLiked ? 1 : -1))
+                                                      .clamp(0, 1 << 30);
                                                 });
                                                 try {
-                                                  await CommunityService.toggleCommentLike(c, post.id);
+                                                  await CommunityService
+                                                      .toggleCommentLike(
+                                                          c, post.id);
                                                 } catch (e) {
                                                   if (kDebugMode) {
-                                                    debugPrint('PostDetailScreen: toggle comment like failed: $e');
+                                                    debugPrint(
+                                                        'PostDetailScreen: toggle comment like failed: $e');
                                                   }
                                                   if (!mounted) return;
                                                   setState(() {
@@ -1812,21 +2031,27 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                                     c.likeCount = prevCount;
                                                   });
                                                   messenger.showKubusSnackBar(
-                                                    SnackBar(content: Text(l10n.postDetailUpdateCommentLikeFailedToast)),
+                                                    SnackBar(
+                                                        content: Text(l10n
+                                                            .postDetailUpdateCommentLikeFailedToast)),
                                                   );
                                                 }
                                               },
                                             ),
                                             GestureDetector(
                                               behavior: HitTestBehavior.opaque,
-                                              onTap: () => _showCommentLikes(c.id),
+                                              onTap: () =>
+                                                  _showCommentLikes(c.id),
                                               child: Padding(
-                                                padding: const EdgeInsets.symmetric(horizontal: 6.0),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 6.0),
                                                 child: Text(
                                                   '${c.likeCount}',
                                                   style: KubusTypography.inter(
                                                     fontSize: 12,
-                                                    color: scheme.onSurface.withValues(alpha: 0.6),
+                                                    color: scheme.onSurface
+                                                        .withValues(alpha: 0.6),
                                                   ),
                                                 ),
                                               ),
@@ -1836,15 +2061,24 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                               onPressed: () {
                                                 setState(() {
                                                   _replyToCommentId = c.id;
-                                                  _replyToAuthorName = c.authorName;
+                                                  _replyToAuthorName =
+                                                      c.authorName;
                                                 });
-                                                _commentController.text = '@${c.authorName} ';
-                                                _commentController.selection = TextSelection.fromPosition(
-                                                  TextPosition(offset: _commentController.text.length),
+                                                _commentController.text =
+                                                    '@${c.authorName} ';
+                                                _commentController.selection =
+                                                    TextSelection.fromPosition(
+                                                  TextPosition(
+                                                      offset: _commentController
+                                                          .text.length),
                                                 );
-                                                FocusScope.of(context).requestFocus(_commentFocusNode);
+                                                FocusScope.of(context)
+                                                    .requestFocus(
+                                                        _commentFocusNode);
                                               },
-                                              child: Text(l10n.commonReply, style: KubusTypography.inter(fontSize: 12)),
+                                              child: Text(l10n.commonReply,
+                                                  style: KubusTypography.inter(
+                                                      fontSize: 12)),
                                             ),
                                           ],
                                         ),
@@ -1856,10 +2090,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             );
                           }
 
-                          List<Widget> buildCommentTree(Comment c, {required int depth}) {
-                            final widgets = <Widget>[buildComment(c, depth: depth)];
+                          List<Widget> buildCommentTree(Comment c,
+                              {required int depth}) {
+                            final widgets = <Widget>[
+                              buildComment(c, depth: depth)
+                            ];
                             for (final r in c.replies) {
-                              widgets.addAll(buildCommentTree(r, depth: depth + 1));
+                              widgets.addAll(
+                                  buildCommentTree(r, depth: depth + 1));
                             }
                             return widgets;
                           }
@@ -1873,7 +2111,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
                           if (error != null && comments.isEmpty) {
                             return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8.0),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 8.0),
                               child: EmptyStateCard(
                                 icon: Icons.error_outline,
                                 title: l10n.postDetailNoCommentsTitle,
@@ -1884,11 +2123,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
                           if (comments.isEmpty) {
                             return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8.0),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 8.0),
                               child: EmptyStateCard(
                                 icon: Icons.comment_bank_outlined,
                                 title: l10n.postDetailNoCommentsTitle,
-                                description: l10n.postDetailNoCommentsDescription,
+                                description:
+                                    l10n.postDetailNoCommentsDescription,
                               ),
                             );
                           }
@@ -1910,11 +2151,25 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  l10n.postDetailReplyingToLabel(_replyToAuthorName!),
-                                  style: KubusTypography.inter(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
+                                  l10n.postDetailReplyingToLabel(
+                                      _replyToAuthorName!),
+                                  style: KubusTypography.inter(
+                                      fontSize: 13,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.7)),
                                 ),
                               ),
-                              IconButton(icon: const Icon(Icons.close), onPressed: () { setState(() { _replyToAuthorName = null; _replyToCommentId = null; _commentController.clear(); }); }),
+                              IconButton(
+                                  icon: const Icon(Icons.close),
+                                  onPressed: () {
+                                    setState(() {
+                                      _replyToAuthorName = null;
+                                      _replyToCommentId = null;
+                                      _commentController.clear();
+                                    });
+                                  }),
                             ],
                           ),
                         ),
@@ -1926,13 +2181,16 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               focusNode: _commentFocusNode,
                               decoration: InputDecoration(
                                 hintText: l10n.postDetailWriteCommentHint,
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8)),
                                 isDense: true,
                               ),
                             ),
                           ),
                           const SizedBox(width: 8),
-                          ElevatedButton(onPressed: _submitComment, child: Text(l10n.commonSend)),
+                          ElevatedButton(
+                              onPressed: _submitComment,
+                              child: Text(l10n.commonSend)),
                         ],
                       ),
                     ],
@@ -1941,5 +2199,3 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     );
   }
 }
-
-

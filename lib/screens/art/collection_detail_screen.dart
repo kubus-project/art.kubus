@@ -19,6 +19,7 @@ import '../../utils/media_url_resolver.dart';
 import '../../utils/wallet_utils.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/detail/detail_shell_components.dart';
+import '../../widgets/common/keyboard_inset_padding.dart';
 import '../../config/config.dart';
 import '../../utils/design_tokens.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -585,7 +586,8 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
                       },
                       title: Text(
                         art.title,
-                        style: KubusTypography.inter(fontWeight: FontWeight.w600),
+                        style:
+                            KubusTypography.inter(fontWeight: FontWeight.w600),
                       ),
                       subtitle: Text(
                         art.artist.isNotEmpty ? art.artist : art.id,
@@ -709,288 +711,292 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
     final coverUrl = MediaUrlResolver.resolve(collection.thumbnailUrl);
 
     return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: DetailSpacing.xl,
-          right: DetailSpacing.xl,
-          top: DetailSpacing.xl,
-          bottom: MediaQuery.of(context).viewInsets.bottom + DetailSpacing.lg,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  l10n.collectionSettingsTitle,
-                  style: KubusTypography.inter(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                    color: scheme.onSurface,
-                  ),
-                ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).maybePop(),
-                ),
-              ],
-            ),
-            const SizedBox(height: DetailSpacing.md),
-            Text(
-              l10n.commonCoverImage,
-              style: KubusTypography.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: scheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: DetailSpacing.sm),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(DetailSpacing.md),
-              child: Container(
-                height: 140,
-                width: double.infinity,
-                color: scheme.surfaceContainerHighest,
-                child: coverUrl == null
-                    ? Icon(
-                        Icons.image_outlined,
-                        size: 44,
-                        color: scheme.onSurface.withValues(alpha: 0.4),
-                      )
-                    : Image.network(
-                        coverUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Icon(
-                          Icons.broken_image_outlined,
-                          size: 44,
-                          color: scheme.onSurface.withValues(alpha: 0.4),
-                        ),
-                      ),
-              ),
-            ),
-            const SizedBox(height: DetailSpacing.md),
-            OutlinedButton.icon(
-              onPressed: (_saving || _updatingCover)
-                  ? null
-                  : () => _changeCover(collection),
-              icon: _updatingCover
-                  ? SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: scheme.primary),
-                    )
-                  : const Icon(Icons.image_outlined, size: 18),
-              label: Text(l10n.commonChangeCover,
-                  style: KubusTypography.inter(fontSize: 13)),
-            ),
-            const SizedBox(height: DetailSpacing.md),
-            Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      child: KeyboardInsetPadding(
+        extraBottom: DetailSpacing.lg,
+        child: Padding(
+          padding: const EdgeInsets.only(
+            left: DetailSpacing.xl,
+            right: DetailSpacing.xl,
+            top: DetailSpacing.xl,
+            bottom: DetailSpacing.lg,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
                   Text(
-                    l10n.collectionSettingsName,
+                    l10n.collectionSettingsTitle,
                     style: KubusTypography.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
                       color: scheme.onSurface,
                     ),
                   ),
-                  const SizedBox(height: DetailSpacing.sm),
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: InputDecoration(
-                      hintText: l10n.collectionSettingsNameHint,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(DetailSpacing.md),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return l10n.collectionCreatorNameRequiredError;
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: DetailSpacing.md),
-                  Text(
-                    l10n.collectionSettingsDescriptionLabel,
-                    style: KubusTypography.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: scheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: DetailSpacing.sm),
-                  TextFormField(
-                    controller: _descriptionController,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      hintText: l10n.collectionSettingsDescriptionHint,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(DetailSpacing.md),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: DetailSpacing.md),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(
-                      l10n.collectionSettingsPublic,
-                      style: KubusTypography.inter(fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: Text(
-                      l10n.collectionSettingsPublicSubtitle,
-                      style: KubusTypography.inter(
-                        fontSize: 12,
-                        color: scheme.onSurface.withValues(alpha: 0.65),
-                      ),
-                    ),
-                    value: _isPublic,
-                    onChanged: (value) => setState(() => _isPublic = value),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).maybePop(),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: DetailSpacing.md),
-            Row(
-              children: [
-                Text(
-                  l10n.collectionDetailArtworks,
-                  style: KubusTypography.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onSurface,
-                  ),
-                ),
-                const Spacer(),
-                TextButton.icon(
-                  onPressed: _loadingArtworks
-                      ? null
-                      : () => _showAddArtworksDialog(collection),
-                  icon: _loadingArtworks
-                      ? SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: scheme.primary,
-                          ),
-                        )
-                      : const Icon(Icons.add, size: 18),
-                  label: Text(l10n.collectionDetailAddArtwork,
-                      style: KubusTypography.inter(fontSize: 13)),
-                ),
-              ],
-            ),
-            const SizedBox(height: DetailSpacing.sm),
-            if (collection.artworks.isEmpty)
+              const SizedBox(height: DetailSpacing.md),
               Text(
-                l10n.collectionDetailNoArtworksYet,
+                l10n.commonCoverImage,
                 style: KubusTypography.inter(
                   fontSize: 13,
-                  color: scheme.onSurface.withValues(alpha: 0.65),
+                  fontWeight: FontWeight.w600,
+                  color: scheme.onSurface,
                 ),
-              )
-            else
-              SizedBox(
-                height: 200,
-                child: ListView.separated(
-                  itemCount: collection.artworks.length,
-                  separatorBuilder: (_, __) => Divider(
-                    height: 1,
-                    color: scheme.outlineVariant.withValues(alpha: 0.5),
-                  ),
-                  itemBuilder: (context, index) {
-                    final art = collection.artworks[index];
-                    final imageUrl = MediaUrlResolver.resolve(
-                      art.imageUrl ??
-                          (art.imageCid != null && art.imageCid!.isNotEmpty
-                              ? 'ipfs://${art.imageCid}'
-                              : null),
-                    );
-                    return ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: ClipRRect(
-                        borderRadius: BorderRadius.circular(DetailSpacing.sm),
-                        child: Container(
-                          width: 44,
-                          height: 44,
-                          color: scheme.surfaceContainerHighest,
-                          child: imageUrl == null
-                              ? Icon(
-                                  Icons.image_outlined,
-                                  color:
-                                      scheme.onSurface.withValues(alpha: 0.5),
-                                )
-                              : Image.network(
-                                  imageUrl,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Icon(
-                                    Icons.broken_image_outlined,
-                                    color:
-                                        scheme.onSurface.withValues(alpha: 0.5),
-                                  ),
-                                ),
+              ),
+              const SizedBox(height: DetailSpacing.sm),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(DetailSpacing.md),
+                child: Container(
+                  height: 140,
+                  width: double.infinity,
+                  color: scheme.surfaceContainerHighest,
+                  child: coverUrl == null
+                      ? Icon(
+                          Icons.image_outlined,
+                          size: 44,
+                          color: scheme.onSurface.withValues(alpha: 0.4),
+                        )
+                      : Image.network(
+                          coverUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Icon(
+                            Icons.broken_image_outlined,
+                            size: 44,
+                            color: scheme.onSurface.withValues(alpha: 0.4),
+                          ),
+                        ),
+                ),
+              ),
+              const SizedBox(height: DetailSpacing.md),
+              OutlinedButton.icon(
+                onPressed: (_saving || _updatingCover)
+                    ? null
+                    : () => _changeCover(collection),
+                icon: _updatingCover
+                    ? SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: scheme.primary),
+                      )
+                    : const Icon(Icons.image_outlined, size: 18),
+                label: Text(l10n.commonChangeCover,
+                    style: KubusTypography.inter(fontSize: 13)),
+              ),
+              const SizedBox(height: DetailSpacing.md),
+              Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.collectionSettingsName,
+                      style: KubusTypography.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: DetailSpacing.sm),
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: InputDecoration(
+                        hintText: l10n.collectionSettingsNameHint,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(DetailSpacing.md),
                         ),
                       ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return l10n.collectionCreatorNameRequiredError;
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: DetailSpacing.md),
+                    Text(
+                      l10n.collectionSettingsDescriptionLabel,
+                      style: KubusTypography.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: DetailSpacing.sm),
+                    TextFormField(
+                      controller: _descriptionController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        hintText: l10n.collectionSettingsDescriptionHint,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(DetailSpacing.md),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: DetailSpacing.md),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
                       title: Text(
-                        art.title,
-                        style: KubusTypography.inter(fontWeight: FontWeight.w600),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        l10n.collectionSettingsPublic,
+                        style:
+                            KubusTypography.inter(fontWeight: FontWeight.w600),
                       ),
                       subtitle: Text(
-                        (art.artistName ?? art.artistWallet ?? art.id)
-                            .toString(),
+                        l10n.collectionSettingsPublicSubtitle,
                         style: KubusTypography.inter(
                           fontSize: 12,
                           color: scheme.onSurface.withValues(alpha: 0.65),
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                      trailing: IconButton(
-                        icon: Icon(Icons.remove_circle_outline,
-                            color: scheme.onSurface.withValues(alpha: 0.65)),
-                        onPressed: () => _removeArtwork(collection, art),
-                      ),
-                    );
-                  },
+                      value: _isPublic,
+                      onChanged: (value) => setState(() => _isPublic = value),
+                    ),
+                  ],
                 ),
               ),
-            const SizedBox(height: DetailSpacing.lg),
-            Row(
-              children: [
-                TextButton(
-                  onPressed:
-                      _saving ? null : () => Navigator.of(context).maybePop(),
-                  child: Text(l10n.commonCancel),
-                ),
-                const Spacer(),
-                FilledButton(
-                  onPressed: _saving ? null : () => _save(collection),
-                  child: _saving
-                      ? SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: scheme.onPrimary,
+              const SizedBox(height: DetailSpacing.md),
+              Row(
+                children: [
+                  Text(
+                    l10n.collectionDetailArtworks,
+                    style: KubusTypography.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: scheme.onSurface,
+                    ),
+                  ),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: _loadingArtworks
+                        ? null
+                        : () => _showAddArtworksDialog(collection),
+                    icon: _loadingArtworks
+                        ? SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: scheme.primary,
+                            ),
+                          )
+                        : const Icon(Icons.add, size: 18),
+                    label: Text(l10n.collectionDetailAddArtwork,
+                        style: KubusTypography.inter(fontSize: 13)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: DetailSpacing.sm),
+              if (collection.artworks.isEmpty)
+                Text(
+                  l10n.collectionDetailNoArtworksYet,
+                  style: KubusTypography.inter(
+                    fontSize: 13,
+                    color: scheme.onSurface.withValues(alpha: 0.65),
+                  ),
+                )
+              else
+                SizedBox(
+                  height: 200,
+                  child: ListView.separated(
+                    itemCount: collection.artworks.length,
+                    separatorBuilder: (_, __) => Divider(
+                      height: 1,
+                      color: scheme.outlineVariant.withValues(alpha: 0.5),
+                    ),
+                    itemBuilder: (context, index) {
+                      final art = collection.artworks[index];
+                      final imageUrl = MediaUrlResolver.resolve(
+                        art.imageUrl ??
+                            (art.imageCid != null && art.imageCid!.isNotEmpty
+                                ? 'ipfs://${art.imageCid}'
+                                : null),
+                      );
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: ClipRRect(
+                          borderRadius: BorderRadius.circular(DetailSpacing.sm),
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            color: scheme.surfaceContainerHighest,
+                            child: imageUrl == null
+                                ? Icon(
+                                    Icons.image_outlined,
+                                    color:
+                                        scheme.onSurface.withValues(alpha: 0.5),
+                                  )
+                                : Image.network(
+                                    imageUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Icon(
+                                      Icons.broken_image_outlined,
+                                      color: scheme.onSurface
+                                          .withValues(alpha: 0.5),
+                                    ),
+                                  ),
                           ),
-                        )
-                      : Text(l10n.commonSave),
+                        ),
+                        title: Text(
+                          art.title,
+                          style: KubusTypography.inter(
+                              fontWeight: FontWeight.w600),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: Text(
+                          (art.artistName ?? art.artistWallet ?? art.id)
+                              .toString(),
+                          style: KubusTypography.inter(
+                            fontSize: 12,
+                            color: scheme.onSurface.withValues(alpha: 0.65),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        trailing: IconButton(
+                          icon: Icon(Icons.remove_circle_outline,
+                              color: scheme.onSurface.withValues(alpha: 0.65)),
+                          onPressed: () => _removeArtwork(collection, art),
+                        ),
+                      );
+                    },
+                  ),
                 ),
-              ],
-            ),
-          ],
+              const SizedBox(height: DetailSpacing.lg),
+              Row(
+                children: [
+                  TextButton(
+                    onPressed:
+                        _saving ? null : () => Navigator.of(context).maybePop(),
+                    child: Text(l10n.commonCancel),
+                  ),
+                  const Spacer(),
+                  FilledButton(
+                    onPressed: _saving ? null : () => _save(collection),
+                    child: _saving
+                        ? SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: scheme.onPrimary,
+                            ),
+                          )
+                        : Text(l10n.commonSave),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
-

@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../utils/wallet_utils.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/keyboard_inset_resolver.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/web3provider.dart';
@@ -33,6 +34,8 @@ import 'profile_edit_screen.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/user_activity_status_line.dart';
 import '../../widgets/topbar_icon.dart';
+import '../../widgets/common/kubus_glass_icon_button.dart';
+import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/profile_artist_info_fields.dart';
 import '../../widgets/detail/detail_shell_components.dart';
@@ -166,7 +169,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     final themeProvider = Provider.of<ThemeProvider>(context);
     final profileProvider = Provider.of<ProfileProvider>(context);
     final daoProvider = Provider.of<DAOProvider>(context);
-    final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
+    final keyboardVisible = KeyboardInsetResolver.isKeyboardVisible(context);
     final bottomSafeInset = MediaQuery.of(context).padding.bottom;
     final walletAddress = profileProvider.currentUser?.walletAddress ?? '';
     final DAOReview? daoReview = walletAddress.isNotEmpty
@@ -536,6 +539,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                             : isSmallScreen
                                 ? 45
                                 : 50,
+                        borderWidth: DetailSpacing.xs,
+                        borderColor: Theme.of(context).colorScheme.surface,
+                        cornerRadiusFactor: 0.22,
                         enableProfileNavigation: false,
                         showStatusIndicator: _showActivityStatus,
                       ),
@@ -846,27 +852,14 @@ class _ProfileScreenState extends State<ProfileScreen>
           final isSmallScreen = constraints.maxWidth < 360;
           final walletAddress = profileProvider.currentUser?.walletAddress;
 
-          return Container(
+          return LiquidGlassCard(
             margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24),
-            padding: EdgeInsets.all(isSmallScreen ? 18 : 22),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: Theme.of(context)
-                    .colorScheme
-                    .outline
-                    .withValues(alpha: 0.5),
-                width: 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+            padding: EdgeInsets.all(
+              isSmallScreen
+                  ? KubusChromeMetrics.cardPadding - KubusSpacing.xxs
+                  : KubusChromeMetrics.cardPadding + KubusSpacing.xs,
             ),
+            borderRadius: BorderRadius.circular(KubusRadius.xl),
             child: Column(
               children: [
                 Row(
@@ -899,7 +892,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ),
                   ],
                 ),
-                SizedBox(height: isSmallScreen ? 16 : 20),
+                SizedBox(
+                  height: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg,
+                ),
                 Row(
                   children: [
                     Expanded(
@@ -973,6 +968,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     bool isCompact = false,
     VoidCallback? onTap,
   }) {
+    final scheme = Theme.of(context).colorScheme;
     final content = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -984,10 +980,9 @@ class _ProfileScreenState extends State<ProfileScreen>
         const SizedBox(height: DetailSpacing.xs),
         Text(
           label,
-          style: KubusTypography.inter(
+          style: KubusTextStyles.detailCaption.copyWith(
             fontSize: isCompact ? 12 : 13,
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            color: scheme.onSurface.withValues(alpha: 0.68),
           ),
         ),
       ],
@@ -1175,14 +1170,11 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildErrorCard(
       {required String message, required VoidCallback onRetry}) {
-    return Container(
+    return LiquidGlassCard(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-            color: Theme.of(context).colorScheme.error.withValues(alpha: 0.2)),
-      ),
+      borderRadius: BorderRadius.circular(KubusRadius.lg),
+      backgroundColor:
+          Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1234,17 +1226,9 @@ class _ProfileScreenState extends State<ProfileScreen>
           MaterialPageRoute(builder: (context) => PostDetailScreen(post: post)),
         );
       },
-      child: Container(
+      child: LiquidGlassCard(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.06)),
-        ),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1324,12 +1308,22 @@ class _ProfileScreenState extends State<ProfileScreen>
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) {
                     final scheme = Theme.of(context).colorScheme;
-                    return Container(
-                      color: scheme.surfaceContainerHighest,
-                      alignment: Alignment.center,
-                      child: Icon(
-                        Icons.image_not_supported_outlined,
-                        color: scheme.onSurfaceVariant,
+                    return DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            scheme.primaryContainer.withValues(alpha: 0.26),
+                            scheme.surfaceContainerHigh.withValues(alpha: 0.18),
+                          ],
+                        ),
+                      ),
+                      child: Center(
+                        child: Icon(
+                          Icons.image_not_supported_outlined,
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
                     );
                   },
@@ -1811,11 +1805,22 @@ class _ProfileScreenState extends State<ProfileScreen>
                 fit: BoxFit.cover,
               )
             else
-              Container(
-                height: 110,
-                width: double.infinity,
-                color: scheme.primaryContainer.withValues(alpha: 0.34),
-                child: const Center(child: Icon(Icons.image_not_supported)),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      scheme.primaryContainer.withValues(alpha: 0.34),
+                      scheme.surfaceContainerHigh.withValues(alpha: 0.18),
+                    ],
+                  ),
+                ),
+                child: const SizedBox(
+                  height: 110,
+                  width: double.infinity,
+                  child: Center(child: Icon(Icons.image_not_supported)),
+                ),
               ),
             Expanded(
               child: Padding(
@@ -2003,21 +2008,17 @@ class _ProfileScreenState extends State<ProfileScreen>
                         ),
                       );
                     },
-                    child: Container(
+                    child: FrostedContainer(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
+                        horizontal: KubusSpacing.sm,
+                        vertical: KubusSpacing.xs,
                       ),
-                      decoration: BoxDecoration(
-                        color: accent.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: accent, width: 1),
-                      ),
+                      borderRadius: BorderRadius.circular(KubusRadius.sm),
+                      backgroundColor: accent.withValues(alpha: 0.12),
                       child: Text(
                         AppLocalizations.of(context)!.commonViewAll,
-                        style: KubusTypography.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                        style: KubusTextStyles.compactBadge.copyWith(
+                          fontWeight: FontWeight.w700,
                           color: accent,
                         ),
                       ),
@@ -2065,44 +2066,31 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildAchievementBadge(String title, IconData icon, bool unlocked) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final scheme = Theme.of(context).colorScheme;
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: unlocked
-            ? themeProvider.accentColor.withValues(alpha: 0.1)
-            : Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: unlocked
-              ? themeProvider.accentColor.withValues(alpha: 0.3)
-              : Theme.of(context).colorScheme.outline,
-        ),
-      ),
+    return LiquidGlassCard(
+      padding: const EdgeInsets.all(KubusSpacing.md),
+      borderRadius: BorderRadius.circular(KubusRadius.md),
+      backgroundColor: unlocked
+          ? themeProvider.accentColor.withValues(alpha: 0.12)
+          : scheme.surface.withValues(alpha: 0.14),
       child: Column(
         children: [
           Icon(
             icon,
             color: unlocked
                 ? themeProvider.accentColor
-                : Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.4),
+                : scheme.onSurface.withValues(alpha: 0.4),
             size: 24,
           ),
           const SizedBox(height: 8),
           Text(
             title,
-            style: KubusTypography.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+            style: KubusTextStyles.compactBadge.copyWith(
+              fontWeight: FontWeight.w700,
               color: unlocked
-                  ? Theme.of(context).colorScheme.onSurface
-                  : Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.4),
+                  ? scheme.onSurface
+                  : scheme.onSurface.withValues(alpha: 0.4),
             ),
           ),
         ],
@@ -2306,51 +2294,52 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildPerformanceCard(
       String title, String value, IconData icon, String? change) {
-    Widget cardContent = Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).colorScheme.outline),
-      ),
+    final scheme = Theme.of(context).colorScheme;
+    final accent = Provider.of<ThemeProvider>(context).accentColor;
+    Widget cardContent = LiquidGlassCard(
+      padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
+      borderRadius: BorderRadius.circular(KubusRadius.md),
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: KubusChromeMetrics.heroIconBox,
+            height: KubusChromeMetrics.heroIconBox,
             decoration: BoxDecoration(
-              color: Provider.of<ThemeProvider>(context)
-                  .accentColor
-                  .withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  accent.withValues(alpha: 0.22),
+                  accent.withValues(alpha: 0.08),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
+              border: Border.all(
+                color: accent.withValues(alpha: 0.20),
+              ),
             ),
             child: Icon(
               icon,
-              color: Provider.of<ThemeProvider>(context).accentColor,
-              size: 20,
+              color: accent,
+              size: KubusHeaderMetrics.actionIcon,
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: KubusSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: KubusTypography.inter(
-                    fontSize: 14,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
+                  style: KubusTextStyles.detailCaption.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.68),
                   ),
                 ),
+                const SizedBox(height: KubusSpacing.xxs),
                 Text(
                   value,
-                  style: KubusTypography.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
+                  style: KubusTextStyles.detailCardTitle.copyWith(
+                    color: scheme.onSurface,
                   ),
                 ),
               ],
@@ -2361,18 +2350,17 @@ class _ProfileScreenState extends State<ProfileScreen>
               builder: (context) {
                 final positiveColor =
                     KubusColorRoles.of(context).positiveAction;
-                return Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: positiveColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
+                return FrostedContainer(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: KubusSpacing.sm,
+                    vertical: KubusSpacing.xs,
                   ),
+                  borderRadius: BorderRadius.circular(KubusRadius.sm),
+                  backgroundColor: positiveColor.withValues(alpha: 0.12),
                   child: Text(
                     change,
-                    style: KubusTypography.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                    style: KubusTextStyles.compactBadge.copyWith(
+                      fontWeight: FontWeight.w700,
                       color: positiveColor,
                     ),
                   ),
@@ -2445,40 +2433,51 @@ class _ProfileScreenState extends State<ProfileScreen>
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(KubusSpacing.lg),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
+      builder: (context) => BackdropGlassSheet(
+        showBorder: false,
+        padding: EdgeInsets.zero,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.outline,
-                borderRadius: BorderRadius.circular(2),
+            KubusSheetHeader(
+              title: AppLocalizations.of(context)!.profileMoreOptionsTitle,
+              trailing: KubusGlassIconButton(
+                icon: Icons.close,
+                tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                onPressed: () => Navigator.pop(context),
               ),
             ),
-            const SizedBox(height: 24),
-            _buildOptionItem(Icons.bookmark,
-                AppLocalizations.of(context)!.profileMenuSavedItemsTitle, () {
-              Navigator.pop(context);
-              _navigateToSavedItems();
-            }),
-            _buildOptionItem(Icons.history,
-                AppLocalizations.of(context)!.profileMenuViewHistoryTitle, () {
-              Navigator.pop(context);
-              _navigateToViewHistory();
-            }),
-            _buildOptionItem(Icons.help,
-                AppLocalizations.of(context)!.profileMenuHelpSupportTitle, () {
-              Navigator.pop(context);
-              _navigateToHelpSupport();
-            }),
-            const SizedBox(height: 24),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                KubusSpacing.lg,
+                0,
+                KubusSpacing.lg,
+                KubusSpacing.lg,
+              ),
+              child: Column(
+                children: [
+                  _buildOptionItem(Icons.bookmark,
+                      AppLocalizations.of(context)!.profileMenuSavedItemsTitle,
+                      () {
+                    Navigator.pop(context);
+                    _navigateToSavedItems();
+                  }),
+                  _buildOptionItem(Icons.history,
+                      AppLocalizations.of(context)!.profileMenuViewHistoryTitle,
+                      () {
+                    Navigator.pop(context);
+                    _navigateToViewHistory();
+                  }),
+                  _buildOptionItem(Icons.help,
+                      AppLocalizations.of(context)!.profileMenuHelpSupportTitle,
+                      () {
+                    Navigator.pop(context);
+                    _navigateToHelpSupport();
+                  }),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -2486,24 +2485,46 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildOptionItem(IconData icon, String title, VoidCallback onTap) {
-    return ListTile(
-      leading: Icon(
-        icon,
-        color: Provider.of<ThemeProvider>(context).accentColor,
-      ),
-      title: Text(
-        title,
-        style: KubusTypography.inter(
-          fontSize: 16,
-          color: Theme.of(context).colorScheme.onSurface,
+    final accent = Provider.of<ThemeProvider>(context).accentColor;
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
+      child: LiquidGlassCard(
+        onTap: onTap,
+        padding: const EdgeInsets.symmetric(
+          horizontal: KubusSpacing.md,
+          vertical: KubusSpacing.sm,
+        ),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
+        child: Row(
+          children: [
+            Container(
+              width: KubusHeaderMetrics.actionHitArea,
+              height: KubusHeaderMetrics.actionHitArea,
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(KubusRadius.sm),
+              ),
+              child: Icon(icon, color: accent),
+            ),
+            const SizedBox(width: KubusSpacing.md),
+            Expanded(
+              child: Text(
+                title,
+                style: KubusTextStyles.navLabel.copyWith(
+                  fontSize: 16,
+                  color: scheme.onSurface,
+                ),
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: KubusSizes.trailingChevron,
+              color: scheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ],
         ),
       ),
-      trailing: Icon(
-        Icons.arrow_forward_ios,
-        size: 16,
-        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-      ),
-      onTap: onTap,
     );
   }
 

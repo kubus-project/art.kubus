@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../utils/design_tokens.dart';
@@ -70,7 +69,7 @@ class KubusDetailPanel extends StatelessWidget {
       padding: EdgeInsets.zero,
       borderRadius: BorderRadius.circular(borderRadius),
       tintBase: scheme.surface,
-      useBlur: !kIsWeb,
+      useBlur: kubusMapBlurEnabled(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -176,7 +175,7 @@ class DetailHeader extends StatelessWidget {
                 accentColor: closeAccentColor ?? accentColor,
                 iconColor: closeIconColor,
                 tooltip: closeTooltip,
-                enableBlur: !kIsWeb,
+                enableBlur: kubusMapBlurEnabled(context),
                 onPressed: onClose,
               ),
             ),

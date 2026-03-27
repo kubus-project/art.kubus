@@ -24,6 +24,7 @@ import '../services/backend_api_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/settings_service.dart';
 import '../widgets/platform_aware_widgets.dart';
+import '../widgets/common/keyboard_inset_padding.dart';
 import '../widgets/glass_components.dart';
 import '../widgets/email_verification_status_badge.dart';
 import '../widgets/common/kubus_screen_header.dart';
@@ -39,6 +40,7 @@ import '../utils/app_animations.dart';
 import '../../config/config.dart';
 import '../utils/map_performance_debug.dart';
 import '../providers/locale_provider.dart';
+import '../utils/wallet_backup_status.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/utils/wallet_reconnect_action.dart';
 
@@ -114,6 +116,8 @@ class _SettingsScreenState extends State<SettingsScreen>
   // Wallet settings state
   String _networkSelection = 'Mainnet';
   bool _autoBackup = true;
+  WalletBackupStatusSnapshot _walletBackupStatus =
+      const WalletBackupStatusSnapshot.noWallet();
 
   // Profile interaction settings
   bool _showAchievements = true;
@@ -294,123 +298,125 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
         ),
         child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(20),
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: AvatarWidget(
+                    wallet: profileProvider.currentUser?.walletAddress ?? '',
+                    avatarUrl: profileProvider.currentUser?.avatar,
+                    radius: 30,
+                    enableProfileNavigation: false,
+                  ),
                 ),
-                child: AvatarWidget(
-                  wallet: profileProvider.currentUser?.walletAddress ?? '',
-                  avatarUrl: profileProvider.currentUser?.avatar,
-                  radius: 30,
-                  enableProfileNavigation: false,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      profileProvider.currentUser?.displayName ??
-                          l10n.settingsGuestUserName,
-                      style: KubusTypography.inter(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onPrimary,
-                      ),
-                    ),
-                    if (walletProvider.hasWalletIdentity) ...[
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        web3Provider.formatAddress(
-                          walletProvider.currentWalletAddress ?? '',
-                        ),
+                        profileProvider.currentUser?.displayName ??
+                            l10n.settingsGuestUserName,
                         style: KubusTypography.inter(
-                          fontSize: 14,
-                          color: Colors.white.withValues(alpha: 0.8),
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onPrimary,
                         ),
                       ),
-                      if (walletProvider.isReadOnlySession)
+                      if (walletProvider.hasWalletIdentity) ...[
                         Text(
-                          'Read-only wallet session',
+                          web3Provider.formatAddress(
+                            walletProvider.currentWalletAddress ?? '',
+                          ),
                           style: KubusTypography.inter(
-                            fontSize: 12,
-                            color: Colors.white.withValues(alpha: 0.75),
+                            fontSize: 14,
+                            color: Colors.white.withValues(alpha: 0.8),
                           ),
                         ),
-                    ] else ...[
-                      Text(
-                        l10n.settingsNoWalletConnected,
-                        style: KubusTypography.inter(
-                          fontSize: 14,
-                          color: Colors.white.withValues(alpha: 0.8),
+                        if (walletProvider.isReadOnlySession)
+                          Text(
+                            'Read-only wallet session',
+                            style: KubusTypography.inter(
+                              fontSize: 12,
+                              color: Colors.white.withValues(alpha: 0.75),
+                            ),
+                          ),
+                      ] else ...[
+                        Text(
+                          l10n.settingsNoWalletConnected,
+                          style: KubusTypography.inter(
+                            fontSize: 14,
+                            color: Colors.white.withValues(alpha: 0.8),
+                          ),
                         ),
+                      ],
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.edit,
+                    color: Theme.of(context).colorScheme.onPrimary,
+                    size: 20,
+                  ),
+                ),
+              ],
+            ),
+            if (walletProvider.hasWalletIdentity) ...[
+              const SizedBox(height: 20),
+              Consumer<WalletProvider>(
+                builder: (context, walletProvider, child) {
+                  // Get KUB8 balance
+                  final kub8Balance = walletProvider.tokens
+                          .where(
+                              (token) => token.symbol.toUpperCase() == 'KUB8')
+                          .isNotEmpty
+                      ? walletProvider.tokens
+                          .where(
+                              (token) => token.symbol.toUpperCase() == 'KUB8')
+                          .first
+                          .balance
+                      : 0.0;
+
+                  // Get SOL balance
+                  final solBalance = walletProvider.tokens
+                          .where((token) => token.symbol.toUpperCase() == 'SOL')
+                          .isNotEmpty
+                      ? walletProvider.tokens
+                          .where((token) => token.symbol.toUpperCase() == 'SOL')
+                          .first
+                          .balance
+                      : 0.0;
+
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: _buildBalanceCard(
+                            'KUB8', kub8Balance.toStringAsFixed(2)),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildBalanceCard(
+                            'SOL', solBalance.toStringAsFixed(3)),
                       ),
                     ],
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.edit,
-                  color: Theme.of(context).colorScheme.onPrimary,
-                  size: 20,
-                ),
+                  );
+                },
               ),
             ],
-          ),
-          if (walletProvider.hasWalletIdentity) ...[
-            const SizedBox(height: 20),
-            Consumer<WalletProvider>(
-              builder: (context, walletProvider, child) {
-                // Get KUB8 balance
-                final kub8Balance = walletProvider.tokens
-                        .where((token) => token.symbol.toUpperCase() == 'KUB8')
-                        .isNotEmpty
-                    ? walletProvider.tokens
-                        .where((token) => token.symbol.toUpperCase() == 'KUB8')
-                        .first
-                        .balance
-                    : 0.0;
-
-                // Get SOL balance
-                final solBalance = walletProvider.tokens
-                        .where((token) => token.symbol.toUpperCase() == 'SOL')
-                        .isNotEmpty
-                    ? walletProvider.tokens
-                        .where((token) => token.symbol.toUpperCase() == 'SOL')
-                        .first
-                        .balance
-                    : 0.0;
-
-                return Row(
-                  children: [
-                    Expanded(
-                      child: _buildBalanceCard(
-                          'KUB8', kub8Balance.toStringAsFixed(2)),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildBalanceCard(
-                          'SOL', solBalance.toStringAsFixed(3)),
-                    ),
-                  ],
-                );
-              },
-            ),
           ],
-        ],
-      ),
+        ),
       ),
     );
   }
@@ -1154,92 +1160,114 @@ class _SettingsScreenState extends State<SettingsScreen>
         bool artist = initialArtist;
         bool institution = initialInstitution;
         return StatefulBuilder(
-          builder: (context, setState) => Container(
-            padding: EdgeInsets.only(
-              left: 24,
-              right: 24,
-              top: 16,
-              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-            ),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.outline,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  l10n.settingsRoleSimulationSheetTitle,
-                  style: KubusTypography.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  l10n.settingsRoleSimulationSheetSubtitle,
-                  style: KubusTypography.inter(
-                    fontSize: 14,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.7),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                SwitchListTile(
-                  title: Text(l10n.settingsRoleArtistTitle,
-                      style: KubusTypography.inter(
-                          fontSize: 16, fontWeight: FontWeight.w600)),
-                  subtitle: Text(l10n.settingsRoleArtistSubtitle,
-                      style: KubusTypography.inter(fontSize: 13)),
-                  value: artist,
-                  activeThumbColor: Theme.of(context).colorScheme.secondary,
-                  onChanged: (val) {
-                    setState(() => artist = val);
-                    profileProvider.setRoleFlags(
-                        isArtist: val, isInstitution: institution);
-                  },
-                ),
-                SwitchListTile(
-                  title: Text(l10n.settingsRoleInstitutionTitle,
-                      style: KubusTypography.inter(
-                          fontSize: 16, fontWeight: FontWeight.w600)),
-                  subtitle: Text(l10n.settingsRoleInstitutionSubtitle,
-                      style: KubusTypography.inter(fontSize: 13)),
-                  value: institution,
-                  activeThumbColor: Theme.of(context).colorScheme.secondary,
-                  onChanged: (val) {
-                    setState(() => institution = val);
-                    profileProvider.setRoleFlags(
-                        isArtist: artist, isInstitution: val);
-                  },
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(l10n.commonClose,
-                          style: KubusTypography.inter(
-                              color: Theme.of(context).colorScheme.outline)),
+          builder: (context, setState) => KeyboardInsetPadding(
+            extraBottom: 24,
+            child: Container(
+              padding: const EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 16,
+                bottom: 24,
+              ),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.outline,
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    l10n.settingsRoleSimulationSheetTitle,
+                    style: KubusTypography.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.settingsRoleSimulationSheetSubtitle,
+                    style: KubusTypography.inter(
+                      fontSize: 14,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SwitchListTile(
+                    title: Text(
+                      l10n.settingsRoleArtistTitle,
+                      style: KubusTypography.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    subtitle: Text(
+                      l10n.settingsRoleArtistSubtitle,
+                      style: KubusTypography.inter(fontSize: 13),
+                    ),
+                    value: artist,
+                    activeThumbColor: Theme.of(context).colorScheme.secondary,
+                    onChanged: (val) {
+                      setState(() => artist = val);
+                      profileProvider.setRoleFlags(
+                        isArtist: val,
+                        isInstitution: institution,
+                      );
+                    },
+                  ),
+                  SwitchListTile(
+                    title: Text(
+                      l10n.settingsRoleInstitutionTitle,
+                      style: KubusTypography.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    subtitle: Text(
+                      l10n.settingsRoleInstitutionSubtitle,
+                      style: KubusTypography.inter(fontSize: 13),
+                    ),
+                    value: institution,
+                    activeThumbColor: Theme.of(context).colorScheme.secondary,
+                    onChanged: (val) {
+                      setState(() => institution = val);
+                      profileProvider.setRoleFlags(
+                        isArtist: artist,
+                        isInstitution: val,
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text(
+                          l10n.commonClose,
+                          style: KubusTypography.inter(
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -1298,10 +1326,11 @@ class _SettingsScreenState extends State<SettingsScreen>
         ),
         _buildSettingsTile(
           l10n.settingsBackupSettingsTileTitle,
-          l10n.settingsAutoBackupSummary(
-              _autoBackup ? l10n.commonEnabled : l10n.commonDisabled),
+          _walletBackupSummary(l10n),
           Icons.backup,
-          onTap: () => _showBackupDialog(),
+          onTap: () {
+            unawaited(_showBackupDialog());
+          },
         ),
         _buildSettingsTile(
           l10n.settingsExportRecoveryPhraseTileTitle,
@@ -1835,127 +1864,20 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  void _showBackupDialog() {
+  Future<void> _showBackupDialog() async {
     final l10n = AppLocalizations.of(context)!;
-    final web3Provider = Provider.of<Web3Provider>(context, listen: false);
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
 
-    if (!web3Provider.isConnected) {
+    if (!walletProvider.hasWalletIdentity) {
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(content: Text(l10n.settingsConnectWalletFirstToast)),
       );
       return;
     }
-
-    showKubusDialog(
-      context: context,
-      builder: (context) => KubusAlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Row(
-          children: [
-            Icon(
-              Icons.warning_amber,
-              color: Theme.of(context).colorScheme.error,
-              size: 24,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              l10n.settingsBackupWalletDialogTitle,
-              style: KubusTypography.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.settingsBackupWalletDialogIntro,
-              style: KubusTypography.inter(
-                fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color:
-                    Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                    color: Theme.of(context).colorScheme.error, width: 1),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.warning,
-                        size: 16,
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        l10n.settingsSecurityWarningTitle,
-                        style: KubusTypography.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    l10n.settingsSecurityWarningBullets,
-                    style: KubusTypography.inter(
-                      fontSize: 11,
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              l10n.commonCancel,
-              style: KubusTypography.inter(
-                color: Theme.of(context).colorScheme.outline,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Provider.of<ThemeProvider>(context).accentColor,
-            ),
-            onPressed: () {
-              Navigator.pop(context);
-              _navigateToRecoveryReveal(walletProvider);
-            },
-            child: Text(
-              l10n.commonContinue,
-              style: KubusTypography.inter(
-                color: Theme.of(context).colorScheme.onPrimary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    await _navigateToRecoveryReveal(walletProvider);
   }
 
-  void _navigateToRecoveryReveal(WalletProvider walletProvider) {
+  Future<void> _navigateToRecoveryReveal(WalletProvider walletProvider) async {
     final l10n = AppLocalizations.of(context)!;
     final hasWallet = walletProvider.wallet != null ||
         (walletProvider.currentWalletAddress ?? '').isNotEmpty;
@@ -1964,9 +1886,11 @@ class _SettingsScreenState extends State<SettingsScreen>
           content: Text(l10n.settingsConnectOrCreateWalletFirstToast)));
       return;
     }
-    Navigator.of(context).push(
+    await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const WalletBackupProtectionScreen()),
     );
+    if (!mounted) return;
+    await _loadAllSettings();
   }
 
   void _showAutoLockDialog() {
@@ -2758,8 +2682,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(confirmContext, false),
-                      child:
-                          Text(l10n.commonCancel, style: KubusTypography.inter()),
+                      child: Text(l10n.commonCancel,
+                          style: KubusTypography.inter()),
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(confirmContext, true),
@@ -3000,6 +2924,10 @@ class _SettingsScreenState extends State<SettingsScreen>
     final hasPin = await walletProvider.hasPin();
     final biometricsSupported = await walletProvider.canUseBiometrics();
     final secureAccountStatus = await _loadSecureAccountStatus();
+    final walletBackupStatus = await WalletBackupStatusResolver.resolve(
+      walletProvider: walletProvider,
+      refreshRemote: true,
+    );
     if (!mounted) return;
 
     setState(() {
@@ -3030,6 +2958,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
       _networkSelection = settings.networkSelection;
       _autoBackup = settings.autoBackup;
+      _walletBackupStatus = walletBackupStatus;
 
       _profileVisibility = settings.profileVisibility;
       _showAchievements = settings.showAchievements;
@@ -3040,6 +2969,10 @@ class _SettingsScreenState extends State<SettingsScreen>
       _secureAccountHasEmail = secureAccountStatus['hasEmail'] == true;
       _secureAccountHasPassword = secureAccountStatus['hasPassword'] == true;
     });
+  }
+
+  String _walletBackupSummary(AppLocalizations l10n) {
+    return _walletBackupStatus.settingsSummary(l10n);
   }
 
   Future<Map<String, dynamic>> _loadSecureAccountStatus() async {

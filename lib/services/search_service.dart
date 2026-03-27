@@ -14,6 +14,35 @@ enum SearchScope {
   map,
 }
 
+@immutable
+class SearchContextSnapshot {
+  const SearchContextSnapshot({
+    this.artworkProvider,
+    this.communityProvider,
+  });
+
+  final ArtworkProvider? artworkProvider;
+  final CommunityHubProvider? communityProvider;
+
+  factory SearchContextSnapshot.capture(
+    BuildContext context, {
+    required SearchScope scope,
+  }) {
+    ArtworkProvider? artworkProvider;
+    CommunityHubProvider? communityProvider;
+    try {
+      artworkProvider = context.read<ArtworkProvider>();
+      if (scope == SearchScope.community || scope == SearchScope.home) {
+        communityProvider = context.read<CommunityHubProvider>();
+      }
+    } catch (_) {}
+    return SearchContextSnapshot(
+      artworkProvider: artworkProvider,
+      communityProvider: communityProvider,
+    );
+  }
+}
+
 /// Centralized search helper that normalizes backend payloads, applies scope-based
 /// filtering, and falls back to local provider data when the backend returns
 /// nothing or is unavailable.
@@ -27,7 +56,7 @@ class SearchService {
   int _requestVersion = 0;
 
   Future<List<MapSearchSuggestion>> fetchSuggestions({
-    required BuildContext context,
+    required SearchContextSnapshot snapshot,
     required String query,
     required SearchScope scope,
     int limit = 8,
@@ -37,16 +66,6 @@ class SearchService {
 
     // Increment version for this request
     final myVersion = ++_requestVersion;
-
-    // Capture providers before async gaps to avoid context-after-await lints.
-    ArtworkProvider? artworkProvider;
-    CommunityHubProvider? communityProvider;
-    try {
-      artworkProvider = context.read<ArtworkProvider>();
-      if (scope == SearchScope.community || scope == SearchScope.home) {
-        communityProvider = context.read<CommunityHubProvider>();
-      }
-    } catch (_) {}
 
     List<Map<String, dynamic>> normalized = [];
     try {
@@ -69,9 +88,12 @@ class SearchService {
     final allowedTypes = _allowedTypesForScope(scope);
     final fromBackend = normalized
         .map((m) => MapSearchSuggestion.fromMap(m))
-        .where((s) =>
-            s.label.isNotEmpty &&
-            (allowedTypes.isEmpty || allowedTypes.contains(s.type.toLowerCase())))
+        .where(
+          (s) =>
+              _isSuggestionUsableForScope(s, scope) &&
+              (allowedTypes.isEmpty ||
+                  allowedTypes.contains(s.type.toLowerCase())),
+        )
         .toList();
 
     if (fromBackend.isNotEmpty) return fromBackend.take(limit).toList();
@@ -80,8 +102,8 @@ class SearchService {
     final fallback = _localFallback(
       trimmed,
       scope,
-      artworkProvider: artworkProvider,
-      communityProvider: communityProvider,
+      artworkProvider: snapshot.artworkProvider,
+      communityProvider: snapshot.communityProvider,
     );
     return fallback.take(limit).toList();
   }
@@ -94,6 +116,29 @@ class SearchService {
         return const {'profile', 'user', 'group', 'community'};
       case SearchScope.map:
         return const {'artwork', 'profile', 'institution', 'event', 'marker'};
+    }
+  }
+
+  bool _isSuggestionUsableForScope(
+    MapSearchSuggestion suggestion,
+    SearchScope scope,
+  ) {
+    if (suggestion.label.trim().isEmpty) return false;
+    final type = suggestion.type.toLowerCase();
+    switch (scope) {
+      case SearchScope.home:
+        if (type == 'artwork' || type == 'profile') {
+          return (suggestion.id ?? '').trim().isNotEmpty;
+        }
+        return suggestion.position != null;
+      case SearchScope.community:
+        return (suggestion.id ?? '').trim().isNotEmpty;
+      case SearchScope.map:
+        if (type == 'artwork' || type == 'profile') {
+          return (suggestion.id ?? '').trim().isNotEmpty;
+        }
+        return suggestion.position != null ||
+            (suggestion.id ?? '').trim().isNotEmpty;
     }
   }
 

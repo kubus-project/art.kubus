@@ -36,6 +36,7 @@ import '../../utils/app_color_utils.dart';
 import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/glass_components.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/wallet_backup_status.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/utils/wallet_reconnect_action.dart';
 
@@ -97,6 +98,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   // Wallet settings state
   String _networkSelection = 'Mainnet';
   bool _autoBackup = true;
+  WalletBackupStatusSnapshot _walletBackupStatus =
+      const WalletBackupStatusSnapshot.noWallet();
 
   // Profile interaction settings
   bool _showAchievements = true;
@@ -145,6 +148,27 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     );
   }
 
+  Future<void> _openWalletBackupProtection() async {
+    final shellScope = DesktopShellScope.of(context);
+    if (shellScope != null) {
+      shellScope.pushScreen(
+        WalletBackupProtectionScreen(
+          onBackupStateChanged: _loadSettings,
+        ),
+      );
+      return;
+    }
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const WalletBackupProtectionScreen(),
+      ),
+    );
+    if (!mounted) return;
+    await _loadSettings();
+  }
+
   Future<void> _loadSettings() async {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final settings = await SettingsService.loadSettings(
@@ -155,6 +179,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     final hasPin = await walletProvider.hasPin();
     final biometricsSupported = await walletProvider.canUseBiometrics();
     final secureAccountStatus = await _loadSecureAccountStatus();
+    final walletBackupStatus = await WalletBackupStatusResolver.resolve(
+      walletProvider: walletProvider,
+      refreshRemote: true,
+    );
     if (!mounted) return;
 
     setState(() {
@@ -192,9 +220,14 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
       _networkSelection = settings.networkSelection;
       _autoBackup = settings.autoBackup;
+      _walletBackupStatus = walletBackupStatus;
       _secureAccountHasEmail = secureAccountStatus['hasEmail'] == true;
       _secureAccountHasPassword = secureAccountStatus['hasPassword'] == true;
     });
+  }
+
+  String _walletBackupSummary(AppLocalizations l10n) {
+    return _walletBackupStatus.settingsSummary(l10n);
   }
 
   Future<Map<String, dynamic>> _loadSecureAccountStatus() async {
@@ -547,8 +580,12 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   }
 
   Widget _buildHeader(ThemeProvider themeProvider) {
-    return Consumer2<ProfileProvider, StatsProvider>(
-      builder: (context, profileProvider, statsProvider, _) {
+    return Consumer<ProfileProvider>(
+      builder: (context, profileProvider, _) {
+        final statsProvider = Provider.of<StatsProvider?>(
+          context,
+          listen: true,
+        );
         final l10n = AppLocalizations.of(context)!;
         final user = profileProvider.currentUser;
         final wallet = (user?.walletAddress ?? '').trim();
@@ -556,7 +593,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
         final headerColor = scheme.secondary;
 
         const metrics = <String>['artworks', 'followers', 'following'];
-        if (wallet.isNotEmpty) {
+        if (wallet.isNotEmpty && statsProvider != null) {
           statsProvider.ensureSnapshot(
             entityType: 'user',
             entityId: wallet,
@@ -565,7 +602,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           );
         }
 
-        final snapshot = wallet.isEmpty
+        final snapshot = wallet.isEmpty || statsProvider == null
             ? null
             : statsProvider.getSnapshot(
                 entityType: 'user',
@@ -574,6 +611,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                 scope: 'public',
               );
         final isLoading = wallet.isNotEmpty &&
+            statsProvider != null &&
             statsProvider.isSnapshotLoading(
               entityType: 'user',
               entityId: wallet,
@@ -907,7 +945,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             const SizedBox(height: 24),
 
             // Security options
-            if (web3Provider.isConnected) ...[
+            if (walletProvider.hasWalletIdentity) ...[
               Text(
                 l10n.desktopSettingsSecuritySectionTitle,
                 style: KubusTextStyles.sectionTitle.copyWith(
@@ -918,6 +956,15 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
               DesktopCard(
                 child: Column(
                   children: [
+                    _buildSettingsRow(
+                      l10n.settingsBackupSettingsTileTitle,
+                      _walletBackupSummary(l10n),
+                      Icons.backup_outlined,
+                      onTap: () {
+                        unawaited(_openWalletBackupProtection());
+                      },
+                    ),
+                    const Divider(height: 32),
                     _buildSettingsRow(
                       l10n.settingsExportRecoveryPhraseTileTitle,
                       l10n.settingsExportRecoveryPhraseTileSubtitle,
@@ -996,7 +1043,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              _openShellAwareScreen(const WalletBackupProtectionScreen());
+              unawaited(_openWalletBackupProtection());
             },
             style: ElevatedButton.styleFrom(
               backgroundColor:

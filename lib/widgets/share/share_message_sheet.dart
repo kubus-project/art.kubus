@@ -4,9 +4,13 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/share/share_types.dart';
 import 'package:art_kubus/utils/creator_display_format.dart';
+import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/search_suggestions.dart';
 import 'package:art_kubus/widgets/avatar_widget.dart';
+import 'package:art_kubus/widgets/common/kubus_glass_icon_button.dart';
+import 'package:art_kubus/widgets/common/kubus_screen_header.dart';
 import 'package:art_kubus/widgets/empty_state_card.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -116,72 +120,90 @@ class _ShareMessageSheetState extends State<ShareMessageSheet> {
     final scheme = Theme.of(context).colorScheme;
     final height = MediaQuery.of(context).size.height;
 
-    return SafeArea(
-      child: Container(
-        height: height * 0.75,
-        decoration: BoxDecoration(
-          color: scheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+    final inputDecoration = InputDecoration(
+      filled: true,
+      fillColor: scheme.surface.withValues(alpha: 0.20),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(KubusRadius.md),
+        borderSide: BorderSide(
+          color: scheme.outline.withValues(alpha: 0.18),
         ),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(KubusRadius.md),
+        borderSide: BorderSide(
+          color: scheme.outline.withValues(alpha: 0.18),
+        ),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(KubusRadius.md),
+        borderSide: BorderSide(
+          color: scheme.primary.withValues(alpha: 0.52),
+        ),
+      ),
+    );
+
+    return SizedBox(
+      height: height * 0.75,
+      child: BackdropGlassSheet(
+        showBorder: false,
+        padding: EdgeInsets.zero,
+        backgroundColor: scheme.surface,
         child: Column(
           children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: scheme.outline.withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(2),
+            KubusSheetHeader(
+              title: l10n.shareMessageTitle,
+              trailing: KubusGlassIconButton(
+                icon: Icons.close,
+                tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                onPressed:
+                    _isSending ? null : () => Navigator.of(context).pop(),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    l10n.shareMessageTitle,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                  IconButton(
-                    onPressed: _isSending ? null : () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: TextField(
-                controller: _searchController,
-                enabled: !_isSending,
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.search),
-                  hintText: l10n.shareMessageSearchHint,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
+              child: LiquidGlassCard(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.sm,
                 ),
-                onChanged: (value) {
-                  _debounce?.cancel();
-                  _debounce = Timer(const Duration(milliseconds: 350), () => _search(value));
-                },
-              ),
-            ),
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: TextField(
-                controller: _messageController,
-                enabled: !_isSending,
-                minLines: 1,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: l10n.shareMessageNoteHint,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
+                child: TextField(
+                  controller: _searchController,
+                  enabled: !_isSending,
+                  decoration: inputDecoration.copyWith(
+                    prefixIcon: const Icon(Icons.search),
+                    hintText: l10n.shareMessageSearchHint,
+                  ),
+                  onChanged: (value) {
+                    _debounce?.cancel();
+                    _debounce = Timer(
+                      const Duration(milliseconds: 350),
+                      () => _search(value),
+                    );
+                  },
                 ),
               ),
             ),
-            const SizedBox(height: 10),
-            const Divider(height: 1),
+            const SizedBox(height: KubusSpacing.sm),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
+              child: LiquidGlassCard(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.sm,
+                ),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
+                child: TextField(
+                  controller: _messageController,
+                  enabled: !_isSending,
+                  minLines: 1,
+                  maxLines: 3,
+                  decoration: inputDecoration.copyWith(
+                    hintText: l10n.shareMessageNoteHint,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: KubusSpacing.sm),
             Expanded(
               child: _isSearching
                   ? const Center(child: CircularProgressIndicator())
@@ -190,16 +212,19 @@ class _ShareMessageSheetState extends State<ShareMessageSheet> {
                       : _searchResults.isEmpty
                           ? Center(
                               child: Padding(
-                                padding: const EdgeInsets.all(24),
+                                padding: const EdgeInsets.all(KubusSpacing.lg),
                                 child: EmptyStateCard(
                                   icon: Icons.search_off,
                                   title: l10n.postDetailNoProfilesFoundTitle,
-                                  description: l10n.postDetailNoProfilesFoundDescription,
+                                  description:
+                                      l10n.postDetailNoProfilesFoundDescription,
                                 ),
                               ),
                             )
                           : ListView.builder(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: KubusSpacing.md,
+                              ),
                               itemCount: _searchResults.length,
                               itemBuilder: (ctx, idx) {
                                 final profile = _searchResults[idx];
@@ -229,33 +254,55 @@ class _ShareMessageSheetState extends State<ShareMessageSheet> {
                                     ((walletAddr != null && walletAddr.isNotEmpty)
                                         ? maskWallet(walletAddr)
                                         : null);
-                                return ListTile(
-                                  enabled: !_isSending,
-                                  leading: AvatarWidget(
-                                    wallet: (walletAddr != null && walletAddr.isNotEmpty)
-                                        ? walletAddr
-                                        : username,
-                                    avatarUrl: avatar,
-                                    radius: 20,
-                                    allowFabricatedFallback: false,
+                                return Padding(
+                                  padding: const EdgeInsets.only(
+                                    bottom: KubusSpacing.sm,
                                   ),
-                                  title: Text(formatted.primary, style: GoogleFonts.inter()),
-                                  subtitle: subtitle == null
-                                      ? null
-                                      : Text(
-                                          subtitle,
-                                          style: GoogleFonts.inter(fontSize: 12),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                  trailing: _isSending
-                                      ? const SizedBox(
-                                          width: 16,
-                                          height: 16,
-                                          child: CircularProgressIndicator(strokeWidth: 2),
-                                        )
-                                      : null,
-                                  onTap: () => _sendTo(profile),
+                                  child: LiquidGlassCard(
+                                    onTap: () => _sendTo(profile),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: KubusSpacing.sm,
+                                      vertical: KubusSpacing.xs,
+                                    ),
+                                    borderRadius:
+                                        BorderRadius.circular(KubusRadius.md),
+                                    child: ListTile(
+                                      enabled: !_isSending,
+                                      contentPadding: EdgeInsets.zero,
+                                      leading: AvatarWidget(
+                                        wallet: (walletAddr != null &&
+                                                walletAddr.isNotEmpty)
+                                            ? walletAddr
+                                            : username,
+                                        avatarUrl: avatar,
+                                        radius: 20,
+                                        allowFabricatedFallback: false,
+                                      ),
+                                      title: Text(
+                                        formatted.primary,
+                                        style: GoogleFonts.inter(),
+                                      ),
+                                      subtitle: subtitle == null
+                                          ? null
+                                          : Text(
+                                              subtitle,
+                                              style: GoogleFonts.inter(
+                                                fontSize: 12,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                      trailing: _isSending
+                                          ? const SizedBox(
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : null,
+                                    ),
+                                  ),
                                 );
                               },
                             ),
@@ -266,4 +313,3 @@ class _ShareMessageSheetState extends State<ShareMessageSheet> {
     );
   }
 }
-

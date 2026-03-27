@@ -14,6 +14,9 @@ class AvatarWidget extends StatefulWidget {
   final String? avatarUrl;
   final String wallet;
   final double radius;
+  final double borderWidth;
+  final Color? borderColor;
+  final double cornerRadiusFactor;
   final bool isLoading;
   final bool allowFabricatedFallback;
   final bool enableProfileNavigation;
@@ -27,6 +30,9 @@ class AvatarWidget extends StatefulWidget {
     this.avatarUrl,
     required this.wallet,
     this.radius = 18,
+    this.borderWidth = 0,
+    this.borderColor,
+    this.cornerRadiusFactor = 0.22,
     this.isLoading = false,
     this.allowFabricatedFallback = false,
     this.enableProfileNavigation = true,
@@ -157,8 +163,8 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
     final useNetwork = effective.isNotEmpty && (effective.startsWith('http') || effective.startsWith('https'));
     final radius = widget.radius;
     final double size = radius * 2;
-    // Boxy shape: Rounded Rectangle with corner radius ~25% of width
-    final borderRadius = BorderRadius.circular(radius * 0.15); 
+    final shapeRadius = size * widget.cornerRadiusFactor;
+    final borderRadius = BorderRadius.circular(shapeRadius);
 
     final colorScheme = Theme.of(context).colorScheme;
     final backgroundColor = colorScheme.surface;
@@ -235,6 +241,24 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
       );
     }
 
+    if (widget.borderWidth > 0) {
+      content = Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          borderRadius: borderRadius,
+          border: Border.all(
+            color: widget.borderColor ?? colorScheme.surface,
+            width: widget.borderWidth,
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: borderRadius,
+          child: content,
+        ),
+      );
+    }
+
     Widget base = content;
     UserPresenceEntry? presence;
     try {
@@ -260,23 +284,26 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
     if (shouldShowPresence) {
       final indicatorSize = (radius * 0.75).clamp(14.0, 18.0).toDouble();
       final indicatorColor = widget.statusColor ?? (effectiveOnline == true ? colorScheme.tertiary : colorScheme.outlineVariant);
+      final indicatorInset = (size * 0.03).clamp(1.0, 2.0).toDouble();
       base = Stack(
         clipBehavior: Clip.none,
         children: [
           content,
           Positioned(
-            top: 4,
-            right: 4,
+            top: indicatorInset,
+            right: indicatorInset,
             child: Container(
               key: const ValueKey('avatar_presence_indicator'),
               width: indicatorSize,
               height: indicatorSize,
               decoration: BoxDecoration(
                 color: indicatorColor,
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(
+                  indicatorSize * widget.cornerRadiusFactor,
+                ),
                 border: Border.all(
-                  color: Theme.of(context).scaffoldBackgroundColor,
-                  width: 1.5,
+                  color: widget.borderColor ?? Theme.of(context).scaffoldBackgroundColor,
+                  width: 1.75,
                 ),
               ),
             ),

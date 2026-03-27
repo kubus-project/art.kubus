@@ -52,4 +52,16 @@ class KeyboardInsetResolver {
     }
     return inset;
   }
+
+  static bool isKeyboardVisible(
+    BuildContext context, {
+    double maxInset = double.infinity,
+    double threshold = 1,
+  }) {
+    return effectiveBottomInset(
+          context,
+          maxInset: maxInset,
+        ) >
+        threshold;
+  }
 }

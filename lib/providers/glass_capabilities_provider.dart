@@ -34,6 +34,7 @@ class GlassCapabilitiesProvider with ChangeNotifier {
   bool _heuristicTriggered = false;
   bool _isInitialized = false;
   Timer? _perfProbeStartTimer;
+  bool _timingsCallbackRegistered = false;
 
   GlassMode get mode => _mode;
 
@@ -304,7 +305,11 @@ class GlassCapabilitiesProvider with ChangeNotifier {
     }
     _probeFrameCount = 0;
     _jankFrameCount = 0;
+    if (_timingsCallbackRegistered) {
+      return;
+    }
     SchedulerBinding.instance.addTimingsCallback(_timingsCallback);
+    _timingsCallbackRegistered = true;
   }
 
   void _timingsCallback(List<FrameTiming> timings) {
@@ -314,7 +319,10 @@ class GlassCapabilitiesProvider with ChangeNotifier {
         _jankFrameCount++;
       }
       if (_probeFrameCount >= _probeFrameLimit) {
-        SchedulerBinding.instance.removeTimingsCallback(_timingsCallback);
+        if (_timingsCallbackRegistered) {
+          SchedulerBinding.instance.removeTimingsCallback(_timingsCallback);
+          _timingsCallbackRegistered = false;
+        }
         final severeJank = _jankFrameCount >= (_probeFrameLimit * 2 ~/ 3);
         if (severeJank && !_autoReduceEffectsOptOut && !_reduceEffectsUser) {
           _heuristicTriggered = true;
@@ -364,7 +372,10 @@ class GlassCapabilitiesProvider with ChangeNotifier {
   @override
   void dispose() {
     _perfProbeStartTimer?.cancel();
-    SchedulerBinding.instance.removeTimingsCallback(_timingsCallback);
+    if (_timingsCallbackRegistered) {
+      SchedulerBinding.instance.removeTimingsCallback(_timingsCallback);
+      _timingsCallbackRegistered = false;
+    }
     webGLContextHealthy.removeListener(_onWebGLHealthChanged);
     super.dispose();
   }

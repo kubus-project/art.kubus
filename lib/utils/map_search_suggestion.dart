@@ -45,12 +45,17 @@ class MapSearchSuggestion {
     }
 
     final type = map['type']?.toString() ?? 'artwork';
-    final rawDisplayName = (map['displayName'] ?? map['display_name'] ?? map['label'])?.toString();
+    final rawDisplayName = (map['displayName'] ??
+            map['display_name'] ??
+            map['label'] ??
+            map['text'])?.toString();
     final rawUsername = (map['username'] ?? map['handle'])?.toString();
     final wallet = (map['wallet'] ?? map['walletAddress'] ?? map['wallet_address'] ?? map['id'])?.toString();
 
     String label;
-    String? subtitle = map['subtitle']?.toString();
+    String? subtitle =
+        (map['subtitle'] ?? map['secondaryText'] ?? map['secondary_text'])
+            ?.toString();
 
     if (type == 'profile' || type == 'institution') {
       final fallback = (wallet != null && wallet.trim().isNotEmpty)
@@ -66,6 +71,7 @@ class MapSearchSuggestion {
       subtitle = formatted.secondary;
     } else {
       label = (map['label'] ??
+              map['text'] ??
               map['displayName'] ??
               map['display_name'] ??
               map['title'] ??

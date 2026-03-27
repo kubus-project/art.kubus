@@ -97,7 +97,11 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
 
       final type = inferType();
 
-      final rawDisplayName = (m['displayName'] ?? m['display_name'] ?? m['name'] ?? m['label'])?.toString();
+      final rawDisplayName = (m['displayName'] ??
+              m['display_name'] ??
+              m['name'] ??
+              m['label'] ??
+              m['text'])?.toString();
       final rawUsername = (m['username'] ?? m['handle'])?.toString();
       final wallet = (m['wallet'] ?? m['walletAddress'] ?? m['wallet_address'] ?? m['id'])?.toString();
 
@@ -123,6 +127,7 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
                 m['display_name'] ??
                 m['title'] ??
                 m['label'] ??
+                m['text'] ??
                 m['name'] ??
                 '')
             .toString();
@@ -131,6 +136,12 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
         // Prefer domain-specific subtitles so map search feels relevant.
         if (m['subtitle'] != null && m['subtitle'].toString().trim().isNotEmpty) {
           subtitle = m['subtitle'].toString();
+        } else if (m['secondaryText'] != null &&
+            m['secondaryText'].toString().trim().isNotEmpty) {
+          subtitle = m['secondaryText'].toString();
+        } else if (m['secondary_text'] != null &&
+            m['secondary_text'].toString().trim().isNotEmpty) {
+          subtitle = m['secondary_text'].toString();
         } else if (type.toLowerCase() == 'artwork') {
           final rawArtist = (m['artist'] ??
                   m['artistName'] ??
@@ -197,6 +208,13 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
         'subtitle': subtitle,
         'id': id,
         'type': type,
+        if (rawDisplayName != null) 'displayName': rawDisplayName,
+        if (rawUsername != null) 'username': rawUsername,
+        if (wallet != null) 'wallet': wallet,
+        if (m['avatarUrl'] != null) 'avatarUrl': m['avatarUrl'],
+        if (m['avatar_url'] != null) 'avatar_url': m['avatar_url'],
+        if (m['imageUrl'] != null) 'imageUrl': m['imageUrl'],
+        if (m['image_url'] != null) 'image_url': m['image_url'],
       };
       if (lat != null && lng != null) {
         normalized['lat'] = lat;

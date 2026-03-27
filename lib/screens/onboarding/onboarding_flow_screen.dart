@@ -18,19 +18,23 @@ import 'package:art_kubus/services/notification_helper.dart';
 import 'package:art_kubus/services/onboarding_state_service.dart';
 import 'package:art_kubus/services/push_notification_service.dart';
 import 'package:art_kubus/services/telemetry/telemetry_service.dart';
+import 'package:art_kubus/services/wallet_backup_passkey_service.dart';
 import 'package:art_kubus/services/wallet_session_sync_service.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/dao_role_verification.dart';
 import 'package:art_kubus/utils/media_url_resolver.dart';
+import 'package:art_kubus/utils/wallet_backup_status.dart';
 import 'package:art_kubus/widgets/app_logo.dart';
 import 'package:art_kubus/widgets/auth_entry_controls.dart';
 import 'package:art_kubus/widgets/auth_methods_panel.dart';
 import 'package:art_kubus/widgets/auth_title_row.dart';
+import 'package:art_kubus/widgets/common/keyboard_inset_padding.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/gradient_icon_card.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/user_persona_picker_content.dart';
+import 'package:art_kubus/widgets/wallet_backup_prompts.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -50,6 +54,7 @@ enum _OnboardingStep {
   verifyEmail,
   role,
   profile,
+  walletBackupIntro,
   walletBackup,
   daoReview,
   accountPermissions,
@@ -211,6 +216,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   bool _verifiedSigningInMessageShown = false;
   bool _requiresWalletBackupStep = false;
   String? _flowScopeKey;
+  WalletBackupStatusSnapshot _walletBackupStatus =
+      const WalletBackupStatusSnapshot.noWallet();
 
   bool get _walletBackupOnboardingEnabled =>
       AppConfig.isFeatureEnabled('walletBackupOnboarding');
@@ -252,6 +259,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           start: Color(0xFF00796B),
           end: Color(0xFF4DB6AC),
           accent: KubusColors.accentTealDark,
+        );
+      case _OnboardingStep.walletBackupIntro:
+        return const _StepPalette(
+          start: Color(0xFF01579B),
+          end: Color(0xFF0288D1),
+          accent: Color(0xFF81D4FA),
         );
       case _OnboardingStep.walletBackup:
         return const _StepPalette(
@@ -397,6 +410,13 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
               .map(_stepFromId)
               .whereType<_OnboardingStep>()
               .toSet();
+      if (completed.contains(_OnboardingStep.walletBackup)) {
+        completed.add(_OnboardingStep.walletBackupIntro);
+      }
+      if (deferred.contains(_OnboardingStep.walletBackup) &&
+          !completed.contains(_OnboardingStep.walletBackupIntro)) {
+        deferred.add(_OnboardingStep.walletBackupIntro);
+      }
       final hasSavedProgress = completed.isNotEmpty || deferred.isNotEmpty;
       var seededInitialProgress = false;
       if (!hasSavedProgress &&
@@ -652,12 +672,16 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       userId: (prefs.getString('user_id') ?? '').trim(),
     );
     if (!_walletBackupOnboardingEnabled) {
+      _walletBackupStatus = const WalletBackupStatusSnapshot.noWallet();
       _requiresWalletBackupStep = false;
       return;
     }
-    _requiresWalletBackupStep = await walletProvider.isMnemonicBackupRequired(
+    _walletBackupStatus = await WalletBackupStatusResolver.resolve(
+      walletProvider: walletProvider,
       walletAddress: walletAddress,
+      refreshRemote: true,
     );
+    _requiresWalletBackupStep = _walletBackupStatus.mnemonicBackupRequired;
   }
 
   bool _sessionMatchesPendingVerificationEmail() {
@@ -727,6 +751,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           if (_verificationRequired) _OnboardingStep.verifyEmail,
           _OnboardingStep.role,
           _OnboardingStep.profile,
+          if (_walletBackupOnboardingEnabled && _requiresWalletBackupStep)
+            _OnboardingStep.walletBackupIntro,
           if (_walletBackupOnboardingEnabled && _requiresWalletBackupStep)
             _OnboardingStep.walletBackup,
           if (_requiresDaoReviewStep) _OnboardingStep.daoReview,
@@ -1786,32 +1812,11 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }
 
   Future<void> _handleWalletBackupStep() async {
+    final completed = await _openMnemonicRevealFlow();
+    if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-    if (!_walletBackupOnboardingEnabled || !_requiresWalletBackupStep) {
-      await _markCompleted(_OnboardingStep.walletBackup);
-      return;
-    }
-    final walletAddress = await _resolveWalletForBackupCheck();
-    if (!mounted) return;
-
-    if ((walletAddress ?? '').isEmpty) {
-      messenger.showKubusSnackBar(
-        SnackBar(content: Text(l10n.onboardingFlowWalletBackupNoWallet)),
-        tone: KubusSnackBarTone.warning,
-      );
-      return;
-    }
-
-    final completed = await navigator.push<bool>(
-      MaterialPageRoute(
-        builder: (_) => const MnemonicRevealScreen(),
-      ),
-    );
-    if (!mounted) return;
-    await _syncWalletBackupRequirement();
-    if (!_requiresWalletBackupStep || completed == true) {
+    if (completed) {
       await _markCompleted(_OnboardingStep.walletBackup);
       return;
     }
@@ -1819,6 +1824,113 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       SnackBar(content: Text(l10n.onboardingFlowWalletBackupContinueHint)),
       tone: KubusSnackBarTone.neutral,
     );
+  }
+
+  Future<bool> _openMnemonicRevealFlow() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    if (!_walletBackupOnboardingEnabled || !_requiresWalletBackupStep) {
+      return true;
+    }
+    final walletAddress = await _resolveWalletForBackupCheck();
+    if (!mounted) return false;
+
+    if ((walletAddress ?? '').isEmpty) {
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.onboardingFlowWalletBackupNoWallet)),
+        tone: KubusSnackBarTone.warning,
+      );
+      return false;
+    }
+
+    final completed = await navigator.push<bool>(
+      MaterialPageRoute(
+        builder: (_) => const MnemonicRevealScreen(),
+      ),
+    );
+    if (!mounted) return false;
+    await _syncWalletBackupRequirement();
+    _refreshAuthDerivedSteps();
+    return !_requiresWalletBackupStep || completed == true;
+  }
+
+  Future<void> _handleWalletBackupIntroRevealPhrase() async {
+    await _openMnemonicRevealFlow();
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  Future<void> _handleWalletBackupIntroCreateEncryptedBackup() async {
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final messenger = ScaffoldMessenger.of(context);
+    final recoveryPassword = await showWalletBackupPasswordPrompt(
+      context: context,
+      title: 'Create encrypted server backup',
+      description:
+          'Choose a recovery password and store it separately from your recovery phrase.',
+      confirm: true,
+      actionLabel: 'Create backup',
+    );
+    if (!mounted || recoveryPassword == null) return;
+
+    try {
+      await walletProvider.createEncryptedWalletBackup(
+        recoveryPassword: recoveryPassword,
+      );
+      await _syncWalletBackupRequirement();
+      _refreshAuthDerivedSteps();
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        const SnackBar(content: Text('Encrypted server backup saved.')),
+        tone: KubusSnackBarTone.success,
+      );
+      setState(() {});
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(error.toString())),
+        tone: KubusSnackBarTone.error,
+      );
+    }
+  }
+
+  Future<void> _handleWalletBackupIntroAddPasskey() async {
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final messenger = ScaffoldMessenger.of(context);
+    final nickname = await showWalletBackupTextPrompt(
+      context: context,
+      title: 'Add a passkey',
+      label: 'Passkey name',
+      description:
+          'Add a passkey to protect the encrypted server backup on this browser or device.',
+      initialValue: 'This device',
+      actionLabel: 'Add passkey',
+    );
+    if (!mounted || nickname == null) return;
+
+    try {
+      final passkey = await walletProvider.enrollEncryptedWalletBackupPasskey(
+        nickname: nickname,
+      );
+      await _syncWalletBackupRequirement();
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(
+            'Passkey "${passkey.nickname ?? passkey.credentialId}" added.',
+          ),
+        ),
+        tone: KubusSnackBarTone.success,
+      );
+      setState(() {});
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(error.toString())),
+        tone: KubusSnackBarTone.error,
+      );
+    }
   }
 
   Future<void> _finishOnboarding() async {
@@ -1941,6 +2053,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         } else {
           await _deferCurrentStep();
         }
+        return;
+      case _OnboardingStep.walletBackupIntro:
+        await _markCompleted(_OnboardingStep.walletBackupIntro);
         return;
       case _OnboardingStep.walletBackup:
         await _handleWalletBackupStep();
@@ -2210,6 +2325,34 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           onAvatarStaged: _stageAvatarForLaterUpload,
         );
         break;
+      case _OnboardingStep.walletBackupIntro:
+        content = _WalletBackupIntroStep(
+          title: l10n.onboardingFlowWalletBackupIntroTitle,
+          body: l10n.onboardingFlowWalletBackupIntroBody,
+          web3Warning: l10n.onboardingFlowWalletBackupIntroWeb3Warning,
+          secretWarning: l10n.onboardingFlowWalletBackupIntroSecretWarning,
+          recoveryPhraseLabel:
+              l10n.onboardingFlowWalletBackupIntroRecoveryPhraseLabel,
+          recoveryPhraseBody:
+              l10n.onboardingFlowWalletBackupIntroRecoveryPhraseBody,
+          encryptedBackupLabel:
+              l10n.onboardingFlowWalletBackupIntroEncryptedBackupLabel,
+          encryptedBackupBody:
+              l10n.onboardingFlowWalletBackupIntroEncryptedBackupBody,
+          passkeyLabel: l10n.onboardingFlowWalletBackupIntroPasskeyLabel,
+          passkeyBody: l10n.onboardingFlowWalletBackupIntroPasskeyBody,
+          hasEncryptedServerBackup:
+              _walletBackupStatus.hasEncryptedServerBackup,
+          hasPasskeyProtection: _walletBackupStatus.hasPasskeyProtection,
+          showPasskeyAction: _walletBackupStatus.hasEncryptedServerBackup &&
+              kIsWeb &&
+              AppConfig.isFeatureEnabled('walletBackupPasskeyWeb'),
+          onRevealRecoveryPhrase: _handleWalletBackupIntroRevealPhrase,
+          onCreateEncryptedBackup:
+              _handleWalletBackupIntroCreateEncryptedBackup,
+          onAddPasskey: _handleWalletBackupIntroAddPasskey,
+        );
+        break;
       case _OnboardingStep.walletBackup:
         content = _WalletBackupStep(
           title: l10n.onboardingFlowWalletBackupTitle,
@@ -2335,6 +2478,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         return Icons.tune_outlined;
       case _OnboardingStep.profile:
         return Icons.badge_outlined;
+      case _OnboardingStep.walletBackupIntro:
+        return Icons.shield_moon_outlined;
       case _OnboardingStep.walletBackup:
         return Icons.vpn_key_outlined;
       case _OnboardingStep.daoReview:
@@ -2375,6 +2520,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
     if (_currentStep == _OnboardingStep.role ||
         _currentStep == _OnboardingStep.profile ||
+        _currentStep == _OnboardingStep.walletBackupIntro ||
         _currentStep == _OnboardingStep.walletBackup ||
         _currentStep == _OnboardingStep.daoReview) {
       if (_currentIndex == 0) {
@@ -2451,6 +2597,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           return l10n.onboardingFlowRoleTitle;
         case _OnboardingStep.profile:
           return l10n.onboardingFlowProfileTitle;
+        case _OnboardingStep.walletBackupIntro:
+          return l10n.onboardingFlowWalletBackupIntroTitle;
         case _OnboardingStep.walletBackup:
           return l10n.onboardingFlowWalletBackupTitle;
         case _OnboardingStep.daoReview:
@@ -2573,6 +2721,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   Widget _buildWelcomeScreen(AppLocalizations l10n, ColorScheme scheme) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final spotlight = _paletteForStep(_OnboardingStep.welcome);
+    final compactMobileHeight =
+        !_isDesktop && MediaQuery.sizeOf(context).height < 700;
 
     return Center(
       child: ConstrainedBox(
@@ -2656,39 +2806,82 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                         ),
                       ),
                     )
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          l10n.onboardingWelcomeDescription,
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  : compactMobileHeight
+                      ? SingleChildScrollView(
+                          padding: const EdgeInsets.only(
+                            bottom: KubusSpacing.sm,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                l10n.onboardingWelcomeDescription,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: scheme.onSurface.withValues(
+                                        alpha: 0.74,
+                                      ),
+                                      height: 1.45,
+                                    ),
+                              ),
+                              const SizedBox(height: KubusSpacing.md),
+                              _WelcomeDecisionPanel(
+                                isDark: isDark,
+                                scheme: scheme,
+                                compact: true,
+                                discoverTitle: l10n.commonDiscoverArt,
+                                discoverBody:
+                                    l10n.onboardingWelcomeDiscoverBody,
+                                createTitle: l10n.commonCreateAccount,
+                                createBody: l10n.onboardingFlowAccountBody,
+                                onSelectGuest: _selectGuestBranch,
+                                onSelectAccount: _selectAccountBranch,
+                                onSignIn: () {
+                                  Navigator.of(context)
+                                      .pushReplacementNamed('/sign-in');
+                                },
+                              ),
+                            ],
+                          ),
+                        )
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              l10n.onboardingWelcomeDescription,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
                                     color: scheme.onSurface.withValues(
                                       alpha: 0.74,
                                     ),
                                     height: 1.45,
                                   ),
+                            ),
+                            const SizedBox(height: KubusSpacing.md),
+                            Expanded(
+                              child: _WelcomeDecisionPanel(
+                                isDark: isDark,
+                                scheme: scheme,
+                                compact: true,
+                                discoverTitle: l10n.commonDiscoverArt,
+                                discoverBody:
+                                    l10n.onboardingWelcomeDiscoverBody,
+                                createTitle: l10n.commonCreateAccount,
+                                createBody: l10n.onboardingFlowAccountBody,
+                                onSelectGuest: _selectGuestBranch,
+                                onSelectAccount: _selectAccountBranch,
+                                onSignIn: () {
+                                  Navigator.of(context)
+                                      .pushReplacementNamed('/sign-in');
+                                },
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: KubusSpacing.md),
-                        Expanded(
-                          child: _WelcomeDecisionPanel(
-                            isDark: isDark,
-                            scheme: scheme,
-                            compact: true,
-                            discoverTitle: l10n.commonDiscoverArt,
-                            discoverBody: l10n.onboardingWelcomeDiscoverBody,
-                            createTitle: l10n.commonCreateAccount,
-                            createBody: l10n.onboardingFlowAccountBody,
-                            onSelectGuest: _selectGuestBranch,
-                            onSelectAccount: _selectAccountBranch,
-                            onSignIn: () {
-                              Navigator.of(context)
-                                  .pushReplacementNamed('/sign-in');
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
             ),
           ],
         ),
@@ -2761,14 +2954,29 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           backgroundColor: Colors.transparent,
           resizeToAvoidBottomInset: false,
           body: SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final compactHeight =
-                    !_isDesktop && constraints.maxHeight < 760;
-                final compactLayout = compactHeight;
-                final hideProgress = !_isDesktop && constraints.maxHeight < 700;
+            child: KeyboardInsetPadding(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final compactHeight =
+                      !_isDesktop && constraints.maxHeight < 760;
+                  final compactLayout = compactHeight;
+                  final hideProgress =
+                      !_isDesktop && constraints.maxHeight < 700;
 
-                if (_isWelcomePhase) {
+                  if (_isWelcomePhase) {
+                    return Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: _isDesktop
+                            ? KubusSpacing.lg
+                            : (compactLayout
+                                ? KubusSpacing.sm
+                                : KubusSpacing.md),
+                        vertical: compactLayout ? 8 : 10,
+                      ),
+                      child: _buildWelcomeScreen(l10n, scheme),
+                    );
+                  }
+
                   return Padding(
                     padding: EdgeInsets.symmetric(
                       horizontal: _isDesktop
@@ -2776,66 +2984,56 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                           : (compactLayout ? KubusSpacing.sm : KubusSpacing.md),
                       vertical: compactLayout ? 8 : 10,
                     ),
-                    child: _buildWelcomeScreen(l10n, scheme),
-                  );
-                }
-
-                return Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: _isDesktop
-                        ? KubusSpacing.lg
-                        : (compactLayout ? KubusSpacing.sm : KubusSpacing.md),
-                    vertical: compactLayout ? 8 : 10,
-                  ),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: _isDesktop ? 1280 : double.infinity,
-                      ),
-                      child: Column(
-                        children: [
-                          _buildHeader(
-                            l10n,
-                            scheme,
-                            compact: compactLayout,
-                          ),
-                          SizedBox(
-                            height: compactLayout
-                                ? KubusSpacing.xs
-                                : KubusSpacing.sm,
-                          ),
-                          if (!hideProgress) ...[
-                            _buildProgress(scheme),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: _isDesktop ? 1280 : double.infinity,
+                        ),
+                        child: Column(
+                          children: [
+                            _buildHeader(
+                              l10n,
+                              scheme,
+                              compact: compactLayout,
+                            ),
                             SizedBox(
-                              height: compactLayout ? KubusSpacing.xs : 12,
+                              height: compactLayout
+                                  ? KubusSpacing.xs
+                                  : KubusSpacing.sm,
+                            ),
+                            if (!hideProgress) ...[
+                              _buildProgress(scheme),
+                              SizedBox(
+                                height: compactLayout ? KubusSpacing.xs : 12,
+                              ),
+                            ],
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  Expanded(
+                                    child: _isDesktop
+                                        ? _buildDesktopContent(l10n, scheme)
+                                        : _buildStepCard(l10n, scheme),
+                                  ),
+                                  SizedBox(
+                                    height: compactLayout
+                                        ? KubusSpacing.sm
+                                        : KubusSpacing.md,
+                                  ),
+                                  _buildBottomActions(
+                                    l10n,
+                                    compact: compactLayout,
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
-                          Expanded(
-                            child: Column(
-                              children: [
-                                Expanded(
-                                  child: _isDesktop
-                                      ? _buildDesktopContent(l10n, scheme)
-                                      : _buildStepCard(l10n, scheme),
-                                ),
-                                SizedBox(
-                                  height: compactLayout
-                                      ? KubusSpacing.sm
-                                      : KubusSpacing.md,
-                                ),
-                                _buildBottomActions(
-                                  l10n,
-                                  compact: compactLayout,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
         ),
@@ -2850,6 +3048,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       case _OnboardingStep.account:
       case _OnboardingStep.role:
       case _OnboardingStep.profile:
+      case _OnboardingStep.walletBackupIntro:
       case _OnboardingStep.daoReview:
       case _OnboardingStep.accountPermissions:
         return l10n.commonContinue;
@@ -4654,6 +4853,277 @@ class _WalletBackupStep extends StatelessWidget {
               isFullWidth: true,
             ),
             const Spacer(),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _WalletBackupIntroStep extends StatefulWidget {
+  const _WalletBackupIntroStep({
+    required this.title,
+    required this.body,
+    required this.web3Warning,
+    required this.secretWarning,
+    required this.recoveryPhraseLabel,
+    required this.recoveryPhraseBody,
+    required this.encryptedBackupLabel,
+    required this.encryptedBackupBody,
+    required this.passkeyLabel,
+    required this.passkeyBody,
+    required this.hasEncryptedServerBackup,
+    required this.hasPasskeyProtection,
+    required this.showPasskeyAction,
+    required this.onRevealRecoveryPhrase,
+    required this.onCreateEncryptedBackup,
+    required this.onAddPasskey,
+  });
+
+  final String title;
+  final String body;
+  final String web3Warning;
+  final String secretWarning;
+  final String recoveryPhraseLabel;
+  final String recoveryPhraseBody;
+  final String encryptedBackupLabel;
+  final String encryptedBackupBody;
+  final String passkeyLabel;
+  final String passkeyBody;
+  final bool hasEncryptedServerBackup;
+  final bool hasPasskeyProtection;
+  final bool showPasskeyAction;
+  final Future<void> Function() onRevealRecoveryPhrase;
+  final Future<void> Function() onCreateEncryptedBackup;
+  final Future<void> Function() onAddPasskey;
+
+  @override
+  State<_WalletBackupIntroStep> createState() => _WalletBackupIntroStepState();
+}
+
+class _WalletBackupIntroStepState extends State<_WalletBackupIntroStep> {
+  bool _busy = false;
+  bool _passkeySupported = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.showPasskeyAction) {
+      unawaited(_loadPasskeySupport());
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _WalletBackupIntroStep oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.showPasskeyAction && widget.showPasskeyAction) {
+      unawaited(_loadPasskeySupport());
+    }
+  }
+
+  Future<void> _loadPasskeySupport() async {
+    final supported = await isWalletBackupPasskeySupported();
+    if (!mounted) return;
+    setState(() {
+      _passkeySupported = supported;
+    });
+  }
+
+  Future<void> _runAction(Future<void> Function() action) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await action();
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  Widget _buildActionCard({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required String body,
+    required String actionLabel,
+    required Future<void> Function() onPressed,
+    bool completed = false,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(KubusSpacing.md),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: Colors.white, size: 20),
+              const SizedBox(width: KubusSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const SizedBox(height: KubusSpacing.xs),
+                    Text(
+                      body,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.82),
+                            height: 1.4,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: KubusSpacing.sm),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: completed
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.check_circle_outline,
+                        color: Color(0xFF81C784),
+                        size: 18,
+                      ),
+                      const SizedBox(width: KubusSpacing.xs),
+                      Text(
+                        actionLabel,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: const Color(0xFF81C784),
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                    ],
+                  )
+                : OutlinedButton.icon(
+                    onPressed:
+                        _busy ? null : () => unawaited(_runAction(onPressed)),
+                    icon: const Icon(Icons.arrow_forward_outlined, size: 18),
+                    label: Text(actionLabel),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.26),
+                      ),
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final passkeyVisible = widget.showPasskeyAction && _passkeySupported;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxHeight < 520;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AuthTitleRow(
+              title: widget.title,
+              subtitle: widget.body,
+              compact: compact,
+              foregroundColor: Colors.white,
+              subtitleColor: Colors.white.withValues(alpha: 0.85),
+            ),
+            const SizedBox(height: KubusSpacing.sm),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(KubusSpacing.md),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.web3Warning,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          height: 1.4,
+                        ),
+                  ),
+                  const SizedBox(height: KubusSpacing.sm),
+                  Text(
+                    widget.secretWarning,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.84),
+                          height: 1.4,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: KubusSpacing.md),
+            Expanded(
+              child: ListView(
+                children: [
+                  _buildActionCard(
+                    context: context,
+                    icon: Icons.vpn_key_outlined,
+                    title: widget.recoveryPhraseLabel,
+                    body: widget.recoveryPhraseBody,
+                    actionLabel: AppLocalizations.of(context)!
+                        .onboardingFlowWalletBackupIntroRevealAction,
+                    onPressed: widget.onRevealRecoveryPhrase,
+                  ),
+                  const SizedBox(height: KubusSpacing.sm),
+                  _buildActionCard(
+                    context: context,
+                    icon: Icons.cloud_upload_outlined,
+                    title: widget.encryptedBackupLabel,
+                    body: widget.encryptedBackupBody,
+                    actionLabel: widget.hasEncryptedServerBackup
+                        ? AppLocalizations.of(context)!
+                            .onboardingFlowWalletBackupIntroEncryptedDone
+                        : AppLocalizations.of(context)!
+                            .onboardingFlowWalletBackupIntroEncryptedAction,
+                    onPressed: widget.onCreateEncryptedBackup,
+                    completed: widget.hasEncryptedServerBackup,
+                  ),
+                  if (passkeyVisible) ...[
+                    const SizedBox(height: KubusSpacing.sm),
+                    _buildActionCard(
+                      context: context,
+                      icon: Icons.phishing_outlined,
+                      title: widget.passkeyLabel,
+                      body: widget.passkeyBody,
+                      actionLabel: widget.hasPasskeyProtection
+                          ? AppLocalizations.of(context)!
+                              .onboardingFlowWalletBackupIntroPasskeyDone
+                          : AppLocalizations.of(context)!
+                              .onboardingFlowWalletBackupIntroPasskeyAction,
+                      onPressed: widget.onAddPasskey,
+                      completed: widget.hasPasskeyProtection,
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ],
         );
       },

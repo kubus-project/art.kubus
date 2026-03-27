@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 import '../providers/glass_capabilities_provider.dart';
 import '../utils/design_tokens.dart';
+import 'common/keyboard_inset_padding.dart';
 import 'general_background.dart';
 import 'glass/glass_surface.dart';
 
@@ -433,33 +434,35 @@ class BackdropGlassSheet extends StatelessWidget {
 
     return SafeArea(
       top: false,
-      child: LiquidGlassPanel(
-        padding: padding ?? const EdgeInsets.all(KubusSpacing.lg),
-        margin: EdgeInsets.zero,
-        borderRadius: effectiveRadius,
-        blurSigma: blurSigma,
-        showBorder: showBorder,
-        backgroundColor: backgroundColor,
-        fallbackMinOpacity: fallbackMinOpacity,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (showHandle) ...[
-              Container(
-                height: KubusSpacing.xs,
-                width: KubusSpacing.xl,
-                decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(KubusRadius.xl),
+      child: KeyboardInsetPadding(
+        child: LiquidGlassPanel(
+          padding: padding ?? const EdgeInsets.all(KubusSpacing.lg),
+          margin: EdgeInsets.zero,
+          borderRadius: effectiveRadius,
+          blurSigma: blurSigma,
+          showBorder: showBorder,
+          backgroundColor: backgroundColor,
+          fallbackMinOpacity: fallbackMinOpacity,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (showHandle) ...[
+                Container(
+                  height: KubusSpacing.xs,
+                  width: KubusSpacing.xl,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(KubusRadius.xl),
+                  ),
                 ),
-              ),
-              const SizedBox(height: KubusSpacing.md),
+                const SizedBox(height: KubusSpacing.md),
+              ],
+              child,
             ],
-            child,
-          ],
+          ),
         ),
       ),
     );

@@ -98,6 +98,7 @@ class UserProfileNavigation {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final radius = BorderRadius.circular(KubusRadius.xl);
+    final isDark = theme.brightness == Brightness.dark;
 
     await showGeneralDialog<void>(
       context: context,
@@ -120,14 +121,22 @@ class UserProfileNavigation {
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(
                       minWidth: 520,
-                      maxWidth: 920,
-                      maxHeight: 920,
+                      maxWidth: 980,
+                      maxHeight: 900,
                     ),
                     child: Material(
-                      color: Colors.transparent,
+                      color: scheme.surface.withValues(
+                        alpha: isDark ? 0.78 : 0.92,
+                      ),
                       child: DecoratedBox(
                         decoration: BoxDecoration(
+                          color: scheme.surface.withValues(
+                            alpha: isDark ? 0.82 : 0.94,
+                          ),
                           borderRadius: radius,
+                          border: Border.all(
+                            color: scheme.outline.withValues(alpha: 0.14),
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: scheme.shadow.withValues(alpha: 0.24),

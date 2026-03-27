@@ -107,7 +107,8 @@ void main() {
     expect(state.nextStepId, isNull);
   });
 
-  test('resumes at wallet backup when backup is still required', () async {
+  test('resumes at wallet backup intro when backup is still required',
+      () async {
     final prefs = await seedProgress(
       completedSteps: <String>{'account', 'role', 'profile'},
     );
@@ -123,6 +124,27 @@ void main() {
     );
 
     expect(state.requiresStructuredOnboarding, isTrue);
-    expect(state.nextStepId, 'walletBackup');
+    expect(state.nextStepId, 'walletBackupIntro');
+  });
+
+  test(
+      'legacy wallet backup progress also satisfies wallet backup intro on resume',
+      () async {
+    final prefs = await seedProgress(
+      completedSteps: <String>{'account', 'role', 'profile', 'walletBackup'},
+    );
+    final state = await AuthOnboardingService.resolveStructuredOnboardingResume(
+      prefs: prefs,
+      hasPendingAuthOnboarding: true,
+      hasAuthenticatedSession: true,
+      hasHydratedProfile: true,
+      requiresWalletBackup: true,
+      heuristicNextStepId: null,
+      persona: 'lover',
+      flowScopeKey: testScope,
+    );
+
+    expect(state.requiresStructuredOnboarding, isTrue);
+    expect(state.nextStepId, 'accountPermissions');
   });
 }

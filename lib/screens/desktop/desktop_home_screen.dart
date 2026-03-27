@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
@@ -87,13 +88,16 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   // AppColorUtils.tealAccent, .coralAccent, .greenAccent, .amberAccent, .purpleAccent
 
   static const double _searchBarWidth = 280;
+  static const double _floatingSearchBarWidth = 240;
   late AnimationController _animationController;
   late ScrollController _scrollController;
   bool _showFloatingHeader = false;
   final BackendApiService _backendApi = BackendApiService();
-  final LayerLink _searchFieldLink = LayerLink();
+  final LayerLink _primarySearchFieldLink = LayerLink();
+  final LayerLink _floatingSearchFieldLink = LayerLink();
   late TextEditingController _searchController;
-  late FocusNode _searchFocusNode;
+  late FocusNode _primarySearchFocusNode;
+  late FocusNode _floatingSearchFocusNode;
   Timer? _searchDebounce;
   String _searchQuery = '';
   bool _isFetchingSuggestions = false;
@@ -128,8 +132,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     _scrollController.addListener(_onScroll);
     _animationController.forward();
     _searchController = TextEditingController();
-    _searchFocusNode = FocusNode();
-    _searchFocusNode.addListener(_handleSearchFocusChange);
+    _primarySearchFocusNode = FocusNode();
+    _floatingSearchFocusNode = FocusNode();
+    _primarySearchFocusNode.addListener(_handleSearchFocusChange);
+    _floatingSearchFocusNode.addListener(_handleSearchFocusChange);
 
     // Initialize providers
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -172,6 +178,15 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       context
           .read<PromotionProvider>()
           .loadFeaturedHome(locale: locale, force: shouldForce),
+    );
+  }
+
+  Future<void> _copyWalletAddress(String walletAddress) async {
+    if (walletAddress.trim().isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: walletAddress.trim()));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showKubusSnackBar(
+      const SnackBar(content: Text('Wallet address copied')),
     );
   }
 
@@ -247,7 +262,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     _creatorResolveDebounce?.cancel();
     _searchOverlayEntry?.remove();
     _searchController.dispose();
-    _searchFocusNode
+    _primarySearchFocusNode
+      ..removeListener(_handleSearchFocusChange)
+      ..dispose();
+    _floatingSearchFocusNode
       ..removeListener(_handleSearchFocusChange)
       ..dispose();
     super.dispose();
@@ -637,6 +655,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
 
   Widget _buildHeader() {
     final profileProvider = Provider.of<ProfileProvider>(context);
+    final web3Provider = Provider.of<Web3Provider>(context);
     final user = profileProvider.currentUser;
     final themeProvider = Provider.of<ThemeProvider>(context);
     final l10n = AppLocalizations.of(context)!;
@@ -692,6 +711,88 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                               ],
                             ],
                           ),
+                          if (web3Provider.isConnected) ...[
+                            const SizedBox(height: KubusSpacing.xs),
+                            Wrap(
+                              spacing: KubusSpacing.sm,
+                              runSpacing: KubusSpacing.xxs,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(
+                                      KubusRadius.sm,
+                                    ),
+                                    onTap: () => _copyWalletAddress(
+                                      web3Provider.walletAddress,
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: KubusSpacing.xxs,
+                                        vertical: KubusSpacing.xxs,
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            web3Provider.formatAddress(
+                                              web3Provider.walletAddress,
+                                            ),
+                                            style: KubusTextStyles
+                                                .screenSubtitle
+                                                .copyWith(
+                                              fontFamily: 'RobotoMono',
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface
+                                                  .withValues(alpha: 0.62),
+                                            ),
+                                          ),
+                                          const SizedBox(
+                                            width: KubusSpacing.xxs,
+                                          ),
+                                          Icon(
+                                            Icons.copy_rounded,
+                                            size: KubusSpacing.md,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withValues(alpha: 0.45),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: KubusSpacing.sm,
+                                    vertical: KubusSpacing.xxs,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(
+                                      KubusRadius.sm,
+                                    ),
+                                    border: Border.all(
+                                      color:
+                                          Colors.orange.withValues(alpha: 0.3),
+                                      width: KubusSizes.hairline,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'DEVNET',
+                                    style: KubusTypography.textTheme.labelSmall
+                                        ?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.orange,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ],
                       ),
                     ],
@@ -705,13 +806,13 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           Row(
             children: [
               CompositedTransformTarget(
-                link: _searchFieldLink,
+                link: _primarySearchFieldLink,
                 child: SizedBox(
                   width: _searchBarWidth,
                   child: DesktopSearchBar(
                     hintText: l10n.mapSearchHint,
                     controller: _searchController,
-                    focusNode: _searchFocusNode,
+                    focusNode: _primarySearchFocusNode,
                     onChanged: _handleSearchChange,
                     onSubmitted: _handleSearchSubmit,
                     autofocus: false,
@@ -2627,11 +2728,18 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
               ),
             ),
             const Spacer(),
-            SizedBox(
-              width: 240,
-              height: 40,
-              child: DesktopSearchBar(
-                hintText: l10n.commonSearch,
+            CompositedTransformTarget(
+              link: _floatingSearchFieldLink,
+              child: SizedBox(
+                width: _floatingSearchBarWidth,
+                height: 40,
+                child: DesktopSearchBar(
+                  hintText: l10n.commonSearch,
+                  controller: _searchController,
+                  focusNode: _floatingSearchFocusNode,
+                  onChanged: _handleSearchChange,
+                  onSubmitted: _handleSearchSubmit,
+                ),
               ),
             ),
           ],
@@ -2942,12 +3050,25 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   }
 
   void _handleSearchFocusChange() {
-    if (!_searchFocusNode.hasFocus) {
+    if (!_hasActiveSearchFocus) {
       _hideSearchOverlay();
     } else {
       _showSearchOverlay();
     }
   }
+
+  bool get _hasActiveSearchFocus =>
+      _primarySearchFocusNode.hasFocus || _floatingSearchFocusNode.hasFocus;
+
+  LayerLink get _activeSearchFieldLink =>
+      _floatingSearchFocusNode.hasFocus
+          ? _floatingSearchFieldLink
+          : _primarySearchFieldLink;
+
+  double get _activeSearchOverlayWidth =>
+      _floatingSearchFocusNode.hasFocus
+          ? _floatingSearchBarWidth
+          : _searchBarWidth;
 
   void _handleSearchChange(String value) {
     setState(() {
@@ -2964,7 +3085,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       return;
     }
 
+    final snapshot =
+        SearchContextSnapshot.capture(context, scope: SearchScope.home);
     _searchDebounce = Timer(const Duration(milliseconds: 275), () async {
+      if (!mounted) return;
       setState(() {
         _isFetchingSuggestions = true;
       });
@@ -2973,7 +3097,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       try {
         List<_SearchSuggestion> suggestions;
         final remote = await _searchService.fetchSuggestions(
-          context: context,
+          snapshot: snapshot,
           query: value,
           scope: SearchScope.home,
           limit: 8,
@@ -3003,6 +3127,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           _searchSuggestions = _buildLocalSearchSuggestions(value);
           _isFetchingSuggestions = false;
         });
+        _showSearchOverlay();
       }
     });
   }
@@ -3094,7 +3219,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   }
 
   void _showSearchOverlay() {
-    if (!_searchFocusNode.hasFocus) return;
+    if (!_hasActiveSearchFocus) return;
     if (_searchOverlayEntry != null) {
       _searchOverlayEntry!.markNeedsBuild();
       return;
@@ -3108,7 +3233,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           children: [
             Positioned.fill(child: Container(color: Colors.transparent)),
             CompositedTransformFollower(
-              link: _searchFieldLink,
+              link: _activeSearchFieldLink,
               showWhenUnlinked: false,
               offset: const Offset(0, 48),
               child: Builder(
@@ -3130,7 +3255,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                         maxHeight: 320,
                       ),
                       child: SizedBox(
-                        width: _searchBarWidth,
+                        width: _activeSearchOverlayWidth,
                         child: _buildSearchSuggestionContent(),
                       ),
                     ),
