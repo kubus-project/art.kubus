@@ -79,7 +79,7 @@ class AuthEntryShell extends StatelessWidget {
                     ),
                     child: Align(
                       alignment: isDesktop
-                          ? const Alignment(0, -0.24)
+                          ? const Alignment(0, -0.16)
                           : Alignment.center,
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 1180),
