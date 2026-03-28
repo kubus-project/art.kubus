@@ -77,7 +77,10 @@ class AuthEntryShell extends StatelessWidget {
                       horizontal: isDesktop ? KubusSpacing.xl : KubusSpacing.md,
                       vertical: isDesktop ? KubusSpacing.lg : KubusSpacing.md,
                     ),
-                    child: Center(
+                    child: Align(
+                      alignment: isDesktop
+                          ? const Alignment(0, -0.24)
+                          : Alignment.center,
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 1180),
                         child: Column(
@@ -96,11 +99,11 @@ class AuthEntryShell extends StatelessWidget {
                                   ? Center(
                                       child: Row(
                                         crossAxisAlignment:
-                                            CrossAxisAlignment.center,
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Expanded(
                                             child: Align(
-                                              alignment: Alignment.centerLeft,
+                                              alignment: Alignment.topLeft,
                                               child: _HeroColumn(
                                                 title: title,
                                                 subtitle: subtitle,
@@ -117,7 +120,7 @@ class AuthEntryShell extends StatelessWidget {
                                               width: KubusSpacing.xl),
                                           Flexible(
                                             child: Align(
-                                              alignment: Alignment.center,
+                                              alignment: Alignment.topCenter,
                                               child: ConstrainedBox(
                                                 constraints:
                                                     const BoxConstraints(
