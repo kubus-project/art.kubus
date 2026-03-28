@@ -193,8 +193,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     final l10n = AppLocalizations.of(context)!;
     final now = DateTime.now();
     final diff = now.difference(timestamp);
-    if (diff.inDays > 7)
+    if (diff.inDays > 7) {
       return l10n.commonTimeAgoWeeks((diff.inDays / 7).floor());
+    }
     if (diff.inDays > 0) return l10n.commonTimeAgoDays(diff.inDays);
     if (diff.inHours > 0) return l10n.commonTimeAgoHours(diff.inHours);
     if (diff.inMinutes > 0) return l10n.commonTimeAgoMinutes(diff.inMinutes);
@@ -432,13 +433,16 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       itemBuilder: (context, index) {
                         final user = likes[index];
                         final subtitleParts = <String>[];
-                        if (user.username != null && user.username!.isNotEmpty)
+                        if (user.username != null && user.username!.isNotEmpty) {
                           subtitleParts.add('@${user.username}');
+                        }
                         if (user.walletAddress != null &&
-                            user.walletAddress!.isNotEmpty)
+                            user.walletAddress!.isNotEmpty) {
                           subtitleParts.add(user.walletAddress!);
-                        if (user.likedAt != null)
+                        }
+                        if (user.likedAt != null) {
                           subtitleParts.add(user.likedAt!.toIso8601String());
+                        }
                         return ListTile(
                           contentPadding: EdgeInsets.zero,
                           leading: AvatarWidget(
@@ -1708,8 +1712,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           }
 
                           Future<void> showHistory(Comment c) async {
-                            if (!c.isEdited || c.originalContent == null)
+                            if (!c.isEdited || c.originalContent == null) {
                               return;
+                            }
                             await showKubusDialog<void>(
                               context: context,
                               builder: (dialogContext) {
@@ -1795,8 +1800,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                                       content: next,
                                                     );
                                                     if (!mounted) return;
-                                                    if (!dialogContext.mounted)
+                                                    if (!dialogContext.mounted) {
                                                       return;
+                                                    }
                                                     Navigator.of(dialogContext)
                                                         .pop();
                                                     messenger.showKubusSnackBar(

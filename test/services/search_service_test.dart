@@ -2,7 +2,7 @@ import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/search_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-class _FakeBackendApiService extends BackendApiService {
+class _FakeBackendApiService implements BackendApiService {
   _FakeBackendApiService(this.suggestions);
 
   final List<Map<String, dynamic>> suggestions;
@@ -19,6 +19,9 @@ class _FakeBackendApiService extends BackendApiService {
   List<Map<String, dynamic>> normalizeSearchSuggestions(dynamic raw) {
     return List<Map<String, dynamic>>.from(raw as List<dynamic>);
   }
+
+  @override
+  noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 void main() {

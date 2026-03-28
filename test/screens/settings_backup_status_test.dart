@@ -35,9 +35,8 @@ class _FakeWalletProvider extends WalletProvider {
     required this.hasSignerValue,
     required this.isReadOnlySessionValue,
     required this.mnemonicBackupRequiredValue,
-    EncryptedWalletBackupDefinition? backupDefinition,
-  })  : backupDefinition = backupDefinition,
-        super(deferInit: true);
+    this.backupDefinition,
+  })  : super(deferInit: true);
 
   String? walletAddressValue;
   bool hasWalletIdentityValue;

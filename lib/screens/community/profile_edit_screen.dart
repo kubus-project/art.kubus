@@ -583,14 +583,16 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           if (u.queryParameters.containsKey('seed')) {
             seed = u.queryParameters['seed']!;
             final segs = u.pathSegments;
-            if (segs.isNotEmpty)
+            if (segs.isNotEmpty) {
               style = segs.lastWhere((s) => s.isNotEmpty,
                   orElse: () => 'identicon');
+            }
           } else {
             final last = u.pathSegments.isNotEmpty ? u.pathSegments.last : '';
             seed = last.replaceAll('.svg', '');
-            if (u.pathSegments.length >= 2)
+            if (u.pathSegments.length >= 2) {
               style = u.pathSegments[u.pathSegments.length - 2];
+            }
           }
         } catch (_) {
           final p = url.split('/').last;
