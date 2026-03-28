@@ -2051,14 +2051,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           final isActive = _selectedFilter == filter;
           return Padding(
             padding: const EdgeInsets.only(left: KubusSpacing.sm),
-              child: KubusGlassChip(
-                label: _getFilterLabel(filter),
-                icon: Icons.filter_alt_outlined,
-                active: isActive,
-                accentColor: themeProvider.accentColor,
-                borderRadius: 10,
-                enableBlur: useMapBlur,
-                onPressed: () {
+            child: KubusGlassChip(
+              label: _getFilterLabel(filter),
+              icon: Icons.filter_alt_outlined,
+              active: isActive,
+              accentColor: themeProvider.accentColor,
+              borderRadius: 10,
+              enableBlur: useMapBlur,
+              onPressed: () {
                 setState(() => _selectedFilter = filter);
                 // Reload markers so the nearby panel reflects the new filter.
                 unawaited(_loadMarkersForCurrentView(force: true).then((_) {
@@ -2625,7 +2625,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
     final useMapBlur = kubusMapBlurEnabled(context);
     return KubusFilterPanel(
       title: l10n.mapFiltersTitle,
@@ -2735,16 +2734,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   activeColor: themeProvider.accentColor,
                 ),
               ),
-              LiquidGlassPanel(
+              buildKubusMapGlassSurface(
+                context: context,
+                kind: KubusMapGlassSurfaceKind.button,
+                borderRadius: BorderRadius.circular(10),
+                tintBase: scheme.surface,
+                useBlur: useMapBlur,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                margin: EdgeInsets.zero,
-                borderRadius: BorderRadius.circular(10),
-                blurSigma: KubusGlassEffects.blurSigmaLight,
-                backgroundColor:
-                    scheme.surface.withValues(alpha: isDark ? 0.16 : 0.12),
-                showBorder: true,
-                enableBlur: useMapBlur,
                 child: Text(
                   l10n.commonDistanceKm(
                     _searchRadius.toStringAsFixed(1),
@@ -3861,8 +3858,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           onPrimaryAction: openDetails,
           onCardTap: openDetails,
           onTitleTap: openDetails,
-          primaryActionIcon:
-              canPresentExhibition ? Icons.museum_outlined : Icons.arrow_forward,
+          primaryActionIcon: canPresentExhibition
+              ? Icons.museum_outlined
+              : Icons.arrow_forward,
           primaryActionLabel: l10n.commonViewDetails,
           actions: overlayActions,
           stackCount: stackCount,

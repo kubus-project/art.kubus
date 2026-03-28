@@ -46,7 +46,8 @@ class AvatarWidget extends StatefulWidget {
   State<AvatarWidget> createState() => _AvatarWidgetState();
 }
 
-class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderStateMixin {
+class _AvatarWidgetState extends State<AvatarWidget>
+    with SingleTickerProviderStateMixin {
   String? _effectiveUrl;
   bool _loading = false;
   late AnimationController _shimmerController;
@@ -59,7 +60,9 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
   void initState() {
     super.initState();
     _setup();
-    _shimmerController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000))..repeat();
+    _shimmerController = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1000))
+      ..repeat();
   }
 
   @override
@@ -74,65 +77,89 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
     final fallbackSeed = WalletUtils.canonical(widget.wallet);
     // 1. If explicit URL provided, trust it completely and skip fetch.
     if (widget.avatarUrl != null && widget.avatarUrl!.isNotEmpty) {
-      setState(() { _effectiveUrl = _normalizeAvatar(widget.avatarUrl); });
+      setState(() {
+        _effectiveUrl = _normalizeAvatar(widget.avatarUrl);
+      });
       return;
     }
 
     // 2. Check cache
     final cached = UserService.getCachedUser(cacheKey)?.profileImageUrl;
     if (cached != null && cached.isNotEmpty) {
-      setState(() { _effectiveUrl = _normalizeAvatar(cached); });
-    } 
-    
+      setState(() {
+        _effectiveUrl = _normalizeAvatar(cached);
+      });
+    }
+
     // 3. Fetch authoritative profile
     // Skip fetch for placeholder/unknown wallets to avoid unnecessary 404s
     final invalidWalletPlaceholders = ['unknown', 'anonymous', 'n/a', 'none'];
     if (walletId.isEmpty || invalidWalletPlaceholders.contains(walletId)) {
       if (kDebugMode) {
-        debugPrint('AvatarWidget: skipping profile fetch for invalid wallet "$walletId"');
+        debugPrint(
+            'AvatarWidget: skipping profile fetch for invalid wallet "$walletId"');
       }
       if (widget.allowFabricatedFallback) {
         if (_effectiveUrl == null || _effectiveUrl!.isEmpty) {
-          setState(() { _effectiveUrl = UserService.safeAvatarUrl(WalletUtils.canonical(widget.wallet)); });
+          setState(() {
+            _effectiveUrl =
+                UserService.safeAvatarUrl(WalletUtils.canonical(widget.wallet));
+          });
         }
       }
       return;
     }
     // Don't set fabricated URL yet to avoid "Robot -> Real" flash.
     // Show initials/loading state instead.
-    
-    setState(() { _loading = true; });
+
+    setState(() {
+      _loading = true;
+    });
     try {
       final u = await UserService.getUserById(cacheKey);
       if (!mounted) return;
-      
+
       final p = u?.profileImageUrl;
       if (p != null && p.isNotEmpty) {
-        setState(() { _effectiveUrl = _normalizeAvatar(p); _loading = false; });
+        setState(() {
+          _effectiveUrl = _normalizeAvatar(p);
+          _loading = false;
+        });
         return;
       }
-      
+
       // 4. If fetch returned nothing, fallback to fabricated if allowed
       if (widget.allowFabricatedFallback) {
         // Only set if we don't have one yet
         if (_effectiveUrl == null || _effectiveUrl!.isEmpty) {
-           setState(() { 
-             _effectiveUrl = UserService.safeAvatarUrl(fallbackSeed.isNotEmpty ? fallbackSeed : cacheKey); 
-             _loading = false; 
-           });
+          setState(() {
+            _effectiveUrl = UserService.safeAvatarUrl(
+                fallbackSeed.isNotEmpty ? fallbackSeed : cacheKey);
+            _loading = false;
+          });
         } else {
-           setState(() { _loading = false; });
+          setState(() {
+            _loading = false;
+          });
         }
       } else {
-        setState(() { _loading = false; });
+        setState(() {
+          _loading = false;
+        });
       }
     } catch (_) {
       if (mounted) {
         // On error, fallback if allowed
-          if (widget.allowFabricatedFallback && (_effectiveUrl == null || _effectiveUrl!.isEmpty)) {
-            setState(() { _effectiveUrl = UserService.safeAvatarUrl(fallbackSeed.isNotEmpty ? fallbackSeed : cacheKey); });
+        if (widget.allowFabricatedFallback &&
+            (_effectiveUrl == null || _effectiveUrl!.isEmpty)) {
+          setState(() {
+            _effectiveUrl = UserService.safeAvatarUrl(
+                fallbackSeed.isNotEmpty ? fallbackSeed : cacheKey);
+          });
         }
-        setState(() { _loading = false; });
+        setState(() {
+          _loading = false;
+        });
       }
     }
   }
@@ -140,10 +167,13 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
   @override
   void didUpdateWidget(covariant AvatarWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.avatarUrl != widget.avatarUrl || oldWidget.wallet != widget.wallet || oldWidget.allowFabricatedFallback != widget.allowFabricatedFallback) {
+    if (oldWidget.avatarUrl != widget.avatarUrl ||
+        oldWidget.wallet != widget.wallet ||
+        oldWidget.allowFabricatedFallback != widget.allowFabricatedFallback) {
       _setup();
     }
-    if (oldWidget.wallet != widget.wallet || oldWidget.showStatusIndicator != widget.showStatusIndicator) {
+    if (oldWidget.wallet != widget.wallet ||
+        oldWidget.showStatusIndicator != widget.showStatusIndicator) {
       _presencePrefetchKey = null;
       _prefetchPresenceIfNeeded();
     }
@@ -160,7 +190,8 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     final effective = _effectiveUrl ?? '';
-    final useNetwork = effective.isNotEmpty && (effective.startsWith('http') || effective.startsWith('https'));
+    final useNetwork = effective.isNotEmpty &&
+        (effective.startsWith('http') || effective.startsWith('https'));
     final radius = widget.radius;
     final double size = radius * 2;
     final shapeRadius = size * widget.cornerRadiusFactor;
@@ -184,14 +215,22 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
               fit: BoxFit.cover,
               errorBuilder: (ctx, error, stack) {
                 final parts = widget.wallet.trim().split(RegExp(r'\s+'));
-                final initials = parts.where((p) => p.isNotEmpty).map((p) => p[0]).take(2).join().toUpperCase();
+                final initials = parts
+                    .where((p) => p.isNotEmpty)
+                    .map((p) => p[0])
+                    .take(2)
+                    .join()
+                    .toUpperCase();
                 return Container(
                   decoration: BoxDecoration(
                     color: colorScheme.surfaceContainerHighest,
                     borderRadius: borderRadius,
                   ),
                   alignment: Alignment.center,
-                  child: Text(initials.isNotEmpty ? initials : 'U', style: TextStyle(fontSize: (radius * 0.7).clamp(10, 14).toDouble(), fontWeight: FontWeight.w600)),
+                  child: Text(initials.isNotEmpty ? initials : 'U',
+                      style: TextStyle(
+                          fontSize: (radius * 0.7).clamp(10, 14).toDouble(),
+                          fontWeight: FontWeight.w600)),
                 );
               },
             ),
@@ -200,7 +239,12 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
       );
     } else {
       final parts = widget.wallet.trim().split(RegExp(r'\s+'));
-      final initials = parts.where((p) => p.isNotEmpty).map((p) => p[0]).take(2).join().toUpperCase();
+      final initials = parts
+          .where((p) => p.isNotEmpty)
+          .map((p) => p[0])
+          .take(2)
+          .join()
+          .toUpperCase();
       content = Container(
         width: size,
         height: size,
@@ -209,7 +253,10 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
           borderRadius: borderRadius,
         ),
         alignment: Alignment.center,
-        child: Text(initials.isNotEmpty ? initials : 'U', style: TextStyle(fontSize: (radius * 0.7).clamp(10, 14).toDouble(), fontWeight: FontWeight.w600)),
+        child: Text(initials.isNotEmpty ? initials : 'U',
+            style: TextStyle(
+                fontSize: (radius * 0.7).clamp(10, 14).toDouble(),
+                fontWeight: FontWeight.w600)),
       );
     }
 
@@ -282,8 +329,11 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
     _touchPresenceWatchIfNeeded();
 
     if (shouldShowPresence) {
-      final indicatorSize = (radius * 0.75).clamp(14.0, 18.0).toDouble();
-      final indicatorColor = widget.statusColor ?? (effectiveOnline == true ? colorScheme.tertiary : colorScheme.outlineVariant);
+      final indicatorSize = (radius * 0.36).clamp(7.0, 9.0).toDouble();
+      final indicatorColor = widget.statusColor ??
+          (effectiveOnline == true
+              ? colorScheme.tertiary
+              : colorScheme.outlineVariant);
       final indicatorInset = (size * 0.03).clamp(1.0, 2.0).toDouble();
       base = Stack(
         clipBehavior: Clip.none,
@@ -302,8 +352,9 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
                   indicatorSize * widget.cornerRadiusFactor,
                 ),
                 border: Border.all(
-                  color: widget.borderColor ?? Theme.of(context).scaffoldBackgroundColor,
-                  width: 1.75,
+                  color: widget.borderColor ??
+                      Theme.of(context).scaffoldBackgroundColor,
+                  width: 1.1,
                 ),
               ),
             ),
@@ -323,8 +374,11 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
       return GestureDetector(
         onTap: () {
           // Generate unique hero tag for this navigation
-          final newTag = 'avatar_${WalletUtils.normalize(widget.wallet)}_${DateTime.now().microsecondsSinceEpoch}';
-          setState(() { _currentHeroTag = newTag; });
+          final newTag =
+              'avatar_${WalletUtils.normalize(widget.wallet)}_${DateTime.now().microsecondsSinceEpoch}';
+          setState(() {
+            _currentHeroTag = newTag;
+          });
 
           UserProfileNavigation.open(
             context,
@@ -332,7 +386,11 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
             heroTag: newTag,
           ).whenComplete(() {
             // clear temporary hero tag after return
-            if (mounted) setState(() { _currentHeroTag = null; });
+            if (mounted) {
+              setState(() {
+                _currentHeroTag = null;
+              });
+            }
           });
         },
         child: wrapped,
@@ -371,20 +429,30 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
     if (!widget.showStatusIndicator) return;
 
     final wallet = widget.wallet.trim();
-    if (wallet.isEmpty) return;
+    if (wallet.isEmpty) {
+      return;
+    }
 
     final normalized = WalletUtils.normalize(wallet);
     const invalid = {'unknown', 'anonymous', 'n/a', 'none'};
-    if (normalized.isEmpty || invalid.contains(normalized.toLowerCase())) return;
-    if (!WalletUtils.looksLikeWallet(normalized)) return;
+    if (normalized.isEmpty || invalid.contains(normalized.toLowerCase())) {
+      return;
+    }
+    if (!WalletUtils.looksLikeWallet(normalized)) {
+      return;
+    }
 
     // PresenceProvider uses a short watched-wallet TTL (currently 2 minutes).
     // Touch at a safe interval below that to avoid stale indicators.
     final now = DateTime.now();
     final last = _presenceLastTouchAt;
-    if (last != null && now.difference(last) < const Duration(seconds: 55)) return;
+    if (last != null && now.difference(last) < const Duration(seconds: 55)) {
+      return;
+    }
 
-    if (_presenceTouchScheduled) return;
+    if (_presenceTouchScheduled) {
+      return;
+    }
     _presenceTouchScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _presenceTouchScheduled = false;
@@ -411,8 +479,11 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
 
       final lower = candidate.toLowerCase();
       if (lower.contains('dicebear') &&
-          (lower.contains('/svg') || lower.endsWith('.svg') || lower.contains('format=svg'))) {
-        candidate = candidate.replaceAll('/svg', '/png').replaceAll('.svg', '.png');
+          (lower.contains('/svg') ||
+              lower.endsWith('.svg') ||
+              lower.contains('format=svg'))) {
+        candidate =
+            candidate.replaceAll('/svg', '/png').replaceAll('.svg', '.png');
       }
 
       if (candidate.startsWith('//')) {

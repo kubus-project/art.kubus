@@ -4,6 +4,7 @@ import '../../l10n/app_localizations.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/wallet_utils.dart';
+import '../avatar_widget.dart';
 import 'detail_shell_components.dart';
 
 /// A shared profile header component for profile screens (own + other users)
@@ -127,7 +128,8 @@ class ProfileHeaderShell extends StatelessWidget {
                           Image.network(
                             resolvedCoverUrl,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                            errorBuilder: (_, __, ___) =>
+                                const SizedBox.shrink(),
                           ),
                           // Gradient overlay for better avatar visibility
                           Positioned.fill(
@@ -155,7 +157,7 @@ class ProfileHeaderShell extends StatelessWidget {
               bottom: -(avatarSize / 2),
               child: GestureDetector(
                 onTap: onAvatarTap,
-                child: _buildAvatar(context, effectiveAccent),
+                child: _buildAvatar(context),
               ),
             ),
           ],
@@ -175,24 +177,11 @@ class ProfileHeaderShell extends StatelessWidget {
     );
   }
 
-  Widget _buildAvatar(BuildContext context, Color accentColor) {
+  Widget _buildAvatar(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final avatarRadius = BorderRadius.circular(avatarSize * 0.22);
-    final resolvedAvatarUrl = avatarUrl == null
-        ? null
-        : (MediaUrlResolver.resolveDisplayUrl(avatarUrl) ??
-            MediaUrlResolver.resolve(avatarUrl) ??
-            avatarUrl);
-
-    final avatarWidget = Container(
-      width: avatarSize,
-      height: avatarSize,
+    final avatarWidget = DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: avatarRadius,
-        border: Border.all(
-          color: scheme.surface,
-          width: DetailSpacing.xs,
-        ),
+        borderRadius: BorderRadius.circular(avatarSize * 0.22),
         boxShadow: [
           BoxShadow(
             color: scheme.shadow.withValues(alpha: 0.15),
@@ -201,57 +190,30 @@ class ProfileHeaderShell extends StatelessWidget {
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: avatarRadius,
-        child: resolvedAvatarUrl != null && resolvedAvatarUrl.isNotEmpty
-            ? Image.network(
-                resolvedAvatarUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _buildInitials(context, accentColor),
-              )
-            : _buildInitials(context, accentColor),
+      child: AvatarWidget(
+        wallet: displayName,
+        avatarUrl: avatarUrl,
+        radius: avatarSize / 2,
+        borderWidth: DetailSpacing.xs,
+        borderColor: scheme.surface,
+        cornerRadiusFactor: 0.22,
+        enableProfileNavigation: false,
+        heroTag: avatarHeroTag,
       ),
     );
-
-    if (avatarHeroTag != null) {
-      return Hero(tag: avatarHeroTag!, child: avatarWidget);
-    }
     return avatarWidget;
-  }
-
-  Widget _buildInitials(BuildContext context, Color accentColor) {
-    final initials = _getInitials(displayName);
-    return Container(
-      color: accentColor.withValues(alpha: 0.2),
-      alignment: Alignment.center,
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Text(
-          initials,
-          style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                color: accentColor,
-              ),
-        ),
-      ),
-    );
-  }
-
-  String _getInitials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+'));
-    if (parts.isEmpty || parts[0].isEmpty) return '?';
-    if (parts.length == 1) return parts[0].substring(0, 1).toUpperCase();
-    return '${parts[0].substring(0, 1)}${parts[1].substring(0, 1)}'.toUpperCase();
   }
 
   Widget _buildFullContent(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final rawUsername = (username ?? '').trim();
     final normalized = rawUsername.startsWith('@')
-      ? rawUsername.substring(1).trim()
-      : rawUsername;
-    final safeHandle = (normalized.isNotEmpty && !WalletUtils.looksLikeWallet(normalized))
-      ? '@$normalized'
-      : null;
+        ? rawUsername.substring(1).trim()
+        : rawUsername;
+    final safeHandle =
+        (normalized.isNotEmpty && !WalletUtils.looksLikeWallet(normalized))
+            ? '@$normalized'
+            : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -326,11 +288,12 @@ class ProfileHeaderShell extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final rawUsername = (username ?? '').trim();
     final normalized = rawUsername.startsWith('@')
-      ? rawUsername.substring(1).trim()
-      : rawUsername;
-    final safeHandle = (normalized.isNotEmpty && !WalletUtils.looksLikeWallet(normalized))
-      ? '@$normalized'
-      : null;
+        ? rawUsername.substring(1).trim()
+        : rawUsername;
+    final safeHandle =
+        (normalized.isNotEmpty && !WalletUtils.looksLikeWallet(normalized))
+            ? '@$normalized'
+            : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -349,13 +312,17 @@ class ProfileHeaderShell extends StatelessWidget {
                           displayName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineMedium
+                              ?.copyWith(
                                 color: scheme.onSurface,
                               ),
                         ),
                       ),
                       if (isVerified) ...[
-                        const SizedBox(width: KubusSpacing.xs + KubusSpacing.xxs),
+                        const SizedBox(
+                            width: KubusSpacing.xs + KubusSpacing.xxs),
                         Icon(
                           Icons.verified,
                           size: KubusSizes.trailingChevron + KubusSpacing.xxs,
@@ -383,8 +350,7 @@ class ProfileHeaderShell extends StatelessWidget {
               ),
             ),
             // Compact actions
-            if (actions.isNotEmpty)
-              Row(children: actions),
+            if (actions.isNotEmpty) Row(children: actions),
           ],
         ),
         if (activityStatus != null) ...[

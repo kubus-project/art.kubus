@@ -416,7 +416,12 @@ class _GovernanceHubState extends State<GovernanceHub>
     final radius = BorderRadius.circular(KubusRadius.md);
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
+      margin: const EdgeInsets.fromLTRB(
+        KubusSpacing.md,
+        KubusSpacing.sm,
+        KubusSpacing.md,
+        KubusSpacing.xs,
+      ),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         borderRadius: radius,
@@ -485,37 +490,40 @@ class _GovernanceHubState extends State<GovernanceHub>
           setState(() => _hoveredTabIndex = null);
         }
       },
-      child: LiquidGlassCard(
-        onTap: () => _setSelectedIndex(index),
-        padding: const EdgeInsets.symmetric(
-          vertical: KubusSpacing.md,
-          horizontal: KubusSpacing.sm,
-        ),
-        margin: const EdgeInsets.symmetric(horizontal: KubusSpacing.xxs),
-        borderRadius: BorderRadius.circular(KubusRadius.sm),
-        blurSigma: buttonStyle.blurSigma,
-        fallbackMinOpacity: buttonStyle.fallbackMinOpacity,
-        showBorder: false,
-        backgroundColor: background,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: foreground,
-              size: KubusSizes.sidebarActionIcon,
-            ),
-            const SizedBox(height: KubusSpacing.xxs),
-            Text(
-              label,
-              style: KubusTypography.textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w600,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 104),
+        child: LiquidGlassCard(
+          onTap: () => _setSelectedIndex(index),
+          padding: const EdgeInsets.symmetric(
+            vertical: KubusSpacing.md,
+            horizontal: KubusSpacing.sm,
+          ),
+          margin: const EdgeInsets.symmetric(horizontal: KubusSpacing.xxs),
+          borderRadius: BorderRadius.circular(KubusRadius.sm),
+          blurSigma: buttonStyle.blurSigma,
+          fallbackMinOpacity: buttonStyle.fallbackMinOpacity,
+          showBorder: false,
+          backgroundColor: background,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
                 color: foreground,
+                size: KubusSizes.sidebarActionIcon,
               ),
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+              const SizedBox(height: KubusSpacing.xs),
+              Text(
+                label,
+                style: KubusTypography.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: foreground,
+                ),
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
       ),
     );

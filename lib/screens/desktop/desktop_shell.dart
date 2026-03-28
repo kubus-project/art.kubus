@@ -13,14 +13,11 @@ import '../../providers/recent_activity_provider.dart';
 import '../../providers/deep_link_provider.dart';
 import '../../providers/deferred_onboarding_provider.dart';
 import '../../config/config.dart';
-import '../../models/recent_activity.dart';
 import '../../utils/activity_navigation.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/telemetry/telemetry_service.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/kubus_labs_feature.dart';
-import '../../widgets/common/kubus_screen_header.dart';
-import '../../widgets/topbar_icon.dart';
 import 'desktop_home_screen.dart';
 import 'desktop_map_screen.dart';
 import 'community/desktop_community_screen.dart';
@@ -40,10 +37,10 @@ import '../onboarding/web3/onboarding_data.dart';
 import '../web3/wallet/connectwallet_screen.dart';
 import '../collab/invites_inbox_screen.dart';
 import '../../widgets/user_persona_onboarding_gate.dart';
-import '../../widgets/recent_activity_tile.dart';
 import '../../widgets/glass_components.dart';
 import '../../utils/share_deep_link_navigation.dart';
 import '../../services/share/share_deep_link_parser.dart';
+import 'components/desktop_notifications_panel.dart';
 
 export 'desktop_shell_scope.dart';
 
@@ -646,72 +643,54 @@ class _DesktopShellState extends State<DesktopShell>
                                   duration: const Duration(milliseconds: 150),
                                   child: Builder(
                                     builder: (context) {
-                                      final panel = Container(
-                                        decoration: BoxDecoration(
-                                          border: Border(
-                                            left: BorderSide(
-                                              color: theme.brightness ==
-                                                      Brightness.dark
-                                                  ? Colors.white
-                                                      .withValues(alpha: 0.06)
-                                                  : theme.colorScheme.outline
-                                                      .withValues(alpha: 0.10),
-                                              width: 1,
+                                      final panel = AnimatedSwitcher(
+                                        duration:
+                                            const Duration(milliseconds: 220),
+                                        switchInCurve: Curves.easeOutCubic,
+                                        switchOutCurve: Curves.easeInCubic,
+                                        child: switch (_functionsPanel) {
+                                          DesktopFunctionsPanel.notifications =>
+                                            DesktopNotificationsPanel(
+                                              key: const ValueKey<String>(
+                                                  'functions_notifications'),
+                                              onClose: _closeFunctionsPanel,
+                                              onRefresh: () => context
+                                                  .read<
+                                                      RecentActivityProvider>()
+                                                  .refresh(force: true),
+                                              onMarkAllRead: () async {
+                                                final activityProvider =
+                                                    context.read<
+                                                        RecentActivityProvider>();
+                                                await context
+                                                    .read<
+                                                        NotificationProvider>()
+                                                    .markViewed(
+                                                      syncServer: true,
+                                                    );
+                                                activityProvider
+                                                    .markAllReadLocally();
+                                              },
+                                              onActivitySelected:
+                                                  (activity) async {
+                                                final parentContext = context;
+                                                _closeFunctionsPanel();
+                                                await ActivityNavigation.open(
+                                                    parentContext, activity);
+                                              },
                                             ),
-                                          ),
-                                        ),
-                                        child: LiquidGlassPanel(
-                                          padding: EdgeInsets.zero,
-                                          margin: EdgeInsets.zero,
-                                          borderRadius: BorderRadius.zero,
-                                          blurSigma:
-                                              KubusGlassEffects.blurSigmaLight,
-                                          showBorder: false,
-                                          backgroundColor: theme
-                                              .colorScheme.surface
-                                              .withValues(
-                                            alpha: theme.brightness ==
-                                                    Brightness.dark
-                                                ? 0.16
-                                                : 0.10,
-                                          ),
-                                          child: AnimatedSwitcher(
-                                            duration: const Duration(
-                                                milliseconds: 220),
-                                            switchInCurve: Curves.easeOutCubic,
-                                            switchOutCurve: Curves.easeInCubic,
-                                            child: switch (_functionsPanel) {
-                                              DesktopFunctionsPanel
-                                                    .notifications =>
-                                                _NotificationsPanel(
-                                                  key: const ValueKey<String>(
-                                                      'functions_notifications'),
-                                                  onClose: _closeFunctionsPanel,
-                                                  onActivitySelected:
-                                                      (activity) async {
-                                                    final parentContext =
-                                                        context;
-                                                    _closeFunctionsPanel();
-                                                    await ActivityNavigation
-                                                        .open(parentContext,
-                                                            activity);
-                                                  },
-                                                ),
-                                              DesktopFunctionsPanel
-                                                    .exploreNearby =>
-                                                _functionsPanelContent ??
-                                                    const SizedBox.shrink(
-                                                      key: ValueKey<String>(
-                                                          'functions_explore_nearby_empty'),
-                                                    ),
-                                              DesktopFunctionsPanel.none =>
+                                          DesktopFunctionsPanel.exploreNearby =>
+                                            _functionsPanelContent ??
                                                 const SizedBox.shrink(
                                                   key: ValueKey<String>(
-                                                      'functions_empty'),
+                                                      'functions_explore_nearby_empty'),
                                                 ),
-                                            },
-                                          ),
-                                        ),
+                                          DesktopFunctionsPanel.none =>
+                                            const SizedBox.shrink(
+                                              key: ValueKey<String>(
+                                                  'functions_empty'),
+                                            ),
+                                        },
                                       );
 
                                       if (!kIsWeb ||
@@ -954,204 +933,5 @@ class _DesktopShellState extends State<DesktopShell>
         ),
       );
     });
-  }
-}
-
-class _NotificationsPanel extends StatelessWidget {
-  final VoidCallback onClose;
-  final Future<void> Function(RecentActivity activity) onActivitySelected;
-
-  const _NotificationsPanel({
-    super.key,
-    required this.onClose,
-    required this.onActivitySelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final headerStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.panelBackground,
-      tintBase: scheme.surface,
-    );
-    final hasUnread =
-        context.select<RecentActivityProvider, bool>((p) => p.hasUnread);
-
-    return Column(
-      children: [
-        // Header
-        DecoratedBox(
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                color: scheme.outline.withValues(alpha: 0.2),
-              ),
-            ),
-          ),
-          child: LiquidGlassPanel(
-            padding: const EdgeInsets.all(KubusSpacing.lg),
-            margin: EdgeInsets.zero,
-            borderRadius: BorderRadius.zero,
-            blurSigma: headerStyle.blurSigma,
-            showBorder: false,
-            fallbackMinOpacity: headerStyle.fallbackMinOpacity,
-            backgroundColor: headerStyle.tintColor,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                KubusSheetHeader(
-                  title: l10n.commonNotifications,
-                  trailing: TopBarIcon(
-                    tooltip: l10n.commonClose,
-                    icon: Icon(
-                      Icons.close,
-                      color: scheme.onSurface,
-                    ),
-                    onPressed: onClose,
-                  ),
-                ),
-                const SizedBox(height: KubusSpacing.xs),
-                Wrap(
-                  spacing: KubusSpacing.xs,
-                  runSpacing: KubusSpacing.xs,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    TopBarIcon(
-                      tooltip: l10n.commonRefresh,
-                      onPressed: () => unawaited(context
-                          .read<RecentActivityProvider>()
-                          .refresh(force: true)),
-                      icon: Icon(
-                        Icons.refresh,
-                        color: scheme.onSurface.withValues(alpha: 0.8),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: !hasUnread
-                          ? null
-                          : () async {
-                              final activityProvider =
-                                  context.read<RecentActivityProvider>();
-                              await context
-                                  .read<NotificationProvider>()
-                                  .markViewed(syncServer: true);
-                              activityProvider.markAllReadLocally();
-                            },
-                      child: Text(
-                        l10n.homeMarkAllReadButton,
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: hasUnread
-                              ? themeProvider.accentColor
-                              : scheme.onSurface.withValues(alpha: 0.4),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        // Notifications list
-        Expanded(
-          child: Consumer<RecentActivityProvider>(
-            builder: (context, activityProvider, _) {
-              final activities = activityProvider.activities;
-              final scheme = Theme.of(context).colorScheme;
-
-              if (activityProvider.isLoading && activities.isEmpty) {
-                return Center(
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: themeProvider.accentColor,
-                  ),
-                );
-              }
-
-              if (activityProvider.error != null && activities.isEmpty) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(KubusSpacing.lg),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.error_outline,
-                            size: KubusSpacing.xxl, color: scheme.error),
-                        const SizedBox(
-                            height: KubusSpacing.sm + KubusSpacing.xs),
-                        Text(
-                          activityProvider.error!,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(
-                                color: scheme.onSurface.withValues(alpha: 0.8),
-                              ),
-                        ),
-                        const SizedBox(
-                            height: KubusSpacing.sm + KubusSpacing.xs),
-                        TextButton(
-                          onPressed: () =>
-                              unawaited(activityProvider.refresh(force: true)),
-                          child: Text(
-                            l10n.commonRetry,
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelLarge
-                                ?.copyWith(
-                                  color: themeProvider.accentColor,
-                                ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }
-
-              if (activities.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.notifications_none,
-                        size: KubusSpacing.xxl + KubusSpacing.xl,
-                        color: scheme.onSurface.withValues(alpha: 0.3),
-                      ),
-                      const SizedBox(height: KubusSpacing.md),
-                      Text(
-                        l10n.homeNoNotificationsTitle,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: scheme.onSurface.withValues(alpha: 0.6),
-                            ),
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              return ListView.builder(
-                padding: const EdgeInsets.all(KubusSpacing.md),
-                itemCount: activities.length,
-                itemBuilder: (context, index) {
-                  final activity = activities[index];
-                  return RecentActivityTile(
-                    activity: activity,
-                    onTap: () => unawaited(onActivitySelected(activity)),
-                  );
-                },
-              );
-            },
-          ),
-        ),
-      ],
-    );
   }
 }

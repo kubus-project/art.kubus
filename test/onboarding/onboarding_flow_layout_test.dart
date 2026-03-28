@@ -232,6 +232,35 @@ void main() {
   });
 
   testWidgets(
+      'wallet backup intro shows missing-backup banner when only one backup is complete',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+    const walletAddress = '4Nd1m5sP3v1bE7c9Q2w6z8YkLmNoPrStUvWxYzABcDeF';
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'wallet_address': walletAddress,
+      '${PreferenceKeys.walletMnemonicBackupRequiredV1Prefix}:$walletAddress':
+          false,
+    });
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        child: const OnboardingFlowScreen(initialStepId: 'walletBackupIntro'),
+        locale: const Locale('en'),
+      ),
+    );
+    await _pumpOnboardingReady(tester);
+
+    expect(
+      find.byKey(const Key('onboarding_wallet_backup_missing_banner')),
+      findsOneWidget,
+    );
+    expect(find.text('Encrypted server backup'), findsWidgets);
+    expect(find.text('Create encrypted backup'), findsWidgets);
+  });
+
+  testWidgets(
       'verification manual check keeps onboarding on verify step while pending',
       (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 1024));

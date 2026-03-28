@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/kubus_color_roles.dart';
-import '../../glass_components.dart';
 import '../../inline_progress.dart';
 import '../kubus_map_glass_surface.dart';
 
@@ -51,8 +50,7 @@ class KubusDiscoveryPathCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final scheme = Theme.of(context).colorScheme;
 
     final roles = KubusColorRoles.of(context);
     final badgeGradient = LinearGradient(
@@ -65,9 +63,7 @@ class KubusDiscoveryPathCard extends StatelessWidget {
       end: Alignment.bottomRight,
     );
 
-    final isDark = theme.brightness == Brightness.dark;
     final radius = BorderRadius.circular(18);
-    final glassTint = scheme.surface.withValues(alpha: isDark ? 0.40 : 0.52);
 
     Widget card = Semantics(
       label: 'discovery_path',
@@ -75,26 +71,13 @@ class KubusDiscoveryPathCard extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
         constraints: constraints,
-        decoration: BoxDecoration(
+        child: buildKubusMapGlassSurface(
+          context: context,
+          kind: KubusMapGlassSurfaceKind.panel,
           borderRadius: radius,
-          border: Border.all(
-            color: scheme.outlineVariant.withValues(alpha: 0.30),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: scheme.shadow.withValues(alpha: isDark ? 0.16 : 0.10),
-              blurRadius: 18,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: LiquidGlassPanel(
+          tintBase: scheme.surface,
           padding: glassPadding,
           margin: EdgeInsets.zero,
-          borderRadius: radius,
-          showBorder: false,
-          backgroundColor: glassTint,
-          enableBlur: kubusMapBlurEnabled(context),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -102,8 +85,7 @@ class KubusDiscoveryPathCard extends StatelessWidget {
               Row(
                 children: [
                   ShaderMask(
-                    shaderCallback: (rect) =>
-                        badgeGradient.createShader(rect),
+                    shaderCallback: (rect) => badgeGradient.createShader(rect),
                     blendMode: BlendMode.srcIn,
                     child: InlineProgress(
                       progress: overallProgress,

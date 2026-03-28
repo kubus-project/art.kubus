@@ -323,6 +323,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
   }
 
   Widget _buildStudioHeader() {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final studioAccent = KubusColorRoles.of(context).web3ArtistStudioAccent;
     final panelStyle = KubusGlassStyle.resolve(
@@ -372,15 +373,20 @@ class _ArtistStudioState extends State<ArtistStudio> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      AppLocalizations.of(context)!.artistStudioHeaderWelcome,
-                      style: KubusTextStyles.sectionTitle.copyWith(
+                    KubusHeaderText(
+                      title: l10n.artistStudioTitle,
+                      subtitle: l10n.artistStudioHeaderWelcome,
+                      titleStyle: KubusTextStyles.heroTitle.copyWith(
                         color: scheme.onSurface,
                       ),
+                      subtitleStyle: KubusTextStyles.sectionSubtitle.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.78),
+                      ),
+                      maxTitleLines: 1,
                     ),
                     const SizedBox(height: KubusSpacing.xs),
                     Text(
-                      AppLocalizations.of(context)!.artistStudioHeaderSubtitle,
+                      l10n.artistStudioHeaderSubtitle,
                       style: KubusTextStyles.actionTileSubtitle.copyWith(
                         color: scheme.onSurface.withValues(alpha: 0.84),
                       ),

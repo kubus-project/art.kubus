@@ -96,25 +96,28 @@ class AuthEntryShell extends StatelessWidget {
                                   ? Center(
                                       child: Row(
                                         crossAxisAlignment:
-                                            CrossAxisAlignment.start,
+                                            CrossAxisAlignment.center,
                                         children: [
                                           Expanded(
-                                            child: _HeroColumn(
-                                              title: title,
-                                              subtitle: subtitle,
-                                              eyebrow: eyebrow,
-                                              highlights: highlights,
-                                              heroIcon: heroIcon,
-                                              gradientStart: gradientStart,
-                                              gradientEnd: gradientEnd,
-                                              compact: compactSurface,
+                                            child: Align(
+                                              alignment: Alignment.centerLeft,
+                                              child: _HeroColumn(
+                                                title: title,
+                                                subtitle: subtitle,
+                                                eyebrow: eyebrow,
+                                                highlights: highlights,
+                                                heroIcon: heroIcon,
+                                                gradientStart: gradientStart,
+                                                gradientEnd: gradientEnd,
+                                                compact: compactSurface,
+                                              ),
                                             ),
                                           ),
                                           const SizedBox(
                                               width: KubusSpacing.xl),
                                           Flexible(
                                             child: Align(
-                                              alignment: Alignment.topCenter,
+                                              alignment: Alignment.center,
                                               child: ConstrainedBox(
                                                 constraints:
                                                     const BoxConstraints(

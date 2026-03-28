@@ -26,7 +26,7 @@ import '../../widgets/support/support_ticket_dialog.dart';
 import '../../utils/app_animations.dart';
 import 'components/desktop_widgets.dart';
 import 'desktop_shell_scope.dart';
-import '../web3/wallet/wallet_home.dart';
+import 'web3/desktop_wallet_screen.dart';
 import '../web3/wallet/wallet_backup_protection_screen.dart';
 import '../auth/secure_account_screen.dart';
 import '../onboarding/onboarding_flow_screen.dart';
@@ -859,7 +859,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                               );
                               return;
                             }
-                            _openShellAwareScreen(const WalletHome());
+                            _openShellAwareScreen(const DesktopWalletScreen());
                           },
                           icon: Icon(
                             walletProvider.isReadOnlySession

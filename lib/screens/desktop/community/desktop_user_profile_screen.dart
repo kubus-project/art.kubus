@@ -760,14 +760,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Avatar
-                Container(
-                  padding: const EdgeInsets.all(3),
-                  clipBehavior: Clip.antiAlias,
+                DecoratedBox(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(
-                      avatarRadius + KubusSpacing.sm,
-                    ),
-                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(avatarRadius * 0.44),
                     boxShadow: [
                       BoxShadow(
                         color: Theme.of(context)
@@ -782,6 +777,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                     wallet: user!.id,
                     avatarUrl: user!.profileImageUrl,
                     radius: avatarRadius,
+                    borderWidth: 3,
+                    borderColor: Theme.of(context).colorScheme.surface,
+                    cornerRadiusFactor: 0.22,
                     enableProfileNavigation: false,
                     heroTag: widget.heroTag,
                   ),

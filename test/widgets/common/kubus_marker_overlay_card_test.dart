@@ -47,6 +47,14 @@ Artwork _artwork() {
   );
 }
 
+String _buildWordSequence(int count) {
+  final words = List<String>.generate(
+    count,
+    (index) => 'word${(index + 1).toString().padLeft(3, '0')}',
+  );
+  return words.join(' ');
+}
+
 Widget _wrap(Widget child) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -173,6 +181,98 @@ void main() {
       await tester.tap(find.byType(KubusCachedImage));
       await tester.pump();
       expect(cardTapCount, 1);
+    },
+  );
+
+  testWidgets(
+    'long description keeps a high preview word budget in dense card mode',
+    (tester) async {
+      final marker = _marker();
+      final artwork = _artwork();
+      final longDescription = _buildWordSequence(220);
+
+      await tester.pumpWidget(
+        _wrap(
+          SizedBox(
+            width: 340,
+            child: KubusMarkerOverlayCard(
+              marker: marker,
+              artwork: artwork,
+              baseColor: Colors.teal,
+              displayTitle: artwork.title,
+              canPresentExhibition: false,
+              description: longDescription,
+              onClose: () {},
+              onPrimaryAction: () {},
+              primaryActionIcon: Icons.arrow_forward,
+              primaryActionLabel: 'More info',
+              maxWidth: 340,
+              maxHeight: 360,
+            ),
+          ),
+        ),
+      );
+
+      final descriptionFinder = find.byWidgetPredicate(
+        (widget) =>
+            widget is Text &&
+            (widget.data?.startsWith('word001 word002 word003') ?? false),
+      );
+
+      expect(descriptionFinder, findsOneWidget);
+
+      final descriptionWidget = tester.widget<Text>(descriptionFinder);
+      final descriptionData = descriptionWidget.data ?? '';
+      final words = descriptionData
+          .split(RegExp(r'\s+'))
+          .where((segment) => segment.trim().isNotEmpty)
+          .length;
+
+      expect(words, greaterThanOrEqualTo(150));
+    },
+  );
+
+  testWidgets(
+    'missing image uses fallback without stretching network image widget',
+    (tester) async {
+      final marker = _marker();
+      final artworkWithoutImage = Artwork(
+        id: 'art-no-image',
+        title: 'No Image Artwork',
+        artist: 'Artist',
+        description: 'Description without a cover image.',
+        imageUrl: '',
+        position: const LatLng(46.0569, 14.5058),
+        rewards: 0,
+        createdAt: DateTime(2024, 1, 1),
+        updatedAt: DateTime(2024, 1, 2),
+        category: 'Painting',
+      );
+
+      await tester.pumpWidget(
+        _wrap(
+          SizedBox(
+            width: 340,
+            child: KubusMarkerOverlayCard(
+              marker: marker,
+              artwork: artworkWithoutImage,
+              baseColor: Colors.teal,
+              displayTitle: artworkWithoutImage.title,
+              canPresentExhibition: false,
+              description: artworkWithoutImage.description,
+              onClose: () {},
+              onPrimaryAction: () {},
+              primaryActionIcon: Icons.arrow_forward,
+              primaryActionLabel: 'More info',
+              maxWidth: 340,
+              maxHeight: 360,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(KubusCachedImage), findsNothing);
+      expect(find.byIcon(Icons.auto_awesome), findsOneWidget);
     },
   );
 }

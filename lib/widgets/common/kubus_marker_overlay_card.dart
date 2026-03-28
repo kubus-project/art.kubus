@@ -56,7 +56,8 @@ class KubusMarkerOverlayCard extends StatelessWidget {
     this.artwork,
     this.distanceText,
     this.description,
-    this.maxPreviewChars = 440,
+    this.maxPreviewChars = 1200,
+    this.maxPreviewWords = 160,
     this.actions = const <MarkerOverlayActionSpec>[],
     this.stackCount = 1,
     this.stackIndex = 0,
@@ -80,6 +81,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
   final String? description;
 
   final int maxPreviewChars;
+  final int maxPreviewWords;
 
   final VoidCallback onClose;
 
@@ -107,17 +109,20 @@ class KubusMarkerOverlayCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    const cardPadding = KubusSpacing.md - KubusSpacing.xs;
 
     final rawDescription = (description ??
             (marker.description.isNotEmpty
                 ? marker.description
                 : (artwork?.description ?? '')))
         .trim();
-    final visibleDescription = rawDescription.isEmpty
-        ? ''
-        : (rawDescription.length <= maxPreviewChars
-            ? rawDescription
-            : '${rawDescription.substring(0, maxPreviewChars)}...');
+    final normalizedDescription = _normalizeDescription(rawDescription);
+    final visibleDescription = _truncateDescription(
+      normalizedDescription,
+      maxWords: maxPreviewWords,
+      maxChars: maxPreviewChars,
+    );
+    final descriptionWordCount = _wordCount(visibleDescription);
 
     final rawImageUrl = ArtworkMediaResolver.resolveCover(
       artwork: artwork,
@@ -131,10 +136,10 @@ class KubusMarkerOverlayCard extends StatelessWidget {
       artwork?.updatedAt ?? marker.updatedAt,
     );
     final dpr = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
-    final cacheWidth = (320 * dpr).clamp(128.0, 960.0).round();
+    final cacheWidth = (304 * dpr).clamp(128.0, 960.0).round();
     final hasConstrainedHeight = maxHeight != null && maxHeight!.isFinite;
-    final constrainedImageHeight = KubusSpacing.xl * 3;
-    final unconstrainedImageHeight = 120.0;
+    final constrainedImageHeight = KubusSpacing.xl * 2 + KubusSpacing.sm;
+    final unconstrainedImageHeight = KubusSpacing.xl * 2 + KubusSpacing.md;
     final imageHeight = hasConstrainedHeight
         ? constrainedImageHeight
         : unconstrainedImageHeight;
@@ -159,7 +164,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
           kind: KubusMapGlassSurfaceKind.panel,
           borderRadius: BorderRadius.circular(KubusRadius.lg),
           tintBase: scheme.surface,
-          padding: const EdgeInsets.all(KubusSpacing.md),
+          padding: const EdgeInsets.all(cardPadding),
           border: Border.all(
             color: baseColor.withValues(alpha: 0.35),
             width: KubusSizes.hairline,
@@ -187,7 +192,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
                 isPromoted: isPromoted,
                 onTitleTap: resolvedTitleTap,
               ),
-              const SizedBox(height: KubusSpacing.sm + KubusSpacing.xxs),
+              const SizedBox(height: KubusSpacing.sm),
               Expanded(
                 child: LayoutBuilder(
                   builder: (context, previewConstraints) {
@@ -196,10 +201,10 @@ class KubusMarkerOverlayCard extends StatelessWidget {
                         hasConstrainedHeight && previewHeight.isFinite
                             ? math.min(
                                 imageHeight,
-                                math.max(0.0, previewHeight * 0.72),
+                                math.max(0.0, previewHeight * 0.46),
                               )
                             : imageHeight;
-                    final showImage = constrainedImageHeight >= 40.0;
+                    final showImage = constrainedImageHeight >= 48.0;
 
                     return _CardTapArea(
                       onTap: resolvedCardTap,
@@ -229,6 +234,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
                               artwork: artwork,
                               marker: marker,
                               visibleDescription: visibleDescription,
+                              descriptionWordCount: descriptionWordCount,
                               showChips: showChips,
                               isConstrained: hasConstrainedHeight,
                             ),
@@ -239,7 +245,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
                   },
                 ),
               ),
-              const SizedBox(height: KubusSpacing.md - KubusSpacing.xs),
+              const SizedBox(height: KubusSpacing.sm),
               _buildFooter(
                 baseColor: baseColor,
                 actionFg: actionFg,
@@ -310,11 +316,17 @@ class KubusMarkerOverlayCard extends StatelessWidget {
       displayTitle,
       maxLines: 2,
       overflow: TextOverflow.ellipsis,
-      style: KubusTextStyles.screenTitle.copyWith(
-        fontWeight: FontWeight.w700,
-        height: 1.2,
-        color: scheme.onSurface,
-      ),
+      style: KubusTypography.textTheme.titleLarge?.copyWith(
+            fontSize: KubusHeaderMetrics.sectionTitle - 1,
+            fontWeight: FontWeight.w700,
+            height: 1.2,
+            color: scheme.onSurface,
+          ) ??
+          KubusTextStyles.sectionTitle.copyWith(
+            fontWeight: FontWeight.w700,
+            height: 1.2,
+            color: scheme.onSurface,
+          ),
     );
 
     return Row(
@@ -333,7 +345,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
                     height: 1.0,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: KubusSpacing.xxs),
               ],
               if (onTitleTap != null)
                 GestureDetector(
@@ -347,14 +359,14 @@ class KubusMarkerOverlayCard extends StatelessWidget {
               else
                 titleWidget,
               if (artwork != null) ...[
-                const SizedBox(height: 4),
+                const SizedBox(height: KubusSpacing.xxs),
                 ArtworkCreatorByline(
                   artwork: artwork,
                   maxLines: 1,
                   style: KubusTypography.textTheme.bodySmall?.copyWith(
                     color: scheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    fontSize: KubusHeaderMetrics.sectionSubtitle - 2,
                     height: 1.15,
                   ),
                 ),
@@ -362,10 +374,13 @@ class KubusMarkerOverlayCard extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(width: KubusSpacing.sm + KubusSpacing.xxs),
+        const SizedBox(width: KubusSpacing.sm),
         if (distanceText != null && distanceText.isNotEmpty)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(
+              horizontal: KubusSpacing.sm - KubusSpacing.xxs,
+              vertical: KubusSpacing.xxs + 1,
+            ),
             decoration: BoxDecoration(
               color: baseColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(999),
@@ -373,8 +388,8 @@ class KubusMarkerOverlayCard extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.near_me, size: 12, color: baseColor),
-                const SizedBox(width: 4),
+                Icon(Icons.near_me, size: 10, color: baseColor),
+                const SizedBox(width: KubusSpacing.xs),
                 Text(
                   distanceText,
                   style: KubusTypography.textTheme.labelSmall?.copyWith(
@@ -386,9 +401,12 @@ class KubusMarkerOverlayCard extends StatelessWidget {
             ),
           ),
         if (isPromoted) ...[
-          const SizedBox(width: 6),
+          const SizedBox(width: KubusSpacing.xs),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(
+              horizontal: KubusSpacing.sm - KubusSpacing.xxs,
+              vertical: KubusSpacing.xxs + 1,
+            ),
             decoration: BoxDecoration(
               color: KubusColorRoles.of(context)
                   .achievementGold
@@ -416,7 +434,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
             ),
           ),
         ],
-        const SizedBox(width: KubusSpacing.sm - KubusSpacing.xxs),
+        const SizedBox(width: KubusSpacing.xs),
         _OverlayIconButton(
           icon: Icons.close,
           tooltip: l10n.commonClose,
@@ -436,38 +454,45 @@ class KubusMarkerOverlayCard extends StatelessWidget {
     required int cacheHeight,
     required double imageHeight,
   }) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(KubusRadius.md),
-      child: SizedBox(
-        height: imageHeight,
-        width: double.infinity,
-        child: imageUrl != null
-            ? KubusCachedImage(
-                imageUrl: imageUrl,
-                fit: BoxFit.cover,
-                filterQuality: FilterQuality.low,
-                cacheWidth: cacheWidth,
-                cacheHeight: cacheHeight,
-                maxDisplayWidth: cacheWidth,
-                cacheVersion: imageVersion,
-                placeholderBuilder: (context) => Container(
-                  color: baseColor.withValues(alpha: 0.12),
-                  child: const Center(
-                    child: CircularProgressIndicator(strokeWidth: 2),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final resolvedHeight = constraints.maxWidth.isFinite
+            ? math.min(imageHeight, constraints.maxWidth / 1.68)
+            : imageHeight;
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(KubusRadius.md),
+          child: SizedBox(
+            height: resolvedHeight,
+            width: double.infinity,
+            child: imageUrl != null
+                ? KubusCachedImage(
+                    imageUrl: imageUrl,
+                    fit: BoxFit.cover,
+                    filterQuality: FilterQuality.low,
+                    cacheWidth: cacheWidth,
+                    cacheHeight: cacheHeight,
+                    maxDisplayWidth: cacheWidth,
+                    cacheVersion: imageVersion,
+                    placeholderBuilder: (context) => Container(
+                      color: baseColor.withValues(alpha: 0.12),
+                      child: const Center(
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                    errorBuilder: (_, __, ___) => _imageFallback(
+                      baseColor,
+                      scheme,
+                      marker,
+                    ),
+                  )
+                : _imageFallback(
+                    baseColor,
+                    scheme,
+                    marker,
                   ),
-                ),
-                errorBuilder: (_, __, ___) => _imageFallback(
-                  baseColor,
-                  scheme,
-                  marker,
-                ),
-              )
-            : _imageFallback(
-                baseColor,
-                scheme,
-                marker,
-              ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -477,6 +502,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
     required Artwork? artwork,
     required ArtMarker marker,
     required String visibleDescription,
+    required int descriptionWordCount,
     required bool showChips,
     required bool isConstrained,
   }) {
@@ -486,18 +512,28 @@ class KubusMarkerOverlayCard extends StatelessWidget {
             ? constraints.maxHeight
             : double.infinity;
 
-        int maxDescriptionLines = isConstrained ? 4 : 7;
+        int maxDescriptionLines = isConstrained ? 7 : 12;
         var showChipsResolved = showChips;
 
+        if (isConstrained && descriptionWordCount >= 105) {
+          showChipsResolved = false;
+        }
+
         if (isConstrained && availableHeight.isFinite) {
-          if (availableHeight < 68) {
+          if (availableHeight < 74) {
             maxDescriptionLines = 1;
             showChipsResolved = false;
-          } else if (availableHeight < 106) {
+          } else if (availableHeight < 104) {
             maxDescriptionLines = 2;
             showChipsResolved = false;
-          } else if (availableHeight < 148) {
+          } else if (availableHeight < 142) {
             maxDescriptionLines = 3;
+            showChipsResolved = false;
+          } else if (availableHeight < 178) {
+            maxDescriptionLines = 4;
+            showChipsResolved = false;
+          } else if (availableHeight < 214) {
+            maxDescriptionLines = 5;
             showChipsResolved = false;
           }
         }
@@ -513,16 +549,17 @@ class KubusMarkerOverlayCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: KubusTextStyles.detailBody.copyWith(
                   color: scheme.onSurfaceVariant,
-                  height: 1.4,
-                  fontSize: KubusHeaderMetrics.sectionSubtitle,
+                  height: 1.32,
+                  fontSize: KubusHeaderMetrics.sectionSubtitle - 2,
+                  fontWeight: FontWeight.w400,
                 ),
               ),
             ],
             if (showChipsResolved) ...[
-              const SizedBox(height: KubusSpacing.sm + KubusSpacing.xxs),
+              const SizedBox(height: KubusSpacing.xs),
               Wrap(
-                spacing: KubusSpacing.sm,
-                runSpacing: KubusSpacing.sm,
+                spacing: KubusSpacing.sm - KubusSpacing.xxs,
+                runSpacing: KubusSpacing.sm - KubusSpacing.xxs,
                 children: [
                   if (canPresentExhibition)
                     _OverlayChip(
@@ -603,7 +640,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
               ],
             ],
           ),
-          const SizedBox(height: KubusSpacing.md - KubusSpacing.xs),
+          const SizedBox(height: KubusSpacing.xs),
         ],
         if (stackCount > 1) ...[
           Center(
@@ -618,7 +655,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
               onSelectIndex: onSelectStackIndex,
             ),
           ),
-          const SizedBox(height: KubusSpacing.md - KubusSpacing.xs),
+          const SizedBox(height: KubusSpacing.xs),
         ],
         SizedBox(
           width: double.infinity,
@@ -648,6 +685,41 @@ class KubusMarkerOverlayCard extends StatelessWidget {
         marker.metadata?['locationName'] != null ||
         marker.metadata?['location'] != null ||
         (artwork != null && artwork.rewards > 0);
+  }
+
+  static String _normalizeDescription(String input) {
+    if (input.isEmpty) return '';
+    return input.replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
+
+  static String _truncateDescription(
+    String input, {
+    required int maxWords,
+    required int maxChars,
+  }) {
+    if (input.isEmpty) return '';
+
+    final words = input.split(' ');
+    final cappedByWords = words.length > maxWords
+        ? '${words.take(maxWords).join(' ')}...'
+        : input;
+
+    if (cappedByWords.length <= maxChars) return cappedByWords;
+
+    final safeIndex = cappedByWords.lastIndexOf(' ', maxChars);
+    if (safeIndex <= 0) {
+      return '${cappedByWords.substring(0, maxChars)}...';
+    }
+    return '${cappedByWords.substring(0, safeIndex)}...';
+  }
+
+  static int _wordCount(String input) {
+    if (input.trim().isEmpty) return 0;
+    return input
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((segment) => segment.trim().isNotEmpty)
+        .length;
   }
 
   static Widget _imageFallback(
@@ -742,10 +814,10 @@ class _OverlayIconButton extends StatelessWidget {
           ],
           onTap: onTap,
           child: SizedBox(
-            width: 36,
-            height: 36,
+            width: 34,
+            height: 34,
             child: Center(
-              child: Icon(icon, size: 18, color: scheme.onSurface),
+              child: Icon(icon, size: 16, color: scheme.onSurface),
             ),
           ),
         ),
@@ -781,18 +853,19 @@ class _OverlayChip extends StatelessWidget {
       borderRadius: BorderRadius.circular(999),
       tintBase: selected ? accent : scheme.surface,
       padding: const EdgeInsets.symmetric(
-        horizontal: KubusSpacing.sm + KubusSpacing.xxs,
-        vertical: KubusSpacing.sm - KubusSpacing.xxs,
+        horizontal: KubusSpacing.sm,
+        vertical: KubusSpacing.xs,
       ),
       border: Border.all(color: border),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: fg),
-          const SizedBox(width: KubusSpacing.sm - KubusSpacing.xxs),
+          Icon(icon, size: 13, color: fg),
+          const SizedBox(width: KubusSpacing.xs),
           Text(
             label,
             style: KubusTypography.textTheme.labelSmall?.copyWith(
+              fontSize: KubusSizes.badgeCountFontSize,
               fontWeight: FontWeight.w700,
               color: fg,
             ),
@@ -826,8 +899,8 @@ class _OverlayActionButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(KubusRadius.sm),
         tintBase: spec.isActive ? spec.activeColor : scheme.surface,
         padding: const EdgeInsets.symmetric(
-          horizontal: KubusSpacing.sm,
-          vertical: KubusSpacing.sm,
+          horizontal: KubusSpacing.sm - KubusSpacing.xxs,
+          vertical: KubusSpacing.sm - KubusSpacing.xxs,
         ),
         border: Border.all(color: border),
         onTap: spec.onTap,
@@ -835,13 +908,13 @@ class _OverlayActionButton extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(spec.icon, size: 16, color: fg),
+            Icon(spec.icon, size: 15, color: fg),
             const SizedBox(width: KubusSpacing.xs),
             Flexible(
               child: Text(
                 spec.label,
                 style: KubusTypography.textTheme.bodyMedium?.copyWith(
-                  fontSize: 11,
+                  fontSize: KubusHeaderMetrics.sectionSubtitle - 2.5,
                   fontWeight: FontWeight.w600,
                   color: fg,
                 ),
@@ -988,7 +1061,10 @@ class _OverlayPrimaryButton extends StatelessWidget {
         kind: KubusMapGlassSurfaceKind.button,
         borderRadius: BorderRadius.circular(KubusRadius.sm),
         tintBase: accent,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(
+          horizontal: KubusSpacing.sm + KubusSpacing.xxs,
+          vertical: KubusSpacing.sm,
+        ),
         border: Border.all(color: accent.withValues(alpha: 0.45)),
         boxShadow: [
           BoxShadow(
@@ -1001,13 +1077,14 @@ class _OverlayPrimaryButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 18, color: foregroundColor),
-            const SizedBox(width: 8),
+            Icon(icon, size: 16, color: foregroundColor),
+            const SizedBox(width: KubusSpacing.sm - KubusSpacing.xxs),
             Flexible(
               child: Text(
                 label,
                 overflow: TextOverflow.ellipsis,
                 style: KubusTypography.textTheme.labelLarge?.copyWith(
+                  fontSize: KubusHeaderMetrics.sectionSubtitle,
                   fontWeight: FontWeight.w700,
                   color: foregroundColor,
                 ),

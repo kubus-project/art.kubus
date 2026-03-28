@@ -93,6 +93,7 @@ import '../widgets/map/filters/kubus_map_marker_layer_chips.dart';
 import '../widgets/map/controls/kubus_map_primary_controls.dart'
     show KubusMapPrimaryControlsLayout;
 import '../widgets/map/dialogs/kubus_map_attribution_dialog.dart';
+import '../widgets/map/kubus_map_glass_surface.dart';
 import '../widgets/common/kubus_filter_panel.dart';
 import '../widgets/common/kubus_glass_icon_button.dart';
 import '../widgets/common/kubus_glass_chip.dart';
@@ -4305,7 +4306,7 @@ class _MapScreenState extends State<MapScreen>
               hintText: l10n.mapSearchHint,
               controller: _mapSearchController.textController,
               focusNode: _mapSearchController.focusNode,
-              enableBlur: !kIsWeb,
+              enableBlur: kubusMapBlurEnabled(context),
               onChanged: (value) => _mapSearchController.onQueryChanged(
                 context,
                 value,
@@ -4719,7 +4720,7 @@ class _MapScreenState extends State<MapScreen>
                 tooltip: 'Map attributions',
                 borderRadius: KubusRadius.sm,
                 iconColor: Theme.of(context).colorScheme.primary,
-                enableBlur: !kIsWeb,
+                enableBlur: kubusMapBlurEnabled(context),
                 onPressed: () =>
                     unawaited(showKubusMapAttributionDialog(context)),
               ),

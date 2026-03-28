@@ -682,42 +682,42 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           body: Stack(
             children: [
               Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Main feed
-                Expanded(
-                  flex: isLarge ? 3 : 2,
-                  child: _buildMainFeed(themeProvider, animationTheme),
-                ),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Main feed
+                  Expanded(
+                    flex: isLarge ? 3 : 2,
+                    child: _buildMainFeed(themeProvider, animationTheme),
+                  ),
 
-                // Right sidebar
-                if (isMedium || isLarge)
-                  SizedBox(
-                    width: isLarge ? 360 : 300,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        border: Border(
-                          left: BorderSide(
-                            color: isDark
-                                ? Colors.white.withValues(alpha: 0.06)
-                                : scheme.outline.withValues(alpha: 0.10),
-                            width: 1,
+                  // Right sidebar
+                  if (isMedium || isLarge)
+                    SizedBox(
+                      width: isLarge ? 360 : 300,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border(
+                            left: BorderSide(
+                              color: isDark
+                                  ? Colors.white.withValues(alpha: 0.06)
+                                  : scheme.outline.withValues(alpha: 0.10),
+                              width: 1,
+                            ),
                           ),
                         ),
-                      ),
-                      child: LiquidGlassPanel(
-                        padding: EdgeInsets.zero,
-                        margin: EdgeInsets.zero,
-                        borderRadius: BorderRadius.zero,
-                        showBorder: false,
-                        backgroundColor: scheme.surface
-                            .withValues(alpha: isDark ? 0.16 : 0.10),
-                        child: _buildRightSidebar(themeProvider),
+                        child: LiquidGlassPanel(
+                          padding: EdgeInsets.zero,
+                          margin: EdgeInsets.zero,
+                          borderRadius: BorderRadius.zero,
+                          showBorder: false,
+                          backgroundColor: scheme.surface
+                              .withValues(alpha: isDark ? 0.16 : 0.10),
+                          child: _buildRightSidebar(themeProvider),
+                        ),
                       ),
                     ),
-                  ),
-              ],
-            ),
+                ],
+              ),
 
               if (_showSearchOverlay) _buildSearchOverlay(themeProvider),
 
@@ -781,12 +781,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           children: [
             // Header with tabs
             _buildHeader(themeProvider),
-
-            // Tab bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: _buildTabBar(themeProvider),
-            ),
 
             _buildSortControls(themeProvider),
 
@@ -1299,44 +1293,100 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
   Widget _buildHeader(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color:
-                Theme.of(context).colorScheme.outline.withValues(alpha: 0.08),
-          ),
-        ),
+    final scheme = Theme.of(context).colorScheme;
+    final accent = themeProvider.accentColor;
+    final headerStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.header,
+      tintBase: accent,
+    );
+    final radius = BorderRadius.circular(KubusRadius.lg + KubusRadius.xs);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        KubusSpacing.md,
+        KubusSpacing.md,
+        KubusSpacing.md,
+        KubusSpacing.sm,
       ),
-      child: Row(
+      child: Column(
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              KubusHeaderText(
-                title: l10n.desktopCommunityHeaderTitle,
-                subtitle: l10n.desktopCommunityHeaderSubtitle,
-                titleStyle: KubusTextStyles.heroTitle.copyWith(
-                  letterSpacing: -0.5,
+          LiquidGlassCard(
+            margin: EdgeInsets.zero,
+            padding: const EdgeInsets.all(KubusSpacing.md + KubusSpacing.xs),
+            borderRadius: radius,
+            blurSigma: headerStyle.blurSigma,
+            fallbackMinOpacity: headerStyle.fallbackMinOpacity,
+            showBorder: false,
+            backgroundColor: headerStyle.tintColor,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: radius,
+                border: Border.all(
+                  color: accent.withValues(alpha: 0.20),
+                  width: KubusSizes.hairline,
                 ),
-                subtitleStyle: KubusTextStyles.sectionSubtitle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    accent.withValues(alpha: 0.16),
+                    accent.withValues(alpha: 0.06),
+                  ],
+                ),
               ),
-            ],
-          ),
-          const Spacer(),
-          SizedBox(
-            width: 280,
-            child: CompositedTransformTarget(
-              link: _searchFieldLink,
-              child: DesktopSearchBar(
-                controller: _communitySearchController,
-                hintText: l10n.desktopCommunitySearchHint,
-                onChanged: _handleSearchChange,
-                onSubmitted: _handleSearchSubmit,
+              child: Padding(
+                padding: const EdgeInsets.all(KubusSpacing.md),
+                child: Row(
+                  children: [
+                    Container(
+                      width: KubusSpacing.xxl + KubusSpacing.sm,
+                      height: KubusSpacing.xxl + KubusSpacing.sm,
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(KubusRadius.lg),
+                      ),
+                      child: Icon(
+                        Icons.groups_2_outlined,
+                        color: accent,
+                        size: KubusHeaderMetrics.actionIcon + KubusSpacing.xs,
+                      ),
+                    ),
+                    const SizedBox(width: KubusSpacing.md),
+                    Expanded(
+                      child: KubusHeaderText(
+                        title: l10n.navigationScreenCommunity,
+                        subtitle: l10n.desktopCommunityHeaderSubtitle,
+                        titleStyle: KubusTextStyles.heroTitle.copyWith(
+                          color: scheme.onSurface,
+                          letterSpacing: -0.5,
+                        ),
+                        subtitleStyle: KubusTextStyles.sectionSubtitle.copyWith(
+                          color: scheme.onSurface.withValues(alpha: 0.76),
+                        ),
+                        maxTitleLines: 1,
+                      ),
+                    ),
+                    const SizedBox(width: KubusSpacing.lg),
+                    SizedBox(
+                      width: 300,
+                      child: CompositedTransformTarget(
+                        link: _searchFieldLink,
+                        child: DesktopSearchBar(
+                          controller: _communitySearchController,
+                          hintText: l10n.desktopCommunitySearchHint,
+                          onChanged: _handleSearchChange,
+                          onSubmitted: _handleSearchSubmit,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
+          const SizedBox(height: KubusSpacing.sm),
+          _buildTabBar(themeProvider),
         ],
       ),
     );
@@ -1576,68 +1626,91 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
   Widget _buildTabBar(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final panelStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.panelBackground,
+      tintBase: scheme.surface,
+    );
+    final radius = BorderRadius.circular(KubusRadius.md);
+    final icons = <String, IconData>{
+      'discover': Icons.explore_outlined,
+      'following': Icons.people_alt_outlined,
+      'groups': Icons.groups_outlined,
+      'art': Icons.palette_outlined,
+    };
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(4),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: themeProvider.isDarkMode
-            ? Theme.of(context)
-                .colorScheme
-                .surfaceContainerHighest
-                .withValues(alpha: 0.5)
-            : Theme.of(context).colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: TabBar(
-        controller: _tabController,
-        isScrollable: true,
-        tabAlignment: TabAlignment.start,
-        labelColor: Colors.white,
-        unselectedLabelColor:
-            Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65),
-        labelStyle: KubusTextStyles.navLabel,
-        unselectedLabelStyle: KubusTextStyles.navLabel,
-        indicator: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              themeProvider.accentColor,
-              themeProvider.accentColor.withValues(alpha: 0.85),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: themeProvider.accentColor.withValues(alpha: 0.35),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+        borderRadius: radius,
+        border: Border.all(
+          color: scheme.outline.withValues(alpha: 0.20),
+          width: KubusSizes.hairline,
         ),
-        indicatorSize: TabBarIndicatorSize.tab,
-        indicatorPadding: EdgeInsets.zero,
-        dividerColor: Colors.transparent,
-        overlayColor: WidgetStateProperty.all(Colors.transparent),
-        splashFactory: NoSplash.splashFactory,
-        padding: EdgeInsets.zero,
-        labelPadding: const EdgeInsets.symmetric(horizontal: 6),
-        tabs: _tabs
-            .map((tab) => Tab(
-                  height: 40,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(_tabLabel(l10n, tab)),
+      ),
+      child: LiquidGlassCard(
+        margin: EdgeInsets.zero,
+        padding: const EdgeInsets.all(KubusSpacing.xs),
+        borderRadius: radius,
+        blurSigma: panelStyle.blurSigma,
+        fallbackMinOpacity: panelStyle.fallbackMinOpacity,
+        showBorder: false,
+        backgroundColor: panelStyle.tintColor,
+        child: TabBar(
+          controller: _tabController,
+          isScrollable: false,
+          tabAlignment: TabAlignment.fill,
+          labelColor: scheme.onSurface,
+          unselectedLabelColor: scheme.onSurface.withValues(alpha: 0.68),
+          labelStyle: KubusTypography.textTheme.labelSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+          unselectedLabelStyle: KubusTypography.textTheme.labelSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+          indicator: BoxDecoration(
+            color: themeProvider.accentColor.withValues(
+              alpha: themeProvider.isDarkMode ? 0.28 : 0.18,
+            ),
+            borderRadius: BorderRadius.circular(KubusRadius.sm),
+            border: Border.all(
+              color: themeProvider.accentColor.withValues(alpha: 0.32),
+              width: KubusSizes.hairline,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: themeProvider.accentColor.withValues(alpha: 0.14),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          indicatorSize: TabBarIndicatorSize.tab,
+          indicatorPadding: const EdgeInsets.all(KubusSpacing.xxs),
+          dividerColor: Colors.transparent,
+          overlayColor: WidgetStateProperty.all(Colors.transparent),
+          splashFactory: NoSplash.splashFactory,
+          padding: EdgeInsets.zero,
+          labelPadding: EdgeInsets.zero,
+          tabs: _tabs
+              .map(
+                (tab) => Tab(
+                  height: 64,
+                  iconMargin: const EdgeInsets.only(bottom: KubusSpacing.xxs),
+                  icon: Icon(
+                    icons[tab] ?? Icons.circle_outlined,
+                    size: KubusHeaderMetrics.actionIcon,
                   ),
-                ))
-            .toList(),
+                  child: Text(
+                    _tabLabel(l10n, tab),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              )
+              .toList(),
+        ),
       ),
     );
   }
@@ -2750,17 +2823,17 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 40),
-              child: Text(
-                subtitle,
-                style: KubusTextStyles.sectionSubtitle.copyWith(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.5),
-                  height: 1.4,
-                ),
-                textAlign: TextAlign.center,
+            child: Text(
+              subtitle,
+              style: KubusTextStyles.sectionSubtitle.copyWith(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.5),
+                height: 1.4,
               ),
+              textAlign: TextAlign.center,
+            ),
           ),
         ],
       ),
@@ -3219,7 +3292,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 icon: Icons.delete_outline,
                 label: l10n.communityUnrepostAction,
                 iconColor: scheme.error,
-                textStyle: KubusTextStyles.navLabel.copyWith(color: scheme.error),
+                textStyle:
+                    KubusTextStyles.navLabel.copyWith(color: scheme.error),
                 onTap: () => unawaited(_unrepostPost(post)),
               ),
               const SizedBox(height: KubusSpacing.md),
@@ -3706,7 +3780,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                 vertical: 12,
                               ),
                               hintText: l10n.desktopCommunitySearchMessagesHint,
-                              hintStyle: KubusTextStyles.screenSubtitle.copyWith(
+                              hintStyle:
+                                  KubusTextStyles.screenSubtitle.copyWith(
                                 color: scheme.onSurface.withValues(alpha: 0.5),
                               ),
                               border: InputBorder.none,
@@ -4751,10 +4826,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         children: [
           Text(
             label,
-                style: KubusTextStyles.navMetaLabel.copyWith(
-                  color: themeProvider.accentColor,
-                  fontWeight: FontWeight.w500,
-                ),
+            style: KubusTextStyles.navMetaLabel.copyWith(
+              color: themeProvider.accentColor,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           const SizedBox(width: 4),
           GestureDetector(
@@ -5050,7 +5125,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                         : (errorMessage ??
                                             AppLocalizations.of(context)!
                                                 .desktopCommunitySearchNoResults),
-                                    style: KubusTextStyles.sectionSubtitle.copyWith(
+                                    style: KubusTextStyles.sectionSubtitle
+                                        .copyWith(
                                       color: Theme.of(context)
                                           .colorScheme
                                           .onSurface
@@ -5103,7 +5179,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                       ),
                                       title: Text(
                                         identity.name,
-                                        style: KubusTextStyles.navLabel.copyWith(
+                                        style:
+                                            KubusTextStyles.navLabel.copyWith(
                                           fontWeight: FontWeight.w600,
                                           color: Theme.of(context)
                                               .colorScheme
@@ -5114,7 +5191,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                           ? null
                                           : Text(
                                               identity.handle!,
-                                              style: KubusTextStyles.navMetaLabel
+                                              style: KubusTextStyles
+                                                  .navMetaLabel
                                                   .copyWith(
                                                 color: Theme.of(context)
                                                     .colorScheme

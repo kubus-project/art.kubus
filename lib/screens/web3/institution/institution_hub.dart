@@ -331,6 +331,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
   }
 
   Widget _buildInstitutionHeader({required bool isApprovedInstitution}) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final roles = KubusColorRoles.of(context);
@@ -392,16 +393,22 @@ class _InstitutionHubState extends State<InstitutionHub> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Institution Dashboard',
-                      style: KubusTextStyles.sectionTitle
-                          .copyWith(color: scheme.onSurface),
+                    KubusHeaderText(
+                      title: l10n.navigationScreenInstitutionHub,
+                      subtitle: subtitle,
+                      titleStyle: KubusTextStyles.heroTitle.copyWith(
+                        color: scheme.onSurface,
+                      ),
+                      subtitleStyle: KubusTextStyles.sectionSubtitle.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.80),
+                      ),
+                      maxTitleLines: 1,
                     ),
                     const SizedBox(height: KubusSpacing.xs),
                     Text(
-                      subtitle,
+                      'Manage exhibitions, events, and institutional visibility from one shared workspace.',
                       style: KubusTextStyles.actionTileSubtitle.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.86),
+                        color: scheme.onSurface.withValues(alpha: 0.74),
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,

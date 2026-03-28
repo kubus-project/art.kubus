@@ -43,6 +43,7 @@ import '../../utils/kubus_color_roles.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/user_profile_navigation.dart';
 import 'components/desktop_widgets.dart';
+import 'components/desktop_notifications_panel.dart';
 import '../web3/wallet/connectwallet_screen.dart';
 import 'web3/desktop_wallet_screen.dart';
 import '../onboarding/web3/web3_onboarding.dart' as web3;
@@ -2782,262 +2783,26 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       context: context,
       barrierColor: Colors.black26,
       builder: (dialogContext) {
-        final l10n = AppLocalizations.of(dialogContext)!;
-        final scheme = Theme.of(dialogContext).colorScheme;
         return Align(
           alignment: Alignment.topRight,
-          child: SizedBox(
-            width: 400,
-            height: MediaQuery.of(dialogContext).size.height * 0.7,
-            child: Padding(
-              padding: const EdgeInsets.only(
-                top: KubusSpacing.xxl + KubusSpacing.xl,
-                right: KubusSpacing.xl,
-              ),
-              child: BackdropGlassSheet(
-                padding: EdgeInsets.zero,
-                showHandle: false,
-                backgroundColor:
-                    scheme.surfaceContainerHighest.withValues(alpha: 0.16),
-                child: Column(
-                  children: [
-                    Padding(
-                      padding:
-                          const EdgeInsets.all(KubusChromeMetrics.cardPadding),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  l10n.commonNotifications,
-                                  style: KubusTextStyles.sectionTitle.copyWith(
-                                    color: scheme.onSurface,
-                                  ),
-                                ),
-                              ),
-                              IconButton(
-                                onPressed: () => Navigator.pop(dialogContext),
-                                icon: Icon(
-                                  Icons.close,
-                                  color: scheme.onSurface,
-                                ),
-                              ),
-                            ],
-                          ),
-                          Wrap(
-                            spacing: KubusSpacing.xs,
-                            runSpacing: KubusSpacing.xs,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              TextButton(
-                                onPressed: () => activityProvider.refresh(
-                                  force: true,
-                                ),
-                                child: Text(l10n.commonRefresh),
-                              ),
-                              if (np.unreadCount > 0)
-                                TextButton(
-                                  onPressed: () => np.markViewed(),
-                                  child: Text(
-                                    l10n.homeMarkAllReadButton,
-                                    style: KubusTextStyles.navLabel.copyWith(
-                                      color: AppColorUtils.greenAccent,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    Divider(
-                      height: 1,
-                      color: scheme.outline.withValues(alpha: 0.2),
-                    ),
-                    Expanded(
-                      child: np.unreadCount == 0
-                          ? Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.notifications_none,
-                                    size: 64,
-                                    color: Theme.of(dialogContext)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.3),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    l10n.homeNoNotificationsTitle,
-                                    style: KubusTextStyles.sectionSubtitle
-                                        .copyWith(
-                                      color: scheme.onSurface.withValues(
-                                        alpha: 0.6,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    l10n.homeAllCaughtUpDescription,
-                                    style:
-                                        KubusTextStyles.navMetaLabel.copyWith(
-                                      color: scheme.onSurface.withValues(
-                                        alpha: 0.4,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : Consumer<RecentActivityProvider>(
-                              builder:
-                                  (dialogInnerContext, activityProvider, _) {
-                                final activities = activityProvider.activities
-                                    .where((a) => !a.isRead)
-                                    .take(10)
-                                    .toList();
-                                if (activities.isEmpty) {
-                                  return Center(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Container(
-                                          width: 80,
-                                          height: 80,
-                                          decoration: BoxDecoration(
-                                            color: AppColorUtils.amberAccent
-                                                .withValues(alpha: 0.1),
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: Center(
-                                            child: Text(
-                                              '${np.unreadCount}',
-                                              style: KubusTextStyles.statValue
-                                                  .copyWith(
-                                                color:
-                                                    AppColorUtils.amberAccent,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 16),
-                                        Text(
-                                          l10n.desktopHomeUnreadNotificationsLabel,
-                                          style: KubusTextStyles.statLabel
-                                              .copyWith(
-                                            color: Theme.of(dialogInnerContext)
-                                                .colorScheme
-                                                .onSurface
-                                                .withValues(alpha: 0.6),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }
-                                return ListView.builder(
-                                  padding:
-                                      const EdgeInsets.all(KubusSpacing.md),
-                                  itemCount: activities.length,
-                                  itemBuilder: (itemContext, index) {
-                                    final activity = activities[index];
-                                    return Material(
-                                      color: Colors.transparent,
-                                      child: InkWell(
-                                        onTap: () {
-                                          Navigator.pop(dialogContext);
-                                          ActivityNavigation.open(
-                                              context, activity);
-                                        },
-                                        borderRadius: BorderRadius.circular(12),
-                                        child: Container(
-                                          margin:
-                                              const EdgeInsets.only(bottom: 8),
-                                          padding: const EdgeInsets.all(12),
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(dialogInnerContext)
-                                                .colorScheme
-                                                .primaryContainer
-                                                .withValues(alpha: 0.5),
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              Container(
-                                                width: 40,
-                                                height: 40,
-                                                decoration: BoxDecoration(
-                                                  color: _getActivityColor(
-                                                          activity.category)
-                                                      .withValues(alpha: 0.12),
-                                                  borderRadius:
-                                                      BorderRadius.circular(10),
-                                                ),
-                                                child: Icon(
-                                                  _getActivityIcon(
-                                                      activity.category),
-                                                  color: _getActivityColor(
-                                                      activity.category),
-                                                  size: 20,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 12),
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      activity.title,
-                                                      style: KubusTextStyles
-                                                          .sectionTitle
-                                                          .copyWith(
-                                                        color: Theme.of(
-                                                                dialogInnerContext)
-                                                            .colorScheme
-                                                            .onSurface,
-                                                      ),
-                                                      maxLines: 1,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                    ),
-                                                    Text(
-                                                      activity.description,
-                                                      style: KubusTextStyles
-                                                          .navMetaLabel
-                                                          .copyWith(
-                                                        color: Theme.of(
-                                                                dialogInnerContext)
-                                                            .colorScheme
-                                                            .onSurface
-                                                            .withValues(
-                                                                alpha: 0.6),
-                                                      ),
-                                                      maxLines: 1,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                );
-                              },
-                            ),
-                    ),
-                  ],
-                ),
+          child: Padding(
+            padding: const EdgeInsets.only(
+              top: KubusSpacing.xxl + KubusSpacing.xl,
+              right: KubusSpacing.xl,
+            ),
+            child: SizedBox(
+              width: 400,
+              height: MediaQuery.of(dialogContext).size.height * 0.72,
+              child: DesktopNotificationsPanel(
+                onClose: () => Navigator.pop(dialogContext),
+                onRefresh: () => activityProvider.refresh(force: true),
+                onMarkAllRead: () => np.markViewed(),
+                unreadOnly: true,
+                visibleLimit: 10,
+                onActivitySelected: (activity) async {
+                  Navigator.pop(dialogContext);
+                  await ActivityNavigation.open(context, activity);
+                },
               ),
             ),
           ),
@@ -3060,15 +2825,13 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   bool get _hasActiveSearchFocus =>
       _primarySearchFocusNode.hasFocus || _floatingSearchFocusNode.hasFocus;
 
-  LayerLink get _activeSearchFieldLink =>
-      _floatingSearchFocusNode.hasFocus
-          ? _floatingSearchFieldLink
-          : _primarySearchFieldLink;
+  LayerLink get _activeSearchFieldLink => _floatingSearchFocusNode.hasFocus
+      ? _floatingSearchFieldLink
+      : _primarySearchFieldLink;
 
-  double get _activeSearchOverlayWidth =>
-      _floatingSearchFocusNode.hasFocus
-          ? _floatingSearchBarWidth
-          : _searchBarWidth;
+  double get _activeSearchOverlayWidth => _floatingSearchFocusNode.hasFocus
+      ? _floatingSearchBarWidth
+      : _searchBarWidth;
 
   void _handleSearchChange(String value) {
     setState(() {

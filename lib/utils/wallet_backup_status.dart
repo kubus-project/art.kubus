@@ -12,6 +12,7 @@ class WalletBackupStatusSnapshot {
     required this.mnemonicBackupRequired,
     required this.hasEncryptedServerBackup,
     required this.hasPasskeyProtection,
+    this.encryptedBackupStatusKnown = true,
   });
 
   const WalletBackupStatusSnapshot.noWallet()
@@ -21,7 +22,8 @@ class WalletBackupStatusSnapshot {
         isReadOnlySession = false,
         mnemonicBackupRequired = false,
         hasEncryptedServerBackup = false,
-        hasPasskeyProtection = false;
+        hasPasskeyProtection = false,
+        encryptedBackupStatusKnown = true;
 
   final String? walletAddress;
   final bool hasWalletIdentity;
@@ -30,6 +32,10 @@ class WalletBackupStatusSnapshot {
   final bool mnemonicBackupRequired;
   final bool hasEncryptedServerBackup;
   final bool hasPasskeyProtection;
+  final bool encryptedBackupStatusKnown;
+
+  bool get encryptedBackupRequirementSatisfiedForGating =>
+      hasEncryptedServerBackup || !encryptedBackupStatusKnown;
 
   bool get needsSignerRestore => hasWalletIdentity && !hasSigner;
 
@@ -143,6 +149,7 @@ class WalletBackupStatusResolver {
 
     var hasEncryptedServerBackup = false;
     var hasPasskeyProtection = false;
+    var encryptedBackupStatusKnown = !encryptedBackupEnabled;
     if (encryptedBackupEnabled) {
       try {
         final definition = await walletProvider.getEncryptedWalletBackup(
@@ -152,9 +159,11 @@ class WalletBackupStatusResolver {
         hasEncryptedServerBackup = definition != null;
         hasPasskeyProtection =
             passkeyEnabled && (definition?.passkeys.isNotEmpty ?? false);
+        encryptedBackupStatusKnown = true;
       } catch (_) {
         hasEncryptedServerBackup = false;
         hasPasskeyProtection = false;
+        encryptedBackupStatusKnown = false;
       }
     }
 
@@ -166,6 +175,7 @@ class WalletBackupStatusResolver {
       mnemonicBackupRequired: mnemonicBackupRequired,
       hasEncryptedServerBackup: hasEncryptedServerBackup,
       hasPasskeyProtection: hasPasskeyProtection,
+      encryptedBackupStatusKnown: encryptedBackupStatusKnown,
     );
   }
 }

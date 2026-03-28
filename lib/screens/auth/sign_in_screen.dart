@@ -29,6 +29,7 @@ import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/auth_google_wallet.dart';
 import '../../utils/keyboard_inset_resolver.dart';
+import '../../utils/wallet_backup_status.dart';
 import '../../utils/wallet_utils.dart';
 import '../web3/wallet/connectwallet_screen.dart';
 import '../desktop/desktop_shell.dart';
@@ -147,10 +148,22 @@ class _SignInScreenState extends State<SignInScreen> {
     );
     final requiresWalletBackup =
         AppConfig.isFeatureEnabled('walletBackupOnboarding')
-            ? await walletProvider.isMnemonicBackupRequired(
-                walletAddress: walletAddress,
-              )
-            : false;
+            ? (() async {
+                final backupStatus = await WalletBackupStatusResolver.resolve(
+                  walletProvider: walletProvider,
+                  walletAddress: walletAddress,
+                  refreshRemote: true,
+                );
+                final recoveryPhraseComplete =
+                    !backupStatus.mnemonicBackupRequired;
+                final encryptedBackupComplete =
+                    !AppConfig.isFeatureEnabled('encryptedWalletBackup') ||
+                        backupStatus
+                            .encryptedBackupRequirementSatisfiedForGating;
+                return !(recoveryPhraseComplete && encryptedBackupComplete);
+              })()
+            : Future<bool>.value(false);
+    final requiresWalletBackupResolved = await requiresWalletBackup;
     final resumeState =
         await AuthOnboardingService.resolveStructuredOnboardingResume(
       prefs: prefs,
@@ -161,7 +174,7 @@ class _SignInScreenState extends State<SignInScreen> {
       ),
       hasAuthenticatedSession: true,
       hasHydratedProfile: profileProvider.hasHydratedProfile,
-      requiresWalletBackup: requiresWalletBackup,
+      requiresWalletBackup: requiresWalletBackupResolved,
       heuristicNextStepId: profileProvider.nextStructuredOnboardingStepId,
       persona: profileProvider.userPersona?.storageValue,
       payload: payload,
