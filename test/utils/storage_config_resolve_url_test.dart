@@ -34,6 +34,27 @@ void main() {
       expect(fromScheme!, endsWith(cid));
     });
 
+    test('resolves IPNS pointers via gateway', () {
+      final fromScheme =
+          StorageConfig.resolveUrl('ipns://public.kubus.site/public-index.json');
+      expect(fromScheme, isNotNull);
+      expect(fromScheme!, contains('/ipns/public.kubus.site/public-index.json'));
+
+      final fromAbsolutePath =
+          StorageConfig.resolveUrl('/ipns/public.kubus.site/public-index.json');
+      expect(
+        fromAbsolutePath,
+        equals(fromScheme),
+      );
+
+      final fromRelativePath =
+          StorageConfig.resolveUrl('ipns/public.kubus.site/public-index.json');
+      expect(
+        fromRelativePath,
+        equals(fromScheme),
+      );
+    });
+
     test('prefixes backend for /uploads relative paths', () {
       expect(
         StorageConfig.resolveUrl('/uploads/foo.jpg'),
@@ -71,4 +92,3 @@ void main() {
     });
   });
 }
-

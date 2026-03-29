@@ -22,6 +22,8 @@ import '../utils/media_url_resolver.dart';
 import 'share/share_types.dart';
 import '../config/config.dart';
 import 'encrypted_wallet_backup_service.dart';
+import 'public_action_outbox_service.dart';
+import 'public_fallback_service.dart';
 import 'storage_config.dart';
 import 'user_action_logger.dart';
 import 'auth_gating_service.dart';
@@ -86,6 +88,8 @@ abstract class ArtworkBackendApi {
   Future<int?> likeArtwork(String artworkId);
   Future<int?> unlikeArtwork(String artworkId);
   Future<int?> discoverArtworkWithCount(String artworkId);
+  Future<void> bookmarkArtwork(String artworkId);
+  Future<void> unbookmarkArtwork(String artworkId);
   Future<int?> recordArtworkView(String artworkId);
 
   Future<List<ArtworkComment>> getArtworkComments({
@@ -202,6 +206,9 @@ class BackendApiService
 
   @override
   final String baseUrl = AppConfig.baseApiUrl;
+  final PublicFallbackService _publicFallbackService = PublicFallbackService();
+  final PublicActionOutboxService _publicActionOutboxService =
+      PublicActionOutboxService();
   String? _authToken;
   String? _refreshToken;
   String? _authWalletCanonical;
@@ -1556,6 +1563,342 @@ class BackendApiService
     throw Exception('Orbit fallback failed: ${fallbackResponse.statusCode}');
   }
 
+  String _normalizeApiBaseUrl(String rawBaseUrl) {
+    final trimmed = rawBaseUrl.trim();
+    if (trimmed.endsWith('/')) {
+      return trimmed.substring(0, trimmed.length - 1);
+    }
+    return trimmed;
+  }
+
+  Uri _buildApiUri(
+    String rawBaseUrl,
+    String path, {
+    Map<String, String>? queryParameters,
+  }) {
+    return Uri.parse('${_normalizeApiBaseUrl(rawBaseUrl)}$path')
+        .replace(queryParameters: queryParameters);
+  }
+
+  Future<Map<String, dynamic>> _fetchJsonFromBaseUrl(
+    String rawBaseUrl,
+    String path, {
+    Map<String, String>? queryParameters,
+    bool includeAuth = true,
+    bool allowOrbitFallback = false,
+  }) {
+    return _fetchJson(
+      _buildApiUri(
+        rawBaseUrl,
+        path,
+        queryParameters: queryParameters,
+      ),
+      includeAuth: includeAuth,
+      allowOrbitFallback: allowOrbitFallback,
+    );
+  }
+
+  bool _isFallbackEligibleReadError(Object error) {
+    final status = _tryParseRequestFailedStatus(error);
+    if (status == null) {
+      return true;
+    }
+    return status >= 500;
+  }
+
+  Future<R> _performPublicRead<R>({
+    required Future<R> Function(String baseUrl) liveRead,
+    required Future<R> Function() snapshotRead,
+    bool allowSnapshot = true,
+  }) async {
+    Object? lastFallbackEligibleError;
+
+    if (_publicFallbackService.mode != AppRuntimeMode.ipfsFallback) {
+      for (final candidateBaseUrl
+          in _publicFallbackService.preferredReadBaseUrls) {
+        try {
+          final result = await liveRead(candidateBaseUrl);
+          _publicFallbackService.recordBackendSuccess(
+              baseUrl: candidateBaseUrl);
+          return result;
+        } catch (error) {
+          if (!_isFallbackEligibleReadError(error)) {
+            rethrow;
+          }
+          lastFallbackEligibleError = error;
+        }
+      }
+
+      _publicFallbackService.recordDualBackendFailure();
+    }
+
+    if (allowSnapshot) {
+      try {
+        return await snapshotRead();
+      } catch (snapshotError) {
+        if (lastFallbackEligibleError != null) {
+          throw lastFallbackEligibleError;
+        }
+        rethrow;
+      }
+    }
+
+    if (lastFallbackEligibleError != null) {
+      throw lastFallbackEligibleError;
+    }
+    throw Exception('Public read failed');
+  }
+
+  Future<List<Map<String, dynamic>>> _loadSnapshotDatasetMaps(
+    String datasetKey,
+  ) async {
+    final records = await _publicFallbackService.loadDatasetArray(datasetKey);
+    return records
+        .whereType<Map>()
+        .map((entry) => Map<String, dynamic>.from(entry))
+        .toList(growable: false);
+  }
+
+  bool _isTransientWriteStatusCode(int statusCode) {
+    return statusCode >= 500;
+  }
+
+  Future<http.Response?> _sendWriteWithFailover(
+    String method,
+    String path, {
+    bool includeAuth = true,
+    Map<String, String>? headers,
+    Object? body,
+    Encoding? encoding,
+    bool isIdempotent = false,
+    Duration timeout = AppConfig.requestTimeout,
+  }) async {
+    http.Response? lastResponse;
+    Object? lastError;
+
+    for (final candidateBaseUrl
+        in _publicFallbackService.preferredWriteBaseUrls) {
+      final uri = _buildApiUri(candidateBaseUrl, path);
+      try {
+        final response = await _request(
+          method,
+          uri,
+          includeAuth: includeAuth,
+          headers: headers,
+          body: body,
+          encoding: encoding,
+          isIdempotent: isIdempotent,
+          timeout: timeout,
+        );
+        if (_isSuccessStatus(response.statusCode)) {
+          _publicFallbackService.recordBackendSuccess(
+              baseUrl: candidateBaseUrl);
+          return response;
+        }
+        lastResponse = response;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    if (lastError != null) {
+      throw lastError;
+    }
+    return lastResponse;
+  }
+
+  bool _shouldQueuePublicActionAfterFailure(
+    http.Response? response,
+    Object? error,
+  ) {
+    if (_publicFallbackService.mode == AppRuntimeMode.ipfsFallback) {
+      return true;
+    }
+
+    if (response != null) {
+      return _isTransientWriteStatusCode(response.statusCode);
+    }
+
+    final status = error == null ? null : _tryParseRequestFailedStatus(error);
+    if (status != null) {
+      return _isTransientWriteStatusCode(status);
+    }
+
+    return error != null;
+  }
+
+  Future<void> _queuePublicAction({
+    required String actionType,
+    required String entityType,
+    required String entityId,
+    Map<String, dynamic> payload = const <String, dynamic>{},
+  }) async {
+    await _publicActionOutboxService.enqueueSignedAction(
+      PublicActionDraftPayload(
+        actionType: actionType,
+        entityType: entityType,
+        entityId: entityId,
+        payload: payload,
+      ),
+    );
+  }
+
+  void _throwIfIpfsFallbackUnavailable(String featureLabel) {
+    if (_publicFallbackService.mode != AppRuntimeMode.ipfsFallback) {
+      return;
+    }
+    throw Exception(
+      '$featureLabel is unavailable while the app is running on public snapshot fallback.',
+    );
+  }
+
+  Map<String, dynamic>? _decodeResponseMap(http.Response response) {
+    if (response.body.isEmpty) {
+      return null;
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is Map<String, dynamic>) {
+      return decoded;
+    }
+    if (decoded is Map) {
+      return Map<String, dynamic>.from(decoded);
+    }
+    return null;
+  }
+
+  int? _tryIntValue(dynamic value) {
+    if (value is int) {
+      return value;
+    }
+    if (value is num) {
+      return value.toInt();
+    }
+    if (value is String) {
+      return int.tryParse(value);
+    }
+    return null;
+  }
+
+  bool? _tryBoolValue(dynamic value) {
+    if (value is bool) {
+      return value;
+    }
+    if (value is String) {
+      final normalized = value.trim().toLowerCase();
+      if (const <String>['true', '1', 'yes', 'y', 'on'].contains(normalized)) {
+        return true;
+      }
+      if (const <String>['false', '0', 'no', 'n', 'off'].contains(normalized)) {
+        return false;
+      }
+    }
+    if (value is num) {
+      return value != 0;
+    }
+    return null;
+  }
+
+  int? _extractIntFromResponse(http.Response response, List<String> keys) {
+    final decoded = _decodeResponseMap(response);
+    if (decoded == null) {
+      return null;
+    }
+
+    final candidates = <Map<String, dynamic>>[
+      decoded,
+      if (decoded['data'] is Map<String, dynamic>)
+        decoded['data'] as Map<String, dynamic>,
+      if (decoded['data'] is Map)
+        Map<String, dynamic>.from(decoded['data'] as Map),
+    ];
+
+    for (final candidate in candidates) {
+      for (final key in keys) {
+        final value = _tryIntValue(candidate[key]);
+        if (value != null) {
+          return value;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  Future<http.Response?> _sendQueueablePublicAction({
+    required String method,
+    required String path,
+    required String actionType,
+    required String entityType,
+    required String entityId,
+    String? walletAddress,
+    Map<String, dynamic> payload = const <String, dynamic>{},
+    Object? body,
+    Encoding? encoding,
+    bool isIdempotent = false,
+  }) async {
+    if (_publicFallbackService.mode == AppRuntimeMode.ipfsFallback) {
+      await _queuePublicAction(
+        actionType: actionType,
+        entityType: entityType,
+        entityId: entityId,
+        payload: payload,
+      );
+      return null;
+    }
+
+    try {
+      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
+    } catch (error) {
+      if (kDebugMode) {
+        AppConfig.debugPrint(
+          'BackendApiService: auth prep for $entityType:$actionType failed: $error',
+        );
+      }
+    }
+
+    http.Response? response;
+    Object? error;
+    try {
+      response = await _sendWriteWithFailover(
+        method,
+        path,
+        includeAuth: true,
+        headers: _getHeaders(),
+        body: body,
+        encoding: encoding,
+        isIdempotent: isIdempotent,
+      );
+    } catch (caughtError) {
+      error = caughtError;
+    }
+
+    if (response != null && _isSuccessStatus(response.statusCode)) {
+      return response;
+    }
+
+    if (_shouldQueuePublicActionAfterFailure(response, error)) {
+      _publicFallbackService.recordDualBackendFailure();
+      await _queuePublicAction(
+        actionType: actionType,
+        entityType: entityType,
+        entityId: entityId,
+        payload: payload,
+      );
+      return response;
+    }
+
+    if (error != null) {
+      throw error;
+    }
+
+    throw BackendApiRequestException(
+      statusCode: response?.statusCode ?? 0,
+      path: path,
+      body: response?.body ?? '',
+    );
+  }
+
   /// Normalize search suggestion payloads from various backend shapes into a
   /// stable list of maps with keys: `label`, `subtitle`, `id`, `type`, `lat`, `lng`.
   ///
@@ -1572,25 +1915,31 @@ class BackendApiService
   Future<String?> fetchServerVersion({
     Duration timeout = const Duration(seconds: 3),
   }) async {
-    final uri = Uri.parse('$baseUrl/health');
     try {
-      final response = await _get(
-        uri,
-        includeAuth: false,
-        headers: _getHeaders(includeAuth: false),
-        timeout: timeout,
+      return await _performPublicRead<String?>(
+        liveRead: (candidateBaseUrl) async {
+          final response = await _get(
+            _buildApiUri(candidateBaseUrl, '/health'),
+            includeAuth: false,
+            headers: _getHeaders(includeAuth: false),
+            timeout: timeout,
+          );
+          if (response.statusCode < 200 || response.statusCode >= 300) {
+            throw Exception('Request failed: ${response.statusCode}');
+          }
+          final decoded = jsonDecode(response.body);
+          if (decoded is! Map) {
+            return null;
+          }
+          final map = Map<String, dynamic>.from(decoded);
+          final rawVersion = (map['version'] ?? '').toString().trim();
+          return rawVersion.isEmpty ? null : rawVersion;
+        },
+        snapshotRead: () async => null,
+        allowSnapshot: false,
       );
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        return null;
-      }
-      final decoded = jsonDecode(response.body);
-      if (decoded is! Map) return null;
-      final map = Map<String, dynamic>.from(decoded);
-      final rawVersion = (map['version'] ?? '').toString().trim();
-      return rawVersion.isEmpty ? null : rawVersion;
     } catch (e) {
-      AppConfig.debugPrint(
-          'BackendApiService.fetchServerVersion failed: $e');
+      AppConfig.debugPrint('BackendApiService.fetchServerVersion failed: $e');
       return null;
     }
   }
@@ -2650,6 +2999,7 @@ class BackendApiService
   Future<Map<String, dynamic>> sendMessage(
       String conversationId, String message,
       {Map<String, dynamic>? data, String? replyToId}) async {
+    _throwIfIpfsFallbackUnavailable('Messages');
     try {
       final body = <String, dynamic>{'message': message};
       if (data != null) body['data'] = data;
@@ -2747,6 +3097,7 @@ class BackendApiService
   /// POST /api/messages { title, members }
   Future<Map<String, dynamic>> createConversation(
       {String? title, bool isGroup = false, List<String>? members}) async {
+    _throwIfIpfsFallbackUnavailable('Messages');
     try {
       final response = await _post(
         Uri.parse('$baseUrl/api/messages'),
@@ -2951,6 +3302,7 @@ class BackendApiService
     String walletAddress,
     Map<String, dynamic> updates,
   ) async {
+    _throwIfIpfsFallbackUnavailable('Profile editing');
     try {
       await _ensureAuthBeforeRequest(walletAddress: walletAddress);
       final payload = {
@@ -2992,16 +3344,38 @@ class BackendApiService
       }
       // URL-encode the wallet address for safe path segments
       final encodedWallet = Uri.encodeComponent(normalized);
-      final uri = Uri.parse('$baseUrl/api/profiles/$encodedWallet');
-      final dynamic data =
-          await _fetchJson(uri, includeAuth: false, allowOrbitFallback: true);
-      final raw = data['data'] ?? data;
-      if (raw is Map<String, dynamic>) {
-        AppConfig.debugPrint(
-            'BackendApiService.getProfileByWallet: parsed profile keys: ${raw.keys.toList()}');
-        return raw;
-      }
-      throw Exception('Invalid profile payload');
+      return await _performPublicRead<Map<String, dynamic>>(
+        liveRead: (candidateBaseUrl) async {
+          final data = await _fetchJsonFromBaseUrl(
+            candidateBaseUrl,
+            '/api/profiles/$encodedWallet',
+            includeAuth: false,
+            allowOrbitFallback: true,
+          );
+          final raw = data['data'] ?? data;
+          if (raw is Map<String, dynamic>) {
+            AppConfig.debugPrint(
+                'BackendApiService.getProfileByWallet: parsed profile keys: ${raw.keys.toList()}');
+            return raw;
+          }
+          throw Exception('Invalid profile payload');
+        },
+        snapshotRead: () async {
+          final profiles = await _loadSnapshotDatasetMaps('profiles');
+          for (final profile in profiles) {
+            final candidate = WalletUtils.normalize(
+              profile['walletAddress'] ??
+                  profile['wallet_address'] ??
+                  profile['wallet'] ??
+                  profile['id'],
+            );
+            if (candidate == normalized) {
+              return profile;
+            }
+          }
+          throw Exception('Profile not found');
+        },
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getProfileByWallet failed: $e');
       rethrow;
@@ -3180,6 +3554,7 @@ class BackendApiService
   @override
   Future<Map<String, dynamic>> saveProfile(
       Map<String, dynamic> profileData) async {
+    _throwIfIpfsFallbackUnavailable('Profile editing');
     // Backend requires authentication (verifyToken). Make sure we have a token
     // available before attempting to save.
     final walletAddress =
@@ -3804,25 +4179,50 @@ class BackendApiService
         'radius': radiusKm.toString(),
         if (limit != null) 'limit': limit.toString(),
       };
-      final uri =
-          Uri.parse('$baseUrl/api/art-markers').replace(queryParameters: qp);
-
-      final dynamic data =
-          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: true);
-      final List<dynamic> markerList;
-      if (data is List) {
-        markerList = data;
-      } else if (data is Map<String, dynamic>) {
-        final dynamic maybeList =
-            data['data'] ?? data['markers'] ?? data['artMarkers'];
-        markerList = maybeList is List ? maybeList : const [];
-      } else {
-        markerList = const [];
-      }
-      return markerList
-          .map(
-              (json) => _artMarkerFromBackendJson(json as Map<String, dynamic>))
-          .toList();
+      return await _performPublicRead<List<ArtMarker>>(
+        liveRead: (candidateBaseUrl) async {
+          final data = await _fetchJsonFromBaseUrl(
+            candidateBaseUrl,
+            '/api/art-markers',
+            queryParameters: qp,
+            includeAuth: true,
+            allowOrbitFallback: true,
+          );
+          final dynamic maybeList =
+              data['data'] ?? data['markers'] ?? data['artMarkers'];
+          final List<dynamic> markerList =
+              maybeList is List ? maybeList : const <dynamic>[];
+          return markerList
+              .map(
+                (json) =>
+                    _artMarkerFromBackendJson(json as Map<String, dynamic>),
+              )
+              .toList(growable: false);
+        },
+        snapshotRead: () async {
+          const distance = Distance();
+          final center = LatLng(latitude, longitude);
+          var markers = (await _loadSnapshotDatasetMaps('markers'))
+              .map(_artMarkerFromBackendJson)
+              .where((marker) {
+            final isPublic =
+                _tryBoolValue(marker.metadata?['isPublic']) ?? marker.isPublic;
+            if (!isPublic) {
+              return false;
+            }
+            final distanceKm = distance.as(
+              LengthUnit.Kilometer,
+              center,
+              marker.position,
+            );
+            return distanceKm <= radiusKm;
+          }).toList(growable: false);
+          if (limit != null && markers.length > limit) {
+            markers = markers.sublist(0, limit);
+          }
+          return markers;
+        },
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getNearbyArtMarkers failed: $e');
       rethrow;
@@ -3853,26 +4253,50 @@ class BackendApiService
         'maxLng': maxLng.toString(),
         if (limit != null) 'limit': limit.toString(),
       };
-      final uri =
-          Uri.parse('$baseUrl/api/art-markers').replace(queryParameters: qp);
+      return await _performPublicRead<List<ArtMarker>>(
+        liveRead: (candidateBaseUrl) async {
+          final data = await _fetchJsonFromBaseUrl(
+            candidateBaseUrl,
+            '/api/art-markers',
+            queryParameters: qp,
+            includeAuth: true,
+            allowOrbitFallback: true,
+          );
+          final dynamic maybeList =
+              data['data'] ?? data['markers'] ?? data['artMarkers'];
+          final List<dynamic> markerList =
+              maybeList is List ? maybeList : const <dynamic>[];
 
-      final dynamic data =
-          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: true);
-      final List<dynamic> markerList;
-      if (data is List) {
-        markerList = data;
-      } else if (data is Map<String, dynamic>) {
-        final dynamic maybeList =
-            data['data'] ?? data['markers'] ?? data['artMarkers'];
-        markerList = maybeList is List ? maybeList : const [];
-      } else {
-        markerList = const [];
-      }
+          return markerList
+              .map(
+                (json) =>
+                    _artMarkerFromBackendJson(json as Map<String, dynamic>),
+              )
+              .toList(growable: false);
+        },
+        snapshotRead: () async {
+          bool withinBounds(ArtMarker marker) {
+            final lat = marker.position.latitude;
+            final lng = marker.position.longitude;
+            if (lat < minLat || lat > maxLat) {
+              return false;
+            }
+            if (minLng <= maxLng) {
+              return lng >= minLng && lng <= maxLng;
+            }
+            return lng >= minLng || lng <= maxLng;
+          }
 
-      return markerList
-          .map(
-              (json) => _artMarkerFromBackendJson(json as Map<String, dynamic>))
-          .toList();
+          var markers = (await _loadSnapshotDatasetMaps('markers'))
+              .map(_artMarkerFromBackendJson)
+              .where(withinBounds)
+              .toList(growable: false);
+          if (limit != null && markers.length > limit) {
+            markers = markers.sublist(0, limit);
+          }
+          return markers;
+        },
+      );
     } catch (e) {
       AppConfig.debugPrint(
           'BackendApiService.getArtMarkersInBounds failed: $e');
@@ -3895,23 +4319,37 @@ class BackendApiService
       try {
         await _ensureAuthWithStoredWallet();
       } catch (_) {}
+      return await _performPublicRead<ArtMarker?>(
+        liveRead: (candidateBaseUrl) async {
+          final data = await _fetchJsonFromBaseUrl(
+            candidateBaseUrl,
+            '/api/art-markers/$id',
+            includeAuth: true,
+            allowOrbitFallback: allowOrbitFallback,
+          );
 
-      final uri = Uri.parse('$baseUrl/api/art-markers/$id');
-      final dynamic data = await _fetchJson(
-        uri,
-        includeAuth: true,
-        allowOrbitFallback: allowOrbitFallback,
+          final payload =
+              data['data'] ?? data['marker'] ?? data['artMarker'] ?? data;
+          if (payload is Map<String, dynamic>) {
+            return _artMarkerFromBackendJson(payload);
+          }
+          if (payload is Map) {
+            return _artMarkerFromBackendJson(
+              Map<String, dynamic>.from(payload),
+            );
+          }
+          return null;
+        },
+        snapshotRead: () async {
+          final markers = await _loadSnapshotDatasetMaps('markers');
+          for (final entry in markers) {
+            if ((entry['id'] ?? '').toString().trim() == id) {
+              return _artMarkerFromBackendJson(entry);
+            }
+          }
+          return null;
+        },
       );
-
-      final dynamic payload = data is Map<String, dynamic>
-          ? (data['data'] ?? data['marker'] ?? data['artMarker'] ?? data)
-          : data;
-
-      if (payload is Map<String, dynamic>) {
-        return _artMarkerFromBackendJson(payload);
-      }
-
-      return null;
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getArtMarker failed: $e');
       return null;
@@ -3957,6 +4395,7 @@ class BackendApiService
   /// POST /api/art-markers
   @override
   Future<ArtMarker?> createArtMarkerRecord(Map<String, dynamic> payload) async {
+    _throwIfIpfsFallbackUnavailable('Marker publishing');
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/art-markers');
@@ -3999,6 +4438,7 @@ class BackendApiService
   @override
   Future<ArtMarker?> updateArtMarkerRecord(
       String markerId, Map<String, dynamic> updates) async {
+    _throwIfIpfsFallbackUnavailable('Marker editing');
     bool markerReflectsUpdates(
         ArtMarker marker, Map<String, dynamic> requested) {
       final requestedName = requested['name'] ?? requested['title'];
@@ -4332,21 +4772,72 @@ class BackendApiService
         }
       }
 
-      final uri = Uri.parse('$baseUrl/api/artworks')
-          .replace(queryParameters: queryParams);
-      final data = await _fetchJson(
-        uri,
-        includeAuth: includePrivateForWallet && hasWalletFilter,
-        allowOrbitFallback: true,
+      return await _performPublicRead<List<Artwork>>(
+        liveRead: (candidateBaseUrl) async {
+          final data = await _fetchJsonFromBaseUrl(
+            candidateBaseUrl,
+            '/api/artworks',
+            queryParameters: queryParams,
+            includeAuth: includePrivateForWallet && hasWalletFilter,
+            allowOrbitFallback: true,
+          );
+          final dynamic listCandidate =
+              data['artworks'] ?? data['data'] ?? data['items'];
+          final List<dynamic> artworks =
+              listCandidate is List ? listCandidate : <dynamic>[];
+          return artworks
+              .map((json) =>
+                  parseArtworkFromBackendJson(json as Map<String, dynamic>))
+              .toList(growable: false);
+        },
+        snapshotRead: () async {
+          if (includePrivateForWallet) {
+            throw Exception(
+              'Private artwork data is unavailable in public snapshot fallback.',
+            );
+          }
+
+          final snapshots = await _loadSnapshotDatasetMaps('artworks');
+          var filtered = snapshots.where((entry) {
+            if (category != null &&
+                entry['category']?.toString().trim().toLowerCase() !=
+                    category.trim().toLowerCase()) {
+              return false;
+            }
+
+            if (arEnabled != null) {
+              final snapshotArEnabled =
+                  _tryBoolValue(entry['arEnabled'] ?? entry['is_ar_enabled']) ??
+                      false;
+              if (snapshotArEnabled != arEnabled) {
+                return false;
+              }
+            }
+
+            if (hasWalletFilter) {
+              final candidateWallet = WalletUtils.canonical(
+                entry['walletAddress'] ??
+                    entry['wallet_address'] ??
+                    entry['wallet'],
+              );
+              if (candidateWallet != WalletUtils.canonical(walletAddress)) {
+                return false;
+              }
+            }
+
+            return _tryBoolValue(entry['isPublic'] ?? entry['is_public']) ??
+                true;
+          }).toList(growable: false);
+
+          final start = ((page - 1) * limit).clamp(0, filtered.length).toInt();
+          final end = (start + limit).clamp(0, filtered.length).toInt();
+          filtered = filtered.sublist(start, end);
+
+          return filtered
+              .map(parseArtworkFromBackendJson)
+              .toList(growable: false);
+        },
       );
-      final dynamic listCandidate =
-          data['artworks'] ?? data['data'] ?? data['items'];
-      final List<dynamic> artworks =
-          listCandidate is List ? listCandidate : <dynamic>[];
-      return artworks
-          .map((json) =>
-              parseArtworkFromBackendJson(json as Map<String, dynamic>))
-          .toList();
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getArtworks failed: $e');
       rethrow;
@@ -4361,14 +4852,30 @@ class BackendApiService
       try {
         await _ensureAuthWithStoredWallet();
       } catch (_) {}
-      final uri = Uri.parse('$baseUrl/api/artworks/$artworkId');
-      final data =
-          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: true);
-      final payload = data['artwork'] ?? data['data'] ?? data;
-      if (payload is Map<String, dynamic>) {
-        return parseArtworkFromBackendJson(payload);
-      }
-      throw Exception('Invalid artwork payload');
+      return await _performPublicRead<Artwork>(
+        liveRead: (candidateBaseUrl) async {
+          final data = await _fetchJsonFromBaseUrl(
+            candidateBaseUrl,
+            '/api/artworks/$artworkId',
+            includeAuth: true,
+            allowOrbitFallback: true,
+          );
+          final payload = data['artwork'] ?? data['data'] ?? data;
+          if (payload is Map<String, dynamic>) {
+            return parseArtworkFromBackendJson(payload);
+          }
+          throw Exception('Invalid artwork payload');
+        },
+        snapshotRead: () async {
+          final artworks = await _loadSnapshotDatasetMaps('artworks');
+          for (final entry in artworks) {
+            if ((entry['id'] ?? '').toString().trim() == artworkId.trim()) {
+              return parseArtworkFromBackendJson(entry);
+            }
+          }
+          throw Exception('Artwork not found');
+        },
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getArtwork failed: $e');
       rethrow;
@@ -4800,23 +5307,18 @@ class BackendApiService
   @override
   Future<int?> likeArtwork(String artworkId) async {
     try {
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
-      final response = await _post(
-        Uri.parse('$baseUrl/api/artworks/$artworkId/like'),
-        headers: _getHeaders(),
+      final response = await _sendQueueablePublicAction(
+        method: 'POST',
+        path: '/api/artworks/$artworkId/like',
+        actionType: 'like',
+        entityType: 'artwork',
+        entityId: artworkId,
+        isIdempotent: true,
       );
-
-      if (response.statusCode == 200) {
-        final payload = jsonDecode(response.body);
-        if (payload is Map<String, dynamic>) {
-          final data = payload['data'] as Map<String, dynamic>? ?? payload;
-          return data['likesCount'] as int?;
-        }
+      if (response == null || !_isSuccessStatus(response.statusCode)) {
         return null;
       }
-      throw Exception('Failed to like artwork (${response.statusCode})');
+      return _extractIntFromResponse(response, const <String>['likesCount']);
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.likeArtwork failed: $e');
       rethrow;
@@ -4828,25 +5330,58 @@ class BackendApiService
   @override
   Future<int?> unlikeArtwork(String artworkId) async {
     try {
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
-      final response = await _delete(
-        Uri.parse('$baseUrl/api/artworks/$artworkId/like'),
-        headers: _getHeaders(),
+      final response = await _sendQueueablePublicAction(
+        method: 'DELETE',
+        path: '/api/artworks/$artworkId/like',
+        actionType: 'unlike',
+        entityType: 'artwork',
+        entityId: artworkId,
+        isIdempotent: true,
       );
-
-      if (response.statusCode == 200) {
-        final payload = jsonDecode(response.body);
-        if (payload is Map<String, dynamic>) {
-          final data = payload['data'] as Map<String, dynamic>? ?? payload;
-          return data['likesCount'] as int?;
-        }
+      if (response == null || !_isSuccessStatus(response.statusCode)) {
         return null;
       }
-      throw Exception('Failed to unlike artwork (${response.statusCode})');
+      return _extractIntFromResponse(response, const <String>['likesCount']);
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.unlikeArtwork failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Bookmark an artwork
+  /// POST /api/artworks/:id/bookmark
+  @override
+  Future<void> bookmarkArtwork(String artworkId) async {
+    try {
+      await _sendQueueablePublicAction(
+        method: 'POST',
+        path: '/api/artworks/$artworkId/bookmark',
+        actionType: 'bookmark',
+        entityType: 'artwork',
+        entityId: artworkId,
+        isIdempotent: true,
+      );
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.bookmarkArtwork failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Remove artwork bookmark
+  /// DELETE /api/artworks/:id/bookmark
+  @override
+  Future<void> unbookmarkArtwork(String artworkId) async {
+    try {
+      await _sendQueueablePublicAction(
+        method: 'DELETE',
+        path: '/api/artworks/$artworkId/bookmark',
+        actionType: 'unbookmark',
+        entityType: 'artwork',
+        entityId: artworkId,
+        isIdempotent: true,
+      );
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.unbookmarkArtwork failed: $e');
       rethrow;
     }
   }
@@ -4975,6 +5510,7 @@ class BackendApiService
     required String content,
     String? parentCommentId,
   }) async {
+    _throwIfIpfsFallbackUnavailable('Artwork comments');
     await _ensureAuthBeforeRequest();
     final uri = Uri.parse('$baseUrl/api/artworks/$artworkId/comments');
     final response = await _post(
@@ -5067,22 +5603,21 @@ class BackendApiService
   @override
   Future<int?> discoverArtworkWithCount(String artworkId) async {
     try {
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
-      final response = await _post(
-        Uri.parse('$baseUrl/api/artworks/$artworkId/discover'),
-        headers: _getHeaders(),
+      final response = await _sendQueueablePublicAction(
+        method: 'POST',
+        path: '/api/artworks/$artworkId/discover',
+        actionType: 'discover',
+        entityType: 'artwork',
+        entityId: artworkId,
+        isIdempotent: true,
       );
-
-      if (response.statusCode == 200) {
-        final payload = jsonDecode(response.body);
-        if (payload is Map<String, dynamic>) {
-          final data = payload['data'] as Map<String, dynamic>? ?? payload;
-          return data['discoveryCount'] as int?;
-        }
+      if (response == null || !_isSuccessStatus(response.statusCode)) {
+        return null;
       }
-      return null;
+      return _extractIntFromResponse(
+        response,
+        const <String>['discoveryCount'],
+      );
     } catch (e) {
       AppConfig.debugPrint(
           'BackendApiService.discoverArtworkWithCount failed: $e');
@@ -5133,16 +5668,76 @@ class BackendApiService
         }
       }
 
-      final uri = Uri.parse('$baseUrl/api/community/posts')
-          .replace(queryParameters: queryParams);
       final allowFallback = followingOnly != true;
-      final data = await _fetchJson(uri,
-          includeAuth: true, allowOrbitFallback: allowFallback);
-      final posts = data['data'] as List<dynamic>? ?? <dynamic>[];
-      return posts
-          .map((json) =>
-              _communityPostFromBackendJson(json as Map<String, dynamic>))
-          .toList();
+      return await _performPublicRead<List<CommunityPost>>(
+        liveRead: (candidateBaseUrl) async {
+          final data = await _fetchJsonFromBaseUrl(
+            candidateBaseUrl,
+            '/api/community/posts',
+            queryParameters: queryParams,
+            includeAuth: true,
+            allowOrbitFallback: allowFallback,
+          );
+          final posts = data['data'] as List<dynamic>? ?? <dynamic>[];
+          return posts
+              .map((json) =>
+                  _communityPostFromBackendJson(json as Map<String, dynamic>))
+              .toList(growable: false);
+        },
+        snapshotRead: () async {
+          if (!allowFallback) {
+            throw Exception(
+              'Following feed is unavailable in public snapshot fallback.',
+            );
+          }
+
+          final snapshots = await _loadSnapshotDatasetMaps('communityFeed');
+          var posts =
+              snapshots.map(_communityPostFromBackendJson).where((post) {
+            if (arOnly == true &&
+                post.category.toLowerCase() != 'art' &&
+                post.artwork == null) {
+              return false;
+            }
+            if (authorWallet != null &&
+                authorWallet.trim().isNotEmpty &&
+                WalletUtils.canonical(post.authorWallet) !=
+                    WalletUtils.canonical(authorWallet)) {
+              return false;
+            }
+            if (tag != null && tag.trim().isNotEmpty) {
+              final normalizedTag =
+                  tag.replaceFirst(RegExp(r'^#+'), '').trim().toLowerCase();
+              if (normalizedTag.isEmpty) {
+                return true;
+              }
+              return post.tags
+                  .map((entry) => entry.toLowerCase())
+                  .contains(normalizedTag);
+            }
+            return true;
+          }).toList(growable: false);
+
+          final normalizedSort = (sort ?? '').trim().toLowerCase();
+          if (normalizedSort == 'popularity' || normalizedSort == 'popular') {
+            posts.sort((left, right) {
+              final leftScore =
+                  left.likeCount + left.commentCount + left.shareCount;
+              final rightScore =
+                  right.likeCount + right.commentCount + right.shareCount;
+              return rightScore.compareTo(leftScore);
+            });
+          } else {
+            posts.sort(
+                (left, right) => right.timestamp.compareTo(left.timestamp));
+          }
+
+          final start = ((page - 1) * limit).clamp(0, posts.length).toInt();
+          final end = (start + limit).clamp(0, posts.length).toInt();
+          return posts.sublist(start, end);
+        },
+        allowSnapshot: allowFallback,
+      );
     } catch (e) {
       _debugLogThrottled(
         'get_community_posts:error',
@@ -5192,14 +5787,30 @@ class BackendApiService
       try {
         await _ensureAuthWithStoredWallet();
       } catch (_) {}
-      final uri = Uri.parse('$baseUrl/api/community/posts/$postId');
-      final data =
-          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: true);
-      final payload = data['data'] ?? data;
-      if (payload is Map<String, dynamic>) {
-        return _communityPostFromBackendJson(payload);
-      }
-      throw Exception('Unexpected post payload');
+      return await _performPublicRead<CommunityPost>(
+        liveRead: (candidateBaseUrl) async {
+          final data = await _fetchJsonFromBaseUrl(
+            candidateBaseUrl,
+            '/api/community/posts/$postId',
+            includeAuth: true,
+            allowOrbitFallback: true,
+          );
+          final payload = data['data'] ?? data;
+          if (payload is Map<String, dynamic>) {
+            return _communityPostFromBackendJson(payload);
+          }
+          throw Exception('Unexpected post payload');
+        },
+        snapshotRead: () async {
+          final snapshots = await _loadSnapshotDatasetMaps('communityFeed');
+          for (final entry in snapshots) {
+            if ((entry['id'] ?? '').toString().trim() == postId.trim()) {
+              return _communityPostFromBackendJson(entry);
+            }
+          }
+          throw Exception('Post not found');
+        },
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getCommunityPostById failed: $e');
       rethrow;
@@ -5225,6 +5836,7 @@ class BackendApiService
     double? locationLat,
     double? locationLng,
   }) async {
+    _throwIfIpfsFallbackUnavailable('Posting');
     try {
       final aggregatedMedia = <String>[];
       if (imageUrl != null && imageUrl.isNotEmpty) {
@@ -5356,21 +5968,56 @@ class BackendApiService
   /// POST /api/community/posts/:id/like
   Future<int?> likePost(String postId) async {
     try {
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
-      final response = await _post(
-        Uri.parse('$baseUrl/api/community/posts/$postId/like'),
-        headers: _getHeaders(),
+      final response = await _sendQueueablePublicAction(
+        method: 'POST',
+        path: '/api/community/posts/$postId/like',
+        actionType: 'like',
+        entityType: 'post',
+        entityId: postId,
+        isIdempotent: true,
       );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data is Map<String, dynamic> ? data['likesCount'] as int? : null;
+      if (response == null || !_isSuccessStatus(response.statusCode)) {
+        return null;
       }
-      throw Exception('Failed to like post (${response.statusCode})');
+      return _extractIntFromResponse(response, const <String>['likesCount']);
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.likePost failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Bookmark a public post
+  /// POST /api/community/posts/:id/bookmark
+  Future<void> bookmarkPost(String postId) async {
+    try {
+      await _sendQueueablePublicAction(
+        method: 'POST',
+        path: '/api/community/posts/$postId/bookmark',
+        actionType: 'bookmark',
+        entityType: 'post',
+        entityId: postId,
+        isIdempotent: true,
+      );
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.bookmarkPost failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Remove public post bookmark
+  /// DELETE /api/community/posts/:id/bookmark
+  Future<void> unbookmarkPost(String postId) async {
+    try {
+      await _sendQueueablePublicAction(
+        method: 'DELETE',
+        path: '/api/community/posts/$postId/bookmark',
+        actionType: 'unbookmark',
+        entityType: 'post',
+        entityId: postId,
+        isIdempotent: true,
+      );
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.unbookmarkPost failed: $e');
       rethrow;
     }
   }
@@ -5643,6 +6290,7 @@ class BackendApiService
     double? locationLat,
     double? locationLng,
   }) async {
+    _throwIfIpfsFallbackUnavailable('Posting');
     try {
       try {
         await _ensureAuthWithStoredWallet();
@@ -5905,20 +6553,18 @@ class BackendApiService
   /// DELETE /api/community/posts/:id/like
   Future<int?> unlikePost(String postId) async {
     try {
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
-      final response = await _delete(
-        Uri.parse('$baseUrl/api/community/posts/$postId/like'),
-        headers: _getHeaders(),
+      final response = await _sendQueueablePublicAction(
+        method: 'DELETE',
+        path: '/api/community/posts/$postId/like',
+        actionType: 'unlike',
+        entityType: 'post',
+        entityId: postId,
         isIdempotent: true,
       );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data is Map<String, dynamic> ? data['likesCount'] as int? : null;
+      if (response == null || !_isSuccessStatus(response.statusCode)) {
+        return null;
       }
-      throw Exception('Failed to unlike post (${response.statusCode})');
+      return _extractIntFromResponse(response, const <String>['likesCount']);
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.unlikePost failed: $e');
       rethrow;
@@ -5932,6 +6578,7 @@ class BackendApiService
     required String content,
     String? parentCommentId,
   }) async {
+    _throwIfIpfsFallbackUnavailable('Comments');
     try {
       try {
         await _ensureAuthWithStoredWallet();
@@ -6325,17 +6972,14 @@ class BackendApiService
   Future<void> followUser(String walletAddress) async {
     final encoded = Uri.encodeComponent(walletAddress);
     try {
-      await _ensureAuthBeforeRequest();
-      final uri = Uri.parse('$baseUrl/api/community/follow/$encoded');
-      final response =
-          await _post(uri, headers: _getHeaders(), isIdempotent: true);
-
-      if (!_isSuccessStatus(response.statusCode)) {
-        final body =
-            response.body.isNotEmpty ? response.body : 'No response body';
-        throw Exception(
-            'Failed to follow user (${response.statusCode}): $body');
-      }
+      await _sendQueueablePublicAction(
+        method: 'POST',
+        path: '/api/community/follow/$encoded',
+        actionType: 'follow',
+        entityType: 'profile',
+        entityId: walletAddress,
+        isIdempotent: true,
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.followUser failed: $e');
       rethrow;
@@ -6348,17 +6992,14 @@ class BackendApiService
   Future<void> unfollowUser(String walletAddress) async {
     final encoded = Uri.encodeComponent(walletAddress);
     try {
-      await _ensureAuthBeforeRequest();
-      final uri = Uri.parse('$baseUrl/api/community/follow/$encoded');
-      final response =
-          await _delete(uri, headers: _getHeaders(), isIdempotent: true);
-
-      if (!_isSuccessStatus(response.statusCode)) {
-        final body =
-            response.body.isNotEmpty ? response.body : 'No response body';
-        throw Exception(
-            'Failed to unfollow user (${response.statusCode}): $body');
-      }
+      await _sendQueueablePublicAction(
+        method: 'DELETE',
+        path: '/api/community/follow/$encoded',
+        actionType: 'unfollow',
+        entityType: 'profile',
+        entityId: walletAddress,
+        isIdempotent: true,
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.unfollowUser failed: $e');
       rethrow;
@@ -7322,9 +7963,6 @@ class BackendApiService
   }) async {
     try {
       if (_eventsApiAvailable == false) return [];
-      final base = institutionId == null
-          ? '$baseUrl/api/events'
-          : '$baseUrl/api/institutions/$institutionId/events';
       final query = <String, String>{
         'limit': '$limit',
         'offset': '$offset',
@@ -7338,82 +7976,133 @@ class BackendApiService
       if (hostUserId != null && hostUserId.trim().isNotEmpty) {
         query['hostUserId'] = hostUserId.trim();
       }
-      final uri = Uri.parse(base).replace(queryParameters: query);
       // Optional auth: include token when present so backend can return `myRole`.
       try {
         await _ensureAuthWithStoredWallet();
       } catch (_) {}
-      final response = await _get(uri, headers: _getHeaders(includeAuth: true));
+      return await _performPublicRead<List<Map<String, dynamic>>>(
+        liveRead: (candidateBaseUrl) async {
+          final base = institutionId == null
+              ? '${_normalizeApiBaseUrl(candidateBaseUrl)}/api/events'
+              : '${_normalizeApiBaseUrl(candidateBaseUrl)}/api/institutions/$institutionId/events';
+          final uri = Uri.parse(base).replace(queryParameters: query);
+          final response =
+              await _get(uri, headers: _getHeaders(includeAuth: true));
 
-      if (response.statusCode == 200) {
-        _eventsApiAvailable = true;
-        final decoded = jsonDecode(response.body);
-        if (decoded is Map<String, dynamic>) {
-          final dynamic data = decoded['data'] ?? decoded;
-          // New envelope: { success: true, data: { events: [...] } }
-          if (data is Map<String, dynamic>) {
-            final list = (data['events'] ??
-                data['items'] ??
-                data['results'] ??
-                const []) as dynamic;
-            if (list is List) return List<Map<String, dynamic>>.from(list);
-          }
-          // Legacy: { events: [...] } or { data: [...] }
-          final list = decoded['events'] ??
-              (decoded['data'] is List ? decoded['data'] : null);
-          if (list is List) return List<Map<String, dynamic>>.from(list);
-        }
-        return [];
-      } else if (response.statusCode == 404) {
-        _eventsApiAvailable = false;
-        return [];
-      } else if (response.statusCode == 400 && institutionId == null) {
-        // Some deployments use page-based pagination rather than offset.
-        final page = (offset ~/ (limit <= 0 ? 1 : limit)) + 1;
-        final retryQuery = <String, String>{
-          'limit': '$limit',
-          'page': '$page',
-        };
-        if (upcoming != null) retryQuery['upcoming'] = '$upcoming';
-        if (from != null && from.trim().isNotEmpty) {
-          retryQuery['from'] = from.trim();
-        }
-        if (to != null && to.trim().isNotEmpty) retryQuery['to'] = to.trim();
-        if (lat != null) retryQuery['lat'] = lat.toString();
-        if (lng != null) retryQuery['lng'] = lng.toString();
-        if (radiusKm != null) retryQuery['radiusKm'] = radiusKm.toString();
-        if (hostUserId != null && hostUserId.trim().isNotEmpty) {
-          retryQuery['hostUserId'] = hostUserId.trim();
-        }
-        final retryUri = Uri.parse('$baseUrl/api/events')
-            .replace(queryParameters: retryQuery);
-        final retryRes =
-            await _get(retryUri, headers: _getHeaders(includeAuth: true));
-        if (retryRes.statusCode == 200) {
-          _eventsApiAvailable = true;
-          final decoded = jsonDecode(retryRes.body);
-          if (decoded is Map<String, dynamic>) {
-            final dynamic data = decoded['data'] ?? decoded;
-            if (data is Map<String, dynamic>) {
-              final list = (data['events'] ??
-                  data['items'] ??
-                  data['results'] ??
-                  const []) as dynamic;
+          if (response.statusCode == 200) {
+            _eventsApiAvailable = true;
+            final decoded = jsonDecode(response.body);
+            if (decoded is Map<String, dynamic>) {
+              final dynamic data = decoded['data'] ?? decoded;
+              if (data is Map<String, dynamic>) {
+                final list = (data['events'] ??
+                    data['items'] ??
+                    data['results'] ??
+                    const []) as dynamic;
+                if (list is List) return List<Map<String, dynamic>>.from(list);
+              }
+              final list = decoded['events'] ??
+                  (decoded['data'] is List ? decoded['data'] : null);
               if (list is List) return List<Map<String, dynamic>>.from(list);
             }
-            final list = decoded['events'] ??
-                (decoded['data'] is List ? decoded['data'] : null);
-            if (list is List) return List<Map<String, dynamic>>.from(list);
+            return [];
           }
-          return [];
-        }
 
-        // Still not usable.
-        _eventsApiAvailable = false;
-        return [];
-      } else {
-        throw Exception('Failed to list events: ${response.statusCode}');
-      }
+          if (response.statusCode == 404) {
+            _eventsApiAvailable = false;
+            return [];
+          }
+
+          if (response.statusCode == 400 && institutionId == null) {
+            final page = (offset ~/ (limit <= 0 ? 1 : limit)) + 1;
+            final retryQuery = <String, String>{
+              'limit': '$limit',
+              'page': '$page',
+            };
+            if (upcoming != null) retryQuery['upcoming'] = '$upcoming';
+            if (from != null && from.trim().isNotEmpty) {
+              retryQuery['from'] = from.trim();
+            }
+            if (to != null && to.trim().isNotEmpty) {
+              retryQuery['to'] = to.trim();
+            }
+            if (lat != null) retryQuery['lat'] = lat.toString();
+            if (lng != null) retryQuery['lng'] = lng.toString();
+            if (radiusKm != null) retryQuery['radiusKm'] = radiusKm.toString();
+            if (hostUserId != null && hostUserId.trim().isNotEmpty) {
+              retryQuery['hostUserId'] = hostUserId.trim();
+            }
+            final retryUri = _buildApiUri(candidateBaseUrl, '/api/events',
+                queryParameters: retryQuery);
+            final retryRes =
+                await _get(retryUri, headers: _getHeaders(includeAuth: true));
+            if (retryRes.statusCode == 200) {
+              _eventsApiAvailable = true;
+              final decoded = jsonDecode(retryRes.body);
+              if (decoded is Map<String, dynamic>) {
+                final dynamic data = decoded['data'] ?? decoded;
+                if (data is Map<String, dynamic>) {
+                  final list = (data['events'] ??
+                      data['items'] ??
+                      data['results'] ??
+                      const []) as dynamic;
+                  if (list is List) {
+                    return List<Map<String, dynamic>>.from(list);
+                  }
+                }
+                final list = decoded['events'] ??
+                    (decoded['data'] is List ? decoded['data'] : null);
+                if (list is List) {
+                  return List<Map<String, dynamic>>.from(list);
+                }
+              }
+              return [];
+            }
+
+            _eventsApiAvailable = false;
+            return [];
+          }
+
+          throw Exception('Request failed: ${response.statusCode}');
+        },
+        snapshotRead: () async {
+          var events = await _loadSnapshotDatasetMaps('events');
+          events = events.where((entry) {
+            if (hostUserId != null &&
+                hostUserId.trim().isNotEmpty &&
+                (entry['hostUserId'] ?? entry['host_user_id'] ?? '')
+                        .toString()
+                        .trim() !=
+                    hostUserId.trim()) {
+              return false;
+            }
+
+            if (upcoming == true) {
+              final startsAt = DateTime.tryParse(
+                (entry['startsAt'] ?? entry['starts_at'] ?? '').toString(),
+              );
+              if (startsAt != null && startsAt.isBefore(DateTime.now())) {
+                return false;
+              }
+            }
+
+            if (institutionId != null &&
+                institutionId.trim().isNotEmpty &&
+                (entry['institutionId'] ?? entry['institution_id'] ?? '')
+                        .toString()
+                        .trim() !=
+                    institutionId.trim()) {
+              return false;
+            }
+
+            return true;
+          }).toList(growable: false);
+
+          final start = offset.clamp(0, events.length).toInt();
+          final end = (start + limit).clamp(0, events.length).toInt();
+          return events.sublist(start, end);
+        },
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.listEvents failed: $e');
       return [];
@@ -7427,17 +8116,33 @@ class BackendApiService
       try {
         await _ensureAuthWithStoredWallet();
       } catch (_) {}
-      final uri = Uri.parse('$baseUrl/api/events/$id');
-      final decoded =
-          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
-      final payload = decoded['data'] ?? decoded;
-      final eventRaw = (payload is Map<String, dynamic>)
-          ? (payload['event'] ?? payload['data'] ?? payload)
-          : null;
-      if (eventRaw is Map<String, dynamic>) {
-        return KubusEvent.fromJson(eventRaw);
-      }
-      return null;
+      return await _performPublicRead<KubusEvent?>(
+        liveRead: (candidateBaseUrl) async {
+          final decoded = await _fetchJsonFromBaseUrl(
+            candidateBaseUrl,
+            '/api/events/$id',
+            includeAuth: true,
+            allowOrbitFallback: false,
+          );
+          final payload = decoded['data'] ?? decoded;
+          final eventRaw = (payload is Map<String, dynamic>)
+              ? (payload['event'] ?? payload['data'] ?? payload)
+              : null;
+          if (eventRaw is Map<String, dynamic>) {
+            return KubusEvent.fromJson(eventRaw);
+          }
+          return null;
+        },
+        snapshotRead: () async {
+          final events = await _loadSnapshotDatasetMaps('events');
+          for (final entry in events) {
+            if ((entry['id'] ?? '').toString().trim() == id.trim()) {
+              return KubusEvent.fromJson(entry);
+            }
+          }
+          return null;
+        },
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getEvent failed: $e');
       rethrow;
@@ -7447,6 +8152,7 @@ class BackendApiService
   /// Create an event
   /// POST /api/events
   Future<KubusEvent?> createEvent(Map<String, dynamic> payload) async {
+    _throwIfIpfsFallbackUnavailable('Event publishing');
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/events');
@@ -7477,6 +8183,7 @@ class BackendApiService
   /// PUT /api/events/:id
   Future<KubusEvent?> updateEvent(
       String id, Map<String, dynamic> updates) async {
+    _throwIfIpfsFallbackUnavailable('Event editing');
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/events/$id');
@@ -7591,21 +8298,44 @@ class BackendApiService
       if (lat != null) qp['lat'] = lat.toString();
       if (lng != null) qp['lng'] = lng.toString();
       if (radiusKm != null) qp['radiusKm'] = radiusKm.toString();
-      final uri =
-          Uri.parse('$baseUrl/api/exhibitions').replace(queryParameters: qp);
-      final decoded =
-          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
-      final payload = decoded['data'] ?? decoded;
-      if (payload is Map<String, dynamic>) {
-        final list = payload['exhibitions'] ?? payload['items'];
-        if (list is List) {
-          return list
-              .whereType<Map<String, dynamic>>()
+      return await _performPublicRead<List<Exhibition>>(
+        liveRead: (candidateBaseUrl) async {
+          final decoded = await _fetchJsonFromBaseUrl(
+            candidateBaseUrl,
+            '/api/exhibitions',
+            queryParameters: qp,
+            includeAuth: true,
+            allowOrbitFallback: false,
+          );
+          final payload = decoded['data'] ?? decoded;
+          if (payload is Map<String, dynamic>) {
+            final list = payload['exhibitions'] ?? payload['items'];
+            if (list is List) {
+              return list
+                  .whereType<Map<String, dynamic>>()
+                  .map(Exhibition.fromJson)
+                  .toList(growable: false);
+            }
+          }
+          return const <Exhibition>[];
+        },
+        snapshotRead: () async {
+          var exhibitions = (await _loadSnapshotDatasetMaps('exhibitions'))
               .map(Exhibition.fromJson)
-              .toList();
-        }
-      }
-      return const [];
+              .where((entry) {
+            if (eventId != null &&
+                eventId.trim().isNotEmpty &&
+                (entry.eventId ?? '').trim() != eventId.trim()) {
+              return false;
+            }
+            return true;
+          }).toList(growable: false);
+
+          final start = offset.clamp(0, exhibitions.length).toInt();
+          final end = (start + limit).clamp(0, exhibitions.length).toInt();
+          return exhibitions.sublist(start, end);
+        },
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.listExhibitions failed: $e');
       rethrow;
@@ -7619,17 +8349,33 @@ class BackendApiService
       try {
         await _ensureAuthWithStoredWallet();
       } catch (_) {}
-      final uri = Uri.parse('$baseUrl/api/exhibitions/$id');
-      final decoded =
-          await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
-      final payload = decoded['data'] ?? decoded;
-      final exhibitionRaw = (payload is Map<String, dynamic>)
-          ? (payload['exhibition'] ?? payload['data'] ?? payload)
-          : null;
-      if (exhibitionRaw is Map<String, dynamic>) {
-        return Exhibition.fromJson(exhibitionRaw);
-      }
-      return null;
+      return await _performPublicRead<Exhibition?>(
+        liveRead: (candidateBaseUrl) async {
+          final decoded = await _fetchJsonFromBaseUrl(
+            candidateBaseUrl,
+            '/api/exhibitions/$id',
+            includeAuth: true,
+            allowOrbitFallback: false,
+          );
+          final payload = decoded['data'] ?? decoded;
+          final exhibitionRaw = (payload is Map<String, dynamic>)
+              ? (payload['exhibition'] ?? payload['data'] ?? payload)
+              : null;
+          if (exhibitionRaw is Map<String, dynamic>) {
+            return Exhibition.fromJson(exhibitionRaw);
+          }
+          return null;
+        },
+        snapshotRead: () async {
+          final exhibitions = await _loadSnapshotDatasetMaps('exhibitions');
+          for (final entry in exhibitions) {
+            if ((entry['id'] ?? '').toString().trim() == id.trim()) {
+              return Exhibition.fromJson(entry);
+            }
+          }
+          return null;
+        },
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getExhibition failed: $e');
       rethrow;
@@ -7639,6 +8385,7 @@ class BackendApiService
   /// Create exhibition
   /// POST /api/exhibitions
   Future<Exhibition?> createExhibition(Map<String, dynamic> payload) async {
+    _throwIfIpfsFallbackUnavailable('Exhibition publishing');
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/exhibitions');
@@ -7670,6 +8417,7 @@ class BackendApiService
   /// PUT /api/exhibitions/:id
   Future<Exhibition?> updateExhibition(
       String id, Map<String, dynamic> updates) async {
+    _throwIfIpfsFallbackUnavailable('Exhibition editing');
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/exhibitions/$id');
@@ -8562,6 +9310,11 @@ class BackendApiService
           preferredCanonical.isNotEmpty &&
           requestedCanonical == preferredCanonical;
       final isImplicitSelfRequest = requestedWallet.isEmpty;
+      final snapshotWalletFilter = requestedWallet.isNotEmpty
+          ? requestedWallet
+          : (isImplicitSelfRequest
+              ? (_preferredWalletCanonical ?? _authWalletCanonical ?? '')
+              : '');
 
       final includeAuth = isImplicitSelfRequest || isForPreferredWallet;
       if (includeAuth) {
@@ -8585,24 +9338,55 @@ class BackendApiService
         queryParams['walletAddress'] = requestedWallet;
       }
 
-      final uri = Uri.parse('$baseUrl/api/collections')
-          .replace(queryParameters: queryParams);
-      final jsonData = await _fetchJson(
-        uri,
-        includeAuth: includeAuth,
-        allowOrbitFallback: true,
-      );
+      return await _performPublicRead<List<Map<String, dynamic>>>(
+        liveRead: (candidateBaseUrl) async {
+          final jsonData = await _fetchJsonFromBaseUrl(
+            candidateBaseUrl,
+            '/api/collections',
+            queryParameters: queryParams,
+            includeAuth: includeAuth,
+            allowOrbitFallback: true,
+          );
 
-      final rawData = jsonData['data'];
-      if (rawData is List) {
-        return rawData.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-      }
-      if (rawData is Map<String, dynamic> && rawData['data'] is List) {
-        return (rawData['data'] as List)
-            .map((e) => Map<String, dynamic>.from(e as Map))
-            .toList();
-      }
-      throw Exception('Unexpected collections response shape');
+          final rawData = jsonData['data'];
+          if (rawData is List) {
+            return rawData
+                .map((e) => Map<String, dynamic>.from(e as Map))
+                .toList(growable: false);
+          }
+          if (rawData is Map<String, dynamic> && rawData['data'] is List) {
+            return (rawData['data'] as List)
+                .map((e) => Map<String, dynamic>.from(e as Map))
+                .toList(growable: false);
+          }
+          throw Exception('Unexpected collections response shape');
+        },
+        snapshotRead: () async {
+          if (isImplicitSelfRequest && snapshotWalletFilter.isEmpty) {
+            return const <Map<String, dynamic>>[];
+          }
+
+          var collections = await _loadSnapshotDatasetMaps('collections');
+          if (snapshotWalletFilter.isNotEmpty) {
+            final canonicalRequested =
+                WalletUtils.canonical(snapshotWalletFilter);
+            collections = collections.where((entry) {
+              final candidate = WalletUtils.canonical(
+                entry['walletAddress'] ??
+                    entry['wallet_address'] ??
+                    entry['ownerWalletAddress'] ??
+                    entry['owner_wallet_address'],
+              );
+              return candidate == canonicalRequested;
+            }).toList(growable: false);
+          }
+
+          final start =
+              ((page - 1) * limit).clamp(0, collections.length).toInt();
+          final end = (start + limit).clamp(0, collections.length).toInt();
+          return collections.sublist(start, end);
+        },
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getCollections failed: $e');
       return [];
@@ -8613,19 +9397,38 @@ class BackendApiService
   /// GET /api/collections/:id
   Future<Map<String, dynamic>> getCollection(String collectionId) async {
     try {
-      final uri = Uri.parse('$baseUrl/api/collections/$collectionId');
-      final jsonData = await _fetchJson(
-        uri,
-        includeAuth: true,
-        allowOrbitFallback: true,
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
+
+      return await _performPublicRead<Map<String, dynamic>>(
+        liveRead: (candidateBaseUrl) async {
+          final jsonData = await _fetchJsonFromBaseUrl(
+            candidateBaseUrl,
+            '/api/collections/$collectionId',
+            includeAuth: true,
+            allowOrbitFallback: true,
+          );
+
+          final data = jsonData['data'];
+          if (data is Map<String, dynamic>) {
+            return data;
+          }
+          if (data is Map) {
+            return Map<String, dynamic>.from(data);
+          }
+          throw Exception('Unexpected collection response shape');
+        },
+        snapshotRead: () async {
+          final collections = await _loadSnapshotDatasetMaps('collections');
+          for (final entry in collections) {
+            if ((entry['id'] ?? '').toString().trim() == collectionId.trim()) {
+              return entry;
+            }
+          }
+          throw Exception('Collection not found');
+        },
       );
-
-      final data = jsonData['data'];
-      if (data is Map<String, dynamic>) {
-        return data;
-      }
-
-      throw Exception('Unexpected collection response shape');
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getCollection failed: $e');
       rethrow;
@@ -8640,6 +9443,7 @@ class BackendApiService
     bool isPublic = true,
     String? thumbnailUrl,
   }) async {
+    _throwIfIpfsFallbackUnavailable('Collection publishing');
     try {
       final response = await _post(
         Uri.parse('$baseUrl/api/collections'),
@@ -8673,6 +9477,7 @@ class BackendApiService
     bool? isPublic,
     String? thumbnailUrl,
   }) async {
+    _throwIfIpfsFallbackUnavailable('Collection editing');
     try {
       await _ensureAuthBeforeRequest();
       final payload = <String, dynamic>{

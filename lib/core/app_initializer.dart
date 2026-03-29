@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_persona.dart';
 import '../config/config.dart';
 import '../providers/config_provider.dart';
+import '../providers/app_mode_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/saved_items_provider.dart';
 import '../providers/wallet_provider.dart';
@@ -171,6 +172,12 @@ class _AppInitializerState extends State<AppInitializer> {
           Provider.of<ConfigProvider>(context, listen: false);
       await _safeStep<void>('config.initialize', configProvider.initialize,
           timeout: const Duration(seconds: 6));
+      if (!mounted) return;
+
+      final appModeProvider =
+          Provider.of<AppModeProvider>(context, listen: false);
+      await _safeStep<void>('app_mode.initialize', appModeProvider.initialize,
+          timeout: const Duration(seconds: 8));
       if (!mounted) return;
 
       final cachedServerVersion = (configProvider.serverVersion ?? '').trim();

@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:path/path.dart' as path;
 import 'package:art_kubus/l10n/app_localizations.dart';
+import '../../../providers/app_mode_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/dao_provider.dart';
 import '../../../services/backend_api_service.dart';
@@ -20,6 +21,7 @@ import '../../../widgets/common/kubus_screen_header.dart';
 import '../components/desktop_widgets.dart';
 import '../desktop_shell_scope.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/app_mode_unavailable_state.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 
 /// Desktop profile edit screen - form layout with card sections
@@ -164,37 +166,52 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final appModeProvider = context.watch<AppModeProvider?>();
+    final isIpfsFallbackMode = appModeProvider?.isIpfsFallbackMode ?? false;
     final animationTheme = context.animationTheme;
     final screenWidth = MediaQuery.of(context).size.width;
     final isLarge = screenWidth >= 1200;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: AnimatedBuilder(
-        animation: _animationController,
-        builder: (context, child) {
-          return FadeTransition(
-            opacity: CurvedAnimation(
-              parent: _animationController,
-              curve: animationTheme.fadeCurve,
-            ),
-            child: Column(
+      body: isIpfsFallbackMode
+          ? Column(
               children: [
                 _buildHeader(themeProvider),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isLarge ? 32 : 24,
-                      vertical: 24,
-                    ),
-                    child: Form(
-                      key: _formKey,
-                      child: Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 900),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
+                const Expanded(
+                  child: AppModeUnavailableState(
+                    featureLabel: 'Profile editing',
+                    title: 'Profile editing unavailable',
+                    icon: Icons.person_outline,
+                  ),
+                ),
+              ],
+            )
+          : AnimatedBuilder(
+              animation: _animationController,
+              builder: (context, child) {
+                return FadeTransition(
+                  opacity: CurvedAnimation(
+                    parent: _animationController,
+                    curve: animationTheme.fadeCurve,
+                  ),
+                  child: Column(
+                    children: [
+                      _buildHeader(themeProvider),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isLarge ? 32 : 24,
+                            vertical: 24,
+                          ),
+                          child: Form(
+                            key: _formKey,
+                            child: Center(
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(maxWidth: 900),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
                               _buildCoverImageSection(themeProvider),
                               const SizedBox(height: 24),
                               _buildAvatarSection(themeProvider),
@@ -209,18 +226,18 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
                               ],
                               _buildPrivacySection(themeProvider),
                               const SizedBox(height: 32),
-                            ],
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                ),
-              ],
+                );
+              },
             ),
-          );
-        },
-      ),
     );
   }
 

@@ -13,6 +13,7 @@ import 'package:logger/logger.dart';
 import 'config/config.dart';
 import 'providers/chat_provider.dart';
 import 'providers/glass_capabilities_provider.dart';
+import 'providers/app_mode_provider.dart';
 import 'providers/profile_provider.dart';
 import 'providers/web3provider.dart';
 import 'providers/themeprovider.dart';
@@ -85,6 +86,7 @@ import 'services/notification_handler.dart';
 import 'services/solana_wallet_service.dart';
 import 'services/socket_service.dart';
 import 'services/backend_api_service.dart';
+import 'services/public_action_outbox_service.dart';
 import 'services/telemetry/telemetry_route_observer.dart';
 import 'services/telemetry/telemetry_service.dart';
 import 'services/webgl_context_helper.dart';
@@ -455,6 +457,10 @@ class _AppLauncherState extends State<AppLauncher> {
                   create: (context) => DeferredOnboardingProvider()),
               ChangeNotifierProvider(create: (context) => AppRefreshProvider()),
               ChangeNotifierProvider(create: (context) => ConfigProvider()),
+              ChangeNotifierProvider<AppModeProvider>(
+                lazy: false,
+                create: (context) => AppModeProvider(),
+              ),
               ProxyProvider<ConfigProvider, TelemetryService>(
                 create: (_) => TelemetryService(),
                 update: (context, configProvider, telemetry) {
@@ -610,6 +616,22 @@ class _AppLauncherState extends State<AppLauncher> {
                 create: (context) => WalletProvider(
                   solanaWalletService: context.read<SolanaWalletService>(),
                 ),
+              ),
+              ProxyProvider2<SolanaWalletService, WalletProvider,
+                  PublicActionOutboxService>(
+                lazy: false,
+                create: (context) => PublicActionOutboxService(),
+                update:
+                    (context, solanaWalletService, walletProvider, outbox) {
+                  final service = outbox ?? PublicActionOutboxService();
+                  service.bindSigner(
+                    walletService: solanaWalletService,
+                    walletAddressResolver: () =>
+                        walletProvider.currentWalletAddress,
+                  );
+                  unawaited(service.initialize());
+                  return service;
+                },
               ),
               ChangeNotifierProxyProvider<WalletProvider, Web3Provider>(
                 create: (context) => Web3Provider(

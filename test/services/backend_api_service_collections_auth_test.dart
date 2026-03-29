@@ -1,6 +1,8 @@
 import 'dart:convert';
 
+import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:art_kubus/services/public_fallback_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -9,8 +11,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(() {
+  setUp(() async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
+    await PublicFallbackService().resetForTesting();
+    final api = BackendApiService();
+    api.setPreferredWalletAddress(null);
+    api.setAuthTokenForTesting(null);
   });
 
   test('getCollections for another wallet does not auto-issue auth', () async {
@@ -21,7 +27,8 @@ void main() {
       requests.add(request);
 
       // The only expected call is an unauthenticated GET to /api/collections.
-      if (request.method.toUpperCase() == 'GET' && request.url.path.endsWith('/api/collections')) {
+      if (request.method.toUpperCase() == 'GET' &&
+          request.url.path.endsWith('/api/collections')) {
         return http.Response(
           jsonEncode(<String, Object?>{'data': <Object?>[]}),
           200,
@@ -31,7 +38,11 @@ void main() {
 
       // Anything else would indicate auth issuance or unexpected side-effects.
       return http.Response(
-        jsonEncode(<String, Object?>{'error': 'unexpected request', 'path': request.url.path, 'method': request.method}),
+        jsonEncode(<String, Object?>{
+          'error': 'unexpected request',
+          'path': request.url.path,
+          'method': request.method
+        }),
         500,
         headers: const <String, String>{'content-type': 'application/json'},
       );
@@ -44,14 +55,73 @@ void main() {
     expect(
       requests.every((r) => r.url.path.endsWith('/api/collections')),
       isTrue,
-      reason: 'Expected only collections fetch requests when viewing another user\'s collections.',
+      reason:
+          'Expected only collections fetch requests when viewing another user\'s collections.',
     );
 
     // Critical security behavior: no auth header should be attached for other users.
     expect(
-      requests.every((r) => !r.headers.keys.any((k) => k.toLowerCase() == 'authorization')),
+      requests.every((r) =>
+          !r.headers.keys.any((k) => k.toLowerCase() == 'authorization')),
       isTrue,
-      reason: 'Viewing another user\'s collections must not include Authorization nor trigger token issuance.',
+      reason:
+          'Viewing another user\'s collections must not include Authorization nor trigger token issuance.',
     );
+  });
+
+  test('getCollections keeps implicit self requests scoped in snapshot mode',
+      () async {
+    const selfWallet = 'WalletSelf11111111111111111111111111111111';
+    const selfCid =
+        'bafybeigdyrzt5bq2dp2i5m2h3x2p6g7c6f3s4n5m6p7q8r9s0t1u2v3w4';
+    const placeholderCid =
+        'bafybeihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku';
+
+    final registry = <String, dynamic>{
+      'version': '2026-03-29',
+      'generatedAt': '2026-03-29T12:00:00Z',
+      'datasets': <String, dynamic>{
+        for (final key in PublicFallbackService.requiredDatasetKeys)
+          key: <String, dynamic>{
+            'cid': key == 'collections' ? selfCid : placeholderCid,
+            'generatedAt': '2026-03-29T12:00:00Z',
+          },
+      },
+    };
+    final collections = <Map<String, dynamic>>[
+      <String, dynamic>{
+        'id': 'self-collection',
+        'name': 'My Collection',
+        'walletAddress': selfWallet,
+      },
+      <String, dynamic>{
+        'id': 'other-collection',
+        'name': 'Other Collection',
+        'walletAddress': 'WalletOther11111111111111111111111111111',
+      },
+    ];
+
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'public_snapshot_registry_cache_v1': jsonEncode(registry),
+      'public_snapshot_registry_raw_cache_v1': jsonEncode(registry),
+      'public_snapshot_dataset_raw_cache_v1_collections':
+          jsonEncode(collections),
+      'public_snapshot_dataset_cid_cache_v1_collections': selfCid,
+    });
+
+    final fallbackService = PublicFallbackService();
+    await fallbackService.resetForTesting();
+    for (var i = 0; i < AppConfig.backendOutageFailureThreshold; i += 1) {
+      fallbackService.recordDualBackendFailure();
+    }
+
+    final api = BackendApiService();
+    api.setPreferredWalletAddress(selfWallet);
+
+    final result = await api.getCollections(limit: 10);
+
+    expect(fallbackService.mode, AppRuntimeMode.ipfsFallback);
+    expect(result, hasLength(1));
+    expect(result.single['id'], 'self-collection');
   });
 }

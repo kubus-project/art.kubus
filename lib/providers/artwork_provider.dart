@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../config/config.dart';
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -22,7 +23,8 @@ class ArtworkProvider extends ChangeNotifier {
   String? _error;
   SavedItemsProvider? _savedItemsProvider;
   final ArtworkBackendApi _backendApi;
-  final Map<String, Future<Artwork>> _inFlightArtworkFetches = <String, Future<Artwork>>{};
+  final Map<String, Future<Artwork>> _inFlightArtworkFetches =
+      <String, Future<Artwork>>{};
   static const String _viewHistoryPrefsKey = 'artwork_view_history_v1';
   final List<ViewHistoryEntry> _viewHistory = <ViewHistoryEntry>[];
   bool _historyLoaded = false;
@@ -32,7 +34,7 @@ class ArtworkProvider extends ChangeNotifier {
 
   List<Artwork> get artworks => List.unmodifiable(_artworks);
   String? get error => _error;
-  
+
   bool isLoading(String operation) => _loadingStates[operation] ?? false;
 
   /// Set SavedItemsProvider reference
@@ -117,7 +119,9 @@ class ArtworkProvider extends ChangeNotifier {
   List<Artwork> get userArtworks {
     // For now, return discovered and favorite artworks as user's collection
     // In a real app, this would filter by creator/owner ID
-    return _artworks.where((artwork) => artwork.isDiscovered || artwork.isFavorite).toList();
+    return _artworks
+        .where((artwork) => artwork.isDiscovered || artwork.isFavorite)
+        .toList();
   }
 
   /// Get artworks by category
@@ -187,17 +191,17 @@ class ArtworkProvider extends ChangeNotifier {
         modelUrl = uploadResult['url'];
       }
 
-        final artwork = Artwork(
-          id: 'artwork_${DateTime.now().millisecondsSinceEpoch}',
-          title: title,
-          artist: artistName,
-          description: description,
-          imageUrl: coverUrl,
-          position: position,
-          status: ArtworkStatus.undiscovered,
-          arEnabled: arEnabled && (modelCid != null || modelUrl != null),
-          rewards: rewards,
-          createdAt: DateTime.now(),
+      final artwork = Artwork(
+        id: 'artwork_${DateTime.now().millisecondsSinceEpoch}',
+        title: title,
+        artist: artistName,
+        description: description,
+        imageUrl: coverUrl,
+        position: position,
+        status: ArtworkStatus.undiscovered,
+        arEnabled: arEnabled && (modelCid != null || modelUrl != null),
+        rewards: rewards,
+        createdAt: DateTime.now(),
         arScale: arEnabled ? modelScale : null,
         model3DCID: modelCid,
         model3DURL: modelUrl,
@@ -262,7 +266,8 @@ class ArtworkProvider extends ChangeNotifier {
     }
   }
 
-  Future<Artwork?> updateArtwork(String artworkId, Map<String, dynamic> updates) async {
+  Future<Artwork?> updateArtwork(
+      String artworkId, Map<String, dynamic> updates) async {
     final id = artworkId.trim();
     if (id.isEmpty) return null;
     final operation = 'update_artwork_$id';
@@ -292,8 +297,8 @@ class ArtworkProvider extends ChangeNotifier {
         final original = artwork;
         final updatedArtwork = artwork.copyWith(
           isLikedByCurrentUser: !artwork.isLikedByCurrentUser,
-          likesCount: artwork.isLikedByCurrentUser 
-              ? artwork.likesCount - 1 
+          likesCount: artwork.isLikedByCurrentUser
+              ? artwork.likesCount - 1
               : artwork.likesCount + 1,
         );
         addOrUpdateArtwork(updatedArtwork);
@@ -338,16 +343,16 @@ class ArtworkProvider extends ChangeNotifier {
       final artwork = getArtworkById(artworkId);
       if (artwork != null) {
         final isAddingToFavorites = !artwork.isFavoriteByCurrentUser;
-        final newStatus = artwork.isFavorite 
-            ? ArtworkStatus.discovered 
+        final newStatus = artwork.isFavorite
+            ? ArtworkStatus.discovered
             : ArtworkStatus.favorite;
-        
+
         final updatedArtwork = artwork.copyWith(
           status: newStatus,
           isFavoriteByCurrentUser: !artwork.isFavoriteByCurrentUser,
         );
         addOrUpdateArtwork(updatedArtwork);
-        
+
         // Sync with SavedItemsProvider
         if (_savedItemsProvider != null) {
           await _savedItemsProvider!.toggleArtworkSaved(artworkId);
@@ -359,6 +364,20 @@ class ArtworkProvider extends ChangeNotifier {
             artworkTitle: artwork.title,
             artistName: artwork.artist,
           );
+        }
+
+        try {
+          if (isAddingToFavorites) {
+            await _backendApi.bookmarkArtwork(artworkId);
+          } else {
+            await _backendApi.unbookmarkArtwork(artworkId);
+          }
+        } catch (e) {
+          if (AppConfig.enableDebugPrints) {
+            AppConfig.debugPrint(
+              'ArtworkProvider.toggleFavorite: bookmark sync failed, keeping local state: $e',
+            );
+          }
         }
       }
     } catch (e) {
@@ -380,15 +399,17 @@ class ArtworkProvider extends ChangeNotifier {
           discoveryCount: artwork.discoveryCount + 1,
         );
         addOrUpdateArtwork(updatedArtwork);
-        
+
         // Auto-save discovered artwork
-        if (_savedItemsProvider != null && !_savedItemsProvider!.isArtworkSaved(artworkId)) {
+        if (_savedItemsProvider != null &&
+            !_savedItemsProvider!.isArtworkSaved(artworkId)) {
           await _savedItemsProvider!.toggleArtworkSaved(artworkId);
         }
-        
+
         // Sync with backend and reconcile server discovery count.
         try {
-          final serverCount = await _backendApi.discoverArtworkWithCount(artworkId);
+          final serverCount =
+              await _backendApi.discoverArtworkWithCount(artworkId);
           if (serverCount != null) {
             final latest = getArtworkById(artworkId);
             if (latest != null) {
@@ -418,7 +439,7 @@ class ArtworkProvider extends ChangeNotifier {
         );
         addOrUpdateArtwork(updatedArtwork);
         await _recordViewHistory(updatedArtwork);
-        
+
         // Sync with backend and reconcile server count (deduplicates per day for authed users).
         final serverViews = await _backendApi.recordArtworkView(artworkId);
         if (serverViews != null) {
@@ -443,10 +464,12 @@ class ArtworkProvider extends ChangeNotifier {
     _commentLoadErrors[artworkId] = null;
     _setLoading(operation, true);
     try {
-      final fetched = await _backendApi.getArtworkComments(artworkId: artworkId, page: 1, limit: 100);
+      final fetched = await _backendApi.getArtworkComments(
+          artworkId: artworkId, page: 1, limit: 100);
       // Keep ordering consistent with Community comments: oldest-first so threads read naturally.
       // Backend provides an ORDER BY, but sort defensively to keep behavior stable.
-      final sorted = [...fetched]..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      final sorted = [...fetched]
+        ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
       final nested = _nestArtworkComments(sorted);
       _comments[artworkId] = nested;
 
@@ -471,7 +494,8 @@ class ArtworkProvider extends ChangeNotifier {
   }
 
   String? commentLoadError(String artworkId) => _commentLoadErrors[artworkId];
-  String? commentSubmitError(String artworkId) => _commentSubmitErrors[artworkId];
+  String? commentSubmitError(String artworkId) =>
+      _commentSubmitErrors[artworkId];
 
   /// Add a comment to an artwork.
   ///
@@ -512,7 +536,9 @@ class ArtworkProvider extends ChangeNotifier {
 
       final optimistic = target.copyWith(
         isLikedByCurrentUser: !target.isLikedByCurrentUser,
-        likesCount: target.isLikedByCurrentUser ? target.likesCount - 1 : target.likesCount + 1,
+        likesCount: target.isLikedByCurrentUser
+            ? target.likesCount - 1
+            : target.likesCount + 1,
       );
 
       _comments[artworkId] = _updateArtworkCommentById(
@@ -559,7 +585,8 @@ class ArtworkProvider extends ChangeNotifier {
     _commentSubmitErrors[artworkId] = null;
     _setLoading(operation, true);
     try {
-      await _backendApi.editArtworkComment(commentId: commentId, content: content);
+      await _backendApi.editArtworkComment(
+          commentId: commentId, content: content);
       await loadComments(artworkId, force: true);
     } catch (e) {
       _commentSubmitErrors[artworkId] = 'Failed to edit comment: $e';
@@ -624,7 +651,8 @@ class ArtworkProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> loadArtworksForWallet(String walletAddress, {bool force = false}) async {
+  Future<void> loadArtworksForWallet(String walletAddress,
+      {bool force = false}) async {
     if (walletAddress.isEmpty) return;
     final cacheKey = walletAddress.toLowerCase();
     if (!force && _walletsWithPrivateArtworks.contains(cacheKey)) {
@@ -693,7 +721,8 @@ class ArtworkProvider extends ChangeNotifier {
     }
   }
 
-  List<ViewHistoryEntry> get viewHistoryEntries => List.unmodifiable(_viewHistory);
+  List<ViewHistoryEntry> get viewHistoryEntries =>
+      List.unmodifiable(_viewHistory);
 
   List<Artwork> getViewHistoryArtworks() {
     return _viewHistory
@@ -766,7 +795,9 @@ class ArtworkProvider extends ChangeNotifier {
 
     for (final c in byId.values) {
       final parentId = c.parentCommentId;
-      if (parentId != null && parentId.isNotEmpty && byId.containsKey(parentId)) {
+      if (parentId != null &&
+          parentId.isNotEmpty &&
+          byId.containsKey(parentId)) {
         final parent = byId[parentId]!;
         byId[parentId] = parent.copyWith(replies: [...parent.replies, c]);
       } else {
@@ -793,7 +824,8 @@ class ArtworkProvider extends ChangeNotifier {
     return total;
   }
 
-  ArtworkComment? _findArtworkCommentById(List<ArtworkComment> roots, String commentId) {
+  ArtworkComment? _findArtworkCommentById(
+      List<ArtworkComment> roots, String commentId) {
     for (final c in roots) {
       if (c.id == commentId) return c;
       final hit = _findArtworkCommentById(c.replies, commentId);
@@ -811,7 +843,9 @@ class ArtworkProvider extends ChangeNotifier {
       final updatedReplies = c.replies.isEmpty
           ? c.replies
           : _updateArtworkCommentById(c.replies, commentId, updater);
-      final withReplies = (updatedReplies == c.replies) ? c : c.copyWith(replies: updatedReplies);
+      final withReplies = (updatedReplies == c.replies)
+          ? c
+          : c.copyWith(replies: updatedReplies);
       if (withReplies.id == commentId) {
         return updater(withReplies);
       }
@@ -842,7 +876,8 @@ class ViewHistoryEntry {
   factory ViewHistoryEntry.fromJson(Map<String, dynamic> json) {
     return ViewHistoryEntry(
       artworkId: json['artworkId']?.toString() ?? '',
-      viewedAt: DateTime.tryParse(json['viewedAt']?.toString() ?? '') ?? DateTime.now(),
+      viewedAt: DateTime.tryParse(json['viewedAt']?.toString() ?? '') ??
+          DateTime.now(),
       markerId: json['markerId']?.toString(),
     );
   }

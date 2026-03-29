@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../models/recent_activity.dart';
+import '../../../providers/app_mode_provider.dart';
 import '../../../providers/recent_activity_provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../utils/design_tokens.dart';
+import '../../../widgets/app_mode_unavailable_state.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 import '../../../widgets/glass_components.dart';
 import '../../../widgets/recent_activity_tile.dart';
@@ -36,7 +38,9 @@ class DesktopNotificationsPanel extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final appModeProvider = context.watch<AppModeProvider?>();
     final l10n = AppLocalizations.of(context)!;
+    final isIpfsFallbackMode = appModeProvider?.isIpfsFallbackMode ?? false;
     final glassStyle = KubusGlassStyle.resolve(
       context,
       surfaceType: KubusGlassSurfaceType.panelBackground,
@@ -91,7 +95,9 @@ class DesktopNotificationsPanel extends StatelessWidget {
                   const SizedBox(width: KubusSpacing.sm),
                   TopBarIcon(
                     tooltip: l10n.commonRefresh,
-                    onPressed: () => unawaited(onRefresh()),
+                    onPressed: isIpfsFallbackMode
+                        ? null
+                        : () => unawaited(onRefresh()),
                     icon: Icon(
                       Icons.refresh,
                       color: scheme.onSurface.withValues(alpha: 0.82),
@@ -100,8 +106,9 @@ class DesktopNotificationsPanel extends StatelessWidget {
                   const SizedBox(width: KubusSpacing.xs),
                   TopBarIcon(
                     tooltip: l10n.homeMarkAllReadButton,
-                    onPressed:
-                        hasUnread ? () => unawaited(onMarkAllRead()) : null,
+                    onPressed: isIpfsFallbackMode
+                        ? null
+                        : (hasUnread ? () => unawaited(onMarkAllRead()) : null),
                     icon: Icon(
                       Icons.done_all_outlined,
                       color: hasUnread
@@ -125,7 +132,17 @@ class DesktopNotificationsPanel extends StatelessWidget {
               height: 1,
               color: scheme.outline.withValues(alpha: 0.20),
             ),
-            Expanded(
+            if (isIpfsFallbackMode)
+              const Expanded(
+                child: AppModeUnavailableState(
+                  featureLabel: 'Notifications',
+                  title: 'Notifications unavailable',
+                  icon: Icons.notifications_off_outlined,
+                  padding: EdgeInsets.all(KubusSpacing.lg),
+                ),
+              )
+            else
+              Expanded(
               child: Consumer<RecentActivityProvider>(
                 builder: (context, activityProvider, _) {
                   final activities = unreadOnly

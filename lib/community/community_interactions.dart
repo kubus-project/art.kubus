@@ -291,7 +291,7 @@ class CommunityService {
   static const String _viewsKey = 'community_views';
 
   // Like/Unlike post (with backend sync)
-    static Future<void> togglePostLike(CommunityPost post,
+  static Future<void> togglePostLike(CommunityPost post,
       {String? currentUserId,
       String? currentUserName,
       String? currentUserWallet,
@@ -626,7 +626,8 @@ class CommunityService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final reports = prefs.getStringList('reported_posts') ?? [];
-      final reportData = '${post.id}|$reason|${DateTime.now().millisecondsSinceEpoch}';
+      final reportData =
+          '${post.id}|$reason|${DateTime.now().millisecondsSinceEpoch}';
       if (!reports.contains(reportData)) {
         reports.add(reportData);
         await prefs.setStringList('reported_posts', reports);
@@ -639,7 +640,8 @@ class CommunityService {
   }
 
   // Report user (community moderation)
-  static Future<void> reportUser(String walletAddress, String reason, {String? details}) async {
+  static Future<void> reportUser(String walletAddress, String reason,
+      {String? details}) async {
     if (!AppConfig.enableReporting) return;
 
     final backendApi = BackendApiService();
@@ -652,9 +654,12 @@ class CommunityService {
   }
 
   // Bookmark/Unbookmark post
-  static Future<void> toggleBookmark(CommunityPost post, {bool trackUserAction = true}) async {
+  static Future<void> toggleBookmark(CommunityPost post,
+      {bool trackUserAction = true}) async {
     final prefs = await SharedPreferences.getInstance();
     final bookmarkedPosts = prefs.getStringList(_bookmarksKey) ?? [];
+    final backendApi = BackendApiService();
+    final wasBookmarked = post.isBookmarked;
 
     if (post.isBookmarked) {
       // Remove bookmark
@@ -678,6 +683,19 @@ class CommunityService {
     if (AppConfig.enableDebugPrints) {
       debugPrint(
           'Post ${post.id} ${post.isBookmarked ? "bookmarked" : "unbookmarked"}');
+    }
+
+    try {
+      if (wasBookmarked) {
+        await backendApi.unbookmarkPost(post.id);
+      } else {
+        await backendApi.bookmarkPost(post.id);
+      }
+    } catch (e) {
+      if (AppConfig.enableDebugPrints) {
+        debugPrint(
+            'CommunityService.toggleBookmark: backend sync failed, keeping local state: $e');
+      }
     }
   }
 

@@ -72,16 +72,36 @@ class StorageConfig {
 
     // IPFS: handle ipfs://CID, ipfs/CID, or /ipfs/CID variants
     if (url.startsWith('ipfs://')) {
-      final cid = url.replaceFirst('ipfs://', '').replaceFirst(RegExp(r'^ipfs/'), '');
+      final cid =
+          url.replaceFirst('ipfs://', '').replaceFirst(RegExp(r'^ipfs/'), '');
       return _ipfsGatewayFor(cid);
     }
     if (url.startsWith('/ipfs/') || url.startsWith('ipfs/')) {
-      final cid = url.split('/ipfs/').last.replaceFirst(RegExp(r'^ipfs/'), '');
+      final cid =
+          url.split('/ipfs/').last.replaceFirst(RegExp(r'^ipfs/'), '');
       return _ipfsGatewayFor(cid);
     }
     if (url.contains('/ipfs/') && !url.startsWith('http')) {
-      final cid = url.split('/ipfs/').last.replaceFirst(RegExp(r'^ipfs/'), '');
+      final cid =
+          url.split('/ipfs/').last.replaceFirst(RegExp(r'^ipfs/'), '');
       return _ipfsGatewayFor(cid);
+    }
+
+    // IPNS: handle ipns://domain/path, /ipns/domain/path, or ipns/domain/path.
+    if (url.startsWith('ipns://')) {
+      final path =
+          url.replaceFirst('ipns://', '').replaceFirst(RegExp(r'^ipns/'), '');
+      return _ipnsGatewayFor(path);
+    }
+    if (url.startsWith('/ipns/') || url.startsWith('ipns/')) {
+      final path =
+          url.split('/ipns/').last.replaceFirst(RegExp(r'^ipns/'), '');
+      return _ipnsGatewayFor(path);
+    }
+    if (url.contains('/ipns/') && !url.startsWith('http')) {
+      final path =
+          url.split('/ipns/').last.replaceFirst(RegExp(r'^ipns/'), '');
+      return _ipnsGatewayFor(path);
     }
 
     // Already absolute HTTP(S)
@@ -143,6 +163,14 @@ class StorageConfig {
     return '$normalizedGateway$cid';
   }
 
+  static String _ipnsGatewayFor(String path) {
+    final gateways = activeIpfsGateways;
+    final gateway = gateways.isNotEmpty ? gateways.first : '';
+    final normalizedGateway = _normalizeIpnsGateway(gateway);
+    final normalizedPath = _normalizeMutablePath(path);
+    return '$normalizedGateway$normalizedPath';
+  }
+
   static String _normalizeBaseUrl(String url) {
     if (url.isEmpty) return url;
     return url.endsWith('/') ? url.substring(0, url.length - 1) : url;
@@ -154,6 +182,30 @@ class StorageConfig {
     if (!g.endsWith('/')) g = '$g/';
     if (!g.contains('/ipfs/')) g = '${g}ipfs/';
     return g;
+  }
+
+  static String _normalizeIpnsGateway(String gateway) {
+    var g = gateway.trim();
+    if (g.isEmpty) return g;
+    if (!g.endsWith('/')) g = '$g/';
+    if (g.contains('/ipfs/')) {
+      return g.replaceFirst('/ipfs/', '/ipns/');
+    }
+    if (!g.contains('/ipns/')) {
+      g = '${g}ipns/';
+    }
+    return g;
+  }
+
+  static String _normalizeMutablePath(String path) {
+    var normalized = path.trim();
+    while (normalized.startsWith('/')) {
+      normalized = normalized.substring(1);
+    }
+    if (normalized.startsWith('ipns/')) {
+      normalized = normalized.substring('ipns/'.length);
+    }
+    return normalized;
   }
 
   static String _selectGateway(String rawGateway) {

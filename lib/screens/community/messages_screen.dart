@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/cache_provider.dart';
+import '../../providers/app_mode_provider.dart';
 import '../../services/user_service.dart';
 import '../../services/backend_api_service.dart';
 import '../../models/user.dart';
@@ -15,6 +16,7 @@ import '../../widgets/avatar_widget.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/user_activity_status_line.dart';
+import '../../widgets/app_mode_unavailable_state.dart';
 import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/topbar_icon.dart';
 import 'package:file_picker/file_picker.dart';
@@ -555,6 +557,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final appModeProvider = context.watch<AppModeProvider?>();
+    final isIpfsFallbackMode = appModeProvider?.isIpfsFallbackMode ?? false;
     return AnimatedGradientBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -582,7 +586,13 @@ class _MessagesScreenState extends State<MessagesScreen> {
             compact: true,
           ),
         ),
-        body: Consumer<ChatProvider>(builder: (context, cp, _) {
+        body: isIpfsFallbackMode
+            ? const AppModeUnavailableState(
+                featureLabel: 'Messages',
+                title: 'Messages unavailable',
+                icon: Icons.chat_bubble_outline,
+              )
+            : Consumer<ChatProvider>(builder: (context, cp, _) {
           final convs = cp.conversations;
           if (convs.isEmpty) {
             return Center(

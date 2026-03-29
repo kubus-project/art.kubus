@@ -177,6 +177,40 @@ class AppConfig {
         isDevelopment ? 'https://api.kubus.site' : 'https://api.kubus.site',
   );
 
+  /// Standby API endpoint used during primary backend failover.
+  static const String standbyApiUrl = String.fromEnvironment(
+    'BACKEND_STANDBY_BASE_URL',
+    defaultValue: 'https://bapi.kubus.site',
+  );
+
+  /// Mutable public snapshot registry pointer resolved through DNSLink/IPNS.
+  static const String publicSnapshotRegistryUrl = String.fromEnvironment(
+    'PUBLIC_SNAPSHOT_REGISTRY_URL',
+    defaultValue: 'ipns://public.kubus.site/public-index.json',
+  );
+
+  /// Consecutive dual-backend failures required before the app enters
+  /// IPFS-backed public snapshot mode.
+  static const int backendOutageFailureThreshold = int.fromEnvironment(
+    'BACKEND_OUTAGE_FAILURE_THRESHOLD',
+    defaultValue: 3,
+  );
+
+  /// Consecutive successful checks against either backend required before the
+  /// app exits IPFS fallback mode.
+  static const int backendRecoverySuccessThreshold = int.fromEnvironment(
+    'BACKEND_RECOVERY_SUCCESS_THRESHOLD',
+    defaultValue: 2,
+  );
+
+  /// Health probe cadence for backend mode detection.
+  static const Duration backendModeHealthCheckInterval = Duration(
+    milliseconds: int.fromEnvironment(
+      'BACKEND_MODE_HEALTH_CHECK_INTERVAL_MS',
+      defaultValue: 15000,
+    ),
+  );
+
   /// Canonical app base URL used for share links (web + deep links).
   ///
   /// Example: https://app.kubus.site
@@ -441,9 +475,9 @@ class AppConfig {
 /// App version and build information
 class AppInfo {
   static const String appName = 'art.kubus';
-  static const String version = '0.5.1';
-  static const int buildNumber = 2603283;
-  static const String buildDate = '2026-03-28';
+  static const String version = '0.5.2';
+  static const int buildNumber = 2603291;
+  static const String buildDate = '2026-03-29';
 
   /// Get full version string
   static String get fullVersion => '$version+$buildNumber';

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../config/config.dart';
 import '../providers/app_refresh_provider.dart';
+import '../providers/app_mode_provider.dart';
 import '../providers/artwork_provider.dart';
 import '../providers/cache_provider.dart';
 import '../providers/chat_provider.dart';
@@ -41,6 +42,7 @@ class AppBootstrapService {
     String? walletAddress,
   }) async {
     final backend = BackendApiService();
+    final appModeProvider = context.read<AppModeProvider>();
 
     // Providers
     final artworkProvider = context.read<ArtworkProvider>();
@@ -64,6 +66,7 @@ class AppBootstrapService {
     final markerManagementProvider = context.read<MarkerManagementProvider>();
 
     await _runTask('wallet_init', walletProvider.initialize);
+    await _runTask('app_mode', appModeProvider.initialize);
 
     final resolvedWallet = (walletAddress ?? '').trim().isNotEmpty
         ? walletAddress!.trim()
@@ -78,6 +81,7 @@ class AppBootstrapService {
     final shouldLoadCommunity = AppConfig.enableUserProfiles;
 
     final p0 = <Future<void>>[
+      _runTask('app_mode_refresh', appModeProvider.refreshMode),
       _runTask('cache', cacheProvider.initialize),
       _runTask('saved_items', savedItemsProvider.initialize),
       _runTask('navigation', navigationProvider.initialize),

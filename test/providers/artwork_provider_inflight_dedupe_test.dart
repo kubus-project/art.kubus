@@ -51,6 +51,12 @@ class _FakeArtworkApi implements ArtworkBackendApi {
   Future<int?> discoverArtworkWithCount(String artworkId) => throw UnimplementedError();
 
   @override
+  Future<void> bookmarkArtwork(String artworkId) => throw UnimplementedError();
+
+  @override
+  Future<void> unbookmarkArtwork(String artworkId) => throw UnimplementedError();
+
+  @override
   Future<int?> recordArtworkView(String artworkId) => throw UnimplementedError();
 
   @override

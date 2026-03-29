@@ -11,6 +11,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../community/community_interactions.dart';
 import '../../models/community_group.dart';
 import '../../models/community_subject.dart';
+import '../../providers/app_mode_provider.dart';
 import '../../providers/community_subject_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/community_hub_provider.dart';
@@ -376,10 +377,21 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     if (_posting) return;
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
+    final appModeProvider =
+        Provider.of<AppModeProvider?>(context, listen: false);
     final content = _composerController.text.trim();
     if (content.isEmpty) {
       messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.communityComposerAddContentToast)));
+      return;
+    }
+    if (appModeProvider?.isIpfsFallbackMode ?? false) {
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content:
+              Text(appModeProvider!.unavailableMessageFor('Posting')),
+        ),
+      );
       return;
     }
 

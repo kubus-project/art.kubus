@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/providers/app_mode_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
@@ -8,6 +9,7 @@ import 'package:art_kubus/utils/auth_password_policy.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/widgets/app_logo.dart';
+import 'package:art_kubus/widgets/app_mode_unavailable_state.dart';
 import 'package:art_kubus/widgets/email_registration_form.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
@@ -488,8 +490,10 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final appModeProvider = context.watch<AppModeProvider?>();
     final scheme = Theme.of(context).colorScheme;
     final roles = KubusColorRoles.of(context);
+    final isIpfsFallbackMode = appModeProvider?.isIpfsFallbackMode ?? false;
 
     final bgStart = scheme.primary.withValues(alpha: 0.55);
     final bgEnd = roles.statTeal.withValues(alpha: 0.48);
@@ -498,7 +502,13 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
     final bgColors = <Color>[bgStart, bgMid, bgEnd, bgStart];
 
     final Widget body;
-    if (_verificationSent) {
+    if (isIpfsFallbackMode) {
+      body = const AppModeUnavailableState(
+        featureLabel: 'Secure account setup',
+        title: 'Secure account unavailable',
+        icon: Icons.security_outlined,
+      );
+    } else if (_verificationSent) {
       body = _buildSuccessState(l10n: l10n, scheme: scheme);
     } else if (_mode == _SecureAccountMode.loading) {
       body = const Center(child: CircularProgressIndicator());

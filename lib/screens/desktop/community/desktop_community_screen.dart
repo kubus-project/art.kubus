@@ -12,6 +12,7 @@ import '../../../providers/profile_provider.dart';
 import '../../../providers/community_hub_provider.dart';
 import '../../../providers/chat_provider.dart';
 import '../../../providers/wallet_provider.dart';
+import '../../../providers/app_mode_provider.dart';
 import '../../../providers/app_refresh_provider.dart';
 import '../../../providers/community_subject_provider.dart';
 import '../../../community/community_interactions.dart';
@@ -5251,6 +5252,19 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
   Future<void> _submitInlinePost() async {
     if (_composeController.text.trim().isEmpty) return;
+    final appModeProvider =
+        Provider.of<AppModeProvider?>(context, listen: false);
+    if (appModeProvider?.isIpfsFallbackMode ?? false) {
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(
+          content:
+              Text(appModeProvider!.unavailableMessageFor('Posting')),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      return;
+    }
 
     setState(() => _isPosting = true);
 
@@ -7021,6 +7035,19 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     if (rawContent.isEmpty && _selectedImages.isEmpty) return;
 
     final l10n = AppLocalizations.of(context)!;
+    final appModeProvider =
+        Provider.of<AppModeProvider?>(context, listen: false);
+    if (appModeProvider?.isIpfsFallbackMode ?? false) {
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(
+          content:
+              Text(appModeProvider!.unavailableMessageFor('Posting')),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
     setState(() => _isPosting = true);
 
     try {

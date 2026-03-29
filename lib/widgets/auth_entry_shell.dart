@@ -78,9 +78,7 @@ class AuthEntryShell extends StatelessWidget {
                       vertical: isDesktop ? KubusSpacing.lg : KubusSpacing.md,
                     ),
                     child: Align(
-                      alignment: isDesktop
-                          ? const Alignment(0, -0.16)
-                          : Alignment.center,
+                      alignment: Alignment.center,
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 1180),
                         child: Column(

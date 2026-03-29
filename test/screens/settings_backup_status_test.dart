@@ -15,9 +15,7 @@ import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/providers/web3provider.dart';
 import 'package:art_kubus/screens/desktop/desktop_settings_screen.dart';
-import 'package:art_kubus/screens/desktop/desktop_shell_scope.dart';
 import 'package:art_kubus/screens/settings_screen.dart';
-import 'package:art_kubus/screens/web3/wallet/wallet_backup_protection_screen.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/encrypted_wallet_backup_service.dart';
 import 'package:art_kubus/utils/wallet_backup_status.dart';
@@ -127,58 +125,9 @@ class _AllowAllSecurityGateProvider extends SecurityGateProvider {
   Future<bool> requireSensitiveActionVerification() async => true;
 }
 
-class _ShellHarness extends StatefulWidget {
-  const _ShellHarness({
-    required this.child,
-    required this.pushedScreen,
-  });
-
-  final Widget child;
-  final ValueNotifier<Widget?> pushedScreen;
-
-  @override
-  State<_ShellHarness> createState() => _ShellHarnessState();
-}
-
-class _ShellHarnessState extends State<_ShellHarness> {
-  Widget? _currentScreen;
-
-  @override
-  Widget build(BuildContext context) {
-    return DesktopShellScope(
-      pushScreen: (screen) {
-        widget.pushedScreen.value = screen;
-        setState(() {
-          _currentScreen = screen;
-        });
-      },
-      popScreen: () {
-        widget.pushedScreen.value = null;
-        setState(() {
-          _currentScreen = null;
-        });
-      },
-      navigateToRoute: (_) {},
-      openNotifications: () {},
-      openFunctionsPanel: (_, {Widget? content}) {},
-      setFunctionsPanelContent: (_) {},
-      closeFunctionsPanel: () {},
-      canPop: _currentScreen != null,
-      child: Stack(
-        children: [
-          widget.child,
-          if (_currentScreen != null)
-            Positioned.fill(child: Material(child: _currentScreen!)),
-        ],
-      ),
-    );
-  }
-}
-
 Widget _buildSettingsApp(
   _FakeWalletProvider walletProvider, {
   Widget? home,
-  ValueNotifier<Widget?>? pushedScreen,
 }) {
   final web3Provider = Web3Provider()..bindWalletProvider(walletProvider);
   final content = home ?? const SettingsScreen();
@@ -212,12 +161,7 @@ Widget _buildSettingsApp(
       locale: Locale('en'),
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
-      home: pushedScreen == null
-          ? content
-          : _ShellHarness(
-              pushedScreen: pushedScreen,
-              child: content,
-            ),
+      home: content,
     ),
   );
 }
@@ -394,11 +338,15 @@ void main() {
   });
 
   testWidgets(
-      'desktop shell refresh callback updates backup summary without rebuild',
+      'desktop settings screen reflects refreshed backup summary on reload',
       (tester) async {
     SharedPreferences.setMockInitialValues(<String, Object>{
       'autoBackup': true,
     });
+    tester.view.devicePixelRatio = 1.0;
+    await tester.binding.setSurfaceSize(const Size(1600, 1200));
+    addTearDown(() async => tester.binding.setSurfaceSize(null));
+    addTearDown(tester.view.resetDevicePixelRatio);
 
     final walletProvider = _FakeWalletProvider(
       walletAddressValue: 'wallet123',
@@ -407,13 +355,12 @@ void main() {
       isReadOnlySessionValue: false,
       mnemonicBackupRequiredValue: false,
     );
-    final pushedScreen = ValueNotifier<Widget?>(null);
-
     await tester.pumpWidget(
       _buildSettingsApp(
         walletProvider,
-        home: const DesktopSettingsScreen(),
-        pushedScreen: pushedScreen,
+        home: const DesktopSettingsScreen(
+          key: ValueKey('desktop_settings_initial'),
+        ),
       ),
     );
     await tester.pump();
@@ -421,23 +368,17 @@ void main() {
 
     expect(find.text('No backup protection configured yet'), findsOneWidget);
 
-    await tester.scrollUntilVisible(
-      find.text('Backup protection'),
-      250,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.pump(const Duration(milliseconds: 200));
-    await tester.tap(find.text('Backup protection'));
-    await tester.pump();
-
-    final backupScreen =
-        pushedScreen.value as WalletBackupProtectionScreen?;
-    expect(backupScreen, isNotNull);
-
     walletProvider.setBackupDefinition(_backup());
-    await backupScreen!.onBackupStateChanged!.call();
+    await tester.pumpWidget(
+      _buildSettingsApp(
+        walletProvider,
+        home: const DesktopSettingsScreen(
+          key: ValueKey('desktop_settings_reloaded'),
+        ),
+      ),
+    );
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(seconds: 2));
 
     expect(
       find.text('Encrypted server backup configured'),

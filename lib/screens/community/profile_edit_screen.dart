@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:path/path.dart' as path;
 import 'package:art_kubus/l10n/app_localizations.dart';
+import '../../providers/app_mode_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/dao_provider.dart';
 import '../../services/backend_api_service.dart';
@@ -16,6 +17,7 @@ import '../../services/event_bus.dart';
 import '../../providers/themeprovider.dart';
 import '../../widgets/inline_loading.dart';
 import '../../utils/media_url_resolver.dart';
+import 'package:art_kubus/widgets/app_mode_unavailable_state.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/common/keyboard_inset_padding.dart';
@@ -628,6 +630,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final l10n = AppLocalizations.of(context)!;
+    final appModeProvider = context.watch<AppModeProvider?>();
+    final isIpfsFallbackMode = appModeProvider?.isIpfsFallbackMode ?? false;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -677,21 +681,28 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             ),
         ],
       ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return KeyboardInsetPadding(
-            child: SingleChildScrollView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: const EdgeInsets.all(KubusSpacing.lg),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight - 48,
-                ),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+      body: isIpfsFallbackMode
+          ? const AppModeUnavailableState(
+              featureLabel: 'Profile editing',
+              title: 'Profile editing unavailable',
+              icon: Icons.person_outline,
+            )
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                return KeyboardInsetPadding(
+                  child: SingleChildScrollView(
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: const EdgeInsets.all(KubusSpacing.lg),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight - 48,
+                      ),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                       // Cover Image section
                       _buildSectionHeader(
                           l10n.commonCoverImage, Icons.panorama),
@@ -1327,14 +1338,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                         ),
                         const SizedBox(height: 32),
                       ],
-                    ],
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
-          );
-        },
-      ),
     );
   }
 

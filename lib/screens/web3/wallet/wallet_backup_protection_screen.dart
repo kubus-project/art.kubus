@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/providers/app_mode_provider.dart';
 import 'package:art_kubus/providers/security_gate_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/web3/wallet/mnemonic_reveal_screen.dart';
@@ -9,6 +10,7 @@ import 'package:art_kubus/services/wallet_backup_passkey_service.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/utils/wallet_backup_status.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
+import 'package:art_kubus/widgets/app_mode_unavailable_state.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/wallet_backup_prompts.dart';
 import 'package:flutter/foundation.dart';
@@ -279,8 +281,10 @@ class _WalletBackupProtectionScreenState
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final appModeProvider = context.watch<AppModeProvider?>();
     final scheme = Theme.of(context).colorScheme;
     final walletProvider = context.watch<WalletProvider>();
+    final isIpfsFallbackMode = appModeProvider?.isIpfsFallbackMode ?? false;
     final walletAddress = walletProvider.currentWalletAddress;
     final backup = walletProvider.encryptedWalletBackupDefinition;
     final hasEncryptedBackup = walletProvider.hasEncryptedWalletBackup;
@@ -307,11 +311,17 @@ class _WalletBackupProtectionScreenState
       appBar: AppBar(
         title: const Text('Protect your web3 wallet'),
       ),
-      body: RefreshIndicator(
-        onRefresh: _refresh,
-        child: ListView(
-          padding: const EdgeInsets.all(KubusSpacing.lg),
-          children: <Widget>[
+      body: isIpfsFallbackMode
+          ? const AppModeUnavailableState(
+              featureLabel: 'Wallet backup',
+              title: 'Wallet backup unavailable',
+              icon: Icons.backup_outlined,
+            )
+          : RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView(
+                padding: const EdgeInsets.all(KubusSpacing.lg),
+                children: <Widget>[
             LiquidGlassCard(
               padding: const EdgeInsets.all(KubusSpacing.lg),
               child: Column(
@@ -469,9 +479,9 @@ class _WalletBackupProtectionScreenState
                 ),
               ),
             ],
-          ],
-        ),
-      ),
+                ],
+              ),
+            ),
     );
   }
 }

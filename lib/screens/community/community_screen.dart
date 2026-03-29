@@ -26,6 +26,7 @@ import '../../widgets/community/community_post_card.dart';
 import '../../widgets/community/community_post_options_sheet.dart';
 import '../../widgets/community/community_subject_picker.dart';
 import 'package:provider/provider.dart';
+import '../../providers/app_mode_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
@@ -5146,6 +5147,8 @@ class _CommunityScreenState extends State<CommunityScreen>
     final messenger = ScaffoldMessenger.of(sheetContext);
     final navigator = Navigator.of(sheetContext);
     final l10n = AppLocalizations.of(sheetContext)!;
+    final appModeProvider =
+        Provider.of<AppModeProvider?>(sheetContext, listen: false);
     var content = _newPostController.text.trim();
     if (content.isEmpty && !_hasSelectedMedia) {
       messenger.showKubusSnackBar(
@@ -5156,6 +5159,15 @@ class _CommunityScreenState extends State<CommunityScreen>
 
     final walletAddress = await _ensureWalletForPosting(sheetContext);
     if (walletAddress == null) return;
+    if (appModeProvider?.isIpfsFallbackMode ?? false) {
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content:
+              Text(appModeProvider!.unavailableMessageFor('Posting')),
+        ),
+      );
+      return;
+    }
 
     setModalState(() => _isPostingNew = true);
 

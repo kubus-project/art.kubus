@@ -56,8 +56,8 @@ class KubusMarkerOverlayCard extends StatelessWidget {
     this.artwork,
     this.distanceText,
     this.description,
-    this.maxPreviewChars = 1200,
-    this.maxPreviewWords = 160,
+    this.maxPreviewChars = 1800,
+    this.maxPreviewWords = 220,
     this.actions = const <MarkerOverlayActionSpec>[],
     this.stackCount = 1,
     this.stackIndex = 0,
@@ -138,8 +138,8 @@ class KubusMarkerOverlayCard extends StatelessWidget {
     final dpr = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
     final cacheWidth = (304 * dpr).clamp(128.0, 960.0).round();
     final hasConstrainedHeight = maxHeight != null && maxHeight!.isFinite;
-    final constrainedImageHeight = KubusSpacing.xl * 2 + KubusSpacing.sm;
-    final unconstrainedImageHeight = KubusSpacing.xl * 2 + KubusSpacing.md;
+    final constrainedImageHeight = KubusSpacing.xl * 3 + KubusSpacing.xxs;
+    final unconstrainedImageHeight = KubusSpacing.xl * 3 + KubusSpacing.sm;
     final imageHeight = hasConstrainedHeight
         ? constrainedImageHeight
         : unconstrainedImageHeight;
@@ -201,10 +201,13 @@ class KubusMarkerOverlayCard extends StatelessWidget {
                         hasConstrainedHeight && previewHeight.isFinite
                             ? math.min(
                                 imageHeight,
-                                math.max(0.0, previewHeight * 0.46),
+                                math.max(
+                                  KubusSpacing.xl * 2.5,
+                                  previewHeight * 0.62,
+                                ),
                               )
                             : imageHeight;
-                    final showImage = constrainedImageHeight >= 48.0;
+                    final showImage = constrainedImageHeight >= 72.0;
 
                     return _CardTapArea(
                       onTap: resolvedCardTap,
@@ -512,28 +515,28 @@ class KubusMarkerOverlayCard extends StatelessWidget {
             ? constraints.maxHeight
             : double.infinity;
 
-        int maxDescriptionLines = isConstrained ? 7 : 12;
+        int maxDescriptionLines = isConstrained ? 10 : 14;
         var showChipsResolved = showChips;
 
-        if (isConstrained && descriptionWordCount >= 105) {
+        if (isConstrained && descriptionWordCount >= 130) {
           showChipsResolved = false;
         }
 
         if (isConstrained && availableHeight.isFinite) {
-          if (availableHeight < 74) {
-            maxDescriptionLines = 1;
-            showChipsResolved = false;
-          } else if (availableHeight < 104) {
+          if (availableHeight < 82) {
             maxDescriptionLines = 2;
             showChipsResolved = false;
-          } else if (availableHeight < 142) {
-            maxDescriptionLines = 3;
-            showChipsResolved = false;
-          } else if (availableHeight < 178) {
+          } else if (availableHeight < 120) {
             maxDescriptionLines = 4;
             showChipsResolved = false;
-          } else if (availableHeight < 214) {
-            maxDescriptionLines = 5;
+          } else if (availableHeight < 158) {
+            maxDescriptionLines = 6;
+            showChipsResolved = false;
+          } else if (availableHeight < 196) {
+            maxDescriptionLines = 8;
+            showChipsResolved = false;
+          } else if (availableHeight < 238) {
+            maxDescriptionLines = 9;
             showChipsResolved = false;
           }
         }

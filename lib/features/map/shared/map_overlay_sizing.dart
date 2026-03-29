@@ -8,12 +8,12 @@ import '../../../utils/design_tokens.dart';
 class MapOverlaySizing {
   const MapOverlaySizing._();
 
-  static const double minCardWidth = 264.0;
-  static const double maxCardWidth = 320.0;
-  static const double preferredCardWidth = 304.0;
-  static const double minCardHeight = 236.0;
-  static const double maxCardHeight = 340.0;
-  static const double fixedCardHeight = 320.0;
+  static const double minCardWidth = 272.0;
+  static const double maxCardWidth = 336.0;
+  static const double preferredCardWidth = 320.0;
+  static const double minCardHeight = 280.0;
+  static const double maxCardHeight = 440.0;
+  static const double fixedCardHeight = 420.0;
 
   static const double defaultHorizontalPadding = KubusSpacing.md;
   static const double defaultVerticalPadding =
@@ -57,7 +57,7 @@ class MapOverlaySizing {
     required double maxCardHeight,
     required bool isCompactWidth,
   }) {
-    final minExpandedHeight = isCompactWidth ? 308.0 : 252.0;
+    final minExpandedHeight = isCompactWidth ? 360.0 : 320.0;
     final raw = math.max(estimatedHeight, minExpandedHeight);
     return raw.clamp(minCardHeight, maxCardHeight).toDouble();
   }
