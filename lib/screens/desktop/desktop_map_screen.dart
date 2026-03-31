@@ -1610,15 +1610,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             top: 0,
             bottom: 0,
             width: 360,
-            child: KubusMapWebPointerInterceptor.wrap(
-              child: Consumer<ArtworkProvider>(
-                builder: (context, artworkProvider, _) {
-                  return _buildRightSidebarContent(
-                    themeProvider,
-                    artworkProvider,
-                  );
-                },
-              ),
+            child: Consumer<ArtworkProvider>(
+              builder: (context, artworkProvider, _) {
+                return _buildRightSidebarContent(
+                  themeProvider,
+                  artworkProvider,
+                );
+              },
             ),
           ),
 
@@ -1943,6 +1941,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
         return KubusSearchOverlayScaffold(
           layout: KubusSearchOverlayLayout.sidePanel,
+          sidePanelSurfaceMode: kIsWeb
+              ? KubusSearchSidePanelSurfaceMode.hostless
+              : KubusSearchSidePanelSurfaceMode.glassHost,
           sidePanelAnimated: true,
           positionAnimationDuration: animationTheme.medium,
           positionAnimationCurve: animationTheme.defaultCurve,
@@ -2934,7 +2935,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       return Semantics(
         label: 'create_marker_sidebar_panel',
         container: true,
-        child: _buildCreateMarkerSidebar(),
+        child: MapOverlayBlocker(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {},
+            child: _buildCreateMarkerSidebar(),
+          ),
+        ),
       );
     }
     // Default: nearby art panel

@@ -52,7 +52,8 @@ class _WebGlassBackdropLayerState extends State<WebGlassBackdropLayer> {
   void didUpdateWidget(covariant WebGlassBackdropLayer oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.blurSigma != widget.blurSigma ||
-        oldWidget.borderRadius != widget.borderRadius) {
+        oldWidget.borderRadius != widget.borderRadius ||
+        oldWidget.backgroundColor != widget.backgroundColor) {
       _applyStyles();
     }
   }

@@ -11,6 +11,11 @@ enum KubusSearchOverlayLayout {
   sidePanel,
 }
 
+enum KubusSearchSidePanelSurfaceMode {
+  glassHost,
+  hostless,
+}
+
 /// Shared scaffold for map search UI and suggestions overlay.
 class KubusSearchOverlayScaffold extends StatelessWidget {
   const KubusSearchOverlayScaffold({
@@ -40,6 +45,7 @@ class KubusSearchOverlayScaffold extends StatelessWidget {
       horizontal: KubusSpacing.md + KubusSpacing.xs,
       vertical: KubusSpacing.md,
     ),
+    this.sidePanelSurfaceMode = KubusSearchSidePanelSurfaceMode.glassHost,
     this.sidePanelRadius = KubusRadius.lg,
     this.sidePanelAnimated = false,
     this.positionAnimationDuration = const Duration(milliseconds: 240),
@@ -74,6 +80,7 @@ class KubusSearchOverlayScaffold extends StatelessWidget {
   final double sectionGap;
 
   final EdgeInsets sidePanelInnerPadding;
+  final KubusSearchSidePanelSurfaceMode sidePanelSurfaceMode;
   final double sidePanelRadius;
   final bool sidePanelAnimated;
   final Duration positionAnimationDuration;
@@ -154,45 +161,59 @@ class KubusSearchOverlayScaffold extends StatelessWidget {
   Widget _buildSidePanel(BuildContext context, double topInset) {
     final scheme = Theme.of(context).colorScheme;
 
-    final panel = MapOverlayBlocker(
-      cursor: SystemMouseCursors.basic,
-      child: buildKubusMapGlassSurface(
-        context: context,
-        kind: KubusMapGlassSurfaceKind.panel,
-        borderRadius: BorderRadius.circular(sidePanelRadius),
-        padding: sidePanelInnerPadding,
-        margin: EdgeInsets.only(
-          left: panelInsets.left,
-          right: panelInsets.right,
-        ),
-        tintBase: scheme.surface,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
           children: [
-            Row(
-              children: [
-                if (leading != null) ...[
-                  leading!,
-                  SizedBox(width: KubusSpacing.xl + KubusSpacing.sm),
-                ],
-                Expanded(child: searchField),
-                if (filterChips != null) ...[
-                  SizedBox(width: KubusSpacing.md + KubusSpacing.xs),
-                  filterChips!,
-                ],
-                if (mapToggle != null) ...[
-                  SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-                  mapToggle!,
-                ],
-              ],
-            ),
-            if (extraContent != null) ...[
-              SizedBox(height: sectionGap),
-              extraContent!,
+            if (leading != null) ...[
+              leading!,
+              SizedBox(width: KubusSpacing.xl + KubusSpacing.sm),
+            ],
+            Expanded(child: searchField),
+            if (filterChips != null) ...[
+              SizedBox(width: KubusSpacing.md + KubusSpacing.xs),
+              filterChips!,
+            ],
+            if (mapToggle != null) ...[
+              SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
+              mapToggle!,
             ],
           ],
         ),
-      ),
+        if (extraContent != null) ...[
+          SizedBox(height: sectionGap),
+          extraContent!,
+        ],
+      ],
+    );
+
+    final panelContent = switch (sidePanelSurfaceMode) {
+      KubusSearchSidePanelSurfaceMode.glassHost => buildKubusMapGlassSurface(
+          context: context,
+          kind: KubusMapGlassSurfaceKind.panel,
+          borderRadius: BorderRadius.circular(sidePanelRadius),
+          padding: sidePanelInnerPadding,
+          margin: EdgeInsets.only(
+            left: panelInsets.left,
+            right: panelInsets.right,
+          ),
+          tintBase: scheme.surface,
+          child: content,
+        ),
+      KubusSearchSidePanelSurfaceMode.hostless => Container(
+          margin: EdgeInsets.only(
+            left: panelInsets.left,
+            right: panelInsets.right,
+          ),
+          padding: sidePanelInnerPadding,
+          child: content,
+        ),
+    };
+
+    final panel = MapOverlayBlocker(
+      cursor: SystemMouseCursors.basic,
+      child: panelContent,
     );
 
     if (!sidePanelAnimated) {

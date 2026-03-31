@@ -140,6 +140,7 @@ class PublicActionOutboxService extends ChangeNotifier {
   int _queuedActionCount = 0;
 
   int get queuedActionCount => _queuedActionCount;
+  AppRuntimeMode get lastSeenMode => _lastSeenMode;
 
   Future<void> initialize() {
     final existing = _initializeFuture;
@@ -363,7 +364,7 @@ class PublicActionOutboxService extends ChangeNotifier {
     _walletService = null;
     _walletAddressResolver = null;
     _queuedActionCount = 0;
-    _lastSeenMode = AppRuntimeMode.live;
+    _lastSeenMode = _fallbackService.mode;
     notifyListeners();
   }
 
@@ -498,9 +499,13 @@ class PublicActionOutboxService extends ChangeNotifier {
 
   void _handleModeChanged() {
     final currentMode = _fallbackService.mode;
+    final modeChanged = _lastSeenMode != currentMode;
     _lastSeenMode = currentMode;
+
     _scheduleFlushIfWritable();
-    notifyListeners();
+    if (modeChanged) {
+      notifyListeners();
+    }
   }
 
   void _scheduleFlushIfWritable() {
