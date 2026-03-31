@@ -1,5 +1,6 @@
 import 'package:art_kubus/widgets/common/kubus_search_overlay_scaffold.dart';
 import 'package:art_kubus/widgets/glass/glass_surface.dart';
+import 'package:art_kubus/widgets/map_overlay_blocker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -7,6 +8,7 @@ Widget _buildSearchOverlay(
   KubusSearchSidePanelSurfaceMode mode, {
   bool animated = false,
   double rightInset = 0,
+  bool showSuggestions = false,
 }) {
   final fieldLink = LayerLink();
 
@@ -27,8 +29,8 @@ Widget _buildSearchOverlay(
               ),
             ),
             searchFieldLink: fieldLink,
-            showSuggestions: false,
-            query: '',
+            showSuggestions: showSuggestions,
+            query: showSuggestions ? 'ma' : '',
             isFetching: false,
             suggestions: const [],
             accentColor: Colors.teal,
@@ -57,6 +59,7 @@ void main() {
 
     expect(find.byKey(const ValueKey<String>('search_field')), findsOneWidget);
     expect(find.byType(GlassSurface), findsOneWidget);
+    expect(find.byType(MapOverlayBlocker), findsOneWidget);
   });
 
   testWidgets('side panel hostless mode removes outer GlassSurface',
@@ -71,10 +74,25 @@ void main() {
 
     expect(find.byKey(const ValueKey<String>('search_field')), findsOneWidget);
     expect(find.byType(GlassSurface), findsNothing);
+    expect(find.byType(MapOverlayBlocker), findsOneWidget);
 
     final animatedPositioned = tester.widget<AnimatedPositioned>(
       find.byType(AnimatedPositioned),
     );
     expect(animatedPositioned.right, 360);
   });
+
+  testWidgets(
+    'side panel with suggestions keeps both panel and suggestions blocked',
+    (tester) async {
+      await tester.pumpWidget(
+        _buildSearchOverlay(
+          KubusSearchSidePanelSurfaceMode.hostless,
+          showSuggestions: true,
+        ),
+      );
+
+      expect(find.byType(MapOverlayBlocker), findsNWidgets(2));
+    },
+  );
 }
