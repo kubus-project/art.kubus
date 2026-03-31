@@ -15,6 +15,7 @@ import '../models/event.dart';
 import '../models/exhibition.dart';
 import '../models/collab_member.dart';
 import '../models/collab_invite.dart';
+import '../models/street_art_claim.dart';
 import '../community/community_interactions.dart';
 import '../utils/wallet_utils.dart';
 import '../utils/search_suggestions.dart';
@@ -151,6 +152,19 @@ abstract class MarkerBackendApi {
   Future<ArtMarker?> updateArtMarkerRecord(
       String markerId, Map<String, dynamic> updates);
   Future<bool> deleteArtMarkerRecord(String markerId);
+  Future<StreetArtClaim> submitStreetArtClaim({
+    required String markerId,
+    required String reason,
+    String? evidenceUrl,
+    String? claimantProfileName,
+  });
+  Future<List<StreetArtClaim>> getStreetArtClaims(String markerId);
+  Future<StreetArtClaim?> reviewStreetArtClaim({
+    required String markerId,
+    required String claimId,
+    required StreetArtClaimReviewAction action,
+    String? note,
+  });
 }
 
 enum AuthSignInMethod {
@@ -2417,6 +2431,7 @@ class BackendApiService
     String? email,
     String? username,
     String? walletAddress,
+    String? displayName,
   }) async {
     try {
       if ((code == null || code.isEmpty) &&
@@ -2442,6 +2457,8 @@ class BackendApiService
         if (username != null && username.isNotEmpty) 'username': username,
         if (walletAddress != null && walletAddress.isNotEmpty)
           'walletAddress': walletAddress,
+        if (displayName != null && displayName.isNotEmpty)
+          'displayName': displayName,
       };
 
       final response = await _post(
@@ -4607,6 +4624,153 @@ class BackendApiService
     } catch (e) {
       AppConfig.debugPrint(
           'BackendApiService.deleteArtMarkerRecord failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Submit a street-art ownership claim for a marker.
+  /// POST /api/art-markers/:id/claims
+  @override
+  Future<StreetArtClaim> submitStreetArtClaim({
+    required String markerId,
+    required String reason,
+    String? evidenceUrl,
+    String? claimantProfileName,
+  }) async {
+    _throwIfIpfsFallbackUnavailable('Street art claims');
+
+    try {
+      await _ensureAuthBeforeRequest();
+      final uri = Uri.parse('$baseUrl/api/art-markers/$markerId/claims');
+      final response = await _post(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode(<String, dynamic>{
+          'reason': reason,
+          if (evidenceUrl != null && evidenceUrl.trim().isNotEmpty)
+            'evidenceUrl': evidenceUrl.trim(),
+          if (claimantProfileName != null &&
+              claimantProfileName.trim().isNotEmpty)
+            'claimantProfileName': claimantProfileName.trim(),
+        }),
+        timeout: const Duration(seconds: 20),
+      );
+
+      if (!_isSuccessStatus(response.statusCode)) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
+      }
+
+      final decoded = _decodeResponseMap(response);
+      final payload = decoded == null
+          ? null
+          : (decoded['data'] ?? decoded['claim'] ?? decoded);
+      if (payload is Map<String, dynamic>) {
+        return StreetArtClaim.fromJson(payload);
+      }
+      if (payload is Map) {
+        return StreetArtClaim.fromJson(Map<String, dynamic>.from(payload));
+      }
+
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: uri.path,
+        body: response.body,
+      );
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.submitStreetArtClaim failed: $e');
+      rethrow;
+    }
+  }
+
+  /// List street-art claims visible to the requester for a marker.
+  /// GET /api/art-markers/:id/claims
+  @override
+  Future<List<StreetArtClaim>> getStreetArtClaims(String markerId) async {
+    try {
+      await _ensureAuthBeforeRequest();
+      final uri = Uri.parse('$baseUrl/api/art-markers/$markerId/claims');
+      final response = await _get(
+        uri,
+        headers: _getHeaders(),
+        timeout: const Duration(seconds: 15),
+      );
+
+      if (!_isSuccessStatus(response.statusCode)) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
+      }
+
+      final decoded = _decodeResponseMap(response);
+      final payload = decoded == null
+          ? null
+          : (decoded['data'] ?? decoded['claims'] ?? decoded['results']);
+      final claimList = payload is List ? payload : const <dynamic>[];
+
+      return claimList
+          .whereType<Map<String, dynamic>>()
+          .map(StreetArtClaim.fromJson)
+          .toList(growable: false);
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.getStreetArtClaims failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Review an existing street-art claim.
+  /// PATCH /api/art-markers/:id/claims/:claimId
+  @override
+  Future<StreetArtClaim?> reviewStreetArtClaim({
+    required String markerId,
+    required String claimId,
+    required StreetArtClaimReviewAction action,
+    String? note,
+  }) async {
+    _throwIfIpfsFallbackUnavailable('Street art claims');
+
+    try {
+      await _ensureAuthBeforeRequest();
+      final uri = Uri.parse(
+        '$baseUrl/api/art-markers/$markerId/claims/$claimId',
+      );
+      final response = await _patch(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode(<String, dynamic>{
+          'action': action.apiValue,
+          if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+        }),
+        timeout: const Duration(seconds: 20),
+      );
+
+      if (!_isSuccessStatus(response.statusCode)) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
+      }
+
+      final decoded = _decodeResponseMap(response);
+      final payload = decoded == null
+          ? null
+          : (decoded['data'] ?? decoded['claim'] ?? decoded);
+      if (payload is Map<String, dynamic>) {
+        return StreetArtClaim.fromJson(payload);
+      }
+      if (payload is Map) {
+        return StreetArtClaim.fromJson(Map<String, dynamic>.from(payload));
+      }
+
+      return null;
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.reviewStreetArtClaim failed: $e');
       rethrow;
     }
   }
@@ -9086,6 +9250,71 @@ class BackendApiService
         await Future.delayed(Duration(seconds: backoff));
       }
     }
+  }
+
+  /// Upload a marker cover image and return the best available storage URL.
+  Future<String?> uploadMarkerCoverImage({
+    required List<int> fileBytes,
+    required String fileName,
+    String fileType = 'image',
+    String? walletAddress,
+    String source = 'map_marker',
+  }) async {
+    if (fileBytes.isEmpty) return null;
+    final safeName = fileName.trim().isEmpty ? 'marker-cover.png' : fileName;
+    // Upload routing expects semantic values (`image`, `video`, ...),
+    // while picker flows may pass MIME strings such as `image/jpeg`.
+    final rawType = fileType.trim().toLowerCase();
+    final normalizedType =
+      rawType.isEmpty || rawType.startsWith('image/') ? 'image' : rawType;
+
+    final upload = await uploadFile(
+      fileBytes: fileBytes,
+      fileName: safeName,
+      fileType: normalizedType,
+      metadata: <String, String>{
+        'entity': 'art_marker',
+        'kind': 'cover',
+        'source': source,
+      },
+      walletAddress: walletAddress,
+    );
+
+    String? valueAsString(dynamic value) {
+      if (value == null) return null;
+      final next = value.toString().trim();
+      return next.isEmpty ? null : next;
+    }
+
+    final primary = valueAsString(upload['uploadedUrl']);
+    if (primary != null) return primary;
+
+    final data = upload['data'];
+    if (data is Map<String, dynamic>) {
+      return valueAsString(
+            data['relativeUrl'] ??
+                data['relative_url'] ??
+                data['url'] ??
+                data['publicPath'] ??
+                data['public_path'] ??
+                data['path'],
+          ) ??
+          primary;
+    }
+    if (data is Map) {
+      final map = Map<String, dynamic>.from(data);
+      return valueAsString(
+            map['relativeUrl'] ??
+                map['relative_url'] ??
+                map['url'] ??
+                map['publicPath'] ??
+                map['public_path'] ??
+                map['path'],
+          ) ??
+          primary;
+    }
+
+    return null;
   }
 
   /// Upload avatar specifically to profile avatars endpoint

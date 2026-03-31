@@ -507,6 +507,55 @@ class ArtMarker {
     return value;
   }
 
+  String? get coverImageUrl {
+    final value = _metadataString(const [
+      'coverImageUrl',
+      'cover_image_url',
+      'coverUrl',
+      'cover_url',
+      'coverImage',
+      'cover_image',
+      'imageUrl',
+      'image_url',
+    ]);
+    if (value == null || value.isEmpty) return null;
+    return value;
+  }
+
+  bool get isCommunityMarker {
+    dynamic readRaw(Map<String, dynamic>? map) {
+      if (map == null) return null;
+      if (map.containsKey('isCommunity')) return map['isCommunity'];
+      if (map.containsKey('is_community')) return map['is_community'];
+      if (map.containsKey('community')) return map['community'];
+      return null;
+    }
+
+    bool parse(dynamic raw) {
+      if (raw is bool) return raw;
+      if (raw is num) return raw != 0;
+      if (raw is String) {
+        final normalized = raw.trim().toLowerCase();
+        return normalized == 'true' ||
+            normalized == '1' ||
+            normalized == 'yes' ||
+            normalized == 'community';
+      }
+      return false;
+    }
+
+    final directRaw = readRaw(metadata);
+    if (directRaw != null) return parse(directRaw);
+
+    final nested = metadata?['metadata'] ?? metadata?['meta'];
+    if (nested is Map) {
+      final nestedRaw = readRaw(Map<String, dynamic>.from(nested));
+      if (nestedRaw != null) return parse(nestedRaw);
+    }
+
+    return false;
+  }
+
   ExhibitionSummaryDto? get resolvedExhibitionSummary {
     final primary = primaryExhibitionSummary;
     if (primary != null && primary.id.trim().isNotEmpty) return primary;

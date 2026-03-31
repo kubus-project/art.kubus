@@ -661,7 +661,10 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
   Future<void> _openProfilePromotionFlow() async {
     final profile = context.read<ProfileProvider>().currentUser;
     final wallet = _resolveWalletAddress(listen: false);
-    final entityId = (profile?.id ?? wallet).trim();
+    final entityId = WalletUtils.coalesce(
+      walletAddress: profile?.walletAddress,
+      wallet: wallet,
+    ).trim();
     if (entityId.isEmpty) return;
 
     await showPromotionBuilderSheet(

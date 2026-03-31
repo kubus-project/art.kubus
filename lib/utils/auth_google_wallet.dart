@@ -57,6 +57,7 @@ Future<Map<String, dynamic>> loginWithGoogleWalletRecovery({
       email: googleResult.email,
       username: null,
       walletAddress: walletAddress,
+      displayName: googleResult.displayName,
     );
   } catch (error) {
     if (!isWalletRequiredForNewGoogleAccount(error)) {
@@ -74,6 +75,7 @@ Future<Map<String, dynamic>> loginWithGoogleWalletRecovery({
       email: googleResult.email,
       username: null,
       walletAddress: provisionedWallet,
+      displayName: googleResult.displayName,
     );
   }
 }

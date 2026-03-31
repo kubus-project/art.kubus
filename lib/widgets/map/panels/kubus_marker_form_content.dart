@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../models/art_marker.dart';
@@ -13,6 +15,7 @@ import '../../../utils/marker_subject_utils.dart';
 import '../../../utils/map_marker_subject_loader.dart';
 import '../../map_marker_dialog.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import '../../creator/creator_kit.dart';
 import '../../glass_components.dart';
 
 /// Reusable stateful form body for creating a map marker.
@@ -69,6 +72,10 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
   Artwork? _selectedArAsset;
   late ArtMarkerType _selectedMarkerType;
   bool _isPublic = true;
+  bool _isCommunity = false;
+  Uint8List? _coverImageBytes;
+  String? _coverImageFileName;
+  String? _coverImageFileType;
 
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -106,6 +113,7 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
     _selectedArAsset =
         _resolveDefaultAsset(_selectedSubjectType, _selectedSubject);
     _selectedMarkerType = _selectedSubjectType.defaultMarkerType;
+    _isCommunity = _isStreetArtSelection();
     _categoryController.text = _selectedSubjectType.defaultCategory;
     _titleController.text = _selectedSubject?.title ?? '';
     _descriptionController.text = _selectedSubject?.subtitle ?? '';
@@ -177,6 +185,16 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
     return null;
   }
 
+  bool _isStreetArtSelection({
+    MarkerSubjectType? subjectType,
+    ArtMarkerType? markerType,
+  }) {
+    final resolvedSubject = subjectType ?? _selectedSubjectType;
+    final resolvedMarker = markerType ?? _selectedMarkerType;
+    return resolvedSubject == MarkerSubjectType.streetArt ||
+        resolvedMarker == ArtMarkerType.streetArt;
+  }
+
   Future<void> _scheduleRefresh({bool force = false}) async {
     if (_refreshScheduled && !force) return;
     _refreshScheduled = true;
@@ -226,6 +244,12 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
     setState(() {
       _selectedSubjectType = type;
       _selectedMarkerType = type.defaultMarkerType;
+      if (_isStreetArtSelection(
+        subjectType: type,
+        markerType: _selectedMarkerType,
+      )) {
+        _isCommunity = true;
+      }
       _categoryController.text = type.defaultCategory;
 
       final options = _subjectOptionsByType[_selectedSubjectType] ?? [];
@@ -233,6 +257,67 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
       _selectedArAsset =
           _resolveDefaultAsset(_selectedSubjectType, _selectedSubject);
     });
+  }
+
+  Future<void> _pickCoverImage() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+
+    final picked = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: true,
+    );
+    if (!mounted) return;
+
+    final file = picked?.files.single;
+    final bytes = file?.bytes;
+    if (bytes == null || bytes.isEmpty) {
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.commonActionFailedToast)),
+      );
+      return;
+    }
+
+    final fallbackFileName = 'street-art-cover.png';
+    final fileName = (file?.name ?? '').trim().isNotEmpty
+        ? file!.name.trim()
+        : fallbackFileName;
+
+    setState(() {
+      _coverImageBytes = bytes;
+      _coverImageFileName = fileName;
+      _coverImageFileType = _resolveImageMimeType(fileName);
+    });
+  }
+
+  void _removeCoverImage() {
+    setState(() {
+      _coverImageBytes = null;
+      _coverImageFileName = null;
+      _coverImageFileType = null;
+    });
+  }
+
+  String _resolveImageMimeType(String fileName) {
+    final lower = fileName.trim().toLowerCase();
+    final dot = lower.lastIndexOf('.');
+    final ext = dot >= 0 ? lower.substring(dot + 1) : '';
+    switch (ext) {
+      case 'png':
+        return 'image/png';
+      case 'webp':
+        return 'image/webp';
+      case 'gif':
+        return 'image/gif';
+      case 'bmp':
+        return 'image/bmp';
+      case 'svg':
+        return 'image/svg+xml';
+      case 'jpg':
+      case 'jpeg':
+      default:
+        return 'image/jpeg';
+    }
   }
 
   @override
@@ -476,6 +561,32 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
               },
             ),
             const SizedBox(height: 12),
+            if (_isStreetArtSelection()) ...[
+              Text(
+                l10n.mapMarkerDialogCoverImageTitle,
+                style: KubusTypography.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: scheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 8),
+              CreatorCoverImagePicker(
+                imageBytes: _coverImageBytes,
+                uploadLabel: l10n.mapMarkerDialogUploadCover,
+                changeLabel: l10n.mapMarkerDialogChangeCover,
+                removeTooltip: l10n.mapMarkerDialogRemoveCoverTooltip,
+                onPick: _pickCoverImage,
+                onRemove: _removeCoverImage,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                l10n.mapMarkerDialogStreetArtCoverRequiredHint,
+                style: KubusTypography.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.72),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             TextFormField(
               controller: _categoryController,
               decoration: InputDecoration(
@@ -523,6 +634,16 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
               ),
               value: _isPublic,
               onChanged: (value) => setState(() => _isPublic = value),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                l10n.mapMarkerCommunityLabel,
+                style: KubusTypography.textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              value: _isCommunity,
+              onChanged: (value) => setState(() => _isCommunity = value),
             ),
             if (widget.allowManualPosition) ...[
               const SizedBox(height: 8),
@@ -637,6 +758,14 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
   void _submit() {
     final l10n = AppLocalizations.of(context)!;
     if (!_formKey.currentState!.validate()) return;
+    if (_isStreetArtSelection() && _coverImageBytes == null) {
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(
+          content: Text(l10n.mapMarkerDialogStreetArtCoverRequiredError),
+        ),
+      );
+      return;
+    }
     if (_subjectSelectionRequired(_selectedSubjectType) &&
         _selectedSubject == null) {
       ScaffoldMessenger.of(context).showKubusSnackBar(
@@ -664,7 +793,11 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
         subject: _selectedSubject,
         linkedArtwork: _selectedArAsset,
         isPublic: _isPublic,
+        isCommunity: _isCommunity,
         positionOverride: manualPosition,
+        coverImageBytes: _coverImageBytes,
+        coverImageFileName: _coverImageFileName,
+        coverImageFileType: _coverImageFileType,
       ),
     );
   }

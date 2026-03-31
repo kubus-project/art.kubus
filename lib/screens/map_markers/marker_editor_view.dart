@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:art_kubus/widgets/glass_components.dart';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
@@ -16,6 +18,8 @@ import '../../models/map_marker_subject.dart';
 import '../../providers/exhibitions_provider.dart';
 import '../../providers/marker_management_provider.dart';
 import '../../providers/tile_providers.dart';
+import '../../providers/wallet_provider.dart';
+import '../../services/backend_api_service.dart';
 import '../../services/storage_config.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/map_marker_subject_loader.dart';
@@ -69,7 +73,12 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
   bool _isPublic = true;
   bool _isActive = true;
   bool _requiresProximity = true;
+  bool _isCommunity = false;
   bool _saving = false;
+  Uint8List? _coverImageBytes;
+  String? _coverImageFileName;
+  String? _coverImageFileType;
+  String? _existingCoverImageUrl;
 
   MarkerSubjectData? _subjectData;
   Map<MarkerSubjectType, List<MarkerSubjectOption>> _subjectOptionsByType =
@@ -108,6 +117,8 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
     _isPublic = marker?.isPublic ?? true;
     _isActive = marker?.isActive ?? true;
     _requiresProximity = marker?.requiresProximity ?? true;
+    _isCommunity = _readCommunityFlag(marker?.metadata);
+    _existingCoverImageUrl = _readCoverImageUrl(marker?.metadata);
 
     _allowedSubjectTypes = Set<MarkerSubjectType>.from(MarkerSubjectType.values);
     _allowedMarkerTypes = Set<ArtMarkerType>.from(ArtMarkerType.values);
@@ -138,6 +149,91 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
 
   bool _validateLatLng(double lat, double lng) =>
       lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+
+  bool _readCommunityFlag(Map<String, dynamic>? metadata) {
+    final raw = metadata?['isCommunity'] ?? metadata?['community'];
+    if (raw is bool) return raw;
+    if (raw is num) return raw != 0;
+    if (raw is String) {
+      final normalized = raw.trim().toLowerCase();
+      return normalized == 'true' ||
+          normalized == '1' ||
+          normalized == 'yes' ||
+          normalized == 'community';
+    }
+    return false;
+  }
+
+  String? _readCoverImageUrl(Map<String, dynamic>? metadata) {
+    final raw = metadata?['coverImageUrl'] ?? metadata?['cover_image_url'];
+    if (raw == null) return null;
+    final value = raw.toString().trim();
+    return value.isEmpty ? null : value;
+  }
+
+  Future<void> _pickCoverImage() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    final picked = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: true,
+    );
+    if (!mounted) return;
+
+    final file = picked?.files.single;
+    final bytes = file?.bytes;
+    if (bytes == null || bytes.isEmpty) {
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.commonActionFailedToast)),
+      );
+      return;
+    }
+
+    final fileName = (file?.name ?? '').trim().isEmpty
+        ? 'street-art-cover.png'
+        : file!.name.trim();
+
+    setState(() {
+      _coverImageBytes = bytes;
+      _coverImageFileName = fileName;
+      _coverImageFileType = _resolveImageMimeType(fileName);
+    });
+  }
+
+  void _clearCoverImageSelection() {
+    setState(() {
+      _coverImageBytes = null;
+      _coverImageFileName = null;
+      _coverImageFileType = null;
+    });
+  }
+
+  String _resolveImageMimeType(String fileName) {
+    final lower = fileName.trim().toLowerCase();
+    final dot = lower.lastIndexOf('.');
+    final ext = dot >= 0 ? lower.substring(dot + 1) : '';
+    switch (ext) {
+      case 'png':
+        return 'image/png';
+      case 'webp':
+        return 'image/webp';
+      case 'gif':
+        return 'image/gif';
+      case 'bmp':
+        return 'image/bmp';
+      case 'svg':
+        return 'image/svg+xml';
+      case 'jpg':
+      case 'jpeg':
+      default:
+        return 'image/jpeg';
+    }
+  }
+
+  bool get _isStreetArtSelection =>
+      _subjectType == MarkerSubjectType.streetArt ||
+      _markerType == ArtMarkerType.streetArt;
 
   void _updatePositionFromFields() {
     final lat = double.tryParse(_latController.text.trim());
@@ -325,6 +421,9 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
           : (_allowedSubjectTypes.contains(MarkerSubjectType.artwork)
             ? MarkerSubjectType.artwork
             : _allowedSubjectTypes.first);
+      if (widget.isNew && _subjectType == MarkerSubjectType.streetArt) {
+        _isCommunity = true;
+      }
 
       final options =
           _subjectOptionsByType[_subjectType] ?? const <MarkerSubjectOption>[];
@@ -430,6 +529,9 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
     setState(() {
       _subjectType = type;
       _markerType = type.defaultMarkerType;
+      if (type == MarkerSubjectType.streetArt) {
+        _isCommunity = true;
+      }
       _categoryController.text = type.defaultCategory;
 
       final options =
@@ -645,6 +747,37 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
       return;
     }
 
+    final isStreetArtMarker = _isStreetArtSelection;
+    final walletAddress = context.read<WalletProvider>().currentWalletAddress;
+    String? coverImageUrl = _existingCoverImageUrl;
+    if (_coverImageBytes != null && _coverImageBytes!.isNotEmpty) {
+      coverImageUrl = await BackendApiService().uploadMarkerCoverImage(
+        fileBytes: _coverImageBytes!,
+        fileName: _coverImageFileName ?? 'street-art-cover.png',
+        fileType: _coverImageFileType ?? 'image',
+        walletAddress: walletAddress,
+        source: widget.isNew ? 'marker_editor_create' : 'marker_editor_update',
+      );
+
+      if (!mounted) return;
+      if (coverImageUrl == null || coverImageUrl.isEmpty) {
+        messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.manageMarkersSaveFailed)),
+        );
+        return;
+      }
+    }
+
+    if (isStreetArtMarker &&
+        (coverImageUrl == null || coverImageUrl.trim().isEmpty)) {
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(l10n.mapMarkerDialogStreetArtCoverRequiredError),
+        ),
+      );
+      return;
+    }
+
     final activationRadius =
         double.tryParse(_activationRadiusController.text.trim()) ?? 50;
     final category = _categoryController.text.trim();
@@ -670,6 +803,12 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
           true) ...{
         'linkedArtworkId': _linkedArtwork?.id ?? _linkedArtworkId,
         if (_linkedArtwork != null) 'linkedArtworkTitle': _linkedArtwork!.title,
+      },
+      if (coverImageUrl != null && coverImageUrl.trim().isNotEmpty)
+        'coverImageUrl': coverImageUrl.trim(),
+      if (_isCommunity) ...{
+        'isCommunity': true,
+        'community': 'community',
       },
       'visibility': _isPublic ? 'public' : 'private',
       if (widget.isNew) 'createdFrom': 'manage_markers',
@@ -1302,6 +1441,24 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                           return null;
                         },
                       ),
+                      if (_isStreetArtSelection) ...[
+                        const CreatorFieldSpacing(),
+                        CreatorCoverImagePicker(
+                          imageBytes: _coverImageBytes,
+                          uploadLabel: l10n.mapMarkerDialogUploadCover,
+                          changeLabel: l10n.mapMarkerDialogChangeCover,
+                          removeTooltip: l10n.mapMarkerDialogRemoveCoverTooltip,
+                          onPick: _pickCoverImage,
+                          onRemove: _clearCoverImageSelection,
+                        ),
+                        const SizedBox(height: KubusSpacing.xs),
+                        Text(
+                          l10n.mapMarkerDialogStreetArtCoverRequiredHint,
+                          style: KubusTextStyles.detailCaption.copyWith(
+                            color: scheme.onSurface.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                   const CreatorSectionSpacing(),
@@ -1369,6 +1526,13 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                         subtitle: l10n.mapMarkerDialogPublicMarkerSubtitle,
                         value: _isPublic,
                         onChanged: (value) => setState(() => _isPublic = value),
+                      ),
+                      const CreatorFieldSpacing(),
+                      CreatorSwitchTile(
+                        title: l10n.mapMarkerCommunityLabel,
+                        value: _isCommunity,
+                        onChanged: (value) =>
+                            setState(() => _isCommunity = value),
                       ),
                       const CreatorFieldSpacing(),
                       CreatorSwitchTile(

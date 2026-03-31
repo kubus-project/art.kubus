@@ -232,6 +232,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
                           ],
                           Expanded(
                             child: _buildBody(
+                              l10n: l10n,
                               baseColor: baseColor,
                               scheme: scheme,
                               artwork: artwork,
@@ -500,6 +501,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
   }
 
   Widget _buildBody({
+    required AppLocalizations l10n,
     required Color baseColor,
     required ColorScheme scheme,
     required Artwork? artwork,
@@ -600,6 +602,13 @@ class KubusMarkerOverlayCard extends StatelessWidget {
                       accent: baseColor,
                       selected: false,
                     ),
+                  if (marker.isCommunityMarker)
+                    _OverlayChip(
+                      label: l10n.mapMarkerCommunityLabel,
+                      icon: Icons.groups_2_outlined,
+                      accent: baseColor,
+                      selected: false,
+                    ),
                   if (artwork != null && artwork.rewards > 0)
                     _OverlayChip(
                       label: '+${artwork.rewards}',
@@ -687,6 +696,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
         marker.metadata?['subject_category'] != null ||
         marker.metadata?['locationName'] != null ||
         marker.metadata?['location'] != null ||
+          marker.isCommunityMarker ||
         (artwork != null && artwork.rewards > 0);
   }
 

@@ -20,6 +20,7 @@ import '../../providers/exhibitions_provider.dart';
 import '../../providers/marker_management_provider.dart';
 import '../../providers/presence_provider.dart';
 import '../../providers/tile_providers.dart';
+import '../../providers/profile_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/attendance_provider.dart';
 import '../../models/artwork.dart';
@@ -61,6 +62,7 @@ import '../../utils/app_color_utils.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/artwork_navigation.dart';
 import '../../utils/media_url_resolver.dart';
+import '../../utils/wallet_utils.dart';
 import 'components/desktop_widgets.dart';
 import 'desktop_shell.dart';
 import 'art/desktop_artwork_detail_screen.dart';
@@ -91,6 +93,7 @@ import '../../widgets/map/controls/kubus_map_primary_controls.dart'
 import '../../widgets/map/cards/kubus_discovery_card.dart';
 import '../../widgets/map/filters/kubus_map_marker_layer_chips.dart';
 import '../../widgets/map/dialogs/kubus_map_attribution_dialog.dart';
+import '../../widgets/map/dialogs/street_art_claims_dialog.dart';
 import '../../widgets/map/kubus_map_glass_surface.dart';
 import '../../widgets/common/kubus_filter_panel.dart';
 import '../../widgets/common/kubus_glass_chip.dart';
@@ -3832,10 +3835,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         .trim();
     final overlayActions = buildMarkerOverlayActions(
       context: context,
+      marker: marker,
       artwork: artwork,
       canPresentExhibition: canPresentExhibition,
       baseColor: baseColor,
       sourceScreen: 'desktop_map_marker',
+      onClaimTap: _canOpenStreetArtClaims(marker)
+          ? () {
+              unawaited(_openStreetArtClaimsDialog(marker));
+            }
+          : null,
     );
 
     final openDetails = canPresentExhibition
@@ -4008,6 +4017,68 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           ),
         );
       },
+    );
+  }
+
+  bool _canOpenStreetArtClaims(ArtMarker marker) {
+    return AppConfig.isFeatureEnabled('streetArtClaims') &&
+        marker.type == ArtMarkerType.streetArt &&
+        marker.isPublic;
+  }
+
+  bool _markerOwnedByCurrentUser(ArtMarker marker) {
+    final wallet = context.read<WalletProvider>().currentWalletAddress;
+    final currentUser = context.read<ProfileProvider>().currentUser;
+    final currentUserId = (currentUser?.id ?? '').trim();
+
+    final metadata = marker.metadata ?? const <String, dynamic>{};
+    final nestedMetadataRaw = metadata['metadata'] ?? metadata['meta'];
+    final nestedMetadata = nestedMetadataRaw is Map
+        ? Map<String, dynamic>.from(
+            nestedMetadataRaw.map(
+              (key, value) => MapEntry(key.toString(), value),
+            ),
+          )
+        : const <String, dynamic>{};
+
+    final ownerCandidates = <String>{
+      marker.createdBy,
+      (metadata['ownerWallet'] ?? '').toString(),
+      (metadata['owner_wallet'] ?? '').toString(),
+      (metadata['walletAddress'] ?? '').toString(),
+      (metadata['wallet_address'] ?? '').toString(),
+      (metadata['createdBy'] ?? '').toString(),
+      (metadata['created_by'] ?? '').toString(),
+      (nestedMetadata['ownerWallet'] ?? '').toString(),
+      (nestedMetadata['owner_wallet'] ?? '').toString(),
+      (nestedMetadata['walletAddress'] ?? '').toString(),
+      (nestedMetadata['wallet_address'] ?? '').toString(),
+      (nestedMetadata['createdBy'] ?? '').toString(),
+      (nestedMetadata['created_by'] ?? '').toString(),
+    };
+
+    for (final candidate in ownerCandidates) {
+      final value = candidate.trim();
+      if (value.isEmpty) continue;
+      if (WalletUtils.equals(value, wallet)) {
+        return true;
+      }
+      if (currentUserId.isNotEmpty && value == currentUserId) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  Future<void> _openStreetArtClaimsDialog(ArtMarker marker) async {
+    if (!_canOpenStreetArtClaims(marker)) return;
+
+    await StreetArtClaimsDialog.show(
+      context: context,
+      marker: marker,
+      isMarkerOwner: _markerOwnedByCurrentUser(marker),
+      canUseDaoReviewActions: false,
     );
   }
 
@@ -4336,6 +4407,31 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     try {
       final exhibitionsProvider = context.read<ExhibitionsProvider>();
       final markerManagementProvider = context.read<MarkerManagementProvider>();
+      final walletAddress = context.read<WalletProvider>().currentWalletAddress;
+      final isStreetArtMarker =
+          form.subjectType == MarkerSubjectType.streetArt ||
+              form.markerType == ArtMarkerType.streetArt;
+
+      String? coverImageUrl;
+      if (isStreetArtMarker &&
+          form.coverImageBytes != null &&
+          form.coverImageBytes!.isNotEmpty) {
+        coverImageUrl = await BackendApiService().uploadMarkerCoverImage(
+          fileBytes: form.coverImageBytes!,
+          fileName: form.coverImageFileName ?? 'street-art-cover.png',
+          fileType: form.coverImageFileType ?? 'image',
+          walletAddress: walletAddress,
+          source: 'desktop_map_screen_create_marker',
+        );
+
+        if (coverImageUrl == null || coverImageUrl.isEmpty) {
+          AppConfig.debugPrint(
+            'DesktopMapScreen: cover upload failed for street-art marker creation',
+          );
+          return false;
+        }
+      }
+
       final currentZoom = _effectiveZoom;
       final gridCell = GridUtils.gridCellForZoom(position, currentZoom);
       final tileProviders = Provider.of<TileProviders?>(context, listen: false);
@@ -4377,6 +4473,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           if (form.linkedArtwork != null) ...{
             'linkedArtworkId': form.linkedArtwork!.id,
             'linkedArtworkTitle': form.linkedArtwork!.title,
+          },
+          if (coverImageUrl != null && coverImageUrl.isNotEmpty)
+            'coverImageUrl': coverImageUrl,
+          if (form.isCommunity) ...{
+            'isCommunity': true,
+            'community': 'community',
           },
           'visibility': form.isPublic ? 'public' : 'private',
           if (form.subject?.metadata != null) ...form.subject!.metadata!,

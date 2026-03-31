@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:latlong2/latlong.dart';
@@ -19,7 +21,11 @@ class MapMarkerFormResult {
   final MarkerSubjectOption? subject;
   final Artwork? linkedArtwork;
   final bool isPublic;
+  final bool isCommunity;
   final LatLng? positionOverride;
+  final Uint8List? coverImageBytes;
+  final String? coverImageFileName;
+  final String? coverImageFileType;
 
   const MapMarkerFormResult({
     required this.title,
@@ -28,9 +34,13 @@ class MapMarkerFormResult {
     required this.markerType,
     required this.subjectType,
     required this.isPublic,
+    required this.isCommunity,
     this.subject,
     this.linkedArtwork,
     this.positionOverride,
+    this.coverImageBytes,
+    this.coverImageFileName,
+    this.coverImageFileType,
   });
 }
 

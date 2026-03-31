@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:art_kubus/models/art_marker.dart';
+import 'package:art_kubus/models/street_art_claim.dart';
 import 'package:art_kubus/providers/marker_management_provider.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/map_marker_service.dart';
@@ -29,6 +30,18 @@ class _FakeMarkerApi implements MarkerBackendApi {
 
   int deleteCalls = 0;
   Completer<bool>? deleteCompleter;
+
+  int submitClaimCalls = 0;
+  Completer<StreetArtClaim>? submitClaimCompleter;
+  StreetArtClaim? submitClaimResult;
+
+  int getClaimsCalls = 0;
+  Completer<List<StreetArtClaim>>? getClaimsCompleter;
+  List<StreetArtClaim> getClaimsResult = const <StreetArtClaim>[];
+
+  int reviewClaimCalls = 0;
+  Completer<StreetArtClaim?>? reviewClaimCompleter;
+  StreetArtClaim? reviewClaimResult;
 
   @override
   Future<List<ArtMarker>> getMyArtMarkers() {
@@ -62,6 +75,40 @@ class _FakeMarkerApi implements MarkerBackendApi {
     if (c != null) return c.future;
     return Future.value(false);
   }
+
+  @override
+  Future<StreetArtClaim> submitStreetArtClaim({
+    required String markerId,
+    required String reason,
+    String? evidenceUrl,
+    String? claimantProfileName,
+  }) {
+    submitClaimCalls += 1;
+    final c = submitClaimCompleter;
+    if (c != null) return c.future;
+    return Future.value(submitClaimResult ?? _claim('claim_1', markerId));
+  }
+
+  @override
+  Future<List<StreetArtClaim>> getStreetArtClaims(String markerId) {
+    getClaimsCalls += 1;
+    final c = getClaimsCompleter;
+    if (c != null) return c.future;
+    return Future.value(getClaimsResult);
+  }
+
+  @override
+  Future<StreetArtClaim?> reviewStreetArtClaim({
+    required String markerId,
+    required String claimId,
+    required StreetArtClaimReviewAction action,
+    String? note,
+  }) {
+    reviewClaimCalls += 1;
+    final c = reviewClaimCompleter;
+    if (c != null) return c.future;
+    return Future.value(reviewClaimResult);
+  }
 }
 
 ArtMarker _marker(String id,
@@ -74,6 +121,18 @@ ArtMarker _marker(String id,
     type: ArtMarkerType.other,
     createdAt: DateTime.utc(2025, 1, 1),
     createdBy: createdBy,
+  );
+}
+
+StreetArtClaim _claim(String id, String markerId) {
+  return StreetArtClaim(
+    id: id,
+    markerId: markerId,
+    claimantWallet: 'wallet_2',
+    reason: 'This mural was painted by me in 2022.',
+    status: StreetArtClaimStatus.pendingOwnerReview,
+    reviewStage: StreetArtClaimStage.ownerReview,
+    createdAt: DateTime.utc(2025, 1, 1),
   );
 }
 

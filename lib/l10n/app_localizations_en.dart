@@ -2860,6 +2860,119 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapMarkerDialogStreetArtHint => 'Street art markers do not need a linked subject. Add a title and description for the public artwork you found.';
 
   @override
+  String get mapMarkerDialogCoverImageTitle => 'Cover image *';
+
+  @override
+  String get mapMarkerDialogUploadCover => 'Upload cover';
+
+  @override
+  String get mapMarkerDialogChangeCover => 'Change cover';
+
+  @override
+  String get mapMarkerDialogRemoveCoverTooltip => 'Remove cover';
+
+  @override
+  String get mapMarkerDialogStreetArtCoverRequiredHint => 'Street art markers require a cover image.';
+
+  @override
+  String get mapMarkerDialogStreetArtCoverRequiredError => 'Add a cover image for this street art marker.';
+
+  @override
+  String get mapMarkerCommunityLabel => 'Community';
+
+  @override
+  String get mapMarkerClaimButton => 'Claim';
+
+  @override
+  String get mapMarkerClaimsDialogTitle => 'Street art claims';
+
+  @override
+  String get mapMarkerClaimSubmitTitle => 'Submit claim';
+
+  @override
+  String get mapMarkerClaimReasonLabel => 'Reason *';
+
+  @override
+  String get mapMarkerClaimEvidenceUrlLabel => 'Evidence URL (optional)';
+
+  @override
+  String get mapMarkerClaimProfileNameLabel => 'Profile name (optional)';
+
+  @override
+  String get mapMarkerClaimSubmitButton => 'Submit claim';
+
+  @override
+  String get mapMarkerClaimLoading => 'Loading claims...';
+
+  @override
+  String get mapMarkerClaimNoClaims => 'No claims yet.';
+
+  @override
+  String get mapMarkerClaimOwnerReviewActionsTitle => 'Owner review';
+
+  @override
+  String get mapMarkerClaimDaoReviewActionsTitle => 'DAO review';
+
+  @override
+  String get mapMarkerClaimActionApprove => 'Approve';
+
+  @override
+  String get mapMarkerClaimActionReject => 'Reject';
+
+  @override
+  String get mapMarkerClaimActionEscalate => 'Escalate to DAO';
+
+  @override
+  String get mapMarkerClaimActionApproveDao => 'Approve (DAO)';
+
+  @override
+  String get mapMarkerClaimActionRejectDao => 'Reject (DAO)';
+
+  @override
+  String get mapMarkerClaimNoteLabel => 'Note (optional)';
+
+  @override
+  String get mapMarkerClaimSubmittedToast => 'Street art claim submitted.';
+
+  @override
+  String get mapMarkerClaimActionSuccessToast => 'Claim updated.';
+
+  @override
+  String get mapMarkerClaimNotEligibleToast => 'Only verified artists can submit claims.';
+
+  @override
+  String get mapMarkerClaimAlreadyActiveToast => 'You already have an active claim for this marker.';
+
+  @override
+  String mapMarkerClaimReasonMinError(Object min) {
+    return 'Reason must be at least $min characters';
+  }
+
+  @override
+  String get mapMarkerClaimStatusPendingOwnerReview => 'Pending owner review';
+
+  @override
+  String get mapMarkerClaimStatusPendingDaoReview => 'Pending DAO review';
+
+  @override
+  String get mapMarkerClaimStatusApproved => 'Approved';
+
+  @override
+  String get mapMarkerClaimStatusRejectedOwner => 'Rejected by owner';
+
+  @override
+  String get mapMarkerClaimStatusRejectedDao => 'Rejected by DAO';
+
+  @override
+  String get mapMarkerClaimStageOwnerReview => 'Owner review';
+
+  @override
+  String get mapMarkerClaimStageDaoReview => 'DAO review';
+
+  @override
+  String get mapMarkerClaimStageResolved => 'Resolved';
+
+  @override
   String get mapMarkerSubjectTypeArtwork => 'Artwork';
 
   @override

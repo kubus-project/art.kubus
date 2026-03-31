@@ -22,6 +22,7 @@ import '../features/map/shared/map_overlay_sizing.dart';
 import '../providers/artwork_provider.dart';
 import '../providers/task_provider.dart';
 import '../providers/wallet_provider.dart';
+import '../providers/profile_provider.dart';
 import '../providers/themeprovider.dart';
 import '../providers/map_deep_link_provider.dart';
 import '../providers/navigation_provider.dart';
@@ -59,6 +60,7 @@ import '../utils/map_performance_debug.dart';
 import '../utils/presence_marker_visit.dart';
 import '../utils/geo_bounds.dart';
 import '../utils/media_url_resolver.dart';
+import '../utils/wallet_utils.dart';
 import '../utils/user_profile_navigation.dart';
 import '../widgets/map_marker_dialog.dart';
 import '../providers/tile_providers.dart';
@@ -93,6 +95,7 @@ import '../widgets/map/filters/kubus_map_marker_layer_chips.dart';
 import '../widgets/map/controls/kubus_map_primary_controls.dart'
     show KubusMapPrimaryControlsLayout;
 import '../widgets/map/dialogs/kubus_map_attribution_dialog.dart';
+import '../widgets/map/dialogs/street_art_claims_dialog.dart';
 import '../widgets/map/kubus_map_glass_surface.dart';
 import '../widgets/common/kubus_filter_panel.dart';
 import '../widgets/common/kubus_glass_icon_button.dart';
@@ -2510,6 +2513,30 @@ class _MapScreenState extends State<MapScreen>
     try {
       final exhibitionsProvider = context.read<ExhibitionsProvider>();
       final markerManagementProvider = context.read<MarkerManagementProvider>();
+      final walletAddress = context.read<WalletProvider>().currentWalletAddress;
+      final isStreetArtMarker =
+          form.subjectType == MarkerSubjectType.streetArt ||
+              form.markerType == ArtMarkerType.streetArt;
+
+      String? coverImageUrl;
+      if (isStreetArtMarker &&
+          form.coverImageBytes != null &&
+          form.coverImageBytes!.isNotEmpty) {
+        coverImageUrl = await BackendApiService().uploadMarkerCoverImage(
+          fileBytes: form.coverImageBytes!,
+          fileName: form.coverImageFileName ?? 'street-art-cover.png',
+          fileType: form.coverImageFileType ?? 'image',
+          walletAddress: walletAddress,
+          source: 'map_screen_create_marker',
+        );
+
+        if (coverImageUrl == null || coverImageUrl.isEmpty) {
+          AppConfig.debugPrint(
+            'MapScreen: cover upload failed for street-art marker creation',
+          );
+          return false;
+        }
+      }
 
       // Snap to the nearest grid cell center at the current zoom level
       // We use the current camera zoom to determine which grid level is most relevant
@@ -2558,6 +2585,12 @@ class _MapScreenState extends State<MapScreen>
           if (form.linkedArtwork != null) ...{
             'linkedArtworkId': form.linkedArtwork!.id,
             'linkedArtworkTitle': form.linkedArtwork!.title,
+          },
+          if (coverImageUrl != null && coverImageUrl.isNotEmpty)
+            'coverImageUrl': coverImageUrl,
+          if (form.isCommunity) ...{
+            'isCommunity': true,
+            'community': 'community',
           },
           'visibility': form.isPublic ? 'public' : 'private',
           if (form.subject?.metadata != null) ...form.subject!.metadata!,
@@ -3918,10 +3951,16 @@ class _MapScreenState extends State<MapScreen>
       final pageBaseColor = _resolveArtMarkerColor(pageMarker, themeProvider);
       final overlayActions = buildMarkerOverlayActions(
         context: context,
+        marker: pageMarker,
         artwork: pageArtwork,
         canPresentExhibition: canPresentExhibition,
         baseColor: pageBaseColor,
         sourceScreen: 'map_marker',
+        onClaimTap: _canOpenStreetArtClaims(pageMarker)
+            ? () {
+                unawaited(_openStreetArtClaimsDialog(pageMarker));
+              }
+            : null,
       );
 
       final openDetails = canPresentExhibition
@@ -4042,6 +4081,68 @@ class _MapScreenState extends State<MapScreen>
           );
         },
       ),
+    );
+  }
+
+  bool _canOpenStreetArtClaims(ArtMarker marker) {
+    return AppConfig.isFeatureEnabled('streetArtClaims') &&
+        marker.type == ArtMarkerType.streetArt &&
+        marker.isPublic;
+  }
+
+  bool _markerOwnedByCurrentUser(ArtMarker marker) {
+    final wallet = context.read<WalletProvider>().currentWalletAddress;
+    final currentUser = context.read<ProfileProvider>().currentUser;
+    final currentUserId = (currentUser?.id ?? '').trim();
+
+    final metadata = marker.metadata ?? const <String, dynamic>{};
+    final nestedMetadataRaw = metadata['metadata'] ?? metadata['meta'];
+    final nestedMetadata = nestedMetadataRaw is Map
+        ? Map<String, dynamic>.from(
+            nestedMetadataRaw.map(
+              (key, value) => MapEntry(key.toString(), value),
+            ),
+          )
+        : const <String, dynamic>{};
+
+    final ownerCandidates = <String>{
+      marker.createdBy,
+      (metadata['ownerWallet'] ?? '').toString(),
+      (metadata['owner_wallet'] ?? '').toString(),
+      (metadata['walletAddress'] ?? '').toString(),
+      (metadata['wallet_address'] ?? '').toString(),
+      (metadata['createdBy'] ?? '').toString(),
+      (metadata['created_by'] ?? '').toString(),
+      (nestedMetadata['ownerWallet'] ?? '').toString(),
+      (nestedMetadata['owner_wallet'] ?? '').toString(),
+      (nestedMetadata['walletAddress'] ?? '').toString(),
+      (nestedMetadata['wallet_address'] ?? '').toString(),
+      (nestedMetadata['createdBy'] ?? '').toString(),
+      (nestedMetadata['created_by'] ?? '').toString(),
+    };
+
+    for (final candidate in ownerCandidates) {
+      final value = candidate.trim();
+      if (value.isEmpty) continue;
+      if (WalletUtils.equals(value, wallet)) {
+        return true;
+      }
+      if (currentUserId.isNotEmpty && value == currentUserId) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  Future<void> _openStreetArtClaimsDialog(ArtMarker marker) async {
+    if (!_canOpenStreetArtClaims(marker)) return;
+
+    await StreetArtClaimsDialog.show(
+      context: context,
+      marker: marker,
+      isMarkerOwner: _markerOwnedByCurrentUser(marker),
+      canUseDaoReviewActions: false,
     );
   }
 

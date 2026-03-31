@@ -5657,6 +5657,228 @@ abstract class AppLocalizations {
   /// **'Street art markers do not need a linked subject. Add a title and description for the public artwork you found.'**
   String get mapMarkerDialogStreetArtHint;
 
+  /// No description provided for @mapMarkerDialogCoverImageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover image *'**
+  String get mapMarkerDialogCoverImageTitle;
+
+  /// No description provided for @mapMarkerDialogUploadCover.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload cover'**
+  String get mapMarkerDialogUploadCover;
+
+  /// No description provided for @mapMarkerDialogChangeCover.
+  ///
+  /// In en, this message translates to:
+  /// **'Change cover'**
+  String get mapMarkerDialogChangeCover;
+
+  /// No description provided for @mapMarkerDialogRemoveCoverTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove cover'**
+  String get mapMarkerDialogRemoveCoverTooltip;
+
+  /// No description provided for @mapMarkerDialogStreetArtCoverRequiredHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Street art markers require a cover image.'**
+  String get mapMarkerDialogStreetArtCoverRequiredHint;
+
+  /// No description provided for @mapMarkerDialogStreetArtCoverRequiredError.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a cover image for this street art marker.'**
+  String get mapMarkerDialogStreetArtCoverRequiredError;
+
+  /// No description provided for @mapMarkerCommunityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Community'**
+  String get mapMarkerCommunityLabel;
+
+  /// No description provided for @mapMarkerClaimButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim'**
+  String get mapMarkerClaimButton;
+
+  /// No description provided for @mapMarkerClaimsDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Street art claims'**
+  String get mapMarkerClaimsDialogTitle;
+
+  /// No description provided for @mapMarkerClaimSubmitTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit claim'**
+  String get mapMarkerClaimSubmitTitle;
+
+  /// No description provided for @mapMarkerClaimReasonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason *'**
+  String get mapMarkerClaimReasonLabel;
+
+  /// No description provided for @mapMarkerClaimEvidenceUrlLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Evidence URL (optional)'**
+  String get mapMarkerClaimEvidenceUrlLabel;
+
+  /// No description provided for @mapMarkerClaimProfileNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile name (optional)'**
+  String get mapMarkerClaimProfileNameLabel;
+
+  /// No description provided for @mapMarkerClaimSubmitButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit claim'**
+  String get mapMarkerClaimSubmitButton;
+
+  /// No description provided for @mapMarkerClaimLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading claims...'**
+  String get mapMarkerClaimLoading;
+
+  /// No description provided for @mapMarkerClaimNoClaims.
+  ///
+  /// In en, this message translates to:
+  /// **'No claims yet.'**
+  String get mapMarkerClaimNoClaims;
+
+  /// No description provided for @mapMarkerClaimOwnerReviewActionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Owner review'**
+  String get mapMarkerClaimOwnerReviewActionsTitle;
+
+  /// No description provided for @mapMarkerClaimDaoReviewActionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'DAO review'**
+  String get mapMarkerClaimDaoReviewActionsTitle;
+
+  /// No description provided for @mapMarkerClaimActionApprove.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve'**
+  String get mapMarkerClaimActionApprove;
+
+  /// No description provided for @mapMarkerClaimActionReject.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get mapMarkerClaimActionReject;
+
+  /// No description provided for @mapMarkerClaimActionEscalate.
+  ///
+  /// In en, this message translates to:
+  /// **'Escalate to DAO'**
+  String get mapMarkerClaimActionEscalate;
+
+  /// No description provided for @mapMarkerClaimActionApproveDao.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve (DAO)'**
+  String get mapMarkerClaimActionApproveDao;
+
+  /// No description provided for @mapMarkerClaimActionRejectDao.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject (DAO)'**
+  String get mapMarkerClaimActionRejectDao;
+
+  /// No description provided for @mapMarkerClaimNoteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Note (optional)'**
+  String get mapMarkerClaimNoteLabel;
+
+  /// No description provided for @mapMarkerClaimSubmittedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Street art claim submitted.'**
+  String get mapMarkerClaimSubmittedToast;
+
+  /// No description provided for @mapMarkerClaimActionSuccessToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim updated.'**
+  String get mapMarkerClaimActionSuccessToast;
+
+  /// No description provided for @mapMarkerClaimNotEligibleToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Only verified artists can submit claims.'**
+  String get mapMarkerClaimNotEligibleToast;
+
+  /// No description provided for @mapMarkerClaimAlreadyActiveToast.
+  ///
+  /// In en, this message translates to:
+  /// **'You already have an active claim for this marker.'**
+  String get mapMarkerClaimAlreadyActiveToast;
+
+  /// No description provided for @mapMarkerClaimReasonMinError.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason must be at least {min} characters'**
+  String mapMarkerClaimReasonMinError(Object min);
+
+  /// No description provided for @mapMarkerClaimStatusPendingOwnerReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending owner review'**
+  String get mapMarkerClaimStatusPendingOwnerReview;
+
+  /// No description provided for @mapMarkerClaimStatusPendingDaoReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending DAO review'**
+  String get mapMarkerClaimStatusPendingDaoReview;
+
+  /// No description provided for @mapMarkerClaimStatusApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get mapMarkerClaimStatusApproved;
+
+  /// No description provided for @mapMarkerClaimStatusRejectedOwner.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected by owner'**
+  String get mapMarkerClaimStatusRejectedOwner;
+
+  /// No description provided for @mapMarkerClaimStatusRejectedDao.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected by DAO'**
+  String get mapMarkerClaimStatusRejectedDao;
+
+  /// No description provided for @mapMarkerClaimStageOwnerReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Owner review'**
+  String get mapMarkerClaimStageOwnerReview;
+
+  /// No description provided for @mapMarkerClaimStageDaoReview.
+  ///
+  /// In en, this message translates to:
+  /// **'DAO review'**
+  String get mapMarkerClaimStageDaoReview;
+
+  /// No description provided for @mapMarkerClaimStageResolved.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolved'**
+  String get mapMarkerClaimStageResolved;
+
   /// No description provided for @mapMarkerSubjectTypeArtwork.
   ///
   /// In en, this message translates to:

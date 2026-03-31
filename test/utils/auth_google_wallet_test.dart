@@ -66,6 +66,8 @@ void main() {
     var loginAttempts = 0;
     String? firstWalletAddress;
     String? secondWalletAddress;
+    String? firstDisplayName;
+    String? secondDisplayName;
     var walletProvisionCalls = 0;
 
     api.setHttpClient(
@@ -85,8 +87,10 @@ void main() {
                 : <String, dynamic>{};
         loginAttempts += 1;
         final walletAddress = (decoded['walletAddress'] ?? '').toString();
+        final displayName = (decoded['displayName'] ?? '').toString();
         if (loginAttempts == 1) {
           firstWalletAddress = walletAddress;
+          firstDisplayName = displayName;
           return http.Response(
             '{"success":false,"errorCode":"WALLET_REQUIRED_FOR_NEW_ACCOUNT"}',
             400,
@@ -95,6 +99,7 @@ void main() {
         }
 
         secondWalletAddress = walletAddress;
+        secondDisplayName = displayName;
         return http.Response(
           '{"success":true,"data":{"token":"jwt-token"}}',
           200,
@@ -121,6 +126,8 @@ void main() {
     expect(loginAttempts, 2);
     expect(firstWalletAddress, isEmpty);
     expect(secondWalletAddress, 'wallet-created-123');
+    expect(firstDisplayName, 'New User');
+    expect(secondDisplayName, 'New User');
     expect(walletProvisionCalls, 1);
   });
 

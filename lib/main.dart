@@ -49,6 +49,7 @@ import 'providers/stats_provider.dart';
 import 'providers/analytics_filters_provider.dart';
 import 'providers/desktop_dashboard_state_provider.dart';
 import 'providers/marker_management_provider.dart';
+import 'providers/street_art_claims_provider.dart';
 import 'providers/attendance_provider.dart';
 import 'providers/security_gate_provider.dart';
 import 'providers/email_preferences_provider.dart';
@@ -721,6 +722,23 @@ class _AppLauncherState extends State<AppLauncher> {
                       profileProvider.currentUser?.walletAddress ??
                           walletProvider.currentWalletAddress);
                   if (!provider.initialized && !provider.isLoading) {
+                    unawaited(provider.initialize());
+                  }
+                  return provider;
+                },
+              ),
+              ChangeNotifierProxyProvider2<ProfileProvider, WalletProvider,
+                  StreetArtClaimsProvider>(
+                create: (context) => StreetArtClaimsProvider(),
+                update: (context, profileProvider, walletProvider,
+                    claimsProvider) {
+                  final provider =
+                      claimsProvider ?? StreetArtClaimsProvider();
+                  provider.bindWallet(
+                    profileProvider.currentUser?.walletAddress ??
+                        walletProvider.currentWalletAddress,
+                  );
+                  if (!provider.initialized) {
                     unawaited(provider.initialize());
                   }
                   return provider;

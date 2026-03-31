@@ -2860,6 +2860,119 @@ class AppLocalizationsSl extends AppLocalizations {
   String get mapMarkerDialogStreetArtHint => 'Označevalci ulične umetnosti ne potrebujejo povezanega predmeta. Dodaj naslov in opis javne umetnine, ki si jo našel/našla.';
 
   @override
+  String get mapMarkerDialogCoverImageTitle => 'Naslovna slika *';
+
+  @override
+  String get mapMarkerDialogUploadCover => 'Naloži naslovnico';
+
+  @override
+  String get mapMarkerDialogChangeCover => 'Zamenjaj naslovnico';
+
+  @override
+  String get mapMarkerDialogRemoveCoverTooltip => 'Odstrani naslovnico';
+
+  @override
+  String get mapMarkerDialogStreetArtCoverRequiredHint => 'Označevalci ulične umetnosti zahtevajo naslovno sliko.';
+
+  @override
+  String get mapMarkerDialogStreetArtCoverRequiredError => 'Dodaj naslovno sliko za ta označevalec ulične umetnosti.';
+
+  @override
+  String get mapMarkerCommunityLabel => 'Skupnost';
+
+  @override
+  String get mapMarkerClaimButton => 'Uveljavi';
+
+  @override
+  String get mapMarkerClaimsDialogTitle => 'Zahtevki za ulično umetnost';
+
+  @override
+  String get mapMarkerClaimSubmitTitle => 'Oddaj zahtevek';
+
+  @override
+  String get mapMarkerClaimReasonLabel => 'Razlog *';
+
+  @override
+  String get mapMarkerClaimEvidenceUrlLabel => 'URL dokazila (neobvezno)';
+
+  @override
+  String get mapMarkerClaimProfileNameLabel => 'Ime profila (neobvezno)';
+
+  @override
+  String get mapMarkerClaimSubmitButton => 'Oddaj zahtevek';
+
+  @override
+  String get mapMarkerClaimLoading => 'Nalaganje zahtevkov...';
+
+  @override
+  String get mapMarkerClaimNoClaims => 'Zaenkrat še ni zahtevkov.';
+
+  @override
+  String get mapMarkerClaimOwnerReviewActionsTitle => 'Pregled lastnika';
+
+  @override
+  String get mapMarkerClaimDaoReviewActionsTitle => 'DAO pregled';
+
+  @override
+  String get mapMarkerClaimActionApprove => 'Odobri';
+
+  @override
+  String get mapMarkerClaimActionReject => 'Zavrni';
+
+  @override
+  String get mapMarkerClaimActionEscalate => 'Posreduj DAO';
+
+  @override
+  String get mapMarkerClaimActionApproveDao => 'Odobri (DAO)';
+
+  @override
+  String get mapMarkerClaimActionRejectDao => 'Zavrni (DAO)';
+
+  @override
+  String get mapMarkerClaimNoteLabel => 'Opomba (neobvezno)';
+
+  @override
+  String get mapMarkerClaimSubmittedToast => 'Zahtevek za ulično umetnost je oddan.';
+
+  @override
+  String get mapMarkerClaimActionSuccessToast => 'Zahtevek je posodobljen.';
+
+  @override
+  String get mapMarkerClaimNotEligibleToast => 'Zahtevek lahko oddajo samo preverjeni umetniki.';
+
+  @override
+  String get mapMarkerClaimAlreadyActiveToast => 'Za ta označevalec že imaš aktiven zahtevek.';
+
+  @override
+  String mapMarkerClaimReasonMinError(Object min) {
+    return 'Razlog mora imeti vsaj $min znakov';
+  }
+
+  @override
+  String get mapMarkerClaimStatusPendingOwnerReview => 'Čaka na pregled lastnika';
+
+  @override
+  String get mapMarkerClaimStatusPendingDaoReview => 'Čaka na DAO pregled';
+
+  @override
+  String get mapMarkerClaimStatusApproved => 'Odobreno';
+
+  @override
+  String get mapMarkerClaimStatusRejectedOwner => 'Lastnik je zavrnil';
+
+  @override
+  String get mapMarkerClaimStatusRejectedDao => 'DAO je zavrnil';
+
+  @override
+  String get mapMarkerClaimStageOwnerReview => 'Pregled lastnika';
+
+  @override
+  String get mapMarkerClaimStageDaoReview => 'DAO pregled';
+
+  @override
+  String get mapMarkerClaimStageResolved => 'Zaključeno';
+
+  @override
   String get mapMarkerSubjectTypeArtwork => 'Umetnina';
 
   @override
