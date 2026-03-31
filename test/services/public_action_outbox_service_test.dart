@@ -80,7 +80,8 @@ void main() {
     expect(decoded['signature'], isNotEmpty);
   });
 
-  test('flush removes applied-like statuses and keeps retryable errors',
+  test(
+      'flush removes applied-like statuses, keeps retryable errors, and does not resend retryables in the same call',
       () async {
     for (final entityId in const <String>['art-1', 'art-2', 'art-3', 'art-4']) {
       await outboxService.enqueueSignedAction(
@@ -122,10 +123,15 @@ void main() {
         );
     final stored = prefs.getStringList(key);
     final remaining = jsonDecode(stored!.single) as Map<String, dynamic>;
+    final flushedActionIds = result.results
+        .map((entry) => (entry['clientActionId'] ?? '').toString())
+        .toList(growable: false);
 
-    expect(result.sentCount, 5);
+    expect(result.sentCount, 4);
     expect(result.removedCount, 3);
     expect(result.remainingCount, 1);
+    expect(flushedActionIds.length, 4);
+    expect(flushedActionIds.toSet().length, flushedActionIds.length);
     expect(outboxService.queuedActionCount, 1);
     expect(remaining['entityId'], 'art-4');
   });

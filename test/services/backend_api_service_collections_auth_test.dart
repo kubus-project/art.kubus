@@ -2,11 +2,30 @@ import 'dart:convert';
 
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:art_kubus/services/public_action_outbox_service.dart';
 import 'package:art_kubus/services/public_fallback_service.dart';
+import 'package:art_kubus/services/solana_wallet_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+class _FakeWalletService extends SolanaWalletService {
+  _FakeWalletService(this.walletAddress);
+
+  final String walletAddress;
+
+  @override
+  bool get hasActiveKeyPair => true;
+
+  @override
+  String? get activePublicKey => walletAddress;
+
+  @override
+  Future<String> signMessageBase64(String messageBase64) async {
+    return base64Encode(utf8.encode('sig:$messageBase64'));
+  }
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -14,6 +33,14 @@ void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues(<String, Object>{});
     await PublicFallbackService().resetForTesting();
+    final outbox = PublicActionOutboxService();
+    await outbox.resetForTesting();
+    outbox.bindSigner(
+      walletService:
+          _FakeWalletService('WalletTest111111111111111111111111111111'),
+      walletAddressResolver: () => 'WalletTest111111111111111111111111111111',
+    );
+    await outbox.initialize();
     final api = BackendApiService();
     api.setPreferredWalletAddress(null);
     api.setAuthTokenForTesting(null);
@@ -123,5 +150,39 @@ void main() {
     expect(fallbackService.mode, AppRuntimeMode.ipfsFallback);
     expect(result, hasLength(1));
     expect(result.single['id'], 'self-collection');
+  });
+
+  test('queueable mutation failures do not increment dual-backend outages',
+      () async {
+    final fallbackService = PublicFallbackService();
+    final outboxService = PublicActionOutboxService();
+    final api = BackendApiService();
+
+    api.setHttpClient(MockClient((request) async {
+      if (request.url.path.contains('/api/artworks/') &&
+          request.url.path.endsWith('/like')) {
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'success': false,
+            'error': 'temporary outage',
+          }),
+          503,
+          headers: const <String, String>{'content-type': 'application/json'},
+        );
+      }
+
+      return http.Response(
+        jsonEncode(<String, Object?>{'success': false, 'error': 'unexpected'}),
+        500,
+        headers: const <String, String>{'content-type': 'application/json'},
+      );
+    }));
+
+    final likes = await api.likeArtwork('art-queue-1');
+    expect(likes, isNull);
+
+    expect(fallbackService.consecutiveDualFailures, 0);
+    expect(fallbackService.mode, AppRuntimeMode.live);
+    expect(outboxService.queuedActionCount, 1);
   });
 }

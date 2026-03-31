@@ -895,7 +895,11 @@ class ProfileProvider extends foundation.ChangeNotifier {
       // Save to SharedPreferences
       final prefs = await _ensurePrefs();
       await prefs.setString('wallet_address', walletAddress);
-      await prefs.setString('username', _currentUser!.username);
+      final persistedUsername = _currentUser?.username ??
+          (profileJson['username']?.toString() ?? '').trim();
+      if (persistedUsername.isNotEmpty) {
+        await prefs.setString('username', persistedUsername);
+      }
       debugPrint(
           'ProfileProvider: Profile saved successfully for wallet: $walletAddress');
 

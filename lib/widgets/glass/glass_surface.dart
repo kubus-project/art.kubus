@@ -176,6 +176,7 @@ class GlassSurface extends StatelessWidget {
               child: WebGlassBackdropLayer(
                 blurSigma: blurSigma,
                 borderRadius: borderRadius,
+                backgroundColor: tintPrimary,
               ),
             ),
             tintedBox,

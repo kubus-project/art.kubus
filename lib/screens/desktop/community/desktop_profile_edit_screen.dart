@@ -1182,7 +1182,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
   }
 
   Future<void> _saveProfile() async {
-    if (!_formKey.currentState!.validate()) return;
+    final formState = _formKey.currentState;
+    if (!(formState?.validate() ?? false)) return;
 
     final l10n = AppLocalizations.of(context)!;
     setState(() => _isSaving = true);

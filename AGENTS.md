@@ -338,6 +338,29 @@ Any mutation touching public entities must call the relevant `publicSyncService`
 
 ---
 
+## 9.1) HA + Public Fallback Deployment Contracts
+
+- The pre-launch public topology is:
+  - Oracle writable primary
+  - home standby backend
+  - DNSLink/IPFS public snapshot fallback
+- The stable public snapshot pointer is:
+  - `ipns://public.kubus.site/public-index.json`
+- That pointer is DNSLink-backed, not native `ipfs name publish`.
+  - the writable backend updates `_dnslink.public.kubus.site`
+  - gateways resolve the name through `/ipns/public.kubus.site/...`
+- Do not hardcode or reintroduce the retired `cloudflare-ipfs.com` public gateway anywhere in app or backend config.
+- `GET /health/ready` is process/container health only.
+- `GET /health/writable` is writable-role health for outage detection and failover.
+- Oracle HTTPS terminates on the Oracle reverse proxy with a Cloudflare Origin CA certificate.
+- home stays HTTP behind Cloudflare Tunnel unless the deployment model explicitly changes.
+- The HA compose stack is now structured for remote Docker context deploys:
+  - Postgres HA config is baked into the Postgres image
+  - nginx site config is baked into the nginx image
+  - the remaining manual Oracle secret is the `artkubus-nginx-ssl` named volume
+
+---
+
 ## 10) Review Checklist (Before Shipping)
 
 - Feature flags honored (Flutter + backend).
@@ -352,6 +375,7 @@ Any mutation touching public entities must call the relevant `publicSyncService`
 - No new legacy/compatibility code was introduced unless explicitly required.
 - Any drastic function contract change is called out in the handoff.
 - Any backend DB schema change updated both `backend/src/db/schema.sql` and `backend/src/db/schema_complete.sql`.
+- If deployment code changed, Oracle/home topology, DNSLink, tunnel origin, TLS, and health-route assumptions still match the HA stack.
 
 ---
 

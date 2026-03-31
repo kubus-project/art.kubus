@@ -275,8 +275,22 @@ class PublicActionOutboxService extends ChangeNotifier {
             continue;
           }
 
+          final attemptedActionIds = <String>{};
+
           while (queue.isNotEmpty) {
-            final batch = queue.take(_maxBatchSize).toList(growable: false);
+            final batch = queue
+                .where((entry) =>
+                    !attemptedActionIds.contains(entry.clientActionId))
+                .take(_maxBatchSize)
+                .toList(growable: false);
+            if (batch.isEmpty) {
+              break;
+            }
+
+            attemptedActionIds.addAll(
+              batch.map((entry) => entry.clientActionId),
+            );
+
             final results = await _postActionBatch(batch);
             if (results == null) {
               final remainingCount = await _refreshQueuedActionCount();
@@ -308,7 +322,7 @@ class PublicActionOutboxService extends ChangeNotifier {
                 .toSet();
 
             if (removableIds.isEmpty) {
-              break;
+              continue;
             }
 
             final beforeLength = queue.length;

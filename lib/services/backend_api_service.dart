@@ -1878,7 +1878,8 @@ class BackendApiService
     }
 
     if (_shouldQueuePublicActionAfterFailure(response, error)) {
-      _publicFallbackService.recordDualBackendFailure();
+      // Queueable mutation failures must not count as dual-backend outages.
+      // Global fallback mode should be driven by health/read probes.
       await _queuePublicAction(
         actionType: actionType,
         entityType: entityType,
