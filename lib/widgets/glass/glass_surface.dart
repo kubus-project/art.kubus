@@ -1,12 +1,10 @@
 import 'dart:ui';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/glass_capabilities_provider.dart';
 import '../../utils/design_tokens.dart';
-import 'web_glass_backdrop_layer.dart';
 
 /// The canonical glass surface widget for the Kubus design system.
 ///
@@ -166,25 +164,6 @@ class GlassSurface extends StatelessWidget {
 
     // Always clip to the border radius, even without blur, to keep corners
     // consistent.
-    if (useBlur && kIsWeb) {
-      return ClipRRect(
-        borderRadius: borderRadius,
-        child: Stack(
-          fit: StackFit.passthrough,
-          children: [
-            Positioned.fill(
-              child: WebGlassBackdropLayer(
-                blurSigma: blurSigma,
-                borderRadius: borderRadius,
-                backgroundColor: tintPrimary,
-              ),
-            ),
-            tintedBox,
-          ],
-        ),
-      );
-    }
-
     if (useBlur) {
       return ClipRRect(
         borderRadius: borderRadius,

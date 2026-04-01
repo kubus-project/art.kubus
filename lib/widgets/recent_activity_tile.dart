@@ -67,7 +67,7 @@ class RecentActivityTile extends StatelessWidget {
               ],
             ),
             child: LiquidGlassCard(
-              padding: const EdgeInsets.all(KubusSpacing.md),
+              padding: EdgeInsets.zero,
               margin: EdgeInsets.zero,
               borderRadius: radius,
               blurSigma: style.blurSigma,
@@ -75,6 +75,7 @@ class RecentActivityTile extends StatelessWidget {
               backgroundColor: style.tintColor,
               fallbackMinOpacity: style.fallbackMinOpacity,
               child: Stack(
+                fit: StackFit.expand,
                 children: [
                   Positioned.fill(
                     child: IgnorePointer(
@@ -92,77 +93,81 @@ class RecentActivityTile extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: KubusChromeMetrics.heroIconBox,
-                        height: KubusChromeMetrics.heroIconBox,
-                        decoration: BoxDecoration(
-                          color: tileColor.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(KubusRadius.sm),
+                  Padding(
+                    padding: const EdgeInsets.all(KubusSpacing.md),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: KubusChromeMetrics.heroIconBox,
+                          height: KubusChromeMetrics.heroIconBox,
+                          decoration: BoxDecoration(
+                            color: tileColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(KubusRadius.sm),
+                          ),
+                          child: Icon(
+                            AppColorUtils.activityIcon(activity.category),
+                            color: tileColor,
+                            size: KubusHeaderMetrics.actionIcon,
+                          ),
                         ),
-                        child: Icon(
-                          AppColorUtils.activityIcon(activity.category),
-                          color: tileColor,
-                          size: KubusHeaderMetrics.actionIcon,
-                        ),
-                      ),
-                      const SizedBox(width: KubusSpacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    activity.title,
-                                    style:
-                                        KubusTextStyles.sectionTitle.copyWith(
-                                      color: theme.colorScheme.onSurface,
-                                      fontWeight: isUnread
-                                          ? FontWeight.w700
-                                          : FontWeight.w600,
+                        const SizedBox(width: KubusSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      activity.title,
+                                      style:
+                                          KubusTextStyles.sectionTitle.copyWith(
+                                        color: theme.colorScheme.onSurface,
+                                        fontWeight: isUnread
+                                            ? FontWeight.w700
+                                            : FontWeight.w600,
+                                      ),
                                     ),
+                                  ),
+                                  if (isUnread)
+                                    Container(
+                                      width: KubusSpacing.xs,
+                                      height: KubusSpacing.xs,
+                                      decoration: BoxDecoration(
+                                        color: tileColor,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              if (description.isNotEmpty) ...[
+                                const SizedBox(height: KubusSpacing.xxs),
+                                Text(
+                                  description,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: KubusTextStyles.navMetaLabel.copyWith(
+                                    color: theme.colorScheme.onSurface
+                                        .withValues(alpha: 0.7),
                                   ),
                                 ),
-                                if (isUnread)
-                                  Container(
-                                    width: KubusSpacing.xs,
-                                    height: KubusSpacing.xs,
-                                    decoration: BoxDecoration(
-                                      color: tileColor,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
                               ],
-                            ),
-                            if (description.isNotEmpty) ...[
                               const SizedBox(height: KubusSpacing.xxs),
                               Text(
-                                description,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: KubusTextStyles.navMetaLabel.copyWith(
-                                  color: theme.colorScheme.onSurface
-                                      .withValues(alpha: 0.7),
+                                formatActivityTime(context, activity.timestamp),
+                                style: KubusTextStyles.compactBadge.copyWith(
+                                  color:
+                                      scheme.onSurface.withValues(alpha: 0.5),
                                 ),
                               ),
                             ],
-                            const SizedBox(height: KubusSpacing.xxs),
-                            Text(
-                              formatActivityTime(context, activity.timestamp),
-                              style: KubusTextStyles.compactBadge.copyWith(
-                                color: scheme.onSurface.withValues(alpha: 0.5),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),

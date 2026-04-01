@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:art_kubus/widgets/glass_components.dart';
 
@@ -120,7 +119,8 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
     _isCommunity = _readCommunityFlag(marker?.metadata);
     _existingCoverImageUrl = _readCoverImageUrl(marker?.metadata);
 
-    _allowedSubjectTypes = Set<MarkerSubjectType>.from(MarkerSubjectType.values);
+    _allowedSubjectTypes =
+        Set<MarkerSubjectType>.from(MarkerSubjectType.values);
     _allowedMarkerTypes = Set<ArtMarkerType>.from(ArtMarkerType.values);
     if (!AppConfig.isFeatureEnabled('streetArtMarkers')) {
       _allowedSubjectTypes.remove(MarkerSubjectType.streetArt);
@@ -406,21 +406,21 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
       _arEnabledArtworks =
           snapshot.artworks.where(artworkSupportsAR).toList(growable: false);
 
-        final requestedType = _parseSubjectType(marker?.subjectType);
-        final resolvedType = requestedType == MarkerSubjectType.misc &&
-            (marker?.artworkId ?? '').trim().isNotEmpty
+      final requestedType = _parseSubjectType(marker?.subjectType);
+      final resolvedType = requestedType == MarkerSubjectType.misc &&
+              (marker?.artworkId ?? '').trim().isNotEmpty
           ? MarkerSubjectType.artwork
           : requestedType;
-        final MarkerSubjectType preferredNewType =
+      final MarkerSubjectType preferredNewType =
           _allowedSubjectTypes.contains(MarkerSubjectType.streetArt)
-            ? MarkerSubjectType.streetArt
-            : MarkerSubjectType.artwork;
-        final initialType = widget.isNew ? preferredNewType : resolvedType;
-        _subjectType = _allowedSubjectTypes.contains(initialType)
+              ? MarkerSubjectType.streetArt
+              : MarkerSubjectType.artwork;
+      final initialType = widget.isNew ? preferredNewType : resolvedType;
+      _subjectType = _allowedSubjectTypes.contains(initialType)
           ? initialType
           : (_allowedSubjectTypes.contains(MarkerSubjectType.artwork)
-            ? MarkerSubjectType.artwork
-            : _allowedSubjectTypes.first);
+              ? MarkerSubjectType.artwork
+              : _allowedSubjectTypes.first);
       if (widget.isNew && _subjectType == MarkerSubjectType.streetArt) {
         _isCommunity = true;
       }

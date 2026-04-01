@@ -1042,6 +1042,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           backgroundColor: style.tintColor,
           fallbackMinOpacity: style.fallbackMinOpacity,
           child: Stack(
+            fit: StackFit.expand,
             children: [
               Positioned.fill(
                 child: IgnorePointer(
@@ -1411,7 +1412,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
             child: LiquidGlassCard(
               onTap: () => _showStatsDialog(title, icon),
-              padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
+              padding: EdgeInsets.zero,
               margin: EdgeInsets.zero,
               borderRadius: radius,
               blurSigma: style.blurSigma,
@@ -1419,6 +1420,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               backgroundColor: style.tintColor,
               fallbackMinOpacity: style.fallbackMinOpacity,
               child: Stack(
+                fit: StackFit.expand,
                 children: [
                   Positioned.fill(
                     child: IgnorePointer(
@@ -1436,116 +1438,121 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       ),
                     ),
                   ),
-                  Center(
-                    child: showIconOnly
-                        ? Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              _buildStatIconBadge(statColor, icon),
-                              SizedBox(height: isSmallScreen ? 4 : 6),
-                              Text(
-                                displayTitle,
-                                style: KubusTextStyles.compactBadge.copyWith(
-                                  fontSize: isSmallScreen
-                                      ? KubusChromeMetrics.navBadgeLabel - 1
-                                      : KubusChromeMetrics.navBadgeLabel,
-                                  color:
-                                      scheme.onSurface.withValues(alpha: 0.68),
+                  Padding(
+                    padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
+                    child: Center(
+                      child: showIconOnly
+                          ? Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                _buildStatIconBadge(statColor, icon),
+                                SizedBox(height: isSmallScreen ? 4 : 6),
+                                Text(
+                                  displayTitle,
+                                  style: KubusTextStyles.compactBadge.copyWith(
+                                    fontSize: isSmallScreen
+                                        ? KubusChromeMetrics.navBadgeLabel - 1
+                                        : KubusChromeMetrics.navBadgeLabel,
+                                    color: scheme.onSurface
+                                        .withValues(alpha: 0.68),
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                textAlign: TextAlign.center,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: KubusSpacing.xxs),
-                              Text(
-                                value,
-                                style: KubusTextStyles.badgeCount.copyWith(
-                                  fontSize: isSmallScreen
-                                      ? KubusChromeMetrics.navMetaLabel
-                                      : KubusChromeMetrics.navLabel,
-                                  color: scheme.onSurface,
+                                const SizedBox(height: KubusSpacing.xxs),
+                                Text(
+                                  value,
+                                  style: KubusTextStyles.badgeCount.copyWith(
+                                    fontSize: isSmallScreen
+                                        ? KubusChromeMetrics.navMetaLabel
+                                        : KubusChromeMetrics.navLabel,
+                                    color: scheme.onSurface,
+                                  ),
                                 ),
-                              ),
-                            ],
-                          )
-                        : isVerticalLayout
-                            ? Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  _buildStatIconBadge(statColor, icon),
-                                  SizedBox(width: isSmallScreen ? 8 : 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Text(
-                                          value,
-                                          style: KubusTextStyles.badgeCount
-                                              .copyWith(
-                                            fontSize: isSmallScreen
-                                                ? KubusChromeMetrics
-                                                    .navBadgeLabel
-                                                : KubusChromeMetrics
-                                                    .navMetaLabel,
-                                            color: scheme.onSurface,
+                              ],
+                            )
+                          : isVerticalLayout
+                              ? Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    _buildStatIconBadge(statColor, icon),
+                                    SizedBox(width: isSmallScreen ? 8 : 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            value,
+                                            style: KubusTextStyles.badgeCount
+                                                .copyWith(
+                                              fontSize: isSmallScreen
+                                                  ? KubusChromeMetrics
+                                                      .navBadgeLabel
+                                                  : KubusChromeMetrics
+                                                      .navMetaLabel,
+                                              color: scheme.onSurface,
+                                            ),
                                           ),
-                                        ),
-                                        Text(
-                                          displayTitle,
-                                          style: KubusTextStyles.compactBadge
-                                              .copyWith(
-                                            fontSize: isSmallScreen
-                                                ? KubusChromeMetrics
-                                                        .navBadgeLabel -
-                                                    2
-                                                : KubusChromeMetrics
-                                                        .navBadgeLabel -
-                                                    1,
-                                            color: scheme.onSurface
-                                                .withValues(alpha: 0.65),
+                                          Text(
+                                            displayTitle,
+                                            style: KubusTextStyles.compactBadge
+                                                .copyWith(
+                                              fontSize: isSmallScreen
+                                                  ? KubusChromeMetrics
+                                                          .navBadgeLabel -
+                                                      2
+                                                  : KubusChromeMetrics
+                                                          .navBadgeLabel -
+                                                      1,
+                                              color: scheme.onSurface
+                                                  .withValues(alpha: 0.65),
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              )
-                            : Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  _buildStatIconBadge(statColor, icon),
-                                  SizedBox(height: isSmallScreen ? 4 : 6),
-                                  Text(
-                                    displayTitle,
-                                    style:
-                                        KubusTextStyles.compactBadge.copyWith(
-                                      fontSize: isSmallScreen
-                                          ? KubusChromeMetrics.navBadgeLabel - 1
-                                          : KubusChromeMetrics.navBadgeLabel,
-                                      color: scheme.onSurface
-                                          .withValues(alpha: 0.68),
+                                  ],
+                                )
+                              : Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    _buildStatIconBadge(statColor, icon),
+                                    SizedBox(height: isSmallScreen ? 4 : 6),
+                                    Text(
+                                      displayTitle,
+                                      style:
+                                          KubusTextStyles.compactBadge.copyWith(
+                                        fontSize: isSmallScreen
+                                            ? KubusChromeMetrics.navBadgeLabel -
+                                                1
+                                            : KubusChromeMetrics.navBadgeLabel,
+                                        color: scheme.onSurface
+                                            .withValues(alpha: 0.68),
+                                      ),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    textAlign: TextAlign.center,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: KubusSpacing.xxs),
-                                  Text(
-                                    value,
-                                    style: KubusTextStyles.badgeCount.copyWith(
-                                      fontSize: isSmallScreen
-                                          ? KubusChromeMetrics.navMetaLabel
-                                          : KubusChromeMetrics.navLabel,
-                                      color: scheme.onSurface,
+                                    const SizedBox(height: KubusSpacing.xxs),
+                                    Text(
+                                      value,
+                                      style:
+                                          KubusTextStyles.badgeCount.copyWith(
+                                        fontSize: isSmallScreen
+                                            ? KubusChromeMetrics.navMetaLabel
+                                            : KubusChromeMetrics.navLabel,
+                                        color: scheme.onSurface,
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
+                                  ],
+                                ),
+                    ),
                   ),
                 ],
               ),
@@ -2008,8 +2015,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       scrollDirection: Axis.horizontal,
                       itemCount: featuredArtworks.length,
                       itemBuilder: (context, index) {
-                        return _buildArtworkCard(
-                            featuredArtworks[index], index);
+                        return _buildArtworkCard(featuredArtworks[index]);
                       },
                     ),
             ),
@@ -2051,7 +2057,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildArtworkCard(Artwork artwork, int index) {
+  Widget _buildArtworkCard(Artwork artwork) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final scheme = Theme.of(context).colorScheme;
     final style = KubusGlassStyle.resolve(
@@ -2741,7 +2747,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
 // New Activity Screen
 class ActivityScreen extends StatefulWidget {
-  const ActivityScreen({super.key});
+  final bool embedded;
+
+  const ActivityScreen({
+    super.key,
+    this.embedded = false,
+  });
 
   @override
   State<ActivityScreen> createState() => _ActivityScreenState();
@@ -2880,19 +2891,21 @@ class _ActivityScreenState extends State<ActivityScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        flexibleSpace: const KubusGlassAppBarBackdrop(
-          showBottomDivider: true,
-        ),
-        title: Text(
-          l10n.homeActivityTitle,
-          style: KubusTextStyles.screenTitle,
-        ),
-      ),
+      appBar: widget.embedded
+          ? null
+          : AppBar(
+              backgroundColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              flexibleSpace: const KubusGlassAppBarBackdrop(
+                showBottomDivider: true,
+              ),
+              title: Text(
+                l10n.homeActivityTitle,
+                style: KubusTextStyles.screenTitle,
+              ),
+            ),
       body: Consumer<RecentActivityProvider>(
         builder: (context, activityProvider, child) {
           final activities = activityProvider.activities;

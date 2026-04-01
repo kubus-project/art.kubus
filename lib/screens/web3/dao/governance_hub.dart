@@ -203,19 +203,27 @@ class _GovernanceHubState extends State<GovernanceHub>
               ),
             ];
           },
-          body: IndexedStack(
-            index: _selectedIndex,
-            children: [
-              _buildActiveProposals(),
-              _buildVotingHistory(),
-              _buildCreateProposal(),
-              _buildTreasury(),
-              _buildDelegation(),
-            ],
-          ),
+          body: _buildSelectedTabBody(),
         ),
       ),
     );
+  }
+
+  Widget _buildSelectedTabBody() {
+    switch (_selectedIndex) {
+      case 0:
+        return _buildActiveProposals();
+      case 1:
+        return _buildVotingHistory();
+      case 2:
+        return _buildCreateProposal();
+      case 3:
+        return _buildTreasury();
+      case 4:
+        return _buildDelegation();
+      default:
+        return _buildActiveProposals();
+    }
   }
 
   Widget _buildGovernanceHeader() {
@@ -416,12 +424,7 @@ class _GovernanceHubState extends State<GovernanceHub>
     final radius = BorderRadius.circular(KubusRadius.md);
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(
-        KubusSpacing.md,
-        KubusSpacing.sm,
-        KubusSpacing.md,
-        KubusSpacing.xs,
-      ),
+      margin: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         borderRadius: radius,
@@ -438,19 +441,44 @@ class _GovernanceHubState extends State<GovernanceHub>
         fallbackMinOpacity: panelStyle.fallbackMinOpacity,
         showBorder: false,
         backgroundColor: panelStyle.tintColor,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              _buildTabButton(
-                  l10n.daoHubTabActiveProposals, Icons.how_to_vote, 0),
-              _buildTabButton(l10n.daoHubTabVotingHistory, Icons.history, 1),
-              _buildTabButton(
-                  l10n.daoHubTabCreateProposal, Icons.add_circle_outline, 2),
-              _buildTabButton(l10n.daoHubTabTreasury, Icons.account_balance, 3),
-              _buildTabButton(l10n.daoHubTabDelegation, Icons.people, 4),
-            ],
-          ),
+        child: Row(
+          children: [
+            Expanded(
+              child: _buildTabButton(
+                l10n.daoHubTabActiveProposals,
+                Icons.how_to_vote,
+                0,
+              ),
+            ),
+            Expanded(
+              child: _buildTabButton(
+                l10n.daoHubTabVotingHistory,
+                Icons.history,
+                1,
+              ),
+            ),
+            Expanded(
+              child: _buildTabButton(
+                l10n.daoHubTabCreateProposal,
+                Icons.add_circle_outline,
+                2,
+              ),
+            ),
+            Expanded(
+              child: _buildTabButton(
+                l10n.daoHubTabTreasury,
+                Icons.account_balance,
+                3,
+              ),
+            ),
+            Expanded(
+              child: _buildTabButton(
+                l10n.daoHubTabDelegation,
+                Icons.people,
+                4,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -490,40 +518,37 @@ class _GovernanceHubState extends State<GovernanceHub>
           setState(() => _hoveredTabIndex = null);
         }
       },
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minWidth: 104),
-        child: LiquidGlassCard(
-          onTap: () => _setSelectedIndex(index),
-          padding: const EdgeInsets.symmetric(
-            vertical: KubusSpacing.md,
-            horizontal: KubusSpacing.sm,
-          ),
-          margin: const EdgeInsets.symmetric(horizontal: KubusSpacing.xxs),
-          borderRadius: BorderRadius.circular(KubusRadius.sm),
-          blurSigma: buttonStyle.blurSigma,
-          fallbackMinOpacity: buttonStyle.fallbackMinOpacity,
-          showBorder: false,
-          backgroundColor: background,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
+      child: LiquidGlassCard(
+        onTap: () => _setSelectedIndex(index),
+        padding: const EdgeInsets.symmetric(
+          vertical: KubusSpacing.md,
+          horizontal: KubusSpacing.sm,
+        ),
+        margin: const EdgeInsets.symmetric(horizontal: KubusSpacing.xxs),
+        borderRadius: BorderRadius.circular(KubusRadius.sm),
+        blurSigma: buttonStyle.blurSigma,
+        fallbackMinOpacity: buttonStyle.fallbackMinOpacity,
+        showBorder: false,
+        backgroundColor: background,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: foreground,
+              size: KubusSizes.sidebarActionIcon,
+            ),
+            const SizedBox(height: KubusSpacing.xs),
+            Text(
+              label,
+              style: KubusTypography.textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w600,
                 color: foreground,
-                size: KubusSizes.sidebarActionIcon,
               ),
-              const SizedBox(height: KubusSpacing.xs),
-              Text(
-                label,
-                style: KubusTypography.textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: foreground,
-                ),
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ),
       ),
     );

@@ -141,6 +141,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     final profileProvider = Provider.of<ProfileProvider>(context);
     final daoProvider = Provider.of<DAOProvider>(context);
     final animationTheme = context.animationTheme;
+    final isEmbeddedSubScreen = DesktopShellScope.of(context)?.canPop ?? false;
     final screenWidth = MediaQuery.of(context).size.width;
     final isLarge = screenWidth >= 1200;
     final isWide = screenWidth >= 1400;
@@ -175,7 +176,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: DetailSpacing.xl),
-                        _buildHeader(themeProvider),
+                        _buildHeader(
+                          showNavigationChrome: !isEmbeddedSubScreen,
+                        ),
                         const SizedBox(height: DetailSpacing.xl),
                         // Profile card with inline stats on wide screens
                         _buildProfileCard(themeProvider, profileProvider,
@@ -300,8 +303,89 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildHeader(ThemeProvider themeProvider) {
+  Widget _buildHeader({required bool showNavigationChrome}) {
     final l10n = AppLocalizations.of(context)!;
+
+    Widget buildActions() {
+      return Row(
+        children: [
+          DesktopActionButton(
+            label: l10n.desktopProfileShareProfileLabel,
+            icon: Icons.share_outlined,
+            onPressed: _shareProfile,
+            isPrimary: false,
+          ),
+          const SizedBox(width: DetailSpacing.md),
+          DesktopActionButton(
+            label: l10n.profileInvitesTooltip,
+            icon: Icons.inbox_outlined,
+            onPressed: () {
+              final shellScope = DesktopShellScope.of(context);
+              if (shellScope != null) {
+                shellScope.pushSubScreen(
+                  title: l10n.profileInvitesTooltip,
+                  child: const InvitesInboxScreen(embedded: true),
+                );
+                return;
+              }
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const InvitesInboxScreen(),
+                ),
+              );
+            },
+            isPrimary: false,
+          ),
+          const SizedBox(width: DetailSpacing.md),
+          if (AppConfig.isFeatureEnabled('analytics')) ...[
+            DesktopActionButton(
+              label: l10n.navigationScreenAnalytics,
+              icon: Icons.analytics_outlined,
+              onPressed: () {
+                final wallet = context
+                        .read<ProfileProvider>()
+                        .currentUser
+                        ?.walletAddress ??
+                    '';
+                if (wallet.trim().isEmpty) return;
+                _openAnalyticsDialog(wallet);
+              },
+              isPrimary: false,
+            ),
+            const SizedBox(width: DetailSpacing.md),
+          ],
+          DesktopActionButton(
+            label: l10n.navigationScreenSettings,
+            icon: Icons.settings_outlined,
+            onPressed: () {
+              final shellScope = DesktopShellScope.of(context);
+              if (shellScope != null) {
+                shellScope.pushScreen(
+                  const DesktopSettingsScreen(embeddedInShell: true),
+                );
+                return;
+              }
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const DesktopSettingsScreen(),
+                ),
+              );
+            },
+            isPrimary: false,
+          ),
+        ],
+      );
+    }
+
+    if (!showNavigationChrome) {
+      return Align(
+        alignment: Alignment.centerRight,
+        child: buildActions(),
+      );
+    }
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -334,76 +418,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           ],
         ),
-        Row(
-          children: [
-            DesktopActionButton(
-              label: l10n.desktopProfileShareProfileLabel,
-              icon: Icons.share_outlined,
-              onPressed: _shareProfile,
-              isPrimary: false,
-            ),
-            const SizedBox(width: DetailSpacing.md),
-            DesktopActionButton(
-              label: l10n.profileInvitesTooltip,
-              icon: Icons.inbox_outlined,
-              onPressed: () {
-                final shellScope = DesktopShellScope.of(context);
-                if (shellScope != null) {
-                  shellScope.pushSubScreen(
-                    title: l10n.profileInvitesTooltip,
-                    child: const InvitesInboxScreen(embedded: true),
-                  );
-                  return;
-                }
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const InvitesInboxScreen(),
-                  ),
-                );
-              },
-              isPrimary: false,
-            ),
-            const SizedBox(width: DetailSpacing.md),
-            if (AppConfig.isFeatureEnabled('analytics')) ...[
-              DesktopActionButton(
-                label: l10n.navigationScreenAnalytics,
-                icon: Icons.analytics_outlined,
-                onPressed: () {
-                  final wallet = context
-                          .read<ProfileProvider>()
-                          .currentUser
-                          ?.walletAddress ??
-                      '';
-                  if (wallet.trim().isEmpty) return;
-                  _openAnalyticsDialog(wallet);
-                },
-                isPrimary: false,
-              ),
-              const SizedBox(width: DetailSpacing.md),
-            ],
-            DesktopActionButton(
-              label: l10n.navigationScreenSettings,
-              icon: Icons.settings_outlined,
-              onPressed: () {
-                final shellScope = DesktopShellScope.of(context);
-                if (shellScope != null) {
-                  shellScope.pushScreen(
-                    const DesktopSettingsScreen(embeddedInShell: true),
-                  );
-                  return;
-                }
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const DesktopSettingsScreen(),
-                  ),
-                );
-              },
-              isPrimary: false,
-            ),
-          ],
-        ),
+        buildActions(),
       ],
     );
   }

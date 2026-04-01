@@ -1332,8 +1332,26 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         _pushScreen(const ProfileScreen(), screenKey);
         return;
       case 'analytics':
-        _pushScreen(
-            const AdvancedAnalyticsScreen(statType: 'Engagement'), screenKey);
+        final shellScope = DesktopShellScope.of(context);
+        Provider.of<NavigationProvider>(context, listen: false)
+            .trackScreenVisit(screenKey);
+        if (shellScope != null) {
+          shellScope.pushSubScreen(
+            title: _screenKeyToTitle(screenKey),
+            child: const AdvancedAnalyticsScreen(
+              statType: 'Engagement',
+              embedded: true,
+            ),
+          );
+        } else {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const AdvancedAnalyticsScreen(
+                statType: 'Engagement',
+              ),
+            ),
+          );
+        }
         return;
       case 'achievements':
         // Reuse onboarding to surface achievements context
@@ -2020,7 +2038,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     if (shellScope != null) {
       shellScope.pushSubScreen(
         title: AppLocalizations.of(context)!.homeActivityTitle,
-        child: const ActivityScreen(),
+        child: const ActivityScreen(embedded: true),
       );
     } else {
       Navigator.of(context).push(

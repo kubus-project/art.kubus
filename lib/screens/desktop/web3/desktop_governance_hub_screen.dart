@@ -175,7 +175,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
                     title: l10n.desktopGovernanceAnalyticsScreenTitle,
-                    child: const DAOAnalytics(),
+                    child: const DAOAnalytics(embedded: true),
                   ),
                 );
               },

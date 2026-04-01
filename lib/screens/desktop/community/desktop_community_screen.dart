@@ -82,7 +82,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     with TickerProviderStateMixin {
   late AnimationController _animationController;
   late TabController _tabController;
-  late ScrollController _scrollController;
   late TextEditingController _groupSearchController;
   late TextEditingController _communitySearchController;
   late TextEditingController _messageSearchController;
@@ -166,7 +165,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       }
       setState(() {}); // refresh FAB options per tab like mobile
     });
-    _scrollController = ScrollController();
     _groupSearchController = TextEditingController();
     _communitySearchController = TextEditingController();
     _messageSearchController = TextEditingController();
@@ -642,7 +640,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     _appRefreshProvider?.removeListener(_onAppRefreshTriggered);
     _animationController.dispose();
     _tabController.dispose();
-    _scrollController.dispose();
     _groupSearchDebounce?.cancel();
     _searchDebounce?.cancel();
     _groupSearchController.dispose();
@@ -778,23 +775,24 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     return Stack(
       key: const ValueKey('community-home-pane'),
       children: [
-        Column(
-          children: [
-            // Header with tabs
-            _buildHeader(themeProvider),
-
-            _buildSortControls(themeProvider),
-
-            // Feed content
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: _tabs
-                    .map((tab) => _buildFeedList(tab, themeProvider))
-                    .toList(),
+        NestedScrollView(
+          headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+            return [
+              SliverToBoxAdapter(
+                child: Column(
+                  children: [
+                    _buildHeader(themeProvider),
+                    _buildSortControls(themeProvider),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ];
+          },
+          body: TabBarView(
+            controller: _tabController,
+            children:
+                _tabs.map((tab) => _buildFeedList(tab, themeProvider)).toList(),
+          ),
         ),
 
         // Floating actions
@@ -2038,7 +2036,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           shellScope.pushScreen(
             DesktopSubScreen(
               title: l10n.season0ScreenTitle,
-              child: const Season0Screen(),
+              child: const Season0Screen(embedded: true),
             ),
           );
         } else {
@@ -2164,7 +2162,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               return false;
             },
             child: ListView.builder(
-              controller: _scrollController,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               itemCount: posts.length + 1,
               itemBuilder: (context, index) {
@@ -2525,7 +2522,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               shellScope.pushScreen(
                 DesktopSubScreen(
                   title: group.name,
-                  child: GroupFeedScreen(group: group),
+                  child: GroupFeedScreen(group: group, embedded: true),
                 ),
               );
             } else {
@@ -3208,7 +3205,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       shellScope.pushScreen(
         DesktopSubScreen(
           title: summary.name,
-          child: GroupFeedScreen(group: summary),
+          child: GroupFeedScreen(group: summary, embedded: true),
         ),
       );
       return;
@@ -5257,8 +5254,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     if (appModeProvider?.isIpfsFallbackMode ?? false) {
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
-          content:
-              Text(appModeProvider!.unavailableMessageFor('Posting')),
+          content: Text(appModeProvider!.unavailableMessageFor('Posting')),
           behavior: SnackBarBehavior.floating,
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
@@ -6015,7 +6011,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             shellScope.pushScreen(
               DesktopSubScreen(
                 title: group.name,
-                child: GroupFeedScreen(group: group),
+                child: GroupFeedScreen(group: group, embedded: true),
               ),
             );
           } else {
@@ -7040,8 +7036,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     if (appModeProvider?.isIpfsFallbackMode ?? false) {
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
-          content:
-              Text(appModeProvider!.unavailableMessageFor('Posting')),
+          content: Text(appModeProvider!.unavailableMessageFor('Posting')),
           backgroundColor: Theme.of(context).colorScheme.error,
           behavior: SnackBarBehavior.floating,
         ),

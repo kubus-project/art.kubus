@@ -13,9 +13,10 @@ import '../web3/institution/institution_hub.dart';
 /// Season 0 landing screen for the Ljubljana beta launch.
 /// CTAs track analytics events (best-effort) then navigate.
 class Season0Screen extends StatelessWidget {
-  const Season0Screen({super.key});
+  const Season0Screen({super.key, this.embedded = false});
 
   static const String _newsletterUrl = 'https://art.kubus.site/#newsletter';
+  final bool embedded;
 
   @override
   Widget build(BuildContext context) {
@@ -24,14 +25,16 @@ class Season0Screen extends StatelessWidget {
     final accent = context.watch<ThemeProvider>().accentColor;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          l10n.season0ScreenTitle,
-          style: KubusTypography.inter(fontWeight: FontWeight.w600),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
+      appBar: embedded
+          ? null
+          : AppBar(
+              title: Text(
+                l10n.season0ScreenTitle,
+                style: KubusTypography.inter(fontWeight: FontWeight.w600),
+              ),
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+            ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -94,7 +97,8 @@ class Season0Screen extends StatelessWidget {
     );
   }
 
-  Widget _buildPointsInfo(BuildContext context, AppLocalizations l10n, ColorScheme scheme) {
+  Widget _buildPointsInfo(
+      BuildContext context, AppLocalizations l10n, ColorScheme scheme) {
     final showLabsNote = AppConfig.isFeatureEnabled('labs');
     return Container(
       padding: const EdgeInsets.all(16),

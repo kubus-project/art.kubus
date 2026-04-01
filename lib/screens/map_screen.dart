@@ -2514,6 +2514,7 @@ class _MapScreenState extends State<MapScreen>
       final exhibitionsProvider = context.read<ExhibitionsProvider>();
       final markerManagementProvider = context.read<MarkerManagementProvider>();
       final walletAddress = context.read<WalletProvider>().currentWalletAddress;
+      final tileProviders = Provider.of<TileProviders?>(context, listen: false);
       final isStreetArtMarker =
           form.subjectType == MarkerSubjectType.streetArt ||
               form.markerType == ArtMarkerType.streetArt;
@@ -2545,7 +2546,6 @@ class _MapScreenState extends State<MapScreen>
           GridUtils.gridCellForZoom(_currentPosition!, currentZoom);
       // Snap to the grid level that is closest to the current zoom
       // This ensures we snap to the grid lines the user is likely seeing
-      final tileProviders = Provider.of<TileProviders?>(context, listen: false);
       final LatLng snappedPosition = tileProviders?.snapToVisibleGrid(
             form.positionOverride ?? _currentPosition!,
             currentZoom,

@@ -7,7 +7,9 @@ import '../../../providers/themeprovider.dart';
 import '../../../widgets/charts/stats_interactive_bar_chart.dart';
 
 class DAOAnalytics extends StatelessWidget {
-  const DAOAnalytics({super.key});
+  const DAOAnalytics({super.key, this.embedded = false});
+
+  final bool embedded;
 
   List<StatsBarEntry> _categoryEntries(Map<String, int> data) {
     final sorted = data.entries.toList(growable: false)
@@ -34,20 +36,22 @@ class DAOAnalytics extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        scrolledUnderElevation: 0,
-        title: Text(
-          l10n.daoAnalyticsTitle,
-          style: KubusTypography.inter(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-      ),
+      appBar: embedded
+          ? null
+          : AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              surfaceTintColor: Colors.transparent,
+              scrolledUnderElevation: 0,
+              title: Text(
+                l10n.daoAnalyticsTitle,
+                style: KubusTypography.inter(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ),
       body: Consumer<DAOProvider>(
         builder: (context, daoProvider, child) {
           final scheme = Theme.of(context).colorScheme;
@@ -58,11 +62,16 @@ class DAOAnalytics extends StatelessWidget {
           final transactions = daoProvider.transactions;
           final analytics = daoProvider.getDAOAnalytics();
           final treasuryAmount = analytics['treasuryAmount'] as double? ?? 0.0;
-          final inflow = transactions.where((tx) => tx.amount >= 0).fold<double>(0, (sum, tx) => sum + tx.amount);
-          final outflow = transactions.where((tx) => tx.amount < 0).fold<double>(0, (sum, tx) => sum + tx.amount.abs());
+          final inflow = transactions
+              .where((tx) => tx.amount >= 0)
+              .fold<double>(0, (sum, tx) => sum + tx.amount);
+          final outflow = transactions
+              .where((tx) => tx.amount < 0)
+              .fold<double>(0, (sum, tx) => sum + tx.amount.abs());
           final avgVotingPower = delegates.isEmpty
               ? 0.0
-              : delegates.fold<int>(0, (sum, d) => sum + d.votingPower) / delegates.length;
+              : delegates.fold<int>(0, (sum, d) => sum + d.votingPower) /
+                  delegates.length;
 
           final byType = <String, int>{};
           for (final p in proposals) {
@@ -92,15 +101,17 @@ class DAOAnalytics extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.all(KubusSpacing.lg),
               children: [
-                _metricsGrid(context, daoProvider, active: active, votes: votes, avgVotingPower: avgVotingPower),
+                _metricsGrid(context, daoProvider,
+                    active: active,
+                    votes: votes,
+                    avgVotingPower: avgVotingPower),
                 const SizedBox(height: 20),
                 _sectionCard(
                   context,
                   title: l10n.daoAnalyticsProposalsByTypeTitle,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: byType.entries
-                        .isEmpty
+                    children: byType.entries.isEmpty
                         ? [
                             Text(
                               l10n.daoAnalyticsNoProposalsYetLabel,
@@ -117,13 +128,14 @@ class DAOAnalytics extends StatelessWidget {
                                 entries: typeEntries,
                                 xLabels: typeLabels,
                                 barColor: scheme.primary,
-                                gridColor: scheme.onSurface.withValues(alpha: 0.12),
+                                gridColor:
+                                    scheme.onSurface.withValues(alpha: 0.12),
                                 height: 180,
                               ),
                             ),
                             const SizedBox(height: 12),
-                            ...byType.entries
-                                .map((entry) => _rowStat(context, entry.key, entry.value.toString())),
+                            ...byType.entries.map((entry) => _rowStat(
+                                context, entry.key, entry.value.toString())),
                           ],
                   ),
                 ),
@@ -133,8 +145,7 @@ class DAOAnalytics extends StatelessWidget {
                   title: l10n.daoAnalyticsProposalsByStatusTitle,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: byStatus.entries
-                        .isEmpty
+                    children: byStatus.entries.isEmpty
                         ? [
                             Text(
                               l10n.daoAnalyticsNoProposalsYetLabel,
@@ -151,13 +162,14 @@ class DAOAnalytics extends StatelessWidget {
                                 entries: statusEntries,
                                 xLabels: statusLabels,
                                 barColor: scheme.secondary,
-                                gridColor: scheme.onSurface.withValues(alpha: 0.12),
+                                gridColor:
+                                    scheme.onSurface.withValues(alpha: 0.12),
                                 height: 180,
                               ),
                             ),
                             const SizedBox(height: 12),
-                            ...byStatus.entries
-                                .map((entry) => _rowStat(context, entry.key, entry.value.toString())),
+                            ...byStatus.entries.map((entry) => _rowStat(
+                                context, entry.key, entry.value.toString())),
                           ],
                   ),
                 ),
@@ -173,17 +185,22 @@ class DAOAnalytics extends StatelessWidget {
                         child: StatsInteractiveBarChart(
                           entries: treasuryEntries,
                           xLabels: treasuryLabels,
-                          barColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+                          barColor:
+                              Provider.of<ThemeProvider>(context, listen: false)
+                                  .accentColor,
                           gridColor: scheme.onSurface.withValues(alpha: 0.12),
                           height: 180,
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _rowStat(context, l10n.daoTreasuryTotalLabel, '${treasuryAmount.toStringAsFixed(2)} KUB8'),
+                      _rowStat(context, l10n.daoTreasuryTotalLabel,
+                          '${treasuryAmount.toStringAsFixed(2)} KUB8'),
                       const SizedBox(height: 8),
-                      _rowStat(context, l10n.daoTreasuryInflowLabel, '${inflow.toStringAsFixed(2)} KUB8'),
+                      _rowStat(context, l10n.daoTreasuryInflowLabel,
+                          '${inflow.toStringAsFixed(2)} KUB8'),
                       const SizedBox(height: 8),
-                      _rowStat(context, l10n.daoTreasuryOutflowLabel, '${outflow.toStringAsFixed(2)} KUB8'),
+                      _rowStat(context, l10n.daoTreasuryOutflowLabel,
+                          '${outflow.toStringAsFixed(2)} KUB8'),
                     ],
                   ),
                 ),
@@ -202,7 +219,8 @@ class DAOAnalytics extends StatelessWidget {
     required int votes,
     required double avgVotingPower,
   }) {
-    final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
+    final accent =
+        Provider.of<ThemeProvider>(context, listen: false).accentColor;
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -211,21 +229,32 @@ class DAOAnalytics extends StatelessWidget {
       mainAxisSpacing: 12,
       childAspectRatio: 1.3,
       children: [
-        _metricCard(context, 'Total Proposals', daoProvider.proposals.length.toString(), Icons.how_to_vote, accent),
-        _metricCard(context, 'Active Proposals', active.toString(), Icons.schedule, Colors.green),
-        _metricCard(context, 'Votes Cast', votes.toString(), Icons.ballot, Colors.blueGrey),
-        _metricCard(context, 'Avg Voting Power', '${avgVotingPower.toStringAsFixed(0)} KUB8', Icons.account_balance_wallet, Colors.teal),
+        _metricCard(context, 'Total Proposals',
+            daoProvider.proposals.length.toString(), Icons.how_to_vote, accent),
+        _metricCard(context, 'Active Proposals', active.toString(),
+            Icons.schedule, Colors.green),
+        _metricCard(context, 'Votes Cast', votes.toString(), Icons.ballot,
+            Colors.blueGrey),
+        _metricCard(
+            context,
+            'Avg Voting Power',
+            '${avgVotingPower.toStringAsFixed(0)} KUB8',
+            Icons.account_balance_wallet,
+            Colors.teal),
       ],
     );
   }
 
-  Widget _metricCard(BuildContext context, String title, String value, IconData icon, Color color) {
+  Widget _metricCard(BuildContext context, String title, String value,
+      IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
+        border: Border.all(
+            color:
+                Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -256,7 +285,10 @@ class DAOAnalytics extends StatelessWidget {
             title,
             style: KubusTypography.inter(
               fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.7),
             ),
           ),
         ],
@@ -264,13 +296,18 @@ class DAOAnalytics extends StatelessWidget {
     );
   }
 
-  Widget _sectionCard(BuildContext context, {required String title, required Widget child}) {
+  Widget _sectionCard(BuildContext context,
+      {required String title, required Widget child}) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.08)),
+        border: Border.all(
+            color: Theme.of(context)
+                .colorScheme
+                .onPrimary
+                .withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -300,7 +337,10 @@ class DAOAnalytics extends StatelessWidget {
               label,
               style: KubusTypography.inter(
                 fontSize: 13,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.8),
               ),
             ),
           ),

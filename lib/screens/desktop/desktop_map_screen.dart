@@ -2545,6 +2545,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                               child: ExhibitionDetailScreen(
                                 exhibitionId: exhibition.id,
                                 attendanceMarkerId: attendanceMarkerId,
+                                embedded: true,
                               ),
                             ),
                           );
@@ -4408,6 +4409,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       final exhibitionsProvider = context.read<ExhibitionsProvider>();
       final markerManagementProvider = context.read<MarkerManagementProvider>();
       final walletAddress = context.read<WalletProvider>().currentWalletAddress;
+      final tileProviders = Provider.of<TileProviders?>(context, listen: false);
       final isStreetArtMarker =
           form.subjectType == MarkerSubjectType.streetArt ||
               form.markerType == ArtMarkerType.streetArt;
@@ -4434,7 +4436,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
       final currentZoom = _effectiveZoom;
       final gridCell = GridUtils.gridCellForZoom(position, currentZoom);
-      final tileProviders = Provider.of<TileProviders?>(context, listen: false);
       final LatLng snappedPosition =
           tileProviders?.snapToVisibleGrid(position, currentZoom) ??
               gridCell.center;

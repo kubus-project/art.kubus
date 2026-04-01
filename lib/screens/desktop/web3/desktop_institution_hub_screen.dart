@@ -426,6 +426,7 @@ class _DesktopInstitutionHubScreenState
                               child: ExhibitionDetailScreen(
                                 exhibitionId: exhibition.id,
                                 initialExhibition: exhibition,
+                                embedded: true,
                               ),
                             ),
                           );

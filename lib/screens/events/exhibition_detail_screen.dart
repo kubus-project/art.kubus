@@ -13,7 +13,8 @@ import '../../providers/collab_provider.dart';
 import '../../providers/exhibitions_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../screens/collab/invites_inbox_screen.dart';
-import '../../services/backend_api_service.dart' show BackendApiRequestException;
+import '../../services/backend_api_service.dart'
+    show BackendApiRequestException;
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../l10n/app_localizations.dart';
@@ -30,12 +31,14 @@ class ExhibitionDetailScreen extends StatefulWidget {
   final String exhibitionId;
   final Exhibition? initialExhibition;
   final String? attendanceMarkerId;
+  final bool embedded;
 
   const ExhibitionDetailScreen({
     super.key,
     required this.exhibitionId,
     this.initialExhibition,
     this.attendanceMarkerId,
+    this.embedded = false,
   });
 
   @override
@@ -86,6 +89,39 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     return role == 'owner' || role == 'admin' || role == 'publisher';
   }
 
+  List<Widget> _buildHeaderActions(AppLocalizations l10n, Exhibition ex) {
+    return [
+      IconButton(
+        tooltip: l10n.commonShare,
+        onPressed: () {
+          ShareService().showShareSheet(
+            context,
+            target: ShareTarget.exhibition(
+              exhibitionId: widget.exhibitionId,
+              title: ex.title,
+            ),
+            sourceScreen: 'exhibition_detail',
+          );
+        },
+        icon: const Icon(Icons.share_outlined),
+      ),
+      IconButton(
+        tooltip: l10n.exhibitionDetailInvitesTooltip,
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const InvitesInboxScreen()),
+          );
+        },
+        icon: const Icon(Icons.inbox_outlined),
+      ),
+      IconButton(
+        tooltip: l10n.exhibitionDetailRefreshTooltip,
+        onPressed: _load,
+        icon: const Icon(Icons.refresh),
+      ),
+    ];
+  }
+
   Future<void> _togglePublish(Exhibition exhibition, bool publish) async {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
@@ -109,8 +145,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       if (!mounted) return;
       messenger.showKubusSnackBar(
         SnackBar(
-          content:
-              Text(l10n.commonActionFailedToast, style: KubusTypography.inter()),
+          content: Text(l10n.commonActionFailedToast,
+              style: KubusTypography.inter()),
           backgroundColor: scheme.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -138,8 +174,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       if (bytes == null || bytes.isEmpty) {
         messenger.showKubusSnackBar(
           SnackBar(
-            content:
-                Text(l10n.commonActionFailedToast, style: KubusTypography.inter()),
+            content: Text(l10n.commonActionFailedToast,
+                style: KubusTypography.inter()),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -156,8 +192,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       if (url == null || url.isEmpty) {
         messenger.showKubusSnackBar(
           SnackBar(
-            content:
-                Text(l10n.commonActionFailedToast, style: KubusTypography.inter()),
+            content: Text(l10n.commonActionFailedToast,
+                style: KubusTypography.inter()),
             backgroundColor: scheme.error,
             behavior: SnackBarBehavior.floating,
           ),
@@ -179,8 +215,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       if (!mounted) return;
       messenger.showKubusSnackBar(
         SnackBar(
-          content:
-              Text(l10n.commonActionFailedToast, style: KubusTypography.inter()),
+          content: Text(l10n.commonActionFailedToast,
+              style: KubusTypography.inter()),
           backgroundColor: scheme.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -293,7 +329,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                       },
                       title: Text(
                         art.title,
-                        style: KubusTypography.inter(fontWeight: FontWeight.w600),
+                        style:
+                            KubusTypography.inter(fontWeight: FontWeight.w600),
                       ),
                       subtitle: Text(
                         art.artist.isNotEmpty ? art.artist : 'â€”',
@@ -310,14 +347,16 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(dialogContext).pop(false),
-                  child: Text(l10n.commonCancel, style: KubusTypography.inter()),
+                  child:
+                      Text(l10n.commonCancel, style: KubusTypography.inter()),
                 ),
                 FilledButton(
                   onPressed: selectedIds.isEmpty
                       ? null
                       : () => Navigator.of(dialogContext).pop(true),
                   child: Text(l10n.commonLink,
-                      style: KubusTypography.inter(fontWeight: FontWeight.w600)),
+                      style:
+                          KubusTypography.inter(fontWeight: FontWeight.w600)),
                 ),
               ],
             );
@@ -488,8 +527,9 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
         if (raw.isNotEmpty) {
           final decoded = jsonDecode(raw);
           if (decoded is Map<String, dynamic>) {
-            final msg =
-                (decoded['error'] ?? decoded['message'] ?? '').toString().trim();
+            final msg = (decoded['error'] ?? decoded['message'] ?? '')
+                .toString()
+                .trim();
             if (msg.isNotEmpty) backendMessage = msg;
           }
         }
@@ -529,39 +569,16 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
 
     final canManage = _canManageExhibition(ex.myRole);
     final canPublish = _canPublishExhibition(ex.myRole);
+    final headerActions = _buildHeaderActions(l10n, ex);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(ex.title,
-            style: KubusTypography.inter(fontWeight: FontWeight.w600)),
-        actions: [
-          IconButton(
-            tooltip: l10n.commonShare,
-            onPressed: () {
-              ShareService().showShareSheet(
-                context,
-                target: ShareTarget.exhibition(
-                    exhibitionId: widget.exhibitionId, title: ex.title),
-                sourceScreen: 'exhibition_detail',
-              );
-            },
-            icon: const Icon(Icons.share_outlined),
-          ),
-          IconButton(
-            tooltip: l10n.exhibitionDetailInvitesTooltip,
-            onPressed: () {
-              Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => const InvitesInboxScreen()));
-            },
-            icon: const Icon(Icons.inbox_outlined),
-          ),
-          IconButton(
-            tooltip: l10n.exhibitionDetailRefreshTooltip,
-            onPressed: _load,
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
-      ),
+      appBar: widget.embedded
+          ? null
+          : AppBar(
+              title: Text(ex.title,
+                  style: KubusTypography.inter(fontWeight: FontWeight.w600)),
+              actions: headerActions,
+            ),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1100),
@@ -570,6 +587,16 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final isWide = constraints.maxWidth >= 900;
+                final embeddedActions = widget.embedded
+                    ? Padding(
+                        padding:
+                            const EdgeInsets.only(bottom: DetailSpacing.md),
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: Wrap(spacing: 4, children: headerActions),
+                        ),
+                      )
+                    : const SizedBox.shrink();
 
                 final details = Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -633,6 +660,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
+                                  if (widget.embedded) embeddedActions,
                                   details,
                                   const SizedBox(height: DetailSpacing.lg),
                                   artworksCard,
@@ -657,6 +685,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
 
                 return ListView(
                   children: [
+                    if (widget.embedded) embeddedActions,
                     details,
                     const SizedBox(height: DetailSpacing.lg),
                     artworksCard,
@@ -754,10 +783,10 @@ class _LinkedArtworksListState extends State<_LinkedArtworksList> {
       tiles.add(
         ListTile(
           dense: true,
-            contentPadding: EdgeInsets.zero,
-            onTap: () {
-              openArtwork(context, id, source: 'exhibition_detail');
-            },
+          contentPadding: EdgeInsets.zero,
+          onTap: () {
+            openArtwork(context, id, source: 'exhibition_detail');
+          },
           title: Text(
             title,
             style: KubusTypography.inter(fontWeight: FontWeight.w600),
@@ -971,5 +1000,3 @@ class _ExhibitionDetailsCard extends StatelessWidget {
 }
 
 // Remove old _InfoRow since we now use InfoRow from detail_shell_components
-
-

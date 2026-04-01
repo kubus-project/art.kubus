@@ -39,9 +39,14 @@ import 'post_detail_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class GroupFeedScreen extends StatefulWidget {
-  const GroupFeedScreen({super.key, required this.group});
+  const GroupFeedScreen({
+    super.key,
+    required this.group,
+    this.embedded = false,
+  });
 
   final CommunityGroupSummary group;
+  final bool embedded;
 
   @override
   State<GroupFeedScreen> createState() => _GroupFeedScreenState();
@@ -78,43 +83,47 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_group.name),
-        actions: [
-          Consumer<CommunityHubProvider>(
-            builder: (context, hub, _) {
-              final latest = _resolveGroup(hub);
-              final isOwner = latest.isOwner;
-              final isMember = latest.isMember;
-              final label = isOwner
-                  ? l10n.commonOwner
-                  : isMember
-                      ? l10n.commonJoined
-                      : l10n.commonJoin;
-              return Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: ElevatedButton(
-                  onPressed: isOwner
-                      ? null
-                      : (_membershipInFlight
-                          ? null
-                          : () => _toggleMembership(hub, latest)),
-                  child: SizedBox(
-                    height: 24,
-                    child: Center(
-                      child: Text(
-                        label,
-                        style: KubusTypography.inter(fontSize: 13),
+      appBar: widget.embedded
+          ? null
+          : AppBar(
+              title: Text(_group.name),
+              actions: [
+                Consumer<CommunityHubProvider>(
+                  builder: (context, hub, _) {
+                    final latest = _resolveGroup(hub);
+                    final isOwner = latest.isOwner;
+                    final isMember = latest.isMember;
+                    final label = isOwner
+                        ? l10n.commonOwner
+                        : isMember
+                            ? l10n.commonJoined
+                            : l10n.commonJoin;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
                       ),
-                    ),
-                  ),
+                      child: ElevatedButton(
+                        onPressed: isOwner
+                            ? null
+                            : (_membershipInFlight
+                                ? null
+                                : () => _toggleMembership(hub, latest)),
+                        child: SizedBox(
+                          height: 24,
+                          child: Center(
+                            child: Text(
+                              label,
+                              style: KubusTypography.inter(fontSize: 13),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
-        ],
-      ),
+              ],
+            ),
       body: Consumer<CommunityHubProvider>(
         builder: (context, hub, _) {
           final summary = _resolveGroup(hub);
@@ -388,8 +397,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     if (appModeProvider?.isIpfsFallbackMode ?? false) {
       messenger.showKubusSnackBar(
         SnackBar(
-          content:
-              Text(appModeProvider!.unavailableMessageFor('Posting')),
+          content: Text(appModeProvider!.unavailableMessageFor('Posting')),
         ),
       );
       return;

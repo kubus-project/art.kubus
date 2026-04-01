@@ -26,10 +26,12 @@ import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class CollectionDetailScreen extends StatefulWidget {
   final String collectionId;
+  final bool embedded;
 
   const CollectionDetailScreen({
     super.key,
     required this.collectionId,
+    this.embedded = false,
   });
 
   @override
@@ -57,6 +59,104 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
 
   void _reload() {
     unawaited(_load(force: true));
+  }
+
+  Widget _buildEmbeddedHeader({
+    required CollectionRecord collection,
+    required String name,
+    required String? thumbnailUrl,
+    required bool canEdit,
+  }) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        DetailSpacing.lg,
+        DetailSpacing.lg,
+        DetailSpacing.lg,
+        0,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: KubusTypography.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurface,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: l10n.commonShare,
+                onPressed: () {
+                  ShareService().showShareSheet(
+                    context,
+                    target: ShareTarget.collection(
+                      collectionId: widget.collectionId,
+                      title: name,
+                    ),
+                    sourceScreen: 'collection_detail',
+                  );
+                },
+                icon: const Icon(Icons.share_outlined),
+              ),
+              if (canEdit)
+                IconButton(
+                  tooltip: l10n.commonEdit,
+                  onPressed: () => _openEditor(collection),
+                  icon: const Icon(Icons.edit),
+                ),
+            ],
+          ),
+          const SizedBox(height: DetailSpacing.md),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(DetailRadius.md),
+            child: SizedBox(
+              height: 180,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      scheme.primary.withValues(alpha: 0.22),
+                      scheme.secondary.withValues(alpha: 0.18),
+                    ],
+                  ),
+                ),
+                child: thumbnailUrl == null
+                    ? Center(
+                        child: Icon(
+                          Icons.collections,
+                          size: 72,
+                          color: scheme.onSurface.withValues(alpha: 0.35),
+                        ),
+                      )
+                    : Image.network(
+                        thumbnailUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Center(
+                          child: Icon(
+                            Icons.broken_image_outlined,
+                            size: 56,
+                            color: scheme.onSurface.withValues(alpha: 0.35),
+                          ),
+                        ),
+                      ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _openEditor(CollectionRecord collection) async {
@@ -144,8 +244,17 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
               walletAddress.isNotEmpty &&
               WalletUtils.equals(walletAddress, resolved.walletAddress);
 
-          return CustomScrollView(
-            slivers: [
+          final slivers = <Widget>[
+            if (widget.embedded)
+              SliverToBoxAdapter(
+                child: _buildEmbeddedHeader(
+                  collection: resolved,
+                  name: name,
+                  thumbnailUrl: thumbnailUrl,
+                  canEdit: canEdit,
+                ),
+              )
+            else
               SliverAppBar(
                 pinned: true,
                 expandedHeight: 220,
@@ -213,69 +322,73 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                   ),
                 ),
               ),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(DetailSpacing.lg,
-                    DetailSpacing.lg, DetailSpacing.lg, DetailSpacing.xl),
-                sliver: SliverList(
-                  delegate: SliverChildListDelegate(
-                    [
-                      if (AppConfig.isFeatureEnabled('collabInvites')) ...[
-                        CollaborationPanel(
-                          entityType: 'collections',
-                          entityId: widget.collectionId,
-                        ),
-                        const SizedBox(
-                            height: DetailSpacing.lg + DetailSpacing.xs),
-                      ],
-                      if (description.isNotEmpty) ...[
-                        Text(
-                          l10n.collectionDetailDescription,
-                          style: DetailTypography.sectionTitle(context),
-                        ),
-                        const SizedBox(height: DetailSpacing.sm),
-                        Text(description,
-                            style: DetailTypography.body(context)),
-                        const SizedBox(
-                            height: DetailSpacing.lg + DetailSpacing.xs),
-                      ],
-                      SectionHeader(
-                        title: l10n.collectionDetailArtworks,
-                        trailing: canEdit
-                            ? TextButton.icon(
-                                onPressed: () => _openEditor(resolved),
-                                icon: const Icon(Icons.edit, size: 16),
-                                label: Text(l10n.collectionDetailManage,
-                                    style: DetailTypography.button(context)),
-                              )
-                            : null,
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(
+                DetailSpacing.lg,
+                DetailSpacing.lg,
+                DetailSpacing.lg,
+                DetailSpacing.xl,
+              ),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate(
+                  [
+                    if (AppConfig.isFeatureEnabled('collabInvites')) ...[
+                      CollaborationPanel(
+                        entityType: 'collections',
+                        entityId: widget.collectionId,
                       ),
-                      const SizedBox(height: DetailSpacing.md),
-                      if ((error ?? '').isNotEmpty && collection != null)
-                        Padding(
-                          padding:
-                              const EdgeInsets.only(bottom: DetailSpacing.md),
-                          child: Text(
-                            l10n.collectionDetailLoadFailedMessage,
-                            style: KubusTypography.inter(
-                                fontSize: 12, color: scheme.error),
-                          ),
-                        ),
-                      if (artworks.isEmpty)
-                        Text(l10n.collectionDetailNoArtworksYet,
-                            style: DetailTypography.caption(context))
-                      else
-                        ...artworks.map((art) => _ArtworkRow(artwork: art)),
-                      if (isLoading)
-                        Padding(
-                          padding: const EdgeInsets.only(top: DetailSpacing.lg),
-                          child: LinearProgressIndicator(color: scheme.primary),
-                        ),
+                      const SizedBox(
+                          height: DetailSpacing.lg + DetailSpacing.xs),
                     ],
-                  ),
+                    if (description.isNotEmpty) ...[
+                      Text(
+                        l10n.collectionDetailDescription,
+                        style: DetailTypography.sectionTitle(context),
+                      ),
+                      const SizedBox(height: DetailSpacing.sm),
+                      Text(description, style: DetailTypography.body(context)),
+                      const SizedBox(
+                          height: DetailSpacing.lg + DetailSpacing.xs),
+                    ],
+                    SectionHeader(
+                      title: l10n.collectionDetailArtworks,
+                      trailing: canEdit
+                          ? TextButton.icon(
+                              onPressed: () => _openEditor(resolved),
+                              icon: const Icon(Icons.edit, size: 16),
+                              label: Text(l10n.collectionDetailManage,
+                                  style: DetailTypography.button(context)),
+                            )
+                          : null,
+                    ),
+                    const SizedBox(height: DetailSpacing.md),
+                    if ((error ?? '').isNotEmpty && collection != null)
+                      Padding(
+                        padding:
+                            const EdgeInsets.only(bottom: DetailSpacing.md),
+                        child: Text(
+                          l10n.collectionDetailLoadFailedMessage,
+                          style: KubusTypography.inter(
+                              fontSize: 12, color: scheme.error),
+                        ),
+                      ),
+                    if (artworks.isEmpty)
+                      Text(l10n.collectionDetailNoArtworksYet,
+                          style: DetailTypography.caption(context))
+                    else
+                      ...artworks.map((art) => _ArtworkRow(artwork: art)),
+                    if (isLoading)
+                      Padding(
+                        padding: const EdgeInsets.only(top: DetailSpacing.lg),
+                        child: LinearProgressIndicator(color: scheme.primary),
+                      ),
+                  ],
                 ),
               ),
-            ],
-          );
+            ),
+          ];
+
+          return CustomScrollView(slivers: slivers);
         },
       ),
     );

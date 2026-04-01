@@ -197,6 +197,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                   title: l10n.userProfileCollectionFallbackTitle,
                   child: CollectionDetailScreen(
                     collectionId: collectionId,
+                    embedded: true,
                   ),
                 ),
               );
@@ -449,6 +450,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                               title: l10n.userProfileCollectionFallbackTitle,
                               child: CollectionDetailScreen(
                                 collectionId: collectionId,
+                                embedded: true,
                               ),
                             ),
                           );
@@ -524,6 +526,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                               child: ExhibitionDetailScreen(
                                 exhibitionId: exhibition.id,
                                 initialExhibition: exhibition,
+                                embedded: true,
                               ),
                             ),
                           );

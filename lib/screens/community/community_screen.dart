@@ -126,8 +126,6 @@ class _CommunityScreenState extends State<CommunityScreen>
   // Avatar cache removed - ChatProvider or UserService are used for user avatars
   // Scroll controller for the feed to detect when user is away from top
   late ScrollController _feedScrollController;
-  // Scroll controller for the Art tab list (pagination)
-  late ScrollController _artFeedScrollController;
   bool _artFeedLoadMoreInFlight = false;
   late final TextEditingController _groupSearchController;
   late final TextEditingController _communitySearchBarController;
@@ -748,9 +746,6 @@ class _CommunityScreenState extends State<CommunityScreen>
       } catch (_) {}
     });
 
-    _artFeedScrollController = ScrollController();
-    _artFeedScrollController.addListener(_maybeLoadMoreArtFeed);
-
     // Listen for socket notifications to animate bell
     try {
       SocketService()
@@ -928,11 +923,6 @@ class _CommunityScreenState extends State<CommunityScreen>
     try {
       _feedScrollController.dispose();
     } catch (_) {}
-    try {
-      _artFeedScrollController
-        ..removeListener(_maybeLoadMoreArtFeed)
-        ..dispose();
-    } catch (_) {}
     _groupSearchDebounce?.cancel();
     _groupSearchController.dispose();
     _communitySearchBarController.dispose();
@@ -942,19 +932,16 @@ class _CommunityScreenState extends State<CommunityScreen>
     super.dispose();
   }
 
-  void _maybeLoadMoreArtFeed() {
-    if (!mounted) return;
-    if (_tabController.index != 3) return;
-    if (!_artFeedScrollController.hasClients) return;
-    if (_artFeedLatitude == null || _artFeedLongitude == null) return;
+  bool _handleArtFeedScrollNotification(ScrollNotification notification) {
+    if (!mounted) return false;
+    if (notification.metrics.axis != Axis.vertical) return false;
+    if (_tabController.index != 3) return false;
+    if (_artFeedLatitude == null || _artFeedLongitude == null) return false;
+    if (notification.metrics.extentAfter > 600) return false;
 
-    // When we're close to the bottom, fetch the next page.
-    final position = _artFeedScrollController.position;
-    if (position.extentAfter > 600) return;
-
-    if (_artFeedLoadMoreInFlight) return;
+    if (_artFeedLoadMoreInFlight) return false;
     final hub = Provider.of<CommunityHubProvider>(context, listen: false);
-    if (hub.artFeedLoading || !hub.artFeedHasMore) return;
+    if (hub.artFeedLoading || !hub.artFeedHasMore) return false;
 
     _artFeedLoadMoreInFlight = true;
     (() async {
@@ -978,6 +965,8 @@ class _CommunityScreenState extends State<CommunityScreen>
         _artFeedLoadMoreInFlight = false;
       }
     })();
+
+    return false;
   }
 
   void _handleIncomingPost(Map<String, dynamic> data) async {
@@ -1108,21 +1097,25 @@ class _CommunityScreenState extends State<CommunityScreen>
               opacity: _fadeAnimation,
               child: SlideTransition(
                 position: _slideAnimation,
-                child: Column(
-                  children: [
-                    _buildAppBar(),
-                    Expanded(
-                      child: TabBarView(
-                        controller: _tabController,
-                        children: [
-                          _buildFeedTab(),
-                          _buildDiscoverTab(),
-                          _buildGroupsTab(),
-                          _buildArtTab(),
-                        ],
+                child: NestedScrollView(
+                  controller: _feedScrollController,
+                  headerSliverBuilder:
+                      (BuildContext context, bool innerBoxIsScrolled) {
+                    return [
+                      SliverToBoxAdapter(
+                        child: _buildAppBar(),
                       ),
-                    ),
-                  ],
+                    ];
+                  },
+                  body: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildFeedTab(),
+                      _buildDiscoverTab(),
+                      _buildGroupsTab(),
+                      _buildArtTab(),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -1580,7 +1573,6 @@ class _CommunityScreenState extends State<CommunityScreen>
       child: Stack(
         children: [
           ListView.builder(
-            controller: showBufferedBanner ? _feedScrollController : null,
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(
               24,
@@ -1970,50 +1962,53 @@ class _CommunityScreenState extends State<CommunityScreen>
 
     return RefreshIndicator(
       onRefresh: () => _ensureArtFeedLoaded(force: true),
-      child: ListView(
-        controller: _artFeedScrollController,
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(
-          24,
-          24,
-          24,
-          24 + KubusLayout.mainBottomNavBarHeight,
-        ),
-        children: [
-          _buildArtFeedHeader(),
-          const SizedBox(height: 16),
-          if (_artFeedError != null && _artFeedPosts.isEmpty)
-            _buildArtStatusCard(
-              icon: Icons.location_off_outlined,
-              title: l10n.communityArtFeedLocationNeededTitle,
-              description: l10n.communityArtFeedLocationNeededDescription,
-              actionLabel: l10n.commonRetry,
-              onAction: () => _ensureArtFeedLoaded(force: true),
-            )
-          else if (_artFeedPosts.isEmpty)
-            _buildArtStatusCard(
-              icon: Icons.brush_outlined,
-              title: l10n.communityArtFeedNoNearbyActivationsTitle,
-              description: l10n.communityArtFeedNoNearbyActivationsDescription,
-              actionLabel: l10n.commonRefresh,
-              onAction: () => _ensureArtFeedLoaded(force: true),
-            ),
-          ..._artFeedPosts.map(_buildArtPostCard),
-          if (_isLoadingArtFeed && _artFeedPosts.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 32),
-              child: Center(
-                child: InlineLoading(
-                  expand: false,
-                  shape: BoxShape.circle,
-                  tileSize: 4,
-                  progress: null,
-                  color: Provider.of<ThemeProvider>(context, listen: false)
-                      .accentColor,
+      child: NotificationListener<ScrollNotification>(
+        onNotification: _handleArtFeedScrollNotification,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(
+            24,
+            24,
+            24,
+            24 + KubusLayout.mainBottomNavBarHeight,
+          ),
+          children: [
+            _buildArtFeedHeader(),
+            const SizedBox(height: 16),
+            if (_artFeedError != null && _artFeedPosts.isEmpty)
+              _buildArtStatusCard(
+                icon: Icons.location_off_outlined,
+                title: l10n.communityArtFeedLocationNeededTitle,
+                description: l10n.communityArtFeedLocationNeededDescription,
+                actionLabel: l10n.commonRetry,
+                onAction: () => _ensureArtFeedLoaded(force: true),
+              )
+            else if (_artFeedPosts.isEmpty)
+              _buildArtStatusCard(
+                icon: Icons.brush_outlined,
+                title: l10n.communityArtFeedNoNearbyActivationsTitle,
+                description:
+                    l10n.communityArtFeedNoNearbyActivationsDescription,
+                actionLabel: l10n.commonRefresh,
+                onAction: () => _ensureArtFeedLoaded(force: true),
+              ),
+            ..._artFeedPosts.map(_buildArtPostCard),
+            if (_isLoadingArtFeed && _artFeedPosts.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 32),
+                child: Center(
+                  child: InlineLoading(
+                    expand: false,
+                    shape: BoxShape.circle,
+                    tileSize: 4,
+                    progress: null,
+                    color: Provider.of<ThemeProvider>(context, listen: false)
+                        .accentColor,
+                  ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -5162,8 +5157,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     if (appModeProvider?.isIpfsFallbackMode ?? false) {
       messenger.showKubusSnackBar(
         SnackBar(
-          content:
-              Text(appModeProvider!.unavailableMessageFor('Posting')),
+          content: Text(appModeProvider!.unavailableMessageFor('Posting')),
         ),
       );
       return;

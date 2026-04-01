@@ -30,11 +30,13 @@ class AdvancedAnalyticsScreen extends StatefulWidget {
   final String? walletAddress;
   final AnalyticsExperienceContext initialContext;
   final List<AnalyticsExperienceContext> contexts;
+  final bool embedded;
 
   const AdvancedAnalyticsScreen({
     super.key,
     required this.statType,
     this.walletAddress,
+    this.embedded = false,
     this.initialContext = AnalyticsExperienceContext.home,
     this.contexts = const <AnalyticsExperienceContext>[
       AnalyticsExperienceContext.home,
@@ -42,10 +44,11 @@ class AdvancedAnalyticsScreen extends StatefulWidget {
   });
 
   @override
-  State<AdvancedAnalyticsScreen> createState() => _AdvancedAnalyticsScreenState();
+  State<AdvancedAnalyticsScreen> createState() =>
+      _AdvancedAnalyticsScreenState();
 }
 
-class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> 
+class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     with TickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -159,31 +162,33 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       opacity: _fadeAnimation,
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          surfaceTintColor: Colors.transparent,
-          scrolledUnderElevation: 0,
-          elevation: 0,
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: scheme.onSurface),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: Text(
-            definition.title,
-            style: KubusTypography.inter(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: scheme.onSurface,
-            ),
-          ),
-          actions: [
-            TopBarIcon(
-              icon: Icon(Icons.share, color: scheme.onSurface),
-              onPressed: () => unawaited(_shareAnalytics(analytics)),
-              tooltip: l10n.commonShare,
-            ),
-          ],
-        ),
+        appBar: widget.embedded
+            ? null
+            : AppBar(
+                backgroundColor: Colors.transparent,
+                surfaceTintColor: Colors.transparent,
+                scrolledUnderElevation: 0,
+                elevation: 0,
+                leading: IconButton(
+                  icon: Icon(Icons.arrow_back, color: scheme.onSurface),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                title: Text(
+                  definition.title,
+                  style: KubusTypography.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: scheme.onSurface,
+                  ),
+                ),
+                actions: [
+                  TopBarIcon(
+                    icon: Icon(Icons.share, color: scheme.onSurface),
+                    onPressed: () => unawaited(_shareAnalytics(analytics)),
+                    tooltip: l10n.commonShare,
+                  ),
+                ],
+              ),
         body: Column(
           children: [
             _buildHeaderControls(
@@ -342,7 +347,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       );
     }
 
-    final timeframeChips = AnalyticsFiltersProvider.allowedTimeframes.map((value) {
+    final timeframeChips =
+        AnalyticsFiltersProvider.allowedTimeframes.map((value) {
       return ChoiceChip(
         selected: timeframe == value,
         label: Text(value.toUpperCase()),
@@ -605,8 +611,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           storageKey: AnalyticsFiltersProvider.profileContextKey,
           title: l10n.profileAnalyticsProfileTitle,
           subtitle: l10n.analyticsProfileSubtitle,
-          scopeLabel:
-              isOwner ? l10n.analyticsYourAnalyticsTitle : l10n.analyticsPublicAnalyticsTitle,
+          scopeLabel: isOwner
+              ? l10n.analyticsYourAnalyticsTitle
+              : l10n.analyticsPublicAnalyticsTitle,
           icon: Icons.person_outline,
           accentColor: scheme.primary,
           metrics: <_AnalyticsMetricDefinition>[
@@ -625,8 +632,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           storageKey: AnalyticsFiltersProvider.communityContextKey,
           title: l10n.profileAnalyticsCommunityTitle,
           subtitle: l10n.analyticsCommunitySubtitle,
-          scopeLabel:
-              isOwner ? l10n.analyticsYourAnalyticsTitle : l10n.analyticsPublicAnalyticsTitle,
+          scopeLabel: isOwner
+              ? l10n.analyticsYourAnalyticsTitle
+              : l10n.analyticsPublicAnalyticsTitle,
           icon: Icons.forum_outlined,
           accentColor: scheme.secondary,
           metrics: <_AnalyticsMetricDefinition>[
@@ -656,19 +664,20 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     required String statType,
   }) {
     final statMetric = StatsApiService.metricFromUiStatType(statType).trim();
-    final candidates = definition.contextType == AnalyticsExperienceContext.home &&
-            statMetric.isNotEmpty &&
-            !hasExplicitMetricSelection
-        ? <String>[
-            statMetric,
-            storedMetricId.trim(),
-            _defaultMetricForDefinition(definition),
-          ]
-        : <String>[
-            storedMetricId.trim(),
-            statMetric,
-            _defaultMetricForDefinition(definition),
-          ];
+    final candidates =
+        definition.contextType == AnalyticsExperienceContext.home &&
+                statMetric.isNotEmpty &&
+                !hasExplicitMetricSelection
+            ? <String>[
+                statMetric,
+                storedMetricId.trim(),
+                _defaultMetricForDefinition(definition),
+              ]
+            : <String>[
+                storedMetricId.trim(),
+                statMetric,
+                _defaultMetricForDefinition(definition),
+              ];
 
     for (final candidate in candidates) {
       if (candidate.isEmpty) continue;
@@ -677,7 +686,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     return definition.metrics.first.id;
   }
 
-  String _contextLabel(AppLocalizations l10n, AnalyticsExperienceContext contextType) {
+  String _contextLabel(
+      AppLocalizations l10n, AnalyticsExperienceContext contextType) {
     switch (contextType) {
       case AnalyticsExperienceContext.home:
         return l10n.analyticsHomeContextLabel;
@@ -709,7 +719,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       labelColor: scheme.primary,
       unselectedLabelColor: scheme.onSurface.withValues(alpha: 0.6),
       indicatorColor: scheme.primary,
-      labelStyle: KubusTypography.inter(fontSize: 14, fontWeight: FontWeight.w600),
+      labelStyle:
+          KubusTypography.inter(fontSize: 14, fontWeight: FontWeight.w600),
       tabs: [
         Tab(text: l10n.analyticsTabOverview),
         Tab(text: l10n.analyticsTabTrends),
@@ -840,8 +851,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color:
-                        (isPositive ? Colors.green : Colors.red).withValues(alpha: 0.2),
+                    color: (isPositive ? Colors.green : Colors.red)
+                        .withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -902,7 +913,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
 
       if (bucket == 'hour') {
         final endBucket = startOfHourUtc(now);
-        final startBucket = endBucket.subtract(const Duration(hours: 1) * (count - 1));
+        final startBucket =
+            endBucket.subtract(const Duration(hours: 1) * (count - 1));
         return List<String>.generate(
           count,
           (i) {
@@ -914,7 +926,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       }
 
       final endBucket = startOfDayUtc(now);
-      final startBucket = endBucket.subtract(const Duration(days: 1) * (count - 1));
+      final startBucket =
+          endBucket.subtract(const Duration(days: 1) * (count - 1));
       return List<String>.generate(
         count,
         (i) {
@@ -979,7 +992,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
                         xLabels: buildLabels(),
                         height: 220,
                         gridColor: scheme.onSurface.withValues(alpha: 0.18),
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 4, vertical: 6),
                       ),
           ),
         ],
@@ -991,7 +1005,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     final l10n = AppLocalizations.of(context)!;
     final compact = _isCompactLayout(context);
     final metrics = analytics.keyMetrics;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1061,7 +1075,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     final progress = analytics.goalProgress;
     final animationTheme = context.animationTheme;
     final scheme = Theme.of(context).colorScheme;
-    
+
     return Container(
       padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
@@ -1169,7 +1183,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     );
   }
 
-  Widget _buildTrendItem(String label, String value, IconData icon, Color color) {
+  Widget _buildTrendItem(
+      String label, String value, IconData icon, Color color) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -1248,7 +1263,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
 
     final labels = data.length == 7
         ? _weekdayLabelsShort(l10n)
-        : List<String>.generate(data.length, (i) => '${i + 1}', growable: false);
+        : List<String>.generate(data.length, (i) => '${i + 1}',
+            growable: false);
 
     final now = DateTime.now();
     final entries = List<StatsBarEntry>.generate(
@@ -1362,21 +1378,21 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-           Row(
-             children: [
-               Icon(Icons.psychology, color: scheme.primary, size: 24),
-               const SizedBox(width: 8),
-               Text(
+          Row(
+            children: [
+              Icon(Icons.psychology, color: scheme.primary, size: 24),
+              const SizedBox(width: 8),
+              Text(
                 l10n.analyticsSectionInsights,
-                  style: KubusTypography.inter(
-                   fontSize: 18,
-                   fontWeight: FontWeight.bold,
-                   color: Colors.white,
-                 ),
-               ),
-             ],
-            ),
-           const SizedBox(height: 16),
+                style: KubusTypography.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
           if (analytics.insights.isEmpty)
             EmptyStateCard(
               icon: Icons.insights,
@@ -1474,7 +1490,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           const SizedBox(height: 4),
           SizedBox(
             height: 8,
-              child: ClipRRect(
+            child: ClipRRect(
               borderRadius: BorderRadius.circular(6),
               child: InlineLoading(
                 progress: value,
@@ -1531,7 +1547,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     );
   }
 
-  Widget _buildRecommendationItem(String title, String description, IconData icon, Color color) {
+  Widget _buildRecommendationItem(
+      String title, String description, IconData icon, Color color) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
@@ -1617,7 +1634,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     );
   }
 
-  Widget _buildComparisonItem(String metric, String yourValue, String benchmarkValue, bool isGood) {
+  Widget _buildComparisonItem(
+      String metric, String yourValue, String benchmarkValue, bool isGood) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -1746,11 +1764,13 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
 
     DateTime bucketStartUtc(DateTime dt) {
       final utc = dt.toUtc();
-      if (bucket == 'hour') return DateTime.utc(utc.year, utc.month, utc.day, utc.hour);
+      if (bucket == 'hour')
+        return DateTime.utc(utc.year, utc.month, utc.day, utc.hour);
       return DateTime.utc(utc.year, utc.month, utc.day);
     }
 
-    final step = bucket == 'hour' ? const Duration(hours: 1) : const Duration(days: 1);
+    final step =
+        bucket == 'hour' ? const Duration(hours: 1) : const Duration(days: 1);
     final currentTo = bucketStartUtc(now).add(step);
     final currentFrom = currentTo.subtract(duration);
     final prevTo = currentFrom;
@@ -1862,16 +1882,19 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
                       ? 90
                       : 30;
       final endBucket = bucket == 'hour'
-          ? DateTime.utc(windowEnd.year, windowEnd.month, windowEnd.day, windowEnd.hour)
+          ? DateTime.utc(
+              windowEnd.year, windowEnd.month, windowEnd.day, windowEnd.hour)
           : DateTime.utc(windowEnd.year, windowEnd.month, windowEnd.day);
-      final step = bucket == 'hour' ? const Duration(hours: 1) : const Duration(days: 1);
+      final step =
+          bucket == 'hour' ? const Duration(hours: 1) : const Duration(days: 1);
       final startBucket = endBucket.subtract(step * (expected - 1));
 
       final valuesByBucket = <int, int>{};
       for (final point in raw) {
         final dt = point.t.toUtc();
         final key = bucket == 'hour'
-            ? DateTime.utc(dt.year, dt.month, dt.day, dt.hour).millisecondsSinceEpoch
+            ? DateTime.utc(dt.year, dt.month, dt.day, dt.hour)
+                .millisecondsSinceEpoch
             : DateTime.utc(dt.year, dt.month, dt.day).millisecondsSinceEpoch;
         valuesByBucket[key] = (valuesByBucket[key] ?? 0) + point.v;
       }
@@ -1883,13 +1906,13 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       }, growable: false);
     }
 
-    final chartData =
-        filledValues(series, windowEnd: currentTo.subtract(const Duration(milliseconds: 1)));
-    final previousChartData =
-        filledValues(previousSeries, windowEnd: prevTo.subtract(const Duration(milliseconds: 1)));
+    final chartData = filledValues(series,
+        windowEnd: currentTo.subtract(const Duration(milliseconds: 1)));
+    final previousChartData = filledValues(previousSeries,
+        windowEnd: prevTo.subtract(const Duration(milliseconds: 1)));
 
-    double sumSeries(StatsSeries? s) =>
-        (s?.series ?? const []).fold<double>(0, (sum, p) => sum + p.v.toDouble());
+    double sumSeries(StatsSeries? s) => (s?.series ?? const [])
+        .fold<double>(0, (sum, p) => sum + p.v.toDouble());
 
     final currentTotal = sumSeries(series);
     final previousTotal = sumSeries(previousSeries);
@@ -1930,10 +1953,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     double stdev(List<double> values) {
       if (values.length < 2) return 0.0;
       final m = mean(values);
-      final variance = values
-              .map((v) => (v - m) * (v - m))
-              .reduce((a, b) => a + b) /
-          values.length;
+      final variance =
+          values.map((v) => (v - m) * (v - m)).reduce((a, b) => a + b) /
+              values.length;
       return variance <= 0 ? 0.0 : math.sqrt(variance);
     }
 
@@ -1957,7 +1979,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     final totalBuckets = chartData.isEmpty ? 0 : chartData.length;
     final nonZeroBuckets = chartData.where((v) => v > 0).length;
     final consistency = totalBuckets == 0 ? 0.0 : nonZeroBuckets / totalBuckets;
-    final peak = chartData.isEmpty ? 0.0 : chartData.reduce((a, b) => a > b ? a : b);
+    final peak =
+        chartData.isEmpty ? 0.0 : chartData.reduce((a, b) => a > b ? a : b);
 
     String momentumLabel = l10n.commonNotAvailableShort;
     if (chartData.length >= 6) {
@@ -1990,7 +2013,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
         'label': bucket == 'hour'
             ? l10n.analyticsKeyMetricPeakHour
             : l10n.analyticsKeyMetricPeak,
-        'value': chartData.isEmpty ? '0' : chartData.reduce((a, b) => a > b ? a : b).toInt().toString(),
+        'value': chartData.isEmpty
+            ? '0'
+            : chartData.reduce((a, b) => a > b ? a : b).toInt().toString(),
         'icon': Icons.trending_up,
         'color': scheme.secondary,
       },
@@ -2008,8 +2033,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       },
     ];
 
-    final goalTargetLabel =
-        previousTotal > 0 ? _formatValue(previousTotal) : l10n.commonNotAvailableShort;
+    final goalTargetLabel = previousTotal > 0
+        ? _formatValue(previousTotal)
+        : l10n.commonNotAvailableShort;
     final goalProgress = previousTotal > 0
         ? (currentTotal / previousTotal).clamp(0.0, 1.0)
         : 0.0;
@@ -2025,7 +2051,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       }
       final max = totals.reduce((a, b) => a > b ? a : b);
       if (max > 0) {
-        seasonalityData = totals.map((v) => (v / max).clamp(0.0, 1.0)).toList(growable: false);
+        seasonalityData = totals
+            .map((v) => (v / max).clamp(0.0, 1.0))
+            .toList(growable: false);
       }
     }
 
@@ -2060,7 +2088,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
         scheme.secondary,
       ));
       insights.add(_AnalyticsInsight(
-        l10n.analyticsConsistencyValue('${(consistency * 100).toStringAsFixed(0)}%'),
+        l10n.analyticsConsistencyValue(
+            '${(consistency * 100).toStringAsFixed(0)}%'),
         Icons.check_circle,
         scheme.primary,
       ));
@@ -2074,17 +2103,23 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       ),
       _AnalyticsPerformanceBar(
         l10n.analyticsPerformanceStability,
-        volatilityScore == null ? 0.0 : (1 / (1 + volatilityScore)).clamp(0.0, 1.0),
+        volatilityScore == null
+            ? 0.0
+            : (1 / (1 + volatilityScore)).clamp(0.0, 1.0),
         Colors.green,
       ),
       _AnalyticsPerformanceBar(
         l10n.analyticsPerformanceGrowth,
-        changePct == null ? 0.0 : (((changePct.clamp(-100.0, 100.0)) + 100.0) / 200.0),
+        changePct == null
+            ? 0.0
+            : (((changePct.clamp(-100.0, 100.0)) + 100.0) / 200.0),
         scheme.tertiary,
       ),
       _AnalyticsPerformanceBar(
         l10n.analyticsPerformanceActivity,
-        chartData.isEmpty ? 0.0 : (avg / (peak == 0 ? 1 : peak)).clamp(0.0, 1.0),
+        chartData.isEmpty
+            ? 0.0
+            : (avg / (peak == 0 ? 1 : peak)).clamp(0.0, 1.0),
         scheme.secondary,
       ),
     ];
@@ -2210,7 +2245,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     final summary = StringBuffer()
       ..writeln(title)
       ..writeln(l10n.analyticsSharePeriodValue(periodLabel))
-      ..writeln('${analytics.metricLabel}: ${_formatValue(analytics.currentTotal)}')
+      ..writeln(
+          '${analytics.metricLabel}: ${_formatValue(analytics.currentTotal)}')
       ..writeln(l10n.analyticsShareChangeValue(analytics.changePctLabel))
       ..writeln(l10n.analyticsShareTrendValue(analytics.trendLabel));
 
@@ -2225,7 +2261,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           content: Text(l10n.analyticsShareUnavailable),
           backgroundColor: scheme.error,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
     }
@@ -2387,7 +2424,8 @@ class _AnalyticsRecommendation {
   final IconData icon;
   final Color color;
 
-  const _AnalyticsRecommendation(this.title, this.description, this.icon, this.color);
+  const _AnalyticsRecommendation(
+      this.title, this.description, this.icon, this.color);
 }
 
 class _AnalyticsComparison {
@@ -2396,6 +2434,6 @@ class _AnalyticsComparison {
   final String previousValue;
   final bool isGood;
 
-  const _AnalyticsComparison(this.metric, this.currentValue, this.previousValue, this.isGood);
+  const _AnalyticsComparison(
+      this.metric, this.currentValue, this.previousValue, this.isGood);
 }
-
