@@ -5,12 +5,14 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/event.dart';
+import '../../models/promotion.dart';
 import '../../providers/events_provider.dart';
 import '../../screens/collab/invites_inbox_screen.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../utils/map_navigation.dart';
 import '../../widgets/collaboration_panel.dart';
+import '../../widgets/promotion/promotion_builder_sheet.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../widgets/glass_components.dart';
 import '../../utils/design_tokens.dart';
@@ -52,6 +54,23 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     }
   }
 
+  bool _canPromoteEvent(KubusEvent event) {
+    final role = (event.myRole ?? '').trim().toLowerCase();
+    final canPublish =
+        role == 'owner' || role == 'admin' || role == 'publisher';
+    return canPublish && event.isPublished && event.id.trim().isNotEmpty;
+  }
+
+  Future<void> _openPromotionFlow(KubusEvent event) async {
+    if (!_canPromoteEvent(event)) return;
+    await showPromotionBuilderSheet(
+      context: context,
+      entityType: PromotionEntityType.event,
+      entityId: event.id,
+      entityLabel: event.title,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -64,6 +83,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     );
 
     final exhibitions = events.exhibitionsForEvent(widget.eventId);
+    final canPromote = _canPromoteEvent(event);
 
     return AnimatedGradientBackground(
       child: Scaffold(
@@ -85,6 +105,12 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                   );
                 },
                 icon: const Icon(Icons.map_outlined),
+              ),
+            if (canPromote)
+              IconButton(
+                tooltip: 'Promote event',
+                onPressed: () => _openPromotionFlow(event),
+                icon: const Icon(Icons.campaign_outlined),
               ),
             IconButton(
               tooltip: l10n.commonShare,

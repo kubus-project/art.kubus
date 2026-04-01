@@ -71,7 +71,8 @@ class MapMarkerService {
   final Map<String, Future<List<ArtMarker>>> _inFlightByKey =
       <String, Future<List<ArtMarker>>>{};
 
-  static const Duration _rateLimitBackoff = Duration(minutes: 30); // Increased from 15 to 30 minutes
+  static const Duration _rateLimitBackoff =
+      Duration(minutes: 30); // Increased from 15 to 30 minutes
   DateTime? _rateLimitUntil;
   final Distance _distance = const Distance();
 
@@ -427,7 +428,8 @@ class MapMarkerService {
         'type': 'geolocation',
         'latitude': marker.position.latitude,
         'longitude': marker.position.longitude,
-        if ((marker.artworkId ?? '').trim().isNotEmpty) 'artworkId': marker.artworkId,
+        if ((marker.artworkId ?? '').trim().isNotEmpty)
+          'artworkId': marker.artworkId,
         if (normalizedCid != null) 'modelCID': normalizedCid,
         if (resolvedUrl != null) 'modelURL': resolvedUrl,
         'storageProvider': storageProvider.name,
@@ -482,7 +484,8 @@ class MapMarkerService {
         ? (_lastQueryBounds != null &&
             _boundsContains(_lastQueryBounds!, marker.position))
         : (_lastQueryCenter != null &&
-            _distance.as(LengthUnit.Kilometer, _lastQueryCenter!, marker.position) <=
+            _distance.as(
+                    LengthUnit.Kilometer, _lastQueryCenter!, marker.position) <=
                 _lastQueryRadiusKm + 0.5);
 
     if (shouldKeep) {
@@ -518,26 +521,29 @@ class MapMarkerService {
   }) async {
     String? clientNonce;
     try {
-      if (artworkId != null && artworkId.isNotEmpty) {
-        // Local cache check
+      final normalizedArtworkId = artworkId?.trim() ?? '';
+      if (normalizedArtworkId.isNotEmpty) {
         final alreadyHasMarker = _cachedMarkers.any(
-          (m) => (m.artworkId ?? '').isNotEmpty && m.artworkId == artworkId,
+          (marker) => (marker.artworkId ?? '').trim() == normalizedArtworkId,
         );
         if (alreadyHasMarker) {
-          throw StateError('Marker already exists for artwork $artworkId');
+          throw StateError(
+            'Marker already exists for artwork $normalizedArtworkId',
+          );
         }
 
-        // Remote check (fetch nearby markers to ensure uniqueness)
         final nearby = await fetchMarkers(
           latitude: location.latitude,
           longitude: location.longitude,
           radiusKm: 25,
         );
-        final remoteHas = nearby.any(
-          (m) => (m.artworkId ?? '').isNotEmpty && m.artworkId == artworkId,
+        final remoteHasMarker = nearby.any(
+          (marker) => (marker.artworkId ?? '').trim() == normalizedArtworkId,
         );
-        if (remoteHas) {
-          throw StateError('Marker already exists for artwork $artworkId');
+        if (remoteHasMarker) {
+          throw StateError(
+            'Marker already exists for artwork $normalizedArtworkId',
+          );
         }
       }
 
@@ -551,7 +557,9 @@ class MapMarkerService {
       }
 
       final normalizedCid = normalizeModelCid(modelCID);
-      final resolvedUrl = (modelURL ?? '').trim().isEmpty ? null : (StorageConfig.resolveUrl(modelURL) ?? modelURL);
+      final resolvedUrl = (modelURL ?? '').trim().isEmpty
+          ? null
+          : (StorageConfig.resolveUrl(modelURL) ?? modelURL);
       final hasCid = (normalizedCid ?? '').trim().isNotEmpty;
       final hasUrl = (resolvedUrl ?? '').trim().isNotEmpty;
       final storageProvider = hasCid && hasUrl
@@ -611,7 +619,8 @@ class MapMarkerService {
             _cachedMarkers.add(marker);
             notifyMarkerUpserted(marker);
             unawaited(_trackStreetArtAchievements(marker));
-            _log('MapMarkerService: recovered created marker via nonce ${marker.id}');
+            _log(
+                'MapMarkerService: recovered created marker via nonce ${marker.id}');
             return marker;
           }
         }
@@ -630,7 +639,8 @@ class MapMarkerService {
               _cachedMarkers.add(marker);
               notifyMarkerUpserted(marker);
               unawaited(_trackStreetArtAchievements(marker));
-              _log('MapMarkerService: recovered created marker after error ${marker.id}');
+              _log(
+                  'MapMarkerService: recovered created marker after error ${marker.id}');
               return marker;
             }
           }
@@ -658,7 +668,8 @@ class MapMarkerService {
   void _handleSocketMarker(Map<String, dynamic> payload) {
     try {
       final event = payload['event']?.toString() ?? '';
-      final deleted = payload['deleted'] == true || event == 'art-marker:deleted';
+      final deleted =
+          payload['deleted'] == true || event == 'art-marker:deleted';
       if (deleted) {
         final id = (payload['id'] ?? payload['_id'] ?? '').toString();
         if (id.isEmpty) return;
@@ -709,7 +720,8 @@ class MapMarkerService {
   }
 
   bool _isValidPosition(LatLng position) {
-    return position.latitude.abs() > 0.0001 || position.longitude.abs() > 0.0001;
+    return position.latitude.abs() > 0.0001 ||
+        position.longitude.abs() > 0.0001;
   }
 
   ArtMarker? _markerFromSocketPayload(Map<String, dynamic> json) {
@@ -718,31 +730,44 @@ class MapMarkerService {
         'id': json['id'] ?? json['_id'] ?? '',
         'name': json['name'] ?? json['title'] ?? json['label'] ?? '',
         'description': json['description'] ?? json['summary'] ?? '',
-        'latitude': _asDouble(json['latitude'] ?? json['lat'] ?? json['position']?['lat']),
-        'longitude': _asDouble(json['longitude'] ?? json['lng'] ?? json['position']?['lng']),
+        'latitude': _asDouble(
+            json['latitude'] ?? json['lat'] ?? json['position']?['lat']),
+        'longitude': _asDouble(
+            json['longitude'] ?? json['lng'] ?? json['position']?['lng']),
         'artworkId': json['artworkId'] ?? json['artwork_id'],
         'modelCID': json['modelCID'] ?? json['model_cid'],
         'modelURL': json['modelURL'] ?? json['model_url'],
-        'storageProvider': json['storageProvider'] ?? json['storage_provider'] ?? 'hybrid',
+        'storageProvider':
+            json['storageProvider'] ?? json['storage_provider'] ?? 'hybrid',
         'scale': _asDouble(json['scale'] ?? json['ar_scale'], 1.0),
-        'rotation': json['rotation'] ?? {
-          'x': _asDouble(json['rotation_x'] ?? json['ar_rotation_x']),
-          'y': _asDouble(json['rotation_y'] ?? json['ar_rotation_y']),
-          'z': _asDouble(json['rotation_z'] ?? json['ar_rotation_z']),
-        },
-        'enableAnimation': json['enableAnimation'] ?? json['enable_animation'] ?? false,
+        'rotation': json['rotation'] ??
+            {
+              'x': _asDouble(json['rotation_x'] ?? json['ar_rotation_x']),
+              'y': _asDouble(json['rotation_y'] ?? json['ar_rotation_y']),
+              'z': _asDouble(json['rotation_z'] ?? json['ar_rotation_z']),
+            },
+        'enableAnimation':
+            json['enableAnimation'] ?? json['enable_animation'] ?? false,
         'animationName': json['animationName'] ?? json['animation_name'],
         'enablePhysics': json['enablePhysics'] ?? false,
-        'enableInteraction': json['enableInteraction'] ?? json['enable_interaction'] ?? true,
+        'enableInteraction':
+            json['enableInteraction'] ?? json['enable_interaction'] ?? true,
         'metadata': json['metadata'] ?? json['marker_data'] ?? json['meta'],
         'tags': json['tags'],
-        'category': json['category'] ?? json['markerType'] ?? json['type'] ?? 'General',
-        'createdAt': json['createdAt'] ?? json['created_at'] ?? DateTime.now().toIso8601String(),
+        'category':
+            json['category'] ?? json['markerType'] ?? json['type'] ?? 'General',
+        'createdAt': json['createdAt'] ??
+            json['created_at'] ??
+            DateTime.now().toIso8601String(),
         'createdBy': json['createdBy'] ?? json['created_by'] ?? 'system',
-        'viewCount': json['viewCount'] ?? json['views'] ?? json['activation_count'] ?? 0,
-        'interactionCount': json['interactionCount'] ?? json['interactions'] ?? 0,
-        'activationRadius': json['activationRadius'] ?? json['activation_radius'] ?? 50.0,
-        'requiresProximity': json['requiresProximity'] ?? json['requires_proximity'] ?? true,
+        'viewCount':
+            json['viewCount'] ?? json['views'] ?? json['activation_count'] ?? 0,
+        'interactionCount':
+            json['interactionCount'] ?? json['interactions'] ?? 0,
+        'activationRadius':
+            json['activationRadius'] ?? json['activation_radius'] ?? 50.0,
+        'requiresProximity':
+            json['requiresProximity'] ?? json['requires_proximity'] ?? true,
         'isPublic': json['isPublic'] ?? json['is_public'] ?? true,
         'markerType': json['markerType'] ?? json['type'],
       };

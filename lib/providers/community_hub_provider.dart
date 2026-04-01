@@ -308,6 +308,7 @@ class CommunityHubProvider extends ChangeNotifier {
     required double longitude,
     double radiusKm = 3,
     int limit = 20,
+    String sort = 'hybrid',
     bool refresh = false,
   }) async {
     if (_artFeedLoading) return;
@@ -323,6 +324,7 @@ class CommunityHubProvider extends ChangeNotifier {
         radiusKm: radiusKm,
         limit: pageSize,
         page: targetPage,
+        sort: sort,
       );
 
       if (targetPage == 1) {

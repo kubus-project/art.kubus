@@ -289,6 +289,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       await hub.loadArtFeed(
         latitude: locationData.latitude!,
         longitude: locationData.longitude!,
+        sort: 'hybrid',
         refresh: true,
       );
       if (!mounted) return;
@@ -342,7 +343,7 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   Future<List<CommunityPost>> _fetchCommunityFeed({
     required bool followingOnly,
-    String sort = 'recent',
+    String sort = 'hybrid',
     String? walletAddress,
   }) async {
     final backendApi = BackendApiService();
@@ -352,6 +353,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       page: 1,
       limit: 50,
       followingOnly: followingOnly,
+      surface: followingOnly ? 'following' : 'discover',
       sort: sort,
     );
     await CommunityService.loadSavedInteractions(

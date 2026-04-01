@@ -14,7 +14,6 @@ import '../providers/notification_provider.dart';
 import '../providers/recent_activity_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/stats_provider.dart';
-import '../models/artwork.dart';
 import '../models/recent_activity.dart';
 import '../models/user_persona.dart';
 import '../models/user_profile.dart';
@@ -29,27 +28,27 @@ import 'onboarding/web3/web3_onboarding.dart' as web3;
 import 'onboarding/web3/onboarding_data.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../widgets/app_logo.dart';
-import '../widgets/avatar_widget.dart';
 import '../widgets/topbar_icon.dart';
 import '../utils/activity_navigation.dart';
 import '../widgets/artist_badge.dart';
 import '../widgets/institution_badge.dart';
-import '../widgets/artwork_creator_byline.dart';
 import '../widgets/inline_loading.dart';
 import '../widgets/enhanced_stats_chart.dart';
 import '../widgets/empty_state_card.dart';
 import '../widgets/recent_activity_tile.dart';
 import 'activity/advanced_analytics_screen.dart';
 import 'map_screen.dart';
+import 'events/event_detail_screen.dart';
+import 'events/exhibition_detail_screen.dart';
 import '../services/stats_api_service.dart';
 import '../models/stats/stats_models.dart';
 import '../utils/app_animations.dart';
 import '../utils/app_color_utils.dart';
 import '../utils/kubus_color_roles.dart';
-import '../utils/artwork_media_resolver.dart';
 import '../utils/design_tokens.dart';
 import '../utils/keyboard_inset_resolver.dart';
 import '../utils/kubus_labs_feature.dart';
+import '../utils/media_url_resolver.dart';
 import '../utils/user_profile_navigation.dart';
 import '../utils/home_search_destination.dart';
 import '../widgets/staggered_fade_slide.dart';
@@ -93,7 +92,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       if (!mounted) return;
       final locale = Localizations.localeOf(context).languageCode;
       unawaited(
-        context.read<PromotionProvider>().loadFeaturedHome(locale: locale),
+        context.read<PromotionProvider>().loadHomeRails(locale: locale),
       );
     });
   }
@@ -211,9 +210,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     sections.add(SizedBox(height: spacing));
     sections.add(animated(_buildRecentActivity()));
     sections.add(SizedBox(height: spacing));
-    sections.add(animated(_buildFeaturedArtworks()));
-    sections.add(SizedBox(height: spacing));
-    sections.add(animated(_buildFeaturedProfiles()));
+    sections.add(animated(_buildHomeRails()));
     sections.add(SizedBox(height: spacing));
     sections.add(animated(const SupportSectionCard()));
 
@@ -1887,129 +1884,82 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildFeaturedArtworks() {
+  Widget _buildHomeRails() {
     return Consumer<PromotionProvider>(
       builder: (context, promotionProvider, child) {
-        final l10n = AppLocalizations.of(context)!;
-        final featuredArtworks =
-            promotionProvider.featuredArtworks.take(6).toList();
-
+        final rails = promotionProvider.homeRails
+            .map((rail) => MapEntry(rail, _visibleItemsForRail(rail)))
+            .where((entry) => entry.value.isNotEmpty)
+            .toList(growable: false);
+        if (rails.isEmpty) {
+          return const SizedBox.shrink();
+        }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  l10n.homeFeaturedArtworksTitle,
-                  style: KubusTextStyles.screenTitle.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    _navigateToGallery();
-                  },
-                  child: Text(
-                    l10n.commonExplore,
-                    style: KubusTextStyles.navLabel.copyWith(
-                      color: Provider.of<ThemeProvider>(context).accentColor,
+          children: rails
+              .map((entry) => Padding(
+                    padding: EdgeInsets.only(
+                      bottom: entry == rails.last ? 0 : KubusSpacing.xl,
                     ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 180,
-              child: featuredArtworks.isEmpty
-                  ? EmptyStateCard(
-                      icon: Icons.image_not_supported,
-                      title: l10n.homeNoFeaturedArtworksTitle,
-                      description: l10n.homeNoFeaturedArtworksDescription,
-                      showAction: true,
-                      actionLabel: l10n.commonExplore,
-                      onAction: _navigateToGallery,
-                    )
-                  : ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: featuredArtworks.length,
-                      itemBuilder: (context, index) {
-                        return _buildArtworkCard(featuredArtworks[index]);
-                      },
+                    child: _buildHomeRailSection(
+                      entry.key,
+                      entry.value,
                     ),
-            ),
-          ],
+                  ))
+              .toList(growable: false),
         );
       },
     );
   }
 
-  Widget _buildFeaturedProfiles() {
-    return Consumer<PromotionProvider>(
-      builder: (context, promotionProvider, _) {
-        final profiles = promotionProvider.featuredProfiles.take(6).toList();
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Featured Artists & Institutions',
-              style: KubusTextStyles.screenTitle.copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 148,
-              child: profiles.isEmpty
-                  ? const SizedBox.shrink()
-                  : ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: profiles.length,
-                      itemBuilder: (context, index) =>
-                          _buildFeaturedProfileCard(profiles[index]),
-                    ),
-            ),
-          ],
-        );
-      },
+  Widget _buildHomeRailSection(
+    HomeRail rail,
+    List<HomeRailItem> items,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    final title = switch (rail.entityType) {
+      PromotionEntityType.artwork => 'Artworks',
+      PromotionEntityType.profile => 'Artists',
+      PromotionEntityType.institution => 'Institutions',
+      PromotionEntityType.event => 'Events',
+      PromotionEntityType.exhibition => 'Exhibitions',
+    };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: KubusTextStyles.screenTitle.copyWith(color: scheme.onSurface),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 176,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: items.length,
+            itemBuilder: (context, index) => _buildHomeRailCard(items[index]),
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildArtworkCard(Artwork artwork) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+  Widget _buildHomeRailCard(HomeRailItem item) {
     final scheme = Theme.of(context).colorScheme;
     final style = KubusGlassStyle.resolve(
       context,
       surfaceType: KubusGlassSurfaceType.card,
       tintBase: scheme.surface,
     );
-
     return GestureDetector(
-      onTap: () {
-        _showArtworkDetail(artwork);
-      },
+      onTap: () => _openHomeRailItem(item),
       child: Container(
-        width: 140,
+        width: 164,
         margin: const EdgeInsets.only(right: 16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: scheme.outlineVariant.withValues(alpha: 0.32),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: scheme.shadow.withValues(alpha: 0.10),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
         child: LiquidGlassCard(
           padding: EdgeInsets.zero,
           margin: EdgeInsets.zero,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
           showBorder: false,
           blurSigma: style.blurSigma,
           backgroundColor: style.tintColor,
@@ -2018,18 +1968,48 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(
-                height: 110,
+                height: 108,
                 child: ClipRRect(
                   borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(16)),
+                      const BorderRadius.vertical(top: Radius.circular(18)),
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      _buildCardCover(artwork, themeProvider),
-                      if (artwork.promotion.isPromoted)
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              scheme.primary.withValues(alpha: 0.22),
+                              scheme.secondary.withValues(alpha: 0.18),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: (() {
+                          final resolvedImage =
+                              MediaUrlResolver.resolve(item.imageUrl);
+                          if (resolvedImage == null || resolvedImage.isEmpty) {
+                            return Center(
+                              child: Icon(
+                                _iconForRailItem(item.entityType),
+                                color: scheme.onSurface.withValues(alpha: 0.72),
+                                size: 28,
+                              ),
+                            );
+                          }
+                          return Image.network(
+                            resolvedImage,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                const SizedBox.shrink(),
+                          );
+                        })(),
+                      ),
+                      if (item.promotion.isPromoted)
                         const Positioned(
-                          top: 8,
-                          left: 8,
+                          top: 10,
+                          left: 10,
                           child:
                               Icon(Icons.star, color: Colors.amber, size: 18),
                         ),
@@ -2045,22 +2025,25 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        artwork.title,
+                        item.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: KubusTextStyles.sectionTitle.copyWith(
                           fontSize: KubusHeaderMetrics.screenSubtitle,
                           color: scheme.onSurface,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: KubusSpacing.xxs),
-                      ArtworkCreatorByline(
-                        artwork: artwork,
-                        style: KubusTextStyles.navMetaLabel.copyWith(
-                          color: scheme.onSurface.withValues(alpha: 0.6),
+                      if ((item.subtitle ?? '').trim().isNotEmpty) ...[
+                        const SizedBox(height: KubusSpacing.xxs),
+                        Text(
+                          item.subtitle!.trim(),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: KubusTextStyles.navMetaLabel.copyWith(
+                            color: scheme.onSurface.withValues(alpha: 0.64),
+                          ),
                         ),
-                        maxLines: 1,
-                      ),
+                      ],
                     ],
                   ),
                 ),
@@ -2072,186 +2055,59 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildFeaturedProfileCard(FeaturedPromotionItem item) {
-    final scheme = Theme.of(context).colorScheme;
-    final subtitle = (item.subtitle ?? '').trim();
-    final style = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.card,
-      tintBase: scheme.surface,
-    );
-
-    return GestureDetector(
-      onTap: () {
-        final wallet = (item.walletAddress ?? '').trim();
-        final target = wallet.isNotEmpty ? wallet : item.id;
-        if (target.trim().isEmpty) return;
-        unawaited(UserProfileNavigation.open(context, userId: target));
-      },
-      child: Container(
-        width: 180,
-        margin: const EdgeInsets.only(right: 12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border:
-              Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
-          boxShadow: [
-            BoxShadow(
-              color: scheme.shadow.withValues(alpha: 0.10),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: LiquidGlassCard(
-          padding: const EdgeInsets.all(KubusSpacing.md),
-          margin: EdgeInsets.zero,
-          borderRadius: BorderRadius.circular(16),
-          showBorder: false,
-          blurSigma: style.blurSigma,
-          backgroundColor: style.tintColor,
-          fallbackMinOpacity: style.fallbackMinOpacity,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  AvatarWidget(
-                    wallet: (item.walletAddress ?? item.id).trim(),
-                    avatarUrl: item.imageUrl,
-                    radius: 18,
-                    enableProfileNavigation: false,
-                    allowFabricatedFallback: true,
-                  ),
-                  const Spacer(),
-                  if (item.promotion.isPromoted)
-                    const Icon(Icons.star, color: Colors.amber, size: 16),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Text(
-                item.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: KubusTextStyles.actionTileTitle.copyWith(
-                  color: scheme.onSurface,
-                ),
-              ),
-              if (subtitle.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: KubusTextStyles.navMetaLabel.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.65),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
+  IconData _iconForRailItem(PromotionEntityType entityType) {
+    return switch (entityType) {
+      PromotionEntityType.artwork => Icons.palette_outlined,
+      PromotionEntityType.profile => Icons.person_outline,
+      PromotionEntityType.institution => Icons.apartment_outlined,
+      PromotionEntityType.event => Icons.event_outlined,
+      PromotionEntityType.exhibition => Icons.museum_outlined,
+    };
   }
 
-  Widget _buildCardCover(Artwork artwork, ThemeProvider themeProvider) {
-    final imageUrl = ArtworkMediaResolver.resolveCover(artwork: artwork);
-    final placeholder = _artworkCoverPlaceholder(themeProvider);
+  List<HomeRailItem> _visibleItemsForRail(HomeRail rail) {
+    return rail.items.where(_canOpenHomeRailItem).toList(growable: false);
+  }
 
-    if (imageUrl == null || imageUrl.isEmpty) {
-      return placeholder;
+  bool _canOpenHomeRailItem(HomeRailItem item) {
+    switch (item.entityType) {
+      case PromotionEntityType.artwork:
+      case PromotionEntityType.profile:
+      case PromotionEntityType.event:
+      case PromotionEntityType.exhibition:
+        return item.id.trim().isNotEmpty;
+      case PromotionEntityType.institution:
+        return item.hasProfileTarget;
     }
-
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        Image.network(
-          imageUrl,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => placeholder,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return Container(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              child: Center(
-                child: SizedBox(
-                  width: 28,
-                  height: 28,
-                  child: InlineLoading(
-                    shape: BoxShape.circle,
-                    color: themeProvider.accentColor,
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-        Positioned.fill(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withValues(alpha: 0.08),
-                  Colors.black.withValues(alpha: 0.22),
-                ],
-              ),
-            ),
-          ),
-        ),
-        if (artwork.arEnabled)
-          Positioned(
-            top: 8,
-            right: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColorUtils.tealAccent,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(Icons.view_in_ar, color: Colors.white, size: 12),
-                  SizedBox(width: 4),
-                  Text(
-                    'AR',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-      ],
-    );
   }
 
-  Widget _artworkCoverPlaceholder(ThemeProvider themeProvider) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            themeProvider.accentColor.withValues(alpha: 0.25),
-            themeProvider.accentColor.withValues(alpha: 0.1),
-          ],
-        ),
-      ),
-      child: const Center(
-        child: Icon(
-          Icons.image,
-          color: Colors.white70,
-          size: 32,
-        ),
-      ),
-    );
+  Future<void> _openHomeRailItem(HomeRailItem item) async {
+    switch (item.entityType) {
+      case PromotionEntityType.artwork:
+        await openArtwork(context, item.id, source: 'home_rail');
+        return;
+      case PromotionEntityType.profile:
+        await UserProfileNavigation.open(context, userId: item.id);
+        return;
+      case PromotionEntityType.institution:
+        final profileTargetId = item.profileTargetId;
+        if (profileTargetId == null) return;
+        await UserProfileNavigation.open(context, userId: profileTargetId);
+        return;
+      case PromotionEntityType.event:
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+              builder: (_) => EventDetailScreen(eventId: item.id)),
+        );
+        return;
+      case PromotionEntityType.exhibition:
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => ExhibitionDetailScreen(exhibitionId: item.id),
+          ),
+        );
+        return;
+    }
   }
 
   // Navigation and interaction methods
@@ -2337,15 +2193,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         builder: (context) => const ActivityScreen(),
       ),
     );
-  }
-
-  void _navigateToGallery() {
-    // Navigate to main app with explore tab
-    Navigator.pushReplacementNamed(context, '/main');
-  }
-
-  void _showArtworkDetail(Artwork artwork) {
-    openArtwork(context, artwork.id, source: 'home');
   }
 
   void _showStatsDialog(String statType, IconData icon) {

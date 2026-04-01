@@ -17,6 +17,7 @@ import '../../features/map/shared/map_screen_shared_helpers.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/artwork_provider.dart';
 import '../../providers/exhibitions_provider.dart';
+import '../../providers/events_provider.dart';
 import '../../providers/marker_management_provider.dart';
 import '../../providers/presence_provider.dart';
 import '../../providers/tile_providers.dart';
@@ -25,6 +26,7 @@ import '../../providers/wallet_provider.dart';
 import '../../providers/attendance_provider.dart';
 import '../../models/artwork.dart';
 import '../../models/art_marker.dart';
+import '../../models/event.dart';
 import '../../models/exhibition.dart';
 import '../../models/map_marker_subject.dart';
 import '../../config/config.dart';
@@ -63,12 +65,15 @@ import '../../utils/media_url_resolver.dart';
 import '../../utils/wallet_utils.dart';
 import 'desktop_shell.dart';
 import 'art/desktop_artwork_detail_screen.dart';
+import '../events/event_detail_screen.dart';
 import '../events/exhibition_detail_screen.dart';
 import '../../features/map/controller/map_view_preferences_controller.dart';
 import '../../features/map/shared/map_marker_collision_config.dart';
 import '../../features/map/shared/map_screen_constants.dart';
 import '../../features/map/shared/map_artwork_filtering.dart';
 import '../../features/map/shared/map_marker_overlay_actions.dart';
+import '../../features/map/shared/map_marker_overlay_presentation.dart';
+import '../../features/map/shared/map_marker_selection_resolver.dart';
 import '../../features/map/shared/map_overlay_sizing.dart';
 import '../../features/map/map_layers_manager.dart';
 import '../../features/map/map_overlay_stack.dart';
@@ -170,6 +175,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   Artwork? _selectedArtwork;
   Exhibition? _selectedExhibition;
+  KubusEvent? _selectedEvent;
   _MarkerOverlayMode _markerOverlayMode = _MarkerOverlayMode.anchored;
   bool _markerStackPagerSyncing = false;
   final PageController _markerStackPageController = PageController();
@@ -274,6 +280,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   bool? _lastAppliedMapThemeDark;
   bool _themeResyncScheduled = false;
 
+  bool get _hasLeftDetailPanel =>
+      _selectedArtwork != null ||
+      _selectedExhibition != null ||
+      _selectedEvent != null;
+
+  bool get _isLeftPanelVisible => _hasLeftDetailPanel || _showFiltersPanel;
+
   static const double _clusterMaxZoom = MapScreenConstants.clusterMaxZoom;
   static const int _markerVisualSyncThrottleMs =
       MapScreenConstants.markerVisualSyncThrottleMs;
@@ -374,6 +387,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           _safeSetState(() {
             _selectedArtwork = null;
             _selectedExhibition = null;
+            _selectedEvent = null;
             _pendingMarkerLocation = null;
           });
         }
@@ -431,6 +445,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         _safeSetState(() {
           _selectedArtwork = null;
           _selectedExhibition = null;
+          _selectedEvent = null;
           _showFiltersPanel = false;
           _pendingMarkerLocation = null;
         });
@@ -810,6 +825,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _nearbySidebarAnchor = anchor;
       _selectedArtwork = null;
       _selectedExhibition = null;
+      _selectedEvent = null;
       _showFiltersPanel = false;
       // Clear any lingering create-marker state.
       _createMarkerSubjectData = null;
@@ -1571,11 +1587,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           AnimatedPositioned(
             duration: animationTheme.medium,
             curve: animationTheme.defaultCurve,
-            left: _selectedArtwork != null ||
-                    _selectedExhibition != null ||
-                    _showFiltersPanel
-                ? 0
-                : -400,
+            left: _isLeftPanelVisible ? 0 : -400,
             top: 80,
             bottom: 24,
             width: 380,
@@ -1592,16 +1604,25 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                           animationTheme,
                         ),
                       )
-                    : _selectedArtwork != null
+                    : _selectedEvent != null
                         ? Semantics(
                             label: 'left_info_panel',
                             container: true,
-                            child: _buildArtworkDetailPanel(
+                            child: _buildEventDetailPanel(
                               themeProvider,
                               animationTheme,
                             ),
                           )
-                        : _buildFiltersPanel(themeProvider),
+                        : _selectedArtwork != null
+                            ? Semantics(
+                                label: 'left_info_panel',
+                                container: true,
+                                child: _buildArtworkDetailPanel(
+                                  themeProvider,
+                                  animationTheme,
+                                ),
+                              )
+                            : _buildFiltersPanel(themeProvider),
               ),
             ),
           ),
@@ -1627,9 +1648,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
           // Map controls (bottom-right) - absorb pointer events
           Positioned(
-            left: _selectedArtwork != null || _selectedExhibition != null
-                ? 400
-                : 24,
+            left: _hasLeftDetailPanel ? 400 : 24,
             right: showLocalNearbyPanel ? (24 + 360) : 24,
             bottom: 24,
             child: Align(
@@ -1648,11 +1667,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           Consumer<TaskProvider>(
             builder: (context, taskProvider, _) {
               final activeProgress = taskProvider.getActiveTaskProgress();
-              final leftOffset = (_selectedArtwork != null ||
-                      _selectedExhibition != null ||
-                      _showFiltersPanel)
-                  ? 400.0
-                  : 24.0;
+              final leftOffset = _isLeftPanelVisible ? 400.0 : 24.0;
 
               if (activeProgress.isEmpty) {
                 // No active tasks: show attribution icon standalone in bottom-left
@@ -1991,6 +2006,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   _showFiltersPanel = !_showFiltersPanel;
                   _selectedArtwork = null;
                   _selectedExhibition = null;
+                  _selectedEvent = null;
                 });
               },
               tooltipPreferBelow: true,
@@ -2596,20 +2612,209 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
   }
 
-  String _formatExhibitionDate(DateTime dt) {
+  Widget _buildEventDetailPanel(
+      ThemeProvider themeProvider, AppAnimationTheme animationTheme) {
+    final event = _selectedEvent;
+    if (event == null) {
+      return const SizedBox.shrink();
+    }
+
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final eventAccent = AppColorUtils.eventColor;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final eventsProvider = context.watch<EventsProvider>();
+    final exhibitionsCount =
+        eventsProvider.exhibitionsForEvent(event.id).length;
+
+    String? dateRange;
+    if (event.startsAt != null || event.endsAt != null) {
+      final start =
+          event.startsAt != null ? _formatPanelDate(event.startsAt!) : null;
+      final end = event.endsAt != null ? _formatPanelDate(event.endsAt!) : null;
+      dateRange = [start, end].whereType<String>().join(' - ');
+      if (dateRange.trim().isEmpty) dateRange = null;
+    }
+
+    final locationBits = <String>[
+      if ((event.locationName ?? '').trim().isNotEmpty)
+        event.locationName!.trim(),
+      if ((event.city ?? '').trim().isNotEmpty) event.city!.trim(),
+      if ((event.country ?? '').trim().isNotEmpty) event.country!.trim(),
+    ];
+    final location = locationBits.isNotEmpty ? locationBits.join(', ') : null;
+    final coverUrl = MediaUrlResolver.resolve(event.coverUrl);
+    final badge = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: scheme.surface.withValues(alpha: isDark ? 0.88 : 0.92),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.event_outlined,
+            size: 16,
+            color: eventAccent,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            l10n.mapMarkerSubjectTypeEvent,
+            style: KubusTextStyles.navMetaLabel.copyWith(
+              fontWeight: FontWeight.w600,
+              color: eventAccent,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return KubusDetailPanel(
+      kind: DetailPanelKind.event,
+      presentation: PanelPresentation.sidePanel,
+      margin: const EdgeInsets.only(left: 24),
+      header: DetailHeader(
+        imageUrl: coverUrl,
+        imageVersion: KubusCachedImage.versionTokenFromDate(
+          event.updatedAt ?? event.createdAt,
+        ),
+        accentColor: eventAccent,
+        closeTooltip: l10n.commonClose,
+        onClose: () {
+          setState(() => _selectedEvent = null);
+        },
+        badge: badge,
+        closeAccentColor: themeProvider.accentColor,
+        fallbackIcon: Icons.event_outlined,
+      ),
+      sections: [
+        Padding(
+          padding: const EdgeInsets.all(KubusSpacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                event.title,
+                style: KubusTextStyles.screenTitle.copyWith(
+                  color: scheme.onSurface,
+                ),
+              ),
+              if (event.host != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Hosted by ${event.host!.displayName ?? event.host!.username ?? 'Unknown'}',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontSize: KubusHeaderMetrics.screenSubtitle,
+                        color: eventAccent,
+                        fontWeight: FontWeight.w500,
+                      ),
+                ),
+              ],
+              const SizedBox(height: 16),
+              if (dateRange != null)
+                DetailMetaRow(
+                  icon: Icons.schedule,
+                  label: dateRange,
+                ),
+              if (location != null)
+                DetailMetaRow(
+                  icon: Icons.place_outlined,
+                  label: location,
+                ),
+              DetailMetaRow(
+                icon: Icons.collections_outlined,
+                label: 'Exhibitions: $exhibitionsCount',
+              ),
+              if ((event.status ?? '').trim().isNotEmpty)
+                DetailMetaRow(
+                  icon: Icons.event_available_outlined,
+                  label: 'Status: ${_labelForPanelStatus(event.status)}',
+                ),
+              if ((event.description ?? '').trim().isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text(
+                  event.description!,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontSize: KubusHeaderMetrics.screenSubtitle,
+                        height: 1.6,
+                        color: scheme.onSurface.withValues(alpha: 0.7),
+                      ),
+                ),
+              ],
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    final shellScope = DesktopShellScope.of(context);
+                    if (shellScope != null) {
+                      shellScope.pushScreen(
+                        DesktopSubScreen(
+                          title: event.title,
+                          child: EventDetailScreen(
+                            eventId: event.id,
+                            initialEvent: event,
+                          ),
+                        ),
+                      );
+                    } else {
+                      unawaited(
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => EventDetailScreen(
+                              eventId: event.id,
+                              initialEvent: event,
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.event_outlined, size: 20),
+                  label: Text(l10n.commonViewDetails),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: eventAccent,
+                    foregroundColor:
+                        ThemeData.estimateBrightnessForColor(eventAccent) ==
+                                Brightness.dark
+                            ? KubusColors.textPrimaryDark
+                            : KubusColors.textPrimaryLight,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 14,
+                      horizontal: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatPanelDate(DateTime dt) {
     final d = dt.toLocal();
     final mm = d.month.toString().padLeft(2, '0');
     final dd = d.day.toString().padLeft(2, '0');
     return '${d.year}-$mm-$dd';
   }
 
-  String _labelForExhibitionStatus(String? raw) {
+  String _formatExhibitionDate(DateTime dt) => _formatPanelDate(dt);
+
+  String _labelForPanelStatus(String? raw) {
     final v = (raw ?? '').trim().toLowerCase();
     if (v.isEmpty) return 'Unknown';
     if (v == 'published') return 'Published';
     if (v == 'draft') return 'Draft';
     return v;
   }
+
+  String _labelForExhibitionStatus(String? raw) => _labelForPanelStatus(raw);
 
   Widget _buildFiltersPanel(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
@@ -2982,8 +3187,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       initialSubjectType: _createMarkerInitialType ?? MarkerSubjectType.artwork,
       allowedSubjectTypes: _createMarkerAllowedTypes,
       blockedArtworkIds: _artMarkers
-          .where((m) => (m.artworkId ?? '').isNotEmpty)
-          .map((m) => m.artworkId!)
+          .where((marker) => (marker.artworkId ?? '').trim().isNotEmpty)
+          .map((marker) => marker.artworkId!.trim())
           .toSet(),
       onSubmit: _handleMarkerFormSubmit,
       onCancel: _handleMarkerFormCancel,
@@ -3076,6 +3281,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }) async {
     setState(() {
       _selectedArtwork = artwork;
+      _selectedExhibition = null;
+      _selectedEvent = null;
       _showFiltersPanel = false;
     });
 
@@ -3276,23 +3483,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   ArtMarker? _findLoadedMarkerForSearchResult(KubusSearchResult result) {
     final resultId = result.id?.trim() ?? '';
-    final normalizedLabel = result.label.trim().toLowerCase();
-    final position = result.position;
-
-    return _artMarkers.where((marker) {
-      if (resultId.isNotEmpty) {
-        if (marker.id == resultId || marker.artworkId == resultId) {
-          return true;
-        }
-      }
-      if (normalizedLabel.isNotEmpty &&
-          marker.name.trim().toLowerCase() == normalizedLabel) {
-        return true;
-      }
-      if (position == null) return false;
-      return (marker.position.latitude - position.latitude).abs() < 0.0002 &&
-          (marker.position.longitude - position.longitude).abs() < 0.0002;
-    }).firstOrNull;
+    return resolveBestMarkerCandidate(
+      _artMarkers,
+      exactMarkerId: resultId,
+      artworkId: resultId,
+      preferredLabel: result.label,
+      preferredPosition: result.position,
+    );
   }
 
   String _markerQueryFiltersKey() {
@@ -3831,24 +4028,24 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final l10n = AppLocalizations.of(context)!;
     final baseColor = _resolveArtMarkerColor(marker, themeProvider);
     final primaryExhibition = marker.resolvedExhibitionSummary;
+    final linkedEvent = _resolveLinkedEvent(marker);
+    final presentation = resolveMarkerOverlayPresentation(
+      marker: marker,
+      artwork: artwork,
+      event: linkedEvent,
+    );
     final exhibitionsFeatureEnabled = AppConfig.isFeatureEnabled('exhibitions');
     final exhibitionsApiAvailable = BackendApiService().exhibitionsApiAvailable;
-    final canPresentExhibition = exhibitionsFeatureEnabled &&
+    final canPresentExhibition = presentation.primaryTarget ==
+            MapMarkerOverlayPrimaryTarget.exhibition &&
+        exhibitionsFeatureEnabled &&
         primaryExhibition != null &&
         primaryExhibition.id.isNotEmpty &&
         exhibitionsApiAvailable != false;
 
-    final exhibitionTitle = (primaryExhibition?.title ?? '').trim();
     final distanceText = _userLocation != null
         ? _formatDistance(_calculateDistance(_userLocation!, marker.position))
         : null;
-    final displayTitle = canPresentExhibition && exhibitionTitle.isNotEmpty
-        ? exhibitionTitle
-        : (artwork?.title.isNotEmpty == true ? artwork!.title : marker.name);
-    final rawDescription = (marker.description.isNotEmpty
-            ? marker.description
-            : (artwork?.description ?? ''))
-        .trim();
     final overlayActions = buildMarkerOverlayActions(
       context: context,
       marker: marker,
@@ -3863,13 +4060,20 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           : null,
     );
 
-    final openDetails = canPresentExhibition
-        ? () => _openExhibitionFromMarker(
-              marker,
-              primaryExhibition,
-              artwork,
-            )
-        : () => _openMarkerDetail(marker, artwork);
+    final linkedSubjectTypeLabel = _markerOverlaySubjectTypeLabel(
+      l10n,
+      presentation.linkedSubject.kind,
+    );
+    void openDetails() {
+      unawaited(
+        _openMarkerPrimaryTarget(
+          marker,
+          artwork: artwork,
+          exhibition: primaryExhibition,
+          event: linkedEvent,
+        ),
+      );
+    }
 
     return ConstrainedBox(
       constraints: BoxConstraints(
@@ -3882,17 +4086,23 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           marker: marker,
           artwork: artwork,
           baseColor: baseColor,
-          displayTitle: displayTitle,
+          displayTitle: presentation.title,
           canPresentExhibition: canPresentExhibition,
           distanceText: distanceText,
-          description: rawDescription,
+          description: presentation.description,
+          linkedSubjectTypeLabel: linkedSubjectTypeLabel,
+          linkedSubjectTitle: presentation.linkedSubject.title,
+          linkedSubjectSubtitle: presentation.linkedSubject.subtitle,
           onClose: _kubusMapController.dismissSelection,
           onPrimaryAction: openDetails,
           onCardTap: openDetails,
           onTitleTap: openDetails,
-          primaryActionIcon: canPresentExhibition
-              ? Icons.museum_outlined
-              : Icons.arrow_forward,
+          primaryActionIcon: switch (presentation.primaryTarget) {
+            MapMarkerOverlayPrimaryTarget.exhibition => Icons.museum_outlined,
+            MapMarkerOverlayPrimaryTarget.event => Icons.event_outlined,
+            MapMarkerOverlayPrimaryTarget.artwork => Icons.arrow_forward,
+            MapMarkerOverlayPrimaryTarget.markerInfo => Icons.info_outline,
+          },
           primaryActionLabel: l10n.commonViewDetails,
           actions: overlayActions,
           stackCount: stackCount,
@@ -4098,6 +4308,104 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
   }
 
+  KubusEvent? _resolveLinkedEvent(ArtMarker marker) {
+    final subjectType = (marker.subjectType ?? '').trim().toLowerCase();
+    if (!subjectType.contains('event')) return null;
+    final eventId = (marker.subjectId ?? '').trim();
+    if (eventId.isEmpty) return null;
+    final eventsProvider = context.read<EventsProvider>();
+    for (final event in eventsProvider.events) {
+      if (event.id == eventId) return event;
+    }
+    return null;
+  }
+
+  String? _markerOverlaySubjectTypeLabel(
+    AppLocalizations l10n,
+    MapMarkerOverlayLinkedSubjectKind kind,
+  ) {
+    switch (kind) {
+      case MapMarkerOverlayLinkedSubjectKind.artwork:
+        return l10n.commonArtwork;
+      case MapMarkerOverlayLinkedSubjectKind.exhibition:
+        return l10n.commonExhibition;
+      case MapMarkerOverlayLinkedSubjectKind.event:
+        return l10n.mapMarkerSubjectTypeEvent;
+      case MapMarkerOverlayLinkedSubjectKind.institution:
+        return l10n.commonInstitution;
+      case MapMarkerOverlayLinkedSubjectKind.group:
+        return l10n.mapMarkerSubjectTypeGroup;
+      case MapMarkerOverlayLinkedSubjectKind.misc:
+      case MapMarkerOverlayLinkedSubjectKind.none:
+        return null;
+    }
+  }
+
+  Future<void> _openMarkerPrimaryTarget(
+    ArtMarker marker, {
+    Artwork? artwork,
+    ExhibitionSummaryDto? exhibition,
+    KubusEvent? event,
+  }) async {
+    final resolvedEvent = event ?? _resolveLinkedEvent(marker);
+    final presentation = resolveMarkerOverlayPresentation(
+      marker: marker,
+      artwork: artwork,
+      event: resolvedEvent,
+    );
+    switch (presentation.primaryTarget) {
+      case MapMarkerOverlayPrimaryTarget.exhibition:
+        await _openExhibitionFromMarker(marker, exhibition, artwork);
+        return;
+      case MapMarkerOverlayPrimaryTarget.event:
+        await _openEventFromMarker(marker, resolvedEvent);
+        return;
+      case MapMarkerOverlayPrimaryTarget.artwork:
+        await _openMarkerDetail(marker, artwork);
+        return;
+      case MapMarkerOverlayPrimaryTarget.markerInfo:
+        await _showMarkerInfoFallback(marker);
+        return;
+    }
+  }
+
+  Future<void> _openEventFromMarker(
+    ArtMarker marker,
+    KubusEvent? event,
+  ) async {
+    final eventId = (event?.id ?? marker.subjectId ?? '').trim();
+    if (eventId.isEmpty ||
+        !AppConfig.isFeatureEnabled('events') ||
+        BackendApiService().eventsApiAvailable == false) {
+      await _showMarkerInfoFallback(marker);
+      return;
+    }
+
+    final eventsProvider = context.read<EventsProvider>();
+    final fetched = event ??
+        await (() async {
+          try {
+            return await eventsProvider.fetchEvent(eventId, force: true);
+          } catch (_) {
+            return null;
+          }
+        })();
+
+    if (!mounted) return;
+    if (fetched == null) {
+      await _showMarkerInfoFallback(marker);
+      return;
+    }
+
+    unawaited(eventsProvider.loadEventExhibitions(fetched.id, refresh: true));
+    setState(() {
+      _selectedEvent = fetched;
+      _selectedArtwork = null;
+      _selectedExhibition = null;
+      _showFiltersPanel = false;
+    });
+  }
+
   Future<void> _openMarkerDetail(ArtMarker marker, Artwork? artwork) async {
     final resolvedArtwork =
         await _ensureLinkedArtworkLoaded(marker, initial: artwork);
@@ -4112,6 +4420,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     setState(() {
       _selectedArtwork = resolvedArtwork;
       _selectedExhibition = null;
+      _selectedEvent = null;
       _showFiltersPanel = false;
     });
   }
@@ -4179,6 +4488,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     setState(() {
       _selectedExhibition = fetched;
       _selectedArtwork = null;
+      _selectedEvent = null;
       _showFiltersPanel = false;
     });
   }
@@ -4223,6 +4533,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               _selectedArtwork = resolvedArtwork;
             }
             _selectedExhibition = null;
+            _selectedEvent = null;
             _showFiltersPanel = false;
           });
         } else {
@@ -4412,6 +4723,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       // Close left panels to avoid clutter.
       _selectedArtwork = null;
       _selectedExhibition = null;
+      _selectedEvent = null;
       _showFiltersPanel = false;
     });
   }
@@ -4537,13 +4849,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       if (mounted) {
         final messenger = ScaffoldMessenger.of(context);
         messenger.showKubusSnackBar(
-          SnackBar(
-              content:
-                  Text(AppLocalizations.of(context)!.mapMarkerDuplicateToast)),
+          SnackBar(content: Text(e.message)),
           tone: KubusSnackBarTone.error,
         );
       }
-      AppConfig.debugPrint('DesktopMapScreen: duplicate marker prevented: $e');
+      AppConfig.debugPrint('DesktopMapScreen: marker creation rejected: $e');
       return false;
     } catch (e) {
       AppConfig.debugPrint('DesktopMapScreen: error creating marker: $e');

@@ -169,6 +169,31 @@ class CommunityPostCard extends StatelessWidget {
                         ],
                       ],
                     ),
+                    if (post.feedPin.isPinned || post.promotion.isPromoted) ...[
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          if (post.feedPin.isPinned)
+                            _buildMetaBadge(
+                              context,
+                              icon: Icons.push_pin_outlined,
+                              label: post.feedPin.surface == null
+                                  ? 'Pinned'
+                                  : 'Pinned ${post.feedPin.surface}',
+                              color: scheme.tertiary,
+                            ),
+                          if (post.promotion.isPromoted)
+                            _buildMetaBadge(
+                              context,
+                              icon: Icons.auto_awesome,
+                              label: 'Promoted',
+                              color: accentColor,
+                            ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     if (post.postType == 'repost' && post.content.isNotEmpty) ...[
                       const SizedBox(height: 6),
@@ -368,6 +393,36 @@ class CommunityPostCard extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildMetaBadge(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

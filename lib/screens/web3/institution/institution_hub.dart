@@ -269,12 +269,12 @@ class _InstitutionHubState extends State<InstitutionHub> {
                     },
                   ),
                 TopBarIcon(
-                  tooltip: 'Promote my profile',
+                  tooltip: 'Promote my institution',
                   icon: Icon(
                     Icons.campaign_outlined,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
-                  onPressed: _openProfilePromotionFlow,
+                  onPressed: _openInstitutionPromotionFlow,
                 ),
                 Consumer<NotificationProvider>(
                   builder: (context, notificationProvider, _) => TopBarIcon(
@@ -417,9 +417,9 @@ class _InstitutionHubState extends State<InstitutionHub> {
                     Align(
                       alignment: Alignment.centerLeft,
                       child: OutlinedButton.icon(
-                        onPressed: _openProfilePromotionFlow,
+                        onPressed: _openInstitutionPromotionFlow,
                         icon: const Icon(Icons.campaign_outlined),
-                        label: const Text('Promote my profile'),
+                        label: const Text('Promote my institution'),
                       ),
                     ),
                     if (isApprovedInstitution) ...[
@@ -1082,7 +1082,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
     );
   }
 
-  Future<void> _openProfilePromotionFlow() async {
+  Future<void> _openInstitutionPromotionFlow() async {
     final profile = context.read<ProfileProvider>().currentUser;
     final wallet = _resolveWalletAddress();
     final entityId = WalletUtils.coalesce(
@@ -1093,9 +1093,9 @@ class _InstitutionHubState extends State<InstitutionHub> {
 
     await showPromotionBuilderSheet(
       context: context,
-      entityType: PromotionEntityType.profile,
+      entityType: PromotionEntityType.institution,
       entityId: entityId,
-      entityLabel: profile?.displayName ?? 'my institution profile',
+      entityLabel: profile?.displayName ?? 'my institution',
     );
   }
 

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 
 import '../../models/exhibition.dart';
+import '../../models/promotion.dart';
 import '../../models/artwork.dart';
 import '../../providers/artwork_provider.dart';
 import '../../providers/attendance_provider.dart';
@@ -26,6 +27,7 @@ import '../../utils/artwork_navigation.dart';
 import '../../utils/design_tokens.dart';
 import '../../config/config.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import '../../widgets/promotion/promotion_builder_sheet.dart';
 
 class ExhibitionDetailScreen extends StatefulWidget {
   final String exhibitionId;
@@ -89,8 +91,34 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     return role == 'owner' || role == 'admin' || role == 'publisher';
   }
 
-  List<Widget> _buildHeaderActions(AppLocalizations l10n, Exhibition ex) {
+  bool _canPromoteExhibition(Exhibition exhibition) {
+    return _canPublishExhibition(exhibition.myRole) &&
+        exhibition.isPublished &&
+        exhibition.id.trim().isNotEmpty;
+  }
+
+  Future<void> _openPromotionFlow(Exhibition exhibition) async {
+    if (!_canPromoteExhibition(exhibition)) return;
+    await showPromotionBuilderSheet(
+      context: context,
+      entityType: PromotionEntityType.exhibition,
+      entityId: exhibition.id,
+      entityLabel: exhibition.title,
+    );
+  }
+
+  List<Widget> _buildHeaderActions(
+    AppLocalizations l10n,
+    Exhibition ex, {
+    required bool canPromote,
+  }) {
     return [
+      if (canPromote)
+        IconButton(
+          tooltip: 'Promote exhibition',
+          onPressed: () => _openPromotionFlow(ex),
+          icon: const Icon(Icons.campaign_outlined),
+        ),
       IconButton(
         tooltip: l10n.commonShare,
         onPressed: () {
@@ -569,7 +597,11 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
 
     final canManage = _canManageExhibition(ex.myRole);
     final canPublish = _canPublishExhibition(ex.myRole);
-    final headerActions = _buildHeaderActions(l10n, ex);
+    final headerActions = _buildHeaderActions(
+      l10n,
+      ex,
+      canPromote: _canPromoteExhibition(ex),
+    );
 
     return Scaffold(
       appBar: widget.embedded

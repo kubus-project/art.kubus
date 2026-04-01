@@ -320,11 +320,11 @@ class _DesktopInstitutionHubScreenState
               ),
             if (isApprovedInstitution)
               KubusActionSidebarTile(
-                title: 'Promote my profile',
+                title: 'Promote my institution',
                 subtitle: 'Request featured institution placement',
                 icon: Icons.campaign_outlined,
                 semantic: KubusActionSemantic.publish,
-                onTap: _openProfilePromotionFlow,
+                onTap: _openInstitutionPromotionFlow,
               ),
             if (section == DesktopInstitutionSection.create &&
                 isApprovedInstitution &&
@@ -549,7 +549,7 @@ class _DesktopInstitutionHubScreenState
     );
   }
 
-  Future<void> _openProfilePromotionFlow() async {
+  Future<void> _openInstitutionPromotionFlow() async {
     final profile = context.read<ProfileProvider>().currentUser;
     final wallet = _resolveWalletAddress(listen: false);
     final entityId = WalletUtils.coalesce(
@@ -560,9 +560,9 @@ class _DesktopInstitutionHubScreenState
 
     await showPromotionBuilderSheet(
       context: context,
-      entityType: PromotionEntityType.profile,
+      entityType: PromotionEntityType.institution,
       entityId: entityId,
-      entityLabel: profile?.displayName ?? 'my institution profile',
+      entityLabel: profile?.displayName ?? 'my institution',
     );
   }
 

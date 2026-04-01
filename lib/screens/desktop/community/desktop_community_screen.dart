@@ -118,9 +118,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   String _messageSearchQuery = '';
   final List<_PaneRoute> _paneStack = [];
   final Map<String, _TagFeedState> _tagFeeds = {};
-  String _discoverSortMode = 'recent';
-  String _followingSortMode = 'recent';
-  String _artSortMode = 'recent';
+  String _discoverSortMode = 'hybrid';
+  String _followingSortMode = 'hybrid';
+  String _artSortMode = 'hybrid';
 
   String _tabLabel(AppLocalizations l10n, String tabKey) {
     switch (tabKey) {
@@ -448,6 +448,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         page: 1,
         limit: 50,
         followingOnly: false,
+        surface: 'discover',
         sort: sort,
       );
       final filtered = await _filterBlockedPosts(posts);
@@ -568,12 +569,17 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       final aggregated = <Map<String, dynamic>>[];
 
       try {
-        final featured = await backend.getPublicFeaturedHome(
-          kind: PromotionEntityType.profile,
-          locale: locale,
-        );
+        final featured = await backend.getPublicHomeRails(locale: locale);
+        final suggestionItems = featured.rails
+            .where((rail) =>
+                rail.entityType == PromotionEntityType.profile ||
+                rail.entityType == PromotionEntityType.institution)
+            .expand((rail) => rail.items)
+            .toList(growable: false);
         aggregated.addAll(
-          featured.map(_promotionProfileToSuggestion),
+          suggestionItems
+              .map(_promotionProfileToSuggestion)
+              .whereType<Map<String, dynamic>>(),
         );
       } catch (e) {
         debugPrint('Featured artists fetch failed: $e');
@@ -630,6 +636,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         page: 1,
         limit: 50,
         followingOnly: true,
+        surface: 'following',
         sort: sort,
       );
       final filtered = await _filterBlockedPosts(posts);
@@ -740,8 +747,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 accentColor: themeProvider.accentColor,
                 minCharsHint: AppLocalizations.of(context)!
                     .desktopCommunitySearchMinCharsHint,
-                noResultsText:
-                    AppLocalizations.of(context)!.desktopCommunitySearchNoResults,
+                noResultsText: AppLocalizations.of(context)!
+                    .desktopCommunitySearchNoResults,
                 maxWidth: 320,
                 onResultTap: (result) {
                   unawaited(_handleSearchResultTap(result));
@@ -1662,6 +1669,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             ),
           ),
           const SizedBox(width: 12),
+          buildChip('Hybrid', 'hybrid', Icons.auto_awesome),
+          const SizedBox(width: 8),
           buildChip(l10n.desktopCommunitySortRecent, 'recent', Icons.schedule),
           const SizedBox(width: 8),
           buildChip(
@@ -1780,7 +1789,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       case KubusSearchResultKind.artwork:
         final artworkId = result.id?.trim() ?? '';
         if (artworkId.isNotEmpty) {
-          await openArtwork(context, artworkId, source: 'desktop_community_search');
+          await openArtwork(context, artworkId,
+              source: 'desktop_community_search');
         }
         return;
       case KubusSearchResultKind.institution:
@@ -1805,7 +1815,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             result.data['screenKey']?.toString().trim() ??
             '';
         if (screenKey.isNotEmpty) {
-          context.read<NavigationProvider>().navigateToScreen(context, screenKey);
+          context
+              .read<NavigationProvider>()
+              .navigateToScreen(context, screenKey);
         }
         return;
       case KubusSearchResultKind.post:
@@ -1821,18 +1833,21 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     }
   }
 
-  Map<String, dynamic> _promotionProfileToSuggestion(
-    FeaturedPromotionItem item,
+  Map<String, dynamic>? _promotionProfileToSuggestion(
+    HomeRailItem item,
   ) {
+    final profileTargetId = item.profileTargetId;
+    if (profileTargetId == null || profileTargetId.isEmpty) {
+      return null;
+    }
+
     return <String, dynamic>{
       ...item.raw,
-      'id': item.id,
+      'id': profileTargetId,
       'displayName': item.title,
       'username': item.raw['username'] ?? item.raw['handle'],
-      'walletAddress':
-          item.walletAddress ?? item.raw['walletAddress'] ?? item.raw['wallet_address'],
-      'wallet':
-          item.walletAddress ?? item.raw['walletAddress'] ?? item.raw['wallet_address'],
+      'walletAddress': profileTargetId,
+      'wallet': profileTargetId,
       'avatarUrl': item.imageUrl,
       'avatar': item.imageUrl,
       'verified': item.raw['verified'] ?? false,
@@ -1869,7 +1884,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   List<CommunityPost> _filterPostsForQuery(List<CommunityPost> posts) {
     final query = _communitySearchController.state.query.trim().toLowerCase();
     if (query.isEmpty) return posts;
-    final normalizedTagQuery = query.startsWith('#') ? query.substring(1) : query;
+    final normalizedTagQuery =
+        query.startsWith('#') ? query.substring(1) : query;
 
     return posts.where((post) {
       final contentMatch = post.content.toLowerCase().contains(query);
@@ -5596,6 +5612,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   List<CommunityPost> _sortPosts(List<CommunityPost> posts, String sortMode) {
     if (posts.length <= 1) return posts;
     final normalized = sortMode.toLowerCase();
+    if (normalized == 'hybrid') {
+      return List<CommunityPost>.from(posts);
+    }
     final sorted = List<CommunityPost>.from(posts);
     if (normalized == 'popularity' || normalized == 'popular') {
       sorted.sort((a, b) => _popularityScore(b).compareTo(_popularityScore(a)));

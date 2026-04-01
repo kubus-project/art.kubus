@@ -9,6 +9,7 @@ import '../kubus_map_glass_surface.dart';
 enum DetailPanelKind {
   artwork,
   exhibition,
+  event,
 }
 
 enum PanelPresentation {

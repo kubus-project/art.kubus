@@ -1,7 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:latlong2/latlong.dart';
 
-import '../models/artwork.dart';
 import '../models/promotion.dart';
 import '../services/backend_api_service.dart';
 
@@ -15,8 +13,7 @@ class PromotionProvider extends ChangeNotifier {
       <PromotionEntityType, List<PromotionRateCard>>{};
 
   final List<PromotionRequest> _myRequests = <PromotionRequest>[];
-  List<Artwork> _featuredArtworks = <Artwork>[];
-  List<FeaturedPromotionItem> _featuredProfiles = <FeaturedPromotionItem>[];
+  List<HomeRail> _homeRails = <HomeRail>[];
 
   bool _rateCardsLoading = false;
   bool _requestsLoading = false;
@@ -48,9 +45,16 @@ class PromotionProvider extends ChangeNotifier {
       );
 
   List<PromotionRequest> get myRequests => List.unmodifiable(_myRequests);
-  List<Artwork> get featuredArtworks => List.unmodifiable(_featuredArtworks);
-  List<FeaturedPromotionItem> get featuredProfiles =>
-      List.unmodifiable(_featuredProfiles);
+  List<HomeRail> get homeRails => List.unmodifiable(_homeRails);
+
+  List<HomeRailItem> railItemsFor(PromotionEntityType entityType) {
+    for (final rail in _homeRails) {
+      if (rail.entityType == entityType) {
+        return List<HomeRailItem>.unmodifiable(rail.items);
+      }
+    }
+    return const <HomeRailItem>[];
+  }
 
   Future<void> loadRateCards(
     PromotionEntityType entityType, {
@@ -229,89 +233,29 @@ class PromotionProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> loadFeaturedHome({
+  Future<void> loadHomeRails({
     String locale = 'en',
     bool force = false,
   }) async {
     if (_featuredLoading) return;
-    if (!force &&
-        _featuredArtworks.isNotEmpty &&
-        _featuredProfiles.isNotEmpty &&
-        _lastFeaturedLocale == locale) {
+    if (!force && _homeRails.isNotEmpty && _lastFeaturedLocale == locale) {
       return;
     }
 
     _featuredLoading = true;
     _error = null;
     notifyListeners();
-    String? artworkError;
-    String? profileError;
 
     try {
-      try {
-        final artworkItems = await _api.getPublicFeaturedHome(
-          kind: PromotionEntityType.artwork,
-          locale: locale,
-        );
-        _featuredArtworks = artworkItems
-            .map(_featuredArtworkFromItem)
-            .whereType<Artwork>()
-            .toList(growable: false);
-      } catch (e) {
-        artworkError = e.toString();
-      }
-
-      try {
-        _featuredProfiles = await _api.getPublicFeaturedHome(
-          kind: PromotionEntityType.profile,
-          locale: locale,
-        );
-      } catch (e) {
-        profileError = e.toString();
-      }
-
+      final response = await _api.getPublicHomeRails(locale: locale);
+      _homeRails = response.rails;
       _lastFeaturedLocale = locale;
-
-      final errors = <String>[
-        if (artworkError != null && artworkError.trim().isNotEmpty)
-          artworkError,
-        if (profileError != null && profileError.trim().isNotEmpty)
-          profileError,
-      ];
-
-      if (errors.isNotEmpty) {
-        _error = errors.join(' | ');
-      }
+      _error = null;
+    } catch (e) {
+      _error = e.toString();
     } finally {
       _featuredLoading = false;
       notifyListeners();
-    }
-  }
-
-  Artwork? _featuredArtworkFromItem(FeaturedPromotionItem item) {
-    final raw = Map<String, dynamic>.from(item.raw);
-    if (raw.isEmpty) return null;
-    raw['promotion'] = item.promotion.toJson();
-    raw['id'] ??= item.id;
-    raw['title'] ??= item.title;
-    raw['artist'] ??= item.subtitle ?? 'Unknown Artist';
-    raw['description'] ??= '';
-    try {
-      final parsed = parseArtworkFromBackendJson(raw);
-      if (parsed.id.trim().isEmpty) return null;
-      return parsed;
-    } catch (_) {
-      return Artwork(
-        id: item.id,
-        title: item.title,
-        artist: item.subtitle ?? 'Unknown Artist',
-        description: '',
-        position: const LatLng(0, 0),
-        rewards: 0,
-        createdAt: DateTime.now(),
-        imageUrl: item.imageUrl,
-        promotion: item.promotion,
-      );
     }
   }
 }

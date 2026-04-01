@@ -15,31 +15,38 @@ void main() {
     BackendApiService().setAuthTokenForTesting(null);
   });
 
-  test('getPublicFeaturedHome reads items from nested data envelope', () async {
+  test('getPublicHomeRails reads rails from nested data envelope', () async {
     final api = BackendApiService();
     api.setHttpClient(
       MockClient((request) async {
         expect(request.method, 'GET');
-        expect(request.url.path, '/api/public/featured-home');
+        expect(request.url.path, '/api/public/home-rails');
+        expect(request.url.queryParameters['locale'], 'en');
         return http.Response(
           jsonEncode(<String, Object?>{
             'success': true,
             'data': <String, Object?>{
-              'kind': 'artwork',
               'locale': 'en',
-              'items': <Object?>[
+              'generatedAt': '2026-04-01T10:00:00.000Z',
+              'rails': <Object?>[
                 <String, Object?>{
                   'entityType': 'artwork',
-                  'entity': <String, Object?>{
-                    'id': 'art-1',
-                    'title': 'Featured artwork',
-                    'artist': 'Artist One',
-                    'imageUrl': '/uploads/featured.jpg',
-                  },
-                  'promotion': <String, Object?>{
-                    'isPromoted': true,
-                    'placementMode': 'rotation_pool',
-                  },
+                  'rail': 'home_artworks',
+                  'label': 'artwork',
+                  'items': <Object?>[
+                    <String, Object?>{
+                      'id': 'art-1',
+                      'entityType': 'artwork',
+                      'title': 'Featured artwork',
+                      'subtitle': 'Artist One',
+                      'imageUrl': '/uploads/featured.jpg',
+                      'href': '/a/art-1',
+                      'promotion': <String, Object?>{
+                        'isPromoted': true,
+                        'placementMode': 'rotation_pool',
+                      },
+                    },
+                  ],
                 },
               ],
             },
@@ -50,15 +57,66 @@ void main() {
       }),
     );
 
-    final items = await api.getPublicFeaturedHome(
-      kind: PromotionEntityType.artwork,
-      locale: 'en',
+    final response = await api.getPublicHomeRails(locale: 'en');
+
+    expect(response.locale, 'en');
+    expect(response.rails, hasLength(1));
+    expect(response.rails.first.entityType, PromotionEntityType.artwork);
+    expect(response.rails.first.items, hasLength(1));
+    expect(response.rails.first.items.first.id, 'art-1');
+    expect(response.rails.first.items.first.title, 'Featured artwork');
+    expect(response.rails.first.items.first.promotion.isPromoted, isTrue);
+  });
+
+  test('getPublicHomeRails accepts top-level payloads and limitPerRail', () async {
+    final api = BackendApiService();
+    api.setHttpClient(
+      MockClient((request) async {
+        expect(request.method, 'GET');
+        expect(request.url.path, '/api/public/home-rails');
+        expect(request.url.queryParameters['locale'], 'sl');
+        expect(request.url.queryParameters['limit'], '4');
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'locale': 'sl',
+            'generatedAt': '2026-04-01T11:00:00.000Z',
+            'rails': <Object?>[
+              <String, Object?>{
+                'entityType': 'profile',
+                'rail': 'home_artists',
+                'label': 'artist',
+                'items': <Object?>[
+                  <String, Object?>{
+                    'id': 'wallet-artist-1',
+                    'entityType': 'profile',
+                    'title': 'Featured Artist',
+                    'subtitle': 'Contemporary painter',
+                    'imageUrl': '/uploads/artist-1.png',
+                    'promotion': <String, Object?>{
+                      'isPromoted': true,
+                      'placementMode': 'priority_ranked',
+                    },
+                  },
+                ],
+              },
+            ],
+          }),
+          200,
+          headers: const <String, String>{'content-type': 'application/json'},
+        );
+      }),
     );
 
-    expect(items, hasLength(1));
-    expect(items.first.id, 'art-1');
-    expect(items.first.title, 'Featured artwork');
-    expect(items.first.promotion.isPromoted, isTrue);
+    final response = await api.getPublicHomeRails(
+      locale: 'sl',
+      limitPerRail: 4,
+    );
+
+    expect(response.locale, 'sl');
+    expect(response.rails.first.entityType, PromotionEntityType.profile);
+    expect(response.rails.first.items.first.id, 'wallet-artist-1');
+    expect(response.rails.first.items.first.subtitle, 'Contemporary painter');
+    expect(response.rails.first.items.first.imageUrl, '/uploads/artist-1.png');
   });
 
   test('listArtists only sends supported query params', () async {
@@ -149,104 +207,5 @@ void main() {
       submission.checkoutUrl,
       'https://checkout.example/session-1',
     );
-  });
-
-  test(
-      'getPublicFeaturedHome uses top-level fallback values when nested entity is sparse',
-      () async {
-    final api = BackendApiService();
-    api.setHttpClient(
-      MockClient((request) async {
-        expect(request.method, 'GET');
-        expect(request.url.path, '/api/public/featured-home');
-        return http.Response(
-          jsonEncode(<String, Object?>{
-            'success': true,
-            'data': <String, Object?>{
-              'kind': 'profile',
-              'locale': 'en',
-              'items': <Object?>[
-                <String, Object?>{
-                  'entityType': 'profile',
-                  'id': 'wallet-artist-1',
-                  'title': 'Featured Artist',
-                  'subtitle': 'Contemporary painter',
-                  'walletAddress': 'wallet-artist-1',
-                  'imageUrl': '/uploads/artist-1.png',
-                  'entity': <String, Object?>{
-                    'bio': 'Sparse nested payload',
-                  },
-                  'promotion': <String, Object?>{
-                    'isPromoted': true,
-                    'placementMode': 'priority_ranked',
-                  },
-                },
-              ],
-            },
-          }),
-          200,
-          headers: const <String, String>{'content-type': 'application/json'},
-        );
-      }),
-    );
-
-    final items = await api.getPublicFeaturedHome(
-      kind: PromotionEntityType.profile,
-      locale: 'en',
-    );
-
-    expect(items, hasLength(1));
-    expect(items.first.id, 'wallet-artist-1');
-    expect(items.first.title, 'Featured Artist');
-    expect(items.first.subtitle, 'Contemporary painter');
-    expect(items.first.walletAddress, 'wallet-artist-1');
-    expect(items.first.imageUrl, '/uploads/artist-1.png');
-  });
-
-  test(
-      'getPublicFeaturedHome normalizes profile id to wallet when both uuid and wallet exist',
-      () async {
-    final api = BackendApiService();
-    api.setHttpClient(
-      MockClient((request) async {
-        expect(request.method, 'GET');
-        expect(request.url.path, '/api/public/featured-home');
-        return http.Response(
-          jsonEncode(<String, Object?>{
-            'success': true,
-            'data': <String, Object?>{
-              'kind': 'profile',
-              'locale': 'en',
-              'items': <Object?>[
-                <String, Object?>{
-                  'entityType': 'profile',
-                  'id': '108b0fff-0514-4acc-a508-465e7aa97b87',
-                  'walletAddress': 'A1b2C3Wallet',
-                  'title': 'Featured Institution',
-                  'entity': <String, Object?>{
-                    'id': '108b0fff-0514-4acc-a508-465e7aa97b87',
-                    'wallet_address': 'A1b2C3Wallet',
-                  },
-                  'promotion': <String, Object?>{
-                    'isPromoted': true,
-                  },
-                },
-              ],
-            },
-          }),
-          200,
-          headers: const <String, String>{'content-type': 'application/json'},
-        );
-      }),
-    );
-
-    final items = await api.getPublicFeaturedHome(
-      kind: PromotionEntityType.profile,
-      locale: 'en',
-    );
-
-    expect(items, hasLength(1));
-    expect(items.first.walletAddress, 'A1b2C3Wallet');
-    expect(items.first.id, 'A1b2C3Wallet');
   });
 }

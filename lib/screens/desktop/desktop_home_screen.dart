@@ -22,14 +22,13 @@ import '../../models/recent_activity.dart';
 import '../../models/user_persona.dart';
 import '../../models/user_profile.dart';
 import '../../models/wallet.dart';
+import '../../models/promotion.dart';
 import '../../community/community_interactions.dart';
-import '../../widgets/empty_state_card.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/artist_badge.dart';
 import '../../widgets/institution_badge.dart';
 import '../../widgets/inline_loading.dart';
-import '../../widgets/artwork_creator_byline.dart';
 import '../../widgets/topbar_icon.dart';
 import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/detail/detail_shell_components.dart';
@@ -37,10 +36,10 @@ import '../../widgets/glass_components.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/activity_navigation.dart';
 import '../../utils/artwork_navigation.dart';
-import '../../utils/artwork_media_resolver.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/home_search_destination.dart';
+import '../../utils/media_url_resolver.dart';
 import '../../utils/user_profile_navigation.dart';
 import 'components/desktop_widgets.dart';
 import 'components/desktop_notifications_panel.dart';
@@ -53,6 +52,8 @@ import 'community/desktop_profile_screen.dart';
 import 'desktop_shell.dart';
 import '../activity/advanced_analytics_screen.dart';
 import '../home_screen.dart' show ActivityScreen;
+import '../events/event_detail_screen.dart';
+import '../events/exhibition_detail_screen.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/user_service.dart';
 import '../../utils/app_color_utils.dart';
@@ -108,7 +109,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   bool _platformStatsPrefetchQueued = false;
   String _lastDiscoveredStatsWallet = '';
   String? _queuedDiscoveredStatsWallet;
-  String _lastFeaturedLocaleRefresh = '';
+  String _lastHomeRailsLocaleRefresh = '';
 
   final Map<String, ({String displayName, String? username})>
       _resolvedCreatorIdentityByWallet =
@@ -146,7 +147,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       final navigationProvider =
           Provider.of<NavigationProvider>(context, listen: false);
       navigationProvider.initialize();
-      _refreshFeaturedHomePromotions();
+      _refreshHomeRails();
       _loadInitialData();
     });
   }
@@ -155,7 +156,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     _schedulePlatformStatsPrefetch();
-    _refreshFeaturedHomePromotions();
+    _refreshHomeRails();
 
     final walletAddress =
         (context.watch<WalletProvider>().currentWalletAddress ?? '').trim();
@@ -168,15 +169,15 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     _scheduleDiscoveredStatsPrefetch(walletAddress);
   }
 
-  void _refreshFeaturedHomePromotions({bool force = false}) {
+  void _refreshHomeRails({bool force = false}) {
     if (!mounted) return;
     final locale = Localizations.localeOf(context).languageCode;
-    final shouldForce = force || _lastFeaturedLocaleRefresh != locale;
-    _lastFeaturedLocaleRefresh = locale;
+    final shouldForce = force || _lastHomeRailsLocaleRefresh != locale;
+    _lastHomeRailsLocaleRefresh = locale;
     unawaited(
       context
           .read<PromotionProvider>()
-          .loadFeaturedHome(locale: locale, force: shouldForce),
+          .loadHomeRails(locale: locale, force: shouldForce),
     );
   }
 
@@ -624,19 +625,11 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   ),
                 ),
 
-                // Featured artworks
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(
                         DetailSpacing.xxl, 0, DetailSpacing.xxl, 56),
-                    child: _buildFeaturedArtworks(),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                        DetailSpacing.xxl, 0, DetailSpacing.xxl, 56),
-                    child: _buildFeaturedProfiles(),
+                    child: _buildHomeRails(),
                   ),
                 ),
 
@@ -1387,6 +1380,15 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     }
   }
 
+  void _pushDesktopSubScreen(String title, Widget screen) {
+    final shellScope = DesktopShellScope.of(context);
+    if (shellScope != null) {
+      shellScope.pushSubScreen(title: title, child: screen);
+    } else {
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+    }
+  }
+
   String _screenKeyToTitle(String key) {
     switch (key) {
       case 'profile':
@@ -1614,216 +1616,160 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     );
   }
 
-  Widget _buildFeaturedArtworks() {
+  Widget _buildHomeRails() {
     return Consumer<PromotionProvider>(
       builder: (context, promotionProvider, _) {
-        final l10n = AppLocalizations.of(context)!;
-        final artworks = promotionProvider.featuredArtworks.take(6).toList();
-
+        final rails = promotionProvider.homeRails
+            .map((rail) => MapEntry(rail, _visibleHomeRailItems(rail)))
+            .where((entry) => entry.value.isNotEmpty)
+            .toList(growable: false);
+        if (rails.isEmpty) {
+          return const SizedBox.shrink();
+        }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            DesktopSectionHeader(
-              title: l10n.homeFeaturedArtworksTitle,
-              subtitle: l10n.desktopHomeFeaturedArtworksSubtitle,
-              icon: Icons.auto_awesome,
-              iconColor: AppColorUtils.tealAccent,
-              action: TextButton.icon(
-                onPressed: () => _openShellTab(1), // Explore tab
-                icon: const Icon(Icons.arrow_forward, size: 18),
-                label: Text(l10n.commonViewAll),
-              ),
-            ),
-            const SizedBox(height: DetailSpacing.xl),
-            if (artworks.isEmpty)
-              EmptyStateCard(
-                icon: Icons.image_not_supported,
-                title: l10n.homeNoFeaturedArtworksTitle,
-                description: l10n.homeNoFeaturedArtworksDescription,
-              )
-            else
-              SizedBox(
-                height: 280,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: artworks.length,
-                  itemBuilder: (context, index) {
-                    return _buildArtworkCard(artworks[index], index);
-                  },
-                ),
-              ),
-          ],
+          children: rails
+              .map((entry) => Padding(
+                    padding: EdgeInsets.only(
+                      bottom: entry == rails.last ? 0 : DetailSpacing.xxl,
+                    ),
+                    child: _buildHomeRailSection(
+                      entry.key,
+                      entry.value,
+                    ),
+                  ))
+              .toList(growable: false),
         );
       },
     );
   }
 
-  Widget _buildFeaturedProfiles() {
-    return Consumer<PromotionProvider>(
-      builder: (context, promotionProvider, _) {
-        final profiles = promotionProvider.featuredProfiles.take(6).toList();
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            DesktopSectionHeader(
-              title: 'Featured Artists & Institutions',
-              subtitle: 'Promoted creators and institutions',
-              icon: Icons.star_outline,
-              iconColor: Colors.amber,
-            ),
-            const SizedBox(height: DetailSpacing.xl),
-            if (profiles.isEmpty)
-              const SizedBox.shrink()
-            else
-              SizedBox(
-                height: 180,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: profiles.length,
-                  itemBuilder: (context, index) {
-                    final item = profiles[index];
-                    return DesktopCard(
-                      width: 240,
-                      margin: EdgeInsets.only(
-                        right:
-                            index < profiles.length - 1 ? DetailSpacing.lg : 0,
-                      ),
-                      onTap: () {
-                        final wallet = (item.walletAddress ?? '').trim();
-                        final target = wallet.isNotEmpty ? wallet : item.id;
-                        if (target.trim().isEmpty) return;
-                        _openUserProfile(target, item.title);
-                      },
-                      child: Row(
-                        children: [
-                          AvatarWidget(
-                            avatarUrl: item.imageUrl,
-                            wallet: item.walletAddress ?? item.id,
-                            radius: 22,
-                            allowFabricatedFallback: true,
-                          ),
-                          const SizedBox(width: DetailSpacing.md),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  item.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: DetailTypography.cardTitle(context),
-                                ),
-                                if ((item.subtitle ?? '').trim().isNotEmpty)
-                                  Text(
-                                    item.subtitle!.trim(),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: DetailTypography.caption(context),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          if (item.promotion.isPromoted)
-                            const Icon(Icons.star,
-                                color: Colors.amber, size: 18),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-          ],
-        );
-      },
+  Widget _buildHomeRailSection(
+    HomeRail rail,
+    List<HomeRailItem> items,
+  ) {
+    final title = switch (rail.entityType) {
+      PromotionEntityType.artwork => 'Artworks',
+      PromotionEntityType.profile => 'Artists',
+      PromotionEntityType.institution => 'Institutions',
+      PromotionEntityType.event => 'Events',
+      PromotionEntityType.exhibition => 'Exhibitions',
+    };
+    final subtitle = switch (rail.entityType) {
+      PromotionEntityType.artwork =>
+        'Most viewed, interacted, and promoted artworks',
+      PromotionEntityType.profile =>
+        'Artist profiles ranked by activity and promotion',
+      PromotionEntityType.institution =>
+        'Institutions with active momentum and promotion',
+      PromotionEntityType.event => 'Upcoming and promoted events',
+      PromotionEntityType.exhibition => 'Upcoming and promoted exhibitions',
+    };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DesktopSectionHeader(
+          title: title,
+          subtitle: subtitle,
+          icon: _iconForHomeRail(rail.entityType),
+          iconColor: rail.entityType == PromotionEntityType.artwork
+              ? AppColorUtils.tealAccent
+              : Colors.amber,
+        ),
+        const SizedBox(height: DetailSpacing.xl),
+        SizedBox(
+          height: 220,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: items.length,
+            itemBuilder: (context, index) =>
+                _buildHomeRailCard(items[index], index, items.length),
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildArtworkCard(Artwork artwork, int index) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-
+  Widget _buildHomeRailCard(HomeRailItem item, int index, int total) {
     return DesktopCard(
-      width: 220,
-      margin: EdgeInsets.only(right: index < 5 ? DetailSpacing.lg : 0),
+      width: 240,
+      margin: EdgeInsets.only(right: index < total - 1 ? DetailSpacing.lg : 0),
       padding: EdgeInsets.zero,
-      onTap: () {
-        openArtwork(context, artwork.id, source: 'desktop_home');
-      },
+      onTap: () => _openHomeRailItem(item),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image
           SizedBox(
-            height: 160,
-            child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(DetailRadius.lg)),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  _buildDesktopCardCover(artwork, themeProvider),
-                  if (artwork.promotion.isPromoted)
-                    const Positioned(
-                      top: 8,
-                      left: 8,
-                      child: Icon(Icons.star, color: Colors.amber, size: 18),
+            height: 140,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.22),
+                        Theme.of(context)
+                            .colorScheme
+                            .secondary
+                            .withValues(alpha: 0.18),
+                      ],
                     ),
-                ],
-              ),
+                  ),
+                  child: (() {
+                    final resolvedImage =
+                        MediaUrlResolver.resolve(item.imageUrl);
+                    if (resolvedImage == null || resolvedImage.isEmpty) {
+                      return Center(
+                        child: Icon(
+                          _iconForHomeRail(item.entityType),
+                          size: 30,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.68),
+                        ),
+                      );
+                    }
+                    return Image.network(
+                      resolvedImage,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    );
+                  })(),
+                ),
+                if (item.promotion.isPromoted)
+                  const Positioned(
+                    top: 10,
+                    left: 10,
+                    child: Icon(Icons.star, color: Colors.amber, size: 18),
+                  ),
+              ],
             ),
           ),
-
-          // Info
           Padding(
             padding: const EdgeInsets.all(DetailSpacing.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  artwork.title,
-                  style: KubusTextStyles.detailCardTitle,
+                  item.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                  style: KubusTextStyles.detailCardTitle,
                 ),
-                const SizedBox(height: DetailSpacing.xs),
-                ArtworkCreatorByline(
-                  artwork: artwork,
-                  style: KubusTextStyles.navMetaLabel,
-                  maxLines: 1,
-                ),
-                const SizedBox(height: DetailSpacing.md),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.favorite,
-                      size: 14,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.5),
-                    ),
-                    const SizedBox(width: DetailSpacing.xs),
-                    Text(
-                      artwork.likesCount.toString(),
-                      style: KubusTextStyles.navMetaLabel,
-                    ),
-                    const SizedBox(width: DetailSpacing.md),
-                    Icon(
-                      Icons.visibility,
-                      size: 14,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.5),
-                    ),
-                    const SizedBox(width: DetailSpacing.xs),
-                    Text(
-                      artwork.viewsCount.toString(),
-                      style: KubusTextStyles.navMetaLabel,
-                    ),
-                  ],
-                ),
+                if ((item.subtitle ?? '').trim().isNotEmpty) ...[
+                  const SizedBox(height: DetailSpacing.xs),
+                  Text(
+                    item.subtitle!.trim(),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: KubusTextStyles.navMetaLabel,
+                  ),
+                ],
               ],
             ),
           ),
@@ -1832,102 +1778,58 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     );
   }
 
-  Widget _buildDesktopCardCover(Artwork artwork, ThemeProvider themeProvider) {
-    final imageUrl = ArtworkMediaResolver.resolveCover(artwork: artwork);
-    final placeholder = _desktopCoverPlaceholder(themeProvider);
-    final l10n = AppLocalizations.of(context)!;
-
-    if (imageUrl == null || imageUrl.isEmpty) {
-      return placeholder;
-    }
-
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        Image.network(
-          imageUrl,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => placeholder,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return Container(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              child: Center(
-                child: SizedBox(
-                  width: 32,
-                  height: 32,
-                  child: InlineLoading(
-                    shape: BoxShape.circle,
-                    color: themeProvider.accentColor,
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-        Positioned.fill(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withValues(alpha: 0.08),
-                  Colors.black.withValues(alpha: 0.22),
-                ],
-              ),
-            ),
-          ),
-        ),
-        if (artwork.arEnabled)
-          Positioned(
-            top: 8,
-            right: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: themeProvider.accentColor,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.view_in_ar, size: 12, color: Colors.white),
-                  const SizedBox(width: 4),
-                  Text(
-                    l10n.commonArShort,
-                    style: KubusTextStyles.badgeCount.copyWith(
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-      ],
-    );
+  IconData _iconForHomeRail(PromotionEntityType entityType) {
+    return switch (entityType) {
+      PromotionEntityType.artwork => Icons.palette_outlined,
+      PromotionEntityType.profile => Icons.person_outline,
+      PromotionEntityType.institution => Icons.apartment_outlined,
+      PromotionEntityType.event => Icons.event_outlined,
+      PromotionEntityType.exhibition => Icons.museum_outlined,
+    };
   }
 
-  Widget _desktopCoverPlaceholder(ThemeProvider themeProvider) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            themeProvider.accentColor.withValues(alpha: 0.25),
-            themeProvider.accentColor.withValues(alpha: 0.1),
-          ],
-        ),
-      ),
-      child: const Center(
-        child: Icon(
-          Icons.image,
-          color: Colors.white70,
-          size: 36,
-        ),
-      ),
-    );
+  List<HomeRailItem> _visibleHomeRailItems(HomeRail rail) {
+    return rail.items.where(_canOpenHomeRailItem).toList(growable: false);
+  }
+
+  bool _canOpenHomeRailItem(HomeRailItem item) {
+    switch (item.entityType) {
+      case PromotionEntityType.artwork:
+      case PromotionEntityType.profile:
+      case PromotionEntityType.event:
+      case PromotionEntityType.exhibition:
+        return item.id.trim().isNotEmpty;
+      case PromotionEntityType.institution:
+        return item.hasProfileTarget;
+    }
+  }
+
+  Future<void> _openHomeRailItem(HomeRailItem item) async {
+    switch (item.entityType) {
+      case PromotionEntityType.artwork:
+        await openArtwork(context, item.id, source: 'desktop_home_rail');
+        return;
+      case PromotionEntityType.profile:
+        _openUserProfile(item.id, item.title);
+        return;
+      case PromotionEntityType.institution:
+        final profileTargetId = item.profileTargetId;
+        if (profileTargetId == null) return;
+        _openUserProfile(profileTargetId, item.title);
+        return;
+      case PromotionEntityType.event:
+        _pushDesktopSubScreen(
+          item.title,
+          EventDetailScreen(eventId: item.id),
+        );
+        return;
+      case PromotionEntityType.exhibition:
+        _pushDesktopSubScreen(
+          item.title,
+          ExhibitionDetailScreen(exhibitionId: item.id),
+        );
+        return;
+    }
   }
 
   void _showWalletOnboarding() {

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/config.dart';
 import '../models/community_group.dart';
+import '../models/promotion.dart';
 import '../services/backend_api_service.dart';
 import '../services/user_action_logger.dart';
 import '../utils/wallet_utils.dart';
@@ -41,6 +42,9 @@ class CommunityPost {
   List<Comment> comments;
   final bool authorIsArtist;
   final bool authorIsInstitution;
+  final PromotionMetadata promotion;
+  final CommunityFeedPinMetadata feedPin;
+  final double? hybridScore;
 
   CommunityPost({
     required this.id,
@@ -76,6 +80,9 @@ class CommunityPost {
     this.comments = const [],
     this.authorIsArtist = false,
     this.authorIsInstitution = false,
+    this.promotion = PromotionMetadata.none,
+    this.feedPin = CommunityFeedPinMetadata.none,
+    this.hybridScore,
   });
 
   CommunityPost copyWith({
@@ -105,6 +112,9 @@ class CommunityPost {
     String? imageUrl,
     bool? authorIsArtist,
     bool? authorIsInstitution,
+    PromotionMetadata? promotion,
+    CommunityFeedPinMetadata? feedPin,
+    double? hybridScore,
   }) {
     return CommunityPost(
       id: id,
@@ -140,6 +150,9 @@ class CommunityPost {
       comments: comments ?? this.comments,
       authorIsArtist: authorIsArtist ?? this.authorIsArtist,
       authorIsInstitution: authorIsInstitution ?? this.authorIsInstitution,
+      promotion: promotion ?? this.promotion,
+      feedPin: feedPin ?? this.feedPin,
+      hybridScore: hybridScore ?? this.hybridScore,
     );
   }
 }

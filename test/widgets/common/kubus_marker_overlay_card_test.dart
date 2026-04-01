@@ -185,6 +185,42 @@ void main() {
   );
 
   testWidgets(
+    'renders marker title first and linked subject context separately',
+    (tester) async {
+      final marker = _marker();
+
+      await tester.pumpWidget(
+        _wrap(
+          SizedBox(
+            width: 340,
+            child: KubusMarkerOverlayCard(
+              marker: marker,
+              baseColor: Colors.teal,
+              displayTitle: 'North Plaza Marker',
+              canPresentExhibition: false,
+              linkedSubjectTypeLabel: 'Artwork',
+              linkedSubjectTitle: 'Main Artwork',
+              linkedSubjectSubtitle: 'Gallery Hall - 2025-05-01',
+              description: marker.description,
+              onClose: () {},
+              onPrimaryAction: () {},
+              primaryActionIcon: Icons.arrow_forward,
+              primaryActionLabel: 'More info',
+              maxWidth: 340,
+              maxHeight: 360,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('North Plaza Marker'), findsOneWidget);
+      expect(find.text('Artwork'), findsOneWidget);
+      expect(find.text('Main Artwork'), findsOneWidget);
+      expect(find.text('Gallery Hall - 2025-05-01'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
     'long description keeps a high preview word budget in dense card mode',
     (tester) async {
       final marker = _marker();

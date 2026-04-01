@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import '../../../models/art_marker.dart';
 import '../../../models/artwork.dart';
 import '../controller/kubus_map_controller.dart';
+import '../shared/map_marker_selection_resolver.dart';
 
 /// Adapter interface so Nearby UI can integrate with [KubusMapController]
 /// without hard-coding it (helps testing + future map implementations).
@@ -93,7 +94,7 @@ class NearbyArtController {
   ///
   /// Preference:
   /// 1) explicit `artwork.arMarkerId` match
-  /// 2) `marker.artworkId == artwork.id`
+  /// 2) closest linked marker for the artwork's position
   ArtMarker? findMarkerForArtwork(
     Artwork artwork,
     List<ArtMarker> markers,
@@ -105,11 +106,11 @@ class NearbyArtController {
       }
     }
 
-    for (final m in markers) {
-      if (m.artworkId == artwork.id) return m;
-    }
-
-    return null;
+    return resolveBestMarkerCandidate(
+      markers,
+      artworkId: artwork.id,
+      preferredPosition: artwork.hasValidLocation ? artwork.position : null,
+    );
   }
 
   double distanceMeters({required LatLng from, required LatLng to}) {

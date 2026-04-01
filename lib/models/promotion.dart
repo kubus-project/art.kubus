@@ -1,6 +1,9 @@
 enum PromotionEntityType {
   artwork,
   profile,
+  institution,
+  event,
+  exhibition,
 }
 
 extension PromotionEntityTypeApi on PromotionEntityType {
@@ -10,6 +13,12 @@ extension PromotionEntityTypeApi on PromotionEntityType {
         return 'artwork';
       case PromotionEntityType.profile:
         return 'profile';
+      case PromotionEntityType.institution:
+        return 'institution';
+      case PromotionEntityType.event:
+        return 'event';
+      case PromotionEntityType.exhibition:
+        return 'exhibition';
     }
   }
 
@@ -18,12 +27,241 @@ extension PromotionEntityTypeApi on PromotionEntityType {
     switch (normalized) {
       case 'profile':
       case 'artist':
-      case 'institution':
         return PromotionEntityType.profile;
+      case 'institution':
+        return PromotionEntityType.institution;
+      case 'event':
+        return PromotionEntityType.event;
+      case 'exhibition':
+        return PromotionEntityType.exhibition;
       case 'artwork':
       default:
         return PromotionEntityType.artwork;
     }
+  }
+}
+
+class CommunityFeedPinMetadata {
+  final bool isPinned;
+  final int? position;
+  final String? surface;
+  final DateTime? startsAt;
+  final DateTime? endsAt;
+  final String badge;
+
+  const CommunityFeedPinMetadata({
+    this.isPinned = false,
+    this.position,
+    this.surface,
+    this.startsAt,
+    this.endsAt,
+    this.badge = 'pin',
+  });
+
+  static const CommunityFeedPinMetadata none = CommunityFeedPinMetadata();
+
+  factory CommunityFeedPinMetadata.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return CommunityFeedPinMetadata.none;
+
+    DateTime? parseDate(dynamic value) {
+      if (value == null) return null;
+      if (value is DateTime) return value;
+      return DateTime.tryParse(value.toString());
+    }
+
+    int? parseInt(dynamic value) {
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      return int.tryParse(value?.toString() ?? '');
+    }
+
+    bool parseBool(dynamic value, {bool fallback = false}) {
+      if (value is bool) return value;
+      final normalized = (value ?? '').toString().trim().toLowerCase();
+      if (normalized == 'true' || normalized == '1' || normalized == 'yes') {
+        return true;
+      }
+      if (normalized == 'false' || normalized == '0' || normalized == 'no') {
+        return false;
+      }
+      return fallback;
+    }
+
+    return CommunityFeedPinMetadata(
+      isPinned:
+          parseBool(json['isPinned'] ?? json['is_pinned'] ?? json['pinned']),
+      position: parseInt(json['position']),
+      surface: (json['surface'])?.toString(),
+      startsAt: parseDate(json['startsAt'] ?? json['starts_at']),
+      endsAt: parseDate(json['endsAt'] ?? json['ends_at']),
+      badge: (json['badge'] ?? 'pin').toString(),
+    );
+  }
+}
+
+class HomeRailItem {
+  final String id;
+  final PromotionEntityType entityType;
+  final String title;
+  final String? subtitle;
+  final String? description;
+  final String? imageUrl;
+  final String? href;
+  final Map<String, dynamic> stats;
+  final PromotionMetadata promotion;
+  final Map<String, dynamic> raw;
+
+  const HomeRailItem({
+    required this.id,
+    required this.entityType,
+    required this.title,
+    required this.stats,
+    required this.promotion,
+    required this.raw,
+    this.subtitle,
+    this.description,
+    this.imageUrl,
+    this.href,
+  });
+
+  factory HomeRailItem.fromJson(Map<String, dynamic> json) {
+    final statsJson = json['stats'];
+    return HomeRailItem(
+      id: (json['id'] ?? json['entityId'] ?? json['entity_id'] ?? '')
+          .toString(),
+      entityType: PromotionEntityTypeApi.fromApiValue(
+        (json['entityType'] ?? json['entity_type'])?.toString(),
+      ),
+      title: (json['title'] ?? 'Untitled').toString(),
+      subtitle: (json['subtitle'])?.toString(),
+      description: (json['description'])?.toString(),
+      imageUrl: (json['imageUrl'] ?? json['image_url'])?.toString(),
+      href: (json['href'] ?? json['canonicalUrl'] ?? json['canonical_url'])
+          ?.toString(),
+      stats: statsJson is Map
+          ? Map<String, dynamic>.from(statsJson)
+          : <String, dynamic>{},
+      promotion: PromotionMetadata.readFrom(json),
+      raw: Map<String, dynamic>.from(json),
+    );
+  }
+
+  String? get profileTargetId {
+    String? pickRawValue(List<String> keys) {
+      for (final key in keys) {
+        final rawValue = raw[key];
+        final normalized = rawValue?.toString().trim();
+        if (normalized != null && normalized.isNotEmpty) {
+          return normalized;
+        }
+      }
+      return null;
+    }
+
+    switch (entityType) {
+      case PromotionEntityType.profile:
+        final profileId = id.trim();
+        return profileId.isEmpty ? null : profileId;
+      case PromotionEntityType.institution:
+        final explicitWallet = pickRawValue(const <String>[
+          'walletAddress',
+          'wallet_address',
+          'wallet',
+          'profileId',
+          'profile_id',
+        ]);
+        if (explicitWallet != null) {
+          return explicitWallet;
+        }
+
+        final institutionId = id.trim();
+        if (institutionId.isEmpty || _looksLikeUuid(institutionId)) {
+          return null;
+        }
+        return institutionId;
+      case PromotionEntityType.artwork:
+      case PromotionEntityType.event:
+      case PromotionEntityType.exhibition:
+        return null;
+    }
+  }
+
+  bool get hasProfileTarget => profileTargetId != null;
+}
+
+bool _looksLikeUuid(String value) {
+  final normalized = value.trim();
+  if (normalized.isEmpty) return false;
+  return RegExp(
+    r'^[0-9a-fA-F]{8}-'
+    r'[0-9a-fA-F]{4}-'
+    r'[0-9a-fA-F]{4}-'
+    r'[0-9a-fA-F]{4}-'
+    r'[0-9a-fA-F]{12}$',
+  ).hasMatch(normalized);
+}
+
+class HomeRail {
+  final PromotionEntityType entityType;
+  final String rail;
+  final String label;
+  final List<HomeRailItem> items;
+
+  const HomeRail({
+    required this.entityType,
+    required this.rail,
+    required this.label,
+    required this.items,
+  });
+
+  factory HomeRail.fromJson(Map<String, dynamic> json) {
+    final itemsJson = json['items'];
+    return HomeRail(
+      entityType: PromotionEntityTypeApi.fromApiValue(
+        (json['entityType'] ?? json['entity_type'])?.toString(),
+      ),
+      rail: (json['rail'] ?? '').toString(),
+      label: (json['label'] ?? '').toString(),
+      items: itemsJson is List
+          ? itemsJson
+              .whereType<Map>()
+              .map((entry) => HomeRailItem.fromJson(
+                    Map<String, dynamic>.from(entry),
+                  ))
+              .toList(growable: false)
+          : const <HomeRailItem>[],
+    );
+  }
+}
+
+class HomeRailsResponse {
+  final String locale;
+  final DateTime? generatedAt;
+  final List<HomeRail> rails;
+
+  const HomeRailsResponse({
+    required this.locale,
+    required this.rails,
+    this.generatedAt,
+  });
+
+  factory HomeRailsResponse.fromJson(Map<String, dynamic> json) {
+    final data = json['data'];
+    final payload = data is Map ? Map<String, dynamic>.from(data) : json;
+    final railsJson = payload['rails'];
+    return HomeRailsResponse(
+      locale: (payload['locale'] ?? 'en').toString(),
+      generatedAt: DateTime.tryParse(
+        (payload['generatedAt'] ?? payload['generated_at'] ?? '').toString(),
+      ),
+      rails: railsJson is List
+          ? railsJson
+              .whereType<Map>()
+              .map((entry) =>
+                  HomeRail.fromJson(Map<String, dynamic>.from(entry)))
+              .toList(growable: false)
+          : const <HomeRail>[],
+    );
   }
 }
 
@@ -342,10 +580,8 @@ class PromotionRateCard {
           (json['kub8PricePerDay'] ?? json['kub8_price_per_day'] as num?)
                   ?.toDouble() ??
               0.0,
-      minDays:
-          (json['minDays'] ?? json['min_days'] as num?)?.toInt() ?? 1,
-      maxDays:
-          (json['maxDays'] ?? json['max_days'] as num?)?.toInt() ?? 30,
+      minDays: (json['minDays'] ?? json['min_days'] as num?)?.toInt() ?? 1,
+      maxDays: (json['maxDays'] ?? json['max_days'] as num?)?.toInt() ?? 30,
       slotCount: (json['slotCount'] ?? json['slot_count'] as num?)?.toInt(),
       isActive: (json['isActive'] ?? json['is_active']) == true,
       volumeDiscounts: volumeDiscounts,
@@ -765,19 +1001,17 @@ class PromotionRequest {
       entityType: PromotionEntityTypeApi.fromApiValue(
         (requestMap['entityType'] ?? requestMap['entity_type'])?.toString(),
       ),
-      rateCardId:
-          (requestMap['rateCardId'] ?? requestMap['rate_card_id'] ?? '')
-              .toString(),
-      rateCardCode:
-          (requestMap['rateCardCode'] ?? requestMap['rate_card_code'])
-              ?.toString(),
+      rateCardId: (requestMap['rateCardId'] ?? requestMap['rate_card_id'] ?? '')
+          .toString(),
+      rateCardCode: (requestMap['rateCardCode'] ?? requestMap['rate_card_code'])
+          ?.toString(),
       placementTier: parsePlacementTier(requestMap),
       durationDays: parseInt(
         requestMap['durationDays'] ?? requestMap['duration_days'],
       ),
       selectedSlotIndex: () {
-        final value =
-            requestMap['selectedSlotIndex'] ?? requestMap['selected_slot_index'];
+        final value = requestMap['selectedSlotIndex'] ??
+            requestMap['selected_slot_index'];
         if (value == null) return null;
         return parseInt(value, fallback: -1) == -1 ? null : parseInt(value);
       }(),
@@ -856,135 +1090,6 @@ class PromotionRequestSubmission {
             json['checkoutUrl'] ??
             json['checkout_url'],
       ),
-    );
-  }
-}
-
-class FeaturedPromotionItem {
-  final String id;
-  final PromotionEntityType entityType;
-  final String title;
-  final String? subtitle;
-  final String? imageUrl;
-  final String? walletAddress;
-  final PromotionMetadata promotion;
-  final Map<String, dynamic> raw;
-
-  const FeaturedPromotionItem({
-    required this.id,
-    required this.entityType,
-    required this.title,
-    required this.promotion,
-    required this.raw,
-    this.subtitle,
-    this.imageUrl,
-    this.walletAddress,
-  });
-
-  factory FeaturedPromotionItem.fromJson(
-    Map<String, dynamic> json,
-    PromotionEntityType fallbackType,
-  ) {
-    String? pickString(List<dynamic> values) {
-      for (final value in values) {
-        if (value == null) continue;
-        final next = value.toString().trim();
-        if (next.isNotEmpty) return next;
-      }
-      return null;
-    }
-
-    final entityMap = json['entity'] is Map
-        ? Map<String, dynamic>.from(json['entity'] as Map)
-        : <String, dynamic>{};
-
-    String? pickMerged(List<String> keys) {
-      final values = <dynamic>[];
-      for (final key in keys) {
-        values.add(json[key]);
-      }
-      for (final key in keys) {
-        values.add(entityMap[key]);
-      }
-      return pickString(values);
-    }
-
-    final title = pickMerged([
-          'title',
-          'displayName',
-          'display_name',
-          'name',
-          'username',
-        ]) ??
-        'Untitled';
-
-    final parsedEntityType = (() {
-      final parsed = PromotionEntityTypeApi.fromApiValue(
-        (json['entityType'] ??
-                json['entity_type'] ??
-                entityMap['entityType'] ??
-                entityMap['entity_type'])
-            ?.toString(),
-      );
-      return parsed == PromotionEntityType.artwork &&
-              fallbackType == PromotionEntityType.profile
-          ? fallbackType
-          : parsed;
-    })();
-
-    final walletAddress = pickMerged([
-      'walletAddress',
-      'wallet_address',
-    ]);
-
-    final fallbackId = pickMerged([
-      'id',
-      '_id',
-      'profileId',
-      'profile_id',
-      'artworkId',
-      'artwork_id',
-      'entityId',
-      'entity_id',
-      'walletAddress',
-      'wallet_address',
-    ]);
-
-    final resolvedId = parsedEntityType == PromotionEntityType.profile
-        ? (walletAddress ?? fallbackId ?? '')
-        : (fallbackId ?? '');
-
-    return FeaturedPromotionItem(
-      id: resolvedId,
-      entityType: parsedEntityType,
-      title: title,
-      subtitle: pickMerged([
-        'subtitle',
-        'artist',
-        'artistName',
-        'artist_name',
-        'username',
-        'type',
-        'bio',
-      ]),
-      imageUrl: pickMerged([
-        'imageUrl',
-        'image_url',
-        'imageURL',
-        'avatar',
-        'avatarUrl',
-        'avatar_url',
-        'coverImage',
-        'cover_image',
-        'coverUrl',
-        'cover_url',
-      ]),
-      walletAddress: walletAddress,
-      promotion: PromotionMetadata.readFrom(
-        json,
-        fallbackMaps: <Map<String, dynamic>?>[entityMap],
-      ),
-      raw: entityMap.isNotEmpty ? entityMap : Map<String, dynamic>.from(json),
     );
   }
 }

@@ -56,6 +56,9 @@ class KubusMarkerOverlayCard extends StatelessWidget {
     this.artwork,
     this.distanceText,
     this.description,
+    this.linkedSubjectTypeLabel,
+    this.linkedSubjectTitle,
+    this.linkedSubjectSubtitle,
     this.maxPreviewChars = 1800,
     this.maxPreviewWords = 220,
     this.actions = const <MarkerOverlayActionSpec>[],
@@ -79,6 +82,9 @@ class KubusMarkerOverlayCard extends StatelessWidget {
 
   /// Optional description override. If null, uses marker/linked artwork.
   final String? description;
+  final String? linkedSubjectTypeLabel;
+  final String? linkedSubjectTitle;
+  final String? linkedSubjectSubtitle;
 
   final int maxPreviewChars;
   final int maxPreviewWords;
@@ -191,6 +197,9 @@ class KubusMarkerOverlayCard extends StatelessWidget {
                 distanceText: distanceText,
                 isPromoted: isPromoted,
                 onTitleTap: resolvedTitleTap,
+                linkedSubjectTypeLabel: linkedSubjectTypeLabel,
+                linkedSubjectTitle: linkedSubjectTitle,
+                linkedSubjectSubtitle: linkedSubjectSubtitle,
               ),
               const SizedBox(height: KubusSpacing.sm),
               Expanded(
@@ -315,7 +324,21 @@ class KubusMarkerOverlayCard extends StatelessWidget {
     required String? distanceText,
     required bool isPromoted,
     required VoidCallback? onTitleTap,
+    required String? linkedSubjectTypeLabel,
+    required String? linkedSubjectTitle,
+    required String? linkedSubjectSubtitle,
   }) {
+    final normalizedLinkedTypeLabel = linkedSubjectTypeLabel?.trim();
+    final normalizedLinkedTitle = linkedSubjectTitle?.trim();
+    final normalizedLinkedSubtitle = linkedSubjectSubtitle?.trim();
+    final displayTitleNormalized = displayTitle.trim();
+    final showLinkedTitle = normalizedLinkedTitle != null &&
+        normalizedLinkedTitle.isNotEmpty &&
+        normalizedLinkedTitle != displayTitleNormalized;
+    final showLinkedSubtitle =
+        normalizedLinkedSubtitle != null && normalizedLinkedSubtitle.isNotEmpty;
+    final showLinkedContext = showLinkedTitle || showLinkedSubtitle;
+
     final titleWidget = Text(
       displayTitle,
       maxLines: 2,
@@ -340,7 +363,17 @@ class KubusMarkerOverlayCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (canPresentExhibition) ...[
+              if ((normalizedLinkedTypeLabel ?? '').isNotEmpty) ...[
+                Text(
+                  normalizedLinkedTypeLabel!,
+                  style: KubusTypography.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: baseColor,
+                    height: 1.0,
+                  ),
+                ),
+                const SizedBox(height: KubusSpacing.xxs),
+              ] else if (canPresentExhibition) ...[
                 Text(
                   l10n.commonExhibition,
                   style: KubusTypography.textTheme.labelSmall?.copyWith(
@@ -362,6 +395,35 @@ class KubusMarkerOverlayCard extends StatelessWidget {
                 )
               else
                 titleWidget,
+              if (showLinkedContext) ...[
+                const SizedBox(height: KubusSpacing.xxs),
+                if (showLinkedTitle)
+                  Text(
+                    normalizedLinkedTitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: KubusTypography.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                      fontSize: KubusHeaderMetrics.sectionSubtitle - 1,
+                      height: 1.15,
+                    ),
+                  ),
+                if (showLinkedSubtitle) ...[
+                  if (showLinkedTitle) const SizedBox(height: 2),
+                  Text(
+                    normalizedLinkedSubtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: KubusTypography.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant.withValues(alpha: 0.9),
+                      fontWeight: FontWeight.w500,
+                      fontSize: KubusHeaderMetrics.sectionSubtitle - 2,
+                      height: 1.15,
+                    ),
+                  ),
+                ],
+              ],
               if (artwork != null) ...[
                 const SizedBox(height: KubusSpacing.xxs),
                 ArtworkCreatorByline(
@@ -696,7 +758,7 @@ class KubusMarkerOverlayCard extends StatelessWidget {
         marker.metadata?['subject_category'] != null ||
         marker.metadata?['locationName'] != null ||
         marker.metadata?['location'] != null ||
-          marker.isCommunityMarker ||
+        marker.isCommunityMarker ||
         (artwork != null && artwork.rewards > 0);
   }
 

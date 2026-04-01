@@ -18,6 +18,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../features/map/shared/map_screen_shared_helpers.dart';
 import '../features/map/shared/map_artwork_filtering.dart';
 import '../features/map/shared/map_marker_overlay_actions.dart';
+import '../features/map/shared/map_marker_overlay_presentation.dart';
+import '../features/map/shared/map_marker_selection_resolver.dart';
 import '../features/map/shared/map_overlay_sizing.dart';
 import '../providers/artwork_provider.dart';
 import '../providers/task_provider.dart';
@@ -28,6 +30,7 @@ import '../providers/map_deep_link_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/main_tab_provider.dart';
 import '../providers/exhibitions_provider.dart';
+import '../providers/events_provider.dart';
 import '../providers/marker_management_provider.dart';
 import '../providers/attendance_provider.dart';
 import '../providers/presence_provider.dart';
@@ -40,6 +43,7 @@ import '../services/push_notification_service.dart';
 import '../services/map_attribution_helper.dart';
 import '../core/app_route_observer.dart';
 import '../models/art_marker.dart';
+import '../models/event.dart';
 import '../widgets/map_marker_style_config.dart';
 import '../utils/artwork_navigation.dart';
 import '../utils/grid_utils.dart';
@@ -76,6 +80,7 @@ import '../features/map/controller/kubus_map_controller.dart';
 import '../features/map/nearby/nearby_art_controller.dart';
 import '../features/map/tutorial/map_tutorial_coordinator.dart';
 import '../utils/marker_cube_geometry.dart';
+import 'events/event_detail_screen.dart';
 import 'events/exhibition_detail_screen.dart';
 import '../widgets/glass_components.dart';
 import '../widgets/kubus_snackbar.dart';
@@ -1777,23 +1782,7 @@ class _MapScreenState extends State<MapScreen>
         final index = _artMarkers.indexWhere((m) => m.id == markerId);
         if (index < 0) return;
         final marker = _artMarkers[index];
-        if (marker.isExhibitionMarker) {
-          unawaited(_openExhibitionFromMarker(marker, null, null));
-          return;
-        }
-        final artworkId = marker.artworkId;
-        if (artworkId != null && artworkId.trim().isNotEmpty) {
-          unawaited(
-            openArtwork(
-              context,
-              artworkId,
-              source: 'map_proximity_push',
-              attendanceMarkerId: marker.id,
-            ),
-          );
-          return;
-        }
-        unawaited(_showMarkerInfoFallback(marker));
+        unawaited(_openMarkerPrimaryTarget(marker));
       }
     } catch (e) {
       AppConfig.debugPrint('MapScreen: failed to handle notification tap: $e');
@@ -1987,23 +1976,7 @@ class _MapScreenState extends State<MapScreen>
           label: l10n.commonView,
           onPressed: () {
             messenger.hideCurrentSnackBar();
-            if (marker.isExhibitionMarker) {
-              unawaited(_openExhibitionFromMarker(marker, null, null));
-              return;
-            }
-            final artworkId = marker.artworkId;
-            if (artworkId != null && artworkId.trim().isNotEmpty) {
-              unawaited(
-                openArtwork(
-                  context,
-                  artworkId,
-                  source: 'map_proximity_snackbar',
-                  attendanceMarkerId: marker.id,
-                ),
-              );
-              return;
-            }
-            unawaited(_showMarkerInfoFallback(marker));
+            unawaited(_openMarkerPrimaryTarget(marker));
           },
         ),
       ),
@@ -2480,8 +2453,8 @@ class _MapScreenState extends State<MapScreen>
       initialSubjectType: initialSubjectType,
       allowedSubjectTypes: allowedSubjectTypes,
       blockedArtworkIds: _artMarkers
-          .where((m) => (m.artworkId ?? '').isNotEmpty)
-          .map((m) => m.artworkId!)
+          .where((marker) => (marker.artworkId ?? '').trim().isNotEmpty)
+          .map((marker) => marker.artworkId!.trim())
           .toSet(),
     );
 
@@ -2648,7 +2621,7 @@ class _MapScreenState extends State<MapScreen>
           tone: KubusSnackBarTone.error,
         );
       }
-      AppConfig.debugPrint('MapScreen: duplicate marker prevented: $e');
+      AppConfig.debugPrint('MapScreen: marker creation rejected: $e');
       return false;
     } catch (e) {
       AppConfig.debugPrint(
@@ -3918,22 +3891,22 @@ class _MapScreenState extends State<MapScreen>
               .getArtworkById(pageMarker.artworkId ?? '');
 
       final pagePrimaryExhibition = pageMarker.resolvedExhibitionSummary;
+      final pageEvent = _resolveLinkedEvent(pageMarker);
+      final presentation = resolveMarkerOverlayPresentation(
+        marker: pageMarker,
+        artwork: pageArtwork,
+        event: pageEvent,
+      );
       final exhibitionsFeatureEnabled =
           AppConfig.isFeatureEnabled('exhibitions');
       final exhibitionsApiAvailable =
           BackendApiService().exhibitionsApiAvailable;
-      final canPresentExhibition = exhibitionsFeatureEnabled &&
+      final canPresentExhibition = presentation.primaryTarget ==
+              MapMarkerOverlayPrimaryTarget.exhibition &&
+          exhibitionsFeatureEnabled &&
           pagePrimaryExhibition != null &&
           pagePrimaryExhibition.id.isNotEmpty &&
           exhibitionsApiAvailable != false;
-
-      final exhibitionTitle = (pagePrimaryExhibition?.title ?? '').trim();
-      final pageDisplayTitle =
-          canPresentExhibition && exhibitionTitle.isNotEmpty
-              ? exhibitionTitle
-              : (pageArtwork?.title.isNotEmpty == true
-                  ? pageArtwork!.title
-                  : pageMarker.name);
 
       final pageDistanceText = () {
         if (_currentPosition == null) return null;
@@ -3963,30 +3936,42 @@ class _MapScreenState extends State<MapScreen>
             : null,
       );
 
-      final openDetails = canPresentExhibition
-          ? () => _openExhibitionFromMarker(
-                pageMarker,
-                pagePrimaryExhibition,
-                pageArtwork,
-              )
-          : () => _openMarkerDetail(pageMarker, pageArtwork);
+      final linkedSubjectTypeLabel = _markerOverlaySubjectTypeLabel(
+        l10n,
+        presentation.linkedSubject.kind,
+      );
+      void openDetails() {
+        unawaited(
+          _openMarkerPrimaryTarget(
+            pageMarker,
+            artwork: pageArtwork,
+            exhibition: pagePrimaryExhibition,
+            event: pageEvent,
+          ),
+        );
+      }
 
       return KubusMarkerOverlayCard(
         marker: pageMarker,
         artwork: pageArtwork,
         baseColor: pageBaseColor,
-        displayTitle: pageDisplayTitle,
+        displayTitle: presentation.title,
         canPresentExhibition: canPresentExhibition,
         distanceText: pageDistanceText,
-        description: pageMarker.description.isNotEmpty
-            ? pageMarker.description
-            : (pageArtwork?.description ?? ''),
+        description: presentation.description,
+        linkedSubjectTypeLabel: linkedSubjectTypeLabel,
+        linkedSubjectTitle: presentation.linkedSubject.title,
+        linkedSubjectSubtitle: presentation.linkedSubject.subtitle,
         onClose: _dismissSelectedMarker,
         onPrimaryAction: openDetails,
         onCardTap: openDetails,
         onTitleTap: openDetails,
-        primaryActionIcon:
-            canPresentExhibition ? Icons.museum_outlined : Icons.arrow_forward,
+        primaryActionIcon: switch (presentation.primaryTarget) {
+          MapMarkerOverlayPrimaryTarget.exhibition => Icons.museum_outlined,
+          MapMarkerOverlayPrimaryTarget.event => Icons.event_outlined,
+          MapMarkerOverlayPrimaryTarget.artwork => Icons.arrow_forward,
+          MapMarkerOverlayPrimaryTarget.markerInfo => Icons.info_outline,
+        },
         primaryActionLabel: l10n.commonViewDetails,
         actions: overlayActions,
         stackCount: stack.length,
@@ -4197,6 +4182,103 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
+  KubusEvent? _resolveLinkedEvent(ArtMarker marker) {
+    final subjectType = (marker.subjectType ?? '').trim().toLowerCase();
+    if (!subjectType.contains('event')) return null;
+    final eventId = (marker.subjectId ?? '').trim();
+    if (eventId.isEmpty) return null;
+    final eventsProvider = context.read<EventsProvider>();
+    for (final event in eventsProvider.events) {
+      if (event.id == eventId) return event;
+    }
+    return null;
+  }
+
+  String? _markerOverlaySubjectTypeLabel(
+    AppLocalizations l10n,
+    MapMarkerOverlayLinkedSubjectKind kind,
+  ) {
+    switch (kind) {
+      case MapMarkerOverlayLinkedSubjectKind.artwork:
+        return l10n.commonArtwork;
+      case MapMarkerOverlayLinkedSubjectKind.exhibition:
+        return l10n.commonExhibition;
+      case MapMarkerOverlayLinkedSubjectKind.event:
+        return l10n.mapMarkerSubjectTypeEvent;
+      case MapMarkerOverlayLinkedSubjectKind.institution:
+        return l10n.commonInstitution;
+      case MapMarkerOverlayLinkedSubjectKind.group:
+        return l10n.mapMarkerSubjectTypeGroup;
+      case MapMarkerOverlayLinkedSubjectKind.misc:
+      case MapMarkerOverlayLinkedSubjectKind.none:
+        return null;
+    }
+  }
+
+  Future<void> _openMarkerPrimaryTarget(
+    ArtMarker marker, {
+    Artwork? artwork,
+    ExhibitionSummaryDto? exhibition,
+    KubusEvent? event,
+  }) async {
+    final resolvedEvent = event ?? _resolveLinkedEvent(marker);
+    final presentation = resolveMarkerOverlayPresentation(
+      marker: marker,
+      artwork: artwork,
+      event: resolvedEvent,
+    );
+    switch (presentation.primaryTarget) {
+      case MapMarkerOverlayPrimaryTarget.exhibition:
+        await _openExhibitionFromMarker(marker, exhibition, artwork);
+        return;
+      case MapMarkerOverlayPrimaryTarget.event:
+        await _openEventFromMarker(marker, resolvedEvent);
+        return;
+      case MapMarkerOverlayPrimaryTarget.artwork:
+        await _openMarkerDetail(marker, artwork);
+        return;
+      case MapMarkerOverlayPrimaryTarget.markerInfo:
+        await _showMarkerInfoFallback(marker);
+        return;
+    }
+  }
+
+  Future<void> _openEventFromMarker(
+    ArtMarker marker,
+    KubusEvent? event,
+  ) async {
+    final eventId = (event?.id ?? marker.subjectId ?? '').trim();
+    if (eventId.isEmpty ||
+        !AppConfig.isFeatureEnabled('events') ||
+        BackendApiService().eventsApiAvailable == false) {
+      await _showMarkerInfoFallback(marker);
+      return;
+    }
+
+    final eventsProvider = context.read<EventsProvider>();
+    final fetched = event ??
+        await (() async {
+          try {
+            return await eventsProvider.fetchEvent(eventId, force: true);
+          } catch (_) {
+            return null;
+          }
+        })();
+
+    if (!mounted) return;
+    if (fetched == null) {
+      await _showMarkerInfoFallback(marker);
+      return;
+    }
+
+    final navigator = Navigator.of(context);
+    navigator.push(
+      MaterialPageRoute(
+        builder: (_) => EventDetailScreen(eventId: fetched.id),
+      ),
+    );
+  }
+
   Future<void> _openExhibitionFromMarker(
     ArtMarker marker,
     ExhibitionSummaryDto? exhibition,
@@ -4391,7 +4473,8 @@ class _MapScreenState extends State<MapScreen>
           return IconButton(
             tooltip: l10n.mapClearSearchTooltip,
             icon: Icon(Icons.close, color: hintColor),
-            onPressed: () => _mapSearchController.clearQueryWithContext(context),
+            onPressed: () =>
+                _mapSearchController.clearQueryWithContext(context),
           );
         }
 
@@ -4480,23 +4563,13 @@ class _MapScreenState extends State<MapScreen>
 
   ArtMarker? _findLoadedMarkerForSearchResult(KubusSearchResult result) {
     final resultId = result.id?.trim() ?? '';
-    final normalizedLabel = result.label.trim().toLowerCase();
-    final position = result.position;
-
-    return _artMarkers.where((marker) {
-      if (resultId.isNotEmpty) {
-        if (marker.id == resultId || marker.artworkId == resultId) {
-          return true;
-        }
-      }
-      if (normalizedLabel.isNotEmpty &&
-          marker.name.trim().toLowerCase() == normalizedLabel) {
-        return true;
-      }
-      if (position == null) return false;
-      return (marker.position.latitude - position.latitude).abs() < 0.0002 &&
-          (marker.position.longitude - position.longitude).abs() < 0.0002;
-    }).firstOrNull;
+    return resolveBestMarkerCandidate(
+      _artMarkers,
+      exactMarkerId: resultId,
+      artworkId: resultId,
+      preferredLabel: result.label,
+      preferredPosition: result.position,
+    );
   }
 
   /// Finds an existing marker for the artwork, or creates a temporary one
@@ -4506,14 +4579,15 @@ class _MapScreenState extends State<MapScreen>
     LatLng? suggestionPosition,
     String? fallbackName,
   ) {
-    // Check if marker already exists in loaded markers
-    final existing =
-        _artMarkers.where((m) => m.artworkId == artworkId).firstOrNull;
-    if (existing != null) return existing;
-
-    // Try to get artwork from provider to create a temporary marker
     final artworkProvider = context.read<ArtworkProvider>();
     final artwork = artworkProvider.getArtworkById(artworkId);
+    final existing = resolveBestMarkerCandidate(
+      _artMarkers,
+      artworkId: artworkId,
+      preferredPosition: suggestionPosition ??
+          (artwork?.hasValidLocation == true ? artwork!.position : null),
+    );
+    if (existing != null) return existing;
 
     final position = suggestionPosition ??
         (artwork?.hasValidLocation == true ? artwork!.position : null);

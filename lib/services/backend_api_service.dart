@@ -3994,51 +3994,35 @@ class BackendApiService
     }
   }
 
-  /// Public homepage featured promotions.
-  /// GET /api/public/featured-home?kind=artwork|profile&locale=en|sl
-  Future<List<FeaturedPromotionItem>> getPublicFeaturedHome({
-    required PromotionEntityType kind,
+  /// Public backend-ranked home rails.
+  /// GET /api/public/home-rails?locale=en|sl
+  Future<HomeRailsResponse> getPublicHomeRails({
     String locale = 'en',
+    int? limitPerRail,
   }) async {
     try {
-      final uri = Uri.parse('$baseUrl/api/public/featured-home').replace(
-        queryParameters: <String, String>{
-          'kind': kind.apiValue,
-          'locale': locale,
-        },
+      final query = <String, String>{'locale': locale};
+      if (limitPerRail != null) {
+        query['limit'] = limitPerRail.toString();
+      }
+      final uri = Uri.parse('$baseUrl/api/public/home-rails').replace(
+        queryParameters: query,
       );
       final dynamic data = await _fetchJson(
         uri,
         includeAuth: false,
         allowOrbitFallback: true,
       );
-      final List<dynamic> list = (() {
-        if (data is List) return data;
-        if (data is Map<String, dynamic>) {
-          final payload = data['data'];
-          if (payload is Map<String, dynamic>) {
-            final nestedItems = payload['items'];
-            if (nestedItems is List) return nestedItems;
-          } else if (payload is Map) {
-            final nestedItems = payload['items'];
-            if (nestedItems is List) return nestedItems;
-          }
-          final flatItems = data['items'];
-          if (flatItems is List) return flatItems;
-          if (payload is List) return payload;
-        }
-        return const <dynamic>[];
-      })();
-      return list
-          .whereType<Map>()
-          .map((e) => FeaturedPromotionItem.fromJson(
-                Map<String, dynamic>.from(e),
-                kind,
-              ))
-          .toList(growable: false);
+      if (data is Map<String, dynamic>) {
+        return HomeRailsResponse.fromJson(data);
+      }
+      if (data is Map) {
+        return HomeRailsResponse.fromJson(Map<String, dynamic>.from(data));
+      }
+      throw Exception('Invalid home rails response');
     } catch (e) {
       AppConfig.debugPrint(
-          'BackendApiService.getPublicFeaturedHome failed: $e');
+          'BackendApiService.getPublicHomeRails failed: $e');
       rethrow;
     }
   }
@@ -5829,6 +5813,7 @@ class BackendApiService
     bool? arOnly,
     String? authorWallet,
     bool? followingOnly,
+    String? surface,
     String? tag,
     String? sort,
   }) async {
@@ -5846,6 +5831,9 @@ class BackendApiService
       if (followingOnly != null) {
         queryParams['followingOnly'] = followingOnly.toString();
       }
+      if (surface != null && surface.trim().isNotEmpty) {
+        queryParams['surface'] = surface.trim().toLowerCase();
+      }
       if (tag != null && tag.trim().isNotEmpty) {
         final normalizedTag = tag.replaceFirst(RegExp(r'^#+'), '').trim();
         if (normalizedTag.isNotEmpty) {
@@ -5854,7 +5842,8 @@ class BackendApiService
       }
       if (sort != null && sort.trim().isNotEmpty) {
         final normalizedSort = sort.trim().toLowerCase();
-        if (normalizedSort == 'popularity' ||
+        if (normalizedSort == 'hybrid' ||
+            normalizedSort == 'popularity' ||
             normalizedSort == 'popular' ||
             normalizedSort == 'recent') {
           queryParams['sort'] =
@@ -5913,7 +5902,9 @@ class BackendApiService
           }).toList(growable: false);
 
           final normalizedSort = (sort ?? '').trim().toLowerCase();
-          if (normalizedSort == 'popularity' || normalizedSort == 'popular') {
+          if (normalizedSort == 'hybrid' ||
+              normalizedSort == 'popularity' ||
+              normalizedSort == 'popular') {
             posts.sort((left, right) {
               final leftScore =
                   left.likeCount + left.commentCount + left.shareCount;
@@ -6269,6 +6260,7 @@ class BackendApiService
     double radiusKm = 3,
     int limit = 20,
     int page = 1,
+    String sort = 'hybrid',
   }) async {
     try {
       final params = <String, String>{
@@ -6277,6 +6269,7 @@ class BackendApiService
         'radiusKm': radiusKm.toStringAsFixed(2),
         'limit': limit.toString(),
         'page': page.toString(),
+        'sort': sort.trim().toLowerCase(),
       };
       final uri = Uri.parse('$baseUrl/api/community/art-feed')
           .replace(queryParameters: params);
@@ -11283,6 +11276,18 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
     isFollowing: json['isFollowing'] as bool? ?? false,
     authorIsArtist: authorIsArtistFlag,
     authorIsInstitution: authorIsInstitutionFlag,
+    promotion: PromotionMetadata.readFrom(json),
+    feedPin: CommunityFeedPinMetadata.fromJson(
+      json['feedPin'] is Map<String, dynamic>
+          ? json['feedPin'] as Map<String, dynamic>
+          : json['feedPin'] is Map
+              ? Map<String, dynamic>.from(json['feedPin'] as Map)
+              : json['feed_pin'] is Map
+                  ? Map<String, dynamic>.from(json['feed_pin'] as Map)
+                  : null,
+    ),
+    hybridScore: (json['hybridScore'] as num?)?.toDouble() ??
+        (json['hybrid_score'] as num?)?.toDouble(),
   );
 }
 
