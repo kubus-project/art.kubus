@@ -14,10 +14,12 @@ import '../../../providers/chat_provider.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../providers/app_mode_provider.dart';
 import '../../../providers/app_refresh_provider.dart';
+import '../../../providers/navigation_provider.dart';
 import '../../../providers/community_subject_provider.dart';
 import '../../../community/community_interactions.dart';
 import '../../../models/community_group.dart';
 import '../../../models/conversation.dart';
+import '../../../models/promotion.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../services/block_list_service.dart';
 import '../../../services/user_service.dart';
@@ -32,6 +34,7 @@ import '../../../widgets/community/community_post_options_sheet.dart';
 import '../../../widgets/community/community_subject_picker.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/app_color_utils.dart';
+import '../../../utils/artwork_navigation.dart';
 import '../../../utils/community_screen_utils.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/media_url_resolver.dart';
@@ -44,6 +47,10 @@ import '../../../utils/user_identity_display.dart';
 import '../../../utils/community_subject_navigation.dart';
 import '../../../widgets/glass_components.dart';
 import '../../../widgets/community/community_composer_controls.dart';
+import '../../../widgets/search/kubus_general_search.dart';
+import '../../../widgets/search/kubus_search_config.dart';
+import '../../../widgets/search/kubus_search_controller.dart';
+import '../../../widgets/search/kubus_search_result.dart';
 import '../components/desktop_widgets.dart';
 import '../desktop_shell.dart';
 import '../../../widgets/community/community_expandable_fab.dart';
@@ -83,18 +90,12 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   late AnimationController _animationController;
   late TabController _tabController;
   late TextEditingController _groupSearchController;
-  late TextEditingController _communitySearchController;
+  late KubusSearchController _communitySearchController;
   late TextEditingController _messageSearchController;
   Timer? _groupSearchDebounce;
-  Timer? _searchDebounce;
   bool _isFabExpanded = false;
-  final LayerLink _searchFieldLink = LayerLink();
   final List<String> _tabs = ['discover', 'following', 'groups', 'art'];
   final BackendApiService _backendApi = BackendApiService();
-  List<Map<String, dynamic>> _searchResults = [];
-  bool _isFetchingSearch = false;
-  String _searchQuery = '';
-  bool _showSearchOverlay = false;
   bool _showComposeDialog = false;
   bool _showMessagesPanel = false;
   bool _isComposerExpanded = false;
@@ -166,7 +167,13 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       setState(() {}); // refresh FAB options per tab like mobile
     });
     _groupSearchController = TextEditingController();
-    _communitySearchController = TextEditingController();
+    _communitySearchController = KubusSearchController(
+      config: const KubusSearchConfig(
+        scope: KubusSearchScope.community,
+        limit: 12,
+      ),
+    );
+    _communitySearchController.addListener(_handleSearchControllerChanged);
     _messageSearchController = TextEditingController();
     _messageSearchController.addListener(_handleMessageSearchChanged);
     _animationController.forward();
@@ -186,6 +193,11 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         _appRefreshProvider?.addListener(_onAppRefreshTriggered);
       } catch (_) {}
     });
+  }
+
+  void _handleSearchControllerChanged() {
+    if (!mounted) return;
+    setState(() {});
   }
 
   void _onAppRefreshTriggered() {
@@ -546,6 +558,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
   Future<void> _loadSuggestions() async {
     if (!mounted) return;
+    final locale = Localizations.localeOf(context).languageCode;
     setState(() {
       _isLoadingSuggestions = true;
       _suggestionsError = null;
@@ -555,9 +568,13 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       final aggregated = <Map<String, dynamic>>[];
 
       try {
-        final featured =
-            await backend.listArtists(featured: true, limit: 12, offset: 0);
-        aggregated.addAll(featured);
+        final featured = await backend.getPublicFeaturedHome(
+          kind: PromotionEntityType.profile,
+          locale: locale,
+        );
+        aggregated.addAll(
+          featured.map(_promotionProfileToSuggestion),
+        );
       } catch (e) {
         debugPrint('Featured artists fetch failed: $e');
       }
@@ -641,9 +658,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     _animationController.dispose();
     _tabController.dispose();
     _groupSearchDebounce?.cancel();
-    _searchDebounce?.cancel();
     _groupSearchController.dispose();
-    _communitySearchController.dispose();
+    _communitySearchController
+      ..removeListener(_handleSearchControllerChanged)
+      ..dispose();
     _messageSearchController.removeListener(_handleMessageSearchChanged);
     _messageSearchController.dispose();
     _tagController.dispose();
@@ -717,7 +735,18 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 ],
               ),
 
-              if (_showSearchOverlay) _buildSearchOverlay(themeProvider),
+              KubusSearchResultsOverlay(
+                controller: _communitySearchController,
+                accentColor: themeProvider.accentColor,
+                minCharsHint: AppLocalizations.of(context)!
+                    .desktopCommunitySearchMinCharsHint,
+                noResultsText:
+                    AppLocalizations.of(context)!.desktopCommunitySearchNoResults,
+                maxWidth: 320,
+                onResultTap: (result) {
+                  unawaited(_handleSearchResultTap(result));
+                },
+              ),
 
               // Compose dialog
               if (_showComposeDialog) _buildComposeDialog(themeProvider),
@@ -1369,14 +1398,11 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     const SizedBox(width: KubusSpacing.lg),
                     SizedBox(
                       width: 300,
-                      child: CompositedTransformTarget(
-                        link: _searchFieldLink,
-                        child: DesktopSearchBar(
-                          controller: _communitySearchController,
-                          hintText: l10n.desktopCommunitySearchHint,
-                          onChanged: _handleSearchChange,
-                          onSubmitted: _handleSearchSubmit,
-                        ),
+                      child: KubusGeneralSearch(
+                        controller: _communitySearchController,
+                        hintText: l10n.desktopCommunitySearchHint,
+                        semanticsLabel: 'desktop_community_search_input',
+                        onSubmitted: _handleSearchSubmit,
                       ),
                     ),
                   ],
@@ -1490,135 +1516,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 : Icons.access_time,
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildSearchOverlay(ThemeProvider themeProvider) {
-    final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    final glassStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.card,
-      tintBase: scheme.surface,
-    );
-    final trimmedQuery = _searchQuery.trim();
-    if (!_isFetchingSearch &&
-        _searchResults.isEmpty &&
-        trimmedQuery.length < 2) {
-      return const SizedBox.shrink();
-    }
-
-    return Positioned.fill(
-      child: CompositedTransformFollower(
-        link: _searchFieldLink,
-        showWhenUnlinked: false,
-        offset: const Offset(0, 50),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxWidth: 320,
-            maxHeight: 320,
-          ),
-          child: LiquidGlassPanel(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            margin: EdgeInsets.zero,
-            borderRadius: BorderRadius.circular(12),
-            blurSigma: glassStyle.blurSigma,
-            fallbackMinOpacity: glassStyle.fallbackMinOpacity,
-            backgroundColor: glassStyle.tintColor,
-            child: Builder(
-              builder: (context) {
-                if (trimmedQuery.length < 2) {
-                  return Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      l10n.desktopCommunitySearchMinCharsHint,
-                      style: KubusTextStyles.sectionSubtitle.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  );
-                }
-
-                if (_isFetchingSearch) {
-                  return const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
-
-                if (_searchResults.isEmpty) {
-                  return Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.search_off,
-                          color: scheme.onSurface.withValues(alpha: 0.4),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          l10n.desktopCommunitySearchNoResults,
-                          style: KubusTextStyles.sectionSubtitle.copyWith(
-                            color: scheme.onSurface.withValues(alpha: 0.6),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                return ListView.separated(
-                  shrinkWrap: true,
-                  itemCount: _searchResults.length,
-                  separatorBuilder: (_, __) => Divider(
-                    height: 1,
-                    color: scheme.outlineVariant,
-                  ),
-                  itemBuilder: (context, index) {
-                    final profile = _searchResults[index];
-                    final wallet = (profile['wallet_address'] ??
-                            profile['walletAddress'] ??
-                            profile['wallet'])
-                        ?.toString();
-
-                    final identity = UserIdentityDisplayUtils.fromProfileMap(
-                      Map<String, dynamic>.from(
-                        profile.map((k, v) => MapEntry(k.toString(), v)),
-                      ),
-                    );
-                    final subtitleText = identity.handle;
-
-                    final avatarUrl = profile['avatar'] ??
-                        profile['avatar_url'] ??
-                        profile['profileImageUrl'];
-                    return ListTile(
-                      leading: AvatarWidget(
-                        avatarUrl: avatarUrl?.toString(),
-                        wallet: wallet ?? '',
-                        radius: 20,
-                        allowFabricatedFallback: true,
-                      ),
-                      title: Text(
-                        identity.name,
-                        style: KubusTextStyles.sectionTitle,
-                      ),
-                      subtitle: subtitleText == null
-                          ? null
-                          : Text(
-                              subtitleText,
-                              style: KubusTextStyles.navMetaLabel.copyWith(
-                                color: scheme.onSurface.withValues(alpha: 0.6),
-                              ),
-                            ),
-                      onTap: () => _handleSearchResultTap(profile),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -1806,47 +1703,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     }
   }
 
-  void _handleSearchChange(String value) {
-    setState(() {
-      _searchQuery = value;
-      _showSearchOverlay = value.trim().isNotEmpty;
-    });
-
-    _searchDebounce?.cancel();
-    final trimmed = value.trim();
-    if (trimmed.length < 2) {
-      setState(() {
-        _searchResults = [];
-        _isFetchingSearch = false;
-      });
-      return;
-    }
-
-    _searchDebounce = Timer(const Duration(milliseconds: 275), () async {
-      setState(() => _isFetchingSearch = true);
-      try {
-        final response = await _backendApi.search(
-          query: trimmed,
-          type: 'profiles',
-          limit: 12,
-        );
-        final parsed = _parseProfileSearchResults(response);
-        if (!mounted) return;
-        setState(() {
-          _searchResults = parsed;
-          _isFetchingSearch = false;
-          _showSearchOverlay = true;
-        });
-      } catch (e) {
-        if (!mounted) return;
-        setState(() {
-          _searchResults = [];
-          _isFetchingSearch = false;
-        });
-      }
-    });
-  }
-
   List<Map<String, dynamic>> _parseProfileSearchResults(
       Map<String, dynamic> payload) {
     final results = <Map<String, dynamic>>[];
@@ -1904,35 +1760,96 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   }
 
   void _handleSearchSubmit(String value) {
-    setState(() {
-      _searchQuery = value.trim();
-      _showSearchOverlay = false;
-      _searchResults = [];
-      _isFetchingSearch = false;
-    });
+    final results = _communitySearchController.state.results;
+    if (value.trim().isEmpty || results.isEmpty) return;
+    unawaited(_handleSearchResultTap(results.first));
   }
 
-  void _handleSearchResultTap(Map<String, dynamic> profile) {
-    final identity = UserIdentityDisplayUtils.fromProfileMap(profile);
-    final label = identity.name == 'Unknown artist' ? '' : identity.name;
-    setState(() {
-      if (label.isNotEmpty) {
-        _communitySearchController.text = label;
-        _searchQuery = label;
-      }
-      _showSearchOverlay = false;
-      _searchResults = [];
-      _isFetchingSearch = false;
-    });
+  Future<void> _handleSearchResultTap(KubusSearchResult result) async {
+    _communitySearchController.setQuery(context, result.label);
+    _communitySearchController.dismissOverlay();
+    FocusScope.of(context).unfocus();
 
-    final wallet = profile['wallet_address'] ??
-        profile['walletAddress'] ??
-        profile['wallet'] ??
-        profile['id'];
-
-    if (wallet != null && wallet.toString().isNotEmpty) {
-      _openUserProfileModal(userId: wallet.toString());
+    switch (result.kind) {
+      case KubusSearchResultKind.profile:
+        final userId = result.id?.trim() ?? '';
+        if (userId.isNotEmpty) {
+          await _openUserProfileModal(userId: userId);
+        }
+        return;
+      case KubusSearchResultKind.artwork:
+        final artworkId = result.id?.trim() ?? '';
+        if (artworkId.isNotEmpty) {
+          await openArtwork(context, artworkId, source: 'desktop_community_search');
+        }
+        return;
+      case KubusSearchResultKind.institution:
+      case KubusSearchResultKind.event:
+      case KubusSearchResultKind.marker:
+        final position = result.position;
+        if (position != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => MapScreen(
+                initialCenter: position,
+                initialZoom: 15,
+                autoFollow: false,
+              ),
+            ),
+          );
+        }
+        return;
+      case KubusSearchResultKind.screen:
+        final screenKey = result.id?.trim() ??
+            result.data['screenKey']?.toString().trim() ??
+            '';
+        if (screenKey.isNotEmpty) {
+          context.read<NavigationProvider>().navigateToScreen(context, screenKey);
+        }
+        return;
+      case KubusSearchResultKind.post:
+        final postId = result.id?.trim() ?? '';
+        if (postId.isEmpty) return;
+        final post = _findPostById(postId);
+        if (post != null) {
+          _openPostDetail(post);
+        } else {
+          await PostDetailScreen.openById(context, postId);
+        }
+        return;
     }
+  }
+
+  Map<String, dynamic> _promotionProfileToSuggestion(
+    FeaturedPromotionItem item,
+  ) {
+    return <String, dynamic>{
+      ...item.raw,
+      'id': item.id,
+      'displayName': item.title,
+      'username': item.raw['username'] ?? item.raw['handle'],
+      'walletAddress':
+          item.walletAddress ?? item.raw['walletAddress'] ?? item.raw['wallet_address'],
+      'wallet':
+          item.walletAddress ?? item.raw['walletAddress'] ?? item.raw['wallet_address'],
+      'avatarUrl': item.imageUrl,
+      'avatar': item.imageUrl,
+      'verified': item.raw['verified'] ?? false,
+    };
+  }
+
+  CommunityPost? _findPostById(String postId) {
+    for (final post in <CommunityPost>[
+      ..._discoverPosts,
+      ..._followingPosts,
+      ...context.read<CommunityHubProvider>().artFeedPosts,
+    ]) {
+      if (post.id == postId) {
+        return post;
+      }
+    }
+    return null;
   }
 
   Widget _buildFeedList(String tabName, ThemeProvider themeProvider) {
@@ -1950,14 +1867,16 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   }
 
   List<CommunityPost> _filterPostsForQuery(List<CommunityPost> posts) {
-    final query = _searchQuery.trim().toLowerCase();
+    final query = _communitySearchController.state.query.trim().toLowerCase();
     if (query.isEmpty) return posts;
+    final normalizedTagQuery = query.startsWith('#') ? query.substring(1) : query;
 
     return posts.where((post) {
       final contentMatch = post.content.toLowerCase().contains(query);
       final authorMatch = post.authorName.toLowerCase().contains(query) ||
           (post.authorUsername?.toLowerCase().contains(query) ?? false);
-      final tagMatch = post.tags.any((t) => t.toLowerCase().contains(query));
+      final tagMatch =
+          post.tags.any((t) => t.toLowerCase().contains(normalizedTagQuery));
       final mentionMatch =
           post.mentions.any((m) => m.toLowerCase().contains(query));
       final groupMatch =
@@ -1992,13 +1911,14 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     }
 
     if (posts.isEmpty) {
+      final hasQuery = _communitySearchController.state.query.trim().isNotEmpty;
       return _buildEmptyState(
         themeProvider,
         Icons.travel_explore,
-        _searchQuery.isEmpty
+        !hasQuery
             ? l10n.desktopCommunityEmptyDiscoverTitle
             : l10n.desktopCommunityEmptySearchTitle,
-        _searchQuery.isEmpty
+        !hasQuery
             ? l10n.desktopCommunityEmptyDiscoverBody
             : l10n.desktopCommunityEmptySearchBody,
       );
@@ -2065,13 +1985,14 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     }
 
     if (posts.isEmpty) {
+      final hasQuery = _communitySearchController.state.query.trim().isNotEmpty;
       return _buildEmptyState(
         themeProvider,
         Icons.people_outline,
-        _searchQuery.isEmpty
+        !hasQuery
             ? l10n.desktopCommunityEmptyFollowingTitle
             : l10n.desktopCommunityEmptySearchTitle,
-        _searchQuery.isEmpty
+        !hasQuery
             ? l10n.desktopCommunityEmptyFollowingBody
             : l10n.desktopCommunityEmptySearchBody,
       );

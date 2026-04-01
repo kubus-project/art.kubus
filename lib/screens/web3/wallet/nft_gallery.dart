@@ -88,14 +88,18 @@ class _NFTGalleryState extends State<NFTGallery> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                     horizontal: 16.0, vertical: 24.0),
-                child: EmptyStateCard(
-                  icon: Icons.account_balance_wallet,
-                  title: 'Connect your wallet',
-                  description: 'Connect a wallet to view your collectibles.',
-                  showAction: true,
-                  actionLabel: 'Connect Wallet',
-                  onAction: () =>
-                      Navigator.of(context).pushNamed('/connect-wallet'),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: EmptyStateCard(
+                    icon: Icons.account_balance_wallet,
+                    title: 'Connect your wallet',
+                    description:
+                        'Connect a wallet to view your collectibles.',
+                    showAction: true,
+                    actionLabel: 'Connect Wallet',
+                    onAction: () =>
+                        Navigator.of(context).pushNamed('/connect-wallet'),
+                  ),
                 ),
               ),
             );
@@ -114,11 +118,14 @@ class _NFTGalleryState extends State<NFTGallery> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                     horizontal: 16.0, vertical: 24.0),
-                child: EmptyStateCard(
-                  icon: Icons.diamond_outlined,
-                  title: 'No collectibles yet',
-                  description: 'Mint NFTs from artworks to see them here.',
-                  showAction: false,
+                child: SizedBox(
+                  width: double.infinity,
+                  child: EmptyStateCard(
+                    icon: Icons.diamond_outlined,
+                    title: 'No collectibles yet',
+                    description: 'Mint NFTs from artworks to see them here.',
+                    showAction: false,
+                  ),
                 ),
               ),
             );

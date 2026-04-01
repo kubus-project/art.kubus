@@ -126,26 +126,29 @@ class _WalletHomeState extends State<WalletHome> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                     horizontal: 16.0, vertical: 24.0),
-                child: EmptyStateCard(
-                  icon: Icons.account_balance_wallet_outlined,
-                  title: l10n.settingsNoWalletConnected,
-                  description: l10n.walletHomeNoWalletDescription,
-                  showAction: true,
-                  actionLabel: l10n.authConnectWalletButton,
-                  onAction: () {
-                    final walletProvider =
-                        Provider.of<WalletProvider>(context, listen: false);
-                    if (!walletProvider.hasWalletIdentity) {
-                      Navigator.pushReplacementNamed(
-                          context, '/connect-wallet');
-                    } else {
-                      ScaffoldMessenger.of(context).showKubusSnackBar(
-                        SnackBar(
-                            content:
-                                Text(l10n.walletHomeAlreadyConnectedToast)),
-                      );
-                    }
-                  },
+                child: SizedBox(
+                  width: double.infinity,
+                  child: EmptyStateCard(
+                    icon: Icons.account_balance_wallet_outlined,
+                    title: l10n.settingsNoWalletConnected,
+                    description: l10n.walletHomeNoWalletDescription,
+                    showAction: true,
+                    actionLabel: l10n.authConnectWalletButton,
+                    onAction: () {
+                      final walletProvider =
+                          Provider.of<WalletProvider>(context, listen: false);
+                      if (!walletProvider.hasWalletIdentity) {
+                        Navigator.pushReplacementNamed(
+                            context, '/connect-wallet');
+                      } else {
+                        ScaffoldMessenger.of(context).showKubusSnackBar(
+                          SnackBar(
+                              content:
+                                  Text(l10n.walletHomeAlreadyConnectedToast)),
+                        );
+                      }
+                    },
+                  ),
                 ),
               ),
             ),
@@ -1012,7 +1015,10 @@ class _WalletHomeState extends State<WalletHome> {
                     const SizedBox(height: 12),
                     if (transactions.isEmpty)
                       Expanded(
-                        child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: KubusSpacing.sm,
+                          ),
                           child: EmptyStateCard(
                             icon: Icons.receipt_long,
                             title: l10n.settingsNoTransactionsTitle,

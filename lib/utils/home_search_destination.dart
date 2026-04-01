@@ -1,6 +1,6 @@
 import 'package:latlong2/latlong.dart';
 
-import 'map_search_suggestion.dart';
+import '../widgets/search/kubus_search_result.dart';
 
 enum HomeSearchDestinationKind {
   artwork,
@@ -32,16 +32,16 @@ class HomeSearchDestination {
   final String? id;
   final LatLng? position;
 
-  factory HomeSearchDestination.fromSuggestion(MapSearchSuggestion suggestion) {
-    final resolvedId = suggestion.id?.trim() ?? '';
-    if (suggestion.type == 'artwork' && resolvedId.isNotEmpty) {
+  factory HomeSearchDestination.fromResult(KubusSearchResult result) {
+    final resolvedId = result.id?.trim() ?? '';
+    if (result.kind == KubusSearchResultKind.artwork && resolvedId.isNotEmpty) {
       return HomeSearchDestination.artwork(resolvedId);
     }
-    if (suggestion.type == 'profile' && resolvedId.isNotEmpty) {
+    if (result.kind == KubusSearchResultKind.profile && resolvedId.isNotEmpty) {
       return HomeSearchDestination.profile(resolvedId);
     }
-    if (suggestion.position != null) {
-      return HomeSearchDestination.map(suggestion.position!);
+    if (result.position != null) {
+      return HomeSearchDestination.map(result.position!);
     }
     return const HomeSearchDestination.none();
   }

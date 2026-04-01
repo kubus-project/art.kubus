@@ -919,13 +919,14 @@ class _OverlayActionButton extends StatelessWidget {
         onTap: spec.onTap,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: MainAxisSize.max,
           children: [
             Icon(spec.icon, size: 15, color: fg),
             const SizedBox(width: KubusSpacing.xs),
             Flexible(
               child: Text(
                 spec.label,
+                textAlign: TextAlign.center,
                 style: KubusTypography.textTheme.bodyMedium?.copyWith(
                   fontSize: KubusHeaderMetrics.sectionSubtitle - 2.5,
                   fontWeight: FontWeight.w600,

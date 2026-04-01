@@ -7,7 +7,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../config/config.dart';
@@ -35,8 +34,6 @@ import 'dart:io';
 import 'dart:math' as math;
 import '../../providers/themeprovider.dart';
 import '../../providers/config_provider.dart';
-import '../../providers/artwork_provider.dart';
-import '../../providers/institution_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/community_hub_provider.dart';
@@ -74,7 +71,10 @@ import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/community/community_season0_banner.dart';
 import '../season0/season0_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
-import '../../widgets/search/kubus_search_bar.dart';
+import '../../widgets/search/kubus_general_search.dart';
+import '../../widgets/search/kubus_search_config.dart';
+import '../../widgets/search/kubus_search_controller.dart';
+import '../../widgets/search/kubus_search_result.dart';
 
 enum CommunityFeedType {
   following,
@@ -128,7 +128,7 @@ class _CommunityScreenState extends State<CommunityScreen>
   late ScrollController _feedScrollController;
   bool _artFeedLoadMoreInFlight = false;
   late final TextEditingController _groupSearchController;
-  late final TextEditingController _communitySearchBarController;
+  late final KubusSearchController _communitySearchController;
   Timer? _groupSearchDebounce;
   final Set<String> _groupActionsInFlight = <String>{};
 
@@ -697,7 +697,13 @@ class _CommunityScreenState extends State<CommunityScreen>
     super.initState();
     _tabController = TabController(length: _tabCount, vsync: this);
     _groupSearchController = TextEditingController();
-    _communitySearchBarController = TextEditingController();
+    _communitySearchController = KubusSearchController(
+      config: const KubusSearchConfig(
+        scope: KubusSearchScope.community,
+        limit: 12,
+      ),
+    );
+    _communitySearchController.addListener(_handleCommunitySearchControllerChanged);
     // Load following feed by default
     _communityPosts = _followingFeedPosts;
     _activeFeed = CommunityFeedType.following;
@@ -817,6 +823,11 @@ class _CommunityScreenState extends State<CommunityScreen>
     });
   }
 
+  void _handleCommunitySearchControllerChanged() {
+    if (!mounted) return;
+    setState(() {});
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -925,7 +936,9 @@ class _CommunityScreenState extends State<CommunityScreen>
     } catch (_) {}
     _groupSearchDebounce?.cancel();
     _groupSearchController.dispose();
-    _communitySearchBarController.dispose();
+    _communitySearchController
+      ..removeListener(_handleCommunitySearchControllerChanged)
+      ..dispose();
     _composerTagController?.dispose();
     _composerMentionController?.dispose();
     _tabController.dispose();
@@ -1090,36 +1103,52 @@ class _CommunityScreenState extends State<CommunityScreen>
       backgroundColor: Colors.transparent,
       body: SafeArea(
         bottom: false,
-        child: AnimatedBuilder(
-          animation: _animationController,
-          builder: (context, child) {
-            return FadeTransition(
-              opacity: _fadeAnimation,
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: NestedScrollView(
-                  controller: _feedScrollController,
-                  headerSliverBuilder:
-                      (BuildContext context, bool innerBoxIsScrolled) {
-                    return [
-                      SliverToBoxAdapter(
-                        child: _buildAppBar(),
+        child: Stack(
+          children: [
+            AnimatedBuilder(
+              animation: _animationController,
+              builder: (context, child) {
+                return FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: SlideTransition(
+                    position: _slideAnimation,
+                    child: NestedScrollView(
+                      controller: _feedScrollController,
+                      headerSliverBuilder:
+                          (BuildContext context, bool innerBoxIsScrolled) {
+                        return [
+                          SliverToBoxAdapter(
+                            child: _buildAppBar(),
+                          ),
+                        ];
+                      },
+                      body: TabBarView(
+                        controller: _tabController,
+                        children: [
+                          _buildFeedTab(),
+                          _buildDiscoverTab(),
+                          _buildGroupsTab(),
+                          _buildArtTab(),
+                        ],
                       ),
-                    ];
-                  },
-                  body: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildFeedTab(),
-                      _buildDiscoverTab(),
-                      _buildGroupsTab(),
-                      _buildArtTab(),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-            );
-          },
+                );
+              },
+            ),
+            KubusSearchResultsOverlay(
+              controller: _communitySearchController,
+              accentColor: context.read<ThemeProvider>().accentColor,
+              minCharsHint: AppLocalizations.of(context)!
+                  .desktopCommunitySearchMinCharsHint,
+              noResultsText:
+                  AppLocalizations.of(context)!.communitySearchEmptyNoResults,
+              maxWidth: 520,
+              onResultTap: (result) {
+                unawaited(_handleCommunitySearchResultTap(result));
+              },
+            ),
+          ],
         ),
       ),
       floatingActionButton: AnimatedBuilder(
@@ -1288,7 +1317,7 @@ class _CommunityScreenState extends State<CommunityScreen>
               ],
             ),
             const SizedBox(height: KubusSpacing.md),
-            _buildCommunitySearchBar(themeProvider),
+            _buildCommunitySearchBar(),
             const SizedBox(height: KubusSpacing.sm),
             _buildTabBar(),
           ],
@@ -1297,84 +1326,92 @@ class _CommunityScreenState extends State<CommunityScreen>
     );
   }
 
-  Widget _buildCommunitySearchBar(ThemeProvider themeProvider) {
-    final scheme = Theme.of(context).colorScheme;
-    final surfaceStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.button,
-      tintBase: scheme.surface,
-    );
-    final hasText = _communitySearchBarController.text.trim().isNotEmpty;
-
+  Widget _buildCommunitySearchBar() {
     return SizedBox(
       height: KubusHeaderMetrics.searchBarHeight,
-      child: KubusSearchBar(
+      child: KubusGeneralSearch(
+        controller: _communitySearchController,
         semanticsLabel: 'community_search_input',
         hintText: AppLocalizations.of(context)!.commonSearchHint,
-        controller: _communitySearchBarController,
-        readOnly: true,
-        onTap: () {
-          _showSearchBottomSheet(
-            initialQuery: _communitySearchBarController.text.trim().isEmpty
-                ? null
-                : _communitySearchBarController.text.trim(),
-          );
-        },
-        trailingBuilder: (context, _) {
-          if (!hasText) return const SizedBox.shrink();
+        onSubmitted: (_) => _communitySearchController.onSubmitted(),
+        trailingBuilder: (context, query) {
+          if (query.trim().isEmpty) return const SizedBox.shrink();
+          final scheme = Theme.of(context).colorScheme;
           return IconButton(
             tooltip: MaterialLocalizations.of(context).deleteButtonTooltip,
             icon: Icon(Icons.close, color: scheme.onSurfaceVariant),
-            onPressed: () {
-              setState(() {
-                _communitySearchBarController.clear();
-              });
-            },
+            onPressed: () =>
+                _communitySearchController.clearQueryWithContext(context),
           );
         },
-        style: KubusSearchBarStyle(
-          borderRadius: BorderRadius.circular(KubusRadius.lg),
-          backgroundColor: surfaceStyle.tintColor,
-          borderColor: scheme.outline.withValues(alpha: 0.18),
-          focusedBorderColor: themeProvider.accentColor,
-          borderWidth: 1,
-          focusedBorderWidth: 2,
-          blurSigma: null,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: KubusSpacing.md,
-            vertical: KubusSpacing.md - KubusSpacing.xxs,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: scheme.shadow.withValues(alpha: 0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-          ],
-          focusedBoxShadow: [
-            BoxShadow(
-              color: themeProvider.accentColor.withValues(alpha: 0.14),
-              blurRadius: 14,
-              offset: const Offset(0, 8),
-            ),
-          ],
-          prefixIconConstraints: const BoxConstraints(
-            minWidth: KubusHeaderMetrics.actionHitArea,
-            minHeight: KubusHeaderMetrics.actionHitArea,
-          ),
-          suffixIconConstraints: const BoxConstraints(
-            minWidth: KubusHeaderMetrics.actionHitArea,
-            minHeight: KubusHeaderMetrics.actionHitArea,
-          ),
-          textStyle: KubusTypography.textTheme.bodyMedium?.copyWith(
-            color: scheme.onSurface,
-          ),
-          hintStyle: KubusTypography.textTheme.bodyMedium?.copyWith(
-            color: scheme.onSurfaceVariant,
-          ),
-        ),
       ),
     );
+  }
+
+  Future<void> _handleCommunitySearchResultTap(KubusSearchResult result) async {
+    _communitySearchController.setQuery(context, result.label);
+    _communitySearchController.dismissOverlay();
+    FocusScope.of(context).unfocus();
+
+    switch (result.kind) {
+      case KubusSearchResultKind.profile:
+        final userId = result.id?.trim() ?? '';
+        if (userId.isNotEmpty) {
+          await UserProfileNavigation.open(context, userId: userId);
+        }
+        return;
+      case KubusSearchResultKind.artwork:
+        final artworkId = result.id?.trim() ?? '';
+        if (artworkId.isNotEmpty) {
+          openArtwork(context, artworkId, source: 'community_search');
+        }
+        return;
+      case KubusSearchResultKind.institution:
+        final position = result.position;
+        if (position != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => MapScreen(
+                initialCenter: position,
+                initialZoom: 15,
+                autoFollow: false,
+              ),
+            ),
+          );
+        }
+        return;
+      case KubusSearchResultKind.screen:
+        final screenKey = result.id?.trim() ??
+            result.data['screenKey']?.toString().trim() ??
+            '';
+        if (screenKey.isNotEmpty) {
+          Provider.of<NavigationProvider>(context, listen: false)
+              .navigateToScreen(context, screenKey);
+        }
+        return;
+      case KubusSearchResultKind.post:
+        final postId = result.id?.trim() ?? '';
+        if (postId.isNotEmpty) {
+          PostDetailScreen.openById(context, postId);
+        }
+        return;
+      case KubusSearchResultKind.event:
+      case KubusSearchResultKind.marker:
+        if (result.position != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => MapScreen(
+                initialCenter: result.position,
+                initialZoom: 15,
+                autoFollow: false,
+              ),
+            ),
+          );
+        }
+        return;
+    }
   }
 
   Future<void> _onSocketNotificationForCommunity(
@@ -1540,11 +1577,15 @@ class _CommunityScreenState extends State<CommunityScreen>
     required String emptySubtitle,
     bool showBufferedBanner = false,
   }) {
+    final filteredPosts = _filterPostsForQuery(_communityPosts);
+    final hasQuery = _communitySearchQuery.isNotEmpty;
+
     if (_isLoading) {
       return const AppLoading();
     }
 
-    if (_communityPosts.isEmpty) {
+    if (filteredPosts.isEmpty) {
+      final l10n = AppLocalizations.of(context)!;
       return RefreshIndicator(
         onRefresh: onRefresh,
         child: SingleChildScrollView(
@@ -1555,12 +1596,13 @@ class _CommunityScreenState extends State<CommunityScreen>
             ),
             child: SizedBox(
               height: MediaQuery.of(context).size.height * 0.6,
-              child: Center(
-                child: EmptyStateCard(
-                  icon: emptyIcon,
-                  title: emptyTitle,
-                  description: emptySubtitle,
-                ),
+              width: double.infinity,
+              child: EmptyStateCard(
+                icon: emptyIcon,
+                title: hasQuery ? l10n.commonNoResultsFound : emptyTitle,
+                description: hasQuery
+                    ? l10n.communitySearchEmptyNoResults
+                    : emptySubtitle,
               ),
             ),
           ),
@@ -1580,7 +1622,7 @@ class _CommunityScreenState extends State<CommunityScreen>
               24,
               24 + KubusLayout.mainBottomNavBarHeight,
             ),
-            itemCount: _communityPosts.length +
+            itemCount: filteredPosts.length +
                 (AppConfig.isFeatureEnabled('season0') ? 1 : 0),
             itemBuilder: (context, index) {
               // Season 0 banner at the top if enabled
@@ -1589,7 +1631,7 @@ class _CommunityScreenState extends State<CommunityScreen>
               }
               final postIndex =
                   AppConfig.isFeatureEnabled('season0') ? index - 1 : index;
-              return _buildPostCard(postIndex);
+              return _buildPostCardForPost(filteredPosts[postIndex]);
             },
           ),
           if (showBufferedBanner && _bufferedIncomingPosts.isNotEmpty)
@@ -1956,6 +1998,9 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   Widget _buildArtTab() {
     final l10n = AppLocalizations.of(context)!;
+    final filteredPosts = _filterPostsForQuery(_artFeedPosts);
+    final hasQuery = _communitySearchQuery.isNotEmpty;
+
     if (_isLoadingArtFeed && _artFeedPosts.isEmpty) {
       return const AppLoading();
     }
@@ -1975,7 +2020,7 @@ class _CommunityScreenState extends State<CommunityScreen>
           children: [
             _buildArtFeedHeader(),
             const SizedBox(height: 16),
-            if (_artFeedError != null && _artFeedPosts.isEmpty)
+            if (_artFeedError != null && filteredPosts.isEmpty && !hasQuery)
               _buildArtStatusCard(
                 icon: Icons.location_off_outlined,
                 title: l10n.communityArtFeedLocationNeededTitle,
@@ -1983,17 +2028,26 @@ class _CommunityScreenState extends State<CommunityScreen>
                 actionLabel: l10n.commonRetry,
                 onAction: () => _ensureArtFeedLoaded(force: true),
               )
-            else if (_artFeedPosts.isEmpty)
+            else if (filteredPosts.isEmpty)
               _buildArtStatusCard(
-                icon: Icons.brush_outlined,
-                title: l10n.communityArtFeedNoNearbyActivationsTitle,
-                description:
-                    l10n.communityArtFeedNoNearbyActivationsDescription,
-                actionLabel: l10n.commonRefresh,
-                onAction: () => _ensureArtFeedLoaded(force: true),
+                icon: hasQuery ? Icons.search_off : Icons.brush_outlined,
+                title: hasQuery
+                    ? l10n.commonNoResultsFound
+                    : l10n.communityArtFeedNoNearbyActivationsTitle,
+                description: hasQuery
+                    ? l10n.communitySearchEmptyNoResults
+                    : l10n.communityArtFeedNoNearbyActivationsDescription,
+                actionLabel: hasQuery
+                    ? l10n.communityClearSearchTooltip
+                    : l10n.commonRefresh,
+                onAction: hasQuery
+                    ? () => _communitySearchController.clearQueryWithContext(
+                          context,
+                        )
+                    : () => _ensureArtFeedLoaded(force: true),
               ),
-            ..._artFeedPosts.map(_buildArtPostCard),
-            if (_isLoadingArtFeed && _artFeedPosts.isNotEmpty)
+            ...filteredPosts.map(_buildArtPostCard),
+            if (_isLoadingArtFeed && filteredPosts.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 32),
                 child: Center(
@@ -2011,6 +2065,38 @@ class _CommunityScreenState extends State<CommunityScreen>
         ),
       ),
     );
+  }
+
+  String get _communitySearchQuery {
+    return _communitySearchController.state.query.trim();
+  }
+
+  String get _normalizedCommunityFeedQuery {
+    final query = _communitySearchQuery.toLowerCase();
+    return query.startsWith('#') ? query.substring(1) : query;
+  }
+
+  List<CommunityPost> _filterPostsForQuery(List<CommunityPost> posts) {
+    final rawQuery = _communitySearchQuery.toLowerCase();
+    if (rawQuery.isEmpty) return posts;
+    final normalizedTagQuery = _normalizedCommunityFeedQuery;
+
+    return posts.where((post) {
+      final contentMatch = post.content.toLowerCase().contains(rawQuery);
+      final authorMatch = post.authorName.toLowerCase().contains(rawQuery) ||
+          (post.authorUsername?.toLowerCase().contains(rawQuery) ?? false);
+      final tagMatch =
+          post.tags.any((tag) => tag.toLowerCase().contains(normalizedTagQuery));
+      final mentionMatch =
+          post.mentions.any((mention) => mention.toLowerCase().contains(rawQuery));
+      final groupMatch =
+          post.group?.name.toLowerCase().contains(rawQuery) ?? false;
+      return contentMatch ||
+          authorMatch ||
+          tagMatch ||
+          mentionMatch ||
+          groupMatch;
+    }).toList(growable: false);
   }
 
   Widget _buildArtFeedHeader() {
@@ -2344,6 +2430,14 @@ class _CommunityScreenState extends State<CommunityScreen>
         ],
       ),
     );
+  }
+
+  Widget _buildPostCardForPost(CommunityPost post) {
+    final sourceIndex = _communityPosts.indexWhere((item) => item.id == post.id);
+    if (sourceIndex == -1) {
+      return const SizedBox.shrink();
+    }
+    return _buildPostCard(sourceIndex);
   }
 
   Widget _buildPostCard(int index) {
@@ -2712,432 +2806,6 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 
   // Navigation and interaction methods
-  void _showSearchBottomSheet(
-      {String initialType = 'profiles', String? initialQuery}) {
-    if (!mounted) return;
-    final sheetContext = context;
-    final backend = BackendApiService();
-    final sheetSearchController =
-        TextEditingController(text: initialQuery ?? '');
-
-    String searchType = initialType;
-    List<Map<String, dynamic>> results = [];
-    bool isLoading = false;
-    Timer? debounce;
-    int requestId = 0;
-
-    Future<void> runSearch(StateSetter setModalState,
-        {String? overrideQuery}) async {
-      final query = (overrideQuery ?? sheetSearchController.text).trim();
-      final currentType = searchType;
-
-      if (query.isEmpty) {
-        setModalState(() {
-          results.clear();
-          isLoading = false;
-        });
-        return;
-      }
-
-      final myRequest = ++requestId;
-      setModalState(() => isLoading = true);
-
-      try {
-        List<Map<String, dynamic>> list = [];
-        if (currentType == 'profiles') {
-          final resp =
-              await backend.search(query: query, type: 'profiles', limit: 20);
-          list = _extractSearchResults(resp, 'profiles');
-        } else if (currentType == 'posts') {
-          final resp =
-              await backend.search(query: query, type: 'posts', limit: 20);
-          list = _extractSearchResults(resp, 'posts');
-        } else if (currentType == 'artworks') {
-          final artworkProvider =
-              Provider.of<ArtworkProvider>(sheetContext, listen: false);
-          list = artworkProvider.artworks
-              .where((a) {
-                final q = query.toLowerCase();
-                return a.title.toLowerCase().contains(q) ||
-                    a.artist.toLowerCase().contains(q);
-              })
-              .take(30)
-              .map((a) => {
-                    'id': a.id,
-                    'title': a.title,
-                    'artistName': a.artist,
-                    'imageUrl': a.imageUrl,
-                  })
-              .toList();
-        } else if (currentType == 'institutions') {
-          final institutionProvider =
-              Provider.of<InstitutionProvider>(sheetContext, listen: false);
-          final q = query.toLowerCase();
-          list = institutionProvider.institutions
-              .where((i) =>
-                  i.name.toLowerCase().contains(q) ||
-                  i.description.toLowerCase().contains(q) ||
-                  i.address.toLowerCase().contains(q))
-              .take(30)
-              .map((i) => {
-                    'id': i.id,
-                    'name': i.name,
-                    'type': i.type,
-                    'address': i.address,
-                    'latitude': i.latitude,
-                    'longitude': i.longitude,
-                  })
-              .toList();
-        } else if (currentType == 'screens') {
-          final l10n = AppLocalizations.of(context)!;
-          final q = query.toLowerCase();
-          list = NavigationProvider.screenDefinitions.entries
-              .map((e) {
-                final label = e.value.labelKey.resolve(l10n);
-                return MapEntry(e.key, (label, e.value.icon));
-              })
-              .where((e) => e.value.$1.toLowerCase().contains(q))
-              .map((e) => {
-                    'screenKey': e.key,
-                    'name': e.value.$1,
-                    'icon': e.value.$2,
-                  })
-              .toList();
-        }
-
-        if (!mounted) return;
-        if (myRequest != requestId) return;
-        setModalState(() {
-          results = list;
-          isLoading = false;
-        });
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint('CommunityScreen: search error: $e');
-        }
-        if (!mounted) return;
-        if (myRequest != requestId) return;
-        setModalState(() => isLoading = false);
-      }
-    }
-
-    showModalBottomSheet(
-      context: sheetContext,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) {
-          final scheme = Theme.of(context).colorScheme;
-          final themeProvider =
-              Provider.of<ThemeProvider>(context, listen: false);
-          final l10n = AppLocalizations.of(context)!;
-
-          if (sheetSearchController.text.trim().isNotEmpty &&
-              results.isEmpty &&
-              !isLoading) {
-            Future.microtask(() => runSearch(setModalState));
-          }
-
-          return Container(
-            height: MediaQuery.of(context).size.height * 0.75,
-            decoration: BoxDecoration(
-              color: scheme.surface,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: Column(
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(
-                    color: scheme.outline.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        _buildSearchTypeChip(
-                          label: l10n.communitySearchTypeProfiles,
-                          selected: searchType == 'profiles',
-                          scheme: scheme,
-                          themeProvider: themeProvider,
-                          onTap: () {
-                            setModalState(() {
-                              searchType = 'profiles';
-                              results.clear();
-                            });
-                            runSearch(setModalState);
-                          },
-                        ),
-                        _buildSearchTypeChip(
-                          label: l10n.communitySearchTypeArtworks,
-                          selected: searchType == 'artworks',
-                          scheme: scheme,
-                          themeProvider: themeProvider,
-                          onTap: () {
-                            setModalState(() {
-                              searchType = 'artworks';
-                              results.clear();
-                            });
-                            runSearch(setModalState);
-                          },
-                        ),
-                        _buildSearchTypeChip(
-                          label: l10n.communitySearchTypeInstitutions,
-                          selected: searchType == 'institutions',
-                          scheme: scheme,
-                          themeProvider: themeProvider,
-                          onTap: () {
-                            setModalState(() {
-                              searchType = 'institutions';
-                              results.clear();
-                            });
-                            runSearch(setModalState);
-                          },
-                        ),
-                        _buildSearchTypeChip(
-                          label: l10n.communitySearchTypeScreens,
-                          selected: searchType == 'screens',
-                          scheme: scheme,
-                          themeProvider: themeProvider,
-                          onTap: () {
-                            setModalState(() {
-                              searchType = 'screens';
-                              results.clear();
-                            });
-                            runSearch(setModalState);
-                          },
-                        ),
-                        _buildSearchTypeChip(
-                          label: l10n.communitySearchTypePosts,
-                          selected: searchType == 'posts',
-                          scheme: scheme,
-                          themeProvider: themeProvider,
-                          onTap: () {
-                            setModalState(() {
-                              searchType = 'posts';
-                              results.clear();
-                            });
-                            runSearch(setModalState);
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: TextField(
-                    controller: sheetSearchController,
-                    decoration: InputDecoration(
-                      hintText: searchType == 'profiles'
-                          ? l10n.communitySearchHintProfiles
-                          : searchType == 'artworks'
-                              ? l10n.communitySearchHintArtworks
-                              : searchType == 'institutions'
-                                  ? l10n.communitySearchHintInstitutions
-                                  : searchType == 'screens'
-                                      ? l10n.communitySearchHintScreens
-                                      : l10n.communitySearchHintPosts,
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      filled: true,
-                      fillColor: scheme.surfaceContainerHighest,
-                      contentPadding: const EdgeInsets.symmetric(
-                          vertical: 14, horizontal: 16),
-                    ),
-                    onChanged: (_) {
-                      debounce?.cancel();
-                      debounce = Timer(const Duration(milliseconds: 250), () {
-                        if (!mounted) return;
-                        runSearch(setModalState);
-                      });
-                    },
-                  ),
-                ),
-                Expanded(
-                  child: isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : results.isEmpty
-                          ? Center(
-                              child: Padding(
-                                padding: const EdgeInsets.all(KubusSpacing.lg),
-                                child: Text(
-                                  sheetSearchController.text.trim().isEmpty
-                                      ? l10n.communitySearchEmptyStartTyping
-                                      : l10n.communitySearchEmptyNoResults,
-                                  style: KubusTypography.inter(
-                                    fontSize: 14,
-                                    color: scheme.onSurface
-                                        .withValues(alpha: 0.45),
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            )
-                          : ListView.builder(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 16),
-                              itemCount: results.length,
-                              itemBuilder: (ctx, idx) {
-                                final result = results[idx];
-                                return _buildSearchResultTile(
-                                  result: result,
-                                  searchType: searchType,
-                                  themeProvider: themeProvider,
-                                  scheme: scheme,
-                                  onTap: () {
-                                    Navigator.pop(context);
-                                    _handleSearchSelection(searchType, result);
-                                  },
-                                );
-                              },
-                            ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    ).whenComplete(() {
-      debounce?.cancel();
-      sheetSearchController.dispose();
-    });
-  }
-
-  Widget _buildSearchTypeChip({
-    required String label,
-    required bool selected,
-    required ColorScheme scheme,
-    required ThemeProvider themeProvider,
-    required VoidCallback onTap,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: ChoiceChip(
-        label: Text(label),
-        selected: selected,
-        onSelected: (_) => onTap(),
-        selectedColor: themeProvider.accentColor.withValues(alpha: 0.2),
-        labelStyle: KubusTypography.inter(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: selected
-              ? scheme.onSurface
-              : scheme.onSurface.withValues(alpha: 0.7),
-        ),
-      ),
-    );
-  }
-
-  void _updateCommunitySearchPreviewFromResult(
-    String type,
-    Map<String, dynamic> result,
-  ) {
-    String label = '';
-    if (type == 'profiles') {
-      label = (result['display_name'] ??
-                  result['displayName'] ??
-                  result['username'] ??
-                  result['wallet_address'] ??
-                  result['walletAddress'] ??
-                  result['wallet'] ??
-                  result['id'])
-              ?.toString() ??
-          '';
-    } else if (type == 'artworks') {
-      label =
-          (result['title'] ?? result['name'] ?? result['label'])?.toString() ??
-              '';
-    } else if (type == 'institutions') {
-      label = (result['name'] ?? result['label'])?.toString() ?? '';
-    } else if (type == 'screens') {
-      label = (result['name'] ?? result['label'])?.toString() ?? '';
-    } else if (type == 'posts') {
-      label = (result['content'] ?? result['title'] ?? result['label'])
-              ?.toString() ??
-          '';
-    }
-
-    if (label.trim().isEmpty) return;
-    setState(() {
-      _communitySearchBarController.text = label.trim();
-    });
-  }
-
-  void _handleSearchSelection(String type, Map<String, dynamic> result) {
-    _updateCommunitySearchPreviewFromResult(type, result);
-
-    if (type == 'profiles') {
-      final walletAddr = (result['wallet_address'] ??
-                  result['wallet'] ??
-                  result['walletAddress'] ??
-                  result['id'])
-              ?.toString() ??
-          '';
-      if (walletAddr.isNotEmpty) {
-        unawaited(UserProfileNavigation.open(context, userId: walletAddr));
-      }
-      return;
-    }
-
-    if (type == 'artworks') {
-      final id = (result['id'] ?? result['artworkId'] ?? result['artwork_id'])
-              ?.toString() ??
-          '';
-      if (id.isNotEmpty) {
-        openArtwork(context, id, source: 'community_search');
-      }
-      return;
-    }
-
-    if (type == 'institutions') {
-      final lat = (result['latitude'] as num?)?.toDouble() ??
-          (result['lat'] as num?)?.toDouble();
-      final lng = (result['longitude'] as num?)?.toDouble() ??
-          (result['lng'] as num?)?.toDouble();
-      if (lat != null && lng != null) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => MapScreen(
-              initialCenter: LatLng(lat, lng),
-              initialZoom: 15,
-              autoFollow: false,
-            ),
-          ),
-        );
-      }
-      return;
-    }
-
-    if (type == 'screens') {
-      final screenKey =
-          (result['screenKey'] ?? result['key'])?.toString() ?? '';
-      if (screenKey.isNotEmpty) {
-        Provider.of<NavigationProvider>(context, listen: false)
-            .navigateToScreen(context, screenKey);
-      }
-      return;
-    }
-
-    if (type == 'posts') {
-      final postId =
-          (result['id'] ?? result['postId'] ?? result['post_id'])?.toString() ??
-              '';
-      if (postId.isNotEmpty) {
-        PostDetailScreen.openById(context, postId);
-      }
-    }
-  }
-
   Future<void> _showNotifications() async {
     final notificationService = PushNotificationService();
     final backend = BackendApiService();
@@ -6818,7 +6486,7 @@ class _CommunityScreenState extends State<CommunityScreen>
   void _filterByTag(String tag) {
     final cleaned = tag.replaceAll('#', '').trim();
     if (cleaned.isEmpty) return;
-    _showSearchBottomSheet(initialType: 'posts', initialQuery: '#$cleaned');
+    _communitySearchController.setQuery(context, '#$cleaned');
   }
 
   void _searchMention(String mention) {

@@ -974,7 +974,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
           avgDurationMinutes = minutes / events.length;
         }
         final avgDurationLabel = avgDurationMinutes == null
-            ? 'â€”'
+            ? '\u2014'
             : avgDurationMinutes >= 60
                 ? '${(avgDurationMinutes / 60).toStringAsFixed(1)} h'
                 : '${avgDurationMinutes.round()} min';
@@ -987,12 +987,13 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
         if (fillValues.isNotEmpty) {
           avgFill = fillValues.fold<double>(0, (sum, v) => sum + v) / fillValues.length;
         }
-        final avgFillLabel = avgFill == null ? 'â€”' : '${(avgFill * 100).toStringAsFixed(0)}%';
+        final avgFillLabel =
+            avgFill == null ? '\u2014' : '${(avgFill * 100).toStringAsFixed(0)}%';
 
         final metrics = [
           {'label': 'Avg. Event Duration', 'value': avgDurationLabel},
           {'label': 'Avg. Event Fill', 'value': avgFillLabel},
-          {'label': 'Return Visitors', 'value': 'â€”'},
+          {'label': 'Return Visitors', 'value': '\u2014'},
         ];
 
         return LayoutBuilder(

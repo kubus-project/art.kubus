@@ -1542,7 +1542,8 @@ class _ConnectWalletState extends State<ConnectWallet>
         await wcService.initialize();
       }
 
-      // Do not capture BuildContext-dependent objects here â€” capture inside the callback after verifying mounted
+      // Do not capture BuildContext-dependent objects here; capture them
+      // inside the callback after verifying mounted.
 
       // Set up callbacks
       wcService.onConnected = (address) async {

@@ -10,8 +10,6 @@ Widget _buildSearchOverlay(
   double rightInset = 0,
   bool showSuggestions = false,
 }) {
-  final fieldLink = LayerLink();
-
   return MaterialApp(
     home: Scaffold(
       body: Stack(
@@ -28,16 +26,13 @@ Widget _buildSearchOverlay(
                 decoration: BoxDecoration(color: Colors.black12),
               ),
             ),
-            searchFieldLink: fieldLink,
-            showSuggestions: showSuggestions,
-            query: showSuggestions ? 'ma' : '',
-            isFetching: false,
-            suggestions: const [],
-            accentColor: Colors.teal,
-            minCharsHint: 'Type at least 2 characters',
-            noResultsText: 'No results',
-            onDismissSuggestions: _noop,
-            onSuggestionTap: (_) {},
+            searchDropdown: showSuggestions
+                ? const Positioned.fill(
+                    child: MapOverlayBlocker(
+                      child: SizedBox.shrink(),
+                    ),
+                  )
+                : null,
             leading: const Text('Discover'),
             filterChips: const Text('Filters'),
             mapToggle: const Icon(Icons.tune),
@@ -47,8 +42,6 @@ Widget _buildSearchOverlay(
     ),
   );
 }
-
-void _noop() {}
 
 void main() {
   testWidgets('side panel with glassHost renders outer GlassSurface',

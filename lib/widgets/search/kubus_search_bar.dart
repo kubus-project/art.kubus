@@ -3,9 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../utils/design_tokens.dart';
-import '../../utils/map_search_suggestion.dart';
 import '../glass_components.dart';
-import '../map_overlay_blocker.dart';
 
 @immutable
 class KubusSearchBarStyle {
@@ -43,7 +41,6 @@ class KubusSearchBarStyle {
   final TextStyle? textStyle;
   final TextStyle? hintStyle;
 }
-
 class KubusSearchBar extends StatefulWidget {
   const KubusSearchBar({
     super.key,
@@ -370,184 +367,6 @@ class _KubusSearchBarState extends State<KubusSearchBar> {
             enableBlur: widget.enableBlur,
             child: textField,
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Shared suggestions overlay used by map screens (mobile + desktop).
-///
-/// The search field must be wrapped in a [CompositedTransformTarget] using the
-/// same [LayerLink] that is passed to this overlay.
-class KubusSearchSuggestionsOverlay extends StatelessWidget {
-  const KubusSearchSuggestionsOverlay({
-    super.key,
-    required this.link,
-    required this.query,
-    required this.isFetching,
-    required this.suggestions,
-    required this.accentColor,
-    required this.minCharsHint,
-    required this.noResultsText,
-    required this.onDismiss,
-    required this.onSuggestionTap,
-    this.offset = const Offset(0, 52),
-    this.maxWidth = 520,
-    this.maxHeight = 360,
-    this.enabled = true,
-  });
-
-  final LayerLink link;
-  final String query;
-  final bool isFetching;
-  final List<MapSearchSuggestion> suggestions;
-  final Color accentColor;
-  final String minCharsHint;
-  final String noResultsText;
-  final VoidCallback onDismiss;
-  final ValueChanged<MapSearchSuggestion> onSuggestionTap;
-
-  /// Offset from the search field to the overlay panel.
-  final Offset offset;
-  final double maxWidth;
-  final double maxHeight;
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) {
-    if (!enabled) return const SizedBox.shrink();
-
-    final trimmed = query.trim();
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final surfaceStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.panelBackground,
-      tintBase: scheme.surface,
-    );
-
-    return Positioned.fill(
-      child: MapOverlayBlocker(
-        cursor: SystemMouseCursors.basic,
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onDismiss,
-                child: const SizedBox.expand(),
-              ),
-            ),
-            CompositedTransformFollower(
-              link: link,
-              showWhenUnlinked: false,
-              offset: offset,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: maxWidth,
-                  maxHeight: maxHeight,
-                ),
-                child: LiquidGlassPanel(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
-                  margin: EdgeInsets.zero,
-                  borderRadius: BorderRadius.circular(KubusRadius.lg),
-                  blurSigma: surfaceStyle.blurSigma,
-                  backgroundColor: surfaceStyle.tintColor,
-                  fallbackMinOpacity: surfaceStyle.fallbackMinOpacity,
-                  child: Builder(
-                    builder: (context) {
-                      if (trimmed.length < 2) {
-                        return Padding(
-                          padding: const EdgeInsets.all(KubusSpacing.md),
-                          child: Text(
-                            minCharsHint,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: scheme.onSurface.withValues(alpha: 0.6),
-                            ),
-                          ),
-                        );
-                      }
-
-                      if (isFetching) {
-                        return const Padding(
-                          padding: EdgeInsets.all(KubusSpacing.md),
-                          child: Center(child: CircularProgressIndicator()),
-                        );
-                      }
-
-                      if (suggestions.isEmpty) {
-                        return Padding(
-                          padding: const EdgeInsets.all(KubusSpacing.md),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.search_off,
-                                color: scheme.onSurface.withValues(alpha: 0.4),
-                              ),
-                              const SizedBox(width: 12),
-                              Flexible(
-                                child: Text(
-                                  noResultsText,
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color:
-                                        scheme.onSurface.withValues(alpha: 0.6),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-
-                      return ListView.separated(
-                        shrinkWrap: true,
-                        itemCount: suggestions.length,
-                        separatorBuilder: (_, __) => Divider(
-                          height: 1,
-                          color: scheme.outlineVariant,
-                        ),
-                        itemBuilder: (context, index) {
-                          final suggestion = suggestions[index];
-                          return MouseRegion(
-                            cursor: SystemMouseCursors.click,
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor:
-                                    accentColor.withValues(alpha: 0.10),
-                                child: Icon(
-                                  suggestion.icon,
-                                  color: accentColor,
-                                ),
-                              ),
-                              title: Text(
-                                suggestion.label,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              subtitle: suggestion.subtitle == null
-                                  ? null
-                                  : Text(
-                                      suggestion.subtitle!,
-                                      style:
-                                          theme.textTheme.bodyMedium?.copyWith(
-                                        color: scheme.onSurface
-                                            .withValues(alpha: 0.6),
-                                      ),
-                                    ),
-                              onTap: () => onSuggestionTap(suggestion),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ),
-          ],
         ),
       ),
     );

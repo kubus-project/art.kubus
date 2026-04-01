@@ -1,14 +1,14 @@
 import 'package:art_kubus/utils/home_search_destination.dart';
-import 'package:art_kubus/utils/map_search_suggestion.dart';
+import 'package:art_kubus/widgets/search/kubus_search_result.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 
 void main() {
   test('institution suggestion with coordinates routes to map', () {
-    final destination = HomeSearchDestination.fromSuggestion(
-      const MapSearchSuggestion(
+    final destination = HomeSearchDestination.fromResult(
+      const KubusSearchResult(
         label: 'City Museum',
-        type: 'institution',
+        kind: KubusSearchResultKind.institution,
         id: 'museum-1',
         position: LatLng(46.0569, 14.5058),
       ),
@@ -19,17 +19,17 @@ void main() {
   });
 
   test('artwork and profile suggestions keep existing destinations', () {
-    final artworkDestination = HomeSearchDestination.fromSuggestion(
-      const MapSearchSuggestion(
+    final artworkDestination = HomeSearchDestination.fromResult(
+      const KubusSearchResult(
         label: 'Artwork',
-        type: 'artwork',
+        kind: KubusSearchResultKind.artwork,
         id: 'art-1',
       ),
     );
-    final profileDestination = HomeSearchDestination.fromSuggestion(
-      const MapSearchSuggestion(
+    final profileDestination = HomeSearchDestination.fromResult(
+      const KubusSearchResult(
         label: 'Creator',
-        type: 'profile',
+        kind: KubusSearchResultKind.profile,
         id: 'wallet123',
       ),
     );
@@ -41,10 +41,10 @@ void main() {
   });
 
   test('unsupported home suggestion without coordinates has no destination', () {
-    final destination = HomeSearchDestination.fromSuggestion(
-      const MapSearchSuggestion(
+    final destination = HomeSearchDestination.fromResult(
+      const KubusSearchResult(
         label: 'Unsupported',
-        type: 'institution',
+        kind: KubusSearchResultKind.institution,
         id: 'institution-1',
       ),
     );

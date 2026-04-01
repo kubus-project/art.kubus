@@ -392,7 +392,8 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.lg),
-      child: Center(
+      child: SizedBox(
+        width: double.infinity,
         child: buildKubusMapGlassSurface(
           context: context,
           kind: KubusMapGlassSurfaceKind.card,
@@ -401,6 +402,7 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
           padding: const EdgeInsets.all(KubusSpacing.xl),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
                 width: 74,

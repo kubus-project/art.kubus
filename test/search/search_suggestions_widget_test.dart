@@ -1,14 +1,14 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:art_kubus/utils/map_search_suggestion.dart';
+import 'package:art_kubus/widgets/search/kubus_search_result.dart';
 
 class _SearchHarness extends StatelessWidget {
   const _SearchHarness({
     required this.future,
   });
 
-  final Future<List<MapSearchSuggestion>> future;
+  final Future<List<KubusSearchResult>> future;
 
   @override
   Widget build(BuildContext context) {
@@ -21,14 +21,14 @@ class _SearchHarness extends StatelessWidget {
           child: SizedBox(
             width: 360,
             height: 240,
-            child: FutureBuilder<List<MapSearchSuggestion>>(
+            child: FutureBuilder<List<KubusSearchResult>>(
               future: future,
               builder: (context, snapshot) {
                 if (snapshot.connectionState != ConnectionState.done) {
                   return const SizedBox.shrink();
                 }
                 final suggestions =
-                    snapshot.data ?? const <MapSearchSuggestion>[];
+                    snapshot.data ?? const <KubusSearchResult>[];
                 if (suggestions.isEmpty) {
                   return const Center(child: Text('No results found'));
                 }
@@ -56,7 +56,7 @@ void main() {
   testWidgets('search with empty query renders empty state', (tester) async {
     await tester.pumpWidget(
       _SearchHarness(
-        future: Future.value(const <MapSearchSuggestion>[]),
+        future: Future.value(const <KubusSearchResult>[]),
       ),
     );
     await tester.pumpAndSettle();
@@ -68,10 +68,10 @@ void main() {
     await tester.pumpWidget(
       _SearchHarness(
         future: Future.value(
-          const <MapSearchSuggestion>[
-            MapSearchSuggestion(
+          const <KubusSearchResult>[
+            KubusSearchResult(
               label: 'Ocean Light',
-              type: 'artwork',
+              kind: KubusSearchResultKind.artwork,
               id: 'artwork-1',
             ),
           ],

@@ -1,0 +1,41 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter: Safe test (current file)",
+      "type": "dart",
+      "request": "launch",
+      "program": "test",
+      "cwd": "${workspaceFolder}",
+      "args": [
+        "${file}"
+      ],
+      "preLaunchTask": "Flutter: Cleanup stale machine test runners",
+      "postDebugTask": "Flutter: Cleanup stale machine test runners"
+    },
+    {
+      "name": "Flutter: Safe test (focused community+desktop)",
+      "type": "dart",
+      "request": "launch",
+      "program": "test",
+      "cwd": "${workspaceFolder}",
+      "args": [
+        "test/community/community_subject_provider_test.dart",
+        "test/community/community_subject_navigation_test.dart",
+        "test/community/community_post_subject_parsing_test.dart",
+        "test/widgets/desktop/desktop_shell_scope_test.dart"
+      ],
+      "preLaunchTask": "Flutter: Cleanup stale machine test runners",
+      "postDebugTask": "Flutter: Cleanup stale machine test runners"
+    },
+    {
+      "name": "Flutter: Safe test (all)",
+      "type": "dart",
+      "request": "launch",
+      "program": "test",
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "Flutter: Cleanup stale machine test runners",
+      "postDebugTask": "Flutter: Cleanup stale machine test runners"
+    }
+  ]
+}

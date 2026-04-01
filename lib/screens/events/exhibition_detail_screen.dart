@@ -333,7 +333,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                             KubusTypography.inter(fontWeight: FontWeight.w600),
                       ),
                       subtitle: Text(
-                        art.artist.isNotEmpty ? art.artist : 'â€”',
+                        art.artist.isNotEmpty ? art.artist : '\u2014',
                         style: KubusTypography.inter(
                             fontSize: 12,
                             color: scheme.onSurface.withValues(alpha: 0.75)),
@@ -877,7 +877,7 @@ class _ExhibitionDetailsCard extends StatelessWidget {
           exhibition.startsAt != null ? _fmtDate(exhibition.startsAt!) : null;
       final end =
           exhibition.endsAt != null ? _fmtDate(exhibition.endsAt!) : null;
-      dateRange = [start, end].whereType<String>().join(' â†’ ');
+      dateRange = [start, end].whereType<String>().join(' \u2192 ');
       if (dateRange.trim().isEmpty) dateRange = null;
     }
 

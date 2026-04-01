@@ -1,17 +1,31 @@
 import 'package:flutter/widgets.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
+import '../community/community_interactions.dart';
+import '../l10n/app_localizations.dart';
 import '../models/artwork.dart';
+import '../models/institution.dart';
 import '../providers/artwork_provider.dart';
 import '../providers/community_hub_provider.dart';
-import '../services/backend_api_service.dart';
-import '../utils/map_search_suggestion.dart';
+import '../providers/institution_provider.dart';
+import '../providers/navigation_provider.dart';
+import '../utils/search_suggestions.dart';
 import '../utils/wallet_utils.dart';
+import '../widgets/search/kubus_search_config.dart';
+import '../widgets/search/kubus_search_result.dart';
+import 'backend_api_service.dart';
 
-enum SearchScope {
-  home,
-  community,
-  map,
+class SearchScreenRecord {
+  const SearchScreenRecord({
+    required this.key,
+    required this.label,
+    required this.icon,
+  });
+
+  final String key;
+  final String label;
+  final IconData icon;
 }
 
 @immutable
@@ -19,185 +33,543 @@ class SearchContextSnapshot {
   const SearchContextSnapshot({
     this.artworkProvider,
     this.communityProvider,
+    this.institutionProvider,
+    this.screenRecords = const <SearchScreenRecord>[],
   });
 
   final ArtworkProvider? artworkProvider;
   final CommunityHubProvider? communityProvider;
+  final InstitutionProvider? institutionProvider;
+  final List<SearchScreenRecord> screenRecords;
 
   factory SearchContextSnapshot.capture(
     BuildContext context, {
-    required SearchScope scope,
+    required KubusSearchConfig config,
   }) {
     ArtworkProvider? artworkProvider;
     CommunityHubProvider? communityProvider;
+    InstitutionProvider? institutionProvider;
+    var screenRecords = const <SearchScreenRecord>[];
+
     try {
       artworkProvider = context.read<ArtworkProvider>();
-      if (scope == SearchScope.community || scope == SearchScope.home) {
+    } catch (_) {}
+
+    try {
+      if (config.scope == KubusSearchScope.community ||
+          config.scope == KubusSearchScope.home) {
         communityProvider = context.read<CommunityHubProvider>();
       }
     } catch (_) {}
+
+    try {
+      institutionProvider = context.read<InstitutionProvider>();
+    } catch (_) {}
+
+    if (config.effectiveKinds.contains(KubusSearchResultKind.screen)) {
+      final l10n = AppLocalizations.of(context);
+      if (l10n != null) {
+        screenRecords = NavigationProvider.screenDefinitions.entries
+            .map(
+              (entry) => SearchScreenRecord(
+                key: entry.key,
+                label: entry.value.labelKey.resolve(l10n),
+                icon: entry.value.icon,
+              ),
+            )
+            .toList(growable: false);
+      }
+    }
+
     return SearchContextSnapshot(
       artworkProvider: artworkProvider,
       communityProvider: communityProvider,
+      institutionProvider: institutionProvider,
+      screenRecords: screenRecords,
     );
   }
 }
 
-/// Centralized search helper that normalizes backend payloads, applies scope-based
-/// filtering, and falls back to local provider data when the backend returns
-/// nothing or is unavailable.
 class SearchService {
   SearchService({BackendApiService? backendApi})
       : _backendApi = backendApi ?? BackendApiService();
 
   final BackendApiService _backendApi;
-  
-  /// Request versioning to cancel stale results when user types fast.
-  int _requestVersion = 0;
 
-  Future<List<MapSearchSuggestion>> fetchSuggestions({
+  Future<List<KubusSearchResult>> fetchResults({
     required SearchContextSnapshot snapshot,
     required String query,
-    required SearchScope scope,
-    int limit = 8,
+    required KubusSearchConfig config,
   }) async {
     final trimmed = query.trim();
-    if (trimmed.length < 2) return const [];
+    if (trimmed.length < config.minChars) return const <KubusSearchResult>[];
 
-    // Increment version for this request
-    final myVersion = ++_requestVersion;
-
-    List<Map<String, dynamic>> normalized = [];
-    try {
-      final raw = await _backendApi.getSearchSuggestions(query: trimmed, limit: limit);
-      
-      // Check if this request is still current (user may have typed more)
-      if (myVersion != _requestVersion) return const [];
-      
-      normalized = _backendApi.normalizeSearchSuggestions(raw);
-    } catch (_) {
-      // Check staleness even on error path
-      if (myVersion != _requestVersion) return const [];
-      normalized = <Map<String, dynamic>>[];
+    final remoteTasks = <Future<List<KubusSearchResult>>>[
+      _fetchBackendSuggestions(trimmed, config),
+    ];
+    if (config.scope == KubusSearchScope.community &&
+        config.effectiveKinds.contains(KubusSearchResultKind.post)) {
+      remoteTasks.add(_fetchCommunityPostResults(trimmed, config.limit));
     }
 
-    // Final staleness check before returning
-    if (myVersion != _requestVersion) return const [];
-
-    // Apply scope filters
-    final allowedTypes = _allowedTypesForScope(scope);
-    final fromBackend = normalized
-        .map((m) => MapSearchSuggestion.fromMap(m))
-        .where(
-          (s) =>
-              _isSuggestionUsableForScope(s, scope) &&
-              (allowedTypes.isEmpty ||
-                  allowedTypes.contains(s.type.toLowerCase())),
-        )
-        .toList();
-
-    if (fromBackend.isNotEmpty) return fromBackend.take(limit).toList();
-
-    // Fallback to local providers when backend is empty or fails.
-    final fallback = _localFallback(
-      trimmed,
-      scope,
-      artworkProvider: snapshot.artworkProvider,
-      communityProvider: snapshot.communityProvider,
-    );
-    return fallback.take(limit).toList();
-  }
-
-  Set<String> _allowedTypesForScope(SearchScope scope) {
-    switch (scope) {
-      case SearchScope.home:
-        return const {}; // allow all normalized types
-      case SearchScope.community:
-        return const {'profile', 'user', 'group', 'community'};
-      case SearchScope.map:
-        return const {'artwork', 'profile', 'institution', 'event', 'marker'};
+    final remoteParts = await Future.wait(remoteTasks);
+    final merged = <KubusSearchResult>[];
+    for (final part in remoteParts) {
+      merged.addAll(part);
     }
+    merged.addAll(_localFallback(trimmed, snapshot, config));
+
+    return _dedupeAndRank(
+      merged,
+      query: trimmed,
+      config: config,
+    ).take(config.limit).toList(growable: false);
   }
 
-  bool _isSuggestionUsableForScope(
-    MapSearchSuggestion suggestion,
-    SearchScope scope,
-  ) {
-    if (suggestion.label.trim().isEmpty) return false;
-    final type = suggestion.type.toLowerCase();
-    switch (scope) {
-      case SearchScope.home:
-        if (type == 'artwork' || type == 'profile') {
-          return (suggestion.id ?? '').trim().isNotEmpty;
-        }
-        return suggestion.position != null;
-      case SearchScope.community:
-        return (suggestion.id ?? '').trim().isNotEmpty;
-      case SearchScope.map:
-        if (type == 'artwork' || type == 'profile') {
-          return (suggestion.id ?? '').trim().isNotEmpty;
-        }
-        return suggestion.position != null ||
-            (suggestion.id ?? '').trim().isNotEmpty;
-    }
-  }
-
-  List<MapSearchSuggestion> _localFallback(
+  Future<List<KubusSearchResult>> _fetchBackendSuggestions(
     String query,
-    SearchScope scope, {
+    KubusSearchConfig config,
+  ) async {
+    try {
+      final raw = await _backendApi.getSearchSuggestions(
+        query: query,
+        limit: config.limit,
+      );
+      final normalized = _backendApi.normalizeSearchSuggestions(raw);
+      return normalized
+          .map(KubusSearchResult.fromMap)
+          .where((result) => _includeResult(result, config))
+          .toList(growable: false);
+    } catch (_) {
+      return const <KubusSearchResult>[];
+    }
+  }
+
+  Future<List<KubusSearchResult>> _fetchCommunityPostResults(
+    String query,
+    int limit,
+  ) async {
+    try {
+      final response = await _backendApi.search(
+        query: query,
+        type: 'posts',
+        limit: limit,
+        page: 1,
+      );
+      final rows = _extractSearchResults(response, 'posts');
+      return rows
+          .map(_communityPostResultFromMap)
+          .whereType<KubusSearchResult>()
+          .toList(growable: false);
+    } catch (_) {
+      return const <KubusSearchResult>[];
+    }
+  }
+
+  List<KubusSearchResult> _localFallback(
+    String query,
+    SearchContextSnapshot snapshot,
+    KubusSearchConfig config,
+  ) {
+    final normalized = query.toLowerCase();
+    final results = <KubusSearchResult>[];
+    final kinds = config.effectiveKinds;
+
+    if (kinds.contains(KubusSearchResultKind.artwork)) {
+      results.addAll(_localArtworkResults(normalized, snapshot.artworkProvider));
+    }
+    if (kinds.contains(KubusSearchResultKind.institution)) {
+      results.addAll(
+        _localInstitutionResults(normalized, snapshot.institutionProvider),
+      );
+    }
+    if (kinds.contains(KubusSearchResultKind.event)) {
+      results.addAll(_localEventResults(normalized, snapshot.institutionProvider));
+    }
+    if (kinds.contains(KubusSearchResultKind.screen)) {
+      results.addAll(_localScreenResults(normalized, snapshot.screenRecords));
+    }
+    if (kinds.contains(KubusSearchResultKind.profile) &&
+        (config.scope == KubusSearchScope.community ||
+            config.scope == KubusSearchScope.home)) {
+      results.addAll(_localProfileResults(normalized, snapshot.communityProvider));
+    }
+    if (kinds.contains(KubusSearchResultKind.post) &&
+        config.scope == KubusSearchScope.community) {
+      results.addAll(_localPostResults(normalized, snapshot.communityProvider));
+    }
+
+    return results.where((result) => _includeResult(result, config)).toList();
+  }
+
+  List<KubusSearchResult> _localArtworkResults(
+    String query,
     ArtworkProvider? artworkProvider,
+  ) {
+    final artworks = artworkProvider?.artworks ?? const <Artwork>[];
+    return artworks
+        .where(
+          (artwork) =>
+              artwork.title.toLowerCase().contains(query) ||
+              artwork.artist.toLowerCase().contains(query) ||
+              artwork.category.toLowerCase().contains(query),
+        )
+        .map(
+          (artwork) => KubusSearchResult(
+            label: artwork.title,
+            kind: KubusSearchResultKind.artwork,
+            detail: !WalletUtils.looksLikeWallet(artwork.artist)
+                ? artwork.artist
+                : null,
+            id: artwork.id,
+            position: artwork.hasValidLocation ? artwork.position : null,
+            data: <String, dynamic>{
+              'artist': artwork.artist,
+              'category': artwork.category,
+            },
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  List<KubusSearchResult> _localInstitutionResults(
+    String query,
+    InstitutionProvider? institutionProvider,
+  ) {
+    final institutions =
+        institutionProvider?.institutions ?? const <Institution>[];
+    return institutions
+        .where(
+          (institution) =>
+              institution.name.toLowerCase().contains(query) ||
+              institution.description.toLowerCase().contains(query) ||
+              institution.address.toLowerCase().contains(query),
+        )
+        .map(
+          (institution) => KubusSearchResult(
+            label: institution.name,
+            kind: KubusSearchResultKind.institution,
+            detail: institution.address.isNotEmpty
+                ? institution.address
+                : (institution.type.isNotEmpty ? institution.type : null),
+            id: institution.id,
+            position: LatLng(institution.latitude, institution.longitude),
+            data: <String, dynamic>{
+              'type': institution.type,
+              'address': institution.address,
+            },
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  List<KubusSearchResult> _localEventResults(
+    String query,
+    InstitutionProvider? institutionProvider,
+  ) {
+    final events = institutionProvider?.events ?? const <Event>[];
+    return events
+        .where(
+          (event) =>
+              event.title.toLowerCase().contains(query) ||
+              event.description.toLowerCase().contains(query) ||
+              event.location.toLowerCase().contains(query),
+        )
+        .map(
+          (event) => KubusSearchResult(
+            label: event.title,
+            kind: KubusSearchResultKind.event,
+            detail: event.location.isNotEmpty ? event.location : null,
+            id: event.id,
+            position: event.latitude != null && event.longitude != null
+                ? LatLng(event.latitude!, event.longitude!)
+                : null,
+            data: <String, dynamic>{
+              'type': event.type.name,
+              'location': event.location,
+            },
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  List<KubusSearchResult> _localScreenResults(
+    String query,
+    List<SearchScreenRecord> screenRecords,
+  ) {
+    return screenRecords
+        .where((screen) => screen.label.toLowerCase().contains(query))
+        .map(
+          (screen) => KubusSearchResult(
+            label: screen.label,
+            kind: KubusSearchResultKind.screen,
+            id: screen.key,
+            iconOverride: screen.icon,
+            data: <String, dynamic>{'screenKey': screen.key},
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  List<KubusSearchResult> _localProfileResults(
+    String query,
     CommunityHubProvider? communityProvider,
-  }) {
-    final normalizedQuery = query.toLowerCase();
-    final results = <MapSearchSuggestion>[];
+  ) {
+    final results = <KubusSearchResult>[];
+    final seen = <String>{};
+    for (final post in communityProvider?.artFeedPosts ?? const <CommunityPost>[]) {
+      final authorName = post.authorName.trim();
+      final authorUsername = post.authorUsername?.trim();
+      final authorWallet = WalletUtils.canonical(post.authorWallet);
+      final matches = authorName.toLowerCase().contains(query) ||
+          (authorUsername?.toLowerCase().contains(query) ?? false) ||
+          authorWallet.contains(query);
+      if (!matches) continue;
 
-    // Artworks are safe to surface for home/map scopes.
-    if (scope == SearchScope.home || scope == SearchScope.map) {
-      try {
-        for (final art in artworkProvider?.artworks ?? const <Artwork>[]) {
-          if (art.title.toLowerCase().contains(normalizedQuery) ||
-              art.artist.toLowerCase().contains(normalizedQuery) ||
-              art.category.toLowerCase().contains(normalizedQuery)) {
-            results.add(MapSearchSuggestion(
-              label: art.title,
-              subtitle: (!WalletUtils.looksLikeWallet(art.artist))
-                  ? art.artist
-                  : null,
-              id: art.id,
-              type: 'artwork',
-              position: art.hasValidLocation ? art.position : null,
-            ));
-          }
-        }
-      } catch (_) {}
+      final id = post.authorId.trim().isNotEmpty
+          ? post.authorId.trim()
+          : (authorWallet.isNotEmpty ? authorWallet : null);
+      if (id == null || id.isEmpty || !seen.add(id)) continue;
+
+      final detail = (authorUsername != null && authorUsername.isNotEmpty)
+          ? '@${authorUsername.startsWith('@') ? authorUsername.substring(1) : authorUsername}'
+          : (authorWallet.isNotEmpty ? maskWallet(authorWallet) : null);
+
+      results.add(
+        KubusSearchResult(
+          label: authorName.isNotEmpty ? authorName : 'Unknown artist',
+          kind: KubusSearchResultKind.profile,
+          detail: detail,
+          id: id,
+          data: <String, dynamic>{
+            'authorWallet': authorWallet,
+            'authorUsername': authorUsername,
+          },
+        ),
+      );
     }
-
-    // Community profiles/groups for community scope.
-    if (scope == SearchScope.community || scope == SearchScope.home) {
-      try {
-        for (final group in communityProvider?.groups ?? const []) {
-          if (group.name.toLowerCase().contains(normalizedQuery)) {
-            results.add(MapSearchSuggestion(
-              label: group.name,
-              subtitle: 'Group',
-              id: group.id,
-              type: 'group',
-            ));
-          }
-        }
-        for (final post in communityProvider?.artFeedPosts ?? const []) {
-          if (post.authorName.toLowerCase().contains(normalizedQuery)) {
-            results.add(MapSearchSuggestion(
-              label: post.authorName,
-              subtitle: post.authorUsername != null ? '@${post.authorUsername}' : null,
-              id: post.authorId,
-              type: 'profile',
-            ));
-          }
-        }
-      } catch (_) {}
-    }
-
     return results;
+  }
+
+  List<KubusSearchResult> _localPostResults(
+    String query,
+    CommunityHubProvider? communityProvider,
+  ) {
+    final normalizedTagQuery = query.startsWith('#') ? query.substring(1) : query;
+    final posts = communityProvider?.artFeedPosts ?? const <CommunityPost>[];
+    return posts
+        .where(
+          (post) =>
+              post.content.toLowerCase().contains(query) ||
+              post.tags.any(
+                (tag) => tag.toLowerCase().contains(normalizedTagQuery),
+              ) ||
+              post.authorName.toLowerCase().contains(query),
+        )
+        .map((post) => _communityPostResultFromPost(post))
+        .whereType<KubusSearchResult>()
+        .toList(growable: false);
+  }
+
+  bool _includeResult(KubusSearchResult result, KubusSearchConfig config) {
+    if (result.label.trim().isEmpty) return false;
+    if (!config.effectiveKinds.contains(result.kind)) return false;
+    final resolvedId = (result.id ?? '').trim();
+    switch (config.scope) {
+      case KubusSearchScope.home:
+        switch (result.kind) {
+          case KubusSearchResultKind.artwork:
+          case KubusSearchResultKind.profile:
+            return resolvedId.isNotEmpty;
+          case KubusSearchResultKind.institution:
+          case KubusSearchResultKind.event:
+          case KubusSearchResultKind.marker:
+            return result.position != null;
+          case KubusSearchResultKind.post:
+          case KubusSearchResultKind.screen:
+            return resolvedId.isNotEmpty;
+        }
+      case KubusSearchScope.community:
+        switch (result.kind) {
+          case KubusSearchResultKind.institution:
+          case KubusSearchResultKind.event:
+          case KubusSearchResultKind.marker:
+            return result.position != null;
+          case KubusSearchResultKind.artwork:
+          case KubusSearchResultKind.profile:
+          case KubusSearchResultKind.post:
+          case KubusSearchResultKind.screen:
+            return resolvedId.isNotEmpty;
+        }
+      case KubusSearchScope.map:
+        if (result.kind == KubusSearchResultKind.artwork ||
+            result.kind == KubusSearchResultKind.profile) {
+          return resolvedId.isNotEmpty;
+        }
+        return result.position != null || resolvedId.isNotEmpty;
+    }
+  }
+
+  List<KubusSearchResult> _dedupeAndRank(
+    List<KubusSearchResult> results, {
+    required String query,
+    required KubusSearchConfig config,
+  }) {
+    final deduped = <String, KubusSearchResult>{};
+    for (final result in results) {
+      deduped.putIfAbsent(result.stableKey, () => result);
+    }
+
+    final sorted = deduped.values.toList(growable: false);
+    sorted.sort((left, right) {
+      final leftRank = _matchRank(left, query);
+      final rightRank = _matchRank(right, query);
+      if (leftRank != rightRank) return leftRank.compareTo(rightRank);
+
+      final leftPriority = _kindPriority(left.kind, config.scope);
+      final rightPriority = _kindPriority(right.kind, config.scope);
+      if (leftPriority != rightPriority) {
+        return leftPriority.compareTo(rightPriority);
+      }
+
+      return left.label.toLowerCase().compareTo(right.label.toLowerCase());
+    });
+    return sorted;
+  }
+
+  int _matchRank(KubusSearchResult result, String query) {
+    final normalized = query.toLowerCase();
+    final label = result.label.toLowerCase();
+    final detail = (result.detail ?? '').toLowerCase();
+
+    if (label == normalized) return 0;
+    if (label.startsWith(normalized)) return 1;
+    if (label.contains(normalized)) return 2;
+    if (detail == normalized) return 3;
+    if (detail.startsWith(normalized)) return 4;
+    if (detail.contains(normalized)) return 5;
+    return 6;
+  }
+
+  int _kindPriority(KubusSearchResultKind kind, KubusSearchScope scope) {
+    final order = switch (scope) {
+      KubusSearchScope.home => const [
+          KubusSearchResultKind.artwork,
+          KubusSearchResultKind.profile,
+          KubusSearchResultKind.institution,
+          KubusSearchResultKind.event,
+          KubusSearchResultKind.marker,
+          KubusSearchResultKind.post,
+          KubusSearchResultKind.screen,
+        ],
+      KubusSearchScope.community => const [
+          KubusSearchResultKind.profile,
+          KubusSearchResultKind.post,
+          KubusSearchResultKind.artwork,
+          KubusSearchResultKind.institution,
+          KubusSearchResultKind.screen,
+          KubusSearchResultKind.event,
+          KubusSearchResultKind.marker,
+        ],
+      KubusSearchScope.map => const [
+          KubusSearchResultKind.artwork,
+          KubusSearchResultKind.profile,
+          KubusSearchResultKind.institution,
+          KubusSearchResultKind.event,
+          KubusSearchResultKind.marker,
+          KubusSearchResultKind.post,
+          KubusSearchResultKind.screen,
+        ],
+    };
+    final index = order.indexOf(kind);
+    return index == -1 ? order.length : index;
+  }
+
+  List<Map<String, dynamic>> _extractSearchResults(
+    Map<String, dynamic> response,
+    String type,
+  ) {
+    final rows = <Map<String, dynamic>>[];
+
+    void addEntries(dynamic items) {
+      if (items is! List) return;
+      for (final item in items) {
+        if (item is Map<String, dynamic>) {
+          rows.add(item);
+        } else if (item is Map) {
+          rows.add(Map<String, dynamic>.from(item));
+        }
+      }
+    }
+
+    final results = response['results'];
+    if (results is Map<String, dynamic>) {
+      addEntries(results[type]);
+      addEntries(results['results']);
+    } else {
+      addEntries(results);
+    }
+
+    final data = response['data'];
+    if (data is Map<String, dynamic>) {
+      addEntries(data[type]);
+      addEntries(data['results']);
+    } else {
+      addEntries(data);
+    }
+
+    return rows;
+  }
+
+  KubusSearchResult? _communityPostResultFromMap(Map<String, dynamic> map) {
+    final id = _stringValue(map, const ['id', 'postId', 'post_id']);
+    if (id == null || id.isEmpty) return null;
+
+    final content =
+        _stringValue(map, const ['content', 'text', 'message']) ?? 'Post';
+    final trimmedContent = content.trim();
+    final author = _stringValue(
+          map,
+          const ['authorName', 'author_name', 'author'],
+        ) ??
+        _stringValue(map['author'], const ['displayName', 'display_name']) ??
+        _stringValue(map['author'], const ['username']) ??
+        'Post';
+
+    final label = trimmedContent.isEmpty ? 'Post' : trimmedContent;
+    return KubusSearchResult(
+      label: label,
+      kind: KubusSearchResultKind.post,
+      detail: author,
+      id: id,
+      data: Map<String, dynamic>.from(map),
+    );
+  }
+
+  KubusSearchResult? _communityPostResultFromPost(CommunityPost post) {
+    final id = post.id.trim();
+    if (id.isEmpty) return null;
+    final label = post.content.trim().isEmpty ? 'Post' : post.content.trim();
+    return KubusSearchResult(
+      label: label,
+      kind: KubusSearchResultKind.post,
+      detail: post.authorName.trim().isEmpty ? null : post.authorName.trim(),
+      id: id,
+      data: <String, dynamic>{
+        'postId': id,
+        'authorName': post.authorName,
+      },
+    );
+  }
+
+  String? _stringValue(dynamic source, List<String> keys) {
+    if (source is! Map) return null;
+    for (final key in keys) {
+      final value = source[key];
+      if (value == null) continue;
+      final text = value.toString().trim();
+      if (text.isNotEmpty) return text;
+    }
+    return null;
   }
 }

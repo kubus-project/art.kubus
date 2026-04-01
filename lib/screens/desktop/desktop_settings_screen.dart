@@ -3554,7 +3554,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           // Copyright
           Center(
             child: Text(
-              'Â© 2025 kubus • ${l10n.settingsAllRightsReserved}',
+              '\u00A9 2025 kubus \u2022 ${l10n.settingsAllRightsReserved}',
               style: KubusTextStyles.navMetaLabel.copyWith(
                 color: Theme.of(context)
                     .colorScheme

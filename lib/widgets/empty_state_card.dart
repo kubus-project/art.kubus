@@ -32,62 +32,85 @@ class EmptyStateCard extends StatelessWidget {
     final radius = BorderRadius.circular(16);
     final glassTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
 
-    return Container(
-      width: double.infinity,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        border: Border.all(
-          color: scheme.outline.withValues(alpha: 0.14),
-        ),
-      ),
-      child: LiquidGlassPanel(
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-        margin: EdgeInsets.zero,
-        borderRadius: radius,
-        showBorder: false,
-        backgroundColor: glassTint,
-        child: Column(
-        // Center content both vertically and horizontally so the icon/text
-        // do not hug the top or bottom when the card is placed in a fixed
-        // height container (e.g. SizedBox).
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Icon(icon,
-              size: 48,
-              color: Theme.of(context).colorScheme.onSurface.withAlpha((0.32 * 255).round())),
-          const SizedBox(height: 12),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final hasBoundedWidth = constraints.maxWidth.isFinite;
+        final hasBoundedHeight = constraints.maxHeight.isFinite;
+
+        Widget content = Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: Column(
+              // Center content both vertically and horizontally so the icon/text
+              // do not hug the top or bottom when the card is placed in a fixed
+              // height container (e.g. SizedBox).
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 48,
+                  color: scheme.onSurface.withAlpha((0.32 * 255).round()),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  description,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: scheme.onSurface.withAlpha((0.6 * 255).round()),
+                  ),
+                ),
+                if (showAction && onAction != null && actionLabel != null) ...[
+                  const SizedBox(height: 12),
+                  TextButton(
+                    onPressed: onAction,
+                    style: TextButton.styleFrom(foregroundColor: accent),
+                    child: Text(actionLabel!),
+                  ),
+                ],
+              ],
             ),
           ),
-          const SizedBox(height: 6),
-          Text(
-            description,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface.withAlpha((0.6 * 255).round()),
+        );
+
+        if (hasBoundedWidth || hasBoundedHeight) {
+          content = SizedBox(
+            width: hasBoundedWidth ? constraints.maxWidth : null,
+            height: hasBoundedHeight ? constraints.maxHeight : null,
+            child: content,
+          );
+        }
+
+        return Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            border: Border.all(
+              color: scheme.outline.withValues(alpha: 0.14),
             ),
           ),
-          if (showAction && onAction != null && actionLabel != null) ...[
-            const SizedBox(height: 12),
-            TextButton(
-              onPressed: onAction,
-              style: TextButton.styleFrom(foregroundColor: accent),
-              child: Text(actionLabel!),
-            ),
-          ],
-        ],
-        ),
-      ),
+          child: LiquidGlassPanel(
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+            margin: EdgeInsets.zero,
+            borderRadius: radius,
+            showBorder: false,
+            backgroundColor: glassTint,
+            child: content,
+          ),
+        );
+      },
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/search_service.dart';
+import 'package:art_kubus/widgets/search/kubus_search_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _FakeBackendApiService implements BackendApiService {
@@ -38,10 +39,32 @@ void main() {
       ),
     );
 
-    final results = await service.fetchSuggestions(
+    final results = await service.fetchResults(
       snapshot: const SearchContextSnapshot(),
       query: 'mu',
-      scope: SearchScope.home,
+      config: const KubusSearchConfig(scope: KubusSearchScope.home),
+    );
+
+    expect(results, isEmpty);
+  });
+
+  test('community scope filters out institution suggestions without coordinates', () async {
+    final service = SearchService(
+      backendApi: _FakeBackendApiService(
+        <Map<String, dynamic>>[
+          <String, dynamic>{
+            'type': 'institution',
+            'id': 'institution-1',
+            'label': 'Museum without coordinates',
+          },
+        ],
+      ),
+    );
+
+    final results = await service.fetchResults(
+      snapshot: const SearchContextSnapshot(),
+      query: 'mu',
+      config: const KubusSearchConfig(scope: KubusSearchScope.community),
     );
 
     expect(results, isEmpty);

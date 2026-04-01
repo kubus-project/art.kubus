@@ -61,6 +61,36 @@ void main() {
     expect(items.first.promotion.isPromoted, isTrue);
   });
 
+  test('listArtists only sends supported query params', () async {
+    final api = BackendApiService();
+    api.setHttpClient(
+      MockClient((request) async {
+        expect(request.method, 'GET');
+        expect(request.url.path, '/api/profiles/artists/list');
+        expect(request.url.queryParameters['verified'], 'true');
+        expect(request.url.queryParameters['limit'], '12');
+        expect(request.url.queryParameters['offset'], '4');
+        expect(request.url.queryParameters.containsKey('featured'), isFalse);
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'success': true,
+            'data': const <Object?>[],
+          }),
+          200,
+          headers: const <String, String>{'content-type': 'application/json'},
+        );
+      }),
+    );
+
+    final items = await api.listArtists(
+      verified: true,
+      limit: 12,
+      offset: 4,
+    );
+
+    expect(items, isEmpty);
+  });
+
   test('createPromotionRequest preserves checkoutUrl in submission result',
       () async {
     final api = BackendApiService();

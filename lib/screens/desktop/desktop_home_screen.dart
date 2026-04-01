@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:latlong2/latlong.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/web3provider.dart';
 import '../../providers/wallet_provider.dart';
@@ -41,6 +40,7 @@ import '../../utils/artwork_navigation.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/home_search_destination.dart';
 import '../../utils/user_profile_navigation.dart';
 import 'components/desktop_widgets.dart';
 import 'components/desktop_notifications_panel.dart';
@@ -52,7 +52,6 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'community/desktop_profile_screen.dart';
 import 'desktop_shell.dart';
 import '../activity/advanced_analytics_screen.dart';
-import '../../services/search_service.dart';
 import '../home_screen.dart' show ActivityScreen;
 import '../../services/backend_api_service.dart';
 import '../../services/user_service.dart';
@@ -60,6 +59,10 @@ import '../../utils/app_color_utils.dart';
 import '../../utils/creator_display_format.dart';
 import '../../utils/wallet_utils.dart';
 import '../../widgets/support/support_section.dart';
+import '../../widgets/search/kubus_general_search.dart';
+import '../../widgets/search/kubus_search_config.dart';
+import '../../widgets/search/kubus_search_controller.dart';
+import '../../widgets/search/kubus_search_result.dart';
 
 @visibleForTesting
 int resolveArtworksDiscoveredCount({
@@ -94,17 +97,9 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   late ScrollController _scrollController;
   bool _showFloatingHeader = false;
   final BackendApiService _backendApi = BackendApiService();
-  final LayerLink _primarySearchFieldLink = LayerLink();
-  final LayerLink _floatingSearchFieldLink = LayerLink();
-  late TextEditingController _searchController;
+  late final KubusSearchController _searchController;
   late FocusNode _primarySearchFocusNode;
   late FocusNode _floatingSearchFocusNode;
-  Timer? _searchDebounce;
-  String _searchQuery = '';
-  bool _isFetchingSuggestions = false;
-  List<_SearchSuggestion> _searchSuggestions = const [];
-  OverlayEntry? _searchOverlayEntry;
-  final SearchService _searchService = SearchService();
   bool _isResolvingLocation = false;
   List<CommunityPost> _popularCommunityPosts = const [];
   bool _popularCommunityLoading = false;
@@ -132,11 +127,14 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     _scrollController = ScrollController();
     _scrollController.addListener(_onScroll);
     _animationController.forward();
-    _searchController = TextEditingController();
+    _searchController = KubusSearchController(
+      config: const KubusSearchConfig(
+        scope: KubusSearchScope.home,
+        limit: 8,
+      ),
+    );
     _primarySearchFocusNode = FocusNode();
     _floatingSearchFocusNode = FocusNode();
-    _primarySearchFocusNode.addListener(_handleSearchFocusChange);
-    _floatingSearchFocusNode.addListener(_handleSearchFocusChange);
 
     // Initialize providers
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -259,16 +257,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     _animationController.dispose();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
-    _searchDebounce?.cancel();
     _creatorResolveDebounce?.cancel();
-    _searchOverlayEntry?.remove();
     _searchController.dispose();
-    _primarySearchFocusNode
-      ..removeListener(_handleSearchFocusChange)
-      ..dispose();
-    _floatingSearchFocusNode
-      ..removeListener(_handleSearchFocusChange)
-      ..dispose();
+    _primarySearchFocusNode.dispose();
+    _floatingSearchFocusNode.dispose();
     super.dispose();
   }
 
@@ -565,6 +557,16 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           // Floating header on scroll
           if (_showFloatingHeader)
             _buildFloatingHeader(themeProvider, animationTheme),
+          KubusSearchResultsOverlay(
+            controller: _searchController,
+            accentColor: themeProvider.accentColor,
+            minCharsHint: AppLocalizations.of(context)!.mapSearchMinCharsHint,
+            noResultsText: AppLocalizations.of(context)!.commonNoSuggestions,
+            maxWidth: _searchBarWidth,
+            onResultTap: (result) {
+              unawaited(_handleSearchResultTap(result));
+            },
+          ),
         ],
       ),
     );
@@ -806,18 +808,15 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           // Right side - search and actions
           Row(
             children: [
-              CompositedTransformTarget(
-                link: _primarySearchFieldLink,
-                child: SizedBox(
-                  width: _searchBarWidth,
-                  child: DesktopSearchBar(
-                    hintText: l10n.mapSearchHint,
-                    controller: _searchController,
-                    focusNode: _primarySearchFocusNode,
-                    onChanged: _handleSearchChange,
-                    onSubmitted: _handleSearchSubmit,
-                    autofocus: false,
-                  ),
+              SizedBox(
+                width: _searchBarWidth,
+                child: KubusGeneralSearch(
+                  controller: _searchController,
+                  focusNode: _primarySearchFocusNode,
+                  hintText: l10n.mapSearchHint,
+                  semanticsLabel: 'desktop_home_search_input',
+                  onSubmitted: _handleSearchSubmit,
+                  autofocus: false,
                 ),
               ),
               const SizedBox(width: DetailSpacing.lg),
@@ -1616,14 +1615,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   }
 
   Widget _buildFeaturedArtworks() {
-    return Consumer2<ArtworkProvider, PromotionProvider>(
-      builder: (context, artworkProvider, promotionProvider, _) {
+    return Consumer<PromotionProvider>(
+      builder: (context, promotionProvider, _) {
         final l10n = AppLocalizations.of(context)!;
-        final artworks = (promotionProvider.featuredArtworks.isNotEmpty
-                ? promotionProvider.featuredArtworks
-                : artworkProvider.artworks)
-            .take(6)
-            .toList();
+        final artworks = promotionProvider.featuredArtworks.take(6).toList();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2747,18 +2742,14 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
               ),
             ),
             const Spacer(),
-            CompositedTransformTarget(
-              link: _floatingSearchFieldLink,
-              child: SizedBox(
-                width: _floatingSearchBarWidth,
-                height: 40,
-                child: DesktopSearchBar(
-                  hintText: l10n.commonSearch,
-                  controller: _searchController,
-                  focusNode: _floatingSearchFocusNode,
-                  onChanged: _handleSearchChange,
-                  onSubmitted: _handleSearchSubmit,
-                ),
+            SizedBox(
+              width: _floatingSearchBarWidth,
+              child: KubusGeneralSearch(
+                controller: _searchController,
+                focusNode: _floatingSearchFocusNode,
+                hintText: l10n.commonSearch,
+                semanticsLabel: 'desktop_home_floating_search_input',
+                onSubmitted: _handleSearchSubmit,
               ),
             ),
           ],
@@ -2832,128 +2823,22 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     activityProvider.markAllReadLocally();
   }
 
-  void _handleSearchFocusChange() {
-    if (!_hasActiveSearchFocus) {
-      _hideSearchOverlay();
-    } else {
-      _showSearchOverlay();
-    }
-  }
-
-  bool get _hasActiveSearchFocus =>
-      _primarySearchFocusNode.hasFocus || _floatingSearchFocusNode.hasFocus;
-
-  LayerLink get _activeSearchFieldLink => _floatingSearchFocusNode.hasFocus
-      ? _floatingSearchFieldLink
-      : _primarySearchFieldLink;
-
-  double get _activeSearchOverlayWidth => _floatingSearchFocusNode.hasFocus
-      ? _floatingSearchBarWidth
-      : _searchBarWidth;
-
-  void _handleSearchChange(String value) {
-    setState(() {
-      _searchQuery = value;
-    });
-
-    _searchDebounce?.cancel();
-    if (value.trim().length < 2) {
-      setState(() {
-        _searchSuggestions = const [];
-        _isFetchingSuggestions = false;
-      });
-      _showSearchOverlay();
-      return;
-    }
-
-    final snapshot =
-        SearchContextSnapshot.capture(context, scope: SearchScope.home);
-    _searchDebounce = Timer(const Duration(milliseconds: 275), () async {
-      if (!mounted) return;
-      setState(() {
-        _isFetchingSuggestions = true;
-      });
-      _showSearchOverlay();
-
-      try {
-        List<_SearchSuggestion> suggestions;
-        final remote = await _searchService.fetchSuggestions(
-          snapshot: snapshot,
-          query: value,
-          scope: SearchScope.home,
-          limit: 8,
-        );
-        suggestions = remote
-            .map((s) => _SearchSuggestion(
-                  label: s.label,
-                  type: s.type,
-                  subtitle: s.subtitle,
-                  id: s.id,
-                  position: s.position,
-                ))
-            .toList(growable: false);
-        if (suggestions.isEmpty) {
-          suggestions = _buildLocalSearchSuggestions(value);
-        }
-
-        if (!mounted) return;
-        setState(() {
-          _searchSuggestions = suggestions;
-          _isFetchingSuggestions = false;
-        });
-        _showSearchOverlay();
-      } catch (_) {
-        if (!mounted) return;
-        setState(() {
-          _searchSuggestions = _buildLocalSearchSuggestions(value);
-          _isFetchingSuggestions = false;
-        });
-        _showSearchOverlay();
-      }
-    });
-  }
-
-  List<_SearchSuggestion> _buildLocalSearchSuggestions(String query) {
-    final normalized = query.toLowerCase();
-    final artworkProvider = context.read<ArtworkProvider>();
-    return artworkProvider.artworks
-        .where((artwork) =>
-            artwork.title.toLowerCase().contains(normalized) ||
-            artwork.artist.toLowerCase().contains(normalized) ||
-            artwork.category.toLowerCase().contains(normalized))
-        .map((art) => _SearchSuggestion(
-              label: art.title,
-              type: 'artwork',
-              subtitle: art.artist,
-              id: art.id,
-            ))
-        .take(8)
-        .toList(growable: false);
-  }
-
   Future<void> _handleSearchSubmit(String value) async {
-    if (value.trim().isEmpty) return;
-    if (_searchSuggestions.isNotEmpty) {
-      await _handleSuggestionTap(_searchSuggestions.first);
-    } else {
-      _handleSearchChange(value);
-    }
+    final results = _searchController.state.results;
+    if (value.trim().isEmpty || results.isEmpty) return;
+    await _handleSearchResultTap(results.first);
   }
 
-  Future<void> _handleSuggestionTap(_SearchSuggestion suggestion) async {
-    setState(() {
-      _searchQuery = suggestion.label;
-      _searchController.text = suggestion.label;
-      _searchSuggestions = const [];
-    });
-    _hideSearchOverlay();
+  Future<void> _handleSearchResultTap(KubusSearchResult result) async {
+    _searchController.setQuery(context, result.label);
+    _searchController.dismissOverlay();
+    FocusScope.of(context).unfocus();
 
-    // If the suggestion has a location, refresh the community feed around it
-    if (suggestion.position != null) {
+    if (result.position != null) {
       final communityProvider = context.read<CommunityHubProvider>();
       _queueArtFeedLoad(
-        lat: suggestion.position!.latitude,
-        lng: suggestion.position!.longitude,
+        lat: result.position!.latitude,
+        lng: result.position!.longitude,
         radiusKm: communityProvider.artFeedRadiusKm,
         limit: 50,
       );
@@ -2972,160 +2857,31 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       );
     }
 
-    final resolvedId = suggestion.id?.trim();
-    if (suggestion.type == 'artwork') {
-      if (resolvedId == null || resolvedId.isEmpty) {
+    final destination = HomeSearchDestination.fromResult(result);
+    switch (destination.kind) {
+      case HomeSearchDestinationKind.artwork:
+        final resolvedId = destination.id?.trim() ?? '';
+        if (resolvedId.isEmpty) {
+          showInvalidSelection();
+          return;
+        }
+        await openArtwork(context, resolvedId, source: 'desktop_home_search');
+        return;
+      case HomeSearchDestinationKind.profile:
+        final resolvedId = destination.id?.trim() ?? '';
+        if (resolvedId.isEmpty) {
+          showInvalidSelection();
+          return;
+        }
+        await UserProfileNavigation.open(context, userId: resolvedId);
+        return;
+      case HomeSearchDestinationKind.map:
+        _openShellTab(1);
+        return;
+      case HomeSearchDestinationKind.none:
         showInvalidSelection();
         return;
-      }
-      await openArtwork(context, resolvedId, source: 'desktop_home_search');
-      return;
     }
-
-    if (suggestion.type == 'profile') {
-      if (resolvedId == null || resolvedId.isEmpty) {
-        showInvalidSelection();
-        return;
-      }
-      await UserProfileNavigation.open(context, userId: resolvedId);
-      return;
-    }
-
-    if (resolvedId == null || resolvedId.isEmpty) {
-      showInvalidSelection();
-      return;
-    }
-
-    _openShellTab(1);
-  }
-
-  void _showSearchOverlay() {
-    if (!_hasActiveSearchFocus) return;
-    if (_searchOverlayEntry != null) {
-      _searchOverlayEntry!.markNeedsBuild();
-      return;
-    }
-
-    _searchOverlayEntry = OverlayEntry(
-      builder: (context) => GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        onTap: _hideSearchOverlay,
-        child: Stack(
-          children: [
-            Positioned.fill(child: Container(color: Colors.transparent)),
-            CompositedTransformFollower(
-              link: _activeSearchFieldLink,
-              showWhenUnlinked: false,
-              offset: const Offset(0, 48),
-              child: Builder(
-                builder: (context) {
-                  final scheme = Theme.of(context).colorScheme;
-                  final isDark =
-                      Theme.of(context).brightness == Brightness.dark;
-                  final glassTint =
-                      scheme.surface.withValues(alpha: isDark ? 0.22 : 0.26);
-
-                  return LiquidGlassPanel(
-                    padding: EdgeInsets.zero,
-                    margin: EdgeInsets.zero,
-                    borderRadius: BorderRadius.circular(12),
-                    blurSigma: KubusGlassEffects.blurSigmaLight,
-                    backgroundColor: glassTint,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        maxHeight: 320,
-                      ),
-                      child: SizedBox(
-                        width: _activeSearchOverlayWidth,
-                        child: _buildSearchSuggestionContent(),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    Overlay.of(context).insert(_searchOverlayEntry!);
-  }
-
-  void _hideSearchOverlay() {
-    _searchOverlayEntry?.remove();
-    _searchOverlayEntry = null;
-  }
-
-  Widget _buildSearchSuggestionContent() {
-    final scheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-
-    if (_searchQuery.trim().length < 2) {
-      return Padding(
-        padding: const EdgeInsets.all(16),
-        child: Text(
-          l10n.mapSearchMinCharsHint,
-          style: KubusTextStyles.sectionSubtitle.copyWith(
-            color: scheme.onSurfaceVariant,
-          ),
-        ),
-      );
-    }
-
-    if (_isFetchingSuggestions) {
-      return const Padding(
-        padding: EdgeInsets.all(KubusSpacing.xl),
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (_searchSuggestions.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.all(KubusSpacing.lg),
-        child: Text(
-          l10n.commonNoSuggestions,
-          style: KubusTextStyles.sectionSubtitle.copyWith(
-            color: scheme.onSurfaceVariant,
-          ),
-        ),
-      );
-    }
-
-    return ListView.separated(
-      shrinkWrap: true,
-      itemCount: _searchSuggestions.length,
-      separatorBuilder: (_, __) => Divider(
-        height: 1,
-        color: scheme.outlineVariant,
-      ),
-      itemBuilder: (context, index) {
-        final suggestion = _searchSuggestions[index];
-        return ListTile(
-          leading: CircleAvatar(
-            backgroundColor:
-                scheme.surfaceContainerHighest.withValues(alpha: 0.6),
-            child: Icon(
-              suggestion.icon,
-              color: scheme.primary,
-            ),
-          ),
-          title: Text(
-            suggestion.label,
-            style: KubusTextStyles.actionTileTitle,
-          ),
-          subtitle: suggestion.subtitle == null
-              ? null
-              : Text(
-                  suggestion.subtitle!,
-                  style: KubusTextStyles.navMetaLabel.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-          onTap: () => _handleSuggestionTap(suggestion),
-        );
-      },
-    );
   }
 
   List<_TrendingArtEntry> _getTrendingEntries(
@@ -3358,38 +3114,6 @@ class _TrendingArtEntry {
       score: score ?? this.score,
       creatorWallet: creatorWallet ?? this.creatorWallet,
     );
-  }
-}
-
-class _SearchSuggestion {
-  final String label;
-  final String type;
-  final String? subtitle;
-  final String? id;
-  final LatLng? position;
-
-  const _SearchSuggestion({
-    required this.label,
-    required this.type,
-    this.subtitle,
-    this.id,
-    this.position,
-  });
-
-  IconData get icon {
-    switch (type) {
-      case 'profile':
-        return Icons.account_circle_outlined;
-      case 'institution':
-        return Icons.museum_outlined;
-      case 'event':
-        return Icons.event_available;
-      case 'marker':
-        return Icons.location_on_outlined;
-      case 'artwork':
-      default:
-        return Icons.auto_awesome;
-    }
   }
 }
 

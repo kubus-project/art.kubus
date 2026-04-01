@@ -1557,7 +1557,7 @@ class _DesktopArtworkDetailScreenState
                   .trim();
               if (msg.isNotEmpty) {
                 backendMessage =
-                    msg.length > 140 ? '${msg.substring(0, 140)}â€¦' : msg;
+                    msg.length > 140 ? '${msg.substring(0, 140)}\u2026' : msg;
               }
             }
           }
@@ -1565,7 +1565,12 @@ class _DesktopArtworkDetailScreenState
           // Ignore body parse failures and fall back to a generic message.
         }
       }
-      backendMessage = backendMessage?.replaceAll('Ã¢â‚¬Â¦', 'â€¦');
+      backendMessage = backendMessage
+          ?.replaceAll('\u00C3\u00A2\u00E2\u201A\u00AC\u00C2\u00A6', '\u2026')
+          .replaceAll(
+            '\u00C3\u0192\u00C2\u00A2\u00C3\u00A2\u20AC\u0161\u00C2\u00AC\u00C3\u201A\u00C2\u00A6',
+            '\u2026',
+          );
       messenger.showKubusSnackBar(
         SnackBar(
           content: Text(

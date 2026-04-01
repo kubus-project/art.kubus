@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../utils/design_tokens.dart';
-import '../../utils/map_search_suggestion.dart';
 import '../map/kubus_map_glass_surface.dart';
 import '../map_overlay_blocker.dart';
-import '../search/kubus_search_bar.dart';
 
 enum KubusSearchOverlayLayout {
   topOverlay,
@@ -22,16 +20,7 @@ class KubusSearchOverlayScaffold extends StatelessWidget {
     super.key,
     required this.layout,
     required this.searchField,
-    required this.searchFieldLink,
-    required this.showSuggestions,
-    required this.query,
-    required this.isFetching,
-    required this.suggestions,
-    required this.accentColor,
-    required this.minCharsHint,
-    required this.noResultsText,
-    required this.onDismissSuggestions,
-    required this.onSuggestionTap,
+    this.searchDropdown,
     this.leading,
     this.filterChips,
     this.mapToggle,
@@ -50,23 +39,11 @@ class KubusSearchOverlayScaffold extends StatelessWidget {
     this.sidePanelAnimated = false,
     this.positionAnimationDuration = const Duration(milliseconds: 240),
     this.positionAnimationCurve = Curves.easeOutCubic,
-    this.suggestionsOffset = const Offset(0, 52),
-    this.suggestionsMaxWidth = 520,
-    this.suggestionsMaxHeight = 360,
   });
 
   final KubusSearchOverlayLayout layout;
   final Widget searchField;
-  final LayerLink searchFieldLink;
-  final bool showSuggestions;
-  final String query;
-  final bool isFetching;
-  final List<MapSearchSuggestion> suggestions;
-  final Color accentColor;
-  final String minCharsHint;
-  final String noResultsText;
-  final VoidCallback onDismissSuggestions;
-  final ValueChanged<MapSearchSuggestion> onSuggestionTap;
+  final Widget? searchDropdown;
 
   final Widget? leading;
   final Widget? filterChips;
@@ -85,10 +62,6 @@ class KubusSearchOverlayScaffold extends StatelessWidget {
   final bool sidePanelAnimated;
   final Duration positionAnimationDuration;
   final Curve positionAnimationCurve;
-
-  final Offset suggestionsOffset;
-  final double suggestionsMaxWidth;
-  final double suggestionsMaxHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -115,21 +88,7 @@ class KubusSearchOverlayScaffold extends StatelessWidget {
             ),
           if (layout == KubusSearchOverlayLayout.sidePanel)
             _buildSidePanel(context, topInset),
-          if (showSuggestions)
-            KubusSearchSuggestionsOverlay(
-              link: searchFieldLink,
-              query: query,
-              isFetching: isFetching,
-              suggestions: suggestions,
-              accentColor: accentColor,
-              minCharsHint: minCharsHint,
-              noResultsText: noResultsText,
-              onDismiss: onDismissSuggestions,
-              onSuggestionTap: onSuggestionTap,
-              offset: suggestionsOffset,
-              maxWidth: suggestionsMaxWidth,
-              maxHeight: suggestionsMaxHeight,
-            ),
+          if (searchDropdown != null) searchDropdown!,
         ],
       ),
     );

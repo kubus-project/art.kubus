@@ -36,7 +36,6 @@ import '../models/task.dart';
 import '../models/map_marker_subject.dart';
 import '../services/ar_integration_service.dart';
 import '../services/map_marker_service.dart';
-import '../services/search_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/map_attribution_helper.dart';
 import '../core/app_route_observer.dart';
@@ -53,7 +52,6 @@ import '../utils/art_marker_list_diff.dart';
 import '../utils/debouncer.dart';
 import '../utils/map_marker_helper.dart';
 import '../utils/map_marker_subject_loader.dart';
-import '../utils/map_search_suggestion.dart';
 import '../utils/map_viewport_utils.dart';
 import '../utils/map_perf_tracker.dart';
 import '../utils/map_performance_debug.dart';
@@ -75,7 +73,6 @@ import '../features/map/shared/map_screen_constants.dart';
 import '../features/map/map_layers_manager.dart';
 import '../features/map/map_overlay_stack.dart';
 import '../features/map/controller/kubus_map_controller.dart';
-import '../features/map/search/map_search_controller.dart';
 import '../features/map/nearby/nearby_art_controller.dart';
 import '../features/map/tutorial/map_tutorial_coordinator.dart';
 import '../utils/marker_cube_geometry.dart';
@@ -83,7 +80,10 @@ import 'events/exhibition_detail_screen.dart';
 import '../widgets/glass_components.dart';
 import '../widgets/kubus_snackbar.dart';
 import '../widgets/map_overlay_blocker.dart';
-import '../widgets/search/kubus_search_bar.dart';
+import '../widgets/search/kubus_general_search.dart';
+import '../widgets/search/kubus_search_config.dart';
+import '../widgets/search/kubus_search_controller.dart';
+import '../widgets/search/kubus_search_result.dart';
 import '../widgets/map/nearby/kubus_nearby_art_panel.dart';
 import '../widgets/tutorial/interactive_tutorial_overlay.dart';
 import '../widgets/map/tutorial/kubus_map_tutorial_overlay.dart';
@@ -135,7 +135,7 @@ class DirectionConePainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
 
     // Draw cone pointing upward (will be rotated by the parent Transform)
-    // Cone dimensions: 60Â° spread angle
+    // Cone dimensions: 60-degree spread angle.
     final coneAngle = math.pi / 3; // 60 degrees in radians
     final coneLength = size.height * 0.8;
 
@@ -290,7 +290,7 @@ class _MapScreenState extends State<MapScreen>
   late final MapTutorialCoordinator _mapTutorialCoordinator;
 
   // Map search (shared controller + UI)
-  late final MapSearchController _mapSearchController;
+  late final KubusSearchController _mapSearchController;
 
   final Map<ArtMarkerType, bool> _markerLayerVisibility = {
     ArtMarkerType.artwork: true,
@@ -481,12 +481,12 @@ class _MapScreenState extends State<MapScreen>
     );
     _mapTutorialCoordinator.addListener(_handleTutorialCoordinatorChanged);
 
-    _mapSearchController = MapSearchController(
-      // Preserve mobile's current UX: show the hint panel when the field is
-      // focused even if the query is still empty.
-      showOverlayOnFocus: true,
-      scope: SearchScope.map,
-      limit: 8,
+    _mapSearchController = KubusSearchController(
+      config: const KubusSearchConfig(
+        scope: KubusSearchScope.map,
+        limit: 8,
+        showOverlayOnFocus: true,
+      ),
     );
     _mapSearchController.addListener(_handleMapSearchControllerChanged);
 
@@ -2186,7 +2186,7 @@ class _MapScreenState extends State<MapScreen>
       discoveryTaskCount,
       _filtersExpanded ? '1' : '0',
       _mapSearchController.state.isOverlayVisible ? '1' : '0',
-      _mapSearchController.state.suggestions.length,
+      _mapSearchController.state.results.length,
     ].join(':');
     if (_markerOverlayTopPaddingMeasurePending &&
         _pendingMarkerOverlayTopPaddingLayoutKey == layoutKey) {
@@ -2784,7 +2784,7 @@ class _MapScreenState extends State<MapScreen>
               _locationPermissionRequested = false;
             }
           } else {
-            // already requested permission once â€” don't re-request repeatedly
+            // Already requested permission once; do not re-request repeatedly.
             AppConfig.debugPrint(
                 'MapScreen: location permission denied and previously requested; skipping further requests');
             resolvedPosition ??= _loadFallbackPosition(prefs);
@@ -4156,7 +4156,6 @@ class _MapScreenState extends State<MapScreen>
     return ListenableBuilder(
       listenable: _mapSearchController,
       builder: (context, _) {
-        final state = _mapSearchController.state;
         final discoveryTaskCount =
             taskProvider?.getActiveTaskProgress().length ?? 0;
         final hasDiscovery = discoveryTaskCount > 0;
@@ -4167,19 +4166,17 @@ class _MapScreenState extends State<MapScreen>
         final hasExtraContent = _filtersExpanded || hasDiscovery;
         return KubusSearchOverlayScaffold(
           layout: KubusSearchOverlayLayout.topOverlay,
-          searchField: _buildSearchCard(theme),
-          searchFieldLink: _mapSearchController.fieldLink,
-          showSuggestions: state.isOverlayVisible,
-          query: state.query,
-          isFetching: state.isFetching,
-          suggestions: state.suggestions,
-          accentColor: themeProvider.accentColor,
-          minCharsHint: l10n.mapSearchMinCharsHint,
-          noResultsText: l10n.mapNoSuggestions,
-          onDismissSuggestions: () => _mapSearchController.dismissOverlay(),
-          onSuggestionTap: (suggestion) {
-            unawaited(_handleSuggestionTap(suggestion));
-          },
+          searchField: _buildSearchCard(),
+          searchDropdown: KubusSearchResultsOverlay(
+            controller: _mapSearchController,
+            accentColor: themeProvider.accentColor,
+            minCharsHint: l10n.mapSearchMinCharsHint,
+            noResultsText: l10n.mapNoSuggestions,
+            onDismiss: _mapSearchController.dismissOverlay,
+            onResultTap: (result) {
+              unawaited(_handleSearchResultTap(result));
+            },
+          ),
           extraContent: hasExtraContent
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -4380,180 +4377,126 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
-  Widget _buildSearchCard(ThemeData theme) {
+  Widget _buildSearchCard() {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = theme.colorScheme;
-    final radius = KubusRadius.circular(KubusRadius.lg);
-    final accent = context.read<ThemeProvider>().accentColor;
-    final surfaceStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.button,
-      tintBase: scheme.surface,
-    );
-    final hintColor = scheme.onSurfaceVariant;
+    final hintColor = Theme.of(context).colorScheme.onSurfaceVariant;
+    return KubusGeneralSearch(
+      controller: _mapSearchController,
+      hintText: l10n.mapSearchHint,
+      semanticsLabel: 'map_search_input',
+      enableBlur: kubusMapBlurEnabled(context),
+      onSubmitted: (_) => _mapSearchController.onSubmitted(),
+      trailingBuilder: (context, query) {
+        if (query.trim().isNotEmpty) {
+          return IconButton(
+            tooltip: l10n.mapClearSearchTooltip,
+            icon: Icon(Icons.close, color: hintColor),
+            onPressed: () => _mapSearchController.clearQueryWithContext(context),
+          );
+        }
 
-    return ListenableBuilder(
-      listenable: _mapSearchController,
-      builder: (context, _) {
-        final query = _mapSearchController.state.query;
-        final hasText = query.trim().isNotEmpty;
-
-        return CompositedTransformTarget(
-          link: _mapSearchController.fieldLink,
-          child: SizedBox(
-            height: KubusHeaderMetrics.searchBarHeight,
-            child: KubusSearchBar(
-              semanticsLabel: 'map_search_input',
-              hintText: l10n.mapSearchHint,
-              controller: _mapSearchController.textController,
-              focusNode: _mapSearchController.focusNode,
-              enableBlur: kubusMapBlurEnabled(context),
-              onChanged: (value) => _mapSearchController.onQueryChanged(
-                context,
-                value,
+        return Tooltip(
+          message: _filtersExpanded
+              ? l10n.mapHideFiltersTooltip
+              : l10n.mapShowFiltersTooltip,
+          preferBelow: false,
+          verticalOffset: 18,
+          margin: const EdgeInsets.symmetric(horizontal: 24),
+          child: IconButton(
+            key: _tutorialFilterButtonKey,
+            icon: Icon(
+              _filtersExpanded ? Icons.filter_alt_off : Icons.filter_alt,
+              color: hintColor,
+            ),
+            style: IconButton.styleFrom(
+              minimumSize: const Size(
+                KubusHeaderMetrics.actionHitArea,
+                KubusHeaderMetrics.actionHitArea,
               ),
-              onSubmitted: (_) {
-                _mapSearchController.onSubmitted();
-              },
-              trailingBuilder: (context, _) {
-                if (hasText) {
-                  return IconButton(
-                    tooltip: l10n.mapClearSearchTooltip,
-                    icon: Icon(Icons.close, color: hintColor),
-                    onPressed: () {
-                      _mapSearchController.clearQueryWithContext(context);
-                    },
-                  );
-                }
-
-                return Tooltip(
-                  message: _filtersExpanded
-                      ? l10n.mapHideFiltersTooltip
-                      : l10n.mapShowFiltersTooltip,
-                  preferBelow: false,
-                  verticalOffset: 18,
-                  margin: const EdgeInsets.symmetric(horizontal: 24),
-                  child: IconButton(
-                    key: _tutorialFilterButtonKey,
-                    icon: Icon(
-                      _filtersExpanded
-                          ? Icons.filter_alt_off
-                          : Icons.filter_alt,
-                      color: hintColor,
-                    ),
-                    style: IconButton.styleFrom(
-                      minimumSize: const Size(
-                        KubusHeaderMetrics.actionHitArea,
-                        KubusHeaderMetrics.actionHitArea,
-                      ),
-                      maximumSize: const Size(
-                        KubusHeaderMetrics.actionHitArea,
-                        KubusHeaderMetrics.actionHitArea,
-                      ),
-                      padding: EdgeInsets.zero,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(KubusRadius.sm),
-                      ),
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _filtersExpanded = !_filtersExpanded;
-                      });
-                    },
-                  ),
-                );
-              },
-              style: KubusSearchBarStyle(
-                borderRadius: radius,
-                backgroundColor: surfaceStyle.tintColor,
-                borderColor: accent.withValues(alpha: 0.22),
-                focusedBorderColor: accent,
-                borderWidth: 1,
-                focusedBorderWidth: 2,
-                blurSigma: surfaceStyle.blurSigma,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: KubusSpacing.md,
-                  vertical: KubusSpacing.md - KubusSpacing.xxs,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: scheme.shadow.withValues(
-                      alpha: theme.brightness == Brightness.dark
-                          ? KubusGlassEffects.shadowOpacityDark
-                          : KubusGlassEffects.shadowOpacityLight,
-                    ),
-                    blurRadius: 18,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-                focusedBoxShadow: [
-                  BoxShadow(
-                    color: scheme.shadow.withValues(
-                      alpha: theme.brightness == Brightness.dark
-                          ? KubusGlassEffects.shadowOpacityDark
-                          : KubusGlassEffects.shadowOpacityLight,
-                    ),
-                    blurRadius: 20,
-                    offset: const Offset(0, 12),
-                  ),
-                ],
-                prefixIconConstraints: const BoxConstraints(
-                  minWidth: KubusHeaderMetrics.actionHitArea,
-                  minHeight: KubusHeaderMetrics.actionHitArea,
-                ),
-                suffixIconConstraints: const BoxConstraints(
-                  minWidth: KubusHeaderMetrics.actionHitArea,
-                  minHeight: KubusHeaderMetrics.actionHitArea,
-                ),
-                textStyle: KubusTypography.textTheme.bodyMedium?.copyWith(
-                  color: scheme.onSurface,
-                ),
-                hintStyle: KubusTypography.textTheme.bodyMedium?.copyWith(
-                  color: hintColor,
-                ),
+              maximumSize: const Size(
+                KubusHeaderMetrics.actionHitArea,
+                KubusHeaderMetrics.actionHitArea,
+              ),
+              padding: EdgeInsets.zero,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(KubusRadius.sm),
               ),
             ),
+            onPressed: () {
+              setState(() {
+                _filtersExpanded = !_filtersExpanded;
+              });
+            },
           ),
         );
       },
     );
   }
 
-  Future<void> _handleSuggestionTap(MapSearchSuggestion suggestion) async {
-    // Update the shared controller (keeps mobile + desktop consistent).
-    _mapSearchController.textController.text = suggestion.label;
-    _mapSearchController.textController.selection =
-        TextSelection.collapsed(offset: suggestion.label.length);
-    _mapSearchController.onQueryChanged(context, suggestion.label);
-    _mapSearchController.dismissOverlay(unfocus: true);
+  Future<void> _handleSearchResultTap(KubusSearchResult result) async {
+    _mapSearchController.setQuery(context, result.label);
+    _mapSearchController.dismissOverlay();
+    FocusScope.of(context).unfocus();
 
-    if (suggestion.position != null) {
+    if (result.position != null) {
       unawaited(
         _kubusMapController.animateTo(
-          suggestion.position!,
+          result.position!,
           zoom: math.max(_lastZoom, 16.0),
         ),
       );
     }
 
     if (!mounted) return;
-    if (suggestion.type == 'artwork' && suggestion.id != null) {
+    if (result.kind == KubusSearchResultKind.artwork && result.id != null) {
       // Find an existing marker for this artwork, or create a temporary one
       // so the floating info card can be shown instead of immediately navigating.
       final marker = _findOrCreateMarkerForArtwork(
-        suggestion.id!,
-        suggestion.position,
-        suggestion.label,
+        result.id!,
+        result.position,
+        result.label,
       );
       if (marker != null) {
         _handleMarkerTap(marker);
         return;
       }
       // Fallback: open detail screen directly if no marker found
-      await openArtwork(context, suggestion.id!, source: 'map_search');
-    } else if (suggestion.type == 'profile' && suggestion.id != null) {
-      await UserProfileNavigation.open(context, userId: suggestion.id!);
+      await openArtwork(context, result.id!, source: 'map_search');
+      return;
     }
+
+    if (result.kind == KubusSearchResultKind.profile && result.id != null) {
+      await UserProfileNavigation.open(context, userId: result.id!);
+      return;
+    }
+
+    if (result.kind != KubusSearchResultKind.marker) return;
+
+    final marker = _findLoadedMarkerForSearchResult(result);
+    if (marker != null) {
+      _handleMarkerTap(marker);
+    }
+  }
+
+  ArtMarker? _findLoadedMarkerForSearchResult(KubusSearchResult result) {
+    final resultId = result.id?.trim() ?? '';
+    final normalizedLabel = result.label.trim().toLowerCase();
+    final position = result.position;
+
+    return _artMarkers.where((marker) {
+      if (resultId.isNotEmpty) {
+        if (marker.id == resultId || marker.artworkId == resultId) {
+          return true;
+        }
+      }
+      if (normalizedLabel.isNotEmpty &&
+          marker.name.trim().toLowerCase() == normalizedLabel) {
+        return true;
+      }
+      if (position == null) return false;
+      return (marker.position.latitude - position.latitude).abs() < 0.0002 &&
+          (marker.position.longitude - position.longitude).abs() < 0.0002;
+    }).firstOrNull;
   }
 
   /// Finds an existing marker for the artwork, or creates a temporary one

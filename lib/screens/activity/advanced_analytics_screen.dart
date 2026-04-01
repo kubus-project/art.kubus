@@ -1238,13 +1238,11 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           const SizedBox(height: 16),
           Expanded(
             child: analytics.seasonalityData.isEmpty
-                ? Center(
-                    child: EmptyStateCard(
-                      icon: Icons.insights,
-                      title: l10n.analyticsNotEnoughDataTitle,
-                      description: l10n.analyticsSeasonalityEmptyDescription,
-                      showAction: false,
-                    ),
+                ? EmptyStateCard(
+                    icon: Icons.insights,
+                    title: l10n.analyticsNotEnoughDataTitle,
+                    description: l10n.analyticsSeasonalityEmptyDescription,
+                    showAction: false,
                   )
                 : _buildSeasonalityInteractiveBarChart(analytics, scheme),
           ),
@@ -1764,8 +1762,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
 
     DateTime bucketStartUtc(DateTime dt) {
       final utc = dt.toUtc();
-      if (bucket == 'hour')
+      if (bucket == 'hour') {
         return DateTime.utc(utc.year, utc.month, utc.day, utc.hour);
+      }
       return DateTime.utc(utc.year, utc.month, utc.day);
     }
 

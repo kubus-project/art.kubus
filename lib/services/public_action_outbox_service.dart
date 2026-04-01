@@ -141,6 +141,19 @@ class PublicActionOutboxService extends ChangeNotifier {
 
   int get queuedActionCount => _queuedActionCount;
   AppRuntimeMode get lastSeenMode => _lastSeenMode;
+  bool get canQueueSignedActions {
+    final signer = _walletService;
+    if (signer == null || !signer.hasActiveKeyPair) {
+      return false;
+    }
+
+    final signerWallet = (signer.activePublicKey ?? '').trim();
+    final resolvedWallet =
+        ((_walletAddressResolver?.call() ?? '').trim()).ifEmpty(signerWallet);
+    return signerWallet.isNotEmpty &&
+        resolvedWallet.isNotEmpty &&
+        signerWallet == resolvedWallet;
+  }
 
   Future<void> initialize() {
     final existing = _initializeFuture;

@@ -23,9 +23,10 @@ class AppModeUnavailableState extends StatelessWidget {
     final appModeProvider = context.watch<AppModeProvider?>();
     final description = appModeProvider?.unavailableMessageFor(featureLabel) ??
         '$featureLabel is currently unavailable.';
-    return Center(
-      child: Padding(
-        padding: padding,
+    return Padding(
+      padding: padding,
+      child: SizedBox(
+        width: double.infinity,
         child: EmptyStateCard(
           icon: icon,
           title: title,

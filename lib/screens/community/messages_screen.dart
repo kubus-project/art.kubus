@@ -418,7 +418,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
           }
           final avatar = matchedUser?.profileImageUrl ?? '';
           final name = matchedUser?.name ?? '';
-          // Only set avatar from a real profileImageUrl. Do not fabricate placeholders here â€” AvatarWidget will handle safe fallbacks.
+          // Only set avatar from a real profileImageUrl. Do not fabricate
+          // placeholders here; AvatarWidget will handle safe fallbacks.
           final currentAvatar = _conversationAvatars[c];
           final currentName = _conversationNames[c];
           if ((currentAvatar == null || currentAvatar.isEmpty) &&
@@ -702,7 +703,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
                       }
                     }
                   }
-                  // Prefer any explicit avatar; do not fabricate a placeholder here â€” AvatarWidget will render a safe fallback.
+                  // Prefer any explicit avatar; do not fabricate a placeholder
+                  // here; AvatarWidget will render a safe fallback.
                   final effectiveFallbackAvatar =
                       _normalizeAvatarUrl(fallbackAvatar);
                   final sanitizedFallback =
@@ -1089,7 +1091,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
           }
         }
       } catch (e) {
-        // best-effort: no synthetic fallback assigned here â€” leave null so AvatarWidget shows a safe fallback.
+        // Best effort: leave the fallback null so AvatarWidget shows a safe
+        // placeholder instead of a fabricated avatar.
       }
       if (mounted) setState(() {});
     } catch (e) {

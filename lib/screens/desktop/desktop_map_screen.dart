@@ -32,7 +32,6 @@ import '../../core/app_route_observer.dart';
 import '../../services/map_attribution_helper.dart';
 import '../../services/map_style_service.dart';
 import '../../services/backend_api_service.dart';
-import '../../services/search_service.dart';
 import '../../services/map_data_controller.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
@@ -44,7 +43,6 @@ import '../../utils/map_performance_debug.dart';
 import '../../utils/map_marker_helper.dart';
 import '../../utils/art_marker_list_diff.dart';
 import '../../utils/debouncer.dart';
-import '../../utils/map_search_suggestion.dart';
 import '../../utils/presence_marker_visit.dart';
 import '../../utils/map_viewport_utils.dart';
 import '../../utils/geo_bounds.dart';
@@ -63,7 +61,6 @@ import '../../utils/artwork_media_resolver.dart';
 import '../../utils/artwork_navigation.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/wallet_utils.dart';
-import 'components/desktop_widgets.dart';
 import 'desktop_shell.dart';
 import 'art/desktop_artwork_detail_screen.dart';
 import '../events/exhibition_detail_screen.dart';
@@ -76,7 +73,6 @@ import '../../features/map/shared/map_overlay_sizing.dart';
 import '../../features/map/map_layers_manager.dart';
 import '../../features/map/map_overlay_stack.dart';
 import '../../features/map/controller/kubus_map_controller.dart';
-import '../../features/map/search/map_search_controller.dart';
 import '../../features/map/tutorial/map_tutorial_coordinator.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
@@ -104,6 +100,10 @@ import '../../widgets/common/kubus_marker_overlay_card.dart';
 import '../../widgets/common/kubus_search_overlay_scaffold.dart';
 import '../../widgets/common/kubus_sort_option.dart';
 import '../../widgets/map/overlays/kubus_marker_overlay_card_wrapper.dart';
+import '../../widgets/search/kubus_general_search.dart';
+import '../../widgets/search/kubus_search_config.dart';
+import '../../widgets/search/kubus_search_controller.dart';
+import '../../widgets/search/kubus_search_result.dart';
 import '../../widgets/map/panels/kubus_detail_panel.dart';
 import '../../features/map/nearby/nearby_art_controller.dart';
 import '../../widgets/map/nearby/kubus_nearby_art_panel.dart';
@@ -260,7 +260,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   static const Duration _markerRefreshInterval =
       MapScreenConstants.markerRefreshInterval;
 
-  late final MapSearchController _mapSearchController;
+  late final KubusSearchController _mapSearchController;
   late final MapViewPreferencesController _mapViewPreferencesController;
   late final MapTutorialCoordinator _mapTutorialCoordinator;
   bool _pendingSafeSetState = false;
@@ -318,10 +318,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
     _mapTutorialCoordinator.addListener(_handleTutorialCoordinatorChanged);
 
-    _mapSearchController = MapSearchController(
-      scope: SearchScope.map,
-      limit: 8,
-      showOverlayOnFocus: false,
+    _mapSearchController = KubusSearchController(
+      config: const KubusSearchConfig(
+        scope: KubusSearchScope.map,
+        limit: 8,
+        showOverlayOnFocus: false,
+      ),
     );
     _mapSearchController.addListener(_handleMapSearchControllerChanged);
 
@@ -425,7 +427,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       onBackgroundTap: () {
         if (!mounted) return;
         _perf.recordSetState('backgroundTap');
-        _mapSearchController.dismissOverlay(unfocus: true);
+        _mapSearchController.dismissOverlay();
         _safeSetState(() {
           _selectedArtwork = null;
           _selectedExhibition = null;
@@ -1034,7 +1036,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   void _pausePolling() {
     _mapDataCoordinator.cancelPending();
     _cubeSyncDebouncer.cancel();
-    _mapSearchController.dismissOverlay(unfocus: false);
+    _mapSearchController.dismissOverlay();
 
     final createdSub = _markerStreamSub;
     if (createdSub != null) {
@@ -1939,8 +1941,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         final trimmed = state.query.trim();
         final shouldShow = state.isOverlayVisible &&
             (state.isFetching ||
-                state.suggestions.isNotEmpty ||
-                trimmed.length >= _mapSearchController.minChars);
+                state.results.isNotEmpty ||
+                trimmed.length >= _mapSearchController.config.minChars);
 
         return KubusSearchOverlayScaffold(
           layout: KubusSearchOverlayLayout.sidePanel,
@@ -1973,7 +1975,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             ],
           ),
           searchField: _buildDesktopSearchField(l10n),
-          searchFieldLink: _mapSearchController.fieldLink,
           filterChips: _buildDesktopFilterChipRow(themeProvider),
           mapToggle: KeyedSubtree(
             key: _tutorialFiltersButtonKey,
@@ -1997,17 +1998,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               tooltipMargin: const EdgeInsets.symmetric(horizontal: 24),
             ),
           ),
-          showSuggestions: shouldShow,
-          query: state.query,
-          isFetching: state.isFetching,
-          suggestions: state.suggestions,
-          accentColor: themeProvider.accentColor,
-          minCharsHint: l10n.mapSearchMinCharsHint,
-          noResultsText: l10n.commonNoResultsFound,
-          onDismissSuggestions: () {
-            _mapSearchController.dismissOverlay(unfocus: false);
-          },
-          onSuggestionTap: _handleSuggestionTap,
+          searchDropdown: KubusSearchResultsOverlay(
+            controller: _mapSearchController,
+            accentColor: themeProvider.accentColor,
+            minCharsHint: l10n.mapSearchMinCharsHint,
+            noResultsText: l10n.commonNoResultsFound,
+            enabled: shouldShow,
+            maxWidth: 520,
+            onDismiss: _mapSearchController.dismissOverlay,
+            onResultTap: _handleSearchResultTap,
+          ),
         );
       },
     );
@@ -2017,30 +2017,15 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final useMapBlur = kubusMapBlurEnabled(context);
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 480),
-      child: CompositedTransformTarget(
-        link: _mapSearchController.fieldLink,
-        child: KeyedSubtree(
-          key: _tutorialSearchKey,
-          child: Semantics(
-            label: 'map_search_input',
-            textField: true,
-            child: MouseRegion(
-              cursor: SystemMouseCursors.text,
-              child: DesktopSearchBar(
-                controller: _mapSearchController.textController,
-                focusNode: _mapSearchController.focusNode,
-                hintText: l10n.mapSearchHint,
-                enableBlur: useMapBlur,
-                onChanged: (value) {
-                  _mapSearchController.onQueryChanged(
-                    context,
-                    value,
-                  );
-                },
-                onSubmitted: _handleSearchSubmit,
-              ),
-            ),
-          ),
+      child: KeyedSubtree(
+        key: _tutorialSearchKey,
+        child: KubusGeneralSearch(
+          controller: _mapSearchController,
+          hintText: l10n.mapSearchHint,
+          semanticsLabel: 'map_search_input',
+          enableBlur: useMapBlur,
+          mouseCursor: SystemMouseCursors.text,
+          onSubmitted: _handleSearchSubmit,
         ),
       ),
     );
@@ -2427,7 +2412,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       final end = exhibition.endsAt != null
           ? _formatExhibitionDate(exhibition.endsAt!)
           : null;
-      dateRange = [start, end].whereType<String>().join(' â€“ ');
+      dateRange = [start, end].whereType<String>().join(' - ');
       if (dateRange.trim().isEmpty) dateRange = null;
     }
 
@@ -3254,30 +3239,60 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
   }
 
-  void _handleSuggestionTap(MapSearchSuggestion suggestion) {
-    _mapSearchController.textController.text = suggestion.label;
-    _mapSearchController.textController.selection =
-        TextSelection.collapsed(offset: suggestion.label.length);
+  void _handleSearchResultTap(KubusSearchResult result) {
+    _mapSearchController.setQuery(context, result.label);
     // Sync controller state without leaving a pending debounced fetch.
-    _mapSearchController.onQueryChanged(context, suggestion.label);
-    _mapSearchController.dismissOverlay(unfocus: true);
+    _mapSearchController.dismissOverlay();
+    FocusScope.of(context).unfocus();
 
-    if (suggestion.position != null) {
+    if (result.position != null) {
       _moveCamera(
-        suggestion.position!,
+        result.position!,
         math.max(_effectiveZoom, 15.0),
       );
     }
 
-    if (suggestion.type == 'artwork' && suggestion.id != null) {
+    if (result.kind == KubusSearchResultKind.artwork && result.id != null) {
       unawaited(_selectArtworkById(
-        suggestion.id!,
-        focusPosition: suggestion.position,
+        result.id!,
+        focusPosition: result.position,
         openDetail: true,
       ));
-    } else if (suggestion.type == 'profile' && suggestion.id != null) {
-      unawaited(UserProfileNavigation.open(context, userId: suggestion.id!));
+      return;
     }
+
+    if (result.kind == KubusSearchResultKind.profile && result.id != null) {
+      unawaited(UserProfileNavigation.open(context, userId: result.id!));
+      return;
+    }
+
+    if (result.kind != KubusSearchResultKind.marker) return;
+
+    final marker = _findLoadedMarkerForSearchResult(result);
+    if (marker != null) {
+      _handleMarkerTap(marker);
+    }
+  }
+
+  ArtMarker? _findLoadedMarkerForSearchResult(KubusSearchResult result) {
+    final resultId = result.id?.trim() ?? '';
+    final normalizedLabel = result.label.trim().toLowerCase();
+    final position = result.position;
+
+    return _artMarkers.where((marker) {
+      if (resultId.isNotEmpty) {
+        if (marker.id == resultId || marker.artworkId == resultId) {
+          return true;
+        }
+      }
+      if (normalizedLabel.isNotEmpty &&
+          marker.name.trim().toLowerCase() == normalizedLabel) {
+        return true;
+      }
+      if (position == null) return false;
+      return (marker.position.latitude - position.latitude).abs() < 0.0002 &&
+          (marker.position.longitude - position.longitude).abs() < 0.0002;
+    }).firstOrNull;
   }
 
   String _markerQueryFiltersKey() {

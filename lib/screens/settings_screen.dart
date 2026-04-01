@@ -2658,7 +2658,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               foregroundColor: Colors.white,
             ),
             onPressed: () async {
-              // Show confirmation dialog â€” ensure mounted before calling showDialog
+              // Show confirmation dialog; ensure mounted before calling showDialog.
               if (!mounted) return;
               final dialogNavigator = Navigator.of(dialogContext);
               final messenger = ScaffoldMessenger.of(context);
@@ -3206,7 +3206,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              'Â© 2025 kubus',
+              '\u00A9 2025 kubus',
               style: KubusTypography.inter(
                 color: Theme.of(context)
                     .colorScheme

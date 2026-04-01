@@ -1709,6 +1709,9 @@ class BackendApiService
               baseUrl: candidateBaseUrl);
           return response;
         }
+        if (!_isTransientWriteStatusCode(response.statusCode)) {
+          return response;
+        }
         lastResponse = response;
       } catch (error) {
         lastError = error;
@@ -1755,6 +1758,19 @@ class BackendApiService
         payload: payload,
       ),
     );
+  }
+
+  String _queueUnavailableMessage(String entityType) {
+    switch (entityType.trim().toLowerCase()) {
+      case 'artwork':
+        return 'Artwork actions are unavailable while the app is running on public snapshot fallback.';
+      case 'post':
+        return 'Post actions are unavailable while the app is running on public snapshot fallback.';
+      case 'profile':
+        return 'Follow actions are unavailable while the app is running on public snapshot fallback.';
+      default:
+        return 'This action is unavailable while the app is running on public snapshot fallback.';
+    }
   }
 
   void _throwIfIpfsFallbackUnavailable(String featureLabel) {
@@ -1852,6 +1868,9 @@ class BackendApiService
     bool isIdempotent = false,
   }) async {
     if (_publicFallbackService.mode == AppRuntimeMode.ipfsFallback) {
+      if (!_publicActionOutboxService.canQueueSignedActions) {
+        throw Exception(_queueUnavailableMessage(entityType));
+      }
       await _queuePublicAction(
         actionType: actionType,
         entityType: entityType,
@@ -1892,6 +1911,16 @@ class BackendApiService
     }
 
     if (_shouldQueuePublicActionAfterFailure(response, error)) {
+      if (!_publicActionOutboxService.canQueueSignedActions) {
+        if (error != null) {
+          throw error;
+        }
+        throw BackendApiRequestException(
+          statusCode: response?.statusCode ?? 0,
+          path: path,
+          body: response?.body ?? '',
+        );
+      }
       // Queueable mutation failures must not count as dual-backend outages.
       // Global fallback mode should be driven by health/read probes.
       await _queuePublicAction(
@@ -3661,7 +3690,6 @@ class BackendApiService
   /// GET /api/profiles/artists/list
   Future<List<Map<String, dynamic>>> listArtists({
     bool? verified,
-    bool? featured,
     int limit = 50,
     int offset = 0,
   }) async {
@@ -3671,7 +3699,6 @@ class BackendApiService
         'offset': offset.toString(),
       };
       if (verified != null) queryParams['verified'] = verified.toString();
-      if (featured != null) queryParams['featured'] = featured.toString();
 
       final uri = Uri.parse('$baseUrl/api/profiles/artists/list')
           .replace(queryParameters: queryParams);
@@ -4690,6 +4717,8 @@ class BackendApiService
   /// GET /api/art-markers/:id/claims
   @override
   Future<List<StreetArtClaim>> getStreetArtClaims(String markerId) async {
+    _throwIfIpfsFallbackUnavailable('Street art claims');
+
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/art-markers/$markerId/claims');
@@ -9266,7 +9295,7 @@ class BackendApiService
     // while picker flows may pass MIME strings such as `image/jpeg`.
     final rawType = fileType.trim().toLowerCase();
     final normalizedType =
-      rawType.isEmpty || rawType.startsWith('image/') ? 'image' : rawType;
+        rawType.isEmpty || rawType.startsWith('image/') ? 'image' : rawType;
 
     final upload = await uploadFile(
       fileBytes: fileBytes,

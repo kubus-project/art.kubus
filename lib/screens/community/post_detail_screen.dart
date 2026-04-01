@@ -412,9 +412,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     }
                     final likes = snapshot.data ?? <CommunityLikeUser>[];
                     if (likes.isEmpty) {
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(KubusSpacing.lg),
+                      return Padding(
+                        padding: const EdgeInsets.all(KubusSpacing.lg),
+                        child: SizedBox(
+                          width: double.infinity,
                           child: EmptyStateCard(
                             icon: Icons.favorite_border,
                             title: l10n.postDetailNoLikesTitle,
@@ -551,9 +552,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     }
                     final likes = snapshot.data ?? <CommunityLikeUser>[];
                     if (likes.isEmpty) {
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(KubusSpacing.lg),
+                      return Padding(
+                        padding: const EdgeInsets.all(KubusSpacing.lg),
+                        child: SizedBox(
+                          width: double.infinity,
                           child: EmptyStateCard(
                             icon: Icons.favorite_border,
                             title: l10n.postDetailNoLikesTitle,
@@ -690,11 +692,15 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   }
                   final reposts = snapshot.data ?? [];
                   if (reposts.isEmpty) {
-                    return Center(
-                      child: EmptyStateCard(
-                        icon: Icons.repeat,
-                        title: l10n.communityNoRepostsTitle,
-                        description: l10n.communityNoRepostsDescription,
+                    return Padding(
+                      padding: const EdgeInsets.all(KubusSpacing.lg),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: EmptyStateCard(
+                          icon: Icons.repeat,
+                          title: l10n.communityNoRepostsTitle,
+                          description: l10n.communityNoRepostsDescription,
+                        ),
                       ),
                     );
                   }

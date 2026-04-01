@@ -9,7 +9,6 @@ import '../providers/themeprovider.dart';
 import '../providers/web3provider.dart';
 import '../providers/wallet_provider.dart';
 import '../providers/navigation_provider.dart';
-import '../providers/artwork_provider.dart';
 import '../providers/promotion_provider.dart';
 import '../providers/notification_provider.dart';
 import '../providers/recent_activity_provider.dart';
@@ -55,15 +54,15 @@ import '../utils/user_profile_navigation.dart';
 import '../utils/home_search_destination.dart';
 import '../widgets/staggered_fade_slide.dart';
 import '../utils/artwork_navigation.dart';
-import '../services/search_service.dart';
 import '../widgets/glass_components.dart';
 import '../widgets/common/kubus_labs_adornment.dart';
 import '../widgets/common/kubus_screen_header.dart';
-import '../widgets/search/kubus_search_bar.dart';
+import '../widgets/search/kubus_general_search.dart';
+import '../widgets/search/kubus_search_config.dart';
+import '../widgets/search/kubus_search_controller.dart';
+import '../widgets/search/kubus_search_result.dart';
 import '../widgets/support/support_section.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
-import '../features/map/search/map_search_controller.dart';
-import '../utils/map_search_suggestion.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -74,15 +73,16 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _animationController;
-  late final MapSearchController _homeSearchController;
+  late final KubusSearchController _homeSearchController;
 
   @override
   void initState() {
     super.initState();
-    _homeSearchController = MapSearchController(
-      scope: SearchScope.home,
-      limit: 8,
-      showOverlayOnFocus: false,
+    _homeSearchController = KubusSearchController(
+      config: const KubusSearchConfig(
+        scope: KubusSearchScope.home,
+        limit: 8,
+      ),
     );
     _animationController = AnimationController(
       duration: AppAnimationTheme.defaults.long,
@@ -406,141 +406,64 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildHomeSearchSection() {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final accent = Provider.of<ThemeProvider>(context).accentColor;
-    final surfaceStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.button,
-      tintBase: scheme.surface,
-    );
-
     return ListenableBuilder(
       listenable: _homeSearchController,
       builder: (context, _) {
         final query = _homeSearchController.state.query;
         final hasText = query.trim().isNotEmpty;
 
-        return CompositedTransformTarget(
-          link: _homeSearchController.fieldLink,
-          child: SizedBox(
-            height: KubusHeaderMetrics.searchBarHeight,
-            child: KubusSearchBar(
-              semanticsLabel: 'home_search_input',
-              hintText: AppLocalizations.of(context)!.commonSearchHint,
-              controller: _homeSearchController.textController,
-              focusNode: _homeSearchController.focusNode,
-              onChanged: (value) =>
-                  _homeSearchController.onQueryChanged(context, value),
-              onSubmitted: (_) => _handleHomeSearchSubmit(),
-              trailingBuilder: (context, _) {
-                if (!hasText) return const SizedBox.shrink();
-                return IconButton(
-                  tooltip:
-                      MaterialLocalizations.of(context).deleteButtonTooltip,
-                  icon: Icon(
-                    Icons.close,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                  onPressed: () {
-                    _homeSearchController.clearQueryWithContext(context);
-                  },
-                );
-              },
-              style: KubusSearchBarStyle(
-                borderRadius: BorderRadius.circular(KubusRadius.lg),
-                backgroundColor: surfaceStyle.tintColor,
-                borderColor: scheme.outline.withValues(alpha: 0.18),
-                focusedBorderColor: accent,
-                borderWidth: 1,
-                focusedBorderWidth: 2,
-                blurSigma: null,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: KubusSpacing.md,
-                  vertical: KubusSpacing.md - KubusSpacing.xxs,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: scheme.shadow.withValues(alpha: 0.08),
-                    blurRadius: 12,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-                focusedBoxShadow: [
-                  BoxShadow(
-                    color: accent.withValues(alpha: 0.14),
-                    blurRadius: 14,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-                prefixIconConstraints: const BoxConstraints(
-                  minWidth: KubusHeaderMetrics.actionHitArea,
-                  minHeight: KubusHeaderMetrics.actionHitArea,
-                ),
-                suffixIconConstraints: const BoxConstraints(
-                  minWidth: KubusHeaderMetrics.actionHitArea,
-                  minHeight: KubusHeaderMetrics.actionHitArea,
-                ),
-                textStyle: KubusTypography.textTheme.bodyMedium?.copyWith(
-                  color: scheme.onSurface,
-                ),
-                hintStyle: KubusTypography.textTheme.bodyMedium?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
+        return KubusGeneralSearch(
+          controller: _homeSearchController,
+          semanticsLabel: 'home_search_input',
+          hintText: AppLocalizations.of(context)!.commonSearchHint,
+          onSubmitted: (_) => _handleHomeSearchSubmit(),
+          trailingBuilder: (context, _) {
+            if (!hasText) return const SizedBox.shrink();
+            return IconButton(
+              tooltip: MaterialLocalizations.of(context).deleteButtonTooltip,
+              icon: Icon(
+                Icons.close,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildHomeSearchOverlay() {
-    return ListenableBuilder(
-      listenable: _homeSearchController,
-      builder: (context, _) {
-        final state = _homeSearchController.state;
-        if (!state.isOverlayVisible) {
-          return const SizedBox.shrink();
-        }
-
-        return KubusSearchSuggestionsOverlay(
-          link: _homeSearchController.fieldLink,
-          query: state.query,
-          isFetching: state.isFetching,
-          suggestions: state.suggestions,
-          accentColor: Provider.of<ThemeProvider>(context).accentColor,
-          minCharsHint: AppLocalizations.of(context)!.mapSearchMinCharsHint,
-          noResultsText: AppLocalizations.of(context)!.commonNoSuggestions,
-          onDismiss: () => _homeSearchController.dismissOverlay(),
-          onSuggestionTap: (suggestion) {
-            unawaited(_handleHomeSearchSuggestionTap(suggestion));
+              onPressed: () {
+                _homeSearchController.clearQueryWithContext(context);
+              },
+            );
           },
         );
       },
     );
   }
 
+  Widget _buildHomeSearchOverlay() {
+    return KubusSearchResultsOverlay(
+      controller: _homeSearchController,
+      accentColor: Provider.of<ThemeProvider>(context).accentColor,
+      minCharsHint: AppLocalizations.of(context)!.mapSearchMinCharsHint,
+      noResultsText: AppLocalizations.of(context)!.commonNoSuggestions,
+      onResultTap: (result) {
+        unawaited(_handleHomeSearchResultTap(result));
+      },
+    );
+  }
+
   void _handleHomeSearchSubmit() {
     final query = _homeSearchController.state.query.trim();
-    final suggestions = _homeSearchController.state.suggestions;
-    _homeSearchController.onSubmitted();
+    final results = _homeSearchController.state.results;
     if (query.isEmpty) return;
-    if (suggestions.isNotEmpty) {
-      unawaited(_handleHomeSearchSuggestionTap(suggestions.first));
+    if (results.isNotEmpty) {
+      unawaited(_handleHomeSearchResultTap(results.first));
     }
   }
 
-  Future<void> _handleHomeSearchSuggestionTap(
-    MapSearchSuggestion suggestion,
+  Future<void> _handleHomeSearchResultTap(
+    KubusSearchResult result,
   ) async {
-    _homeSearchController.textController.text = suggestion.label;
-    _homeSearchController.textController.selection =
-        TextSelection.collapsed(offset: suggestion.label.length);
-    _homeSearchController.onQueryChanged(context, suggestion.label);
-    _homeSearchController.dismissOverlay(unfocus: true);
+    _homeSearchController.setQuery(context, result.label);
+    _homeSearchController.dismissOverlay();
+    FocusScope.of(context).unfocus();
 
-    final destination = HomeSearchDestination.fromSuggestion(suggestion);
+    final destination = HomeSearchDestination.fromResult(result);
     switch (destination.kind) {
       case HomeSearchDestinationKind.artwork:
         await openArtwork(context, destination.id!, source: 'home_search');
@@ -1267,8 +1190,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             final v = (snapshot.counters[key] ?? 0);
             return _formatCompactCount(v);
           }
-          if (isLoading) return 'â€¦';
-          if (error != null) return 'â€”';
+          if (isLoading) return '...';
+          if (error != null) return '-';
           return '0';
         }
 
@@ -1965,14 +1888,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildFeaturedArtworks() {
-    return Consumer2<ArtworkProvider, PromotionProvider>(
-      builder: (context, artworkProvider, promotionProvider, child) {
+    return Consumer<PromotionProvider>(
+      builder: (context, promotionProvider, child) {
         final l10n = AppLocalizations.of(context)!;
-        final featuredArtworks = (promotionProvider.featuredArtworks.isNotEmpty
-                ? promotionProvider.featuredArtworks
-                : artworkProvider.artworks)
-            .take(6)
-            .toList();
+        final featuredArtworks =
+            promotionProvider.featuredArtworks.take(6).toList();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,

@@ -1127,7 +1127,14 @@ class _ConversationScreenState extends State<ConversationScreen> {
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: ['ðŸ‘', 'â¤ï¸', 'ðŸ˜‚', 'ðŸ˜®', 'ðŸ˜¢', 'ðŸ˜¡']
+                children: const <String>[
+                  '\u{1F44D}',
+                  '\u2764\uFE0F',
+                  '\u{1F602}',
+                  '\u{1F62E}',
+                  '\u{1F622}',
+                  '\u{1F621}',
+                ]
                     .map((emoji) {
                   return GestureDetector(
                     onTap: () {

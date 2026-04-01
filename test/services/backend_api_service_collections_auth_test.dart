@@ -27,6 +27,19 @@ class _FakeWalletService extends SolanaWalletService {
   }
 }
 
+class _InactiveWalletService extends SolanaWalletService {
+  @override
+  bool get hasActiveKeyPair => false;
+
+  @override
+  String? get activePublicKey => null;
+
+  @override
+  Future<String> signMessageBase64(String messageBase64) async {
+    throw UnsupportedError('No signing key available');
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -184,5 +197,116 @@ void main() {
     expect(fallbackService.consecutiveDualFailures, 0);
     expect(fallbackService.mode, AppRuntimeMode.live);
     expect(outboxService.queuedActionCount, 1);
+  });
+
+  test('queueable writes preserve primary 4xx instead of queuing via standby',
+      () async {
+    final requests = <http.Request>[];
+    final outboxService = PublicActionOutboxService();
+    final api = BackendApiService();
+
+    api.setHttpClient(MockClient((request) async {
+      requests.add(request);
+      if (request.url.host == Uri.parse(AppConfig.baseApiUrl).host) {
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'success': false,
+            'error': 'artwork not found',
+          }),
+          404,
+          headers: const <String, String>{'content-type': 'application/json'},
+        );
+      }
+
+      return http.Response(
+        jsonEncode(<String, Object?>{
+          'success': false,
+          'error': 'standby unavailable',
+        }),
+        503,
+        headers: const <String, String>{'content-type': 'application/json'},
+      );
+    }));
+
+    await expectLater(
+      api.likeArtwork('missing-artwork'),
+      throwsA(
+        isA<BackendApiRequestException>().having(
+          (error) => error.statusCode,
+          'statusCode',
+          404,
+        ),
+      ),
+    );
+
+    expect(requests, hasLength(1));
+    expect(requests.single.url.host, Uri.parse(AppConfig.baseApiUrl).host);
+    expect(outboxService.queuedActionCount, 0);
+  });
+
+  test('ipfs fallback write path does not queue when session cannot sign',
+      () async {
+    final fallbackService = PublicFallbackService();
+    final outboxService = PublicActionOutboxService();
+    final api = BackendApiService();
+
+    await outboxService.resetForTesting();
+    outboxService.bindSigner(
+      walletService: _InactiveWalletService(),
+      walletAddressResolver: () => 'WalletTest111111111111111111111111111111',
+    );
+    await outboxService.initialize();
+
+    for (var i = 0; i < AppConfig.backendOutageFailureThreshold; i += 1) {
+      fallbackService.recordDualBackendFailure();
+    }
+
+    await expectLater(
+      api.likeArtwork('art-ipfs-no-signer'),
+      throwsA(
+        isA<Exception>().having(
+          (error) => error.toString(),
+          'message',
+          contains('public snapshot fallback'),
+        ),
+      ),
+    );
+
+    expect(fallbackService.mode, AppRuntimeMode.ipfsFallback);
+    expect(outboxService.queuedActionCount, 0);
+  });
+
+  test('street art claims are blocked while snapshot fallback is active',
+      () async {
+    final fallbackService = PublicFallbackService();
+    final api = BackendApiService();
+    var requestCount = 0;
+
+    api.setHttpClient(MockClient((request) async {
+      requestCount += 1;
+      return http.Response(
+        jsonEncode(<String, Object?>{'success': true, 'data': <Object?>[]}),
+        200,
+        headers: const <String, String>{'content-type': 'application/json'},
+      );
+    }));
+
+    for (var i = 0; i < AppConfig.backendOutageFailureThreshold; i += 1) {
+      fallbackService.recordDualBackendFailure();
+    }
+
+    await expectLater(
+      api.getStreetArtClaims('marker-ipfs'),
+      throwsA(
+        isA<Exception>().having(
+          (error) => error.toString(),
+          'message',
+          contains('Street art claims is unavailable'),
+        ),
+      ),
+    );
+
+    expect(fallbackService.mode, AppRuntimeMode.ipfsFallback);
+    expect(requestCount, 0);
   });
 }
