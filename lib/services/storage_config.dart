@@ -7,9 +7,9 @@ import '../config/config.dart';
 class StorageConfig {
   // IPFS Gateways (prioritized list)
   static const List<String> ipfsGateways = [
+    'https://dweb.link/ipfs/',
     'https://ipfs.io/ipfs/',
     'https://gateway.pinata.cloud/ipfs/',
-    'https://dweb.link/ipfs/',
   ];
 
   // Optional overrides via --dart-define for dev/staging builds.
@@ -42,65 +42,92 @@ class StorageConfig {
   static String get pinataSecretKey => ApiKeys.pinataSecretKey;
 
   static List<String> get activeIpfsGateways {
-    final single = _selectGateway(_envIpfsGateway);
-    if (single.trim().isNotEmpty) return [single.trim()];
+    final ordered = <String>[];
+    final seen = <String>{};
+
+    void addCandidate(String raw) {
+      final trimmed = raw.trim();
+      if (trimmed.isEmpty) return;
+      if (seen.add(trimmed)) {
+        ordered.add(trimmed);
+      }
+    }
+
+    final single = _envIpfsGateway.trim();
+    if (single.isNotEmpty) {
+      for (final value in single.split(',')) {
+        addCandidate(value);
+      }
+    }
 
     final csv = _envIpfsGateways.trim();
     if (csv.isNotEmpty) {
-      return csv
-          .split(',')
-          .map((e) => e.trim())
-          .where((e) => e.isNotEmpty)
-          .toList(growable: false);
+      for (final value in csv.split(',')) {
+        addCandidate(value);
+      }
     }
 
-    return ipfsGateways;
+    // Always append built-in defaults as fallback candidates.
+    for (final gateway in ipfsGateways) {
+      addCandidate(gateway);
+    }
+
+    return ordered;
   }
 
   /// Resolve storage URLs by handling IPFS CIDs and backend-relative paths.
   /// Falls back to the configured HTTP backend for relative paths.
   static String? resolveUrl(String? raw) {
-    if (raw == null) return null;
+    final candidates = resolveAllUrls(raw);
+    if (candidates.isEmpty) return null;
+    return candidates.first;
+  }
+
+  /// Resolve storage URLs and return all ordered gateway candidates.
+  ///
+  /// The first item is the preferred URL; following items are fallbacks.
+  static List<String> resolveAllUrls(String? raw) {
+    if (raw == null) return const <String>[];
     final url = raw.trim();
-    if (url.isEmpty) return null;
+    if (url.isEmpty) return const <String>[];
 
     // Bare CID (v0 "Qm..." or v1 "bafy..."): treat as IPFS.
     if (isLikelyCid(url)) {
-      return _ipfsGatewayFor(url);
+      return _ipfsGatewayCandidatesFor(url);
     }
 
     // IPFS: handle ipfs://CID, ipfs/CID, or /ipfs/CID variants
     if (url.startsWith('ipfs://')) {
       final cid =
           url.replaceFirst('ipfs://', '').replaceFirst(RegExp(r'^ipfs/'), '');
-      return _ipfsGatewayFor(cid);
+      return _ipfsGatewayCandidatesFor(cid);
     }
     if (url.startsWith('/ipfs/') || url.startsWith('ipfs/')) {
       final cid =
           url.split('/ipfs/').last.replaceFirst(RegExp(r'^ipfs/'), '');
-      return _ipfsGatewayFor(cid);
+      return _ipfsGatewayCandidatesFor(cid);
     }
     if (url.contains('/ipfs/') && !url.startsWith('http')) {
       final cid =
           url.split('/ipfs/').last.replaceFirst(RegExp(r'^ipfs/'), '');
-      return _ipfsGatewayFor(cid);
+      return _ipfsGatewayCandidatesFor(cid);
     }
 
     // IPNS: handle ipns://domain/path, /ipns/domain/path, or ipns/domain/path.
     if (url.startsWith('ipns://')) {
       final path =
           url.replaceFirst('ipns://', '').replaceFirst(RegExp(r'^ipns/'), '');
-      return _ipnsGatewayFor(path);
+      return _ipnsGatewayCandidatesFor(path);
     }
     if (url.startsWith('/ipns/') || url.startsWith('ipns/')) {
       final path =
           url.split('/ipns/').last.replaceFirst(RegExp(r'^ipns/'), '');
-      return _ipnsGatewayFor(path);
+      return _ipnsGatewayCandidatesFor(path);
     }
     if (url.contains('/ipns/') && !url.startsWith('http')) {
       final path =
           url.split('/ipns/').last.replaceFirst(RegExp(r'^ipns/'), '');
-      return _ipnsGatewayFor(path);
+      return _ipnsGatewayCandidatesFor(path);
     }
 
     // Already absolute HTTP(S)
@@ -116,22 +143,22 @@ class StorageConfig {
           final relative = StringBuffer(path);
           if (uri.hasQuery) relative.write('?${uri.query}');
           if (uri.hasFragment) relative.write('#${uri.fragment}');
-          return resolveUrl(relative.toString());
+          return resolveAllUrls(relative.toString());
         }
 
         // On Flutter Web, mixed-content HTTP URLs are blocked on HTTPS sites.
         // Best-effort upgrade to HTTPS in secure contexts.
         if (_isWebSecureContext && uri.scheme == 'http') {
-          return uri.replace(scheme: 'https').toString();
+          return <String>[uri.replace(scheme: 'https').toString()];
         }
       }
-      return url;
+      return <String>[url];
     }
 
     // Relative path: prefix with configured backend when available
     final backend = _effectiveHttpBackendForResolution;
-    if (backend.isEmpty) return url;
-    return url.startsWith('/') ? '$backend$url' : '$backend/$url';
+    if (backend.isEmpty) return <String>[url];
+    return <String>[url.startsWith('/') ? '$backend$url' : '$backend/$url'];
   }
 
   /// Get active HTTP backend URL
@@ -155,19 +182,52 @@ class StorageConfig {
     customHttpBackend = _normalizeBaseUrl(url);
   }
 
-  static String _ipfsGatewayFor(String cid) {
-    final gateways = activeIpfsGateways;
-    final gateway = gateways.isNotEmpty ? gateways.first : '';
-    final normalizedGateway = _normalizeGateway(gateway);
-    return '$normalizedGateway$cid';
+  static List<String> _ipfsGatewayCandidatesFor(String cidOrPath) {
+    final normalizedPath = _normalizeIpfsPath(cidOrPath);
+    if (normalizedPath.isEmpty) return const <String>[];
+
+    final urls = <String>[];
+    final seen = <String>{};
+    for (final gateway in activeIpfsGateways) {
+      final normalizedGateway = _normalizeGateway(gateway);
+      if (normalizedGateway.isEmpty) continue;
+      final candidate = '$normalizedGateway$normalizedPath';
+      if (seen.add(candidate)) {
+        urls.add(candidate);
+      }
+    }
+    return urls;
   }
 
-  static String _ipnsGatewayFor(String path) {
-    final gateways = activeIpfsGateways;
-    final gateway = gateways.isNotEmpty ? gateways.first : '';
-    final normalizedGateway = _normalizeIpnsGateway(gateway);
+  static List<String> _ipnsGatewayCandidatesFor(String path) {
     final normalizedPath = _normalizeMutablePath(path);
-    return '$normalizedGateway$normalizedPath';
+    if (normalizedPath.isEmpty) return const <String>[];
+
+    final urls = <String>[];
+    final seen = <String>{};
+    final gateways = activeIpfsGateways;
+
+    // Prefer a direct dweb.link DNSLink subdomain candidate when possible.
+    for (final gateway in gateways) {
+      final candidate =
+          _buildDwebIpnsSubdomainCandidate(gateway, normalizedPath);
+      if (candidate == null || candidate.isEmpty) continue;
+      if (seen.add(candidate)) {
+        urls.add(candidate);
+      }
+    }
+
+    // Then include standard /ipns/... gateway paths for all configured gateways.
+    for (final gateway in gateways) {
+      final normalizedGateway = _normalizeIpnsGateway(gateway);
+      if (normalizedGateway.isEmpty) continue;
+      final candidate = '$normalizedGateway$normalizedPath';
+      if (seen.add(candidate)) {
+        urls.add(candidate);
+      }
+    }
+
+    return urls;
   }
 
   static String _normalizeBaseUrl(String url) {
@@ -181,6 +241,20 @@ class StorageConfig {
     if (!g.endsWith('/')) g = '$g/';
     if (!g.contains('/ipfs/')) g = '${g}ipfs/';
     return g;
+  }
+
+  static String _normalizeIpfsPath(String path) {
+    var normalized = path.trim();
+    while (normalized.startsWith('/')) {
+      normalized = normalized.substring(1);
+    }
+    if (normalized.startsWith('ipfs/')) {
+      normalized = normalized.substring('ipfs/'.length);
+    }
+    while (normalized.startsWith('/')) {
+      normalized = normalized.substring(1);
+    }
+    return normalized;
   }
 
   static String _normalizeIpnsGateway(String gateway) {
@@ -207,11 +281,42 @@ class StorageConfig {
     return normalized;
   }
 
-  static String _selectGateway(String rawGateway) {
-    final trimmed = rawGateway.trim();
-    if (!trimmed.contains(',')) return trimmed;
-    final parts = trimmed.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
-    return parts.isNotEmpty ? parts.first : trimmed;
+  static String? _buildDwebIpnsSubdomainCandidate(
+    String gateway,
+    String normalizedPath,
+  ) {
+    final parsedGateway = Uri.tryParse(gateway.trim());
+    if (parsedGateway == null) return null;
+    if (parsedGateway.host.toLowerCase() != 'dweb.link') return null;
+
+    final firstSlash = normalizedPath.indexOf('/');
+    final mutableName =
+        firstSlash >= 0 ? normalizedPath.substring(0, firstSlash) : normalizedPath;
+    if (!_looksLikeDnsLinkName(mutableName)) return null;
+
+    final encodedName = _encodeDnsLinkNameForDweb(mutableName);
+    if (encodedName.isEmpty) return null;
+
+    final remainingPath =
+        firstSlash >= 0 ? normalizedPath.substring(firstSlash + 1) : '';
+    final scheme = parsedGateway.scheme.isEmpty ? 'https' : parsedGateway.scheme;
+    final port = parsedGateway.hasPort ? ':${parsedGateway.port}' : '';
+    final suffix = remainingPath.isEmpty ? '' : '/$remainingPath';
+
+    return '$scheme://$encodedName.ipns.dweb.link$port$suffix';
+  }
+
+  static bool _looksLikeDnsLinkName(String value) {
+    final candidate = value.trim();
+    return candidate.contains('.') && candidate.length >= 3;
+  }
+
+  static String _encodeDnsLinkNameForDweb(String value) {
+    final lowered = value.trim().toLowerCase();
+    if (lowered.isEmpty) return '';
+    final replaced = lowered.replaceAll(RegExp(r'[^a-z0-9-]'), '-');
+    final collapsed = replaced.replaceAll(RegExp(r'-+'), '-');
+    return collapsed.replaceAll(RegExp(r'^-+|-+$'), '');
   }
 
   static bool isLikelyCid(String value) {

@@ -284,43 +284,51 @@ class PublicFallbackService extends ChangeNotifier {
       }
     }
 
-    final resolvedUrl =
-        StorageConfig.resolveUrl(AppConfig.publicSnapshotRegistryUrl);
-    if (resolvedUrl == null || resolvedUrl.isEmpty) {
+    final candidateUrls =
+        StorageConfig.resolveAllUrls(AppConfig.publicSnapshotRegistryUrl);
+    if (candidateUrls.isEmpty) {
       return _registryCache;
     }
 
-    try {
-      final response = await _client.get(
-        Uri.parse(resolvedUrl),
-        headers: const <String, String>{
-          'Accept': 'application/json',
-        },
-      ).timeout(const Duration(seconds: 8));
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        return _registryCache;
-      }
+    Object? lastError;
+    for (final candidateUrl in candidateUrls) {
+      try {
+        final response = await _client.get(
+          Uri.parse(candidateUrl),
+          headers: const <String, String>{
+            'Accept': 'application/json',
+          },
+        ).timeout(const Duration(seconds: 8));
+        if (response.statusCode < 200 || response.statusCode >= 300) {
+          continue;
+        }
 
-      final decoded = jsonDecode(response.body);
-      if (decoded is! Map) {
-        return _registryCache;
-      }
+        final decoded = jsonDecode(response.body);
+        if (decoded is! Map) {
+          continue;
+        }
 
-      final registry = PublicSnapshotRegistryRecord.fromJson(
-          Map<String, dynamic>.from(decoded));
-      if (!_hasRequiredDatasets(registry)) {
-        return _registryCache;
-      }
+        final registry = PublicSnapshotRegistryRecord.fromJson(
+            Map<String, dynamic>.from(decoded));
+        if (!_hasRequiredDatasets(registry)) {
+          continue;
+        }
 
-      _registryCache = registry;
-      await _persistRegistry(registry, response.body);
-      return registry;
-    } catch (error) {
+        _registryCache = registry;
+        await _persistRegistry(registry, response.body);
+        return registry;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    if (lastError != null) {
       AppConfig.debugPrint(
-        'PublicFallbackService.loadRegistry failed: $error',
+        'PublicFallbackService.loadRegistry failed across all gateways: $lastError',
       );
-      return _registryCache;
     }
+
+    return _registryCache;
   }
 
   Future<List<dynamic>> loadDatasetArray(
@@ -356,48 +364,57 @@ class PublicFallbackService extends ChangeNotifier {
       return const <dynamic>[];
     }
 
-    final resolvedUrl = StorageConfig.resolveUrl('ipfs://${datasetRecord.cid}');
-    if (resolvedUrl == null || resolvedUrl.isEmpty) {
+    final candidateUrls =
+        StorageConfig.resolveAllUrls('ipfs://${datasetRecord.cid}');
+    if (candidateUrls.isEmpty) {
       return const <dynamic>[];
     }
 
-    try {
-      final response = await _client.get(
-        Uri.parse(resolvedUrl),
-        headers: const <String, String>{
-          'Accept': 'application/json',
-        },
-      ).timeout(const Duration(seconds: 8));
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        return const <dynamic>[];
-      }
+    Object? lastError;
+    for (final candidateUrl in candidateUrls) {
+      try {
+        final response = await _client.get(
+          Uri.parse(candidateUrl),
+          headers: const <String, String>{
+            'Accept': 'application/json',
+          },
+        ).timeout(const Duration(seconds: 8));
+        if (response.statusCode < 200 || response.statusCode >= 300) {
+          continue;
+        }
 
-      final decoded = jsonDecode(response.body);
-      final List<dynamic> items;
-      if (decoded is List) {
-        items = decoded;
-      } else if (decoded is Map && decoded['data'] is List) {
-        items = List<dynamic>.from(decoded['data'] as List);
-      } else {
-        items = const <dynamic>[];
-      }
+        final decoded = jsonDecode(response.body);
+        final List<dynamic> items;
+        if (decoded is List) {
+          items = decoded;
+        } else if (decoded is Map && decoded['data'] is List) {
+          items = List<dynamic>.from(decoded['data'] as List);
+        } else {
+          continue;
+        }
 
-      _datasetCache[normalizedKey] = List<dynamic>.from(items);
-      _datasetCidCache[normalizedKey] = datasetRecord.cid;
-      await _persistDataset(
-        normalizedKey,
-        datasetRecord.cid,
-        response.body,
-      );
-      return List<dynamic>.from(items);
-    } catch (error) {
-      AppConfig.debugPrint(
-        'PublicFallbackService.loadDatasetArray($normalizedKey) failed: $error',
-      );
-      return cachedItems == null
-          ? const <dynamic>[]
-          : List<dynamic>.from(cachedItems);
+        _datasetCache[normalizedKey] = List<dynamic>.from(items);
+        _datasetCidCache[normalizedKey] = datasetRecord.cid;
+        await _persistDataset(
+          normalizedKey,
+          datasetRecord.cid,
+          response.body,
+        );
+        return List<dynamic>.from(items);
+      } catch (error) {
+        lastError = error;
+      }
     }
+
+    if (lastError != null) {
+      AppConfig.debugPrint(
+        'PublicFallbackService.loadDatasetArray($normalizedKey) failed across all gateways: $lastError',
+      );
+    }
+
+    return cachedItems == null
+        ? const <dynamic>[]
+        : List<dynamic>.from(cachedItems);
   }
 
   void bindHttpClient(http.Client client) {

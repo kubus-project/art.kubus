@@ -34,12 +34,6 @@ class KubusHeaderTitleBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final resolvedSubtitle = subtitle?.trim();
-    final resolvedTitleStyle = (titleStyle ?? KubusTextStyles.screenTitle)
-        .copyWith(color: titleColor ?? scheme.onSurface);
-    final resolvedSubtitleStyle =
-        (subtitleStyle ?? KubusTextStyles.screenSubtitle).copyWith(
-      color: subtitleColor ?? scheme.onSurface.withValues(alpha: 0.72),
-    );
 
     return ConstrainedBox(
       constraints: BoxConstraints(
@@ -50,30 +44,61 @@ class KubusHeaderTitleBlock extends StatelessWidget {
       ),
       child: SizedBox(
         width: double.infinity,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              title,
-              style: resolvedTitleStyle,
-              maxLines: compact ? 3 : maxTitleLines,
-              overflow: TextOverflow.ellipsis,
-            ),
-            if (resolvedSubtitle != null && resolvedSubtitle.isNotEmpty) ...[
-              SizedBox(
-                height: compact
-                    ? KubusHeaderMetrics.sectionSubtitleGap
-                    : KubusHeaderMetrics.subtitleGap,
-              ),
-              Text(
-                resolvedSubtitle,
-                style: resolvedSubtitleStyle,
-                maxLines: maxSubtitleLines,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final availableWidth =
+                constraints.maxWidth.isFinite && constraints.maxWidth > 0
+                    ? constraints.maxWidth
+                    : (MediaQuery.maybeOf(context)?.size.width ?? 360);
+            final baseTitleStyle =
+                (titleStyle ?? KubusTextStyles.screenTitle).copyWith(
+              color: titleColor ?? scheme.onSurface,
+            );
+            final resolvedTitleStyle = KubusTextStyles.responsiveTitleStyle(
+              context,
+              baseTitleStyle,
+              availableWidth: availableWidth,
+              compact: compact,
+            );
+            final resolvedSubtitleStyle =
+                (subtitleStyle ?? KubusTextStyles.screenSubtitle).copyWith(
+              color: subtitleColor ?? scheme.onSurface.withValues(alpha: 0.72),
+            );
+            final effectiveTitleLines = KubusTextStyles.responsiveTitleLines(
+              availableWidth,
+              // Preserve the caller's requested line cap; responsive logic may
+              // still relax ultra-narrow layouts for readability.
+              maxLines: maxTitleLines,
+              compact: compact,
+            );
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  title,
+                  style: resolvedTitleStyle,
+                  maxLines: effectiveTitleLines,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (resolvedSubtitle != null &&
+                    resolvedSubtitle.isNotEmpty) ...[
+                  SizedBox(
+                    height: compact
+                        ? KubusHeaderMetrics.sectionSubtitleGap
+                        : KubusHeaderMetrics.subtitleGap,
+                  ),
+                  Text(
+                    resolvedSubtitle,
+                    style: resolvedSubtitleStyle,
+                    maxLines: maxSubtitleLines,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
+            );
+          },
         ),
       ),
     );
@@ -113,8 +138,8 @@ class KubusHeaderText extends StatelessWidget {
     final defaultTitleStyle = isSection
         ? KubusTextStyles.sectionTitle
         : (isMobileWidth
-            ? KubusTextStyles.mobileAppBarTitle
-            : KubusTextStyles.screenTitle);
+            ? KubusTextStyles.responsiveMobileAppBarTitle(context)
+            : KubusTextStyles.responsiveScreenTitle(context));
     return KubusHeaderTitleBlock(
       title: title,
       subtitle: subtitle,

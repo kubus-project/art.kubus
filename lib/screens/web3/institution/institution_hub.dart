@@ -244,7 +244,8 @@ class _InstitutionHubState extends State<InstitutionHub> {
               ),
               title: Text(
                 'Institution Hub',
-                style: KubusTextStyles.mobileAppBarTitle.copyWith(
+                style: KubusTextStyles.responsiveMobileAppBarTitle(context)
+                    .copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
                 overflow: TextOverflow.ellipsis,
@@ -448,13 +449,23 @@ class _InstitutionHubState extends State<InstitutionHub> {
                     ),
                     if (canSelfServeInstitutionPromotion) ...[
                       const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
-                      Center(
-                        child: OutlinedButton.icon(
-                          onPressed: _openInstitutionPromotionFlow,
-                          icon: const Icon(Icons.campaign_outlined),
-                          label: const Text('Promote my institution'),
-                          style: OutlinedButton.styleFrom(
-                            alignment: Alignment.center,
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: OutlinedButton.icon(
+                            onPressed: _openInstitutionPromotionFlow,
+                            icon: const Icon(Icons.campaign_outlined),
+                            label: const Text(
+                              'Promote my institution',
+                              maxLines: 1,
+                              softWrap: false,
+                              overflow: TextOverflow.fade,
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              alignment: Alignment.centerLeft,
+                            ),
                           ),
                         ),
                       ),

@@ -18,6 +18,7 @@ import '../../../utils/app_animations.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
+import '../../../widgets/avatar_widget.dart';
 import '../components/desktop_widgets.dart';
 import '../desktop_shell_scope.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -444,6 +445,12 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
 
   Widget _buildAvatarSection(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
+    const avatarDiameter = 140.0;
+    const avatarRadius = avatarDiameter / 2;
+    final avatarFrameRadius = AvatarWidget.shapeRadiusFor(
+      radius: avatarRadius,
+      cornerRadiusFactor: AvatarWidget.defaultCornerRadiusFactor,
+    );
     return DesktopCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -462,17 +469,17 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
                 child: Stack(
                   children: [
                     Container(
-                      width: 140,
-                      height: 140,
+                      width: avatarDiameter,
+                      height: avatarDiameter,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(KubusRadius.lg),
+                        borderRadius: BorderRadius.circular(avatarFrameRadius),
                         border: Border.all(
                           color: themeProvider.accentColor,
                           width: 3,
                         ),
                       ),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(KubusRadius.lg),
+                        borderRadius: BorderRadius.circular(avatarFrameRadius),
                         child: _avatarUrl != null && _avatarUrl!.isNotEmpty
                             ? _buildAvatarWidget(_avatarUrl!, themeProvider)
                             : Icon(

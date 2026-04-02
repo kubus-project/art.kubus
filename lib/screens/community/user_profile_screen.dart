@@ -625,6 +625,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     final hasCoverImage = coverImageUrl != null &&
         coverImageUrl.isNotEmpty &&
         !coverUrlIsKnownBad;
+    const avatarRadius = 45.0;
+    const avatarCornerRadiusFactor = AvatarWidget.defaultCornerRadiusFactor;
 
     return Column(
       children: [
@@ -719,7 +721,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               child: Center(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(90 * 0.22),
+                    borderRadius: BorderRadius.circular(
+                      AvatarWidget.shapeRadiusFor(
+                        radius: avatarRadius,
+                        cornerRadiusFactor: avatarCornerRadiusFactor,
+                      ),
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.15),
@@ -731,10 +738,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                   child: AvatarWidget(
                     wallet: user!.id,
                     avatarUrl: user!.profileImageUrl,
-                    radius: 45,
+                    radius: avatarRadius,
                     borderWidth: 5,
                     borderColor: Theme.of(context).colorScheme.surface,
-                    cornerRadiusFactor: 0.22,
+                    cornerRadiusFactor: avatarCornerRadiusFactor,
                     enableProfileNavigation: false,
                     heroTag: widget.heroTag,
                   ),

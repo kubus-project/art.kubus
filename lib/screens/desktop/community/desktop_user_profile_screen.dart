@@ -683,6 +683,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     final coverImageUrl = _normalizeMediaUrl(user!.coverImageUrl);
     final hasCoverImage = coverImageUrl != null && coverImageUrl.isNotEmpty;
     const avatarRadius = 44.0;
+    const avatarCornerRadiusFactor = AvatarWidget.defaultCornerRadiusFactor;
 
     return DesktopCard(
       padding: EdgeInsets.zero,
@@ -764,7 +765,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                 // Avatar
                 DecoratedBox(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(avatarRadius * 0.44),
+                    borderRadius: BorderRadius.circular(
+                      AvatarWidget.shapeRadiusFor(
+                        radius: avatarRadius,
+                        cornerRadiusFactor: avatarCornerRadiusFactor,
+                      ),
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: Theme.of(context)
@@ -781,7 +787,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                     radius: avatarRadius,
                     borderWidth: 3,
                     borderColor: Theme.of(context).colorScheme.surface,
-                    cornerRadiusFactor: 0.22,
+                    cornerRadiusFactor: avatarCornerRadiusFactor,
                     enableProfileNavigation: false,
                     heroTag: widget.heroTag,
                   ),

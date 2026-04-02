@@ -32,13 +32,19 @@ void main() {
       final fromScheme = StorageConfig.resolveUrl('ipfs://$cid');
       expect(fromScheme, isNotNull);
       expect(fromScheme!, endsWith(cid));
+
+      final candidates = StorageConfig.resolveAllUrls('ipfs://$cid');
+      expect(candidates, isNotEmpty);
+      expect(candidates.first, equals(fromScheme));
+      expect(candidates.length, greaterThan(1));
     });
 
     test('resolves IPNS pointers via gateway', () {
-      final fromScheme =
-          StorageConfig.resolveUrl('ipns://public.kubus.site/public-index.json');
+      final fromScheme = StorageConfig.resolveUrl(
+          'ipns://public.kubus.site/public-index.json');
       expect(fromScheme, isNotNull);
-      expect(fromScheme!, contains('/ipns/public.kubus.site/public-index.json'));
+      expect(fromScheme!,
+          equals('https://public-kubus-site.ipns.dweb.link/public-index.json'));
 
       final fromAbsolutePath =
           StorageConfig.resolveUrl('/ipns/public.kubus.site/public-index.json');
@@ -52,6 +58,16 @@ void main() {
       expect(
         fromRelativePath,
         equals(fromScheme),
+      );
+
+      final candidates = StorageConfig.resolveAllUrls(
+        'ipns://public.kubus.site/public-index.json',
+      );
+      expect(candidates, isNotEmpty);
+      expect(candidates.first, equals(fromScheme));
+      expect(
+        candidates,
+        contains('https://dweb.link/ipns/public.kubus.site/public-index.json'),
       );
     });
 
@@ -72,14 +88,16 @@ void main() {
         equals('https://api.example.test/uploads/foo.jpg'),
       );
       expect(
-        StorageConfig.resolveUrl('https://old.example.test/profiles/cover/foo.jpg'),
+        StorageConfig.resolveUrl(
+            'https://old.example.test/profiles/cover/foo.jpg'),
         equals('https://api.example.test/profiles/cover/foo.jpg'),
       );
     });
 
     test('preserves query/fragment when canonicalizing upload URLs', () {
       expect(
-        StorageConfig.resolveUrl('https://old.example.test/uploads/foo.jpg?v=123#frag'),
+        StorageConfig.resolveUrl(
+            'https://old.example.test/uploads/foo.jpg?v=123#frag'),
         equals('https://api.example.test/uploads/foo.jpg?v=123#frag'),
       );
     });

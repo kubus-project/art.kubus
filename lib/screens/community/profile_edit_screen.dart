@@ -21,6 +21,7 @@ import 'package:art_kubus/widgets/app_mode_unavailable_state.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/common/keyboard_inset_padding.dart';
+import '../../widgets/avatar_widget.dart';
 
 class ProfileEditScreen extends StatefulWidget {
   const ProfileEditScreen({super.key, this.isOnboarding = false});
@@ -633,6 +634,12 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     final l10n = AppLocalizations.of(context)!;
     final appModeProvider = context.watch<AppModeProvider?>();
     final isIpfsFallbackMode = appModeProvider?.isIpfsFallbackMode ?? false;
+    const avatarDiameter = 120.0;
+    const avatarRadius = avatarDiameter / 2;
+    final avatarFrameRadius = AvatarWidget.shapeRadiusFor(
+      radius: avatarRadius,
+      cornerRadiusFactor: AvatarWidget.defaultCornerRadiusFactor,
+    );
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -821,16 +828,21 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                     child: Stack(
                                       children: [
                                         Container(
-                                          width: 120,
-                                          height: 120,
+                                          width: avatarDiameter,
+                                          height: avatarDiameter,
                                           decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
+                                            borderRadius: BorderRadius.circular(
+                                              avatarFrameRadius,
+                                            ),
                                             border: Border.all(
                                               color: themeProvider.accentColor,
                                               width: 3,
                                             ),
                                           ),
-                                          child: ClipOval(
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              avatarFrameRadius,
+                                            ),
                                             child: _avatarUrl != null &&
                                                     _avatarUrl!.isNotEmpty
                                                 ? _buildAvatarWidget(

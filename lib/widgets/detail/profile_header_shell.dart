@@ -179,9 +179,16 @@ class ProfileHeaderShell extends StatelessWidget {
 
   Widget _buildAvatar(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final avatarRadius = avatarSize / 2;
+    const avatarCornerRadiusFactor = AvatarWidget.defaultCornerRadiusFactor;
     final avatarWidget = DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(avatarSize * 0.22),
+        borderRadius: BorderRadius.circular(
+          AvatarWidget.shapeRadiusFor(
+            radius: avatarRadius,
+            cornerRadiusFactor: avatarCornerRadiusFactor,
+          ),
+        ),
         boxShadow: [
           BoxShadow(
             color: scheme.shadow.withValues(alpha: 0.15),
@@ -193,10 +200,10 @@ class ProfileHeaderShell extends StatelessWidget {
       child: AvatarWidget(
         wallet: displayName,
         avatarUrl: avatarUrl,
-        radius: avatarSize / 2,
+        radius: avatarRadius,
         borderWidth: DetailSpacing.xs,
         borderColor: scheme.surface,
-        cornerRadiusFactor: 0.22,
+        cornerRadiusFactor: avatarCornerRadiusFactor,
         enableProfileNavigation: false,
         heroTag: avatarHeroTag,
       ),

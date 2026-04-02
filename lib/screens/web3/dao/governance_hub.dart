@@ -156,7 +156,9 @@ class _GovernanceHubState extends State<GovernanceHub>
                   Flexible(
                     child: Text(
                       l10n.daoHubAppBarTitle,
-                      style: KubusTextStyles.mobileAppBarTitle.copyWith(
+                      style:
+                          KubusTextStyles.responsiveMobileAppBarTitle(context)
+                              .copyWith(
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
                       overflow: TextOverflow.ellipsis,
@@ -291,40 +293,51 @@ class _GovernanceHubState extends State<GovernanceHub>
                       ),
                       const SizedBox(width: 16),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Wrap(
-                              spacing: KubusSpacing.sm,
-                              runSpacing: KubusSpacing.xs,
-                              crossAxisAlignment: WrapCrossAlignment.center,
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final titleStyle =
+                                KubusTextStyles.responsiveHeroTitle(
+                              context,
+                              availableWidth: constraints.maxWidth,
+                            ).copyWith(
+                              color: Theme.of(context).colorScheme.onSurface,
+                            );
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'art.kubus DAO',
-                                  style: KubusTextStyles.heroTitle.copyWith(
-                                    color:
-                                        Theme.of(context).colorScheme.onSurface,
-                                  ),
+                                Wrap(
+                                  spacing: KubusSpacing.sm,
+                                  runSpacing: KubusSpacing.xs,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    Text(
+                                      'art.kubus DAO',
+                                      style: titleStyle,
+                                      maxLines:
+                                          constraints.maxWidth < 280 ? 2 : 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const KubusLabsAdornment.inlinePill(
+                                      feature: KubusLabsFeature.dao,
+                                      emphasized: true,
+                                    ),
+                                  ],
                                 ),
-                                const KubusLabsAdornment.inlinePill(
-                                  feature: KubusLabsFeature.dao,
-                                  emphasized: true,
+                                const SizedBox(height: 4),
+                                Text(
+                                  l10n.daoHubHeaderSubtitle,
+                                  style: KubusTextStyles.heroSubtitle.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.82),
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              l10n.daoHubHeaderSubtitle,
-                              style: KubusTextStyles.heroSubtitle.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.82),
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
+                            );
+                          },
                         ),
                       ),
                     ],

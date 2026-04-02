@@ -258,6 +258,134 @@ class KubusTypography {
 class KubusTextStyles {
   KubusTextStyles._();
 
+  static TextStyle _scaleForWidth(
+    TextStyle base, {
+    required double availableWidth,
+    required double narrowWidth,
+    required double wideWidth,
+    required double minScale,
+  }) {
+    final baseFontSize = base.fontSize;
+    if (baseFontSize == null) return base;
+    final safeWidth = availableWidth.isFinite ? availableWidth : wideWidth;
+    if (safeWidth >= wideWidth) return base;
+    final progress =
+        ((safeWidth - narrowWidth) / (wideWidth - narrowWidth)).clamp(0.0, 1.0);
+    final scale = minScale + (1 - minScale) * progress;
+    return base.copyWith(fontSize: baseFontSize * scale);
+  }
+
+  static TextStyle responsiveMobileAppBarTitle(
+    BuildContext context, {
+    double? availableWidth,
+  }) {
+    final width =
+        availableWidth ?? MediaQuery.maybeOf(context)?.size.width ?? 390;
+    return _scaleForWidth(
+      mobileAppBarTitle,
+      availableWidth: width,
+      narrowWidth: 240,
+      wideWidth: 390,
+      minScale: 0.84,
+    );
+  }
+
+  static TextStyle responsiveScreenTitle(
+    BuildContext context, {
+    double? availableWidth,
+  }) {
+    final width =
+        availableWidth ?? MediaQuery.maybeOf(context)?.size.width ?? 420;
+    return _scaleForWidth(
+      screenTitle,
+      availableWidth: width,
+      narrowWidth: 260,
+      wideWidth: 420,
+      minScale: 0.86,
+    );
+  }
+
+  static TextStyle responsiveTitleStyle(
+    BuildContext context,
+    TextStyle base, {
+    double? availableWidth,
+    bool compact = false,
+  }) {
+    final width =
+        availableWidth ?? MediaQuery.maybeOf(context)?.size.width ?? 360;
+    final fontSize = base.fontSize ?? KubusHeaderMetrics.screenTitle;
+    final minScale = fontSize >= KubusChromeMetrics.heroTitle
+        ? 0.78
+        : compact
+            ? 0.9
+            : 0.86;
+    return _scaleForWidth(
+      base,
+      availableWidth: width,
+      narrowWidth: compact ? 180 : 240,
+      wideWidth: compact ? 320 : 420,
+      minScale: minScale,
+    );
+  }
+
+  static TextStyle responsiveHeroTitle(
+    BuildContext context, {
+    double? availableWidth,
+  }) {
+    final width =
+        availableWidth ?? MediaQuery.maybeOf(context)?.size.width ?? 420;
+    return _scaleForWidth(
+      heroTitle,
+      availableWidth: width,
+      narrowWidth: 220,
+      wideWidth: 420,
+      minScale: 0.78,
+    );
+  }
+
+  static TextStyle responsiveNavLabel(
+    BuildContext context, {
+    double? availableWidth,
+    bool compact = false,
+  }) {
+    final width =
+        availableWidth ?? MediaQuery.maybeOf(context)?.size.width ?? 180;
+    return _scaleForWidth(
+      navLabel,
+      availableWidth: width,
+      narrowWidth: compact ? 110 : 140,
+      wideWidth: compact ? 180 : 220,
+      minScale: compact ? 0.84 : 0.88,
+    );
+  }
+
+  static TextStyle responsiveCompactBadge(
+    BuildContext context, {
+    double? availableWidth,
+  }) {
+    final width =
+        availableWidth ?? MediaQuery.maybeOf(context)?.size.width ?? 180;
+    return _scaleForWidth(
+      compactBadge,
+      availableWidth: width,
+      narrowWidth: 110,
+      wideWidth: 180,
+      minScale: 0.84,
+    );
+  }
+
+  static int responsiveTitleLines(
+    double availableWidth, {
+    required int maxLines,
+    required bool compact,
+  }) {
+    final threshold = compact ? 220.0 : 320.0;
+    if (!availableWidth.isFinite || availableWidth >= threshold) {
+      return maxLines;
+    }
+    return maxLines < 2 ? 2 : maxLines;
+  }
+
   static TextStyle get mobileAppBarTitle =>
       screenTitle.copyWith(fontSize: KubusHeaderMetrics.mobileAppBarTitle);
 

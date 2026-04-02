@@ -280,6 +280,11 @@ class _SettingsScreenState extends State<SettingsScreen>
     final profileProvider = Provider.of<ProfileProvider>(context);
     final scheme = Theme.of(context).colorScheme;
     final headerColor = scheme.secondary;
+    const avatarRadius = 30.0;
+    final avatarFrameRadius = AvatarWidget.shapeRadiusFor(
+      radius: avatarRadius,
+      cornerRadiusFactor: AvatarWidget.defaultCornerRadiusFactor,
+    );
 
     return _buildSettingsPanel(
       padding: EdgeInsets.zero,
@@ -304,15 +309,16 @@ class _SettingsScreenState extends State<SettingsScreen>
                 Container(
                   width: 60,
                   height: 60,
+                  clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius:
-                        BorderRadius.circular(KubusRadius.lg + KubusRadius.xs),
+                    borderRadius: BorderRadius.circular(avatarFrameRadius),
                   ),
                   child: AvatarWidget(
                     wallet: profileProvider.currentUser?.walletAddress ?? '',
                     avatarUrl: profileProvider.currentUser?.avatar,
-                    radius: 30,
+                    radius: avatarRadius,
+                    cornerRadiusFactor: AvatarWidget.defaultCornerRadiusFactor,
                     enableProfileNavigation: false,
                   ),
                 ),

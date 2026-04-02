@@ -11,7 +11,6 @@ import '../../../utils/kubus_color_roles.dart';
 import '../../../widgets/kubus_action_sidebar.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 import '../../../widgets/glass_components.dart';
-import '../components/desktop_widgets.dart';
 import '../desktop_shell.dart';
 import '../../web3/dao/governance_hub.dart';
 import '../../web3/dao/dao_analytics.dart';
@@ -217,86 +216,105 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
           surfaceType: KubusGlassSurfaceType.card,
         );
 
-        return DesktopCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: KubusChromeMetrics.heroIconBox - KubusSpacing.xs,
-                    height: KubusChromeMetrics.heroIconBox - KubusSpacing.xs,
-                    decoration: BoxDecoration(
-                      color: daoAccent.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(KubusRadius.md),
-                    ),
-                    child: Icon(
-                      Icons.how_to_vote,
-                      color: daoAccent,
-                      size: KubusChromeMetrics.heroIcon,
-                    ),
-                  ),
-                  const SizedBox(width: KubusSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Your Voting Power',
-                          style: KubusTextStyles.statLabel.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.6),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${votingPower.toStringAsFixed(2)} KUB8',
-                          style: KubusTextStyles.heroTitle.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+        return LiquidGlassCard(
+          padding: const EdgeInsets.all(KubusSpacing.md),
+          borderRadius: BorderRadius.circular(KubusRadius.md),
+          showBorder: false,
+          backgroundColor: cardGlassStyle.tintColor,
+          blurSigma: cardGlassStyle.blurSigma,
+          fallbackMinOpacity: cardGlassStyle.fallbackMinOpacity,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(KubusRadius.md),
+              border: Border.all(
+                color: daoAccent.withValues(alpha: 0.18),
+                width: KubusSizes.hairline,
               ),
-              if (!hasVotingPower) ...[
-                const SizedBox(height: KubusSpacing.md),
-                LiquidGlassPanel(
-                  padding:
-                      const EdgeInsets.all(KubusSpacing.md - KubusSpacing.xs),
-                  borderRadius:
-                      BorderRadius.circular(KubusRadius.sm + KubusSpacing.xs),
-                  showBorder: false,
-                  backgroundColor: cardGlassStyle.tintColor,
-                  blurSigma: cardGlassStyle.blurSigma,
-                  fallbackMinOpacity: cardGlassStyle.fallbackMinOpacity,
-                  child: Row(
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(KubusSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: roles.lockedFeature,
-                        size: KubusHeaderMetrics.actionIcon,
+                      Container(
+                        width: KubusSizes.sidebarActionIconBox,
+                        height: KubusSizes.sidebarActionIconBox,
+                        decoration: BoxDecoration(
+                          color: daoAccent.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(KubusRadius.sm),
+                        ),
+                        child: Icon(
+                          Icons.how_to_vote,
+                          color: daoAccent,
+                          size: KubusSizes.sidebarActionIcon,
+                        ),
                       ),
                       const SizedBox(width: KubusSpacing.md),
                       Expanded(
-                        child: Text(
-                          l10n.desktopGovernanceAcquireKub8Hint,
-                          style: KubusTextStyles.actionTileSubtitle.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.8),
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Your voting power',
+                              style:
+                                  KubusTextStyles.actionTileSubtitle.copyWith(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.62),
+                              ),
+                            ),
+                            const SizedBox(height: KubusSpacing.xxs),
+                            Text(
+                              '${votingPower.toStringAsFixed(2)} KUB8',
+                              style: KubusTextStyles.sectionTitle.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                ),
-              ],
-            ],
+                  if (!hasVotingPower) ...[
+                    const SizedBox(height: KubusSpacing.md),
+                    LiquidGlassPanel(
+                      padding: const EdgeInsets.all(
+                          KubusSpacing.md - KubusSpacing.xs),
+                      borderRadius: BorderRadius.circular(KubusRadius.md),
+                      showBorder: false,
+                      backgroundColor: cardGlassStyle.tintColor,
+                      blurSigma: cardGlassStyle.blurSigma,
+                      fallbackMinOpacity: cardGlassStyle.fallbackMinOpacity,
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            color: roles.lockedFeature,
+                            size: KubusHeaderMetrics.actionIcon,
+                          ),
+                          const SizedBox(width: KubusSpacing.md),
+                          Expanded(
+                            child: Text(
+                              l10n.desktopGovernanceAcquireKub8Hint,
+                              style:
+                                  KubusTextStyles.actionTileSubtitle.copyWith(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.8),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ),
         );
       },
@@ -323,7 +341,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                     Theme.of(context).colorScheme.primary,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: KubusSpacing.sm),
                 Expanded(
                   child: _buildStatCard(
                     'Active',
@@ -334,7 +352,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: KubusSpacing.sm),
             Row(
               children: [
                 Expanded(
@@ -345,7 +363,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                     KubusColorRoles.of(context).statCoral,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: KubusSpacing.sm),
                 Expanded(
                   child: _buildStatCard(
                     'Treasury',
@@ -391,17 +409,32 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color, size: KubusHeaderMetrics.actionIcon),
+            Container(
+              width: KubusSizes.sidebarActionIconBox - KubusSpacing.xs,
+              height: KubusSizes.sidebarActionIconBox - KubusSpacing.xs,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(KubusRadius.sm),
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: KubusHeaderMetrics.actionIcon,
+              ),
+            ),
             const SizedBox(height: KubusSpacing.sm),
             Text(
               value,
-              style: KubusTextStyles.statValue.copyWith(
+              style: KubusTextStyles.sectionTitle.copyWith(
                 color: Theme.of(context).colorScheme.onSurface,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
+            const SizedBox(height: KubusSpacing.xxs),
             Text(
               label,
-              style: KubusTextStyles.statLabel.copyWith(
+              style: KubusTextStyles.actionTileSubtitle.copyWith(
                 color: Theme.of(context)
                     .colorScheme
                     .onSurface
@@ -435,7 +468,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
               children: [
                 Icon(
                   Icons.inbox_outlined,
-                  size: KubusChromeMetrics.heroIcon,
+                  size: KubusChromeMetrics.heroIcon - KubusSpacing.xs,
                   color: Theme.of(context)
                       .colorScheme
                       .onSurface
@@ -444,7 +477,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                 const SizedBox(height: KubusSpacing.sm),
                 Text(
                   'No recent activity',
-                  style: KubusTextStyles.detailBody.copyWith(
+                  style: KubusTextStyles.actionTileSubtitle.copyWith(
                     color: Theme.of(context)
                         .colorScheme
                         .onSurface
@@ -459,55 +492,72 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
         return Column(
           children: recentProposals.map((proposal) {
             final scheme = Theme.of(context).colorScheme;
-            return Container(
-              margin: const EdgeInsets.only(
+            return Padding(
+              padding: const EdgeInsets.only(
                   bottom: KubusSpacing.md - KubusSpacing.xs),
-              padding: const EdgeInsets.all(KubusSpacing.md - KubusSpacing.xs),
-              decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .primaryContainer
-                    .withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(KubusRadius.sm),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: KubusChromeMetrics.navBadgeDot,
-                    height: KubusChromeMetrics.navBadgeDot,
-                    decoration: BoxDecoration(
-                      color: proposal.status == ProposalStatus.active
-                          ? scheme.tertiary
-                          : scheme.onSurface.withValues(alpha: 0.4),
-                      shape: BoxShape.circle,
+              child: LiquidGlassCard(
+                padding:
+                    const EdgeInsets.all(KubusSpacing.md - KubusSpacing.xs),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
+                showBorder: false,
+                backgroundColor: activityGlassStyle.tintColor,
+                blurSigma: activityGlassStyle.blurSigma,
+                fallbackMinOpacity: activityGlassStyle.fallbackMinOpacity,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(KubusRadius.md),
+                    border: Border.all(
+                      color: scheme.primary.withValues(alpha: 0.14),
+                      width: KubusSizes.hairline,
                     ),
                   ),
-                  const SizedBox(width: KubusSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.all(KubusSpacing.md - KubusSpacing.xs),
+                    child: Row(
                       children: [
-                        Text(
-                          proposal.title,
-                          style: KubusTextStyles.detailCardTitle.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface,
+                        Container(
+                          width: KubusChromeMetrics.navBadgeDot,
+                          height: KubusChromeMetrics.navBadgeDot,
+                          decoration: BoxDecoration(
+                            color: proposal.status == ProposalStatus.active
+                                ? scheme.tertiary
+                                : scheme.onSurface.withValues(alpha: 0.4),
+                            shape: BoxShape.circle,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                        Text(
-                          proposal.status.name,
-                          style: KubusTextStyles.detailLabel.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.6),
+                        const SizedBox(width: KubusSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                proposal.title,
+                                style: KubusTextStyles.actionTileTitle.copyWith(
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: KubusSpacing.xxs),
+                              Text(
+                                proposal.status.name,
+                                style:
+                                    KubusTextStyles.actionTileSubtitle.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.6),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
                   ),
-                ],
+                ),
               ),
             );
           }).toList(),

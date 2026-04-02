@@ -227,7 +227,8 @@ class _ArtistStudioState extends State<ArtistStudio> {
               ),
               title: Text(
                 l10n.artistStudioTitle,
-                style: KubusTextStyles.mobileAppBarTitle.copyWith(
+                style: KubusTextStyles.responsiveMobileAppBarTitle(context)
+                    .copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
                 overflow: TextOverflow.ellipsis,
@@ -394,13 +395,23 @@ class _ArtistStudioState extends State<ArtistStudio> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: KubusSpacing.sm),
-                    Center(
-                      child: OutlinedButton.icon(
-                        onPressed: _openProfilePromotionFlow,
-                        icon: const Icon(Icons.campaign_outlined),
-                        label: const Text('Promote my profile'),
-                        style: OutlinedButton.styleFrom(
-                          alignment: Alignment.center,
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: OutlinedButton.icon(
+                          onPressed: _openProfilePromotionFlow,
+                          icon: const Icon(Icons.campaign_outlined),
+                          label: const Text(
+                            'Promote my profile',
+                            maxLines: 1,
+                            softWrap: false,
+                            overflow: TextOverflow.fade,
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            alignment: Alignment.centerLeft,
+                          ),
                         ),
                       ),
                     ),

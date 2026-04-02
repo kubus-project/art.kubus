@@ -11,6 +11,15 @@ import '../utils/user_profile_navigation.dart';
 import '../utils/wallet_utils.dart';
 
 class AvatarWidget extends StatefulWidget {
+  static const double defaultCornerRadiusFactor = 0.22;
+
+  static double shapeRadiusFor({
+    required double radius,
+    double cornerRadiusFactor = defaultCornerRadiusFactor,
+  }) {
+    return radius * 2 * cornerRadiusFactor;
+  }
+
   final String? avatarUrl;
   final String wallet;
   final double radius;
@@ -32,7 +41,7 @@ class AvatarWidget extends StatefulWidget {
     this.radius = 18,
     this.borderWidth = 0,
     this.borderColor,
-    this.cornerRadiusFactor = 0.22,
+    this.cornerRadiusFactor = defaultCornerRadiusFactor,
     this.isLoading = false,
     this.allowFabricatedFallback = false,
     this.enableProfileNavigation = true,
@@ -194,7 +203,10 @@ class _AvatarWidgetState extends State<AvatarWidget>
         (effective.startsWith('http') || effective.startsWith('https'));
     final radius = widget.radius;
     final double size = radius * 2;
-    final shapeRadius = size * widget.cornerRadiusFactor;
+    final shapeRadius = AvatarWidget.shapeRadiusFor(
+      radius: radius,
+      cornerRadiusFactor: widget.cornerRadiusFactor,
+    );
     final borderRadius = BorderRadius.circular(shapeRadius);
 
     final colorScheme = Theme.of(context).colorScheme;
@@ -329,7 +341,7 @@ class _AvatarWidgetState extends State<AvatarWidget>
     _touchPresenceWatchIfNeeded();
 
     if (shouldShowPresence) {
-      final indicatorSize = (radius * 0.36).clamp(7.0, 9.0).toDouble();
+      final indicatorSize = (radius * 0.36).clamp(8.0, 11.0).toDouble();
       final indicatorColor = widget.statusColor ??
           (effectiveOnline == true
               ? colorScheme.tertiary

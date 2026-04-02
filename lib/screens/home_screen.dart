@@ -616,8 +616,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             Flexible(
                               child: Text(
                                 '$greeting ${profileProvider.currentUser?.displayName ?? l10n.homeDefaultDisplayName}',
-                                style: KubusTextStyles.heroTitle
-                                    .copyWith(color: Colors.white),
+                                style: KubusTextStyles.responsiveHeroTitle(
+                                  context,
+                                  availableWidth: isSmallScreen ? 220 : 320,
+                                ).copyWith(color: Colors.white),
+                                maxLines: isSmallScreen ? 2 : 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
@@ -1738,45 +1741,65 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             // Use Center widget for perfect centering when unlocked
             if (!isLocked)
               Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(
-                            KubusRadius.sm + KubusRadius.xs),
-                      ),
-                      child: Icon(
-                        icon,
-                        color: color,
-                        size: 18,
-                      ),
-                    ),
-                    const SizedBox(height: KubusSpacing.sm),
-                    Text(
-                      title,
-                      style: KubusTextStyles.navLabel.copyWith(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final titleStyle = KubusTextStyles.responsiveTitleStyle(
+                      context,
+                      KubusTextStyles.navLabel.copyWith(
                         fontSize: KubusChromeMetrics.navMetaLabel,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: KubusSpacing.xxs),
-                    Text(
-                      subtitle,
-                      style: KubusTextStyles.compactBadge.copyWith(
+                      availableWidth: constraints.maxWidth,
+                      compact: true,
+                    );
+                    final subtitleStyle = KubusTextStyles.responsiveTitleStyle(
+                      context,
+                      KubusTextStyles.compactBadge.copyWith(
                         fontSize: KubusChromeMetrics.navBadgeLabel + 1,
                         color: Theme.of(context)
                             .colorScheme
                             .onSurface
                             .withValues(alpha: 0.6),
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+                      availableWidth: constraints.maxWidth,
+                      compact: true,
+                    );
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(
+                                KubusRadius.sm + KubusRadius.xs),
+                          ),
+                          child: Icon(
+                            icon,
+                            color: color,
+                            size: 18,
+                          ),
+                        ),
+                        const SizedBox(height: KubusSpacing.sm),
+                        Text(
+                          title,
+                          style: titleStyle,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: KubusSpacing.xxs),
+                        Text(
+                          subtitle,
+                          style: subtitleStyle,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
             // Locked state - positioned at top
@@ -2786,7 +2809,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
               ),
               title: Text(
                 l10n.homeActivityTitle,
-                style: KubusTextStyles.mobileAppBarTitle,
+                style: KubusTextStyles.responsiveMobileAppBarTitle(context),
               ),
             ),
       body: Consumer<RecentActivityProvider>(
