@@ -12,7 +12,6 @@ import 'package:art_kubus/widgets/common/kubus_screen_header.dart';
 import 'package:art_kubus/widgets/empty_state_card.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class ShareMessageSheet extends StatefulWidget {
   const ShareMessageSheet({
@@ -24,7 +23,8 @@ class ShareMessageSheet extends StatefulWidget {
 
   final ShareTarget target;
   final String initialMessage;
-  final Future<void> Function({required String recipientWallet, required String message}) onSend;
+  final Future<void> Function(
+      {required String recipientWallet, required String message}) onSend;
 
   @override
   State<ShareMessageSheet> createState() => _ShareMessageSheetState();
@@ -68,7 +68,8 @@ class _ShareMessageSheetState extends State<ShareMessageSheet> {
 
     setState(() => _isSearching = true);
     try {
-      final resp = await BackendApiService().search(query: q, type: 'profiles', limit: 20);
+      final resp = await BackendApiService()
+          .search(query: q, type: 'profiles', limit: 20);
       final list = <Map<String, dynamic>>[];
       if (resp['success'] == true && resp['results'] is Map) {
         final profiles = (resp['results']['profiles'] as List?) ?? [];
@@ -99,13 +100,18 @@ class _ShareMessageSheetState extends State<ShareMessageSheet> {
         .trim();
 
     final rawUsername = (profile['username'] ?? '').toString().trim();
-    final username = rawUsername.startsWith('@') ? rawUsername.substring(1).trim() : rawUsername;
-    final recipientWallet = (walletAddr?.isNotEmpty == true ? walletAddr! : username).trim();
+    final username = rawUsername.startsWith('@')
+        ? rawUsername.substring(1).trim()
+        : rawUsername;
+    final recipientWallet =
+        (walletAddr?.isNotEmpty == true ? walletAddr! : username).trim();
     if (recipientWallet.isEmpty) return;
 
     setState(() => _isSending = true);
     try {
-      final message = _messageController.text.trim().isEmpty ? widget.initialMessage : _messageController.text.trim();
+      final message = _messageController.text.trim().isEmpty
+          ? widget.initialMessage
+          : _messageController.text.trim();
       await widget.onSend(recipientWallet: recipientWallet, message: message);
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -235,13 +241,19 @@ class _ShareMessageSheetState extends State<ShareMessageSheet> {
                                         profile['id'])
                                     ?.toString()
                                     .trim();
-                                final rawUsername = (profile['username'] ?? '').toString().trim();
+                                final rawUsername = (profile['username'] ?? '')
+                                    .toString()
+                                    .trim();
                                 final username = rawUsername.startsWith('@')
                                     ? rawUsername.substring(1).trim()
                                     : rawUsername;
-                                final displayName =
-                                    (profile['displayName'] ?? profile['display_name'])?.toString().trim();
-                                final avatar = (profile['avatar'] ?? profile['avatar_url'])?.toString();
+                                final displayName = (profile['displayName'] ??
+                                        profile['display_name'])
+                                    ?.toString()
+                                    .trim();
+                                final avatar =
+                                    (profile['avatar'] ?? profile['avatar_url'])
+                                        ?.toString();
 
                                 final formatted = CreatorDisplayFormat.format(
                                   fallbackLabel: l10n.commonUnknown,
@@ -251,7 +263,8 @@ class _ShareMessageSheetState extends State<ShareMessageSheet> {
                                 );
 
                                 final subtitle = formatted.secondary ??
-                                    ((walletAddr != null && walletAddr.isNotEmpty)
+                                    ((walletAddr != null &&
+                                            walletAddr.isNotEmpty)
                                         ? maskWallet(walletAddr)
                                         : null);
                                 return Padding(
@@ -280,15 +293,15 @@ class _ShareMessageSheetState extends State<ShareMessageSheet> {
                                       ),
                                       title: Text(
                                         formatted.primary,
-                                        style: GoogleFonts.inter(),
+                                        style: KubusTypography
+                                            .textTheme.bodyMedium,
                                       ),
                                       subtitle: subtitle == null
                                           ? null
                                           : Text(
                                               subtitle,
-                                              style: GoogleFonts.inter(
-                                                fontSize: 12,
-                                              ),
+                                              style:
+                                                  KubusTextStyles.navMetaLabel,
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                             ),

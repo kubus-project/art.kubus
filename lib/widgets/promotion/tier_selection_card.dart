@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../../models/promotion.dart';
+import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../glass_components.dart';
 
@@ -39,12 +40,12 @@ class TierSelectionCard extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeInOut,
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusChromeMetrics.compactCardPadding),
         decoration: BoxDecoration(
           color: isSelected
               ? tierColor.withValues(alpha: 0.15)
               : colors.surfaceContainerHighest.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(KubusRadius.md),
           border: Border.all(
             color:
                 isSelected ? tierColor : colors.outline.withValues(alpha: 0.3),
@@ -57,10 +58,10 @@ class TierSelectionCard extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(KubusSpacing.sm),
                   decoration: BoxDecoration(
                     color: tierColor.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(KubusRadius.sm),
                   ),
                   child: Icon(
                     tierIcon,
@@ -68,7 +69,7 @@ class TierSelectionCard extends StatelessWidget {
                     size: 24,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: KubusSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -102,7 +103,7 @@ class TierSelectionCard extends StatelessWidget {
                   ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: KubusSpacing.md),
             Text(
               _tierDescription(l10n, tier),
               style: theme.textTheme.bodySmall?.copyWith(
@@ -110,14 +111,14 @@ class TierSelectionCard extends StatelessWidget {
               ),
             ),
             if (rateCard.isSlotBased) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: KubusSpacing.sm),
               _SlotIndicator(
                 slotCount: rateCard.slotCount ?? 3,
                 tierColor: tierColor,
               ),
             ],
             if (rateCard.volumeDiscounts.isNotEmpty) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: KubusSpacing.sm),
               _DiscountBadges(
                 discounts: rateCard.volumeDiscounts,
                 tierColor: tierColor,
@@ -231,14 +232,17 @@ class _DiscountBadges extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return Wrap(
-      spacing: 6,
-      runSpacing: 4,
+      spacing: KubusSpacing.xs + KubusSpacing.xxs,
+      runSpacing: KubusSpacing.xxs,
       children: discounts.map((discount) {
         return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          padding: const EdgeInsets.symmetric(
+            horizontal: KubusSpacing.sm,
+            vertical: KubusSpacing.xxs,
+          ),
           decoration: BoxDecoration(
             color: tierColor.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(KubusRadius.md),
           ),
           child: Text(
             '${l10n.promotionBuilderDiscountBadge(discount.discountPercent.toStringAsFixed(0))} • ${l10n.promotionBuilderDurationDays(discount.minDays)}+',

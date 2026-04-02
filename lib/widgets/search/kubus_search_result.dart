@@ -33,6 +33,114 @@ class KubusSearchResult {
   final IconData? iconOverride;
   final Map<String, dynamic> data;
 
+  String? dataString(Iterable<String> keys) {
+    for (final key in keys) {
+      final value = data[key];
+      if (value == null) continue;
+      if (value is Iterable) {
+        for (final item in value) {
+          if (item == null) continue;
+          final nestedText = item.toString().trim();
+          if (nestedText.isNotEmpty) return nestedText;
+        }
+        continue;
+      }
+      final text = value.toString().trim();
+      if (text.isNotEmpty) return text;
+    }
+    return null;
+  }
+
+  String? get walletSeed => dataString(const <String>[
+        'wallet',
+        'walletAddress',
+        'wallet_address',
+        'authorWallet',
+        'author_wallet',
+        'creatorWallet',
+        'creator_wallet',
+      ]) ??
+      (kind == KubusSearchResultKind.profile ? id : null);
+
+  String? get markerId => dataString(const <String>[
+        'markerId',
+        'marker_id',
+      ]) ??
+      (kind == KubusSearchResultKind.marker ? id : null);
+
+  String? get artworkId => dataString(const <String>[
+        'artworkId',
+        'artwork_id',
+        'linkedArtworkId',
+        'linked_artwork_id',
+      ]) ??
+      (kind == KubusSearchResultKind.artwork ? id : null);
+
+  String? get subjectId => dataString(const <String>[
+        'subjectId',
+        'subject_id',
+      ]) ??
+      switch (kind) {
+        KubusSearchResultKind.institution => id,
+        KubusSearchResultKind.event => id,
+        KubusSearchResultKind.artwork => artworkId,
+        _ => null,
+      };
+
+  String? get subjectType => dataString(const <String>[
+        'subjectType',
+        'subject_type',
+      ]) ??
+      switch (kind) {
+        KubusSearchResultKind.artwork => 'artwork',
+        KubusSearchResultKind.institution => 'institution',
+        KubusSearchResultKind.event => 'event',
+        _ => null,
+      };
+
+  String? get avatarUrl => dataString(const <String>[
+        'avatarUrl',
+        'avatar_url',
+        'avatar',
+        'profileImageUrl',
+        'profile_image_url',
+        'profileImage',
+        'profile_image',
+        'authorAvatar',
+        'author_avatar',
+      ]);
+
+  String? get previewImageUrl => dataString(const <String>[
+        'imageUrl',
+        'image_url',
+        'image',
+        'coverImageUrl',
+        'cover_image_url',
+        'coverImage',
+        'cover_image',
+        'coverUrl',
+        'cover_url',
+        'thumbnailUrl',
+        'thumbnail_url',
+        'thumbnail',
+        'previewUrl',
+        'preview_url',
+        'preview',
+        'hero',
+        'banner',
+        'mediaUrl',
+        'media_url',
+        'artworkImage',
+        'artwork_image',
+        'artworkImageUrl',
+        'artwork_image_url',
+        'imageUrls',
+        'image_urls',
+        'images',
+        'coverImages',
+        'cover_images',
+      ]);
+
   String get stableKey {
     final lat = position?.latitude.toStringAsFixed(5) ?? '';
     final lng = position?.longitude.toStringAsFixed(5) ?? '';

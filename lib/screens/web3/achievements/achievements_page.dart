@@ -66,7 +66,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
         scrolledUnderElevation: 0,
         title: Text(
           'Achievements & POAPs',
-          style: KubusTextStyles.screenTitle.copyWith(
+          style: KubusTextStyles.mobileAppBarTitle.copyWith(
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),

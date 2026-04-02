@@ -109,16 +109,19 @@ class KubusHeaderText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isSection = kind == KubusHeaderKind.section;
+    final isMobileWidth = (MediaQuery.maybeOf(context)?.size.width ?? 0) < 900;
+    final defaultTitleStyle = isSection
+        ? KubusTextStyles.sectionTitle
+        : (isMobileWidth
+            ? KubusTextStyles.mobileAppBarTitle
+            : KubusTextStyles.screenTitle);
     return KubusHeaderTitleBlock(
       title: title,
       subtitle: subtitle,
       compact: compact || isSection,
       titleColor: titleColor,
       subtitleColor: subtitleColor,
-      titleStyle: titleStyle ??
-          (isSection
-              ? KubusTextStyles.sectionTitle
-              : KubusTextStyles.screenTitle),
+      titleStyle: titleStyle ?? defaultTitleStyle,
       subtitleStyle: subtitleStyle ??
           (isSection
               ? KubusTextStyles.sectionSubtitle

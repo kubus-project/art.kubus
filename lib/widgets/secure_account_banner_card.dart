@@ -6,7 +6,6 @@ import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/widgets/kubus_card.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SecureAccountBannerCard extends StatefulWidget {
@@ -141,14 +140,13 @@ class _SecureAccountBannerCardState extends State<SecureAccountBannerCard> {
     }
 
     final scheme = Theme.of(context).colorScheme;
-  final l10n = AppLocalizations.of(context)!;
-    final title =
-    _hasEmail && !_hasPassword
-      ? l10n.authSecureAccountAddPasswordTitle
-      : l10n.authSecureAccountTitle;
+    final l10n = AppLocalizations.of(context)!;
+    final title = _hasEmail && !_hasPassword
+        ? l10n.authSecureAccountAddPasswordTitle
+        : l10n.authSecureAccountTitle;
     final subtitle = _hasEmail && !_hasPassword
-    ? l10n.authSecureAccountBannerAddPasswordSubtitle
-    : l10n.authSecureAccountFormDefaultSubtitle;
+        ? l10n.authSecureAccountBannerAddPasswordSubtitle
+        : l10n.authSecureAccountFormDefaultSubtitle;
 
     Widget card = KubusCard(
       padding: const EdgeInsets.all(KubusSpacing.md),
@@ -168,17 +166,16 @@ class _SecureAccountBannerCardState extends State<SecureAccountBannerCard> {
                   children: [
                     Text(
                       title,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
+                      style: KubusTextStyles.sectionTitle.copyWith(
+                        fontSize: KubusChromeMetrics.navLabel,
                         fontWeight: FontWeight.w800,
                         color: scheme.onSurface,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: KubusSpacing.xs),
                     Text(
                       subtitle,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
+                      style: KubusTextStyles.navMetaLabel.copyWith(
                         height: 1.3,
                         color: scheme.onSurface.withValues(alpha: 0.75),
                       ),
@@ -208,7 +205,7 @@ class _SecureAccountBannerCardState extends State<SecureAccountBannerCard> {
                 onPressed: _dismiss,
                 child: Text(
                   'Not now',
-                  style: GoogleFonts.inter(
+                  style: KubusTextStyles.navLabel.copyWith(
                     fontWeight: FontWeight.w600,
                     color: scheme.onSurface.withValues(alpha: 0.7),
                   ),
@@ -220,7 +217,9 @@ class _SecureAccountBannerCardState extends State<SecureAccountBannerCard> {
                 icon: const Icon(Icons.arrow_forward_rounded, size: 18),
                 label: Text(
                   'Secure',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+                  style: KubusTextStyles.navLabel.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: scheme.primary,
@@ -231,7 +230,7 @@ class _SecureAccountBannerCardState extends State<SecureAccountBannerCard> {
                     vertical: KubusSpacing.sm,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(KubusRadius.md),
                   ),
                 ),
               ),

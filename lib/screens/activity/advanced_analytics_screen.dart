@@ -175,9 +175,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
                 ),
                 title: Text(
                   definition.title,
-                  style: KubusTypography.inter(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                  style: KubusTextStyles.mobileAppBarTitle.copyWith(
                     color: scheme.onSurface,
                   ),
                 ),

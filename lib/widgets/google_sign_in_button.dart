@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../utils/design_tokens.dart';
 
 /// Google Sign-In button that works across platforms.
 /// The handler should trigger the platform-appropriate GIS/SDK flow.
@@ -22,7 +22,7 @@ class GoogleSignInButton extends StatelessWidget {
     final background =
         colorScheme.surface.withValues(alpha: isDark ? 0.9 : 0.96);
     // Match KubusButton geometry (more square than the previous pill-ish look).
-    final radius = BorderRadius.circular(8);
+    final radius = BorderRadius.circular(KubusRadius.sm);
 
     final baseForeground = isDark ? Colors.white : const Color(0xFF1F1F1F);
     final borderColor = isDark
@@ -52,8 +52,8 @@ class GoogleSignInButton extends StatelessWidget {
           shadowColor: Colors.transparent,
           disabledForegroundColor: baseForeground.withValues(alpha: 0.55),
           padding: const EdgeInsets.symmetric(
-            horizontal: 24,
-            vertical: 16,
+            horizontal: KubusSpacing.lg,
+            vertical: KubusSpacing.md,
           ),
           side: BorderSide(
             color: borderColor,
@@ -65,10 +65,7 @@ class GoogleSignInButton extends StatelessWidget {
         icon: leading,
         label: Text(
           isLoading ? 'Connecting...' : 'Continue with Google',
-          style: GoogleFonts.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
+          style: KubusTextStyles.sectionTitle,
         ),
       ),
     );
@@ -88,8 +85,8 @@ class _GoogleGlyph extends StatelessWidget {
       child: Center(
         child: Text(
           'G',
-          style: GoogleFonts.inter(
-            fontSize: 14,
+          style: KubusTypography.inter(
+            fontSize: KubusHeaderMetrics.screenSubtitle,
             fontWeight: FontWeight.w800,
             color: color,
             height: 1,

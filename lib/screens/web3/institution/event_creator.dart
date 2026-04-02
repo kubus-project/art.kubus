@@ -162,7 +162,7 @@ class _EventCreatorState extends State<EventCreator>
             children: [
               Text(
                 _isEditing ? 'Edit Event' : 'Create New Event',
-                style: KubusTextStyles.screenTitle.copyWith(
+                style: KubusTextStyles.mobileAppBarTitle.copyWith(
                   color: scheme.onSurface,
                 ),
               ),
@@ -176,8 +176,7 @@ class _EventCreatorState extends State<EventCreator>
           ),
           const Spacer(),
           IconButton(
-            icon: Icon(Icons.help_outline,
-                color: scheme.onPrimary),
+            icon: Icon(Icons.help_outline, color: scheme.onPrimary),
             onPressed: () => _showHelp(),
           ),
         ],
@@ -194,8 +193,7 @@ class _EventCreatorState extends State<EventCreator>
           return Expanded(
             child: Container(
               height: KubusSpacing.xs,
-              margin: EdgeInsets.only(
-                  right: index < 3 ? KubusSpacing.sm : 0),
+              margin: EdgeInsets.only(right: index < 3 ? KubusSpacing.sm : 0),
               decoration: BoxDecoration(
                 color: index <= _currentStep
                     ? KubusColorRoles.of(context).web3InstitutionAccent
@@ -548,19 +546,19 @@ class _EventCreatorState extends State<EventCreator>
           style: TextStyle(color: scheme.onSurface),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(
-                color: scheme.onSurface.withValues(alpha: 0.4)),
+            hintStyle:
+                TextStyle(color: scheme.onSurface.withValues(alpha: 0.4)),
             filled: true,
             fillColor: scheme.onSurface.withValues(alpha: 0.04),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(KubusRadius.md),
-              borderSide: BorderSide(
-                  color: scheme.outline.withValues(alpha: 0.25)),
+              borderSide:
+                  BorderSide(color: scheme.outline.withValues(alpha: 0.25)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(KubusRadius.md),
-              borderSide: BorderSide(
-                  color: scheme.outline.withValues(alpha: 0.25)),
+              borderSide:
+                  BorderSide(color: scheme.outline.withValues(alpha: 0.25)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(KubusRadius.md),
@@ -585,14 +583,12 @@ class _EventCreatorState extends State<EventCreator>
             decoration: BoxDecoration(
               color: scheme.onSurface.withValues(alpha: 0.04),
               borderRadius: BorderRadius.circular(KubusRadius.md),
-              border: Border.all(
-                  color: scheme.outline.withValues(alpha: 0.25)),
+              border: Border.all(color: scheme.outline.withValues(alpha: 0.25)),
             ),
             child: Row(
               children: [
                 Icon(Icons.location_city,
-                    color: scheme.onSurface.withValues(alpha: 0.7),
-                    size: 18),
+                    color: scheme.onSurface.withValues(alpha: 0.7), size: 18),
                 const SizedBox(width: KubusSpacing.sm),
                 Expanded(
                   child: Text(
@@ -634,8 +630,8 @@ class _EventCreatorState extends State<EventCreator>
               decoration: BoxDecoration(
                 color: scheme.onSurface.withValues(alpha: 0.04),
                 borderRadius: BorderRadius.circular(KubusRadius.md),
-                border: Border.all(
-                    color: scheme.outline.withValues(alpha: 0.25)),
+                border:
+                    Border.all(color: scheme.outline.withValues(alpha: 0.25)),
               ),
               child: DropdownButton<String>(
                 value: selectedId,
@@ -685,8 +681,7 @@ class _EventCreatorState extends State<EventCreator>
           decoration: BoxDecoration(
             color: scheme.onSurface.withValues(alpha: 0.04),
             borderRadius: BorderRadius.circular(KubusRadius.md),
-            border: Border.all(
-                color: scheme.outline.withValues(alpha: 0.25)),
+            border: Border.all(color: scheme.outline.withValues(alpha: 0.25)),
           ),
           child: DropdownButton<String>(
             value: value,
@@ -731,8 +726,7 @@ class _EventCreatorState extends State<EventCreator>
             decoration: BoxDecoration(
               color: scheme.onSurface.withValues(alpha: 0.04),
               borderRadius: BorderRadius.circular(KubusRadius.md),
-              border: Border.all(
-                  color: scheme.outline.withValues(alpha: 0.25)),
+              border: Border.all(color: scheme.outline.withValues(alpha: 0.25)),
             ),
             child: Row(
               children: [
@@ -780,8 +774,7 @@ class _EventCreatorState extends State<EventCreator>
             decoration: BoxDecoration(
               color: scheme.onSurface.withValues(alpha: 0.04),
               borderRadius: BorderRadius.circular(KubusRadius.md),
-              border: Border.all(
-                  color: scheme.outline.withValues(alpha: 0.25)),
+              border: Border.all(color: scheme.outline.withValues(alpha: 0.25)),
             ),
             child: Row(
               children: [
@@ -816,8 +809,7 @@ class _EventCreatorState extends State<EventCreator>
               child: ElevatedButton(
                 onPressed: () => setState(() => _currentStep--),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      scheme.onSurface.withValues(alpha: 0.08),
+                  backgroundColor: scheme.onSurface.withValues(alpha: 0.08),
                   padding:
                       const EdgeInsets.symmetric(vertical: KubusSpacing.md),
                   shape: RoundedRectangleBorder(
@@ -839,8 +831,7 @@ class _EventCreatorState extends State<EventCreator>
               style: ElevatedButton.styleFrom(
                 backgroundColor: accent,
                 foregroundColor: scheme.onPrimary,
-                padding:
-                    const EdgeInsets.symmetric(vertical: KubusSpacing.md),
+                padding: const EdgeInsets.symmetric(vertical: KubusSpacing.md),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(KubusRadius.md),
                 ),

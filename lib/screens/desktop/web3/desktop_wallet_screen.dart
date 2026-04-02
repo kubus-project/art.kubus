@@ -253,10 +253,11 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                     backgroundColor: themeProvider.accentColor,
                     foregroundColor: Colors.white,
                     padding: EdgeInsets.symmetric(
-                        horizontal: DetailSpacing.xxl,
-                        vertical: DetailSpacing.lg),
+                      horizontal: KubusSpacing.xxl,
+                      vertical: KubusSpacing.lg,
+                    ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(DetailRadius.md),
+                      borderRadius: BorderRadius.circular(KubusRadius.md),
                     ),
                   ),
                 ),
@@ -269,11 +270,12 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                   label: const Text('Import Wallet'),
                   style: OutlinedButton.styleFrom(
                     padding: EdgeInsets.symmetric(
-                        horizontal: DetailSpacing.xxl,
-                        vertical: DetailSpacing.lg),
+                      horizontal: KubusSpacing.xxl,
+                      vertical: KubusSpacing.lg,
+                    ),
                     side: BorderSide(color: themeProvider.accentColor),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(DetailRadius.md),
+                      borderRadius: BorderRadius.circular(KubusRadius.md),
                     ),
                   ),
                 ),
@@ -483,15 +485,15 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                     onTap: walletAddress.isEmpty
                         ? null
                         : () => _copyWalletAddress(walletAddress),
-                    borderRadius: BorderRadius.circular(DetailRadius.sm),
+                    borderRadius: BorderRadius.circular(KubusRadius.sm),
                     child: Container(
                       padding: EdgeInsets.symmetric(
-                        horizontal: DetailSpacing.md,
-                        vertical: DetailSpacing.sm,
+                        horizontal: KubusSpacing.md,
+                        vertical: KubusSpacing.sm,
                       ),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(DetailRadius.sm),
+                        borderRadius: BorderRadius.circular(KubusRadius.sm),
                         border: Border.all(
                           color: Colors.white.withValues(alpha: 0.12),
                         ),
@@ -502,12 +504,12 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                           Text(
                             _truncateAddress(walletAddress),
                             style: KubusTypography.inter(
-                              fontSize: 13,
+                              fontSize: KubusChromeMetrics.navMetaLabel,
                               color: Colors.white,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          SizedBox(width: DetailSpacing.sm),
+                          const SizedBox(width: KubusSpacing.sm),
                           const Icon(Icons.copy, size: 14, color: Colors.white),
                         ],
                       ),
@@ -516,7 +518,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xxs),
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -583,11 +585,11 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                     foregroundColor: Colors.white,
                     backgroundColor: Colors.white.withValues(alpha: 0.12),
                     padding: EdgeInsets.symmetric(
-                      horizontal: DetailSpacing.lg,
-                      vertical: DetailSpacing.md,
+                      horizontal: KubusSpacing.lg,
+                      vertical: KubusSpacing.md,
                     ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(DetailRadius.md),
+                      borderRadius: BorderRadius.circular(KubusRadius.md),
                     ),
                   ),
                 ),
@@ -599,11 +601,11 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                     foregroundColor: Colors.white,
                     backgroundColor: Colors.white.withValues(alpha: 0.08),
                     padding: EdgeInsets.symmetric(
-                      horizontal: DetailSpacing.lg,
-                      vertical: DetailSpacing.md,
+                      horizontal: KubusSpacing.lg,
+                      vertical: KubusSpacing.md,
                     ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(DetailRadius.md),
+                      borderRadius: BorderRadius.circular(KubusRadius.md),
                     ),
                   ),
                 ),
@@ -788,13 +790,13 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
           unselectedLabelStyle: KubusTextStyles.navLabel,
           indicator: BoxDecoration(
             color: themeProvider.accentColor.withValues(alpha: 0.14),
-            borderRadius: BorderRadius.circular(DetailRadius.md),
+            borderRadius: BorderRadius.circular(KubusRadius.md),
           ),
           indicatorSize: TabBarIndicatorSize.tab,
           dividerColor: Colors.transparent,
           labelPadding: EdgeInsets.symmetric(
-            horizontal: DetailSpacing.lg,
-            vertical: DetailSpacing.sm,
+            horizontal: KubusSpacing.lg,
+            vertical: KubusSpacing.sm,
           ),
           tabs: _tabs.map((tab) => Tab(text: tab)).toList(),
         ),
@@ -809,12 +811,12 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     final network = walletProvider.currentSolanaNetwork.toLowerCase();
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: DetailSpacing.md,
-        vertical: DetailSpacing.sm,
+        horizontal: KubusSpacing.md,
+        vertical: KubusSpacing.sm,
       ),
       decoration: BoxDecoration(
         color: themeProvider.accentColor.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(DetailRadius.md),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
         border: Border.all(
           color: themeProvider.accentColor.withValues(alpha: 0.18),
         ),
@@ -859,15 +861,15 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
         color: Colors.transparent,
         child: InkWell(
           onTap: onPressed,
-          borderRadius: BorderRadius.circular(DetailRadius.md),
+          borderRadius: BorderRadius.circular(KubusRadius.md),
           child: Container(
             padding: EdgeInsets.symmetric(
-              horizontal: DetailSpacing.md,
-              vertical: DetailSpacing.sm,
+              horizontal: KubusSpacing.md,
+              vertical: KubusSpacing.sm,
             ),
             decoration: BoxDecoration(
               color: scheme.primaryContainer.withValues(alpha: 0.72),
-              borderRadius: BorderRadius.circular(DetailRadius.md),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
               border: Border.all(
                 color: scheme.outline.withValues(alpha: 0.16),
               ),
@@ -876,7 +878,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(icon, size: 18, color: scheme.onSurface),
-                SizedBox(width: DetailSpacing.sm),
+                const SizedBox(width: KubusSpacing.sm),
                 Text(
                   label,
                   style: KubusTextStyles.navLabel.copyWith(
@@ -899,19 +901,19 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: DetailSpacing.md,
-        vertical: DetailSpacing.sm,
+        horizontal: KubusSpacing.md,
+        vertical: KubusSpacing.sm,
       ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(DetailRadius.md),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
         border: Border.all(color: color.withValues(alpha: 0.18)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 16, color: color),
-          SizedBox(width: DetailSpacing.xs),
+          const SizedBox(width: KubusSpacing.xs),
           Text(
             label,
             style: KubusTextStyles.navMetaLabel.copyWith(
@@ -930,15 +932,15 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
       color: Colors.transparent,
       child: InkWell(
         onTap: () => _copyWalletAddress(address),
-        borderRadius: BorderRadius.circular(DetailRadius.md),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
         child: Container(
           padding: EdgeInsets.symmetric(
-            horizontal: DetailSpacing.md,
-            vertical: DetailSpacing.sm,
+            horizontal: KubusSpacing.md,
+            vertical: KubusSpacing.sm,
           ),
           decoration: BoxDecoration(
             color: scheme.surfaceContainerHighest.withValues(alpha: 0.44),
-            borderRadius: BorderRadius.circular(DetailRadius.md),
+            borderRadius: BorderRadius.circular(KubusRadius.md),
             border: Border.all(
               color: scheme.outline.withValues(alpha: 0.18),
             ),
@@ -947,7 +949,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(Icons.copy, size: 16, color: scheme.onSurface),
-              SizedBox(width: DetailSpacing.xs),
+              const SizedBox(width: KubusSpacing.xs),
               Text(
                 _truncateAddress(address),
                 style: KubusTextStyles.navMetaLabel.copyWith(
@@ -969,19 +971,19 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
   }) {
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: DetailSpacing.md,
-        vertical: DetailSpacing.sm,
+        horizontal: KubusSpacing.md,
+        vertical: KubusSpacing.sm,
       ),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(DetailRadius.md),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
         border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 16, color: Colors.white),
-          SizedBox(width: DetailSpacing.sm),
+          const SizedBox(width: KubusSpacing.sm),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

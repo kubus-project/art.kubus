@@ -127,7 +127,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
                   children: [
                     Text(
                       title,
-                      style: KubusTextStyles.screenTitle.copyWith(
+                      style: KubusTextStyles.mobileAppBarTitle.copyWith(
                         color: scheme.onSurface,
                       ),
                       maxLines: 1,

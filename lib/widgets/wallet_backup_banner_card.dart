@@ -9,7 +9,6 @@ import 'package:art_kubus/screens/web3/wallet/wallet_backup_protection_screen.da
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/widgets/kubus_card.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -158,17 +157,16 @@ class _WalletBackupBannerCardState extends State<WalletBackupBannerCard> {
                   children: [
                     Text(
                       l10n.walletBackupBannerTitle,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
+                      style: KubusTextStyles.sectionTitle.copyWith(
+                        fontSize: KubusChromeMetrics.navLabel,
                         fontWeight: FontWeight.w800,
                         color: scheme.onSurface,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: KubusSpacing.xs),
                     Text(
                       l10n.walletBackupBannerSubtitle,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
+                      style: KubusTextStyles.navMetaLabel.copyWith(
                         height: 1.3,
                         color: scheme.onSurface.withValues(alpha: 0.75),
                       ),
@@ -186,7 +184,9 @@ class _WalletBackupBannerCardState extends State<WalletBackupBannerCard> {
               icon: const Icon(Icons.visibility_outlined, size: 18),
               label: Text(
                 l10n.walletBackupBannerAction,
-                style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+                style: KubusTextStyles.navLabel.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               style: OutlinedButton.styleFrom(
                 foregroundColor: scheme.primary,
@@ -196,7 +196,7 @@ class _WalletBackupBannerCardState extends State<WalletBackupBannerCard> {
                   vertical: KubusSpacing.sm,
                 ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
                 ),
               ),
             ),

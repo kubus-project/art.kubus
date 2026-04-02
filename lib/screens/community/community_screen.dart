@@ -42,6 +42,7 @@ import '../../providers/community_subject_provider.dart';
 import '../../models/community_group.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/share/share_service.dart';
+import '../../services/share/share_deep_link_parser.dart';
 import '../../services/share/share_types.dart';
 import '../../services/block_list_service.dart';
 import '../../services/push_notification_service.dart';
@@ -60,6 +61,8 @@ import '../../providers/navigation_provider.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/artwork_navigation.dart';
 import '../../utils/community_screen_utils.dart';
+import '../../utils/institution_navigation.dart';
+import '../../utils/map_navigation.dart';
 import '../../widgets/community/community_composer_controls.dart';
 import '../../widgets/community/community_expandable_fab.dart';
 import '../../widgets/community/community_group_picker_content.dart';
@@ -67,6 +70,7 @@ import '../../widgets/community/community_likes_sheet.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/community_subject_navigation.dart';
 import '../../utils/media_url_resolver.dart';
+import '../../utils/share_deep_link_navigation.dart';
 import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/community/community_season0_banner.dart';
 import '../season0/season0_screen.dart';
@@ -1369,17 +1373,76 @@ class _CommunityScreenState extends State<CommunityScreen>
         }
         return;
       case KubusSearchResultKind.institution:
+      case KubusSearchResultKind.event:
+        final markerId = result.markerId?.trim() ?? '';
+        if (markerId.isNotEmpty && result.position == null) {
+          await ShareDeepLinkNavigation.open(
+            context,
+            ShareDeepLinkTarget(
+              type: ShareEntityType.marker,
+              id: markerId,
+            ),
+          );
+          return;
+        }
+
+        final mapPosition = result.position;
+        if (mapPosition != null) {
+          MapNavigation.open(
+            context,
+            center: mapPosition,
+            zoom: 15,
+            autoFollow: false,
+            initialMarkerId: result.markerId,
+            initialArtworkId: result.artworkId,
+            initialSubjectId: result.subjectId,
+            initialSubjectType: result.subjectType,
+            initialTargetLabel: result.label,
+          );
+          return;
+        }
+
+        if (result.kind == KubusSearchResultKind.institution) {
+          final institutionId = result.id?.trim() ?? '';
+          final profileTargetId = InstitutionNavigation.resolveProfileTargetId(
+            institutionId: institutionId,
+            data: result.data,
+          );
+          if (institutionId.isNotEmpty || profileTargetId != null) {
+            await InstitutionNavigation.open(
+              context,
+              institutionId: institutionId,
+              profileTargetId: profileTargetId,
+              data: result.data,
+              title: result.label,
+            );
+          }
+        }
+        return;
+      case KubusSearchResultKind.marker:
+        final markerSelectionId = result.markerId?.trim() ?? '';
+        if (markerSelectionId.isNotEmpty) {
+          await ShareDeepLinkNavigation.open(
+            context,
+            ShareDeepLinkTarget(
+              type: ShareEntityType.marker,
+              id: markerSelectionId,
+            ),
+          );
+          return;
+        }
         final position = result.position;
         if (position != null) {
-          Navigator.push(
+          MapNavigation.open(
             context,
-            MaterialPageRoute(
-              builder: (_) => MapScreen(
-                initialCenter: position,
-                initialZoom: 15,
-                autoFollow: false,
-              ),
-            ),
+            center: position,
+            zoom: 15,
+            autoFollow: false,
+            initialMarkerId: result.markerId,
+            initialArtworkId: result.artworkId,
+            initialSubjectId: result.subjectId,
+            initialSubjectType: result.subjectType,
+            initialTargetLabel: result.label,
           );
         }
         return;
@@ -1396,21 +1459,6 @@ class _CommunityScreenState extends State<CommunityScreen>
         final postId = result.id?.trim() ?? '';
         if (postId.isNotEmpty) {
           PostDetailScreen.openById(context, postId);
-        }
-        return;
-      case KubusSearchResultKind.event:
-      case KubusSearchResultKind.marker:
-        if (result.position != null) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => MapScreen(
-                initialCenter: result.position,
-                initialZoom: 15,
-                autoFollow: false,
-              ),
-            ),
-          );
         }
         return;
     }

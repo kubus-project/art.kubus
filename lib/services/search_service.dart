@@ -10,6 +10,7 @@ import '../providers/artwork_provider.dart';
 import '../providers/community_hub_provider.dart';
 import '../providers/institution_provider.dart';
 import '../providers/navigation_provider.dart';
+import '../utils/artwork_media_resolver.dart';
 import '../utils/search_suggestions.dart';
 import '../utils/wallet_utils.dart';
 import '../widgets/search/kubus_search_config.dart';
@@ -226,6 +227,11 @@ class SearchService {
             data: <String, dynamic>{
               'artist': artwork.artist,
               'category': artwork.category,
+              'artworkId': artwork.id,
+              'subjectType': 'artwork',
+              'subjectId': artwork.id,
+              'walletAddress': artwork.walletAddress,
+              'imageUrl': ArtworkMediaResolver.resolveCover(artwork: artwork),
             },
           ),
         )
@@ -257,6 +263,10 @@ class SearchService {
             data: <String, dynamic>{
               'type': institution.type,
               'address': institution.address,
+              'subjectType': 'institution',
+              'subjectId': institution.id,
+              if (institution.imageUrls.isNotEmpty)
+                'imageUrl': institution.imageUrls.first,
             },
           ),
         )
@@ -287,6 +297,9 @@ class SearchService {
             data: <String, dynamic>{
               'type': event.type.name,
               'location': event.location,
+              'subjectType': 'event',
+              'subjectId': event.id,
+              if (event.imageUrls.isNotEmpty) 'imageUrl': event.imageUrls.first,
             },
           ),
         )
@@ -344,6 +357,9 @@ class SearchService {
           data: <String, dynamic>{
             'authorWallet': authorWallet,
             'authorUsername': authorUsername,
+            'wallet': authorWallet,
+            if (post.authorAvatar != null && post.authorAvatar!.trim().isNotEmpty)
+              'avatarUrl': post.authorAvatar!.trim(),
           },
         ),
       );
@@ -382,6 +398,7 @@ class SearchService {
           case KubusSearchResultKind.profile:
             return resolvedId.isNotEmpty;
           case KubusSearchResultKind.institution:
+            return resolvedId.isNotEmpty || result.position != null;
           case KubusSearchResultKind.event:
           case KubusSearchResultKind.marker:
             return result.position != null;
@@ -392,6 +409,7 @@ class SearchService {
       case KubusSearchScope.community:
         switch (result.kind) {
           case KubusSearchResultKind.institution:
+            return resolvedId.isNotEmpty || result.position != null;
           case KubusSearchResultKind.event:
           case KubusSearchResultKind.marker:
             return result.position != null;
@@ -542,7 +560,59 @@ class SearchService {
       kind: KubusSearchResultKind.post,
       detail: author,
       id: id,
-      data: Map<String, dynamic>.from(map),
+      data: <String, dynamic>{
+        ...Map<String, dynamic>.from(map),
+        if ((_stringValue(
+                  map,
+                  const ['imageUrl', 'image_url', 'coverUrl', 'cover_url'],
+                ) ??
+                _stringValue(map['artwork'], const ['imageUrl', 'image_url']) ??
+                '')
+            .isNotEmpty)
+          'imageUrl': _stringValue(
+                map,
+                const ['imageUrl', 'image_url', 'coverUrl', 'cover_url'],
+              ) ??
+              _stringValue(map['artwork'], const ['imageUrl', 'image_url']),
+        if ((_stringValue(
+                  map,
+                  const ['authorAvatar', 'author_avatar', 'avatarUrl', 'avatar_url'],
+                ) ??
+                _stringValue(
+                  map['author'],
+                  const ['avatarUrl', 'avatar_url', 'profileImageUrl'],
+                ) ??
+                '')
+            .isNotEmpty)
+          'avatarUrl': _stringValue(
+                map,
+                const ['authorAvatar', 'author_avatar', 'avatarUrl', 'avatar_url'],
+              ) ??
+              _stringValue(
+                map['author'],
+                const ['avatarUrl', 'avatar_url', 'profileImageUrl'],
+              ),
+        if ((_stringValue(
+                  map,
+                  const ['authorWallet', 'author_wallet', 'wallet', 'walletAddress'],
+                ) ??
+                _stringValue(map['author'], const ['wallet', 'walletAddress']) ??
+                '')
+            .isNotEmpty)
+          'wallet': _stringValue(
+                map,
+                const ['authorWallet', 'author_wallet', 'wallet', 'walletAddress'],
+              ) ??
+              _stringValue(map['author'], const ['wallet', 'walletAddress']),
+        if (map['mediaUrls'] is List &&
+            (map['mediaUrls'] as List)
+                .map((item) => item?.toString().trim() ?? '')
+                .any((item) => item.isNotEmpty))
+          'imageUrls': (map['mediaUrls'] as List)
+              .map((item) => item?.toString().trim() ?? '')
+              .where((item) => item.isNotEmpty)
+              .toList(growable: false),
+      },
     );
   }
 
@@ -558,6 +628,15 @@ class SearchService {
       data: <String, dynamic>{
         'postId': id,
         'authorName': post.authorName,
+        if (post.imageUrl != null && post.imageUrl!.trim().isNotEmpty)
+          'imageUrl': post.imageUrl!.trim()
+        else if (post.mediaUrls.isNotEmpty)
+          'imageUrl': post.mediaUrls.first,
+        if (post.authorAvatar != null && post.authorAvatar!.trim().isNotEmpty)
+          'avatarUrl': post.authorAvatar!.trim(),
+        if ((post.authorWallet ?? '').trim().isNotEmpty)
+          'wallet': post.authorWallet!.trim(),
+        if (post.mediaUrls.isNotEmpty) 'imageUrls': post.mediaUrls,
       },
     );
   }

@@ -16,6 +16,8 @@ ArtMarker? resolveBestMarkerCandidate(
   Iterable<ArtMarker> markers, {
   String? exactMarkerId,
   String? artworkId,
+  String? subjectId,
+  String? subjectType,
   String? preferredLabel,
   LatLng? preferredPosition,
 }) {
@@ -38,6 +40,30 @@ ArtMarker? resolveBestMarkerCandidate(
         .toList(growable: false);
     if (artworkCandidates.isNotEmpty) {
       candidates = artworkCandidates;
+    }
+  }
+
+  final normalizedSubjectId = subjectId?.trim() ?? '';
+  if (normalizedSubjectId.isNotEmpty) {
+    final subjectCandidates = candidates
+        .where((marker) => (marker.subjectId ?? '').trim() == normalizedSubjectId)
+        .toList(growable: false);
+    if (subjectCandidates.isNotEmpty) {
+      candidates = subjectCandidates;
+    }
+  }
+
+  final normalizedSubjectType = subjectType?.trim().toLowerCase() ?? '';
+  if (normalizedSubjectType.isNotEmpty) {
+    final typedCandidates = candidates
+        .where(
+          (marker) =>
+              (marker.subjectType ?? '').trim().toLowerCase() ==
+              normalizedSubjectType,
+        )
+        .toList(growable: false);
+    if (typedCandidates.isNotEmpty) {
+      candidates = typedCandidates;
     }
   }
 

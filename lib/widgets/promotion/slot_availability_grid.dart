@@ -3,6 +3,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 
 import '../../models/promotion.dart';
+import '../../utils/design_tokens.dart';
 import '../glass_components.dart';
 
 /// A visual grid showing slot availability for premium tier promotions
@@ -52,7 +53,7 @@ class SlotAvailabilityGrid extends StatelessWidget {
             color: colors.onSurfaceVariant,
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: KubusSpacing.md),
         Row(
           children: slots.map((slot) {
             final isSelected = selectedSlot == slot.slotIndex;
@@ -61,7 +62,7 @@ class SlotAvailabilityGrid extends StatelessWidget {
             return Expanded(
               child: Padding(
                 padding: EdgeInsets.only(
-                  right: slot.slotIndex < slots.length ? 8 : 0,
+                  right: slot.slotIndex < slots.length ? KubusSpacing.sm : 0,
                 ),
                 child: _SlotCard(
                   slotIndex: slot.slotIndex,
@@ -75,7 +76,7 @@ class SlotAvailabilityGrid extends StatelessWidget {
           }).toList(),
         ),
         if (hasUnavailableSelected && alternatives != null) ...[
-          const SizedBox(height: 16),
+          const SizedBox(height: KubusSpacing.md),
           _AlternativeDatesSection(
             alternatives: alternatives!,
             onSelected: onAlternativeSelected,
@@ -124,10 +125,10 @@ class _SlotCard extends StatelessWidget {
       backgroundColor: backgroundColor,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         decoration: BoxDecoration(
           color: backgroundColor,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(KubusRadius.md),
           border: Border.all(
             color: borderColor,
             width: isSelected ? 2 : 1,
@@ -142,7 +143,7 @@ class _SlotCard extends StatelessWidget {
                   : colors.error,
               size: 28,
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: KubusSpacing.xs),
             Text(
               l10n.promotionBuilderSlotLabel(slotIndex),
               style: theme.textTheme.labelLarge?.copyWith(
@@ -150,7 +151,7 @@ class _SlotCard extends StatelessWidget {
                 color: isAvailable ? colors.onSurface : colors.error,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: KubusSpacing.xxs + KubusSpacing.xxs),
             Text(
               isAvailable
                   ? l10n.promotionBuilderSlotAvailable
@@ -198,7 +199,7 @@ class _AlternativeDatesSection extends StatelessWidget {
         child: Row(
           children: [
             Icon(Icons.info_outline, color: colors.error, size: 20),
-            const SizedBox(width: 8),
+            const SizedBox(width: KubusSpacing.sm),
             Expanded(
               child: Text(
                 l10n.promotionBuilderNoAlternativeDates,
@@ -219,10 +220,10 @@ class _AlternativeDatesSection extends StatelessWidget {
           children: [
             Icon(
               Icons.lightbulb_outline,
-              size: 18,
+              size: KubusHeaderMetrics.actionIcon - 2,
               color: roles.statBlue,
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: KubusSpacing.xs),
             Text(
               l10n.promotionBuilderAlternativeDates,
               style: theme.textTheme.titleSmall?.copyWith(
@@ -231,13 +232,13 @@ class _AlternativeDatesSection extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: KubusSpacing.sm),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
             children: alternatives.alternatives.map((alt) {
               return Padding(
-                padding: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsets.only(right: KubusSpacing.sm),
                 child: _AlternativeDateChip(
                   alternative: alt,
                   onTap: onSelected != null ? () => onSelected!(alt) : null,
@@ -273,7 +274,10 @@ class _AlternativeDateChip extends StatelessWidget {
 
     return FrostedContainer(
       onTap: onTap,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(
+        horizontal: KubusSpacing.md,
+        vertical: KubusSpacing.sm + KubusSpacing.xxs,
+      ),
       backgroundColor: colors.surfaceContainerHighest.withValues(alpha: 0.65),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

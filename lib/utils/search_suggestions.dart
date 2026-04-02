@@ -11,6 +11,13 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
   try {
     if (raw == null) return out;
 
+    Map<String, dynamic>? asMap(dynamic value) {
+      if (value is Map) {
+        return Map<String, dynamic>.from(value);
+      }
+      return null;
+    }
+
     List<dynamic> items = [];
     if (raw is List) {
       items = raw;
@@ -198,10 +205,219 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
 
       double? lat;
       double? lng;
-      final latRaw = m['lat'] ?? m['latitude'] ?? (m['latlng'] is Map ? (m['latlng']['lat']) : null);
-      final lngRaw = m['lng'] ?? m['longitude'] ?? (m['latlng'] is Map ? (m['latlng']['lng']) : null);
+      final authorMap = m['author'] is Map
+          ? Map<String, dynamic>.from(m['author'] as Map)
+          : null;
+      final artworkMap = m['artwork'] is Map
+          ? Map<String, dynamic>.from(m['artwork'] as Map)
+          : null;
+      final institutionMap = m['institution'] is Map
+          ? Map<String, dynamic>.from(m['institution'] as Map)
+          : null;
+      final eventMap = m['event'] is Map
+          ? Map<String, dynamic>.from(m['event'] as Map)
+          : null;
+      final metadataMap = m['metadata'] is Map
+          ? Map<String, dynamic>.from(m['metadata'] as Map)
+          : (m['meta'] is Map
+              ? Map<String, dynamic>.from(m['meta'] as Map)
+              : null);
+      final artworkMetadataMap =
+          asMap(artworkMap?['metadata']) ?? asMap(artworkMap?['meta']);
+      final institutionMetadataMap =
+          asMap(institutionMap?['metadata']) ?? asMap(institutionMap?['meta']);
+      final eventMetadataMap =
+          asMap(eventMap?['metadata']) ?? asMap(eventMap?['meta']);
+      final rootLatLngMap = asMap(m['latlng']);
+      final artworkLatLngMap = asMap(artworkMap?['latlng']);
+      final institutionLatLngMap = asMap(institutionMap?['latlng']);
+      final eventLatLngMap = asMap(eventMap?['latlng']);
+      final latRaw = m['lat'] ??
+          m['latitude'] ??
+          rootLatLngMap?['lat'] ??
+          artworkMap?['lat'] ??
+          artworkMap?['latitude'] ??
+          artworkLatLngMap?['lat'] ??
+          institutionMap?['lat'] ??
+          institutionMap?['latitude'] ??
+          institutionLatLngMap?['lat'] ??
+          eventMap?['lat'] ??
+          eventMap?['latitude'] ??
+          eventLatLngMap?['lat'];
+      final lngRaw = m['lng'] ??
+          m['longitude'] ??
+          rootLatLngMap?['lng'] ??
+          artworkMap?['lng'] ??
+          artworkMap?['longitude'] ??
+          artworkLatLngMap?['lng'] ??
+          institutionMap?['lng'] ??
+          institutionMap?['longitude'] ??
+          institutionLatLngMap?['lng'] ??
+          eventMap?['lng'] ??
+          eventMap?['longitude'] ??
+          eventLatLngMap?['lng'];
       if (latRaw is num) lat = latRaw.toDouble();
       if (lngRaw is num) lng = lngRaw.toDouble();
+      final markerCandidate = (m['markerId'] ??
+              m['marker_id'] ??
+              metadataMap?['markerId'] ??
+              metadataMap?['marker_id'] ??
+              artworkMap?['markerId'] ??
+              artworkMap?['marker_id'] ??
+              artworkMetadataMap?['markerId'] ??
+              artworkMetadataMap?['marker_id'] ??
+              institutionMap?['markerId'] ??
+              institutionMap?['marker_id'] ??
+              institutionMetadataMap?['markerId'] ??
+              institutionMetadataMap?['marker_id'] ??
+              eventMap?['markerId'] ??
+              eventMap?['marker_id'] ??
+              eventMetadataMap?['markerId'] ??
+              eventMetadataMap?['marker_id'])
+          ?.toString()
+          .trim();
+      final subjectTypeCandidate = (m['subjectType'] ??
+              m['subject_type'] ??
+              metadataMap?['subjectType'] ??
+              metadataMap?['subject_type'] ??
+              artworkMap?['subjectType'] ??
+              artworkMap?['subject_type'] ??
+              artworkMetadataMap?['subjectType'] ??
+              artworkMetadataMap?['subject_type'] ??
+              institutionMap?['subjectType'] ??
+              institutionMap?['subject_type'] ??
+              institutionMetadataMap?['subjectType'] ??
+              institutionMetadataMap?['subject_type'] ??
+              eventMap?['subjectType'] ??
+              eventMap?['subject_type'] ??
+              eventMetadataMap?['subjectType'] ??
+              eventMetadataMap?['subject_type'])
+          ?.toString()
+          .trim();
+      final subjectIdCandidate = (m['subjectId'] ??
+              m['subject_id'] ??
+              metadataMap?['subjectId'] ??
+              metadataMap?['subject_id'] ??
+              artworkMap?['subjectId'] ??
+              artworkMap?['subject_id'] ??
+              artworkMetadataMap?['subjectId'] ??
+              artworkMetadataMap?['subject_id'] ??
+              institutionMap?['subjectId'] ??
+              institutionMap?['subject_id'] ??
+              institutionMetadataMap?['subjectId'] ??
+              institutionMetadataMap?['subject_id'] ??
+              eventMap?['subjectId'] ??
+              eventMap?['subject_id'] ??
+              eventMetadataMap?['subjectId'] ??
+              eventMetadataMap?['subject_id'])
+          ?.toString()
+          .trim();
+      final artworkIdCandidate = (m['artworkId'] ??
+              m['artwork_id'] ??
+              metadataMap?['artworkId'] ??
+              metadataMap?['artwork_id'] ??
+              artworkMap?['id'] ??
+              artworkMap?['artworkId'] ??
+              artworkMap?['artwork_id'] ??
+              artworkMetadataMap?['artworkId'] ??
+              artworkMetadataMap?['artwork_id'])
+          ?.toString()
+          .trim();
+      final avatarCandidate = (m['avatarUrl'] ??
+              m['avatar_url'] ??
+              m['avatar'] ??
+              m['profileImageUrl'] ??
+              m['profile_image_url'] ??
+              m['profileImage'] ??
+              m['profile_image'] ??
+              m['authorAvatar'] ??
+              m['author_avatar'] ??
+              authorMap?['avatarUrl'] ??
+              authorMap?['avatar_url'] ??
+              authorMap?['avatar'] ??
+              authorMap?['profileImageUrl'] ??
+              authorMap?['profile_image_url'] ??
+              artworkMap?['authorAvatar'] ??
+              artworkMap?['author_avatar'])
+          ?.toString()
+          .trim();
+      final imageCandidate = (m['imageUrl'] ??
+              m['image_url'] ??
+              m['image'] ??
+              m['coverImageUrl'] ??
+              m['cover_image_url'] ??
+              m['coverImage'] ??
+              m['cover_image'] ??
+              m['coverUrl'] ??
+              m['cover_url'] ??
+              m['thumbnailUrl'] ??
+              m['thumbnail_url'] ??
+              m['thumbnail'] ??
+              m['previewUrl'] ??
+              m['preview_url'] ??
+              m['preview'] ??
+              m['hero'] ??
+              m['banner'] ??
+              m['mediaUrl'] ??
+              m['media_url'] ??
+              m['artworkImage'] ??
+              m['artwork_image'] ??
+              m['artworkImageUrl'] ??
+              m['artwork_image_url'] ??
+              artworkMap?['imageUrl'] ??
+              artworkMap?['image_url'] ??
+              artworkMap?['coverImageUrl'] ??
+              artworkMap?['cover_image_url'] ??
+              artworkMap?['coverUrl'] ??
+              artworkMap?['cover_url'] ??
+              institutionMap?['imageUrl'] ??
+              institutionMap?['image_url'] ??
+              eventMap?['imageUrl'] ??
+              eventMap?['image_url'])
+          ?.toString()
+          .trim();
+      final rawImageList = m['imageUrls'] ??
+          m['image_urls'] ??
+          m['images'] ??
+          artworkMap?['imageUrls'] ??
+          artworkMap?['image_urls'] ??
+          artworkMap?['images'] ??
+          institutionMap?['imageUrls'] ??
+          institutionMap?['image_urls'] ??
+          institutionMap?['images'] ??
+          eventMap?['imageUrls'] ??
+          eventMap?['image_urls'] ??
+          eventMap?['images'];
+      final imageListCandidate = rawImageList is List
+          ? rawImageList
+              .map((item) => item?.toString().trim() ?? '')
+              .where((item) => item.isNotEmpty)
+              .toList(growable: false)
+          : const <String>[];
+
+      id = (id?.trim().isNotEmpty ?? false)
+          ? id
+          : ((type.toLowerCase() == 'artwork')
+                  ? artworkIdCandidate
+                  : (type.toLowerCase() == 'institution')
+                      ? (m['institutionId'] ??
+                              m['institution_id'] ??
+                              institutionMap?['id'] ??
+                              institutionMap?['institutionId'] ??
+                              institutionMap?['institution_id'])
+                          ?.toString()
+                          .trim()
+                      : (type.toLowerCase() == 'event')
+                          ? (m['eventId'] ??
+                                  m['event_id'] ??
+                                  eventMap?['id'] ??
+                                  eventMap?['eventId'] ??
+                                  eventMap?['event_id'])
+                              ?.toString()
+                              .trim()
+                          : (type.toLowerCase() == 'marker')
+                              ? markerCandidate
+                              : id);
 
       final normalized = <String, dynamic>{
         'label': label,
@@ -211,10 +427,19 @@ List<Map<String, dynamic>> normalizeSearchSuggestionsPayload(dynamic raw) {
         if (rawDisplayName != null) 'displayName': rawDisplayName,
         if (rawUsername != null) 'username': rawUsername,
         if (wallet != null) 'wallet': wallet,
-        if (m['avatarUrl'] != null) 'avatarUrl': m['avatarUrl'],
-        if (m['avatar_url'] != null) 'avatar_url': m['avatar_url'],
-        if (m['imageUrl'] != null) 'imageUrl': m['imageUrl'],
-        if (m['image_url'] != null) 'image_url': m['image_url'],
+        if (markerCandidate != null && markerCandidate.isNotEmpty)
+          'markerId': markerCandidate,
+        if (subjectTypeCandidate != null && subjectTypeCandidate.isNotEmpty)
+          'subjectType': subjectTypeCandidate,
+        if (subjectIdCandidate != null && subjectIdCandidate.isNotEmpty)
+          'subjectId': subjectIdCandidate,
+        if (artworkIdCandidate != null && artworkIdCandidate.isNotEmpty)
+          'artworkId': artworkIdCandidate,
+        if (avatarCandidate != null && avatarCandidate.isNotEmpty)
+          'avatarUrl': avatarCandidate,
+        if (imageCandidate != null && imageCandidate.isNotEmpty)
+          'imageUrl': imageCandidate,
+        if (imageListCandidate.isNotEmpty) 'imageUrls': imageListCandidate,
       };
       if (lat != null && lng != null) {
         normalized['lat'] = lat;

@@ -3,7 +3,10 @@ import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers/themeprovider.dart';
+import '../../utils/artwork_media_resolver.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/media_url_resolver.dart';
+import '../avatar_widget.dart';
 import '../glass_components.dart';
 import '../map_overlay_blocker.dart';
 import 'kubus_search_bar.dart';
@@ -206,6 +209,98 @@ class KubusSearchResultsOverlay extends StatelessWidget {
   final double maxHeight;
   final bool enabled;
 
+  Widget _buildIconBadge(
+    BuildContext context,
+    KubusSearchResult result,
+    Color resolvedAccent,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: resolvedAccent.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
+        border: Border.all(
+          color: scheme.outline.withValues(alpha: 0.12),
+        ),
+      ),
+      child: Icon(
+        result.icon,
+        color: resolvedAccent,
+      ),
+    );
+  }
+
+  String? _resolvePreviewUrl(KubusSearchResult result) {
+    switch (result.kind) {
+      case KubusSearchResultKind.artwork:
+        return ArtworkMediaResolver.resolveCover(
+          metadata: result.data,
+          fallbackUrl: result.previewImageUrl,
+          additionalUrls: <String?>[result.previewImageUrl],
+        );
+      case KubusSearchResultKind.post:
+      case KubusSearchResultKind.institution:
+      case KubusSearchResultKind.event:
+      case KubusSearchResultKind.marker:
+        return MediaUrlResolver.resolveDisplayUrl(result.previewImageUrl);
+      case KubusSearchResultKind.profile:
+      case KubusSearchResultKind.screen:
+        return null;
+    }
+  }
+
+  Widget _buildResultLeading(
+    BuildContext context,
+    KubusSearchResult result,
+    Color resolvedAccent,
+  ) {
+    if (result.kind == KubusSearchResultKind.profile ||
+        (result.kind == KubusSearchResultKind.post &&
+            (result.avatarUrl?.trim().isNotEmpty ?? false))) {
+      final wallet = (result.walletSeed ?? result.id ?? result.label).trim();
+      return SizedBox(
+        width: 44,
+        height: 44,
+        child: AvatarWidget(
+          avatarUrl: result.avatarUrl,
+          wallet: wallet.isEmpty ? result.label : wallet,
+          radius: 22,
+          allowFabricatedFallback: true,
+          enableProfileNavigation: false,
+          showStatusIndicator: false,
+        ),
+      );
+    }
+
+    final previewUrl = _resolvePreviewUrl(result);
+    if (previewUrl == null || previewUrl.isEmpty) {
+      return _buildIconBadge(context, result, resolvedAccent);
+    }
+
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.64),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
+        border: Border.all(
+          color: scheme.outline.withValues(alpha: 0.12),
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Image.network(
+        previewUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return _buildIconBadge(context, result, resolvedAccent);
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -304,43 +399,55 @@ class KubusSearchResultsOverlay extends StatelessWidget {
                           }
 
                           final l10n = AppLocalizations.of(context)!;
-                          return ListView.separated(
-                            shrinkWrap: true,
-                            itemCount: state.results.length,
-                            separatorBuilder: (_, __) => Divider(
-                              height: 1,
-                              color: scheme.outlineVariant,
+                          return Material(
+                            type: MaterialType.transparency,
+                            child: ListView.separated(
+                              shrinkWrap: true,
+                              itemCount: state.results.length,
+                              separatorBuilder: (_, __) => Divider(
+                                height: 1,
+                                color: scheme.outlineVariant,
+                              ),
+                              itemBuilder: (context, index) {
+                                final result = state.results[index];
+                                return MouseRegion(
+                                  cursor: SystemMouseCursors.click,
+                                  child: ListTile(
+                                    minLeadingWidth: 44,
+                                    contentPadding:
+                                        const EdgeInsets.symmetric(
+                                      horizontal: KubusSpacing.md,
+                                      vertical: KubusSpacing.xxs,
+                                    ),
+                                    leading: _buildResultLeading(
+                                      context,
+                                      result,
+                                      resolvedAccent,
+                                    ),
+                                    title: Text(
+                                      result.label,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style:
+                                          theme.textTheme.bodyMedium?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      result.subtitleText(l10n),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style:
+                                          theme.textTheme.bodyMedium?.copyWith(
+                                        color: scheme.onSurface
+                                            .withValues(alpha: 0.6),
+                                      ),
+                                    ),
+                                    onTap: () => onResultTap(result),
+                                  ),
+                                );
+                              },
                             ),
-                            itemBuilder: (context, index) {
-                              final result = state.results[index];
-                              return MouseRegion(
-                                cursor: SystemMouseCursors.click,
-                                child: ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundColor:
-                                        resolvedAccent.withValues(alpha: 0.10),
-                                    child: Icon(
-                                      result.icon,
-                                      color: resolvedAccent,
-                                    ),
-                                  ),
-                                  title: Text(
-                                    result.label,
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  subtitle: Text(
-                                    result.subtitleText(l10n),
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: scheme.onSurface
-                                          .withValues(alpha: 0.6),
-                                    ),
-                                  ),
-                                  onTap: () => onResultTap(result),
-                                ),
-                              );
-                            },
                           );
                         },
                       ),

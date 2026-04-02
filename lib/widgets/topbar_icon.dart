@@ -32,7 +32,7 @@ class TopBarIcon extends StatelessWidget {
       surfaceType: KubusGlassSurfaceType.button,
       tintBase: scheme.surface,
     );
-    final radius = BorderRadius.circular(10);
+    final radius = BorderRadius.circular(KubusRadius.sm);
 
     Widget inner = IconButton(
       padding: EdgeInsets.zero,

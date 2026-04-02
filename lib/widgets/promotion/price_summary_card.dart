@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../../models/promotion.dart';
+import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../glass_components.dart';
 
@@ -44,7 +45,7 @@ class PriceSummaryCard extends StatelessWidget {
     );
 
     return LiquidGlassCard(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(KubusChromeMetrics.compactCardPadding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -53,7 +54,7 @@ class PriceSummaryCard extends StatelessWidget {
             selectedMethod: selectedPaymentMethod,
             onChanged: onPaymentMethodChanged,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: KubusSpacing.md),
 
           // Price breakdown
           _PriceRow(
@@ -65,7 +66,7 @@ class PriceSummaryCard extends StatelessWidget {
           ),
 
           if (hasDiscount) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: KubusSpacing.sm),
             _PriceRow(
               label:
                   '${l10n.promotionBuilderPriceDiscount} (${pricing.discountPercent.toStringAsFixed(0)}%)',
@@ -77,7 +78,7 @@ class PriceSummaryCard extends StatelessWidget {
           ],
 
           const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
+            padding: EdgeInsets.symmetric(vertical: KubusSpacing.md),
             child: Divider(),
           ),
 
@@ -103,13 +104,15 @@ class PriceSummaryCard extends StatelessWidget {
 
           // KUB8 balance warning
           if (insufficientKub8) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: KubusSpacing.md),
             FrostedContainer(
               backgroundColor: colors.errorContainer.withValues(alpha: 0.3),
               child: Row(
                 children: [
-                  Icon(Icons.warning_amber, color: colors.error, size: 18),
-                  const SizedBox(width: 8),
+                  Icon(Icons.warning_amber,
+                      color: colors.error,
+                      size: KubusHeaderMetrics.actionIcon - 2),
+                  const SizedBox(width: KubusSpacing.sm),
                   Expanded(
                     child: Text(
                       l10n.promotionBuilderInsufficientKub8Balance(
@@ -126,17 +129,17 @@ class PriceSummaryCard extends StatelessWidget {
           ],
 
           // Refund policy
-          const SizedBox(height: 12),
+          const SizedBox(height: KubusSpacing.md),
           Row(
             children: [
               Icon(
                 quote.isRefundable ? Icons.check_circle : Icons.info_outline,
-                size: 16,
+                size: KubusChromeMetrics.navMetaLabel + 4,
                 color: quote.isRefundable
                     ? roles.positiveAction
                     : colors.onSurfaceVariant,
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: KubusSpacing.xs),
               Expanded(
                 child: Text(
                   quote.isRefundable
@@ -153,15 +156,15 @@ class PriceSummaryCard extends StatelessWidget {
           ),
 
           // Schedule info
-          const SizedBox(height: 8),
+          const SizedBox(height: KubusSpacing.sm),
           Row(
             children: [
               Icon(
                 Icons.calendar_today,
-                size: 16,
+                size: KubusChromeMetrics.navMetaLabel + 4,
                 color: colors.onSurfaceVariant,
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: KubusSpacing.xs),
               Expanded(
                 child: Text(
                   '${_formatDate(context, quote.schedule.startDate)} → ${_formatDate(context, quote.schedule.endDate)}',

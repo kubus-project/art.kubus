@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../utils/app_animations.dart';
 import '../../utils/design_tokens.dart';
@@ -61,7 +60,9 @@ class CommunityExpandableFab extends StatelessWidget {
           fontWeight: FontWeight.w600,
         );
       }
-      return GoogleFonts.inter(fontWeight: FontWeight.w600);
+      return KubusTypography.textTheme.labelMedium!.copyWith(
+        fontWeight: FontWeight.w600,
+      );
     }
 
     TextStyle optionStyle() {
@@ -71,8 +72,7 @@ class CommunityExpandableFab extends StatelessWidget {
           color: scheme.onSurface,
         );
       }
-      return GoogleFonts.inter(
-        fontSize: 13,
+      return KubusTextStyles.navMetaLabel.copyWith(
         fontWeight: FontWeight.w600,
         color: scheme.onSurface,
       );
@@ -113,14 +113,15 @@ class CommunityExpandableFab extends StatelessWidget {
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
+                                  horizontal: KubusSpacing.sm + KubusSpacing.xs,
+                                  vertical: KubusSpacing.sm,
                                 ),
                                 decoration: BoxDecoration(
                                   color: scheme.surface,
                                   borderRadius: isMobile
                                       ? KubusRadius.circular(KubusRadius.sm)
-                                      : BorderRadius.circular(10),
+                                      : BorderRadius.circular(
+                                          KubusRadius.sm + KubusSpacing.xxs),
                                   boxShadow: [
                                     BoxShadow(
                                       color: Colors.black.withValues(

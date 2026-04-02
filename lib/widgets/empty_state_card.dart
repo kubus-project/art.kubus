@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/themeprovider.dart';
+import '../utils/design_tokens.dart';
 import 'glass_components.dart';
 
 class EmptyStateCard extends StatelessWidget {
@@ -29,7 +29,7 @@ class EmptyStateCard extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final radius = BorderRadius.circular(16);
+    final radius = BorderRadius.circular(KubusRadius.lg);
     final glassTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
 
     return LayoutBuilder(
@@ -53,27 +53,25 @@ class EmptyStateCard extends StatelessWidget {
                   size: 48,
                   color: scheme.onSurface.withAlpha((0.32 * 255).round()),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: KubusSpacing.sm),
                 Text(
                   title,
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                  style: KubusTextStyles.sectionTitle.copyWith(
                     color: scheme.onSurface,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: KubusSpacing.xs + KubusSpacing.xxs),
                 Text(
                   description,
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
+                  style: KubusTypography.textTheme.bodyMedium?.copyWith(
                     color: scheme.onSurface.withAlpha((0.6 * 255).round()),
                   ),
                 ),
                 if (showAction && onAction != null && actionLabel != null) ...[
-                  const SizedBox(height: 12),
+                  const SizedBox(height: KubusSpacing.sm),
                   TextButton(
                     onPressed: onAction,
                     style: TextButton.styleFrom(foregroundColor: accent),
@@ -102,7 +100,10 @@ class EmptyStateCard extends StatelessWidget {
             ),
           ),
           child: LiquidGlassPanel(
-            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+            padding: const EdgeInsets.symmetric(
+              vertical: KubusSpacing.lg,
+              horizontal: KubusSpacing.md,
+            ),
             margin: EdgeInsets.zero,
             borderRadius: radius,
             showBorder: false,

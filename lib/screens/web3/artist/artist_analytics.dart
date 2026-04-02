@@ -149,7 +149,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
       children: [
         Text(
           'Analytics Dashboard',
-          style: KubusTextStyles.screenTitle.copyWith(
+          style: KubusTextStyles.mobileAppBarTitle.copyWith(
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),

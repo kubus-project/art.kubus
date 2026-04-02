@@ -17,6 +17,7 @@ enum MapMarkerOverlayPrimaryTarget {
   artwork,
   exhibition,
   event,
+  institution,
 }
 
 class MapMarkerOverlayLinkedSubjectContext {
@@ -247,6 +248,10 @@ MapMarkerOverlayPrimaryTarget _resolvePrimaryTarget({
       }
       break;
     case MapMarkerOverlayLinkedSubjectKind.institution:
+      if ((linkedSubjectId ?? '').isNotEmpty) {
+        return MapMarkerOverlayPrimaryTarget.institution;
+      }
+      break;
     case MapMarkerOverlayLinkedSubjectKind.group:
     case MapMarkerOverlayLinkedSubjectKind.misc:
     case MapMarkerOverlayLinkedSubjectKind.none:

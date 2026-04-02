@@ -91,7 +91,7 @@ class _EventManagerState extends State<EventManager>
         children: [
           Text(
             'Event Manager',
-            style: KubusTextStyles.screenTitle.copyWith(
+            style: KubusTextStyles.mobileAppBarTitle.copyWith(
               color: scheme.onSurface,
             ),
           ),
@@ -111,8 +111,7 @@ class _EventManagerState extends State<EventManager>
                 onPressed: () => _showNotifications(),
               ),
               IconButton(
-                icon: Icon(Icons.search,
-                    color: scheme.onSurface, size: 20),
+                icon: Icon(Icons.search, color: scheme.onSurface, size: 20),
                 onPressed: () => _showSearchDialog(),
               ),
             ],
@@ -280,8 +279,7 @@ class _EventManagerState extends State<EventManager>
           Row(
             children: [
               Icon(Icons.location_on,
-                  color: scheme.onSurface.withValues(alpha: 0.6),
-                  size: 14),
+                  color: scheme.onSurface.withValues(alpha: 0.6), size: 14),
               const SizedBox(width: KubusSpacing.xs),
               Flexible(
                 child: Text(
@@ -294,8 +292,7 @@ class _EventManagerState extends State<EventManager>
               ),
               const SizedBox(width: KubusSpacing.sm),
               Icon(Icons.schedule,
-                  color: scheme.onSurface.withValues(alpha: 0.6),
-                  size: 14),
+                  color: scheme.onSurface.withValues(alpha: 0.6), size: 14),
               const SizedBox(width: KubusSpacing.xs),
               Flexible(
                 child: Text(
@@ -376,9 +373,8 @@ class _EventManagerState extends State<EventManager>
     final scheme = Theme.of(context).colorScheme;
     return TextButton.icon(
       onPressed: onPressed,
-      icon: Icon(icon,
-          color: scheme.onSurface.withValues(alpha: 0.7),
-          size: 16),
+      icon:
+          Icon(icon, color: scheme.onSurface.withValues(alpha: 0.7), size: 16),
       label: Text(
         label,
         style: KubusTextStyles.detailCaption.copyWith(
@@ -610,8 +606,8 @@ class _EventManagerState extends State<EventManager>
         final scheme = Theme.of(context).colorScheme;
         return KubusAlertDialog(
           backgroundColor: scheme.surfaceContainerHighest,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(KubusRadius.lg)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(KubusRadius.lg)),
           title: Text(event.title,
               style: KubusTextStyles.detailSectionTitle.copyWith(
                 color: scheme.onSurface,
@@ -680,8 +676,7 @@ class _EventManagerState extends State<EventManager>
             child: Text(AppLocalizations.of(context)!.commonCancel),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(
-                backgroundColor: scheme.error),
+            style: ElevatedButton.styleFrom(backgroundColor: scheme.error),
             onPressed: () {
               context.read<InstitutionProvider>().deleteEvent(event.id);
               Navigator.pop(context);
@@ -689,8 +684,7 @@ class _EventManagerState extends State<EventManager>
                 SnackBar(content: Text('${event.title} deleted')),
               );
             },
-            child: Text('Delete',
-                style: TextStyle(color: scheme.onError)),
+            child: Text('Delete', style: TextStyle(color: scheme.onError)),
           ),
         ],
       ),

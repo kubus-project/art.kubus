@@ -1,8 +1,11 @@
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:flutter/material.dart';
 
 import '../../community/community_interactions.dart';
+import '../../utils/design_tokens.dart';
+import '../common/kubus_glass_icon_button.dart';
+import '../common/kubus_screen_header.dart';
+import '../glass_components.dart';
 
 /// Shared post "more" options sheet.
 ///
@@ -19,68 +22,87 @@ Future<void> showCommunityPostOptionsSheet({
   final theme = Theme.of(context);
   final l10n = AppLocalizations.of(context);
 
+  Widget optionTile({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    Color? iconColor,
+    Color? textColor,
+  }) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(icon, color: iconColor),
+      title: Text(
+        label,
+        style: KubusTypography.textTheme.bodyLarge?.copyWith(
+          color: textColor,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      onTap: onTap,
+    );
+  }
+
   await showModalBottomSheet<void>(
     context: context,
-    backgroundColor: theme.colorScheme.surface,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (sheetContext) => Container(
-      padding: const EdgeInsets.all(24),
+    backgroundColor: Colors.transparent,
+    builder: (sheetContext) => BackdropGlassSheet(
+      showBorder: false,
+      padding: EdgeInsets.zero,
+      backgroundColor: theme.colorScheme.surface,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(2),
+          KubusSheetHeader(
+            title: l10n?.profileMoreOptionsTitle ?? 'Options',
+            trailing: KubusGlassIconButton(
+              icon: Icons.close,
+              tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+              onPressed: () => Navigator.pop(sheetContext),
             ),
           ),
-          const SizedBox(height: 24),
-          if (!isOwner)
-            ListTile(
-              leading: const Icon(Icons.report),
-              title: Text(
-                l10n?.postDetailMoreOptionsReportAction ?? 'Report',
-                style: GoogleFonts.inter(fontSize: 16),
-              ),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                onReport();
-              },
-            )
-          else ...[
-            ListTile(
-              leading: const Icon(Icons.edit_outlined),
-              title: Text(
-                l10n?.commonEdit ?? 'Edit',
-                style: GoogleFonts.inter(fontSize: 16),
-              ),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                onEdit();
-              },
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              KubusSpacing.lg,
+              KubusSpacing.none,
+              KubusSpacing.lg,
+              KubusSpacing.lg,
             ),
-            ListTile(
-              leading: Icon(
-                Icons.delete_outline,
-                color: theme.colorScheme.error,
-              ),
-              title: Text(
-                l10n?.commonDelete ?? 'Delete',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  color: theme.colorScheme.error,
-                ),
-              ),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                onDelete();
-              },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (!isOwner)
+                  optionTile(
+                    icon: Icons.report,
+                    label: l10n?.postDetailMoreOptionsReportAction ?? 'Report',
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      onReport();
+                    },
+                  )
+                else ...[
+                  optionTile(
+                    icon: Icons.edit_outlined,
+                    label: l10n?.commonEdit ?? 'Edit',
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      onEdit();
+                    },
+                  ),
+                  optionTile(
+                    icon: Icons.delete_outline,
+                    iconColor: theme.colorScheme.error,
+                    textColor: theme.colorScheme.error,
+                    label: l10n?.commonDelete ?? 'Delete',
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      onDelete();
+                    },
+                  ),
+                ],
+              ],
             ),
-          ],
+          ),
         ],
       ),
     ),

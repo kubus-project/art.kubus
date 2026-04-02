@@ -1,7 +1,6 @@
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class EmailVerificationStatusBadge extends StatefulWidget {
@@ -67,17 +66,20 @@ class _EmailVerificationStatusBadgeState
       child: Container(
         padding: EdgeInsets.symmetric(
           horizontal: dense ? KubusSpacing.sm : KubusSpacing.md,
-          vertical: dense ? 4 : 6,
+          vertical:
+              dense ? KubusSpacing.xs : KubusSpacing.xs + KubusSpacing.xxs,
         ),
         decoration: BoxDecoration(
           color: scheme.error.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(KubusRadius.xl),
           border: Border.all(color: scheme.error.withValues(alpha: 0.35)),
         ),
         child: Text(
           'Email not verified',
-          style: GoogleFonts.inter(
-            fontSize: dense ? 11 : 12,
+          style: KubusTextStyles.compactBadge.copyWith(
+            fontSize: dense
+                ? KubusChromeMetrics.navBadgeLabel + 2
+                : KubusChromeMetrics.navMetaLabel,
             fontWeight: FontWeight.w700,
             color: scheme.error,
           ),

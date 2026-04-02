@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../utils/design_tokens.dart';
 
@@ -31,8 +30,10 @@ class CommunitySeason0Banner extends StatelessWidget {
     final content = GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: EdgeInsets.only(bottom: isMobile ? KubusSpacing.md : 16),
-        padding: EdgeInsets.all(isMobile ? KubusSpacing.md : 16),
+        margin: EdgeInsets.only(
+          bottom: isMobile ? KubusSpacing.md : KubusSpacing.md,
+        ),
+        padding: EdgeInsets.all(isMobile ? KubusSpacing.md : KubusSpacing.md),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
@@ -44,7 +45,7 @@ class CommunitySeason0Banner extends StatelessWidget {
           ),
           borderRadius: isMobile
               ? KubusRadius.circular(KubusRadius.md)
-              : BorderRadius.circular(14),
+              : BorderRadius.circular(KubusRadius.md),
           border: Border.all(
             color: accentColor.withValues(alpha: isMobile ? 0.3 : 0.25),
           ),
@@ -58,7 +59,7 @@ class CommunitySeason0Banner extends StatelessWidget {
                 color: accentColor.withValues(alpha: isMobile ? 0.18 : 0.15),
                 borderRadius: isMobile
                     ? KubusRadius.circular(KubusRadius.sm)
-                    : BorderRadius.circular(12),
+                    : BorderRadius.circular(KubusRadius.md),
               ),
               child: Icon(
                 Icons.rocket_launch_outlined,
@@ -78,21 +79,22 @@ class CommunitySeason0Banner extends StatelessWidget {
                             fontWeight: FontWeight.w700,
                             color: scheme.onSurface,
                           )
-                        : GoogleFonts.inter(
-                            fontSize: 15,
+                        : KubusTextStyles.sectionTitle.copyWith(
+                            fontSize: KubusChromeMetrics.navLabel + 1,
                             fontWeight: FontWeight.w700,
                             color: scheme.onSurface,
                           ),
                   ),
-                  SizedBox(height: isMobile ? 2 : 3),
+                  SizedBox(
+                      height:
+                          isMobile ? KubusSpacing.xxs : KubusSpacing.xs - 1),
                   Text(
                     subtitle,
                     style: isMobile
                         ? KubusTypography.textTheme.bodySmall?.copyWith(
                             color: scheme.onSurface.withValues(alpha: 0.65),
                           )
-                        : GoogleFonts.inter(
-                            fontSize: 13,
+                        : KubusTextStyles.navMetaLabel.copyWith(
                             color: scheme.onSurface.withValues(alpha: 0.6),
                           ),
                   ),

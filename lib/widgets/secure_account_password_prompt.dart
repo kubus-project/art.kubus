@@ -1,8 +1,8 @@
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 Map<String, dynamic>? _mapOrNull(Object? value) {
   if (value is Map<String, dynamic>) return value;
@@ -40,14 +40,14 @@ Future<void> maybeShowGooglePasswordUpgradePrompt(
       backgroundColor: scheme.surface,
       title: Text(
         l10n.authSecureAccountAddPasswordTitle,
-        style: GoogleFonts.inter(
+        style: KubusTextStyles.sheetTitle.copyWith(
           color: scheme.onSurface,
           fontWeight: FontWeight.w800,
         ),
       ),
       content: Text(
         l10n.authSecureAccountPromptAddPasswordBody,
-        style: GoogleFonts.inter(
+        style: KubusTextStyles.detailBody.copyWith(
           color: scheme.onSurface.withValues(alpha: 0.78),
           height: 1.4,
         ),

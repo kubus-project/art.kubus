@@ -800,11 +800,11 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   Row(
                     children: [
                       Container(
-                        width: 48,
-                        height: 48,
+                        width: KubusHeaderMetrics.searchBarHeight,
+                        height: KubusHeaderMetrics.searchBarHeight,
                         decoration: BoxDecoration(
                           color: statusColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(KubusRadius.md),
                         ),
                         child: Icon(
                           canTransact
@@ -815,7 +815,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                           color: statusColor,
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: KubusSpacing.md),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -996,12 +996,14 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       context: context,
       builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(KubusRadius.xl),
+        ),
         title: Row(
           children: [
             Icon(Icons.warning_amber,
                 color: Theme.of(context).colorScheme.error),
-            const SizedBox(width: 12),
+            const SizedBox(width: KubusSpacing.sm),
             Text(
               l10n.settingsSecurityWarningTitle,
               style: KubusTextStyles.sheetTitle.copyWith(
@@ -1023,7 +1025,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                     .withValues(alpha: 0.8),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: KubusSpacing.sm),
             Text(
               l10n.settingsSecurityWarningBullets,
               style: KubusTextStyles.detailCaption.copyWith(
@@ -1065,7 +1067,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       context: context,
       builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(KubusRadius.xl),
+        ),
         title: Text(
           l10n.desktopSettingsDisconnectWalletDialogTitle,
           style: KubusTextStyles.sheetTitle,
@@ -3278,10 +3282,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     final achievementColor = Colors.amber;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(KubusSpacing.md),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHighest.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
         border: Border.all(
           color: isUnlocked
               ? achievementColor.withValues(alpha: 0.5)
@@ -3297,7 +3301,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
               color: isUnlocked
                   ? achievementColor.withValues(alpha: 0.2)
                   : scheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
             ),
             child: Icon(
               icon,
@@ -3307,7 +3311,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   : scheme.onSurface.withValues(alpha: 0.4),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: KubusSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -3321,7 +3325,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                       ),
                     ),
                     if (isUnlocked) ...[
-                      const SizedBox(width: 8),
+                      const SizedBox(width: KubusSpacing.sm),
                       Icon(
                         Icons.check_circle,
                         size: 18,
@@ -3338,7 +3342,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   ),
                 ),
                 if (!isUnlocked && progress != null && total != null) ...[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: KubusSpacing.sm),
                   LinearProgressIndicator(
                     value: progress / total,
                     backgroundColor: scheme.surfaceContainerHighest,
@@ -3356,12 +3360,15 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(
+              horizontal: KubusSpacing.sm + KubusSpacing.xs,
+              vertical: KubusSpacing.xs + KubusSpacing.xxs,
+            ),
             decoration: BoxDecoration(
               color: isUnlocked
                   ? achievementColor.withValues(alpha: 0.2)
                   : scheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(KubusRadius.xl),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,

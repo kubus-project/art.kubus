@@ -190,7 +190,7 @@ class _ArtworkArManagerScreenState extends State<ArtworkArManagerScreen> {
       appBar: AppBar(
         title: Text(
           'AR Marker',
-          style: KubusTextStyles.screenTitle.copyWith(
+          style: KubusTextStyles.mobileAppBarTitle.copyWith(
             color: scheme.onSurface,
           ),
         ),

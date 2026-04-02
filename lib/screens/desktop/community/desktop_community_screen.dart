@@ -22,6 +22,7 @@ import '../../../models/conversation.dart';
 import '../../../models/promotion.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../services/block_list_service.dart';
+import '../../../services/share/share_deep_link_parser.dart';
 import '../../../services/user_service.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
@@ -37,10 +38,13 @@ import '../../../utils/app_color_utils.dart';
 import '../../../utils/artwork_navigation.dart';
 import '../../../utils/community_screen_utils.dart';
 import '../../../utils/design_tokens.dart';
+import '../../../utils/institution_navigation.dart';
+import '../../../utils/map_navigation.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/creator_display_format.dart';
 import '../../../utils/search_suggestions.dart';
+import '../../../utils/share_deep_link_navigation.dart';
 import '../../../utils/user_profile_navigation.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../utils/user_identity_display.dart';
@@ -578,7 +582,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             .toList(growable: false);
         aggregated.addAll(
           suggestionItems
-              .map(_promotionProfileToSuggestion)
+              .map(_promotionRailItemToSuggestion)
               .whereType<Map<String, dynamic>>(),
         );
       } catch (e) {
@@ -1795,18 +1799,79 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         return;
       case KubusSearchResultKind.institution:
       case KubusSearchResultKind.event:
+        final markerId = result.markerId?.trim() ?? '';
+        if (markerId.isNotEmpty && result.position == null) {
+          await ShareDeepLinkNavigation.open(
+            context,
+            ShareDeepLinkTarget(
+              type: ShareEntityType.marker,
+              id: markerId,
+            ),
+          );
+          return;
+        }
+
+        final mapPosition = result.position;
+        if (mapPosition != null) {
+          MapNavigation.open(
+            context,
+            center: mapPosition,
+            zoom: 15,
+            autoFollow: false,
+            initialMarkerId: result.markerId,
+            initialArtworkId: result.artworkId,
+            initialSubjectId: result.subjectId,
+            initialSubjectType: result.subjectType,
+            initialTargetLabel: result.label,
+          );
+          return;
+        }
+
+        if (result.kind == KubusSearchResultKind.institution) {
+          final institutionId = result.id?.trim() ?? '';
+          final profileTargetId = InstitutionNavigation.resolveProfileTargetId(
+            institutionId: institutionId,
+            data: result.data,
+          );
+          if (institutionId.isNotEmpty || profileTargetId != null) {
+            await InstitutionNavigation.open(
+              context,
+              institutionId: institutionId,
+              profileTargetId: profileTargetId,
+              data: result.data,
+              title: result.label,
+              openProfileTarget: (resolvedProfileTargetId) =>
+                  _openUserProfileModal(
+                userId: resolvedProfileTargetId,
+              ),
+            );
+          }
+        }
+        return;
       case KubusSearchResultKind.marker:
+        final markerSelectionId = result.markerId?.trim() ?? '';
+        if (markerSelectionId.isNotEmpty) {
+          await ShareDeepLinkNavigation.open(
+            context,
+            ShareDeepLinkTarget(
+              type: ShareEntityType.marker,
+              id: markerSelectionId,
+            ),
+          );
+          return;
+        }
         final position = result.position;
         if (position != null) {
-          Navigator.push(
+          MapNavigation.open(
             context,
-            MaterialPageRoute(
-              builder: (_) => MapScreen(
-                initialCenter: position,
-                initialZoom: 15,
-                autoFollow: false,
-              ),
-            ),
+            center: position,
+            zoom: 15,
+            autoFollow: false,
+            initialMarkerId: result.markerId,
+            initialArtworkId: result.artworkId,
+            initialSubjectId: result.subjectId,
+            initialSubjectType: result.subjectType,
+            initialTargetLabel: result.label,
           );
         }
         return;
@@ -1833,21 +1898,38 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     }
   }
 
-  Map<String, dynamic>? _promotionProfileToSuggestion(
+  Map<String, dynamic>? _promotionRailItemToSuggestion(
     HomeRailItem item,
   ) {
+    if (item.entityType != PromotionEntityType.profile &&
+        item.entityType != PromotionEntityType.institution) {
+      return null;
+    }
+
     final profileTargetId = item.profileTargetId;
-    if (profileTargetId == null || profileTargetId.isEmpty) {
+    final institutionId = item.id.trim();
+    if (item.entityType == PromotionEntityType.institution &&
+        institutionId.isEmpty &&
+        (profileTargetId == null || profileTargetId.isEmpty)) {
+      return null;
+    }
+    if (item.entityType == PromotionEntityType.profile &&
+        (profileTargetId == null || profileTargetId.isEmpty)) {
       return null;
     }
 
     return <String, dynamic>{
       ...item.raw,
-      'id': profileTargetId,
+      'id': item.entityType == PromotionEntityType.institution
+          ? institutionId
+          : profileTargetId,
+      'entityType': item.entityType.apiValue,
+      if (institutionId.isNotEmpty) 'institutionId': institutionId,
+      if (profileTargetId != null) 'profileTargetId': profileTargetId,
       'displayName': item.title,
       'username': item.raw['username'] ?? item.raw['handle'],
-      'walletAddress': profileTargetId,
-      'wallet': profileTargetId,
+      if (profileTargetId != null) 'walletAddress': profileTargetId,
+      if (profileTargetId != null) 'wallet': profileTargetId,
       'avatarUrl': item.imageUrl,
       'avatar': item.imageUrl,
       'verified': item.raw['verified'] ?? false,
@@ -5764,6 +5846,11 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         else
           Column(
             children: _suggestedArtists.map((artist) {
+              final entityType =
+                  (artist['entityType'] ?? PromotionEntityType.profile.apiValue)
+                      .toString();
+              final isInstitutionSuggestion =
+                  entityType == PromotionEntityType.institution.apiValue;
               final displayName = (artist['displayName'] ??
                       artist['name'] ??
                       artist['username'] ??
@@ -5778,9 +5865,16 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       artist['avatarUrl'] ??
                       artist['profileImage'])
                   ?.toString();
+              final institutionId =
+                  (artist['institutionId'] ?? artist['id'])?.toString() ?? '';
               final walletAddress =
-                  (artist['walletAddress'] ?? artist['wallet'])?.toString();
-              final profileId = walletAddress ?? handle;
+                  (artist['profileTargetId'] ??
+                          artist['walletAddress'] ??
+                          artist['wallet'])
+                      ?.toString();
+              final navigationId = isInstitutionSuggestion
+                  ? institutionId
+                  : ((walletAddress ?? artist['id'])?.toString() ?? handle);
               final canonicalWallet = WalletUtils.canonical(walletAddress);
               final currentWallet = WalletUtils.canonical(
                   context.read<WalletProvider>().currentWalletAddress);
@@ -5793,16 +5887,37 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: DesktopCard(
-                  onTap: profileId.isEmpty
-                      ? null
-                      : () => _openUserProfileModal(
-                          userId: profileId,
-                          username: handle.isEmpty ? null : handle),
+                  onTap: isInstitutionSuggestion
+                      ? (navigationId.isEmpty && walletAddress == null
+                          ? null
+                          : () => InstitutionNavigation.open(
+                                context,
+                                institutionId: navigationId,
+                                profileTargetId: walletAddress,
+                                title: displayName,
+                                openProfileTarget: (profileTargetId) =>
+                                    _openUserProfileModal(
+                                  userId: profileTargetId,
+                                  username: handle.isEmpty ? null : handle,
+                                ),
+                              ))
+                      : (navigationId.isEmpty
+                          ? null
+                          : () => _openUserProfileModal(
+                                userId: navigationId,
+                                username: handle.isEmpty ? null : handle,
+                              )),
                   child: Row(
                     children: [
                       AvatarWidget(
                         avatarUrl: avatar,
-                        wallet: profileId,
+                        wallet: walletAddress?.trim().isNotEmpty == true
+                            ? walletAddress!
+                            : (isInstitutionSuggestion
+                                ? displayName
+                                : (navigationId.isNotEmpty
+                                ? navigationId
+                                : displayName)),
                         radius: 22,
                         allowFabricatedFallback: true,
                       ),
@@ -5838,30 +5953,39 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           ],
                         ),
                       ),
-                      TextButton(
-                        onPressed: (!canFollow || isFollowBusy)
-                            ? null
-                            : () => _toggleSuggestedFollow(
-                                  walletAddress: canonicalWallet,
-                                  displayName: displayName,
-                                ),
-                        child: Text(
-                          isFollowing
-                              ? AppLocalizations.of(context)!
-                                  .desktopCommunityFollowingButton
-                              : AppLocalizations.of(context)!
-                                  .desktopCommunityFollowButton,
-                          style: KubusTextStyles.navLabel.copyWith(
-                            color: isFollowing
-                                ? Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.7)
-                                : themeProvider.accentColor,
-                            fontWeight: FontWeight.w600,
+                      if (canFollow || isFollowBusy)
+                        TextButton(
+                          onPressed: (!canFollow || isFollowBusy)
+                              ? null
+                              : () => _toggleSuggestedFollow(
+                                    walletAddress: canonicalWallet,
+                                    displayName: displayName,
+                                  ),
+                          child: Text(
+                            isFollowing
+                                ? AppLocalizations.of(context)!
+                                    .desktopCommunityFollowingButton
+                                : AppLocalizations.of(context)!
+                                    .desktopCommunityFollowButton,
+                            style: KubusTextStyles.navLabel.copyWith(
+                              color: isFollowing
+                                  ? Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.7)
+                                  : themeProvider.accentColor,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
+                        )
+                      else
+                        Icon(
+                          Icons.chevron_right,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.45),
                         ),
-                      ),
                     ],
                   ),
                 ),

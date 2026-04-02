@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../config/config.dart';
@@ -12,6 +11,7 @@ import '../../providers/exhibitions_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../utils/creator_display_format.dart';
+import '../../utils/design_tokens.dart';
 import '../../utils/search_suggestions.dart';
 import '../../utils/media_url_resolver.dart';
 import '../common/keyboard_inset_padding.dart';
@@ -38,7 +38,7 @@ class CommunitySubjectPicker {
       return showDialog<CommunitySubjectSelection>(
         context: context,
         builder: (dialogContext) => Dialog(
-          insetPadding: const EdgeInsets.all(24),
+          insetPadding: const EdgeInsets.all(KubusSpacing.lg),
           backgroundColor: Theme.of(dialogContext).colorScheme.surface,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 720, maxHeight: 720),
@@ -57,7 +57,9 @@ class CommunitySubjectPicker {
           height: MediaQuery.of(sheetContext).size.height * 0.75,
           decoration: BoxDecoration(
             color: Theme.of(sheetContext).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(KubusRadius.xl),
+            ),
           ),
           child: content,
         ),
@@ -116,25 +118,27 @@ class _CommunitySubjectPickerContentState
     return Column(
       children: [
         Container(
-          width: 48,
-          height: 5,
-          margin: const EdgeInsets.symmetric(vertical: 12),
+          width: KubusChromeMetrics.sheetHandleWidth,
+          height: KubusChromeMetrics.sheetHandleHeight,
+          margin: const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
           decoration: BoxDecoration(
             color: scheme.outline.withValues(alpha: 0.4),
-            borderRadius: BorderRadius.circular(3),
+            borderRadius: BorderRadius.circular(KubusRadius.xs),
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+          padding: const EdgeInsets.fromLTRB(
+            KubusSpacing.lg,
+            KubusSpacing.none,
+            KubusSpacing.lg,
+            KubusSpacing.sm,
+          ),
           child: Row(
             children: [
               Text(
                 l10n.communitySubjectPickerTitle,
-                style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: scheme.onSurface,
-                ),
+                style: KubusTextStyles.sheetTitle
+                    .copyWith(color: scheme.onSurface),
               ),
               const Spacer(),
               IconButton(
@@ -145,14 +149,14 @@ class _CommunitySubjectPickerContentState
           ),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.lg),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
               children: _types.map((type) {
                 final selected = _selectedType == type;
                 return Padding(
-                  padding: const EdgeInsets.only(right: 12),
+                  padding: const EdgeInsets.only(right: KubusSpacing.sm),
                   child: ChoiceChip(
                     label: Text(_typeLabel(l10n, type)),
                     selected: selected,
@@ -169,18 +173,18 @@ class _CommunitySubjectPickerContentState
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: KubusSpacing.sm),
         if (_selectedType == 'none')
           _buildNoneState(context, l10n)
         else ...[
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.lg),
             child: TextField(
               decoration: InputDecoration(
                 hintText: l10n.communitySubjectPickerSearchHint,
                 prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(KubusRadius.lg),
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
@@ -189,7 +193,7 @@ class _CommunitySubjectPickerContentState
               onChanged: (value) => setState(() => _query = value.trim()),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: KubusSpacing.sm),
           Expanded(
             child: _buildSubjectList(
               context,
@@ -211,15 +215,14 @@ class _CommunitySubjectPickerContentState
           children: [
             Icon(Icons.link_off,
                 color: scheme.onSurface.withValues(alpha: 0.5)),
-            const SizedBox(height: 8),
+            const SizedBox(height: KubusSpacing.sm),
             Text(
               l10n.communitySubjectNoneLabel,
-              style: GoogleFonts.inter(
-                fontSize: 14,
+              style: KubusTextStyles.sheetSubtitle.copyWith(
                 color: scheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: KubusSpacing.sm),
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context)
@@ -262,7 +265,7 @@ class _CommunitySubjectPickerContentState
       return Center(
         child: Text(
           l10n.communityConnectWalletFirstToast,
-          style: GoogleFonts.inter(),
+          style: KubusTypography.textTheme.bodyMedium,
           textAlign: TextAlign.center,
         ),
       );
@@ -278,7 +281,7 @@ class _CommunitySubjectPickerContentState
           return Center(
             child: Text(
               l10n.communitySubjectPickerLoadFailed,
-              style: GoogleFonts.inter(),
+              style: KubusTypography.textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
           );
@@ -292,7 +295,7 @@ class _CommunitySubjectPickerContentState
           return _buildEmptyList(l10n.communitySubjectPickerEmptyArtwork);
         }
         return ListView.separated(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
           itemCount: filtered.length,
           separatorBuilder: (_, __) => const Divider(height: 1),
           itemBuilder: (ctx, index) {
@@ -344,7 +347,7 @@ class _CommunitySubjectPickerContentState
       return _buildEmptyList(l10n.communitySubjectPickerEmptyExhibition);
     }
     return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
       itemCount: filtered.length,
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (ctx, index) {
@@ -387,7 +390,7 @@ class _CommunitySubjectPickerContentState
       return _buildEmptyList(l10n.communitySubjectPickerEmptyCollection);
     }
     return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
       itemCount: filtered.length,
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (ctx, index) {
@@ -427,7 +430,7 @@ class _CommunitySubjectPickerContentState
           return Center(
             child: Text(
               l10n.communitySubjectPickerLoadFailed,
-              style: GoogleFonts.inter(),
+              style: KubusTypography.textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
           );
@@ -445,7 +448,7 @@ class _CommunitySubjectPickerContentState
           return _buildEmptyList(l10n.communitySubjectPickerEmptyInstitution);
         }
         return ListView.separated(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
           itemCount: filtered.length,
           separatorBuilder: (_, __) => const Divider(height: 1),
           itemBuilder: (ctx, index) {
@@ -528,11 +531,11 @@ class _CommunitySubjectPickerContentState
   Widget _buildEmptyList(String message) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(KubusSpacing.lg),
         child: Text(
           message,
           textAlign: TextAlign.center,
-          style: GoogleFonts.inter(),
+          style: KubusTypography.textTheme.bodyMedium,
         ),
       ),
     );
@@ -572,7 +575,7 @@ class _SubjectListTile extends StatelessWidget {
     return ListTile(
       leading: imageUrl != null && imageUrl.isNotEmpty
           ? ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(KubusRadius.sm),
               child: Image.network(
                 imageUrl,
                 width: 48,
@@ -588,12 +591,16 @@ class _SubjectListTile extends StatelessWidget {
               Icons.insert_drive_file_outlined,
               color: scheme.onSurface.withValues(alpha: 0.5),
             ),
-      title: Text(preview.title, style: GoogleFonts.inter()),
+      title: Text(
+        preview.title,
+        style: KubusTypography.textTheme.bodyMedium?.copyWith(
+          fontWeight: FontWeight.w500,
+        ),
+      ),
       subtitle: (preview.subtitle ?? '').trim().isNotEmpty
           ? Text(
               preview.subtitle!,
-              style: GoogleFonts.inter(
-                fontSize: 12,
+              style: KubusTextStyles.navMetaLabel.copyWith(
                 color: scheme.onSurface.withValues(alpha: 0.6),
               ),
             )

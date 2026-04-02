@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/design_tokens.dart';
 import 'splash_wave.dart';
 import 'splash_diamonds.dart';
 import 'dart:math';
@@ -32,10 +33,10 @@ class _AppLoadingState extends State<AppLoading> {
 
   @override
   Widget build(BuildContext context) {
-    final showVersionFooter =
-        (widget.appVersion ?? '').trim().isNotEmpty ||
-            (widget.serverVersion ?? '').trim().isNotEmpty;
-    final splash = _useDiamonds ? SplashDiamonds(seed: _seed) : const SplashWave();
+    final showVersionFooter = (widget.appVersion ?? '').trim().isNotEmpty ||
+        (widget.serverVersion ?? '').trim().isNotEmpty;
+    final splash =
+        _useDiamonds ? SplashDiamonds(seed: _seed) : const SplashWave();
 
     if (!showVersionFooter) {
       return splash;
@@ -50,16 +51,19 @@ class _AppLoadingState extends State<AppLoading> {
       children: [
         Positioned.fill(child: splash),
         Positioned(
-          left: 16,
-          right: 16,
-          bottom: 24,
+          left: KubusSpacing.md,
+          right: KubusSpacing.md,
+          bottom: KubusSpacing.lg,
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: colorScheme.surface.withValues(alpha: 0.62),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
             ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              padding: const EdgeInsets.symmetric(
+                horizontal: KubusSpacing.sm + KubusSpacing.xs,
+                vertical: KubusSpacing.sm + KubusSpacing.xxs,
+              ),
               child: DefaultTextStyle(
                 style: Theme.of(context).textTheme.bodySmall!.copyWith(
                       color: colorScheme.onSurface.withValues(alpha: 0.92),
@@ -69,7 +73,8 @@ class _AppLoadingState extends State<AppLoading> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (appVersion.isNotEmpty) Text('App: $appVersion'),
-                    if (serverVersion.isNotEmpty) Text('Server: $serverVersion'),
+                    if (serverVersion.isNotEmpty)
+                      Text('Server: $serverVersion'),
                   ],
                 ),
               ),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/utils/design_tokens.dart';
 
 class ProfileArtistInfoFields extends StatelessWidget {
   final List<String> fieldOfWork;
@@ -27,26 +27,33 @@ class ProfileArtistInfoFields extends StatelessWidget {
     final showYears = yearsActive > 0;
     if (!showField && !showYears) return const SizedBox.shrink();
 
-    Widget row({required IconData icon, required String label, required String value}) {
+    Widget row(
+        {required IconData icon,
+        required String label,
+        required String value}) {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: scheme.onSurface.withValues(alpha: 0.7)),
-          const SizedBox(width: 8),
+          Icon(
+            icon,
+            size: KubusHeaderMetrics.actionIcon - 4,
+            color: scheme.onSurface.withValues(alpha: 0.7),
+          ),
+          const SizedBox(width: KubusSpacing.sm),
           Flexible(
             child: Text.rich(
               TextSpan(
                 children: [
                   TextSpan(
                     text: '$label: ',
-                    style: GoogleFonts.inter(
+                    style: KubusTextStyles.navLabel.copyWith(
                       fontWeight: FontWeight.w600,
                       color: scheme.onSurface.withValues(alpha: 0.8),
                     ),
                   ),
                   TextSpan(
                     text: value,
-                    style: GoogleFonts.inter(
+                    style: KubusTextStyles.navLabel.copyWith(
                       fontWeight: FontWeight.w500,
                       color: scheme.onSurface.withValues(alpha: 0.9),
                     ),
@@ -71,7 +78,7 @@ class ProfileArtistInfoFields extends StatelessWidget {
             label: l10n.profileFieldOfWorkLabel,
             value: normalizedField.join(', '),
           ),
-        if (showField && showYears) const SizedBox(height: 8),
+        if (showField && showYears) const SizedBox(height: KubusSpacing.sm),
         if (showYears)
           row(
             icon: Icons.timelapse,
@@ -82,4 +89,3 @@ class ProfileArtistInfoFields extends StatelessWidget {
     );
   }
 }
-

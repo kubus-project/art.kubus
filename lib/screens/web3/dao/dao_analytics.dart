@@ -45,9 +45,7 @@ class DAOAnalytics extends StatelessWidget {
               scrolledUnderElevation: 0,
               title: Text(
                 l10n.daoAnalyticsTitle,
-                style: KubusTypography.inter(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
+                style: KubusTextStyles.mobileAppBarTitle.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),

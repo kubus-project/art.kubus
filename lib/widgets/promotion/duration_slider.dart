@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
+import '../../utils/design_tokens.dart';
 import '../glass_components.dart';
 
 /// A slider for selecting promotion duration with quick pick chips
@@ -30,7 +31,7 @@ class DurationSlider extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return LiquidGlassCard(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(KubusChromeMetrics.compactCardPadding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -49,7 +50,7 @@ class DurationSlider extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: KubusSpacing.sm),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
@@ -57,7 +58,7 @@ class DurationSlider extends StatelessWidget {
                   quickPicks.where((d) => d >= min && d <= max).map((days) {
                 final isSelected = value == days;
                 return Padding(
-                  padding: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.only(right: KubusSpacing.sm),
                   child: _QuickPickChip(
                     days: days,
                     isSelected: isSelected,
@@ -67,7 +68,7 @@ class DurationSlider extends StatelessWidget {
               }).toList(),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: KubusSpacing.md),
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
               trackHeight: 6,
@@ -87,7 +88,7 @@ class DurationSlider extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.sm),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -132,10 +133,13 @@ class _DurationBadge extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.symmetric(
+            horizontal: KubusSpacing.md,
+            vertical: KubusSpacing.xs + KubusSpacing.xxs,
+          ),
           decoration: BoxDecoration(
             color: colors.primaryContainer,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(KubusRadius.xl),
           ),
           child: Text(
             l10n.promotionBuilderDurationDays(days),
@@ -146,12 +150,15 @@ class _DurationBadge extends StatelessWidget {
           ),
         ),
         if (discountPercent > 0) ...[
-          const SizedBox(width: 8),
+          const SizedBox(width: KubusSpacing.sm),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(
+              horizontal: KubusSpacing.sm,
+              vertical: KubusSpacing.xxs,
+            ),
             decoration: BoxDecoration(
               color: roles.positiveAction.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -161,7 +168,7 @@ class _DurationBadge extends StatelessWidget {
                   size: 14,
                   color: roles.positiveAction,
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: KubusSpacing.xxs + KubusSpacing.xxs),
                 Text(
                   l10n.promotionBuilderDiscountBadge(
                     discountPercent.toStringAsFixed(0),
@@ -210,14 +217,17 @@ class _QuickPickChip extends StatelessWidget {
 
     return FrostedContainer(
       onTap: onTap,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: KubusSpacing.md - KubusSpacing.xxs,
+        vertical: KubusSpacing.sm,
+      ),
       backgroundColor:
           isSelected ? roles.statTeal : colors.surfaceContainerHighest,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         decoration: BoxDecoration(
           color: Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(KubusRadius.xl),
           border: Border.all(
             color: isSelected
                 ? roles.statTeal

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/app_mode_provider.dart';
+import '../utils/design_tokens.dart';
 import 'empty_state_card.dart';
 
 class AppModeUnavailableState extends StatelessWidget {
@@ -10,7 +11,7 @@ class AppModeUnavailableState extends StatelessWidget {
     required this.featureLabel,
     required this.title,
     this.icon = Icons.cloud_off_outlined,
-    this.padding = const EdgeInsets.all(24),
+    this.padding = const EdgeInsets.all(KubusSpacing.lg),
   });
 
   final String featureLabel;

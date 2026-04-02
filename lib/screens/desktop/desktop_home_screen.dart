@@ -28,6 +28,7 @@ import '../../widgets/app_logo.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/artist_badge.dart';
 import '../../widgets/institution_badge.dart';
+import '../../widgets/empty_state_card.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/topbar_icon.dart';
 import '../../widgets/common/kubus_screen_header.dart';
@@ -39,6 +40,8 @@ import '../../utils/artwork_navigation.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/home_search_destination.dart';
+import '../../utils/institution_navigation.dart';
+import '../../utils/map_navigation.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/user_profile_navigation.dart';
 import 'components/desktop_widgets.dart';
@@ -55,9 +58,12 @@ import '../home_screen.dart' show ActivityScreen;
 import '../events/event_detail_screen.dart';
 import '../events/exhibition_detail_screen.dart';
 import '../../services/backend_api_service.dart';
+import '../../services/share/share_deep_link_parser.dart';
+import '../../services/share/share_types.dart';
 import '../../services/user_service.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/creator_display_format.dart';
+import '../../utils/share_deep_link_navigation.dart';
 import '../../utils/wallet_utils.dart';
 import '../../widgets/support/support_section.dart';
 import '../../widgets/search/kubus_general_search.dart';
@@ -1620,11 +1626,42 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     return Consumer<PromotionProvider>(
       builder: (context, promotionProvider, _) {
         final rails = promotionProvider.homeRails
-            .map((rail) => MapEntry(rail, _visibleHomeRailItems(rail)))
+            .map((rail) => MapEntry(rail, _renderableHomeRailItems(rail)))
             .where((entry) => entry.value.isNotEmpty)
             .toList(growable: false);
+        if (promotionProvider.featuredLoading &&
+            promotionProvider.homeRails.isEmpty) {
+          return const SizedBox(
+            height: 220,
+            child: Center(
+              child: InlineLoading(expand: false),
+            ),
+          );
+        }
         if (rails.isEmpty) {
-          return const SizedBox.shrink();
+          final locale = Localizations.localeOf(context).languageCode;
+          final hasError = (promotionProvider.error ?? '').trim().isNotEmpty;
+          return EmptyStateCard(
+            icon: hasError
+                ? Icons.campaign_outlined
+                : Icons.auto_awesome_mosaic_outlined,
+            title: hasError
+                ? 'Home rails unavailable'
+                : 'Discovery rails are warming up',
+            description: hasError
+                ? 'We could not load ranked home rails right now.'
+                : 'Featured artworks, artists, institutions, events, and exhibitions will appear here once ranked content is available.',
+            showAction: hasError,
+            actionLabel: hasError ? 'Retry' : null,
+            onAction: hasError
+                ? () {
+                    context.read<PromotionProvider>().loadHomeRails(
+                          locale: locale,
+                          force: true,
+                        );
+                  }
+                : null,
+          );
         }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1691,11 +1728,12 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   }
 
   Widget _buildHomeRailCard(HomeRailItem item, int index, int total) {
+    final canOpen = _hasHomeRailDestination(item);
     return DesktopCard(
       width: 240,
       margin: EdgeInsets.only(right: index < total - 1 ? DetailSpacing.lg : 0),
       padding: EdgeInsets.zero,
-      onTap: () => _openHomeRailItem(item),
+      onTap: canOpen ? () => _openHomeRailItem(item) : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1788,11 +1826,15 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     };
   }
 
-  List<HomeRailItem> _visibleHomeRailItems(HomeRail rail) {
-    return rail.items.where(_canOpenHomeRailItem).toList(growable: false);
+  List<HomeRailItem> _renderableHomeRailItems(HomeRail rail) {
+    return rail.items.where(_canRenderHomeRailItem).toList(growable: false);
   }
 
-  bool _canOpenHomeRailItem(HomeRailItem item) {
+  bool _canRenderHomeRailItem(HomeRailItem item) {
+    return item.id.trim().isNotEmpty;
+  }
+
+  bool _hasHomeRailDestination(HomeRailItem item) {
     switch (item.entityType) {
       case PromotionEntityType.artwork:
       case PromotionEntityType.profile:
@@ -1800,7 +1842,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       case PromotionEntityType.exhibition:
         return item.id.trim().isNotEmpty;
       case PromotionEntityType.institution:
-        return item.hasProfileTarget;
+        return item.id.trim().isNotEmpty;
     }
   }
 
@@ -1813,9 +1855,13 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         _openUserProfile(item.id, item.title);
         return;
       case PromotionEntityType.institution:
-        final profileTargetId = item.profileTargetId;
-        if (profileTargetId == null) return;
-        _openUserProfile(profileTargetId, item.title);
+        await InstitutionNavigation.open(
+          context,
+          institutionId: item.id,
+          profileTargetId: item.profileTargetId,
+          data: item.raw,
+          title: item.title,
+        );
         return;
       case PromotionEntityType.event:
         _pushDesktopSubScreen(
@@ -2759,6 +2805,79 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       );
     }
 
+    final markerId = result.markerId?.trim() ?? '';
+    if (result.kind == KubusSearchResultKind.marker && markerId.isNotEmpty) {
+      await ShareDeepLinkNavigation.open(
+        context,
+        ShareDeepLinkTarget(
+          type: ShareEntityType.marker,
+          id: markerId,
+        ),
+      );
+      return;
+    }
+
+    final isMapSubjectResult =
+        result.kind == KubusSearchResultKind.institution ||
+            result.kind == KubusSearchResultKind.event;
+    if (isMapSubjectResult &&
+        markerId.isNotEmpty &&
+        result.position == null) {
+      await ShareDeepLinkNavigation.open(
+        context,
+        ShareDeepLinkTarget(
+          type: ShareEntityType.marker,
+          id: markerId,
+        ),
+      );
+      return;
+    }
+
+    if (isMapSubjectResult && result.position != null) {
+      MapNavigation.open(
+        context,
+        center: result.position!,
+        zoom: 15,
+        autoFollow: false,
+        initialMarkerId: result.markerId,
+        initialArtworkId: result.artworkId,
+        initialSubjectId: result.subjectId,
+        initialSubjectType: result.subjectType,
+        initialTargetLabel: result.label,
+      );
+      return;
+    }
+
+    if (result.kind == KubusSearchResultKind.institution) {
+      final institutionId = result.id?.trim() ?? '';
+      final profileTargetId = InstitutionNavigation.resolveProfileTargetId(
+        institutionId: institutionId,
+        data: result.data,
+      );
+      if (institutionId.isNotEmpty || profileTargetId != null) {
+        await InstitutionNavigation.open(
+          context,
+          institutionId: institutionId,
+          profileTargetId: profileTargetId,
+          data: result.data,
+          title: result.label,
+        );
+        return;
+      }
+      if (result.position != null) {
+        MapNavigation.open(
+          context,
+          center: result.position!,
+          zoom: 15,
+          autoFollow: false,
+          initialSubjectId: institutionId.isNotEmpty ? institutionId : null,
+          initialSubjectType: 'institution',
+          initialTargetLabel: result.label,
+        );
+        return;
+      }
+    }
+
     final destination = HomeSearchDestination.fromResult(result);
     switch (destination.kind) {
       case HomeSearchDestinationKind.artwork:
@@ -2778,7 +2897,17 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         await UserProfileNavigation.open(context, userId: resolvedId);
         return;
       case HomeSearchDestinationKind.map:
-        _openShellTab(1);
+        final position = destination.position;
+        if (position == null) {
+          showInvalidSelection();
+          return;
+        }
+        MapNavigation.open(
+          context,
+          center: position,
+          zoom: 15,
+          autoFollow: false,
+        );
         return;
       case HomeSearchDestinationKind.none:
         showInvalidSelection();

@@ -456,7 +456,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               const KubusGlassAppBarBackdrop(showBottomDivider: true),
           title: Text(
             l10n.userProfileTitle,
-            style: KubusTextStyles.screenTitle,
+            style: KubusTextStyles.mobileAppBarTitle,
           ),
         ),
         body: const AppLoading(),
@@ -470,7 +470,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               const KubusGlassAppBarBackdrop(showBottomDivider: true),
           title: Text(
             l10n.userProfileTitle,
-            style: KubusTextStyles.screenTitle,
+            style: KubusTextStyles.mobileAppBarTitle,
           ),
         ),
         body: Center(
@@ -502,7 +502,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               const KubusGlassAppBarBackdrop(showBottomDivider: true),
           title: Text(
             user!.name.isNotEmpty ? user!.name : l10n.userProfileTitle,
-            style: KubusTextStyles.screenTitle,
+            style: KubusTextStyles.mobileAppBarTitle,
           ),
           actions: [
             IconButton(

@@ -37,7 +37,6 @@ import '../widgets/enhanced_stats_chart.dart';
 import '../widgets/empty_state_card.dart';
 import '../widgets/recent_activity_tile.dart';
 import 'activity/advanced_analytics_screen.dart';
-import 'map_screen.dart';
 import 'events/event_detail_screen.dart';
 import 'events/exhibition_detail_screen.dart';
 import '../services/stats_api_service.dart';
@@ -48,7 +47,10 @@ import '../utils/kubus_color_roles.dart';
 import '../utils/design_tokens.dart';
 import '../utils/keyboard_inset_resolver.dart';
 import '../utils/kubus_labs_feature.dart';
+import '../utils/map_navigation.dart';
 import '../utils/media_url_resolver.dart';
+import '../utils/share_deep_link_navigation.dart';
+import '../utils/institution_navigation.dart';
 import '../utils/user_profile_navigation.dart';
 import '../utils/home_search_destination.dart';
 import '../widgets/staggered_fade_slide.dart';
@@ -61,6 +63,8 @@ import '../widgets/search/kubus_search_config.dart';
 import '../widgets/search/kubus_search_controller.dart';
 import '../widgets/search/kubus_search_result.dart';
 import '../widgets/support/support_section.dart';
+import '../services/share/share_deep_link_parser.dart';
+import '../services/share/share_types.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -460,6 +464,79 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _homeSearchController.dismissOverlay();
     FocusScope.of(context).unfocus();
 
+    final markerId = result.markerId?.trim() ?? '';
+    if (result.kind == KubusSearchResultKind.marker && markerId.isNotEmpty) {
+      await ShareDeepLinkNavigation.open(
+        context,
+        ShareDeepLinkTarget(
+          type: ShareEntityType.marker,
+          id: markerId,
+        ),
+      );
+      return;
+    }
+
+    final isMapSubjectResult =
+        result.kind == KubusSearchResultKind.institution ||
+            result.kind == KubusSearchResultKind.event;
+    if (isMapSubjectResult &&
+        markerId.isNotEmpty &&
+        result.position == null) {
+      await ShareDeepLinkNavigation.open(
+        context,
+        ShareDeepLinkTarget(
+          type: ShareEntityType.marker,
+          id: markerId,
+        ),
+      );
+      return;
+    }
+
+    if (isMapSubjectResult && result.position != null) {
+      MapNavigation.open(
+        context,
+        center: result.position!,
+        zoom: 15,
+        autoFollow: false,
+        initialMarkerId: result.markerId,
+        initialArtworkId: result.artworkId,
+        initialSubjectId: result.subjectId,
+        initialSubjectType: result.subjectType,
+        initialTargetLabel: result.label,
+      );
+      return;
+    }
+
+    if (result.kind == KubusSearchResultKind.institution) {
+      final institutionId = result.id?.trim() ?? '';
+      final profileTargetId = InstitutionNavigation.resolveProfileTargetId(
+        institutionId: institutionId,
+        data: result.data,
+      );
+      if (institutionId.isNotEmpty || profileTargetId != null) {
+        await InstitutionNavigation.open(
+          context,
+          institutionId: institutionId,
+          profileTargetId: profileTargetId,
+          data: result.data,
+          title: result.label,
+        );
+        return;
+      }
+      if (result.position != null) {
+        MapNavigation.open(
+          context,
+          center: result.position!,
+          zoom: 15,
+          autoFollow: false,
+          initialSubjectId: institutionId.isNotEmpty ? institutionId : null,
+          initialSubjectType: 'institution',
+          initialTargetLabel: result.label,
+        );
+        return;
+      }
+    }
+
     final destination = HomeSearchDestination.fromResult(result);
     switch (destination.kind) {
       case HomeSearchDestinationKind.artwork:
@@ -469,14 +546,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         await UserProfileNavigation.open(context, userId: destination.id!);
         return;
       case HomeSearchDestinationKind.map:
-        await Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => MapScreen(
-              initialCenter: destination.position!,
-              initialZoom: 15,
-              autoFollow: false,
-            ),
-          ),
+        MapNavigation.open(
+          context,
+          center: destination.position!,
+          zoom: 15,
+          autoFollow: false,
         );
         return;
       case HomeSearchDestinationKind.none:
@@ -1888,11 +1962,42 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return Consumer<PromotionProvider>(
       builder: (context, promotionProvider, child) {
         final rails = promotionProvider.homeRails
-            .map((rail) => MapEntry(rail, _visibleItemsForRail(rail)))
+            .map((rail) => MapEntry(rail, _renderableItemsForRail(rail)))
             .where((entry) => entry.value.isNotEmpty)
             .toList(growable: false);
+        if (promotionProvider.featuredLoading &&
+            promotionProvider.homeRails.isEmpty) {
+          return const SizedBox(
+            height: 176,
+            child: Center(
+              child: InlineLoading(expand: false),
+            ),
+          );
+        }
         if (rails.isEmpty) {
-          return const SizedBox.shrink();
+          final locale = Localizations.localeOf(context).languageCode;
+          final hasError = (promotionProvider.error ?? '').trim().isNotEmpty;
+          return EmptyStateCard(
+            icon: hasError
+                ? Icons.campaign_outlined
+                : Icons.auto_awesome_mosaic_outlined,
+            title: hasError
+                ? 'Home rails unavailable'
+                : 'Discovery rails are warming up',
+            description: hasError
+                ? 'We could not load ranked home rails right now.'
+                : 'Featured artworks, artists, institutions, events, and exhibitions will appear here once ranked content is available.',
+            showAction: hasError,
+            actionLabel: hasError ? 'Retry' : null,
+            onAction: hasError
+                ? () {
+                    context.read<PromotionProvider>().loadHomeRails(
+                          locale: locale,
+                          force: true,
+                        );
+                  }
+                : null,
+          );
         }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1951,8 +2056,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       surfaceType: KubusGlassSurfaceType.card,
       tintBase: scheme.surface,
     );
+    final canOpen = _hasHomeRailDestination(item);
     return GestureDetector(
-      onTap: () => _openHomeRailItem(item),
+      onTap: canOpen ? () => _openHomeRailItem(item) : null,
       child: Container(
         width: 164,
         margin: const EdgeInsets.only(right: 16),
@@ -2065,11 +2171,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     };
   }
 
-  List<HomeRailItem> _visibleItemsForRail(HomeRail rail) {
-    return rail.items.where(_canOpenHomeRailItem).toList(growable: false);
+  List<HomeRailItem> _renderableItemsForRail(HomeRail rail) {
+    return rail.items.where(_canRenderHomeRailItem).toList(growable: false);
   }
 
-  bool _canOpenHomeRailItem(HomeRailItem item) {
+  bool _canRenderHomeRailItem(HomeRailItem item) {
+    return item.id.trim().isNotEmpty;
+  }
+
+  bool _hasHomeRailDestination(HomeRailItem item) {
     switch (item.entityType) {
       case PromotionEntityType.artwork:
       case PromotionEntityType.profile:
@@ -2077,7 +2187,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       case PromotionEntityType.exhibition:
         return item.id.trim().isNotEmpty;
       case PromotionEntityType.institution:
-        return item.hasProfileTarget;
+        return item.id.trim().isNotEmpty;
     }
   }
 
@@ -2090,9 +2200,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         await UserProfileNavigation.open(context, userId: item.id);
         return;
       case PromotionEntityType.institution:
-        final profileTargetId = item.profileTargetId;
-        if (profileTargetId == null) return;
-        await UserProfileNavigation.open(context, userId: profileTargetId);
+        await InstitutionNavigation.open(
+          context,
+          institutionId: item.id,
+          profileTargetId: item.profileTargetId,
+          data: item.raw,
+          title: item.title,
+        );
         return;
       case PromotionEntityType.event:
         await Navigator.of(context).push(
@@ -2670,7 +2784,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
               ),
               title: Text(
                 l10n.homeActivityTitle,
-                style: KubusTextStyles.screenTitle,
+                style: KubusTextStyles.mobileAppBarTitle,
               ),
             ),
       body: Consumer<RecentActivityProvider>(

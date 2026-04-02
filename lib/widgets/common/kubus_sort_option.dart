@@ -29,12 +29,12 @@ class KubusSortOption extends StatelessWidget {
     final accent = accentColor ?? scheme.primary;
     final animationTheme = context.animationTheme;
 
-    final radius = BorderRadius.circular(12);
+    final radius = BorderRadius.circular(KubusRadius.md);
     final idleTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.12);
     final selectedTint = accent.withValues(alpha: isDark ? 0.12 : 0.14);
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
       child: MouseRegion(
         cursor: onPressed == null
             ? SystemMouseCursors.basic
@@ -54,7 +54,8 @@ class KubusSortOption extends StatelessWidget {
                 ? [
                     BoxShadow(
                       color: accent.withValues(alpha: 0.12),
-                      blurRadius: 12,
+                      blurRadius:
+                          KubusGlassSurfaceTokens.button.shadowBlurRadius,
                       offset: const Offset(0, 4),
                     ),
                   ]
@@ -69,22 +70,24 @@ class KubusSortOption extends StatelessWidget {
             backgroundColor: selected ? selectedTint : idleTint,
             onTap: onPressed,
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding:
+                  const EdgeInsets.all(KubusChromeMetrics.compactCardPadding),
               child: Row(
                 children: [
                   Icon(
                     icon,
-                    size: 20,
+                    size: KubusHeaderMetrics.actionIcon,
                     color: selected
                         ? accent
                         : scheme.onSurface.withValues(alpha: 0.6),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: KubusSpacing.md),
                   Text(
                     label,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      fontSize: 14,
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                      fontSize: KubusChromeMetrics.navLabel,
+                      fontWeight:
+                          selected ? FontWeight.w600 : FontWeight.normal,
                       color: selected ? accent : scheme.onSurface,
                     ),
                   ),
@@ -92,7 +95,7 @@ class KubusSortOption extends StatelessWidget {
                   if (selected)
                     Icon(
                       Icons.check_circle,
-                      size: 20,
+                      size: KubusHeaderMetrics.actionIcon,
                       color: accent,
                     ),
                 ],

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/community_screen_utils.dart';
+import '../../utils/design_tokens.dart';
 
 enum CommunityComposerCategorySelectorVariant {
   mobile,
@@ -72,7 +72,7 @@ class CommunityComposerCategorySelector extends StatelessWidget {
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: EdgeInsets.only(bottom: isMobile ? 8 : 0),
+      padding: EdgeInsets.only(bottom: isMobile ? KubusSpacing.sm : 0),
       child: Row(
         children: options.map((option) {
           final selected = selectedValue == option.value;
@@ -82,13 +82,13 @@ class CommunityComposerCategorySelector extends StatelessWidget {
               children: [
                 Icon(
                   option.icon,
-                  size: 16,
+                  size: KubusHeaderMetrics.actionIcon - 4,
                   color: selected
                       ? accentColor
                       : scheme.onSurface
                           .withValues(alpha: isMobile ? 0.7 : 0.6),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: KubusSpacing.xs + KubusSpacing.xxs),
                 Text(option.label),
               ],
             ),
@@ -107,8 +107,8 @@ class CommunityComposerCategorySelector extends StatelessWidget {
                       ? accentColor.withValues(alpha: 0.5)
                       : Colors.transparent,
             ),
-            labelStyle: GoogleFonts.inter(
-              fontSize: isMobile ? 13 : 13,
+            labelStyle: KubusTextStyles.navLabel.copyWith(
+              fontSize: KubusChromeMetrics.navMetaLabel + 1,
               fontWeight: selected
                   ? FontWeight.w600
                   : (isMobile ? FontWeight.w400 : FontWeight.w500),
@@ -119,7 +119,11 @@ class CommunityComposerCategorySelector extends StatelessWidget {
           );
 
           return Padding(
-            padding: EdgeInsets.only(right: isMobile ? 12 : 8),
+            padding: EdgeInsets.only(
+              right: isMobile
+                  ? KubusSpacing.sm + KubusSpacing.xxs
+                  : KubusSpacing.sm,
+            ),
             child: isMobile
                 ? AnimatedScale(
                     duration: animationTheme.short,
@@ -151,8 +155,8 @@ class CommunityComposerAttachmentCard extends StatelessWidget {
     required this.borderColor,
     required this.duration,
     required this.curve,
-    this.borderRadius = 16,
-    this.padding = const EdgeInsets.all(16),
+    this.borderRadius = KubusRadius.lg,
+    this.padding = const EdgeInsets.all(KubusSpacing.md),
     this.titleMaxLines = 1,
     this.subtitleMaxLines = 2,
   });
@@ -192,25 +196,24 @@ class CommunityComposerAttachmentCard extends StatelessWidget {
           child: Row(
             children: [
               leading,
-              const SizedBox(width: 12),
+              const SizedBox(width: KubusSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
-                      style: GoogleFonts.inter(
-                        fontSize: 15,
+                      style: KubusTextStyles.sectionTitle.copyWith(
+                        fontSize: KubusChromeMetrics.navLabel + 1,
                         fontWeight: FontWeight.w600,
                       ),
                       maxLines: titleMaxLines,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: KubusSpacing.xs),
                     Text(
                       subtitle,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
+                      style: KubusTextStyles.navMetaLabel.copyWith(
                         color: scheme.onSurface.withValues(alpha: 0.6),
                       ),
                       maxLines: subtitleMaxLines,
@@ -219,7 +222,7 @@ class CommunityComposerAttachmentCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: KubusSpacing.md),
               trailing,
             ],
           ),

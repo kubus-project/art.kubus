@@ -76,9 +76,11 @@ class KubusSearchController extends ChangeNotifier {
   }
 
   bool _shouldShowOverlayFor(String query) {
-    if (!hasFocusedField) return false;
-    if (config.showOverlayOnFocus) return true;
-    return query.trim().isNotEmpty;
+    final trimmed = query.trim();
+    if (hasFocusedField) {
+      return config.showOverlayOnFocus || trimmed.isNotEmpty;
+    }
+    return _state.isOverlayVisible && trimmed.isNotEmpty;
   }
 
   void updateFieldFocus(LayerLink link, bool hasFocus) {

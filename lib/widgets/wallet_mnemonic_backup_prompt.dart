@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../l10n/app_localizations.dart';
 import '../screens/desktop/desktop_shell.dart';
+import '../utils/design_tokens.dart';
 import 'glass_components.dart';
 import 'kubus_button.dart';
 
@@ -30,10 +31,10 @@ Future<bool> showWalletMnemonicBackupPrompt({
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(KubusSpacing.md),
             decoration: BoxDecoration(
               color: Colors.orange.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(KubusRadius.sm),
               border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
             ),
             child: Row(
@@ -42,14 +43,13 @@ Future<bool> showWalletMnemonicBackupPrompt({
                 const Icon(
                   Icons.warning_amber_rounded,
                   color: Colors.orange,
-                  size: 20,
+                  size: KubusHeaderMetrics.actionIcon,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: KubusSpacing.sm),
                 Expanded(
                   child: Text(
                     l10n.connectWalletMnemonicDialogWarning,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
+                    style: KubusTextStyles.navMetaLabel.copyWith(
                       fontWeight: FontWeight.w600,
                       color: Colors.orange,
                     ),
@@ -58,13 +58,13 @@ Future<bool> showWalletMnemonicBackupPrompt({
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: KubusSpacing.md),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(KubusSpacing.md),
             decoration: BoxDecoration(
               color: scheme.surface,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(KubusRadius.sm),
               border: Border.all(color: scheme.outline),
             ),
             child: SelectableText(
@@ -91,7 +91,7 @@ Future<bool> showWalletMnemonicBackupPrompt({
             decoration: InputDecoration(
               hintText: l10n.connectWalletMnemonicDialogConfirmHint,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(KubusRadius.sm),
               ),
             ),
             onChanged: (value) {
@@ -103,8 +103,7 @@ Future<bool> showWalletMnemonicBackupPrompt({
           const SizedBox(height: 8),
           Text(
             l10n.connectWalletMnemonicDialogAddressLabel(shortAddress),
-            style: GoogleFonts.inter(
-              fontSize: 12,
+            style: KubusTextStyles.navMetaLabel.copyWith(
               color: scheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
@@ -119,10 +118,7 @@ Future<bool> showWalletMnemonicBackupPrompt({
       barrierDismissible: false,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setDialogState) => KubusAlertDialog(
-          title: Text(
-            l10n.connectWalletMnemonicDialogTitle,
-            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-          ),
+          title: Text(l10n.connectWalletMnemonicDialogTitle),
           content: buildMnemonicContent(dialogContext, setDialogState),
           actions: [
             ElevatedButton(
@@ -134,7 +130,7 @@ Future<bool> showWalletMnemonicBackupPrompt({
               ),
               child: Text(
                 l10n.connectWalletMnemonicDialogConfirmButton,
-                style: GoogleFonts.inter(
+                style: KubusTypography.textTheme.labelLarge?.copyWith(
                   color: confirmed ? Colors.white : Colors.grey,
                 ),
               ),
@@ -160,29 +156,37 @@ Future<bool> showWalletMnemonicBackupPrompt({
             heightFactor: 0.94,
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                padding: const EdgeInsets.fromLTRB(
+                  KubusSpacing.md,
+                  KubusSpacing.md,
+                  KubusSpacing.md,
+                  KubusSpacing.lg,
+                ),
                 child: LiquidGlassPanel(
-                  borderRadius: BorderRadius.circular(24),
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                  borderRadius: BorderRadius.circular(KubusRadius.xl),
+                  padding: const EdgeInsets.fromLTRB(
+                    KubusChromeMetrics.cardPadding,
+                    KubusChromeMetrics.cardPadding,
+                    KubusChromeMetrics.cardPadding,
+                    KubusSpacing.lg,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         l10n.connectWalletMnemonicDialogTitle,
-                        style: GoogleFonts.inter(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                        style: KubusTextStyles.sheetTitle.copyWith(
                           color: scheme.onSurface,
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: KubusSpacing.md),
                       Expanded(
                         child: buildMnemonicContent(
                           sheetContext,
                           setDialogState,
                         ),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: KubusChromeMetrics.cardPadding),
                       KubusButton(
                         onPressed: confirmed
                             ? () => Navigator.pop(sheetContext, true)

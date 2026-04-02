@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
+import '../utils/design_tokens.dart';
 import 'charts/stats_interactive_bar_chart.dart';
 import 'charts/stats_interactive_line_chart.dart';
 
@@ -24,14 +24,15 @@ class EnhancedStatsChart extends StatelessWidget {
 
     final xLabels = (labels != null && labels!.length == data.length)
         ? labels!
-        : List<String>.generate(data.length, (i) => '${i + 1}d', growable: false);
+        : List<String>.generate(data.length, (i) => '${i + 1}d',
+            growable: false);
 
     return Container(
       height: 250,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
       decoration: BoxDecoration(
         color: scheme.onSurface.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(color: scheme.onSurface.withValues(alpha: 0.10)),
       ),
       child: Column(
@@ -39,13 +40,12 @@ class EnhancedStatsChart extends StatelessWidget {
         children: [
           Text(
             title,
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+            style: KubusTextStyles.sectionTitle.copyWith(
+              fontWeight: FontWeight.w700,
               color: scheme.onSurface,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: KubusSpacing.md),
           StatsInteractiveLineChart(
             series: [
               StatsLineSeries(
@@ -86,7 +86,8 @@ class EnhancedBarChart extends StatelessWidget {
 
     final xLabels = (labels != null && labels!.length == data.length)
         ? labels!
-        : List<String>.generate(data.length, (i) => '${i + 1}d', growable: false);
+        : List<String>.generate(data.length, (i) => '${i + 1}d',
+            growable: false);
 
     final now = DateTime.now();
     final entries = List<StatsBarEntry>.generate(
@@ -103,10 +104,10 @@ class EnhancedBarChart extends StatelessWidget {
 
     return Container(
       height: 200,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(KubusSpacing.md),
       decoration: BoxDecoration(
         color: scheme.onSurface.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
         border: Border.all(color: scheme.onSurface.withValues(alpha: 0.10)),
       ),
       child: Column(
@@ -114,12 +115,12 @@ class EnhancedBarChart extends StatelessWidget {
         children: [
           Text(
             title,
-            style: GoogleFonts.inter(
+            style: KubusTextStyles.sectionTitle.copyWith(
               fontWeight: FontWeight.w600,
               color: scheme.onSurface,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: KubusSpacing.sm),
           StatsInteractiveBarChart(
             entries: entries,
             xLabels: xLabels,

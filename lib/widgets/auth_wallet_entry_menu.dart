@@ -1,9 +1,9 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
+import 'package:art_kubus/widgets/common/kubus_screen_header.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 enum AuthWalletEntryOption {
   walletConnect,
@@ -94,7 +94,7 @@ Future<AuthWalletEntryOption?> showAuthWalletEntryMenu({
     context: context,
     isScrollControlled: false,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(KubusRadius.xl)),
     ),
     builder: buildMenu,
   );
@@ -120,27 +120,21 @@ class _AuthWalletEntryMenuContent extends StatelessWidget {
         child: ConstrainedBox(
           constraints: BoxConstraints(maxHeight: maxHeight),
           child: LiquidGlassPanel(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(KubusRadius.xl),
             padding: const EdgeInsets.all(KubusSpacing.lg),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    l10n.authConnectWalletModalTitle,
-                    style: GoogleFonts.inter(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
+                  KubusHeaderText(
+                    title: l10n.authConnectWalletModalTitle,
+                    subtitle: description,
+                    titleStyle: KubusTextStyles.sheetTitle.copyWith(
+                      fontSize: KubusChromeMetrics.heroTitle,
                       color: scheme.onSurface,
                     ),
-                  ),
-                  const SizedBox(height: KubusSpacing.xs),
-                  Text(
-                    description,
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      height: 1.45,
+                    subtitleStyle: KubusTextStyles.sheetSubtitle.copyWith(
                       color: scheme.onSurface.withValues(alpha: 0.72),
                     ),
                   ),
@@ -176,11 +170,11 @@ class _WalletEntryOptionTile extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: () => Navigator.of(context).pop(option),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         child: Ink(
           decoration: BoxDecoration(
             color: scheme.surface.withValues(alpha: 0.72),
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(KubusRadius.lg),
             border: Border.all(
               color: scheme.outlineVariant.withValues(alpha: 0.22),
             ),
@@ -193,7 +187,7 @@ class _WalletEntryOptionTile extends StatelessWidget {
                 height: 44,
                 decoration: BoxDecoration(
                   color: scheme.primary.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
                 ),
                 child: Icon(
                   option.icon,
@@ -211,9 +205,7 @@ class _WalletEntryOptionTile extends StatelessWidget {
                         Expanded(
                           child: Text(
                             option.label(l10n),
-                            style: GoogleFonts.inter(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
+                            style: KubusTextStyles.sectionTitle.copyWith(
                               color: scheme.onSurface,
                             ),
                           ),
@@ -222,17 +214,16 @@ class _WalletEntryOptionTile extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: KubusSpacing.sm,
-                              vertical: 4,
+                              vertical: KubusSpacing.xs,
                             ),
                             decoration: BoxDecoration(
                               color: scheme.secondary.withValues(alpha: 0.14),
-                              borderRadius: BorderRadius.circular(999),
+                              borderRadius:
+                                  BorderRadius.circular(KubusRadius.xl),
                             ),
                             child: Text(
                               l10n.connectWalletAdvancedBadge,
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
+                              style: KubusTextStyles.compactBadge.copyWith(
                                 color: scheme.secondary,
                               ),
                             ),
@@ -242,8 +233,8 @@ class _WalletEntryOptionTile extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       option.description(l10n),
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
+                      style: KubusTextStyles.sectionSubtitle.copyWith(
+                        fontSize: KubusChromeMetrics.navMetaLabel + 1,
                         height: 1.35,
                         color: scheme.onSurface.withValues(alpha: 0.68),
                       ),

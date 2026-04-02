@@ -9,6 +9,8 @@ import 'package:latlong2/latlong.dart';
 ArtMarker _marker({
   required String id,
   String? artworkId,
+  String? subjectId,
+  String? subjectType,
   required double lat,
   required double lng,
   String name = 'Marker',
@@ -20,6 +22,10 @@ ArtMarker _marker({
     position: LatLng(lat, lng),
     artworkId: artworkId,
     type: ArtMarkerType.artwork,
+    metadata: <String, dynamic>{
+      if (subjectId != null) 'subjectId': subjectId,
+      if (subjectType != null) 'subjectType': subjectType,
+    },
     createdAt: DateTime(2024, 1, 1),
     createdBy: 'tester',
   );
@@ -146,6 +152,35 @@ void main() {
       );
 
       expect(resolved?.id, 'marker-b');
+    });
+
+    test('filters by subject type before label and distance ranking', () {
+      final resolved = resolveBestMarkerCandidate(
+        <ArtMarker>[
+          _marker(
+            id: 'institution-marker',
+            subjectId: 'shared-subject',
+            subjectType: 'institution',
+            lat: 46.0569,
+            lng: 14.5058,
+            name: 'Shared Place',
+          ),
+          _marker(
+            id: 'event-marker',
+            subjectId: 'shared-subject',
+            subjectType: 'event',
+            lat: 46.0800,
+            lng: 14.5400,
+            name: 'Shared Place',
+          ),
+        ],
+        subjectId: 'shared-subject',
+        subjectType: 'event',
+        preferredLabel: 'Shared Place',
+        preferredPosition: const LatLng(46.0569, 14.5058),
+      );
+
+      expect(resolved?.id, 'event-marker');
     });
   });
 

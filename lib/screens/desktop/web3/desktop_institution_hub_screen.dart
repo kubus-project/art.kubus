@@ -31,6 +31,7 @@ import '../../events/exhibition_list_screen.dart';
 import '../../map_markers/manage_markers_screen.dart';
 import '../../../widgets/glass_components.dart';
 import '../../../widgets/kubus_action_sidebar.dart';
+import '../../../widgets/kubus_snackbar.dart';
 import '../../../widgets/promotion/promotion_builder_sheet.dart';
 
 /// Desktop Institution Hub screen with split-panel layout
@@ -94,6 +95,30 @@ class _DesktopInstitutionHubScreenState
       walletAddress: profileProvider.currentUser?.walletAddress,
       wallet: web3Provider.walletAddress,
     );
+  }
+
+  String? _institutionPromotionUnavailableReason() {
+    final wallet = _resolveWalletAddress();
+    if (wallet.isEmpty) {
+      return 'Connect an approved institution wallet to request institution promotion.';
+    }
+
+    final daoProvider = context.read<DAOProvider>();
+    final review =
+        _institutionReview ?? daoProvider.findReviewForWallet(wallet);
+    final verification = DaoRoleVerification(
+      walletAddress: wallet,
+      review: review,
+    );
+
+    if (verification.isApprovedFor(DaoRoleType.artist) ||
+        verification.isPendingFor(DaoRoleType.artist)) {
+      return 'Artist wallets cannot self-serve institution promotion. Use a dedicated institution wallet.';
+    }
+    if (!verification.isApprovedFor(DaoRoleType.institution)) {
+      return 'Institution promotion is available only for approved institution wallets.';
+    }
+    return null;
   }
 
   Future<void> _loadInstitutionReviewStatus({bool forceRefresh = false}) async {
@@ -217,6 +242,13 @@ class _DesktopInstitutionHubScreenState
     );
     final isApprovedInstitution =
         verification.isApprovedFor(DaoRoleType.institution);
+    final hasArtistBadge = verification.isApprovedFor(DaoRoleType.artist);
+    final hasConflictingArtistReview =
+        verification.isPendingFor(DaoRoleType.artist);
+    final canSelfServeInstitutionPromotion =
+        isApprovedInstitution &&
+        !hasArtistBadge &&
+        !hasConflictingArtistReview;
     final sidebarStyle = KubusGlassStyle.resolve(
       context,
       surfaceType: KubusGlassSurfaceType.sidebarBackground,
@@ -318,7 +350,7 @@ class _DesktopInstitutionHubScreenState
                   );
                 },
               ),
-            if (isApprovedInstitution)
+            if (canSelfServeInstitutionPromotion)
               KubusActionSidebarTile(
                 title: 'Promote my institution',
                 subtitle: 'Request featured institution placement',
@@ -550,6 +582,14 @@ class _DesktopInstitutionHubScreenState
   }
 
   Future<void> _openInstitutionPromotionFlow() async {
+    final unavailableReason = _institutionPromotionUnavailableReason();
+    if (unavailableReason != null) {
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(unavailableReason)),
+        tone: KubusSnackBarTone.warning,
+      );
+      return;
+    }
     final profile = context.read<ProfileProvider>().currentUser;
     final wallet = _resolveWalletAddress(listen: false);
     final entityId = WalletUtils.coalesce(

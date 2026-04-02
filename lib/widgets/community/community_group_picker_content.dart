@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../models/community_group.dart';
+import '../../utils/design_tokens.dart';
 
 class CommunityGroupPickerContent extends StatelessWidget {
   const CommunityGroupPickerContent({
@@ -13,8 +13,13 @@ class CommunityGroupPickerContent extends StatelessWidget {
     this.showHandle = false,
     this.headerTrailing,
     this.footer,
-    this.headerPadding = const EdgeInsets.fromLTRB(24, 24, 24, 12),
-    this.listPadding = const EdgeInsets.all(24),
+    this.headerPadding = const EdgeInsets.fromLTRB(
+      KubusSpacing.lg,
+      KubusSpacing.lg,
+      KubusSpacing.lg,
+      KubusSpacing.sm,
+    ),
+    this.listPadding = const EdgeInsets.all(KubusSpacing.lg),
   });
 
   final String title;
@@ -37,12 +42,12 @@ class CommunityGroupPickerContent extends StatelessWidget {
         if (showHandle)
           Center(
             child: Container(
-              width: 48,
-              height: 5,
-              margin: const EdgeInsets.symmetric(vertical: 12),
+              width: KubusChromeMetrics.sheetHandleWidth,
+              height: KubusChromeMetrics.sheetHandleHeight,
+              margin: const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
               decoration: BoxDecoration(
                 color: scheme.outline.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(3),
+                borderRadius: BorderRadius.circular(KubusRadius.xs),
               ),
             ),
           ),
@@ -52,11 +57,8 @@ class CommunityGroupPickerContent extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: scheme.onSurface,
-                ),
+                style: KubusTextStyles.sheetTitle
+                    .copyWith(color: scheme.onSurface),
               ),
               const Spacer(),
               if (headerTrailing != null) headerTrailing!,
@@ -78,14 +80,15 @@ class CommunityGroupPickerContent extends StatelessWidget {
                 contentPadding: EdgeInsets.zero,
                 title: Text(
                   group.name,
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                  style: KubusTypography.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 subtitle: Text(
                   subtitleBuilder(group),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
+                  style: KubusTextStyles.navMetaLabel.copyWith(
                     color: scheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),

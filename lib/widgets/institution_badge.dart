@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/themeprovider.dart';
+import '../utils/design_tokens.dart';
 
 class InstitutionBadge extends StatelessWidget {
   final double fontSize;
@@ -12,7 +12,10 @@ class InstitutionBadge extends StatelessWidget {
   const InstitutionBadge({
     super.key,
     this.fontSize = 10,
-    this.padding = const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+    this.padding = const EdgeInsets.symmetric(
+      horizontal: KubusSpacing.xs + KubusSpacing.xxs,
+      vertical: KubusSpacing.xxs,
+    ),
     this.useOnPrimary = false,
     this.iconOnly = false,
   });
@@ -22,7 +25,8 @@ class InstitutionBadge extends StatelessWidget {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final colorScheme = Theme.of(context).colorScheme;
     final accent = themeProvider.accentColor;
-    final textColor = useOnPrimary ? colorScheme.onPrimary : colorScheme.onSurface;
+    final textColor =
+        useOnPrimary ? colorScheme.onPrimary : colorScheme.onSurface;
 
     // Icon-only mode: just show the icon without text or background container
     if (iconOnly) {
@@ -33,17 +37,17 @@ class InstitutionBadge extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: accent.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(KubusRadius.xl),
         border: Border.all(color: accent.withValues(alpha: 0.5)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.apartment_rounded, size: fontSize + 4, color: accent),
-          const SizedBox(width: 4),
+          const SizedBox(width: KubusSpacing.xs),
           Text(
             'INSTITUTION',
-            style: GoogleFonts.inter(
+            style: KubusTextStyles.compactBadge.copyWith(
               fontSize: fontSize,
               fontWeight: FontWeight.w700,
               color: textColor,

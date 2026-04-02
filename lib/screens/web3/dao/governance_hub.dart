@@ -156,7 +156,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                   Flexible(
                     child: Text(
                       l10n.daoHubAppBarTitle,
-                      style: KubusTextStyles.screenTitle.copyWith(
+                      style: KubusTextStyles.mobileAppBarTitle.copyWith(
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
                       overflow: TextOverflow.ellipsis,

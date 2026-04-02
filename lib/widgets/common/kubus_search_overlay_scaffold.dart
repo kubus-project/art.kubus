@@ -25,11 +25,16 @@ class KubusSearchOverlayScaffold extends StatelessWidget {
     this.filterChips,
     this.mapToggle,
     this.extraContent,
-    this.panelInsets = const EdgeInsets.fromLTRB(12, 10, 12, 0),
+    this.panelInsets = const EdgeInsets.fromLTRB(
+      KubusSpacing.sm,
+      KubusSpacing.sm,
+      KubusSpacing.sm,
+      0,
+    ),
     this.maxWidth = 420,
     this.rightInset = 0,
     this.useSafeTopPadding = true,
-    this.sectionGap = 10,
+    this.sectionGap = KubusSpacing.sm,
     this.sidePanelInnerPadding = const EdgeInsets.symmetric(
       horizontal: KubusSpacing.md + KubusSpacing.xs,
       vertical: KubusSpacing.md,

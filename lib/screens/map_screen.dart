@@ -61,6 +61,7 @@ import '../utils/map_perf_tracker.dart';
 import '../utils/map_performance_debug.dart';
 import '../utils/presence_marker_visit.dart';
 import '../utils/geo_bounds.dart';
+import '../utils/institution_navigation.dart';
 import '../utils/media_url_resolver.dart';
 import '../utils/wallet_utils.dart';
 import '../utils/user_profile_navigation.dart';
@@ -181,6 +182,10 @@ class MapScreen extends StatefulWidget {
   final double? initialZoom;
   final bool autoFollow;
   final String? initialMarkerId;
+  final String? initialArtworkId;
+  final String? initialSubjectId;
+  final String? initialSubjectType;
+  final String? initialTargetLabel;
 
   const MapScreen({
     super.key,
@@ -188,6 +193,10 @@ class MapScreen extends StatefulWidget {
     this.initialZoom,
     this.autoFollow = true,
     this.initialMarkerId,
+    this.initialArtworkId,
+    this.initialSubjectId,
+    this.initialSubjectType,
+    this.initialTargetLabel,
   });
 
   @override
@@ -272,7 +281,7 @@ class _MapScreenState extends State<MapScreen>
   Color? _markerTapRippleColor;
   late final ValueNotifier<Offset?> _selectedMarkerAnchorNotifier;
   final Debouncer _cubeSyncDebouncer = Debouncer();
-  bool _didOpenInitialMarker = false;
+  bool _didOpenInitialSelection = false;
   MapDeepLinkProvider? _mapDeepLinkProvider;
   MainTabProvider? _tabProvider;
   bool _handlingDeepLinkIntent = false;
@@ -1426,13 +1435,27 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
-  Future<void> _maybeOpenInitialMarker() async {
-    if (_didOpenInitialMarker) return;
+  Future<void> _maybeOpenInitialSelection() async {
+    if (_didOpenInitialSelection) return;
     final markerId = widget.initialMarkerId?.trim() ?? '';
-    if (markerId.isEmpty) return;
+    final artworkId = widget.initialArtworkId?.trim() ?? '';
+    final subjectId = widget.initialSubjectId?.trim() ?? '';
+    if (markerId.isEmpty && artworkId.isEmpty && subjectId.isEmpty) return;
 
-    _didOpenInitialMarker = true;
-    await _openMarkerById(markerId);
+    _didOpenInitialSelection = true;
+    if (markerId.isNotEmpty) {
+      final opened = await _openMarkerById(markerId);
+      if (opened) return;
+    }
+
+    await _openMarkerBySelection(
+      exactMarkerId: markerId,
+      artworkId: artworkId,
+      subjectId: subjectId,
+      subjectType: widget.initialSubjectType,
+      preferredLabel: widget.initialTargetLabel,
+      preferredPosition: widget.initialCenter,
+    );
   }
 
   void _handleMapDeepLinkProviderChanged() {
@@ -1535,6 +1558,72 @@ class _MapScreenState extends State<MapScreen>
         if (!mounted) return false;
       }
     }
+    return false;
+  }
+
+  Future<bool> _openMarkerBySelection({
+    String? exactMarkerId,
+    String? artworkId,
+    String? subjectId,
+    String? subjectType,
+    String? preferredLabel,
+    LatLng? preferredPosition,
+  }) async {
+    final markerId = exactMarkerId?.trim() ?? '';
+    final normalizedArtworkId = artworkId?.trim() ?? '';
+    final normalizedSubjectId = subjectId?.trim() ?? '';
+    final normalizedSubjectType = subjectType?.trim() ?? '';
+    if (markerId.isEmpty &&
+        normalizedArtworkId.isEmpty &&
+        normalizedSubjectId.isEmpty) {
+      return false;
+    }
+
+    final targetPosition = preferredPosition ?? widget.initialCenter;
+    for (var attempt = 0; attempt < 4; attempt++) {
+      final existing = resolveBestMarkerCandidate(
+        _artMarkers,
+        exactMarkerId: markerId,
+        artworkId: normalizedArtworkId,
+        subjectId: normalizedSubjectId,
+        subjectType: normalizedSubjectType,
+        preferredLabel: preferredLabel,
+        preferredPosition: targetPosition,
+      );
+      if (existing != null) {
+        await _animateMapTo(existing.position, zoom: math.max(_lastZoom, 15));
+        _showArtMarkerDialog(existing);
+        return true;
+      }
+
+      if (targetPosition != null) {
+        await _loadArtMarkers(center: targetPosition, force: true);
+        if (!mounted) return false;
+
+        final refreshed = resolveBestMarkerCandidate(
+          _artMarkers,
+          exactMarkerId: markerId,
+          artworkId: normalizedArtworkId,
+          subjectId: normalizedSubjectId,
+          subjectType: normalizedSubjectType,
+          preferredLabel: preferredLabel,
+          preferredPosition: targetPosition,
+        );
+        if (refreshed != null) {
+          await _animateMapTo(refreshed.position, zoom: math.max(_lastZoom, 15));
+          _showArtMarkerDialog(refreshed);
+          return true;
+        }
+      }
+
+      if (attempt < 3) {
+        await Future<void>.delayed(
+          Duration(milliseconds: 220 * (attempt + 1)),
+        );
+        if (!mounted) return false;
+      }
+    }
+
     return false;
   }
 
@@ -3342,7 +3431,7 @@ class _MapScreenState extends State<MapScreen>
           if (_travelModeEnabled) {
             unawaited(
               _loadMarkersForCurrentView(force: true)
-                  .then((_) => _maybeOpenInitialMarker())
+                  .then((_) => _maybeOpenInitialSelection())
                   .catchError((e) {
                 if (kDebugMode) {
                   debugPrint('MapScreen: initial marker load error: $e');
@@ -3352,7 +3441,7 @@ class _MapScreenState extends State<MapScreen>
           } else if (_artMarkers.isEmpty && !_isLoadingMarkers) {
             unawaited(
               _loadMarkersForCurrentView(force: true)
-                  .then((_) => _maybeOpenInitialMarker())
+                  .then((_) => _maybeOpenInitialSelection())
                   .catchError((e) {
                 if (kDebugMode) {
                   debugPrint('MapScreen: initial marker load error: $e');
@@ -3360,7 +3449,7 @@ class _MapScreenState extends State<MapScreen>
               }),
             );
           } else {
-            unawaited(_maybeOpenInitialMarker().catchError((e) {
+            unawaited(_maybeOpenInitialSelection().catchError((e) {
               if (kDebugMode) {
                 debugPrint('MapScreen: open initial marker error: $e');
               }
@@ -3969,6 +4058,7 @@ class _MapScreenState extends State<MapScreen>
         primaryActionIcon: switch (presentation.primaryTarget) {
           MapMarkerOverlayPrimaryTarget.exhibition => Icons.museum_outlined,
           MapMarkerOverlayPrimaryTarget.event => Icons.event_outlined,
+          MapMarkerOverlayPrimaryTarget.institution => Icons.museum_outlined,
           MapMarkerOverlayPrimaryTarget.artwork => Icons.arrow_forward,
           MapMarkerOverlayPrimaryTarget.markerInfo => Icons.info_outline,
         },
@@ -4234,6 +4324,9 @@ class _MapScreenState extends State<MapScreen>
       case MapMarkerOverlayPrimaryTarget.event:
         await _openEventFromMarker(marker, resolvedEvent);
         return;
+      case MapMarkerOverlayPrimaryTarget.institution:
+        await _openInstitutionFromMarker(marker, presentation.linkedSubject.id);
+        return;
       case MapMarkerOverlayPrimaryTarget.artwork:
         await _openMarkerDetail(marker, artwork);
         return;
@@ -4276,6 +4369,31 @@ class _MapScreenState extends State<MapScreen>
       MaterialPageRoute(
         builder: (_) => EventDetailScreen(eventId: fetched.id),
       ),
+    );
+  }
+
+  Future<void> _openInstitutionFromMarker(
+    ArtMarker marker,
+    String? linkedInstitutionId,
+  ) async {
+    final institutionId = (linkedInstitutionId ?? marker.subjectId ?? '').trim();
+    final profileTargetId = InstitutionNavigation.resolveProfileTargetId(
+      institutionId: institutionId,
+      data: marker.metadata,
+    );
+    if (institutionId.isEmpty && profileTargetId == null) {
+      await _showMarkerInfoFallback(marker);
+      return;
+    }
+
+    await InstitutionNavigation.open(
+      context,
+      institutionId: institutionId,
+      profileTargetId: profileTargetId,
+      data: marker.metadata,
+      title: marker.subjectTitle?.trim().isNotEmpty == true
+          ? marker.subjectTitle!.trim()
+          : marker.name,
     );
   }
 
@@ -4553,20 +4671,80 @@ class _MapScreenState extends State<MapScreen>
       return;
     }
 
-    if (result.kind != KubusSearchResultKind.marker) return;
+    if (result.kind == KubusSearchResultKind.institution) {
+      final marker = _findLoadedMarkerForSearchResult(result);
+      if (marker != null) {
+        _handleMarkerTap(marker);
+        return;
+      }
+
+      final markerId = result.markerId?.trim() ?? '';
+      if (markerId.isNotEmpty) {
+        final opened = await _openMarkerById(markerId);
+        if (opened) return;
+      }
+
+      final openedBySelection = await _openMarkerBySelection(
+        exactMarkerId: result.markerId,
+        artworkId: result.artworkId,
+        subjectId: result.subjectId,
+        subjectType: result.subjectType,
+        preferredLabel: result.label,
+        preferredPosition: result.position,
+      );
+      if (openedBySelection) return;
+
+      final institutionId = result.id?.trim() ?? '';
+      final profileTargetId = InstitutionNavigation.resolveProfileTargetId(
+        institutionId: institutionId,
+        data: result.data,
+      );
+      if (institutionId.isNotEmpty || profileTargetId != null) {
+        if (!mounted) return;
+        await InstitutionNavigation.open(
+          context,
+          institutionId: institutionId,
+          profileTargetId: profileTargetId,
+          data: result.data,
+          title: result.label,
+        );
+      }
+      return;
+    }
+
+    final isMarkerSelection = result.kind == KubusSearchResultKind.marker ||
+        result.kind == KubusSearchResultKind.event;
+    if (!isMarkerSelection) return;
 
     final marker = _findLoadedMarkerForSearchResult(result);
     if (marker != null) {
       _handleMarkerTap(marker);
+      return;
     }
+
+    final markerId = result.markerId?.trim() ?? '';
+    if (markerId.isNotEmpty) {
+      final opened = await _openMarkerById(markerId);
+      if (opened) return;
+    }
+
+    await _openMarkerBySelection(
+      exactMarkerId: result.markerId,
+      artworkId: result.artworkId,
+      subjectId: result.subjectId,
+      subjectType: result.subjectType,
+      preferredLabel: result.label,
+      preferredPosition: result.position,
+    );
   }
 
   ArtMarker? _findLoadedMarkerForSearchResult(KubusSearchResult result) {
-    final resultId = result.id?.trim() ?? '';
     return resolveBestMarkerCandidate(
       _artMarkers,
-      exactMarkerId: resultId,
-      artworkId: resultId,
+      exactMarkerId: result.markerId,
+      artworkId: result.artworkId,
+      subjectId: result.subjectId,
+      subjectType: result.subjectType,
       preferredLabel: result.label,
       preferredPosition: result.position,
     );

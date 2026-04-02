@@ -126,7 +126,7 @@ class _InvitesInboxScreenState extends State<InvitesInboxScreen> {
       appBar: AppBar(
         title: Text(
           l10n.profileInvitesTooltip,
-          style: KubusTextStyles.screenTitle.copyWith(
+          style: KubusTextStyles.mobileAppBarTitle.copyWith(
             color: scheme.onSurface,
           ),
         ),

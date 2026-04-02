@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../providers/platform_provider.dart';
 import '../utils/kubus_color_roles.dart';
+import '../utils/design_tokens.dart';
 import 'glass_components.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
@@ -29,7 +29,8 @@ class PlatformAwareFeatureButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<PlatformProvider>(
       builder: (context, platformProvider, child) {
-        final isSupported = platformProvider.capabilities[requiredCapability] ?? false;
+        final isSupported =
+            platformProvider.capabilities[requiredCapability] ?? false;
         final theme = Theme.of(context);
         final scheme = theme.colorScheme;
         final isDark = theme.brightness == Brightness.dark;
@@ -38,12 +39,14 @@ class PlatformAwareFeatureButton extends StatelessWidget {
             ? (color ?? Theme.of(context).primaryColor)
             : scheme.outline;
 
-        final radius = BorderRadius.circular(platformProvider.defaultBorderRadius);
+        final radius =
+            BorderRadius.circular(platformProvider.defaultBorderRadius);
         final glassTint = baseColor.withValues(
           alpha: isSupported ? (isDark ? 0.82 : 0.88) : (isDark ? 0.22 : 0.16),
         );
-        final outlineColor = baseColor.withValues(alpha: isSupported ? 0.30 : 0.22);
-        
+        final outlineColor =
+            baseColor.withValues(alpha: isSupported ? 0.30 : 0.22);
+
         return Container(
           decoration: BoxDecoration(
             borderRadius: radius,
@@ -76,7 +79,7 @@ class PlatformAwareFeatureButton extends StatelessWidget {
               ),
               label: Text(
                 label,
-                style: GoogleFonts.inter(
+                style: KubusTextStyles.navLabel.copyWith(
                   color: isSupported
                       ? Colors.white
                       : platformProvider.getUnsupportedFeatureColor(context),
@@ -104,7 +107,8 @@ class PlatformAwareFeatureButton extends StatelessWidget {
     );
   }
 
-  void _showUnsupportedMessage(BuildContext context, PlatformProvider platformProvider) {
+  void _showUnsupportedMessage(
+      BuildContext context, PlatformProvider platformProvider) {
     ScaffoldMessenger.of(context).showKubusSnackBar(
       SnackBar(
         content: Text(platformProvider.getUnsupportedFeatureMessage(feature)),
@@ -139,7 +143,8 @@ class PlatformAwareCard extends StatelessWidget {
         final scheme = theme.colorScheme;
         final isDark = theme.brightness == Brightness.dark;
 
-        final radius = BorderRadius.circular(platformProvider.defaultBorderRadius);
+        final radius =
+            BorderRadius.circular(platformProvider.defaultBorderRadius);
         final glassTint = (backgroundColor ?? scheme.surface)
             .withValues(alpha: isDark ? 0.16 : 0.10);
 
@@ -197,25 +202,25 @@ class PlatformAwareLayout extends StatelessWidget {
         return LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
-            
+
             // Platform-specific layouts
             if (platformProvider.isWeb && webLayout != null) {
               return webLayout!;
             }
-            
+
             if (platformProvider.isDesktop && desktopLayout != null) {
               return desktopLayout!;
             }
-            
+
             // Screen size-based layouts
             if (platformProvider.isLargeScreen(width)) {
               return desktopLayout ?? tabletLayout ?? mobileLayout;
             }
-            
+
             if (platformProvider.isMediumScreen(width)) {
               return tabletLayout ?? mobileLayout;
             }
-            
+
             return mobileLayout;
           },
         );
@@ -235,11 +240,11 @@ class PlatformDebugWidget extends StatelessWidget {
         return ExpansionTile(
           title: Text(
             'Platform Debug Info',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+            style: KubusTextStyles.sectionTitle,
           ),
           children: [
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(KubusSpacing.md),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -250,11 +255,11 @@ class PlatformDebugWidget extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     'Capabilities:',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                    style: KubusTextStyles.sectionTitle,
                   ),
                   ...platformProvider.capabilities.entries.map(
                     (entry) => Padding(
-                      padding: const EdgeInsets.only(left: 16),
+                      padding: const EdgeInsets.only(left: KubusSpacing.md),
                       child: Builder(
                         builder: (context) {
                           final roles = KubusColorRoles.of(context);
@@ -265,9 +270,9 @@ class PlatformDebugWidget extends StatelessWidget {
                                 color: entry.value
                                     ? roles.positiveAction
                                     : roles.negativeAction,
-                                size: 16,
+                                size: KubusHeaderMetrics.actionIcon - 4,
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: KubusSpacing.sm),
                               Text(entry.key.toString().split('.').last),
                             ],
                           );
@@ -284,5 +289,3 @@ class PlatformDebugWidget extends StatelessWidget {
     );
   }
 }
-
-

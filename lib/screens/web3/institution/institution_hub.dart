@@ -129,6 +129,30 @@ class _InstitutionHubState extends State<InstitutionHub> {
     );
   }
 
+  String? _institutionPromotionUnavailableReason() {
+    final wallet = _resolveWalletAddress();
+    if (wallet.isEmpty) {
+      return 'Connect an approved institution wallet to request institution promotion.';
+    }
+
+    final daoProvider = context.read<DAOProvider>();
+    final review =
+        _institutionReview ?? daoProvider.findReviewForWallet(wallet);
+    final verification = DaoRoleVerification(
+      walletAddress: wallet,
+      review: review,
+    );
+
+    if (verification.isApprovedFor(DaoRoleType.artist) ||
+        verification.isPendingFor(DaoRoleType.artist)) {
+      return 'Artist wallets cannot self-serve institution promotion. Use a dedicated institution wallet.';
+    }
+    if (!verification.isApprovedFor(DaoRoleType.institution)) {
+      return 'Institution promotion is available only for approved institution wallets.';
+    }
+    return null;
+  }
+
   Future<void> _loadInstitutionReviewStatus({bool forceRefresh = false}) async {
     final wallet = _resolveWalletAddress();
     if (wallet.isEmpty || _reviewLoading) return;
@@ -195,6 +219,8 @@ class _InstitutionHubState extends State<InstitutionHub> {
     final hasConflictingArtistReview =
         verification.isPendingFor(DaoRoleType.artist);
     final isCrossRoleBlocked = hasArtistBadge || hasConflictingArtistReview;
+    final canSelfServeInstitutionPromotion =
+        isApprovedInstitution && !isCrossRoleBlocked;
 
     final pages = <Widget>[
       const EventManager(),
@@ -218,7 +244,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
               ),
               title: Text(
                 'Institution Hub',
-                style: KubusTextStyles.screenTitle.copyWith(
+                style: KubusTextStyles.mobileAppBarTitle.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
                 overflow: TextOverflow.ellipsis,
@@ -268,14 +294,15 @@ class _InstitutionHubState extends State<InstitutionHub> {
                       );
                     },
                   ),
-                TopBarIcon(
-                  tooltip: 'Promote my institution',
-                  icon: Icon(
-                    Icons.campaign_outlined,
-                    color: Theme.of(context).colorScheme.onSurface,
+                if (canSelfServeInstitutionPromotion)
+                  TopBarIcon(
+                    tooltip: 'Promote my institution',
+                    icon: Icon(
+                      Icons.campaign_outlined,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    onPressed: _openInstitutionPromotionFlow,
                   ),
-                  onPressed: _openInstitutionPromotionFlow,
-                ),
                 Consumer<NotificationProvider>(
                   builder: (context, notificationProvider, _) => TopBarIcon(
                     tooltip: l10n.commonNotifications,
@@ -297,7 +324,10 @@ class _InstitutionHubState extends State<InstitutionHub> {
               child: Column(
                 children: [
                   _buildInstitutionHeader(
-                      isApprovedInstitution: isApprovedInstitution),
+                    isApprovedInstitution: isApprovedInstitution,
+                    canSelfServeInstitutionPromotion:
+                        canSelfServeInstitutionPromotion,
+                  ),
                   if (widget.showVerificationCard)
                     _buildInstitutionApplicationCard(
                       review,
@@ -330,7 +360,10 @@ class _InstitutionHubState extends State<InstitutionHub> {
     );
   }
 
-  Widget _buildInstitutionHeader({required bool isApprovedInstitution}) {
+  Widget _buildInstitutionHeader({
+    required bool isApprovedInstitution,
+    required bool canSelfServeInstitutionPromotion,
+  }) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
@@ -413,15 +446,19 @@ class _InstitutionHubState extends State<InstitutionHub> {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: OutlinedButton.icon(
-                        onPressed: _openInstitutionPromotionFlow,
-                        icon: const Icon(Icons.campaign_outlined),
-                        label: const Text('Promote my institution'),
+                    if (canSelfServeInstitutionPromotion) ...[
+                      const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+                      Center(
+                        child: OutlinedButton.icon(
+                          onPressed: _openInstitutionPromotionFlow,
+                          icon: const Icon(Icons.campaign_outlined),
+                          label: const Text('Promote my institution'),
+                          style: OutlinedButton.styleFrom(
+                            alignment: Alignment.center,
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                     if (isApprovedInstitution) ...[
                       const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
                       Wrap(
@@ -1083,6 +1120,14 @@ class _InstitutionHubState extends State<InstitutionHub> {
   }
 
   Future<void> _openInstitutionPromotionFlow() async {
+    final unavailableReason = _institutionPromotionUnavailableReason();
+    if (unavailableReason != null) {
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(unavailableReason)),
+        tone: KubusSnackBarTone.warning,
+      );
+      return;
+    }
     final profile = context.read<ProfileProvider>().currentUser;
     final wallet = _resolveWalletAddress();
     final entityId = WalletUtils.coalesce(
@@ -1294,10 +1339,15 @@ class _InstitutionHubState extends State<InstitutionHub> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: KubusSpacing.md),
-            OutlinedButton.icon(
-              onPressed: () => _showInstitutionApplicationModal(),
-              icon: const Icon(Icons.send_rounded),
-              label: const Text('Apply for DAO review'),
+            Center(
+              child: OutlinedButton.icon(
+                onPressed: () => _showInstitutionApplicationModal(),
+                icon: const Icon(Icons.send_rounded),
+                label: const Text('Apply for DAO review'),
+                style: OutlinedButton.styleFrom(
+                  alignment: Alignment.center,
+                ),
+              ),
             ),
           ],
         ),

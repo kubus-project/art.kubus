@@ -8,6 +8,7 @@ import '../../community/community_interactions.dart';
 import '../../models/community_subject.dart';
 import '../../providers/community_subject_provider.dart';
 import '../../utils/app_animations.dart';
+import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/media_url_resolver.dart';
 import '../avatar_widget.dart';
@@ -69,11 +70,12 @@ class CommunityPostCard extends StatelessWidget {
         final theme = Theme.of(context);
         final scheme = theme.colorScheme;
         final isDark = theme.brightness == Brightness.dark;
-        final radius = BorderRadius.circular(16);
-        final glassTint = scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
+        final radius = BorderRadius.circular(KubusRadius.lg);
+        final glassTint =
+            scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
 
         return Container(
-          margin: const EdgeInsets.only(bottom: 20),
+          margin: const EdgeInsets.only(bottom: KubusChromeMetrics.cardPadding),
           child: MouseRegion(
             cursor: SystemMouseCursors.click,
             child: GestureDetector(
@@ -87,7 +89,7 @@ class CommunityPostCard extends StatelessWidget {
                   ),
                 ),
                 child: LiquidGlassPanel(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
                   margin: EdgeInsets.zero,
                   borderRadius: radius,
                   showBorder: false,
@@ -95,296 +97,332 @@ class CommunityPostCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                    Row(
-                      children: [
-                        AvatarWidget(
-                          wallet: (post.authorWallet ?? post.authorId),
-                          avatarUrl: post.authorAvatar,
-                          radius: 20,
-                          allowFabricatedFallback: true,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: onOpenAuthorProfile,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Flexible(
-                                      fit: FlexFit.loose,
-                                      child: Text(
-                                        post.authorName,
-                                        style: GoogleFonts.inter(
-                                          fontSize: isSmallScreen ? 14 : 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: scheme.onSurface,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    CommunityAuthorRoleBadges(
-                                      post: post,
-                                      fontSize: isSmallScreen ? 8.5 : 9.5,
-                                      iconOnly: false,
-                                    ),
-                                  ],
-                                ),
-                                if ((post.authorUsername ?? '').trim().isNotEmpty)
-                                  Text(
-                                    '@${post.authorUsername!.trim()}',
-                                    style: GoogleFonts.inter(
-                                      fontSize: isSmallScreen ? 12 : 14,
-                                      color: scheme.onSurface.withValues(alpha: 0.6),
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Text(
-                          _timeAgo(context, post.timestamp, l10n),
-                          style: GoogleFonts.inter(
-                            fontSize: isSmallScreen ? 10 : 12,
-                            color: scheme.onSurface.withValues(alpha: 0.5),
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (onMoreOptions != null) ...[
-                          const SizedBox(width: 6),
-                          IconButton(
-                            visualDensity: VisualDensity.compact,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            onPressed: onMoreOptions,
-                            icon: Icon(
-                              Icons.more_vert,
-                              size: 18,
-                              color: scheme.onSurface.withValues(alpha: 0.6),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    if (post.feedPin.isPinned || post.promotion.isPromoted) ...[
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
+                      Row(
                         children: [
-                          if (post.feedPin.isPinned)
-                            _buildMetaBadge(
-                              context,
-                              icon: Icons.push_pin_outlined,
-                              label: post.feedPin.surface == null
-                                  ? 'Pinned'
-                                  : 'Pinned ${post.feedPin.surface}',
-                              color: scheme.tertiary,
+                          AvatarWidget(
+                            wallet: (post.authorWallet ?? post.authorId),
+                            avatarUrl: post.authorAvatar,
+                            radius: 20,
+                            allowFabricatedFallback: true,
+                          ),
+                          const SizedBox(
+                              width: KubusSpacing.sm + KubusSpacing.xs),
+                          Expanded(
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: onOpenAuthorProfile,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Flexible(
+                                        fit: FlexFit.loose,
+                                        child: Text(
+                                          post.authorName,
+                                          style: KubusTextStyles.sectionTitle
+                                              .copyWith(
+                                            fontSize: isSmallScreen
+                                                ? KubusChromeMetrics.navLabel
+                                                : KubusHeaderMetrics
+                                                    .sectionTitle,
+                                            fontWeight: FontWeight.w700,
+                                            color: scheme.onSurface,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      CommunityAuthorRoleBadges(
+                                        post: post,
+                                        fontSize: isSmallScreen ? 8.5 : 9.5,
+                                        iconOnly: false,
+                                      ),
+                                    ],
+                                  ),
+                                  if ((post.authorUsername ?? '')
+                                      .trim()
+                                      .isNotEmpty)
+                                    Text(
+                                      '@${post.authorUsername!.trim()}',
+                                      style: KubusTextStyles.sectionSubtitle
+                                          .copyWith(
+                                        fontSize: isSmallScreen
+                                            ? KubusChromeMetrics.navMetaLabel
+                                            : KubusHeaderMetrics.screenSubtitle,
+                                        color: scheme.onSurface
+                                            .withValues(alpha: 0.6),
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                ],
+                              ),
                             ),
-                          if (post.promotion.isPromoted)
-                            _buildMetaBadge(
-                              context,
-                              icon: Icons.auto_awesome,
-                              label: 'Promoted',
-                              color: accentColor,
+                          ),
+                          Text(
+                            _timeAgo(context, post.timestamp, l10n),
+                            style: KubusTextStyles.navMetaLabel.copyWith(
+                              fontSize: isSmallScreen
+                                  ? KubusChromeMetrics.navBadgeLabel
+                                  : KubusChromeMetrics.navMetaLabel,
+                              color: scheme.onSurface.withValues(alpha: 0.5),
                             ),
-                        ],
-                      ),
-                    ],
-                    const SizedBox(height: 16),
-                    if (post.postType == 'repost' && post.content.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        post.content,
-                        style: GoogleFonts.inter(
-                          fontSize: isSmallScreen ? 13 : 15,
-                          height: 1.5,
-                          color: scheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Divider(color: scheme.outline.withValues(alpha: 0.5)),
-                      const SizedBox(height: 12),
-                    ],
-                    if (post.category.isNotEmpty && post.category != 'post') ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        margin: const EdgeInsets.only(bottom: 12),
-                        decoration: BoxDecoration(
-                          color: accentColor.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              _getCategoryIcon(post.category),
-                              size: 14,
-                              color: accentColor,
-                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (onMoreOptions != null) ...[
                             const SizedBox(width: 6),
-                            Text(
-                              _formatCategoryLabel(post.category),
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: accentColor,
+                            IconButton(
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: onMoreOptions,
+                              icon: Icon(
+                                Icons.more_vert,
+                                size: 18,
+                                color: scheme.onSurface.withValues(alpha: 0.6),
                               ),
                             ),
                           ],
+                        ],
+                      ),
+                      if (post.feedPin.isPinned ||
+                          post.promotion.isPromoted) ...[
+                        const SizedBox(
+                            height: KubusSpacing.sm + KubusSpacing.xxs),
+                        Wrap(
+                          spacing: KubusSpacing.sm,
+                          runSpacing: KubusSpacing.sm,
+                          children: [
+                            if (post.feedPin.isPinned)
+                              _buildMetaBadge(
+                                context,
+                                icon: Icons.push_pin_outlined,
+                                label: post.feedPin.surface == null
+                                    ? 'Pinned'
+                                    : 'Pinned ${post.feedPin.surface}',
+                                color: scheme.tertiary,
+                              ),
+                            if (post.promotion.isPromoted)
+                              _buildMetaBadge(
+                                context,
+                                icon: Icons.auto_awesome,
+                                label: 'Promoted',
+                                color: accentColor,
+                              ),
+                          ],
                         ),
-                      ),
-                    ],
-                    if (post.postType == 'repost' && post.originalPost != null) ...[
-                      _RepostInnerCard(
-                        post: post.originalPost!,
-                        accentColor: accentColor,
-                        onOpenPostDetail: onOpenPostDetail,
-                      ),
-                    ] else ...[
-                      Text(
-                        post.content,
-                        style: GoogleFonts.inter(
-                          fontSize: isSmallScreen ? 13 : 15,
-                          height: 1.5,
-                          color: scheme.onSurface,
+                      ],
+                      const SizedBox(height: KubusSpacing.md),
+                      if (post.postType == 'repost' &&
+                          post.content.isNotEmpty) ...[
+                        const SizedBox(
+                            height: KubusSpacing.xs + KubusSpacing.xxs),
+                        Text(
+                          post.content,
+                          style: KubusTextStyles.detailBody.copyWith(
+                            fontSize: isSmallScreen ? 13 : 15,
+                            height: 1.5,
+                            color: scheme.onSurface,
+                          ),
                         ),
-                      ),
-                    ],
-                    if (_hasPrimaryImage(post)) ...[
-                      const SizedBox(height: 16),
-                      GestureDetector(
-                        onTap: () => onOpenPostDetail(_primaryImagePost(post)),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.network(
-                            _primaryImageUrl(post),
-                            height: 200,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Container(
-                                height: 200,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      accentColor.withValues(alpha: 0.3),
-                                      accentColor.withValues(alpha: 0.1),
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(12),
+                        const SizedBox(height: KubusSpacing.sm),
+                        Divider(color: scheme.outline.withValues(alpha: 0.5)),
+                        const SizedBox(height: KubusSpacing.sm),
+                      ],
+                      if (post.category.isNotEmpty &&
+                          post.category != 'post') ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: KubusSpacing.sm + KubusSpacing.xxs,
+                            vertical: KubusSpacing.xs,
+                          ),
+                          margin:
+                              const EdgeInsets.only(bottom: KubusSpacing.sm),
+                          decoration: BoxDecoration(
+                            color: accentColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(KubusRadius.sm),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _getCategoryIcon(post.category),
+                                size: 14,
+                                color: accentColor,
+                              ),
+                              const SizedBox(
+                                  width: KubusSpacing.xs + KubusSpacing.xxs),
+                              Text(
+                                _formatCategoryLabel(post.category),
+                                style: KubusTextStyles.navMetaLabel.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: accentColor,
                                 ),
-                                child: Center(
-                                  child: SizedBox(
-                                    width: 36,
-                                    height: 36,
-                                    child: InlineLoading(
-                                      expand: true,
-                                      shape: BoxShape.circle,
-                                      tileSize: 4.0,
-                                      progress: loadingProgress.expectedTotalBytes != null
-                                          ? (loadingProgress.cumulativeBytesLoaded /
-                                              loadingProgress.expectedTotalBytes!)
-                                          : null,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                height: 200,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      accentColor.withValues(alpha: 0.3),
-                                      accentColor.withValues(alpha: 0.1),
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Center(
-                                  child: Icon(
-                                    Icons.image_not_supported,
-                                    color: scheme.onPrimary,
-                                    size: 60,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
-                    if (post.postType != 'repost') ...[
-                      _PostMetadataSection(
-                        post: post,
-                        accentColor: accentColor,
-                        onTagTap: onTagTap,
-                        onMentionTap: onMentionTap,
-                        onOpenLocation: onOpenLocation,
-                        onOpenGroup: onOpenGroup,
-                        onOpenSubject: onOpenSubject,
-                      ),
-                    ],
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _InteractionButton(
-                            icon: post.isLiked ? Icons.favorite : Icons.favorite_border,
-                            label: '${post.likeCount}',
-                            onTap: onToggleLike,
-                            onCountTap: onShowLikes,
-                            isActive: post.isLiked,
-                            color: post.isLiked
-                                ? KubusColorRoles.of(context).likeAction
-                                : scheme.onSurface.withValues(alpha: 0.6),
-                            accentColor: accentColor,
-                          ),
-                        ),
-                        Expanded(
-                          child: _InteractionButton(
-                            icon: Icons.comment_outlined,
-                            label: '${post.commentCount}',
-                            onTap: onOpenComments,
-                            accentColor: accentColor,
-                          ),
-                        ),
-                        Expanded(
-                          child: _InteractionButton(
-                            icon: Icons.repeat,
-                            label: '${post.shareCount}',
-                            onTap: onRepost,
-                            onCountTap: post.shareCount > 0 ? onShowReposts : null,
-                            accentColor: accentColor,
-                          ),
-                        ),
-                        Expanded(
-                          child: _InteractionButton(
-                            icon: Icons.share_outlined,
-                            label: '',
-                            onTap: onShare,
-                            accentColor: accentColor,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          onPressed: onToggleBookmark,
-                          icon: Icon(
-                            post.isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                            color: post.isBookmarked
-                                ? scheme.primary
-                                : scheme.onSurface.withValues(alpha: 0.6),
-                            size: 20,
+                              ),
+                            ],
                           ),
                         ),
                       ],
-                    ),
+                      if (post.postType == 'repost' &&
+                          post.originalPost != null) ...[
+                        _RepostInnerCard(
+                          post: post.originalPost!,
+                          accentColor: accentColor,
+                          onOpenPostDetail: onOpenPostDetail,
+                        ),
+                      ] else ...[
+                        Text(
+                          post.content,
+                          style: KubusTextStyles.detailBody.copyWith(
+                            fontSize: isSmallScreen ? 13 : 15,
+                            height: 1.5,
+                            color: scheme.onSurface,
+                          ),
+                        ),
+                      ],
+                      if (_hasPrimaryImage(post)) ...[
+                        const SizedBox(height: KubusSpacing.md),
+                        GestureDetector(
+                          onTap: () =>
+                              onOpenPostDetail(_primaryImagePost(post)),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(KubusRadius.md),
+                            child: Image.network(
+                              _primaryImageUrl(post),
+                              height: 200,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              loadingBuilder:
+                                  (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Container(
+                                  height: 200,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        accentColor.withValues(alpha: 0.3),
+                                        accentColor.withValues(alpha: 0.1),
+                                      ],
+                                    ),
+                                    borderRadius:
+                                        BorderRadius.circular(KubusRadius.md),
+                                  ),
+                                  child: Center(
+                                    child: SizedBox(
+                                      width: 36,
+                                      height: 36,
+                                      child: InlineLoading(
+                                        expand: true,
+                                        shape: BoxShape.circle,
+                                        tileSize: 4.0,
+                                        progress: loadingProgress
+                                                    .expectedTotalBytes !=
+                                                null
+                                            ? (loadingProgress
+                                                    .cumulativeBytesLoaded /
+                                                loadingProgress
+                                                    .expectedTotalBytes!)
+                                            : null,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  height: 200,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        accentColor.withValues(alpha: 0.3),
+                                        accentColor.withValues(alpha: 0.1),
+                                      ],
+                                    ),
+                                    borderRadius:
+                                        BorderRadius.circular(KubusRadius.md),
+                                  ),
+                                  child: Center(
+                                    child: Icon(
+                                      Icons.image_not_supported,
+                                      color: scheme.onPrimary,
+                                      size: 60,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (post.postType != 'repost') ...[
+                        _PostMetadataSection(
+                          post: post,
+                          accentColor: accentColor,
+                          onTagTap: onTagTap,
+                          onMentionTap: onMentionTap,
+                          onOpenLocation: onOpenLocation,
+                          onOpenGroup: onOpenGroup,
+                          onOpenSubject: onOpenSubject,
+                        ),
+                      ],
+                      const SizedBox(height: KubusSpacing.md),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _InteractionButton(
+                              icon: post.isLiked
+                                  ? Icons.favorite
+                                  : Icons.favorite_border,
+                              label: '${post.likeCount}',
+                              onTap: onToggleLike,
+                              onCountTap: onShowLikes,
+                              isActive: post.isLiked,
+                              color: post.isLiked
+                                  ? KubusColorRoles.of(context).likeAction
+                                  : scheme.onSurface.withValues(alpha: 0.6),
+                              accentColor: accentColor,
+                            ),
+                          ),
+                          Expanded(
+                            child: _InteractionButton(
+                              icon: Icons.comment_outlined,
+                              label: '${post.commentCount}',
+                              onTap: onOpenComments,
+                              accentColor: accentColor,
+                            ),
+                          ),
+                          Expanded(
+                            child: _InteractionButton(
+                              icon: Icons.repeat,
+                              label: '${post.shareCount}',
+                              onTap: onRepost,
+                              onCountTap:
+                                  post.shareCount > 0 ? onShowReposts : null,
+                              accentColor: accentColor,
+                            ),
+                          ),
+                          Expanded(
+                            child: _InteractionButton(
+                              icon: Icons.share_outlined,
+                              label: '',
+                              onTap: onShare,
+                              accentColor: accentColor,
+                            ),
+                          ),
+                          const SizedBox(width: KubusSpacing.sm),
+                          IconButton(
+                            onPressed: onToggleBookmark,
+                            icon: Icon(
+                              post.isBookmarked
+                                  ? Icons.bookmark
+                                  : Icons.bookmark_border,
+                              color: post.isBookmarked
+                                  ? scheme.primary
+                                  : scheme.onSurface.withValues(alpha: 0.6),
+                              size: 20,
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -446,7 +484,8 @@ CommunityPost _primaryImagePost(CommunityPost post) {
       : post;
 }
 
-String _timeAgo(BuildContext context, DateTime timestamp, AppLocalizations? l10n) {
+String _timeAgo(
+    BuildContext context, DateTime timestamp, AppLocalizations? l10n) {
   // Prefer localizations when available (tests or minimal wrappers may omit).
   final localizations = l10n ?? AppLocalizations.of(context);
   final now = DateTime.now();
@@ -519,7 +558,8 @@ String _formatCategoryLabel(String category) {
       return category
           .replaceAll('_', ' ')
           .split(' ')
-          .map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : w)
+          .map((w) =>
+              w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : w)
           .join(' ');
   }
 }
@@ -536,7 +576,8 @@ CommunitySubjectRef? _resolveSubjectRef(CommunityPost post) {
   return null;
 }
 
-String _subjectTypeLabel(BuildContext context, String type, AppLocalizations? l10n) {
+String _subjectTypeLabel(
+    BuildContext context, String type, AppLocalizations? l10n) {
   final localized = l10n ?? AppLocalizations.of(context);
   if (localized == null) return type;
   switch (type.toLowerCase()) {
@@ -674,84 +715,86 @@ class _RepostInnerCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-            Row(
-              children: [
-                AvatarWidget(
-                  wallet: post.authorWallet ?? post.authorId,
-                  avatarUrl: post.authorAvatar,
-                  radius: 16,
-                  allowFabricatedFallback: true,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            fit: FlexFit.loose,
-                            child: Text(
-                              post.authorName,
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                                color: scheme.onSurface,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          CommunityAuthorRoleBadges(
-                            post: post,
-                            fontSize: 8,
-                            iconOnly: false,
-                          ),
-                        ],
-                      ),
-                      if (originalHandle.isNotEmpty)
-                        Text(
-                          '@$originalHandle',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: scheme.onSurface.withValues(alpha: 0.6),
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                    ],
+              Row(
+                children: [
+                  AvatarWidget(
+                    wallet: post.authorWallet ?? post.authorId,
+                    avatarUrl: post.authorAvatar,
+                    radius: 16,
+                    allowFabricatedFallback: true,
                   ),
-                ),
-                Text(
-                  _timeAgo(context, post.timestamp, AppLocalizations.of(context)),
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    color: scheme.onSurface.withValues(alpha: 0.5),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              fit: FlexFit.loose,
+                              child: Text(
+                                post.authorName,
+                                style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: scheme.onSurface,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            CommunityAuthorRoleBadges(
+                              post: post,
+                              fontSize: 8,
+                              iconOnly: false,
+                            ),
+                          ],
+                        ),
+                        if (originalHandle.isNotEmpty)
+                          Text(
+                            '@$originalHandle',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: scheme.onSurface.withValues(alpha: 0.6),
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    _timeAgo(
+                        context, post.timestamp, AppLocalizations.of(context)),
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: scheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                post.content,
+                style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface),
+              ),
+              if (post.imageUrl != null) ...[
+                const SizedBox(height: 10),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    MediaUrlResolver.resolveDisplayUrl(post.imageUrl) ??
+                        post.imageUrl!,
+                    height: 140,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      height: 140,
+                      color: accentColor.withValues(alpha: 0.1),
+                      child:
+                          Icon(Icons.image_not_supported, color: accentColor),
+                    ),
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              post.content,
-              style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface),
-            ),
-            if (post.imageUrl != null) ...[
-              const SizedBox(height: 10),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  MediaUrlResolver.resolveDisplayUrl(post.imageUrl) ??
-                      post.imageUrl!,
-                  height: 140,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 140,
-                    color: accentColor.withValues(alpha: 0.1),
-                    child: Icon(Icons.image_not_supported, color: accentColor),
-                  ),
-                ),
-              ),
-            ],
             ],
           ),
         ),
@@ -792,7 +835,8 @@ class _PostMetadataSection extends StatelessWidget {
         subjectPreview = CommunitySubjectPreview(
           ref: subjectRef,
           title: post.artwork!.title,
-          imageUrl: MediaUrlResolver.resolve(post.artwork!.imageUrl) ?? post.artwork!.imageUrl,
+          imageUrl: MediaUrlResolver.resolve(post.artwork!.imageUrl) ??
+              post.artwork!.imageUrl,
         );
       }
     }
@@ -820,7 +864,8 @@ class _PostMetadataSection extends StatelessWidget {
               return GestureDetector(
                 onTap: onTagTap == null ? null : () => onTagTap!(tag),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
                     color: roles.tagChipBackground.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(14),
@@ -845,9 +890,11 @@ class _PostMetadataSection extends StatelessWidget {
             runSpacing: 6,
             children: post.mentions.map((mention) {
               return GestureDetector(
-                onTap: onMentionTap == null ? null : () => onMentionTap!(mention),
+                onTap:
+                    onMentionTap == null ? null : () => onMentionTap!(mention),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
                     color: scheme.secondaryContainer.withValues(alpha: 0.6),
                     borderRadius: BorderRadius.circular(14),
@@ -907,7 +954,8 @@ class _PostMetadataSection extends StatelessWidget {
                       '• ${post.distanceKm!.toStringAsFixed(1)} km',
                       style: GoogleFonts.inter(
                         fontSize: 11,
-                        color: scheme.onTertiaryContainer.withValues(alpha: 0.7),
+                        color:
+                            scheme.onTertiaryContainer.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -916,65 +964,71 @@ class _PostMetadataSection extends StatelessWidget {
             ),
           ),
         ],
-          if (resolvedPreview != null) ...[
-            const SizedBox(height: 12),
-            GestureDetector(
-              onTap:
-                  onOpenSubject == null ? null : () => onOpenSubject!(resolvedPreview),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: scheme.primaryContainer,
+        if (resolvedPreview != null) ...[
+          const SizedBox(height: 12),
+          GestureDetector(
+            onTap: onOpenSubject == null
+                ? null
+                : () => onOpenSubject!(resolvedPreview),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: scheme.primaryContainer,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: scheme.outline.withValues(alpha: 0.3)),
+                border:
+                    Border.all(color: scheme.outline.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: accentColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: resolvedPreview.imageUrl != null
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: Image.network(
-                                MediaUrlResolver.resolveDisplayUrl(
-                                      resolvedPreview.imageUrl,
-                                    ) ??
-                                    resolvedPreview.imageUrl!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Icon(
-                                  _subjectTypeIcon(resolvedPreview.ref.normalizedType),
-                                  color: accentColor,
-                                  size: 22,
-                                ),
-                              ),
-                            )
-                          : Icon(
-                              _subjectTypeIcon(resolvedPreview.ref.normalizedType),
-                              color: accentColor,
-                              size: 22,
-                            ),
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: accentColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
                     ),
+                    child: resolvedPreview.imageUrl != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.network(
+                              MediaUrlResolver.resolveDisplayUrl(
+                                    resolvedPreview.imageUrl,
+                                  ) ??
+                                  resolvedPreview.imageUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Icon(
+                                _subjectTypeIcon(
+                                    resolvedPreview.ref.normalizedType),
+                                color: accentColor,
+                                size: 22,
+                              ),
+                            ),
+                          )
+                        : Icon(
+                            _subjectTypeIcon(
+                                resolvedPreview.ref.normalizedType),
+                            color: accentColor,
+                            size: 22,
+                          ),
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            resolvedPreview.title,
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: scheme.onSurface,
-                            ),
+                      children: [
+                        Text(
+                          resolvedPreview.title,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: scheme.onSurface,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          l10n?.communitySubjectLinkedLabel(subjectTypeLabel ?? '') ?? 'Linked',
+                          l10n?.communitySubjectLinkedLabel(
+                                  subjectTypeLabel ?? '') ??
+                              'Linked',
                           style: GoogleFonts.inter(
                             fontSize: 11,
                             color: scheme.onSurface.withValues(alpha: 0.6),

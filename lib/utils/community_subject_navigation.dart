@@ -5,9 +5,8 @@ import '../models/community_subject.dart';
 import '../screens/art/collection_detail_screen.dart';
 import '../screens/events/exhibition_detail_screen.dart';
 import '../screens/desktop/desktop_shell.dart';
-import '../screens/community/user_profile_screen.dart' as mobile_profile;
-import '../screens/desktop/community/desktop_user_profile_screen.dart' as desktop_profile;
 import 'artwork_navigation.dart';
+import 'institution_navigation.dart';
 
 class CommunitySubjectNavigation {
   CommunitySubjectNavigation._();
@@ -74,19 +73,10 @@ class CommunitySubjectNavigation {
     }
 
     if (normalizedType == 'institution') {
-      final desktopScreen = desktop_profile.UserProfileScreen(userId: subject.id);
-      final mobileScreen = mobile_profile.UserProfileScreen(userId: subject.id);
-      if (isDesktop && shellScope != null) {
-        shellScope.pushScreen(
-          DesktopSubScreen(
-            title: titleOverride ?? fallbackTitle(),
-            child: desktopScreen,
-          ),
-        );
-        return;
-      }
-      await Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => isDesktop ? desktopScreen : mobileScreen),
+      await InstitutionNavigation.open(
+        context,
+        institutionId: subject.id,
+        title: titleOverride ?? fallbackTitle(),
       );
     }
   }

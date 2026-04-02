@@ -154,6 +154,7 @@ class KubusSizes {
 class KubusHeaderMetrics {
   KubusHeaderMetrics._();
 
+  static const double mobileAppBarTitle = 18.0;
   static const double screenTitle = 20.0;
   static const double screenSubtitle = 14.0;
   static const double sectionTitle = 16.0;
@@ -256,6 +257,9 @@ class KubusTypography {
 /// sprinkling `copyWith(fontWeight: ...)` across the codebase.
 class KubusTextStyles {
   KubusTextStyles._();
+
+  static TextStyle get mobileAppBarTitle =>
+      screenTitle.copyWith(fontSize: KubusHeaderMetrics.mobileAppBarTitle);
 
   static TextStyle get screenTitle =>
       KubusTypography.textTheme.headlineMedium!.copyWith(

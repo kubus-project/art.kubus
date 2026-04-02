@@ -227,7 +227,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
               ),
               title: Text(
                 l10n.artistStudioTitle,
-                style: KubusTextStyles.screenTitle.copyWith(
+                style: KubusTextStyles.mobileAppBarTitle.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
                 overflow: TextOverflow.ellipsis,
@@ -394,12 +394,14 @@ class _ArtistStudioState extends State<ArtistStudio> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: KubusSpacing.sm),
-                    Align(
-                      alignment: Alignment.centerLeft,
+                    Center(
                       child: OutlinedButton.icon(
                         onPressed: _openProfilePromotionFlow,
                         icon: const Icon(Icons.campaign_outlined),
                         label: const Text('Promote my profile'),
+                        style: OutlinedButton.styleFrom(
+                          alignment: Alignment.center,
+                        ),
                       ),
                     ),
                   ],
@@ -984,10 +986,15 @@ class _ArtistStudioState extends State<ArtistStudio> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: KubusSpacing.md),
-            OutlinedButton.icon(
-              onPressed: () => _showArtistApplicationModal(),
-              icon: const Icon(Icons.send_rounded),
-              label: Text(l10n.artistStudioCtaApplyForDaoReview),
+            Center(
+              child: OutlinedButton.icon(
+                onPressed: () => _showArtistApplicationModal(),
+                icon: const Icon(Icons.send_rounded),
+                label: Text(l10n.artistStudioCtaApplyForDaoReview),
+                style: OutlinedButton.styleFrom(
+                  alignment: Alignment.center,
+                ),
+              ),
             ),
           ],
         ),
