@@ -40,6 +40,7 @@ import '../../utils/artwork_navigation.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/home_search_destination.dart';
+import '../../utils/home_rail_creator_identity.dart';
 import '../../utils/institution_navigation.dart';
 import '../../utils/map_navigation.dart';
 import '../../utils/media_url_resolver.dart';
@@ -1728,6 +1729,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   }
 
   Widget _buildHomeRailCard(HomeRailItem item, int index, int total) {
+    final subtitle = _buildHomeRailCardSubtitle(item);
     final canOpen = _hasHomeRailDestination(item);
     return DesktopCard(
       width: 240,
@@ -1799,20 +1801,68 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   overflow: TextOverflow.ellipsis,
                   style: KubusTextStyles.detailCardTitle,
                 ),
-                if ((item.subtitle ?? '').trim().isNotEmpty) ...[
+                if (subtitle != null) ...[
                   const SizedBox(height: DetailSpacing.xs),
-                  Text(
-                    item.subtitle!.trim(),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: KubusTextStyles.navMetaLabel,
-                  ),
+                  subtitle,
                 ],
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget? _buildHomeRailCardSubtitle(HomeRailItem item) {
+    final scheme = Theme.of(context).colorScheme;
+    final baseStyle = KubusTextStyles.navMetaLabel;
+    if (item.entityType == PromotionEntityType.artwork) {
+      final creatorIdentity = resolveArtworkHomeRailCreator(
+        item,
+        fallbackLabel:
+            AppLocalizations.of(context)?.desktopHomeCreatorFallbackName ??
+                'Creator',
+      );
+      if (creatorIdentity == null) return null;
+
+      final creatorText = Text(
+        creatorIdentity.label,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: creatorIdentity.canOpenProfile
+            ? baseStyle.copyWith(
+                color: scheme.primary,
+                decoration: TextDecoration.underline,
+                decorationColor: scheme.primary,
+              )
+            : baseStyle,
+      );
+      if (!creatorIdentity.canOpenProfile) {
+        return creatorText;
+      }
+      return MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => unawaited(
+            UserProfileNavigation.open(
+              context,
+              userId: creatorIdentity.userId!,
+              username: creatorIdentity.username,
+            ),
+          ),
+          child: creatorText,
+        ),
+      );
+    }
+
+    final subtitle = (item.subtitle ?? '').trim();
+    if (subtitle.isEmpty) return null;
+    return Text(
+      subtitle,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      style: baseStyle,
     );
   }
 

@@ -146,24 +146,68 @@ class HomeRailItem {
     );
   }
 
-  String? get profileTargetId {
-    String? pickRawValue(List<String> keys) {
-      for (final key in keys) {
-        final rawValue = raw[key];
-        final normalized = rawValue?.toString().trim();
-        if (normalized != null && normalized.isNotEmpty) {
-          return normalized;
-        }
+  String? _pickRawValue(List<String> keys) {
+    for (final key in keys) {
+      final rawValue = raw[key];
+      final normalized = rawValue?.toString().trim();
+      if (normalized != null && normalized.isNotEmpty) {
+        return normalized;
       }
+    }
+    return null;
+  }
+
+  String? get creatorDisplayName {
+    if (entityType != PromotionEntityType.artwork) return null;
+    return _pickRawValue(const <String>[
+      'creatorDisplayName',
+      'creator_display_name',
+    ]);
+  }
+
+  String? get creatorArtistName {
+    if (entityType != PromotionEntityType.artwork) return null;
+    return _pickRawValue(const <String>[
+      'artistName',
+      'artist_name',
+    ]);
+  }
+
+  String? get creatorUsername {
+    if (entityType != PromotionEntityType.artwork) return null;
+    return _pickRawValue(const <String>[
+      'creatorUsername',
+      'creator_username',
+    ]);
+  }
+
+  String? get creatorWalletAddress {
+    if (entityType != PromotionEntityType.artwork) return null;
+    return _pickRawValue(const <String>[
+      'creatorWalletAddress',
+      'creator_wallet_address',
+      'walletAddress',
+      'wallet_address',
+      'wallet',
+    ]);
+  }
+
+  String? get creatorTargetId {
+    if (entityType != PromotionEntityType.artwork) return null;
+    final creatorId = creatorWalletAddress?.trim();
+    if (creatorId == null || creatorId.isEmpty) {
       return null;
     }
+    return creatorId;
+  }
 
+  String? get profileTargetId {
     switch (entityType) {
       case PromotionEntityType.profile:
         final profileId = id.trim();
         return profileId.isEmpty ? null : profileId;
       case PromotionEntityType.institution:
-        final explicitWallet = pickRawValue(const <String>[
+        final explicitWallet = _pickRawValue(const <String>[
           'walletAddress',
           'wallet_address',
           'wallet',

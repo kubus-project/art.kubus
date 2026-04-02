@@ -54,6 +54,7 @@ import '../utils/user_profile_navigation.dart';
 import '../utils/home_search_destination.dart';
 import '../widgets/staggered_fade_slide.dart';
 import '../utils/artwork_navigation.dart';
+import '../utils/home_rail_creator_identity.dart';
 import '../widgets/glass_components.dart';
 import '../widgets/common/kubus_labs_adornment.dart';
 import '../widgets/common/kubus_screen_header.dart';
@@ -2076,6 +2077,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildHomeRailCard(HomeRailItem item) {
     final scheme = Theme.of(context).colorScheme;
+    final subtitle = _buildHomeRailCardSubtitle(item, scheme);
     final style = KubusGlassStyle.resolve(
       context,
       surfaceType: KubusGlassSurfaceType.card,
@@ -2164,16 +2166,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           color: scheme.onSurface,
                         ),
                       ),
-                      if ((item.subtitle ?? '').trim().isNotEmpty) ...[
+                      if (subtitle != null) ...[
                         const SizedBox(height: KubusSpacing.xxs),
-                        Text(
-                          item.subtitle!.trim(),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: KubusTextStyles.navMetaLabel.copyWith(
-                            color: scheme.onSurface.withValues(alpha: 0.64),
-                          ),
-                        ),
+                        subtitle,
                       ],
                     ],
                   ),
@@ -2183,6 +2178,57 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         ),
       ),
+    );
+  }
+
+  Widget? _buildHomeRailCardSubtitle(HomeRailItem item, ColorScheme scheme) {
+    final baseStyle = KubusTextStyles.navMetaLabel.copyWith(
+      color: scheme.onSurface.withValues(alpha: 0.64),
+    );
+    if (item.entityType == PromotionEntityType.artwork) {
+      final creatorIdentity = resolveArtworkHomeRailCreator(
+        item,
+        fallbackLabel:
+            AppLocalizations.of(context)?.desktopHomeCreatorFallbackName ??
+                'Creator',
+      );
+      if (creatorIdentity == null) return null;
+
+      final creatorText = Text(
+        creatorIdentity.label,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: creatorIdentity.canOpenProfile
+            ? baseStyle.copyWith(
+                color: scheme.primary,
+                decoration: TextDecoration.underline,
+                decorationColor: scheme.primary,
+              )
+            : baseStyle,
+      );
+      if (!creatorIdentity.canOpenProfile) {
+        return creatorText;
+      }
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => unawaited(
+          UserProfileNavigation.open(
+            context,
+            userId: creatorIdentity.userId!,
+            username: creatorIdentity.username,
+          ),
+        ),
+        child: creatorText,
+      );
+    }
+
+    final subtitle = (item.subtitle ?? '').trim();
+    if (subtitle.isEmpty) return null;
+    return Text(
+      subtitle,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      style: baseStyle,
     );
   }
 

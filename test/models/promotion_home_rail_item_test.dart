@@ -30,4 +30,23 @@ void main() {
     expect(institutionItem.profileTargetId, isNull);
     expect(institutionItem.hasProfileTarget, isFalse);
   });
+
+  test('artwork creator getters expose creator identity fields', () {
+    final artworkItem = HomeRailItem.fromJson(<String, dynamic>{
+      'id': 'art-1',
+      'entityType': 'artwork',
+      'title': 'Promoted Artwork',
+      'subtitle': 'Ada Lovelace',
+      'artistName': 'Ada Lovelace',
+      'creatorDisplayName': 'Ada Lovelace',
+      'creatorUsername': 'ada',
+      'creatorWalletAddress': 'wallet-artist-1',
+    });
+
+    expect(artworkItem.creatorDisplayName, 'Ada Lovelace');
+    expect(artworkItem.creatorArtistName, 'Ada Lovelace');
+    expect(artworkItem.creatorUsername, 'ada');
+    expect(artworkItem.creatorWalletAddress, 'wallet-artist-1');
+    expect(artworkItem.creatorTargetId, 'wallet-artist-1');
+  });
 }
