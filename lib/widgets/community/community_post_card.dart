@@ -1,6 +1,5 @@
 import 'package:art_kubus/models/community_group.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 
@@ -450,11 +449,10 @@ class CommunityPostCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 13, color: color),
-          const SizedBox(width: 6),
+          const SizedBox(width: KubusSpacing.xs + KubusSpacing.xxs),
           Text(
             label,
-            style: GoogleFonts.inter(
-              fontSize: 11,
+            style: KubusTextStyles.compactBadge.copyWith(
               fontWeight: FontWeight.w600,
               color: color,
             ),
@@ -641,7 +639,8 @@ class _InteractionButton extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(
+            vertical: KubusSpacing.xs + KubusSpacing.xxs),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
@@ -653,14 +652,13 @@ class _InteractionButton extends StatelessWidget {
               child: Icon(icon, color: finalColor, size: 20),
             ),
             if (label.isNotEmpty) ...[
-              const SizedBox(width: 8),
+              const SizedBox(width: KubusSpacing.sm),
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: onCountTap ?? onTap,
                 child: AnimatedDefaultTextStyle(
                   duration: animationTheme.short,
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
+                  style: KubusTextStyles.navMetaLabel.copyWith(
                     color: finalColor,
                     fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
                   ),
@@ -693,13 +691,13 @@ class _RepostInnerCard extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final originalHandle = (post.authorUsername ?? '').trim();
 
-    final radius = BorderRadius.circular(12);
+    final radius = BorderRadius.circular(KubusRadius.md);
     final glassTint = scheme.surface.withValues(alpha: isDark ? 0.14 : 0.09);
 
     return GestureDetector(
       onTap: () => onOpenPostDetail(post),
       child: Container(
-        margin: const EdgeInsets.only(top: 8),
+        margin: const EdgeInsets.only(top: KubusSpacing.sm),
         decoration: BoxDecoration(
           borderRadius: radius,
           border: Border.all(
@@ -707,7 +705,7 @@ class _RepostInnerCard extends StatelessWidget {
           ),
         ),
         child: LiquidGlassPanel(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(KubusSpacing.md),
           margin: EdgeInsets.zero,
           borderRadius: radius,
           showBorder: false,
@@ -723,7 +721,7 @@ class _RepostInnerCard extends StatelessWidget {
                     radius: 16,
                     allowFabricatedFallback: true,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: KubusSpacing.sm),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -734,9 +732,8 @@ class _RepostInnerCard extends StatelessWidget {
                               fit: FlexFit.loose,
                               child: Text(
                                 post.authorName,
-                                style: GoogleFonts.inter(
+                                style: KubusTextStyles.navMetaLabel.copyWith(
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 13,
                                   color: scheme.onSurface,
                                 ),
                                 overflow: TextOverflow.ellipsis,
@@ -752,8 +749,7 @@ class _RepostInnerCard extends StatelessWidget {
                         if (originalHandle.isNotEmpty)
                           Text(
                             '@$originalHandle',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
+                            style: KubusTextStyles.navMetaLabel.copyWith(
                               color: scheme.onSurface.withValues(alpha: 0.6),
                             ),
                             overflow: TextOverflow.ellipsis,
@@ -764,22 +760,24 @@ class _RepostInnerCard extends StatelessWidget {
                   Text(
                     _timeAgo(
                         context, post.timestamp, AppLocalizations.of(context)),
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
+                    style: KubusTextStyles.compactBadge.copyWith(
+                      fontSize: KubusChromeMetrics.navBadgeLabel + 2,
                       color: scheme.onSurface.withValues(alpha: 0.5),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: KubusSpacing.sm),
               Text(
                 post.content,
-                style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface),
+                style: KubusTextStyles.navMetaLabel.copyWith(
+                  color: scheme.onSurface,
+                ),
               ),
               if (post.imageUrl != null) ...[
-                const SizedBox(height: 10),
+                const SizedBox(height: KubusSpacing.sm + KubusSpacing.xxs),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(KubusRadius.sm),
                   child: Image.network(
                     MediaUrlResolver.resolveDisplayUrl(post.imageUrl) ??
                         post.imageUrl!,
@@ -855,25 +853,26 @@ class _PostMetadataSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (post.tags.isNotEmpty) ...[
-          const SizedBox(height: 14),
+          const SizedBox(height: KubusSpacing.md - KubusSpacing.xxs),
           Wrap(
-            spacing: 8,
-            runSpacing: 6,
+            spacing: KubusSpacing.sm,
+            runSpacing: KubusSpacing.xs + KubusSpacing.xxs,
             children: post.tags.map((tag) {
               final roles = KubusColorRoles.of(context);
               return GestureDetector(
                 onTap: onTagTap == null ? null : () => onTagTap!(tag),
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: KubusSpacing.sm + KubusSpacing.xs,
+                    vertical: KubusSpacing.xs + KubusSpacing.xxs,
+                  ),
                   decoration: BoxDecoration(
                     color: roles.tagChipBackground.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(KubusRadius.lg),
                   ),
                   child: Text(
                     '#$tag',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
+                    style: KubusTextStyles.navMetaLabel.copyWith(
                       fontWeight: FontWeight.w500,
                       color: roles.tagChipBackground,
                     ),
@@ -884,25 +883,26 @@ class _PostMetadataSection extends StatelessWidget {
           ),
         ],
         if (post.mentions.isNotEmpty) ...[
-          const SizedBox(height: 10),
+          const SizedBox(height: KubusSpacing.sm + KubusSpacing.xxs),
           Wrap(
-            spacing: 8,
-            runSpacing: 6,
+            spacing: KubusSpacing.sm,
+            runSpacing: KubusSpacing.xs + KubusSpacing.xxs,
             children: post.mentions.map((mention) {
               return GestureDetector(
                 onTap:
                     onMentionTap == null ? null : () => onMentionTap!(mention),
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: KubusSpacing.sm + KubusSpacing.xs,
+                    vertical: KubusSpacing.xs + KubusSpacing.xxs,
+                  ),
                   decoration: BoxDecoration(
                     color: scheme.secondaryContainer.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(KubusRadius.lg),
                   ),
                   child: Text(
                     '@$mention',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
+                    style: KubusTextStyles.navMetaLabel.copyWith(
                       fontWeight: FontWeight.w500,
                       color: scheme.onSecondaryContainer,
                     ),
@@ -915,7 +915,7 @@ class _PostMetadataSection extends StatelessWidget {
         if (post.location != null &&
             (post.location!.name?.isNotEmpty == true ||
                 post.location!.lat != null)) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: KubusSpacing.md),
           GestureDetector(
             onTap: onOpenLocation == null ||
                     post.location!.lat == null ||
@@ -923,10 +923,13 @@ class _PostMetadataSection extends StatelessWidget {
                 ? null
                 : () => onOpenLocation!(post.location!),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(
+                horizontal: KubusSpacing.md,
+                vertical: KubusSpacing.sm,
+              ),
               decoration: BoxDecoration(
                 color: scheme.tertiaryContainer.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -936,24 +939,22 @@ class _PostMetadataSection extends StatelessWidget {
                     size: 16,
                     color: scheme.tertiary,
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: KubusSpacing.xs + KubusSpacing.xxs),
                   Flexible(
                     child: Text(
                       post.location!.name ??
                           '${post.location!.lat!.toStringAsFixed(4)}, ${post.location!.lng!.toStringAsFixed(4)}',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
+                      style: KubusTextStyles.navMetaLabel.copyWith(
                         color: scheme.onTertiaryContainer,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   if (post.distanceKm != null) ...[
-                    const SizedBox(width: 8),
+                    const SizedBox(width: KubusSpacing.sm),
                     Text(
                       '• ${post.distanceKm!.toStringAsFixed(1)} km',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
+                      style: KubusTextStyles.compactBadge.copyWith(
                         color:
                             scheme.onTertiaryContainer.withValues(alpha: 0.7),
                       ),
@@ -965,16 +966,16 @@ class _PostMetadataSection extends StatelessWidget {
           ),
         ],
         if (resolvedPreview != null) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: KubusSpacing.md),
           GestureDetector(
             onTap: onOpenSubject == null
                 ? null
                 : () => onOpenSubject!(resolvedPreview),
             child: Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(KubusSpacing.md),
               decoration: BoxDecoration(
                 color: scheme.primaryContainer,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
                 border:
                     Border.all(color: scheme.outline.withValues(alpha: 0.3)),
               ),
@@ -985,11 +986,14 @@ class _PostMetadataSection extends StatelessWidget {
                     height: 44,
                     decoration: BoxDecoration(
                       color: accentColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(
+                          KubusRadius.sm + KubusSpacing.xxs),
                     ),
                     child: resolvedPreview.imageUrl != null
                         ? ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(
+                              KubusRadius.sm + KubusSpacing.xxs,
+                            ),
                             child: Image.network(
                               MediaUrlResolver.resolveDisplayUrl(
                                     resolvedPreview.imageUrl,
@@ -1011,15 +1015,14 @@ class _PostMetadataSection extends StatelessWidget {
                             size: 22,
                           ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: KubusSpacing.md),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           resolvedPreview.title,
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
+                          style: KubusTextStyles.navMetaLabel.copyWith(
                             fontWeight: FontWeight.w600,
                             color: scheme.onSurface,
                           ),
@@ -1029,8 +1032,7 @@ class _PostMetadataSection extends StatelessWidget {
                           l10n?.communitySubjectLinkedLabel(
                                   subjectTypeLabel ?? '') ??
                               'Linked',
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
+                          style: KubusTextStyles.compactBadge.copyWith(
                             color: scheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
@@ -1048,14 +1050,17 @@ class _PostMetadataSection extends StatelessWidget {
           ),
         ],
         if (post.group != null) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: KubusSpacing.md),
           GestureDetector(
             onTap: onOpenGroup == null ? null : () => onOpenGroup!(post.group!),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(
+                horizontal: KubusSpacing.md,
+                vertical: KubusSpacing.sm,
+              ),
               decoration: BoxDecoration(
                 color: scheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -1065,12 +1070,11 @@ class _PostMetadataSection extends StatelessWidget {
                     size: 16,
                     color: scheme.onSurfaceVariant,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: KubusSpacing.sm),
                   Flexible(
                     child: Text(
                       post.group!.name,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
+                      style: KubusTextStyles.navMetaLabel.copyWith(
                         fontWeight: FontWeight.w500,
                         color: scheme.onSurfaceVariant,
                       ),

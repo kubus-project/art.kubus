@@ -2142,7 +2142,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
             width: iconBoxSize,
             height: iconBoxSize,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(KubusRadius.lg),
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -3508,7 +3508,7 @@ class _WelcomeChoiceCard extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: scheme.surface.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(KubusRadius.xl),
       ),
       child: Padding(
         padding: EdgeInsets.all(compact ? KubusSpacing.md : KubusSpacing.lg),
@@ -3726,7 +3726,7 @@ class _InlineVerificationPanelState extends State<_InlineVerificationPanel> {
             color: widget.isVerified
                 ? Colors.green.withValues(alpha: 0.2)
                 : Colors.white.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(KubusRadius.md),
             border: Border.all(
               color: widget.isVerified
                   ? Colors.green.withValues(alpha: 0.5)
@@ -3928,7 +3928,7 @@ class _FinishVerificationSignInPanelState
       padding: const EdgeInsets.all(KubusSpacing.sm),
       decoration: BoxDecoration(
         color: scheme.surface.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
         border: Border.all(
           color: scheme.outline.withValues(alpha: 0.24),
         ),
@@ -4443,7 +4443,7 @@ class _DaoReviewStepState extends State<_DaoReviewStep> {
             padding: const EdgeInsets.all(KubusSpacing.sm),
             decoration: BoxDecoration(
               color: scheme.surface.withValues(alpha: 0.28),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(KubusRadius.lg),
               border: Border.all(
                 color: scheme.outline.withValues(alpha: 0.22),
               ),

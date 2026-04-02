@@ -101,7 +101,7 @@ class Season0Screen extends StatelessWidget {
       BuildContext context, AppLocalizations l10n, ColorScheme scheme) {
     final showLabsNote = AppConfig.isFeatureEnabled('labs');
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(KubusSpacing.md),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(14),
@@ -114,7 +114,7 @@ class Season0Screen extends StatelessWidget {
             height: 44,
             decoration: BoxDecoration(
               color: scheme.primary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
             ),
             child: Icon(Icons.stars_outlined, color: scheme.primary, size: 24),
           ),
@@ -226,7 +226,7 @@ class _ActionCard extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(14),
@@ -239,7 +239,7 @@ class _ActionCard extends StatelessWidget {
               height: 48,
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
               ),
               child: Icon(icon, color: color, size: 24),
             ),

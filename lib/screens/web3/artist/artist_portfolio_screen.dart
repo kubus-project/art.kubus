@@ -79,10 +79,15 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
                       ? _buildEmptyState(l10n)
                       : ListView.separated(
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                          padding: const EdgeInsets.fromLTRB(
+                            KubusSpacing.md,
+                            KubusSpacing.sm,
+                            KubusSpacing.md,
+                            KubusSpacing.lg,
+                          ),
                           itemCount: entries.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 10),
+                          separatorBuilder: (_, __) => const SizedBox(
+                              height: KubusSpacing.sm + KubusSpacing.xxs),
                           itemBuilder: (context, index) {
                             final entry = entries[index];
                             return _buildEntryCard(
@@ -115,7 +120,12 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
     final scheme = Theme.of(context).colorScheme;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.fromLTRB(
+        KubusSpacing.md,
+        KubusSpacing.md,
+        KubusSpacing.md,
+        KubusSpacing.sm,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -133,7 +143,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: KubusSpacing.xs),
                     Text(
                       countLabel,
                       style: KubusTextStyles.screenSubtitle.copyWith(
@@ -153,7 +163,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
             ],
           ),
           if (error != null && error.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: KubusSpacing.sm),
             Text(
               error,
               style:
@@ -163,7 +173,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
             ),
           ],
           if (isBusy) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xxs),
             LinearProgressIndicator(
               minHeight: 3,
               backgroundColor: scheme.onSurface.withValues(alpha: 0.08),
@@ -200,7 +210,12 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: const EdgeInsets.fromLTRB(
+        KubusSpacing.md,
+        KubusSpacing.none,
+        KubusSpacing.md,
+        KubusSpacing.sm,
+      ),
       child: Row(
         children: [
           Expanded(
@@ -222,7 +237,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
               onSelected: (value) => setState(() => _typeFilter = value),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: KubusSpacing.md),
           Expanded(
             child: _DropdownFilter<PortfolioPublishState>(
               label: statusLabel(_statusFilter),
@@ -249,7 +264,12 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 48, 16, 24),
+      padding: const EdgeInsets.fromLTRB(
+        KubusSpacing.md,
+        KubusSpacing.xl,
+        KubusSpacing.md,
+        KubusSpacing.lg,
+      ),
       children: [
         Center(
           child: Column(
@@ -259,14 +279,14 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
                 size: 64,
                 color: scheme.onSurface.withValues(alpha: 0.3),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: KubusSpacing.md),
               Text(
                 l10n.artistGalleryEmptyTitle,
                 style: KubusTextStyles.sectionTitle.copyWith(
                   color: scheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: KubusSpacing.sm),
               Text(
                 l10n.artistGalleryEmptyDescription,
                 textAlign: TextAlign.center,
@@ -274,7 +294,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
                   color: scheme.onSurface.withValues(alpha: 0.5),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: KubusSpacing.lg),
               ElevatedButton.icon(
                 onPressed: widget.onCreateRequested,
                 icon: const Icon(Icons.add),
@@ -328,14 +348,14 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
 
     return Material(
       color: scheme.surface,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(KubusRadius.lg),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         onTap: () => _openEntry(context, entry, provider),
         child: Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(KubusSpacing.md),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(KubusRadius.lg),
             border:
                 Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
           ),
@@ -343,7 +363,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _CoverThumb(url: coverUrl),
-              const SizedBox(width: 12),
+              const SizedBox(width: KubusSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -360,13 +380,15 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: KubusSpacing.sm),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
+                            horizontal: KubusSpacing.sm,
+                            vertical: KubusSpacing.xxs + KubusSpacing.xxs,
+                          ),
                           decoration: BoxDecoration(
                             color: statusColor.withValues(alpha: 0.14),
-                            borderRadius: BorderRadius.circular(999),
+                            borderRadius: BorderRadius.circular(KubusRadius.xl),
                           ),
                           child: Text(
                             statusLabel(),
@@ -377,7 +399,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: KubusSpacing.xs + KubusSpacing.xxs),
                     Row(
                       children: [
                         Text(
@@ -410,7 +432,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
                   ],
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: KubusSpacing.xs + KubusSpacing.xxs),
               _EntryMenu(
                 entry: entry,
                 canPromote: artwork != null && _artworkCanBePromoted(artwork),
@@ -621,7 +643,7 @@ class _CoverThumb extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(KubusRadius.md),
       child: Container(
         width: 56,
         height: 56,
@@ -715,10 +737,11 @@ class _DropdownFilter<T> extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(
+          horizontal: KubusSpacing.md - KubusSpacing.xxs),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
         border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
       ),
       child: DropdownButtonHideUnderline(

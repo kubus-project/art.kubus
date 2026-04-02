@@ -113,7 +113,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
           end: Alignment.bottomRight,
           colors: [accentPrimary, accentSecondary],
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
       ),
       child: Column(
         children: [
@@ -335,10 +335,10 @@ class _AchievementsPageState extends State<AchievementsPage> {
     final accent = CategoryAccentColor.resolve(context, category);
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(KubusSpacing.md),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(color: isUnlocked ? accent : scheme.outline),
       ),
       child: Column(
@@ -414,7 +414,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: accent.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
               ),
               child: Text(
                 achievement.isPOAP ? 'POAP' : 'UNLOCKED',

@@ -17,7 +17,8 @@ class CollectionSettingsScreen extends StatefulWidget {
   });
 
   @override
-  State<CollectionSettingsScreen> createState() => _CollectionSettingsScreenState();
+  State<CollectionSettingsScreen> createState() =>
+      _CollectionSettingsScreenState();
 }
 
 class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
@@ -25,15 +26,15 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   bool _didPlayEntrance = false;
-  
+
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
-  
+
   bool _isPublic = true;
   bool _allowContributions = false;
   bool _enableNotifications = true;
   String _selectedCategory = 'Digital Art';
-  
+
   final List<String> _categories = [
     'Digital Art',
     'AR Sculptures',
@@ -50,7 +51,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
     super.initState();
     _nameController.text = widget.collectionName;
     _descriptionController.text = _getCollectionDescription();
-    
+
     _animationController = AnimationController(
       duration: AppAnimationTheme.defaults.medium,
       vsync: this,
@@ -109,7 +110,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
     final l10n = AppLocalizations.of(context)!;
     // Use tealAccent for collection-related elements
     const collectionColor = AppColorUtils.tealAccent;
-    
+
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
@@ -186,15 +187,15 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
-        const SizedBox(height: 16),
-        
+        const SizedBox(height: KubusSpacing.md),
         // Collection Name
         Text(
           l10n.collectionSettingsName,
           style: KubusTypography.inter(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
           ),
         ),
         const SizedBox(height: 8),
@@ -203,19 +204,19 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
           decoration: InputDecoration(
             hintText: l10n.collectionSettingsNameHint,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
               borderSide: BorderSide(
                 color: Theme.of(context).colorScheme.outline,
               ),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
               borderSide: BorderSide(
                 color: Theme.of(context).colorScheme.outline,
               ),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
               borderSide: BorderSide(
                 color: Theme.of(context).colorScheme.primary,
                 width: 2,
@@ -223,15 +224,15 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
             ),
           ),
         ),
-        const SizedBox(height: 20),
-        
+        const SizedBox(height: KubusSpacing.lg),
         // Description
         Text(
           l10n.collectionSettingsDescriptionLabel,
           style: KubusTypography.inter(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
           ),
         ),
         const SizedBox(height: 8),
@@ -241,19 +242,19 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
           decoration: InputDecoration(
             hintText: l10n.collectionSettingsDescriptionHint,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
               borderSide: BorderSide(
                 color: Theme.of(context).colorScheme.outline,
               ),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
               borderSide: BorderSide(
                 color: Theme.of(context).colorScheme.outline,
               ),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
               borderSide: BorderSide(
                 color: Theme.of(context).colorScheme.primary,
                 width: 2,
@@ -261,15 +262,15 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
             ),
           ),
         ),
-        const SizedBox(height: 20),
-        
+        const SizedBox(height: KubusSpacing.lg),
         // Category
         Text(
           l10n.collectionSettingsCategory,
           style: KubusTypography.inter(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
           ),
         ),
         const SizedBox(height: 8),
@@ -277,13 +278,13 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
           initialValue: _selectedCategory,
           decoration: InputDecoration(
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
               borderSide: BorderSide(
                 color: Theme.of(context).colorScheme.outline,
               ),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
               borderSide: BorderSide(
                 color: Theme.of(context).colorScheme.outline,
               ),
@@ -318,8 +319,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
-        const SizedBox(height: 16),
-        
+        const SizedBox(height: KubusSpacing.md),
         _buildSwitchTile(
           l10n.collectionSettingsPublic,
           l10n.collectionSettingsPublicSubtitle,
@@ -343,8 +343,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
-        const SizedBox(height: 16),
-        
+        const SizedBox(height: KubusSpacing.md),
         _buildSwitchTile(
           l10n.collectionSettingsAllowContributions,
           l10n.collectionSettingsAllowContributionsSubtitle,
@@ -368,8 +367,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
-        const SizedBox(height: 16),
-        
+        const SizedBox(height: KubusSpacing.md),
         _buildSwitchTile(
           l10n.collectionSettingsUpdates,
           l10n.collectionSettingsUpdatesSubtitle,
@@ -380,12 +378,13 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
     );
   }
 
-  Widget _buildSwitchTile(String title, String subtitle, bool value, Function(bool) onChanged) {
+  Widget _buildSwitchTile(
+      String title, String subtitle, bool value, Function(bool) onChanged) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(KubusSpacing.md),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
         border: Border.all(
           color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
         ),
@@ -404,12 +403,15 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: KubusSpacing.xs),
                 Text(
                   subtitle,
                   style: KubusTypography.inter(
                     fontSize: 14,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -438,14 +440,13 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
             color: Colors.red,
           ),
         ),
-        const SizedBox(height: 16),
-        
+        const SizedBox(height: KubusSpacing.md),
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(KubusSpacing.md),
           decoration: BoxDecoration(
             color: Colors.red.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(KubusRadius.md),
             border: Border.all(
               color: Colors.red.withValues(alpha: 0.3),
             ),
@@ -476,7 +477,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
                   backgroundColor: Colors.red,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(KubusRadius.sm),
                   ),
                 ),
                 child: Text(l10n.collectionSettingsDeleteButton),
@@ -540,4 +541,3 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen>
     );
   }
 }
-

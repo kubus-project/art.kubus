@@ -2,7 +2,8 @@ import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
+import '../../utils/design_tokens.dart';
 
 @immutable
 class StatsLineSeries {
@@ -91,13 +92,17 @@ class StatsInteractiveLineChart extends StatelessWidget {
                       border: Border(
                         bottom: BorderSide(color: gridColor),
                         left: BorderSide(color: gridColor),
-                        right: BorderSide(color: gridColor.withValues(alpha: 0.35)),
-                        top: BorderSide(color: gridColor.withValues(alpha: 0.35)),
+                        right: BorderSide(
+                            color: gridColor.withValues(alpha: 0.35)),
+                        top: BorderSide(
+                            color: gridColor.withValues(alpha: 0.35)),
                       ),
                     ),
                     titlesData: FlTitlesData(
-                      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      topTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false)),
+                      rightTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false)),
                       leftTitles: AxisTitles(
                         sideTitles: SideTitles(
                           showTitles: true,
@@ -109,9 +114,9 @@ class StatsInteractiveLineChart extends StatelessWidget {
                               padding: const EdgeInsets.only(right: 6),
                               child: Text(
                                 value.round().toString(),
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  color: scheme.onSurface.withValues(alpha: 0.65),
+                                style: KubusTextStyles.navMetaLabel.copyWith(
+                                  color:
+                                      scheme.onSurface.withValues(alpha: 0.65),
                                 ),
                               ),
                             );
@@ -132,9 +137,10 @@ class StatsInteractiveLineChart extends StatelessWidget {
                               padding: const EdgeInsets.only(top: 6),
                               child: Text(
                                 xLabels[idx],
-                                style: GoogleFonts.inter(
-                                  fontSize: 10,
-                                  color: scheme.onSurface.withValues(alpha: 0.55),
+                                style: KubusTextStyles.navMetaLabel.copyWith(
+                                  fontSize: KubusChromeMetrics.navMetaLabel - 2,
+                                  color:
+                                      scheme.onSurface.withValues(alpha: 0.55),
                                 ),
                                 textAlign: TextAlign.center,
                               ),
@@ -152,14 +158,15 @@ class StatsInteractiveLineChart extends StatelessWidget {
                         fitInsideVertically: true,
                         getTooltipItems: (spots) {
                           if (spots.isEmpty) return const [];
-                          final x = spots.first.x.round().clamp(0, xLabels.length - 1);
+                          final x = spots.first.x
+                              .round()
+                              .clamp(0, xLabels.length - 1);
                           final header = xLabels[x];
 
                           final items = <LineTooltipItem>[
                             LineTooltipItem(
                               '$header\n',
-                              GoogleFonts.inter(
-                                fontSize: 11,
+                              KubusTextStyles.navMetaLabel.copyWith(
                                 fontWeight: FontWeight.w700,
                                 color: scheme.onSurface,
                               ),
@@ -167,14 +174,14 @@ class StatsInteractiveLineChart extends StatelessWidget {
                           ];
 
                           for (final spot in spots) {
-                            final label = spot.barIndex >= 0 && spot.barIndex < normalizedSeries.length
+                            final label = spot.barIndex >= 0 &&
+                                    spot.barIndex < normalizedSeries.length
                                 ? normalizedSeries[spot.barIndex].label
                                 : 'Series';
                             items.add(
                               LineTooltipItem(
                                 '$label: ${spot.y.round()}\n',
-                                GoogleFonts.inter(
-                                  fontSize: 11,
+                                KubusTextStyles.navMetaLabel.copyWith(
                                   fontWeight: FontWeight.w600,
                                   color: spot.bar.color ?? scheme.primary,
                                 ),
@@ -243,7 +250,8 @@ class StatsInteractiveLineChart extends StatelessWidget {
   static double _niceInterval(double maxY) {
     if (maxY <= 0) return 1;
     final rough = maxY / 4;
-    final power = math.pow(10, (math.log(rough) / math.ln10).floor()).toDouble();
+    final power =
+        math.pow(10, (math.log(rough) / math.ln10).floor()).toDouble();
     final scaled = rough / power;
     final base = scaled <= 1
         ? 1

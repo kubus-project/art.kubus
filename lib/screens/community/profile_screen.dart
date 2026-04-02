@@ -647,7 +647,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                         decoration: BoxDecoration(
                           color:
                               themeProvider.accentColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(KubusRadius.sm),
                           border: Border.all(
                             color: themeProvider.accentColor
                                 .withValues(alpha: 0.3),
@@ -740,7 +740,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     shadowColor: themeProvider.accentColor
                                         .withValues(alpha: 0.3),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
+                                      borderRadius:
+                                          BorderRadius.circular(KubusRadius.md),
                                     ),
                                   ),
                                   child: Text(
@@ -761,7 +762,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     color: themeProvider.accentColor,
                                     width: 1.5,
                                   ),
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius:
+                                      BorderRadius.circular(KubusRadius.md),
                                 ),
                                 child: TextButton(
                                   onPressed: () {
@@ -800,7 +802,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     shadowColor: themeProvider.accentColor
                                         .withValues(alpha: 0.3),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
+                                      borderRadius:
+                                          BorderRadius.circular(KubusRadius.md),
                                     ),
                                   ),
                                   child: Text(
@@ -820,7 +823,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     color: themeProvider.accentColor,
                                     width: 1.5,
                                   ),
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius:
+                                      BorderRadius.circular(KubusRadius.md),
                                 ),
                                 child: IconButton(
                                   onPressed: () {
@@ -1171,7 +1175,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget _buildErrorCard(
       {required String message, required VoidCallback onRetry}) {
     return LiquidGlassCard(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(KubusSpacing.md),
       borderRadius: BorderRadius.circular(KubusRadius.lg),
       backgroundColor:
           Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.16),
@@ -1227,7 +1231,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         );
       },
       child: LiquidGlassCard(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         borderRadius: BorderRadius.circular(KubusRadius.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1301,7 +1305,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             if (post.imageUrl != null && post.imageUrl!.isNotEmpty) ...[
               const SizedBox(height: 12),
               ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
                 child: Image.network(
                   MediaUrlResolver.resolveDisplayUrl(post.imageUrl) ??
                       post.imageUrl!,
@@ -2752,7 +2756,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 decoration: InputDecoration(
                   hintText: l10n.profileReportBugHint,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(KubusRadius.md),
                   ),
                 ),
               ),
@@ -2825,7 +2829,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   color: Provider.of<ThemeProvider>(context)
                       .accentColor
                       .withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(KubusRadius.xl),
                 ),
                 child: Icon(
                   Icons.palette,

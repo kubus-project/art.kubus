@@ -205,7 +205,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
             width: KubusChromeMetrics.railExpandedLogo,
             height: KubusChromeMetrics.railExpandedLogo,
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
           Expanded(
             child: AnimatedOpacity(
               opacity: widget.expandAnimation.value,
@@ -342,7 +342,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                       ),
                     ),
                     if (widget.isExpanded) ...[
-                      const SizedBox(width: 12),
+                      const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
                       Expanded(
                         child: AnimatedOpacity(
                           opacity: widget.expandAnimation.value,
@@ -540,7 +540,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(KubusRadius.sm),
         child: SizedBox(
           width: KubusHeaderMetrics.actionHitArea,
           height: KubusHeaderMetrics.actionHitArea,
@@ -563,13 +563,19 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                   right: 0,
                   top: 0,
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                    constraints:
-                        const BoxConstraints(minWidth: 14, minHeight: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: KubusSpacing.xs,
+                      vertical: KubusSpacing.xxs,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth:
+                          KubusSpacing.sm + KubusSpacing.xs + KubusSpacing.xxs,
+                      minHeight:
+                          KubusSpacing.sm + KubusSpacing.xs + KubusSpacing.xxs,
+                    ),
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.error,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(KubusRadius.sm),
                       border: Border.all(
                         color: Theme.of(context).colorScheme.surface,
                         width: 1,
@@ -650,13 +656,19 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                   right: 0,
                   top: 0,
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                    constraints:
-                        const BoxConstraints(minWidth: 14, minHeight: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: KubusSpacing.xs,
+                      vertical: KubusSpacing.xxs,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth:
+                          KubusSpacing.sm + KubusSpacing.xs + KubusSpacing.xxs,
+                      minHeight:
+                          KubusSpacing.sm + KubusSpacing.xs + KubusSpacing.xxs,
+                    ),
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.error,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(KubusRadius.sm),
                       border: Border.all(
                         color: Theme.of(context).colorScheme.surface,
                         width: 1,
@@ -721,11 +733,11 @@ class _DesktopNavigationState extends State<DesktopNavigation>
           color: Colors.transparent,
           child: InkWell(
             onTap: widget.onWalletTap,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(KubusRadius.sm),
             child: Container(
               padding: widget.isExpanded
-                  ? const EdgeInsets.all(9)
-                  : const EdgeInsets.all(8),
+                  ? const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xxs)
+                  : const EdgeInsets.all(KubusSpacing.sm),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
@@ -735,7 +747,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(KubusRadius.sm),
                 boxShadow: [
                   BoxShadow(
                     color: themeProvider.accentColor.withValues(alpha: 0.3),
@@ -865,7 +877,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
           color: Colors.transparent,
           child: InkWell(
             onTap: widget.onProfileTap,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(KubusRadius.sm),
             child: Container(
               padding: EdgeInsets.all(widget.isExpanded ? 10 : 8),
               decoration: BoxDecoration(
@@ -889,7 +901,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                     enableProfileNavigation: false,
                   ),
                   if (widget.isExpanded) ...[
-                    const SizedBox(width: 10),
+                    const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
                     Expanded(
                       child: AnimatedOpacity(
                         opacity: widget.expandAnimation.value,

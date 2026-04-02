@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/themeprovider.dart';
@@ -829,8 +828,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                             if (hasWalletIdentity)
                               Text(
                                 web3Provider.formatAddress(walletAddress),
-                                style: GoogleFonts.robotoMono(
-                                  fontSize: KubusChromeMetrics.navMetaLabel,
+                                style: KubusTextStyles.navMetaLabel.copyWith(
                                   color: Theme.of(context)
                                       .colorScheme
                                       .onSurface
@@ -2408,14 +2406,14 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(KubusRadius.md),
           child: Container(
             padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
             decoration: BoxDecoration(
               color: isSelected
                   ? themeColor.withValues(alpha: 0.1)
                   : scheme.primaryContainer,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
               border: Border.all(
                 color: isSelected ? themeColor : Colors.transparent,
                 width: 2,
@@ -3124,7 +3122,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(KubusRadius.lg),
               border: Border.all(
                 color: Provider.of<ThemeProvider>(context)
                     .accentColor

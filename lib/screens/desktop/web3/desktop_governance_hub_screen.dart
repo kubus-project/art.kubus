@@ -364,7 +364,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
 
   Widget _buildStatCard(
       String label, String value, IconData icon, Color color) {
-    final radius = BorderRadius.circular(12);
+    final radius = BorderRadius.circular(KubusRadius.md);
     final glassStyle = KubusGlassStyle.resolve(
       context,
       surfaceType: KubusGlassSurfaceType.card,

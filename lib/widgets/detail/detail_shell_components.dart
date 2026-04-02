@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../utils/design_tokens.dart';
@@ -261,8 +260,7 @@ class StatChip extends StatelessWidget {
           const SizedBox(width: DetailSpacing.xs),
           Text(
             value,
-            style: GoogleFonts.inter(
-              fontSize: 13,
+            style: KubusTextStyles.navMetaLabel.copyWith(
               fontWeight: FontWeight.w600,
               color: effectiveColor,
             ),
@@ -271,8 +269,7 @@ class StatChip extends StatelessWidget {
             const SizedBox(width: DetailSpacing.xs),
             Text(
               label!,
-              style: GoogleFonts.inter(
-                fontSize: 12,
+              style: KubusTextStyles.navMetaLabel.copyWith(
                 color: effectiveColor.withValues(alpha: 0.8),
               ),
             ),
@@ -672,7 +669,7 @@ class DetailActionsRow extends StatelessWidget {
       foregroundColor: isActive ? activeColor : scheme.onSurface,
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
         side: BorderSide(
           color: isActive
               ? activeColor.withValues(alpha: 0.3)
@@ -687,8 +684,7 @@ class DetailActionsRow extends StatelessWidget {
         icon: Icon(action.icon, size: 18),
         label: Text(
           action.label,
-          style: GoogleFonts.inter(
-            fontSize: 13,
+          style: KubusTextStyles.navMetaLabel.copyWith(
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -701,8 +697,7 @@ class DetailActionsRow extends StatelessWidget {
       style: buttonStyle,
       child: Text(
         action.label,
-        style: GoogleFonts.inter(
-          fontSize: 13,
+        style: KubusTextStyles.navMetaLabel.copyWith(
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -857,9 +852,9 @@ class _CollapsibleSectionState extends State<_CollapsibleSection>
       children: [
         InkWell(
           onTap: _toggle,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(KubusRadius.sm),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
             child: Row(
               children: [
                 Expanded(
@@ -872,7 +867,7 @@ class _CollapsibleSectionState extends State<_CollapsibleSection>
                 ),
                 if (widget.trailing != null) ...[
                   widget.trailing!,
-                  const SizedBox(width: 8),
+                  const SizedBox(width: KubusSpacing.sm),
                 ],
                 RotationTransition(
                   turns: _iconTurns,
@@ -953,16 +948,19 @@ class CollaboratorsRow extends StatelessWidget {
         ),
         if (remainingCount > 0) ...[
           const SizedBox(width: 8),
+          const SizedBox(width: KubusSpacing.sm),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(
+              horizontal: KubusSpacing.sm,
+              vertical: KubusSpacing.xs,
+            ),
             decoration: BoxDecoration(
               color: scheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
             ),
             child: Text(
               '+$remainingCount',
-              style: GoogleFonts.inter(
-                fontSize: 12,
+              style: KubusTextStyles.navMetaLabel.copyWith(
                 fontWeight: FontWeight.w600,
                 color: scheme.onSurface.withValues(alpha: 0.7),
               ),
@@ -975,8 +973,7 @@ class CollaboratorsRow extends StatelessWidget {
             onPressed: onViewAll,
             child: Text(
               l10n.commonViewAll,
-              style: GoogleFonts.inter(
-                fontSize: 13,
+              style: KubusTextStyles.navMetaLabel.copyWith(
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -1032,7 +1029,7 @@ class CollaboratorsRow extends StatelessWidget {
       alignment: Alignment.center,
       child: Text(
         initials,
-        style: GoogleFonts.inter(
+        style: KubusTypography.inter(
           fontSize: avatarSize * 0.4,
           fontWeight: FontWeight.w600,
           color: scheme.onPrimaryContainer,
@@ -1144,7 +1141,7 @@ class DetailStatCard extends StatelessWidget {
       padding: const EdgeInsets.all(DetailSpacing.lg),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(
           color: scheme.outline.withValues(alpha: 0.1),
         ),
@@ -1153,20 +1150,19 @@ class DetailStatCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 24, color: effectiveIconColor),
-          const SizedBox(height: 8),
+          const SizedBox(height: KubusSpacing.sm),
           Text(
             value,
-            style: GoogleFonts.inter(
-              fontSize: 20,
+            style: KubusTextStyles.sheetTitle.copyWith(
+              fontSize: KubusHeaderMetrics.screenTitle,
               fontWeight: FontWeight.w700,
               color: scheme.onSurface,
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: KubusSpacing.xxs),
           Text(
             label,
-            style: GoogleFonts.inter(
-              fontSize: 12,
+            style: KubusTextStyles.navMetaLabel.copyWith(
               color: scheme.onSurface.withValues(alpha: 0.6),
             ),
             maxLines: 1,
@@ -1179,7 +1175,7 @@ class DetailStatCard extends StatelessWidget {
     if (onTap != null) {
       return InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         child: content,
       );
     }
@@ -1214,7 +1210,7 @@ class DetailBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(KubusRadius.xl),
         boxShadow: [
           BoxShadow(
             color: bgColor.withValues(alpha: 0.3),
@@ -1232,7 +1228,7 @@ class DetailBadge extends StatelessWidget {
           ],
           Text(
             label.toUpperCase(),
-            style: GoogleFonts.inter(
+            style: KubusTextStyles.compactBadge.copyWith(
               fontSize: fontSize,
               fontWeight: FontWeight.w700,
               color: fgColor,
@@ -1274,14 +1270,14 @@ class DetailArtworkCard extends StatelessWidget {
 
     return Material(
       color: scheme.surface,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(KubusRadius.md),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
         child: Container(
           padding: EdgeInsets.all(isCompact ? 10 : 12),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(KubusRadius.md),
             border: Border.all(
               color: scheme.outline.withValues(alpha: 0.12),
             ),
@@ -1290,7 +1286,8 @@ class DetailArtworkCard extends StatelessWidget {
             children: [
               // Thumbnail
               ClipRRect(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius:
+                    BorderRadius.circular(KubusRadius.sm + KubusSpacing.xxs),
                 child: Container(
                   width: imageSize,
                   height: imageSize,
@@ -1327,20 +1324,19 @@ class DetailArtworkCard extends StatelessWidget {
                       title,
                       maxLines: isCompact ? 1 : 2,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
+                      style: KubusTextStyles.sectionTitle.copyWith(
                         fontSize: isCompact ? 14 : 15,
                         fontWeight: FontWeight.w600,
                         color: scheme.onSurface,
                       ),
                     ),
                     if (subtitle != null && subtitle!.isNotEmpty) ...[
-                      const SizedBox(height: 2),
+                      const SizedBox(height: KubusSpacing.xxs),
                       Text(
                         subtitle!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
+                        style: KubusTextStyles.navMetaLabel.copyWith(
                           color: scheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
@@ -1349,10 +1345,10 @@ class DetailArtworkCard extends StatelessWidget {
                 ),
               ),
               if (trailing != null) ...[
-                const SizedBox(width: 8),
+                const SizedBox(width: KubusSpacing.sm),
                 trailing!,
               ] else ...[
-                const SizedBox(width: 4),
+                const SizedBox(width: KubusSpacing.xs),
                 Icon(
                   Icons.chevron_right,
                   size: 20,

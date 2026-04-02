@@ -122,8 +122,10 @@ class DesktopAuthShell extends StatelessWidget {
                                   children: highlights
                                       .map(
                                         (item) => Padding(
-                                          padding:
-                                              const EdgeInsets.only(bottom: 12),
+                                          padding: const EdgeInsets.only(
+                                            bottom: KubusSpacing.sm +
+                                                KubusSpacing.xs,
+                                          ),
                                           child: Row(
                                             children: [
                                               Container(
@@ -134,7 +136,8 @@ class DesktopAuthShell extends StatelessWidget {
                                                       .accentColor
                                                       .withValues(alpha: 0.18),
                                                   borderRadius:
-                                                      BorderRadius.circular(8),
+                                                      BorderRadius.circular(
+                                                          KubusRadius.sm),
                                                 ),
                                                 child: Icon(
                                                   Icons.check,
@@ -147,7 +150,8 @@ class DesktopAuthShell extends StatelessWidget {
                                               Expanded(
                                                 child: Text(
                                                   item,
-                                                  style: KubusTextStyles.navLabel
+                                                  style: KubusTextStyles
+                                                      .navLabel
                                                       .copyWith(
                                                     color: Theme.of(context)
                                                         .colorScheme
@@ -165,7 +169,7 @@ class DesktopAuthShell extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 24),
+                      const SizedBox(width: KubusSpacing.lg),
                       Expanded(
                         child: LiquidGlassPanel(
                           padding: const EdgeInsets.all(KubusSpacing.lg),
@@ -176,7 +180,7 @@ class DesktopAuthShell extends StatelessWidget {
                             children: [
                               form,
                               if (footer != null) ...[
-                                const SizedBox(height: 16),
+                                const SizedBox(height: KubusSpacing.md),
                                 footer!,
                               ],
                             ],
@@ -222,7 +226,7 @@ class DesktopAuthShell extends StatelessWidget {
                     Icon(Icons.check, size: 18, color: scheme.primary)
                   else
                     const SizedBox(width: 18),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: KubusSpacing.sm),
                   Text(l10n.languageSlovenian),
                 ],
               ),
@@ -235,7 +239,7 @@ class DesktopAuthShell extends StatelessWidget {
                     Icon(Icons.check, size: 18, color: scheme.primary)
                   else
                     const SizedBox(width: 18),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: KubusSpacing.sm),
                   Text(l10n.languageEnglish),
                 ],
               ),
@@ -243,7 +247,7 @@ class DesktopAuthShell extends StatelessWidget {
           ],
           tooltip: l10n.settingsLanguageTitle,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.sm),
             child: Icon(
               Icons.language,
               size: KubusHeaderMetrics.actionIcon,

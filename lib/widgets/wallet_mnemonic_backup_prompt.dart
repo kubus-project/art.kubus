@@ -76,12 +76,12 @@ Future<bool> showWalletMnemonicBackupPrompt({
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: KubusSpacing.md),
           Text(
             l10n.connectWalletMnemonicDialogConfirmPrompt,
-            style: GoogleFonts.inter(
-              fontSize: 14,
+            style: KubusTextStyles.navMetaLabel.copyWith(
               fontWeight: FontWeight.w500,
+              color: scheme.onSurface,
             ),
           ),
           const SizedBox(height: 8),

@@ -396,7 +396,7 @@ class _DesktopWeb3OnboardingScreenState
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
                 ),
                 child: Text(
                   widget.featureTitle,
@@ -430,12 +430,12 @@ class _DesktopWeb3OnboardingScreenState
                         child: AnimatedContainer(
                           duration: animationTheme.short,
                           margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(KubusSpacing.md),
                           decoration: BoxDecoration(
                             color: scheme.surface.withValues(
                               alpha: isActive ? 0.12 : 0.06,
                             ),
-                            borderRadius: BorderRadius.circular(24),
+                            borderRadius: BorderRadius.circular(KubusRadius.xl),
                           ),
                           child: Row(
                             children: [

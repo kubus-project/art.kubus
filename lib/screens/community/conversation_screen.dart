@@ -828,16 +828,19 @@ class _ConversationScreenState extends State<ConversationScreen> {
           Positioned(
             left: visible.length * (avatarSize - overlap),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              padding: const EdgeInsets.symmetric(
+                horizontal: KubusSpacing.sm,
+                vertical: KubusSpacing.xs,
+              ),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(KubusRadius.sm),
                 border: Border.all(
                     color: Theme.of(context).colorScheme.surface, width: 1.0),
               ),
               child: Text('+${count - visible.length}',
                   style: KubusTypography.inter(
-                      fontSize: 10,
+                      fontSize: KubusSizes.badgeCountFontSize,
                       color: Theme.of(context).colorScheme.onSurface)),
             ),
           ),
@@ -1087,12 +1090,15 @@ class _ConversationScreenState extends State<ConversationScreen> {
           onTap: () => _chatProvider.toggleReaction(
               widget.conversation.id, message.id, entry.key),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            padding: const EdgeInsets.symmetric(
+              horizontal: KubusSpacing.sm,
+              vertical: KubusSpacing.xs,
+            ),
             decoration: BoxDecoration(
               color: isSelected
                   ? Theme.of(context).colorScheme.primaryContainer
                   : Theme.of(context).colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
               border: Border.all(
                 color: isSelected
                     ? Theme.of(context).colorScheme.primary
@@ -1102,8 +1108,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
             ),
             child: Text(
               '${entry.key} ${entry.value}',
-              style: TextStyle(
-                fontSize: 12,
+              style: KubusTypography.inter(
+                fontSize: KubusChromeMetrics.navMetaLabel,
                 color: isSelected
                     ? Theme.of(context).colorScheme.onPrimaryContainer
                     : Theme.of(context).colorScheme.onSurfaceVariant,
@@ -1124,7 +1130,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(KubusSpacing.md),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: const <String>[
@@ -1134,8 +1140,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   '\u{1F62E}',
                   '\u{1F622}',
                   '\u{1F621}',
-                ]
-                    .map((emoji) {
+                ].map((emoji) {
                   return GestureDetector(
                     onTap: () {
                       Navigator.pop(context);
@@ -1850,7 +1855,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
     if (isImage) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
         child: GestureDetector(
           onTap: () async {
             try {
@@ -1888,7 +1893,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   errorBuilder: (context, error, stackTrace) {
                     return Container(
                       height: 200,
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(KubusSpacing.md),
                       color: Theme.of(context).colorScheme.errorContainer,
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -1896,7 +1901,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                           Icon(Icons.broken_image,
                               size: 48,
                               color: Theme.of(context).colorScheme.error),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: KubusSpacing.sm),
                           Text(l10n.messagesAttachmentFailedToLoadImage,
                               style: TextStyle(
                                   color: Theme.of(context)
@@ -1904,7 +1909,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                                       .onErrorContainer)),
                           Text(fileName,
                               style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: KubusChromeMetrics.navMetaLabel,
                                   color: Theme.of(context)
                                       .colorScheme
                                       .onErrorContainer)),
@@ -1917,20 +1922,23 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   bottom: 8,
                   right: 8,
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: KubusSpacing.sm,
+                      vertical: KubusSpacing.xs,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.6),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(KubusRadius.md),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.download, size: 16, color: Colors.white),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: KubusSpacing.xs),
                         Text(fileName,
                             style: const TextStyle(
-                                color: Colors.white, fontSize: 12)),
+                                color: Colors.white,
+                                fontSize: KubusChromeMetrics.navMetaLabel)),
                       ],
                     ),
                   ),
@@ -1944,12 +1952,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
     if (isVideo) {
       return Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         decoration: BoxDecoration(
           color: isMe
               ? Theme.of(context).colorScheme.primaryContainer
               : Theme.of(context).colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(KubusRadius.md),
           border:
               Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         ),
@@ -2023,12 +2031,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
     // Generic file attachment
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(KubusSpacing.md),
       decoration: BoxDecoration(
         color: isMe
             ? Theme.of(context).colorScheme.primaryContainer
             : Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
         border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: Column(
@@ -2038,7 +2046,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
             children: [
               Icon(Icons.attach_file,
                   size: 32, color: Theme.of(context).colorScheme.primary),
-              const SizedBox(width: 12),
+              const SizedBox(width: KubusSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

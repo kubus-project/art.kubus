@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../utils/design_tokens.dart';
 import 'disk_cached_artwork_image.dart';
 
 class ArtworkGalleryView extends StatefulWidget {
@@ -39,8 +40,9 @@ class _ArtworkGalleryViewState extends State<ArtworkGalleryView>
   void didUpdateWidget(ArtworkGalleryView oldWidget) {
     super.didUpdateWidget(oldWidget);
     // Clamp the selected index when the image list changes (e.g. async load).
-    final urls =
-        widget.imageUrls.where((u) => u.trim().isNotEmpty).toList(growable: false);
+    final urls = widget.imageUrls
+        .where((u) => u.trim().isNotEmpty)
+        .toList(growable: false);
     if (urls.isNotEmpty && _index >= urls.length) {
       _index = urls.length - 1;
     }
@@ -91,7 +93,7 @@ class _ArtworkGalleryViewState extends State<ArtworkGalleryView>
   }) {
     final scheme = Theme.of(context).colorScheme;
     return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(KubusRadius.lg),
       child: Material(
         color: scheme.surfaceContainerHighest,
         child: InkWell(
@@ -114,7 +116,9 @@ class _ArtworkGalleryViewState extends State<ArtworkGalleryView>
   @override
   Widget build(BuildContext context) {
     super.build(context); // Required by AutomaticKeepAliveClientMixin
-    final urls = widget.imageUrls.where((u) => u.trim().isNotEmpty).toList(growable: false);
+    final urls = widget.imageUrls
+        .where((u) => u.trim().isNotEmpty)
+        .toList(growable: false);
     if (urls.isEmpty) return const SizedBox.shrink();
 
     final width = MediaQuery.of(context).size.width;
@@ -140,20 +144,25 @@ class _ArtworkGalleryViewState extends State<ArtworkGalleryView>
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: KubusSpacing.sm),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(
               urls.length,
               (idx) => Container(
-                width: 8,
-                height: 8,
-                margin: const EdgeInsets.symmetric(horizontal: 4),
+                width: KubusSpacing.sm,
+                height: KubusSpacing.sm,
+                margin: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.xs,
+                ),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: idx == _index
                       ? Theme.of(context).colorScheme.primary
-                      : Theme.of(context).colorScheme.outline.withValues(alpha: 0.35),
+                      : Theme.of(context)
+                          .colorScheme
+                          .outline
+                          .withValues(alpha: 0.35),
                 ),
               ),
             ),
@@ -173,20 +182,21 @@ class _ArtworkGalleryViewState extends State<ArtworkGalleryView>
           onTap: () => _openLightbox(_index),
         ),
         if (urls.length > 1) ...[
-          const SizedBox(height: 10),
+          const SizedBox(height: KubusSpacing.sm),
           SizedBox(
             height: 64,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: urls.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              separatorBuilder: (_, __) =>
+                  const SizedBox(width: KubusSpacing.sm),
               itemBuilder: (context, idx) {
                 final url = urls[idx];
                 final selected = idx == _index;
                 return GestureDetector(
                   onTap: () => setState(() => _index = idx),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(KubusRadius.md),
                     child: Container(
                       width: 64,
                       height: 64,
@@ -194,7 +204,10 @@ class _ArtworkGalleryViewState extends State<ArtworkGalleryView>
                         border: Border.all(
                           color: selected
                               ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.outline.withValues(alpha: 0.18),
+                              : Theme.of(context)
+                                  .colorScheme
+                                  .outline
+                                  .withValues(alpha: 0.18),
                           width: selected ? 2 : 1,
                         ),
                       ),
@@ -202,8 +215,10 @@ class _ArtworkGalleryViewState extends State<ArtworkGalleryView>
                         url: url,
                         fit: BoxFit.cover,
                         showProgress: false,
-                        errorIconColor:
-                            Theme.of(context).colorScheme.outline.withValues(alpha: 0.6),
+                        errorIconColor: Theme.of(context)
+                            .colorScheme
+                            .outline
+                            .withValues(alpha: 0.6),
                       ),
                     ),
                   ),
@@ -295,13 +310,13 @@ class _ArtworkLightboxDialogState extends State<_ArtworkLightboxDialog> {
             },
           ),
           Positioned(
-            top: 12,
-            right: 12,
+            top: KubusSpacing.sm,
+            right: KubusSpacing.sm,
             child: IconButton(
               tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
               onPressed: () => Navigator.of(context).pop(),
               icon: Container(
-                padding: const EdgeInsets.all(6),
+                padding: const EdgeInsets.all(KubusSpacing.xs + 2),
                 decoration: BoxDecoration(
                   color: scheme.inverseSurface.withValues(alpha: 0.35),
                   shape: BoxShape.circle,

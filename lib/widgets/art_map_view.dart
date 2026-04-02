@@ -10,6 +10,7 @@ import 'package:maplibre_gl/maplibre_gl.dart' as ml;
 import '../config/config.dart';
 import '../services/map_style_service.dart';
 import '../services/webgl_context_helper.dart';
+import '../utils/design_tokens.dart';
 import 'kubus_snackbar.dart';
 
 /// Shared MapLibre layer used by both mobile and desktop map screens.
@@ -345,7 +346,8 @@ class _ArtMapViewState extends State<ArtMapView> {
       _webForceResizeCallCount += 1;
       controller.forceResizeWebMap();
     } catch (e, st) {
-      AppConfig.debugPrint('ArtMapView: forceResizeWebMap failed ($reason): $e');
+      AppConfig.debugPrint(
+          'ArtMapView: forceResizeWebMap failed ($reason): $e');
       if (kDebugMode) {
         AppConfig.debugPrint('ArtMapView: forceResizeWebMap stack: $st');
       }
@@ -633,7 +635,7 @@ class _ArtMapViewState extends State<ArtMapView> {
                     child: Container(
                       color: Colors.black.withValues(alpha: 0.15),
                       alignment: Alignment.center,
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(KubusSpacing.md),
                       child: _StyleErrorCard(
                         reason:
                             _styleFailureReason ?? 'Map style failed to load.',
@@ -682,10 +684,10 @@ class _StyleErrorCard extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(KubusSpacing.md),
           decoration: BoxDecoration(
             color: bg,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(KubusRadius.lg),
             border: Border.all(color: border),
             boxShadow: [
               BoxShadow(

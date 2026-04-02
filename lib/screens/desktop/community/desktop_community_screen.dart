@@ -1018,7 +1018,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: themeProvider.accentColor.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(KubusRadius.md),
                     ),
                     child: Text(
                       '#$rank',
@@ -2206,7 +2206,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                             backgroundColor: themeProvider.accentColor,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
+                                borderRadius:
+                                    BorderRadius.circular(KubusRadius.md)),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -2443,7 +2444,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 14),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
+                              borderRadius:
+                                  BorderRadius.circular(KubusRadius.md)),
                         ),
                       ),
                     ],
@@ -2469,7 +2471,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       context: context,
       builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(KubusRadius.lg),
+        ),
         title: Text(
           l10n.desktopCommunityCreateOptionCreateGroup,
           style: KubusTextStyles.sectionTitle,
@@ -2527,7 +2531,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         color: themeProvider.isDarkMode
             ? Theme.of(context).colorScheme.surface
             : Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
         border: Border.all(
           color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
         ),
@@ -2553,9 +2557,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               );
             }
           },
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(KubusRadius.md),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(KubusSpacing.md),
             child: Row(
               children: [
                 // Group avatar
@@ -2564,29 +2568,29 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   height: 56,
                   decoration: BoxDecoration(
                     color: themeProvider.accentColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(KubusRadius.md),
                   ),
-                  child:
-                      group.coverImage != null && group.coverImage!.isNotEmpty
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image.network(
-                                MediaUrlResolver.resolveDisplayUrl(
-                                        group.coverImage) ??
-                                    group.coverImage!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Icon(
-                                  Icons.groups,
-                                  color: themeProvider.accentColor,
-                                  size: 28,
-                                ),
-                              ),
-                            )
-                          : Icon(
+                  child: group.coverImage != null &&
+                          group.coverImage!.isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(KubusRadius.md),
+                          child: Image.network(
+                            MediaUrlResolver.resolveDisplayUrl(
+                                    group.coverImage) ??
+                                group.coverImage!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Icon(
                               Icons.groups,
                               color: themeProvider.accentColor,
                               size: 28,
                             ),
+                          ),
+                        )
+                      : Icon(
+                          Icons.groups,
+                          color: themeProvider.accentColor,
+                          size: 28,
+                        ),
                 ),
                 const SizedBox(width: 16),
                 // Group info
@@ -2755,7 +2759,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             height: 80,
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(KubusRadius.xl),
             ),
             child: Icon(
               Icons.error_outline,
@@ -2818,7 +2822,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             height: 80,
             decoration: BoxDecoration(
               color: themeProvider.accentColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(KubusRadius.xl),
             ),
             child: Icon(
               icon,
@@ -3159,10 +3163,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
     return Container(
       margin: const EdgeInsets.only(top: 16),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
         border: Border.all(color: scheme.outline.withValues(alpha: 0.2)),
       ),
       child: Column(
@@ -3422,7 +3426,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         height: MediaQuery.of(context).size.height * 0.7,
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(KubusRadius.xl),
+          ),
         ),
         child: Column(
           children: [
@@ -3663,7 +3669,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
         splashColor: themeProvider.accentColor.withValues(alpha: 0.1),
         highlightColor: themeProvider.accentColor.withValues(alpha: 0.05),
         child: AnimatedContainer(
@@ -3681,7 +3687,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     end: Alignment.bottomCenter,
                   )
                 : null,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(KubusRadius.md),
             border: Border.all(
               color: isSelected
                   ? themeProvider.accentColor.withValues(alpha: 0.4)
@@ -3765,7 +3771,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           children: [
             // Search and new message
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(KubusSpacing.md),
               child: Row(
                 children: [
                   Expanded(
@@ -3773,7 +3779,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       height: 44,
                       child: Container(
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(KubusRadius.md),
                           border: Border.all(
                             color: scheme.outline.withValues(alpha: 0.18),
                           ),
@@ -3782,7 +3788,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           // Keep the glass background full-bleed; spacing belongs to the input.
                           padding: EdgeInsets.zero,
                           margin: EdgeInsets.zero,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(KubusRadius.md),
                           showBorder: false,
                           backgroundColor: scheme.surface.withValues(
                             alpha: isDark ? 0.22 : 0.26,
@@ -3968,9 +3974,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       color: Colors.transparent,
       child: InkWell(
         onTap: () => _openConversation(conversation),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
         child: Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
           margin: const EdgeInsets.symmetric(vertical: 4),
           decoration: BoxDecoration(
             color: isActive
@@ -3978,7 +3984,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 : hasUnread
                     ? scheme.secondary.withValues(alpha: 0.05)
                     : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(KubusRadius.md),
             border: isActive
                 ? Border.all(
                     color: scheme.secondary.withValues(alpha: 0.4), width: 1.2)
@@ -4450,7 +4456,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         color: themeProvider.isDarkMode
             ? Theme.of(context).colorScheme.surfaceContainerHighest
             : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(
           color: _isComposerExpanded
               ? themeProvider.accentColor.withValues(alpha: 0.3)
@@ -4508,7 +4514,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                 .colorScheme
                                 .primaryContainer
                                 .withValues(alpha: 0.5),
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(KubusRadius.xl),
                           ),
                           child: Text(
                             AppLocalizations.of(context)!
@@ -4542,7 +4548,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                   .colorScheme
                                   .surfaceContainerHighest
                               : themeProvider.accentColor,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(KubusRadius.sm),
                         ),
                         child: Icon(
                           _isComposerExpanded
@@ -4618,7 +4624,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     .withValues(alpha: 0.4),
               ),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
                 borderSide: BorderSide.none,
               ),
               filled: true,
@@ -4674,7 +4680,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         height: 60,
                         margin: const EdgeInsets.only(right: 8),
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(KubusRadius.sm),
                           image: DecorationImage(
                             image: MemoryImage(_selectedImages[index].bytes),
                             fit: BoxFit.cover,
@@ -4713,7 +4719,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
                 color: themeProvider.accentColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -4743,7 +4749,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
         // Action bar
         Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
           child: Row(
             children: [
               _buildCompactActionButton(
@@ -4804,7 +4810,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   minimumSize: const Size(60, 32),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(KubusRadius.lg),
                   ),
                 ),
                 child: _isPosting
@@ -4836,7 +4842,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: themeProvider.accentColor.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -4871,7 +4877,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(KubusRadius.sm),
           child: Padding(
             padding: const EdgeInsets.all(8),
             child: Icon(
@@ -4893,8 +4899,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         final l10n = AppLocalizations.of(context)!;
         return KubusAlertDialog(
           backgroundColor: Theme.of(context).colorScheme.surface,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(KubusRadius.lg),
+          ),
           title: Text(
             l10n.desktopCommunityAddTagDialogTitle,
             style: KubusTextStyles.sectionTitle.copyWith(
@@ -5078,7 +5085,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             return KubusAlertDialog(
               backgroundColor: Theme.of(context).colorScheme.surface,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
+                  borderRadius: BorderRadius.circular(KubusRadius.lg)),
               title: Text(
                 AppLocalizations.of(context)!
                     .desktopCommunityMentionDialogTitle,
@@ -5490,7 +5497,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           decoration: BoxDecoration(
                             color: _getTrendingRankColor(rank)
                                 .withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(KubusRadius.sm),
                           ),
                           child: Center(
                             child: Text(
@@ -5867,11 +5874,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   ?.toString();
               final institutionId =
                   (artist['institutionId'] ?? artist['id'])?.toString() ?? '';
-              final walletAddress =
-                  (artist['profileTargetId'] ??
-                          artist['walletAddress'] ??
-                          artist['wallet'])
-                      ?.toString();
+              final walletAddress = (artist['profileTargetId'] ??
+                      artist['walletAddress'] ??
+                      artist['wallet'])
+                  ?.toString();
               final navigationId = isInstitutionSuggestion
                   ? institutionId
                   : ((walletAddress ?? artist['id'])?.toString() ?? handle);
@@ -5916,8 +5922,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                             : (isInstitutionSuggestion
                                 ? displayName
                                 : (navigationId.isNotEmpty
-                                ? navigationId
-                                : displayName)),
+                                    ? navigationId
+                                    : displayName)),
                         radius: 22,
                         allowFabricatedFallback: true,
                       ),
@@ -6087,7 +6093,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             );
           }
         },
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(KubusRadius.sm),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 10),
           child: Row(
@@ -6104,11 +6110,11 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       themeProvider.accentColor.withValues(alpha: 0.7),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
                 ),
                 child: group.coverImage != null
                     ? ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(KubusRadius.md),
                         child: Image.network(
                           MediaUrlResolver.resolveDisplayUrl(
                                   group.coverImage) ??
@@ -6160,7 +6166,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: themeProvider.accentColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(KubusRadius.sm),
                   ),
                   child: Text(
                     AppLocalizations.of(context)!
@@ -6211,7 +6217,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               constraints: const BoxConstraints(maxHeight: 600),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(KubusRadius.xl),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.2),
@@ -6273,7 +6279,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 20, vertical: 10),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius:
+                                  BorderRadius.circular(KubusRadius.xl),
                             ),
                           ),
                           child: _isPosting
@@ -6365,8 +6372,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                         height: 100,
                                         margin: const EdgeInsets.only(right: 8),
                                         decoration: BoxDecoration(
-                                          borderRadius:
-                                              BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(
+                                              KubusRadius.md),
                                           image: DecorationImage(
                                             image: MemoryImage(
                                                 _selectedImages[index].bytes),
@@ -6411,7 +6418,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
                   // Actions
                   Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(KubusSpacing.md),
                     decoration: BoxDecoration(
                       border: Border(
                         top: BorderSide(
@@ -6574,10 +6581,12 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(KubusRadius.lg),
+        ),
       ),
       builder: (context) => Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         child: Wrap(
           spacing: 12,
           runSpacing: 12,
@@ -6592,7 +6601,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 height: 48,
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
                 ),
                 child: Center(
                   child: Text(
@@ -6807,7 +6816,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       },
       leading: previewValue != null && imageUrl != null && imageUrl.isNotEmpty
           ? ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
               child: Image.network(
                 MediaUrlResolver.resolveDisplayUrl(imageUrl) ?? imageUrl,
                 width: 48,
@@ -6824,7 +6833,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               height: 48,
               decoration: BoxDecoration(
                 color: themeProvider.accentColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
               ),
               child: Icon(
                 subjectIcon,
@@ -6887,7 +6896,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: themeProvider.accentColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(KubusRadius.lg),
                 border: Border.all(
                     color: themeProvider.accentColor.withValues(alpha: 0.3)),
               ),
@@ -6964,8 +6973,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         return Dialog(
           insetPadding:
               const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(KubusRadius.xl),
+          ),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 520, maxHeight: 560),
             child: CommunityGroupPickerContent(
@@ -7026,8 +7036,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         final l10n = AppLocalizations.of(context)!;
         return KubusAlertDialog(
           backgroundColor: Theme.of(context).colorScheme.surface,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(KubusRadius.lg),
+          ),
           title: Row(
             children: [
               Icon(Icons.view_in_ar,
@@ -7389,7 +7400,9 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(KubusRadius.xl),
+      ),
       child: Container(
         width: 400,
         constraints: const BoxConstraints(maxHeight: 500),
@@ -7417,7 +7430,7 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
             const SizedBox(height: 16),
             Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
                 border: Border.all(
                   color: Theme.of(context)
                       .colorScheme
@@ -7428,7 +7441,7 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
               child: LiquidGlassPanel(
                 padding: EdgeInsets.zero,
                 margin: EdgeInsets.zero,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
                 blurSigma: KubusGlassStyle.resolve(
                   context,
                   surfaceType: KubusGlassSurfaceType.card,

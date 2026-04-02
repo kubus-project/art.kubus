@@ -68,9 +68,7 @@ class _WalletHomeState extends State<WalletHome> {
               scrolledUnderElevation: 0,
               title: Text(
                 l10n.walletHomeTitle,
-                style: KubusTypography.inter(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+                style: KubusTextStyles.mobileAppBarTitle.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
@@ -108,9 +106,7 @@ class _WalletHomeState extends State<WalletHome> {
               scrolledUnderElevation: 0,
               title: Text(
                 l10n.walletHomeTitle,
-                style: KubusTypography.inter(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+                style: KubusTextStyles.mobileAppBarTitle.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
@@ -168,9 +164,7 @@ class _WalletHomeState extends State<WalletHome> {
                 scrolledUnderElevation: 0,
                 title: Text(
                   l10n.walletHomeTitle,
-                  style: KubusTypography.inter(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+                  style: KubusTextStyles.mobileAppBarTitle.copyWith(
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
@@ -196,14 +190,22 @@ class _WalletHomeState extends State<WalletHome> {
                 ],
               ),
               body: SingleChildScrollView(
-                padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
+                padding: EdgeInsets.all(
+                  isSmallScreen
+                      ? KubusSpacing.lg
+                      : KubusChromeMetrics.cardPadding,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Wallet Balance Card
                     Container(
                       width: double.infinity,
-                      padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
+                      padding: EdgeInsets.all(
+                        isSmallScreen
+                            ? KubusSpacing.lg
+                            : KubusChromeMetrics.cardPadding,
+                      ),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
@@ -213,7 +215,7 @@ class _WalletHomeState extends State<WalletHome> {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(KubusRadius.xl),
                         boxShadow: [
                           BoxShadow(
                             color: AppColorUtils.amberAccent
@@ -232,7 +234,7 @@ class _WalletHomeState extends State<WalletHome> {
                               Text(
                                 l10n.walletHomeTotalBalanceLabel,
                                 style: KubusTypography.inter(
-                                  fontSize: isSmallScreen ? 14 : 16,
+                                  fontSize: KubusHeaderMetrics.sectionSubtitle,
                                   color: Theme.of(context)
                                       .colorScheme
                                       .onSurface
@@ -272,19 +274,25 @@ class _WalletHomeState extends State<WalletHome> {
                                 },
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 6),
+                                    horizontal:
+                                        KubusSpacing.md - KubusSpacing.xxs,
+                                    vertical:
+                                        KubusSpacing.xxs + KubusSpacing.xxs,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: Theme.of(context)
                                         .colorScheme
                                         .onPrimary
                                         .withValues(alpha: 0.2),
-                                    borderRadius: BorderRadius.circular(20),
+                                    borderRadius:
+                                        BorderRadius.circular(KubusRadius.xl),
                                   ),
                                   child: Text(
                                     wallet?.shortAddress ??
                                         _shortenAddress(walletAddress ?? ''),
                                     style: KubusTypography.inter(
-                                      fontSize: isSmallScreen ? 12 : 14,
+                                      fontSize:
+                                          KubusHeaderMetrics.sectionSubtitle,
                                       color: Theme.of(context)
                                           .colorScheme
                                           .onSurface,
@@ -295,7 +303,11 @@ class _WalletHomeState extends State<WalletHome> {
                               ),
                             ],
                           ),
-                          SizedBox(height: isSmallScreen ? 12 : 16),
+                          SizedBox(
+                            height: isSmallScreen
+                                ? KubusSpacing.md
+                                : KubusChromeMetrics.compactCardPadding,
+                          ),
                           // Main KUB8 Balance
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -304,17 +316,21 @@ class _WalletHomeState extends State<WalletHome> {
                               Text(
                                 _getKub8Balance().toStringAsFixed(2),
                                 style: KubusTypography.inter(
-                                  fontSize: isSmallScreen ? 36 : 48,
+                                  fontSize: isSmallScreen
+                                      ? KubusChromeMetrics.heroTitle +
+                                          KubusSpacing.md
+                                      : KubusChromeMetrics.heroTitle +
+                                          KubusSpacing.lg,
                                   fontWeight: FontWeight.bold,
                                   color:
                                       Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: KubusSpacing.sm),
                               Text(
                                 'KUB8',
                                 style: KubusTypography.inter(
-                                  fontSize: isSmallScreen ? 16 : 20,
+                                  fontSize: KubusHeaderMetrics.sectionTitle,
                                   fontWeight: FontWeight.w600,
                                   color: Theme.of(context)
                                       .colorScheme
@@ -324,14 +340,17 @@ class _WalletHomeState extends State<WalletHome> {
                               ),
                             ],
                           ),
-                          SizedBox(height: isSmallScreen ? 8 : 12),
+                          SizedBox(
+                              height: isSmallScreen
+                                  ? KubusSpacing.sm
+                                  : KubusSpacing.md),
                           // Secondary balances (SOL and USD)
                           Row(
                             children: [
                               Text(
                                 '${_getSolBalance().toStringAsFixed(3)} SOL',
                                 style: KubusTypography.inter(
-                                  fontSize: isSmallScreen ? 14 : 16,
+                                  fontSize: KubusHeaderMetrics.sectionSubtitle,
                                   fontWeight: FontWeight.w500,
                                   color: Theme.of(context)
                                       .colorScheme
@@ -339,11 +358,11 @@ class _WalletHomeState extends State<WalletHome> {
                                       .withValues(alpha: 0.7),
                                 ),
                               ),
-                              const SizedBox(width: 16),
+                              const SizedBox(width: KubusSpacing.md),
                               Text(
                                 '≈ \$${wallet?.totalValue.toStringAsFixed(2) ?? '0.00'}',
                                 style: KubusTypography.inter(
-                                  fontSize: isSmallScreen ? 14 : 16,
+                                  fontSize: KubusHeaderMetrics.sectionSubtitle,
                                   fontWeight: FontWeight.w500,
                                   color: Theme.of(context)
                                       .colorScheme
@@ -354,11 +373,15 @@ class _WalletHomeState extends State<WalletHome> {
                             ],
                           ),
                           if (isReadOnlySession) ...[
-                            SizedBox(height: isSmallScreen ? 12 : 16),
+                            SizedBox(
+                              height: isSmallScreen
+                                  ? KubusSpacing.md
+                                  : KubusSpacing.lg,
+                            ),
                             Text(
                               'Reconnect to enable signing and transfers.',
                               style: KubusTypography.inter(
-                                fontSize: isSmallScreen ? 13 : 14,
+                                fontSize: KubusHeaderMetrics.sectionSubtitle,
                                 fontWeight: FontWeight.w500,
                                 color: Theme.of(context)
                                     .colorScheme
@@ -371,14 +394,20 @@ class _WalletHomeState extends State<WalletHome> {
                       ),
                     ),
 
-                    SizedBox(height: isSmallScreen ? 16 : 20),
+                    SizedBox(
+                      height: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg,
+                    ),
 
                     // Action Buttons (Separated from balance card)
                     Container(
-                      padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+                      padding: EdgeInsets.all(
+                        isSmallScreen
+                            ? KubusSpacing.lg
+                            : KubusChromeMetrics.cardPadding,
+                      ),
                       decoration: BoxDecoration(
                         color: Theme.of(context).colorScheme.surface,
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(KubusRadius.lg),
                         border: Border.all(
                             color: Theme.of(context)
                                 .colorScheme
@@ -409,7 +438,8 @@ class _WalletHomeState extends State<WalletHome> {
                               enabled: canTransact,
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(
+                              width: KubusSpacing.sm + KubusSpacing.xs),
                           Expanded(
                             child: _buildActionButton(
                               l10n.walletHomeActionReceive,
@@ -467,7 +497,9 @@ class _WalletHomeState extends State<WalletHome> {
                       ),
                     ),
 
-                    SizedBox(height: isSmallScreen ? 24 : 32),
+                    SizedBox(
+                      height: isSmallScreen ? KubusSpacing.lg : KubusSpacing.xl,
+                    ),
 
                     // Tokens Section
                     Row(
@@ -476,7 +508,7 @@ class _WalletHomeState extends State<WalletHome> {
                         Text(
                           l10n.walletHomeYourTokensTitle,
                           style: KubusTypography.inter(
-                            fontSize: isSmallScreen ? 18 : 20,
+                            fontSize: KubusHeaderMetrics.sectionTitle,
                             fontWeight: FontWeight.bold,
                             color: Theme.of(context).colorScheme.onSurface,
                           ),
@@ -484,19 +516,27 @@ class _WalletHomeState extends State<WalletHome> {
                       ],
                     ),
 
-                    SizedBox(height: isSmallScreen ? 12 : 16),
+                    SizedBox(
+                      height: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg,
+                    ),
 
                     // Token List
                     Column(
                       children: tokens
                           .map((token) => Container(
                                 margin: EdgeInsets.only(
-                                    bottom: isSmallScreen ? 8 : 12),
-                                padding:
-                                    EdgeInsets.all(isSmallScreen ? 12 : 16),
+                                    bottom: isSmallScreen
+                                        ? KubusSpacing.sm
+                                        : KubusSpacing.md),
+                                padding: EdgeInsets.all(
+                                  isSmallScreen
+                                      ? KubusSpacing.md
+                                      : KubusSpacing.lg,
+                                ),
                                 decoration: BoxDecoration(
                                   color: Theme.of(context).colorScheme.surface,
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius:
+                                      BorderRadius.circular(KubusRadius.md),
                                   border: Border.all(
                                       color: Theme.of(context)
                                           .colorScheme
@@ -506,7 +546,7 @@ class _WalletHomeState extends State<WalletHome> {
                                 child: Row(
                                   children: [
                                     _buildTokenAvatar(token),
-                                    const SizedBox(width: 16),
+                                    const SizedBox(width: KubusSpacing.md),
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment:
@@ -515,7 +555,8 @@ class _WalletHomeState extends State<WalletHome> {
                                           Text(
                                             token.name,
                                             style: KubusTypography.inter(
-                                              fontSize: 16,
+                                              fontSize: KubusHeaderMetrics
+                                                  .sectionSubtitle,
                                               fontWeight: FontWeight.w600,
                                               color: Theme.of(context)
                                                   .colorScheme
@@ -525,7 +566,8 @@ class _WalletHomeState extends State<WalletHome> {
                                           Text(
                                             token.symbol,
                                             style: KubusTypography.inter(
-                                              fontSize: 14,
+                                              fontSize: KubusHeaderMetrics
+                                                  .sectionSubtitle,
                                               color: Theme.of(context)
                                                   .colorScheme
                                                   .onSurface
@@ -542,7 +584,8 @@ class _WalletHomeState extends State<WalletHome> {
                                         Text(
                                           token.balance.toStringAsFixed(4),
                                           style: KubusTypography.inter(
-                                            fontSize: 16,
+                                            fontSize: KubusHeaderMetrics
+                                                .sectionSubtitle,
                                             fontWeight: FontWeight.w600,
                                             color: Theme.of(context)
                                                 .colorScheme
@@ -552,7 +595,8 @@ class _WalletHomeState extends State<WalletHome> {
                                         Text(
                                           '\$${token.value.toStringAsFixed(2)}',
                                           style: KubusTypography.inter(
-                                            fontSize: 14,
+                                            fontSize: KubusHeaderMetrics
+                                                .sectionSubtitle,
                                             color: Theme.of(context)
                                                 .colorScheme
                                                 .onSurface
@@ -567,7 +611,9 @@ class _WalletHomeState extends State<WalletHome> {
                           .toList(),
                     ),
 
-                    SizedBox(height: isSmallScreen ? 24 : 32),
+                    SizedBox(
+                        height:
+                            isSmallScreen ? KubusSpacing.lg : KubusSpacing.xl),
 
                     // Recent Transactions
                     _buildRecentTransactions(isSmallScreen: isSmallScreen),
@@ -594,7 +640,7 @@ class _WalletHomeState extends State<WalletHome> {
       height: 40,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(KubusRadius.xl),
         border:
             Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
         color: theme.colorScheme.surfaceContainerHighest,
@@ -631,7 +677,7 @@ class _WalletHomeState extends State<WalletHome> {
       height: 40,
       decoration: BoxDecoration(
         color: _getTokenColor(token.symbol),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(KubusRadius.xl),
       ),
       child: Center(
         child: Text(
@@ -682,13 +728,13 @@ class _WalletHomeState extends State<WalletHome> {
       key: buttonKey,
       decoration: BoxDecoration(
         color: scheme.surface.withValues(alpha: enabled ? 0.5 : 0.35),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
         border: Border.all(color: effectiveColor, width: 1.5),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(KubusRadius.md),
           onTap: onPressed,
           child: Padding(
             padding: EdgeInsets.symmetric(
@@ -779,7 +825,7 @@ class _WalletHomeState extends State<WalletHome> {
               child: Text(
                 l10n.walletHomeRecentTransactionsTitle,
                 style: KubusTypography.inter(
-                  fontSize: isSmallScreen ? 18 : 20,
+                  fontSize: KubusHeaderMetrics.sectionTitle,
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
@@ -798,7 +844,7 @@ class _WalletHomeState extends State<WalletHome> {
             ),
           ],
         ),
-        SizedBox(height: isSmallScreen ? 12 : 16),
+        SizedBox(height: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
         if (recentTransactions.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -814,10 +860,11 @@ class _WalletHomeState extends State<WalletHome> {
         else
           ...recentTransactions.map((transaction) => Container(
                 margin: EdgeInsets.only(bottom: isSmallScreen ? 8 : 12),
-                padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                padding: EdgeInsets.all(
+                    isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
                   border: Border.all(
                       color: Theme.of(context)
                           .colorScheme
@@ -832,7 +879,7 @@ class _WalletHomeState extends State<WalletHome> {
                       decoration: BoxDecoration(
                         color: _getTransactionColor(transaction.type)
                             .withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(KubusRadius.xl),
                       ),
                       child: Icon(
                         _getTransactionIcon(transaction.type),
@@ -977,14 +1024,15 @@ class _WalletHomeState extends State<WalletHome> {
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(KubusRadius.xl)),
       ),
       builder: (context) {
         return SafeArea(
           child: KeyboardInsetPadding(
             extraBottom: 16,
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(KubusSpacing.md),
               child: SizedBox(
                 height: MediaQuery.of(context).size.height * 0.75,
                 child: Column(
@@ -1033,13 +1081,15 @@ class _WalletHomeState extends State<WalletHome> {
                           itemBuilder: (context, index) {
                             final tx = transactions[index];
                             return Container(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              padding: const EdgeInsets.all(12),
+                              margin: const EdgeInsets.only(
+                                  bottom: KubusSpacing.sm),
+                              padding: const EdgeInsets.all(KubusSpacing.sm),
                               decoration: BoxDecoration(
                                 color: Theme.of(context)
                                     .colorScheme
                                     .surfaceContainerHighest,
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius:
+                                    BorderRadius.circular(KubusRadius.md),
                                 border: Border.all(
                                   color: Theme.of(context)
                                       .colorScheme
@@ -1055,7 +1105,8 @@ class _WalletHomeState extends State<WalletHome> {
                                     decoration: BoxDecoration(
                                       color: _getTransactionColor(tx.type)
                                           .withValues(alpha: 0.2),
-                                      borderRadius: BorderRadius.circular(20),
+                                      borderRadius:
+                                          BorderRadius.circular(KubusRadius.xl),
                                     ),
                                     child: Icon(
                                       _getTransactionIcon(tx.type),

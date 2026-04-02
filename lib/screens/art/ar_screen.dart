@@ -375,18 +375,20 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             // Mode selector overlay for all modes (positioned at bottom)
             if (_isARReady)
               Positioned(
-                bottom: 20 + KubusLayout.mainBottomNavBarHeight,
-                left: 20,
-                right: 20,
+                bottom: KubusSpacing.lg + KubusLayout.mainBottomNavBarHeight,
+                left: KubusSpacing.lg,
+                right: KubusSpacing.lg,
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: KubusSpacing.sm,
+                    vertical: KubusSpacing.sm,
+                  ),
                   decoration: BoxDecoration(
                     color: Theme.of(context)
                         .colorScheme
                         .surface
                         .withValues(alpha: 0.95),
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(KubusRadius.lg),
                     border: Border.all(
                       color: AppColorUtils.cyanAccent.withValues(alpha: 0.3),
                       width: 1,
@@ -402,13 +404,16 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                         child: GestureDetector(
                           onTap: () => _changeMode(modeId),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: KubusSpacing.md,
+                            ),
                             decoration: BoxDecoration(
                               color: isSelected
                                   ? AppColorUtils.cyanAccent
                                       .withValues(alpha: 0.2)
                                   : Colors.transparent,
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius:
+                                  BorderRadius.circular(KubusRadius.md),
                               border: Border.all(
                                 color: isSelected
                                     ? AppColorUtils.cyanAccent
@@ -427,9 +432,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                           .colorScheme
                                           .onSurface
                                           .withValues(alpha: 0.6),
-                                  size: 20,
+                                  size: KubusHeaderMetrics.actionIcon,
                                 ),
-                                const SizedBox(height: 4),
+                                const SizedBox(height: KubusSpacing.xs),
                                 Text(
                                   _modeName(l10n, modeId),
                                   style: KubusTypography.inter(
@@ -439,7 +444,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                             .colorScheme
                                             .onSurface
                                             .withValues(alpha: 0.6),
-                                    fontSize: 11,
+                                    fontSize: KubusChromeMetrics.navMetaLabel,
                                     fontWeight: isSelected
                                         ? FontWeight.w600
                                         : FontWeight.normal,
@@ -469,7 +474,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const AppLoading(),
-            const SizedBox(height: 24),
+            const SizedBox(height: KubusSpacing.lg),
             Text(
               l10n.arInitializingTitle,
               style: KubusTypography.inter(
@@ -556,7 +561,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                       height: 50,
                       decoration: BoxDecoration(
                         color: AppColorUtils.cyanAccent.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(KubusRadius.sm),
                       ),
                       child: Icon(
                         Icons.view_in_ar,
@@ -649,10 +654,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
               left: 20,
               right: 20,
               child: Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(KubusSpacing.md),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.7),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -776,7 +781,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     )['icon'] as IconData;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(KubusSpacing.md),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -792,10 +797,13 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           // Mode indicator (back button removed during AR camera view)
           Expanded(
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(
+                horizontal: KubusSpacing.md,
+                vertical: KubusSpacing.sm,
+              ),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(KubusRadius.xl),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -828,7 +836,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                 color: _flashEnabled
                     ? AppColorUtils.amberAccent.withValues(alpha: 0.2)
                     : Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(KubusRadius.xl),
                 border: _flashEnabled
                     ? Border.all(color: AppColorUtils.amberAccent, width: 1.5)
                     : null,
@@ -840,7 +848,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   color: _flashEnabled
                       ? AppColorUtils.amberAccent
                       : Theme.of(context).colorScheme.onSurface,
-                  size: 20,
+                  size: KubusHeaderMetrics.actionIcon,
                 ),
                 onPressed: () async {
                   try {
@@ -854,7 +862,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                 },
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: KubusSpacing.sm),
           ],
           // Settings button
           Container(
@@ -862,7 +870,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             height: 40,
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(KubusRadius.xl),
             ),
             child: IconButton(
               padding: EdgeInsets.zero,
@@ -950,7 +958,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         foregroundColor: buttonTextColor,
         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(KubusRadius.md),
         ),
         elevation: 8,
         shadowColor: AppColorUtils.cyanAccent.withValues(alpha: 0.4),
@@ -1016,7 +1024,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         builder: (context, scrollController) => Container(
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(KubusRadius.xl),
+            ),
           ),
           child: Column(
             children: [
@@ -1059,7 +1069,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           decoration: BoxDecoration(
                             color:
                                 Theme.of(context).colorScheme.primaryContainer,
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(KubusRadius.sm),
                           ),
                           child: Icon(Icons.view_in_ar,
                               color: Theme.of(context).colorScheme.primary),
@@ -1163,7 +1173,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           height: MediaQuery.of(context).size.height * 0.6,
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(KubusRadius.xl),
+            ),
           ),
           child: Column(
             children: [
@@ -1478,13 +1490,13 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           final l10n = AppLocalizations.of(context)!;
           return SafeArea(
             child: KeyboardInsetPadding(
-              extraBottom: 20,
+              extraBottom: KubusSpacing.lg,
               child: Container(
-                margin: const EdgeInsets.all(12),
-                padding: const EdgeInsets.all(20),
+                margin: const EdgeInsets.all(KubusSpacing.md),
+                padding: const EdgeInsets.all(KubusSpacing.lg),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(KubusRadius.xl),
                 ),
                 child: Form(
                   key: formKey,
@@ -1496,7 +1508,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           children: [
                             Icon(Icons.create,
                                 color: Theme.of(context).colorScheme.primary),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: KubusSpacing.sm),
                             Expanded(
                               child: Text(
                                 l10n.arCreateUploadTitle,
@@ -1516,7 +1528,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: KubusSpacing.sm),
                         Text(
                           l10n.arCreateUploadSubtitle,
                           style: KubusTypography.inter(
@@ -1527,13 +1539,14 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                 .withValues(alpha: 0.7),
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: KubusSpacing.lg),
                         DropdownButtonFormField<MarkerSubjectType>(
                           initialValue: selectedSubjectType,
                           decoration: InputDecoration(
                             labelText: l10n.arCreateSubjectTypeLabel,
                             border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12)),
+                                borderRadius:
+                                    BorderRadius.circular(KubusRadius.md)),
                           ),
                           items: allowedSubjectTypes
                               .map(
@@ -1546,7 +1559,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                               .toList(),
                           onChanged: null,
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: KubusSpacing.md),
                         if ((subjectOptionsByType[selectedSubjectType] ?? [])
                             .isNotEmpty)
                           DropdownButtonFormField<MarkerSubjectOption>(
@@ -1555,7 +1568,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                               labelText: l10n.arCreateSubjectLabel(
                                   selectedSubjectType.label),
                               border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12)),
+                                  borderRadius:
+                                      BorderRadius.circular(KubusRadius.md)),
                             ),
                             items: (subjectOptionsByType[selectedSubjectType] ??
                                     [])
@@ -1603,13 +1617,14 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                         else
                           Container(
                             width: double.infinity,
-                            padding: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.all(KubusSpacing.md),
                             decoration: BoxDecoration(
                               color: Theme.of(context)
                                   .colorScheme
                                   .surfaceContainerHighest
                                   .withValues(alpha: 0.5),
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius:
+                                  BorderRadius.circular(KubusRadius.md),
                             ),
                             child: Text(
                               l10n.arCreateNoSubjectsAvailable(
@@ -1618,14 +1633,15 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                               style: KubusTypography.inter(fontSize: 13),
                             ),
                           ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: KubusSpacing.md),
                         TextFormField(
                           controller: titleController,
                           enabled: !isSubmitting,
                           decoration: InputDecoration(
                             labelText: l10n.arCreateMarkerTitleLabel,
                             border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12)),
+                                borderRadius:
+                                    BorderRadius.circular(KubusRadius.md)),
                           ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
@@ -1637,7 +1653,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: KubusSpacing.md),
                         TextFormField(
                           controller: descriptionController,
                           enabled: !isSubmitting,
@@ -1645,7 +1661,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           decoration: InputDecoration(
                             labelText: l10n.arCreateDescriptionLabel,
                             border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12)),
+                                borderRadius:
+                                    BorderRadius.circular(KubusRadius.md)),
                           ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
@@ -1657,17 +1674,18 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: KubusSpacing.md),
                         TextFormField(
                           controller: categoryController,
                           enabled: !isSubmitting,
                           decoration: InputDecoration(
                             labelText: l10n.arCreateCategoryLabel,
                             border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12)),
+                                borderRadius:
+                                    BorderRadius.circular(KubusRadius.md)),
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: KubusSpacing.md),
                         Text(
                           l10n.arCreateAttach3dAssetTitle,
                           style: KubusTypography.inter(
@@ -1676,7 +1694,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                             color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: KubusSpacing.sm),
                         OutlinedButton.icon(
                           onPressed: isSubmitting
                               ? null
@@ -1697,21 +1715,22 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                               : l10n.arCreateReplaceModelButton),
                         ),
                         if (selectedModelName != null) ...[
-                          const SizedBox(height: 8),
+                          const SizedBox(height: KubusSpacing.sm),
                           Container(
                             width: double.infinity,
-                            padding: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.all(KubusSpacing.md),
                             decoration: BoxDecoration(
                               color: Theme.of(context)
                                   .colorScheme
                                   .primaryContainer
                                   .withValues(alpha: 0.4),
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius:
+                                  BorderRadius.circular(KubusRadius.md),
                             ),
                             child: Row(
                               children: [
                                 const Icon(Icons.insert_drive_file),
-                                const SizedBox(width: 12),
+                                const SizedBox(width: KubusSpacing.md),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
@@ -1787,16 +1806,16 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                               : (value) =>
                                   setModalState(() => isPublic = value),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: KubusSpacing.sm),
                         Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(KubusSpacing.md),
                           decoration: BoxDecoration(
                             color: Theme.of(context)
                                 .colorScheme
                                 .surfaceContainerHighest
                                 .withValues(alpha: 0.5),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(KubusRadius.md),
                           ),
                           child: Row(
                             children: [
@@ -1826,7 +1845,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                               foregroundColor:
                                   Theme.of(context).colorScheme.onPrimary,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius:
+                                    BorderRadius.circular(KubusRadius.md),
                               ),
                             ),
                             icon: isSubmitting
@@ -1904,8 +1924,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             height: MediaQuery.of(context).size.height * 0.6,
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(20)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(KubusRadius.xl),
+              ),
             ),
             child: Padding(
               padding: const EdgeInsets.all(KubusSpacing.lg),
@@ -2085,7 +2106,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         curve: animationTheme.defaultCurve,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(KubusRadius.xl),
           color: isActive ? color.withValues(alpha: 0.15) : Colors.transparent,
           border: Border.all(
             color: isActive ? color : Theme.of(context).colorScheme.outline,
@@ -2303,8 +2324,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             height: MediaQuery.of(context).size.height * 0.7,
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(20)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(KubusRadius.xl),
+              ),
             ),
             child: Padding(
               padding: const EdgeInsets.all(KubusSpacing.lg),

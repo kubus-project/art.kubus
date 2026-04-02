@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import '../widgets/app_loading.dart';
+import '../utils/design_tokens.dart';
 
 /// AR View Widget - Handles platform-specific AR rendering
 class ARView extends StatefulWidget {
@@ -43,12 +44,12 @@ class _ARViewState extends State<ARView> with TickerProviderStateMixin {
   late Animation<double> _gridOpacityAnimation;
   late AnimationController _pulseAnimationController;
   late Animation<double> _pulseAnimation;
-  
+
   CameraController? _cameraController;
   List<CameraDescription>? _cameras;
   bool _isCameraInitialized = false;
   bool _isFlashOn = false;
-  
+
   // AR space tracking
   Offset? _detectedPlaneCenter; // Screen position of detected plane center
   double _planeDistance = 1.0; // Distance in meters from camera to plane
@@ -64,16 +65,17 @@ class _ARViewState extends State<ARView> with TickerProviderStateMixin {
     _gridOpacityAnimation = Tween<double>(begin: 0.2, end: 0.0).animate(
       CurvedAnimation(parent: _gridAnimationController, curve: Curves.easeOut),
     );
-    
+
     // Pulse animation for placed objects
     _pulseAnimationController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
     )..repeat(reverse: true);
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
-      CurvedAnimation(parent: _pulseAnimationController, curve: Curves.easeInOut),
+      CurvedAnimation(
+          parent: _pulseAnimationController, curve: Curves.easeInOut),
     );
-    
+
     _initializeAR();
   }
 
@@ -81,12 +83,12 @@ class _ARViewState extends State<ARView> with TickerProviderStateMixin {
     try {
       // Initialize camera
       await _initializeCamera();
-      
+
       if (mounted) {
         setState(() {
           _isReady = true;
         });
-        
+
         if (widget.onARViewCreated != null) {
           widget.onARViewCreated!({
             'platform': Platform.isAndroid ? 'android' : 'ios',
@@ -94,7 +96,7 @@ class _ARViewState extends State<ARView> with TickerProviderStateMixin {
             'camera': _isCameraInitialized,
           }, toggleFlash);
         }
-        
+
         // Simulate surface detection after a delay
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted) {
@@ -108,7 +110,7 @@ class _ARViewState extends State<ARView> with TickerProviderStateMixin {
               _planeDistance = 1.5; // meters
             });
             _gridAnimationController.forward();
-            
+
             // Convert widget objects to AR 3D objects
             _updateARObjects();
           }
@@ -124,7 +126,7 @@ class _ARViewState extends State<ARView> with TickerProviderStateMixin {
       }
     }
   }
-  
+
   Future<void> _initializeCamera() async {
     try {
       _cameras = await availableCameras();
@@ -138,22 +140,22 @@ class _ARViewState extends State<ARView> with TickerProviderStateMixin {
         }
         return;
       }
-      
+
       // Use the back camera for AR
       final backCamera = _cameras!.firstWhere(
         (camera) => camera.lensDirection == CameraLensDirection.back,
         orElse: () => _cameras!.first,
       );
-      
+
       _cameraController = CameraController(
         backCamera,
         ResolutionPreset.high,
         enableAudio: false,
         imageFormatGroup: ImageFormatGroup.jpeg,
       );
-      
+
       await _cameraController!.initialize();
-      
+
       if (mounted) {
         setState(() {
           _isCameraInitialized = true;
@@ -186,31 +188,31 @@ class _ARViewState extends State<ARView> with TickerProviderStateMixin {
     _pulseAnimationController.dispose();
     super.dispose();
   }
-  
+
   /// Convert widget objects to AR 3D space objects
   void _updateARObjects() {
     if (widget.placedObjects == null) {
       _arObjects.clear();
       return;
     }
-    
+
     _arObjects.clear();
-    
+
     for (int i = 0; i < widget.placedObjects!.length; i++) {
       final obj = widget.placedObjects![i];
-      
+
       // Place objects in a grid on the detected plane
       // Grid spacing in meters (real world units)
       const gridSpacing = 0.4; // 40cm between objects
       final col = i % 3; // 3 columns
       final row = i ~/ 3; // Multiple rows
-      
+
       // Calculate world position in meters relative to detected plane
       // Objects are placed on the plane at _planeDistance meters from camera
       final worldX = (col - 1) * gridSpacing; // -0.4, 0, 0.4 meters
       final worldY = -row * gridSpacing; // Rows going down
       final worldZ = _planeDistance; // All objects on detected plane
-      
+
       _arObjects.add(ARObject3D(
         id: obj['id'] ?? 'obj_$i',
         worldPosition: Vector3(worldX, worldY, worldZ),
@@ -218,7 +220,7 @@ class _ARViewState extends State<ARView> with TickerProviderStateMixin {
         metadata: obj,
       ));
     }
-    
+
     if (mounted) {
       setState(() {}); // Trigger repaint
     }
@@ -251,7 +253,10 @@ class _ARViewState extends State<ARView> with TickerProviderStateMixin {
               Text(
                 _errorMessage,
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.7),
                   fontSize: 14,
                 ),
                 textAlign: TextAlign.center,
@@ -283,7 +288,10 @@ class _ARViewState extends State<ARView> with TickerProviderStateMixin {
               Text(
                 Platform.isAndroid ? 'Using ARCore' : 'Using ARKit',
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.7),
                   fontSize: 14,
                 ),
               ),
@@ -345,7 +353,7 @@ class _ARViewState extends State<ARView> with TickerProviderStateMixin {
                 ),
               ),
             ),
-          
+
           // AR Camera overlay with grid
           if (widget.showPlanes && !_surfaceDetected)
             AnimatedBuilder(
@@ -357,26 +365,27 @@ class _ARViewState extends State<ARView> with TickerProviderStateMixin {
                 );
               },
             ),
-          
+
           // Grid fade out animation when surface is detected
           if (widget.showPlanes && _surfaceDetected)
             AnimatedBuilder(
               animation: _gridOpacityAnimation,
               builder: (context, child) {
                 return CustomPaint(
-                  painter: ARPlanesPainter(opacity: _gridOpacityAnimation.value),
+                  painter:
+                      ARPlanesPainter(opacity: _gridOpacityAnimation.value),
                   child: Container(),
                 );
               },
             ),
-          
+
           // Feature points visualization (tracking points)
           if (widget.showFeaturePoints && _surfaceDetected)
             CustomPaint(
               painter: ARFeaturePointsPainter(),
               child: Container(),
             ),
-          
+
           // Full-screen gesture detector for AR interactions
           Positioned.fill(
             child: GestureDetector(
@@ -388,7 +397,7 @@ class _ARViewState extends State<ARView> with TickerProviderStateMixin {
               child: Container(color: Colors.transparent),
             ),
           ),
-          
+
           // Center crosshair for targeting
           Center(
             child: IgnorePointer(
@@ -396,7 +405,8 @@ class _ARViewState extends State<ARView> with TickerProviderStateMixin {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.7), width: 2),
+                  border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.7), width: 2),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
@@ -412,7 +422,7 @@ class _ARViewState extends State<ARView> with TickerProviderStateMixin {
               ),
             ),
           ),
-          
+
           // Placed objects visualization - render in AR space, not as UI overlays
           if (widget.placedObjects != null && widget.placedObjects!.isNotEmpty)
             IgnorePointer(
@@ -424,17 +434,17 @@ class _ARViewState extends State<ARView> with TickerProviderStateMixin {
                 child: Container(),
               ),
             ),
-          
+
           // Debug info overlay
           if (widget.debugInfo == true)
             Positioned(
               bottom: 20,
               left: 20,
               child: Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(KubusSpacing.sm),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.7),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(KubusRadius.sm),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -481,11 +491,11 @@ class _ARViewState extends State<ARView> with TickerProviderStateMixin {
       ),
     );
   }
-  
+
   /// Handle tap on AR space to detect object interaction
   void _handleARTap(Offset position) {
     if (widget.placedObjects == null || widget.placedObjects!.isEmpty) return;
-    
+
     // Simple hit detection - check if tap is near any object
     for (final obj in widget.placedObjects!) {
       if (widget.onObjectTapped != null) {
@@ -494,20 +504,20 @@ class _ARViewState extends State<ARView> with TickerProviderStateMixin {
       }
     }
   }
-  
+
   /// Toggle camera flash on/off
   Future<void> toggleFlash() async {
     if (_cameraController == null || !_isCameraInitialized) return;
-    
+
     try {
       final newFlashMode = _isFlashOn ? FlashMode.off : FlashMode.torch;
       await _cameraController!.setFlashMode(newFlashMode);
-      
+
       if (mounted) {
         setState(() {
           _isFlashOn = !_isFlashOn;
         });
-        
+
         // Notify parent widget about flash state change
         if (widget.onFlashToggle != null) {
           widget.onFlashToggle!(_isFlashOn);
@@ -517,7 +527,7 @@ class _ARViewState extends State<ARView> with TickerProviderStateMixin {
       debugPrint('Flash toggle error: $e');
     }
   }
-  
+
   /// Get current flash state
   bool get isFlashOn => _isFlashOn;
 }
@@ -525,9 +535,9 @@ class _ARViewState extends State<ARView> with TickerProviderStateMixin {
 /// Custom painter for AR planes visualization
 class ARPlanesPainter extends CustomPainter {
   final double opacity;
-  
+
   ARPlanesPainter({this.opacity = 0.2});
-  
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
@@ -544,13 +554,13 @@ class ARPlanesPainter extends CustomPainter {
     const gridSize = 60.0;
     final centerX = size.width / 2;
     final centerY = size.height / 2;
-    
+
     for (double x = 0; x < size.width; x += gridSize) {
       // Make lines near center more prominent
       final distanceFromCenter = (x - centerX).abs() / centerX;
       final lineOpacity = opacity * (1.5 - distanceFromCenter * 0.5);
       paint.color = Colors.cyan.withValues(alpha: lineOpacity.clamp(0.0, 1.0));
-      
+
       canvas.drawLine(
         Offset(x, 0),
         Offset(x, size.height),
@@ -562,7 +572,7 @@ class ARPlanesPainter extends CustomPainter {
       final distanceFromCenter = (y - centerY).abs() / centerY;
       final lineOpacity = opacity * (1.5 - distanceFromCenter * 0.5);
       paint.color = Colors.cyan.withValues(alpha: lineOpacity.clamp(0.0, 1.0));
-      
+
       canvas.drawLine(
         Offset(0, y),
         Offset(size.width, y),
@@ -580,9 +590,9 @@ class ARPlanesPainter extends CustomPainter {
 /// Custom painter for AR feature points (tracking points)
 class ARFeaturePointsPainter extends CustomPainter {
   static List<Offset>? _cachedPoints;
-  
+
   ARFeaturePointsPainter();
-  
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
@@ -602,7 +612,7 @@ class ARFeaturePointsPainter extends CustomPainter {
         _cachedPoints!.add(Offset(x, y));
       }
     }
-    
+
     // Draw cached feature points (they stay in same position)
     for (final point in _cachedPoints!) {
       canvas.drawCircle(point, 2.0, paint);
@@ -613,7 +623,7 @@ class ARFeaturePointsPainter extends CustomPainter {
   bool shouldRepaint(covariant ARFeaturePointsPainter oldDelegate) {
     return false; // Points are static, no need to repaint
   }
-  
+
   /// Reset cached points (call when surface detection resets)
   static void resetPoints() {
     _cachedPoints = null;
@@ -624,67 +634,70 @@ class ARFeaturePointsPainter extends CustomPainter {
 class ARObjectsPainter extends CustomPainter {
   final List<Map<String, dynamic>> objects;
   final Animation<double> animation;
-  
+
   // Camera/AR space parameters
   static const Vector3 _cameraPosition = Vector3(0, 0, 0); // Camera at origin
   static const double _focalLength = 800.0; // Simulated focal length in pixels
   static const double _planeDepth = 1.5; // Detected plane is 1.5 meters away
-  
+
   ARObjectsPainter({
     required this.objects,
     required this.animation,
   }) : super(repaint: animation);
-  
+
   @override
   void paint(Canvas canvas, Size size) {
     // Convert widget objects to 3D AR objects with world coordinates
     final arObjects = _convertToARObjects(objects, size);
-    
+
     // Sort by distance (far to near) for proper rendering order
-    arObjects.sort((a, b) => 
-      b.worldPosition.z.compareTo(a.worldPosition.z)
-    );
-    
+    arObjects.sort((a, b) => b.worldPosition.z.compareTo(a.worldPosition.z));
+
     // Render each object
     for (final arObject in arObjects) {
       // Project 3D position to 2D screen
-      final screenPos = arObject.projectToScreen(size, _cameraPosition, _focalLength);
-      
+      final screenPos =
+          arObject.projectToScreen(size, _cameraPosition, _focalLength);
+
       // Calculate size based on distance
       final baseSize = 100.0; // Increased base size for better visibility
-      final apparentSize = arObject.getApparentSize(_cameraPosition, baseSize) * animation.value;
-      
+      final apparentSize =
+          arObject.getApparentSize(_cameraPosition, baseSize) * animation.value;
+
       // Skip only if object is behind camera or way too small
       if (arObject.worldPosition.z <= 0.1 || apparentSize < 5) continue;
-      
+
       // Clamp to reasonable size range
       final clampedSize = apparentSize.clamp(40.0, 150.0);
-      
+
       // Draw object with shadow for depth
-      _drawObjectShadow(canvas, screenPos.dx, screenPos.dy + 10, clampedSize, arObject.worldPosition.z);
-      _drawObject(canvas, screenPos.dx, screenPos.dy, clampedSize, arObject.metadata, animation.value);
+      _drawObjectShadow(canvas, screenPos.dx, screenPos.dy + 10, clampedSize,
+          arObject.worldPosition.z);
+      _drawObject(canvas, screenPos.dx, screenPos.dy, clampedSize,
+          arObject.metadata, animation.value);
     }
   }
-  
+
   /// Convert 2D widget objects to 3D AR objects with world coordinates
-  List<ARObject3D> _convertToARObjects(List<Map<String, dynamic>> widgetObjects, Size screenSize) {
+  List<ARObject3D> _convertToARObjects(
+      List<Map<String, dynamic>> widgetObjects, Size screenSize) {
     final arObjects = <ARObject3D>[];
-    
+
     for (int i = 0; i < widgetObjects.length; i++) {
       final obj = widgetObjects[i];
-      
+
       // Place objects in a grid on the detected plane
       // Grid spacing in meters (real world units)
       const gridSpacing = 0.4; // 40cm between objects
       final col = i % 3; // 3 columns
       final row = i ~/ 3; // Multiple rows
-      
+
       // Calculate world position in meters
       // Objects are placed on a plane at _planeDepth meters from camera
       final worldX = (col - 1) * gridSpacing; // -0.4, 0, 0.4 meters
       final worldY = -row * gridSpacing; // Down from plane center
       final worldZ = _planeDepth; // All objects on same depth plane
-      
+
       arObjects.add(ARObject3D(
         id: obj['id'] ?? 'obj_$i',
         worldPosition: Vector3(worldX, worldY, worldZ),
@@ -692,15 +705,16 @@ class ARObjectsPainter extends CustomPainter {
         metadata: obj,
       ));
     }
-    
+
     return arObjects;
   }
-  
-  void _drawObjectShadow(Canvas canvas, double x, double y, double size, double depth) {
+
+  void _drawObjectShadow(
+      Canvas canvas, double x, double y, double size, double depth) {
     final shadowPaint = Paint()
       ..color = Colors.black.withValues(alpha: 0.3 * depth)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
-    
+
     canvas.drawOval(
       Rect.fromCenter(
         center: Offset(x, y),
@@ -710,54 +724,55 @@ class ARObjectsPainter extends CustomPainter {
       shadowPaint,
     );
   }
-  
-  void _drawObject(Canvas canvas, double x, double y, double size, Map<String, dynamic> obj, double scale) {
+
+  void _drawObject(Canvas canvas, double x, double y, double size,
+      Map<String, dynamic> obj, double scale) {
     // Draw outer glow for better visibility
     final glowPaint = Paint()
       ..color = Colors.cyan.withValues(alpha: 0.3)
       ..style = PaintingStyle.fill
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 15);
-    
+
     canvas.drawCircle(Offset(x, y), size * 0.7, glowPaint);
-    
+
     // Draw object container with gradient effect
     final containerPaint = Paint()
       ..color = Colors.blue.withValues(alpha: 0.7)
       ..style = PaintingStyle.fill;
-    
+
     final borderPaint = Paint()
       ..color = Colors.cyan
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3.0;
-    
+
     final rect = RRect.fromRectAndRadius(
       Rect.fromCenter(center: Offset(x, y), width: size, height: size),
-      const Radius.circular(12),
+      const Radius.circular(KubusRadius.md),
     );
-    
+
     // Draw with effects
     canvas.drawRRect(rect, containerPaint);
     canvas.drawRRect(rect, borderPaint);
-    
+
     // Draw AR icon in center
     final iconPaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.fill;
-    
+
     // Draw a 3D cube icon
     final iconSize = size * 0.4;
     final cubeCenter = Offset(x, y);
-    
+
     // Draw simple 3D cube representation
     final cubePath = Path()
-      ..moveTo(cubeCenter.dx - iconSize/2, cubeCenter.dy)
-      ..lineTo(cubeCenter.dx, cubeCenter.dy - iconSize/2)
-      ..lineTo(cubeCenter.dx + iconSize/2, cubeCenter.dy)
-      ..lineTo(cubeCenter.dx, cubeCenter.dy + iconSize/2)
+      ..moveTo(cubeCenter.dx - iconSize / 2, cubeCenter.dy)
+      ..lineTo(cubeCenter.dx, cubeCenter.dy - iconSize / 2)
+      ..lineTo(cubeCenter.dx + iconSize / 2, cubeCenter.dy)
+      ..lineTo(cubeCenter.dx, cubeCenter.dy + iconSize / 2)
       ..close();
-    
+
     canvas.drawPath(cubePath, iconPaint);
-    
+
     // Draw model type text
     final textPainter = TextPainter(
       text: TextSpan(
@@ -789,32 +804,33 @@ class ARObject3D {
   final Vector3 worldPosition; // Position in meters from origin
   final double scale;
   final Map<String, dynamic> metadata;
-  
+
   ARObject3D({
     required this.id,
     required this.worldPosition,
     this.scale = 1.0,
     this.metadata = const {},
   });
-  
+
   /// Project 3D world position to 2D screen coordinates
-  Offset projectToScreen(Size screenSize, Vector3 cameraPosition, double focalLength) {
+  Offset projectToScreen(
+      Size screenSize, Vector3 cameraPosition, double focalLength) {
     // Simple perspective projection
     // In a real AR app, this would use the device's camera intrinsics
     final relativeX = worldPosition.x - cameraPosition.x;
     final relativeY = worldPosition.y - cameraPosition.y;
     final relativeZ = worldPosition.z - cameraPosition.z;
-    
+
     // Avoid division by zero
     final z = relativeZ == 0 ? 0.001 : relativeZ;
-    
+
     // Perspective projection formula
     final screenX = screenSize.width / 2 + (relativeX * focalLength / z);
     final screenY = screenSize.height / 2 - (relativeY * focalLength / z);
-    
+
     return Offset(screenX, screenY);
   }
-  
+
   /// Get apparent size based on distance from camera
   double getApparentSize(Vector3 cameraPosition, double baseSize) {
     final distance = _distanceToCamera(cameraPosition);
@@ -822,7 +838,7 @@ class ARObject3D {
     // Use simpler scaling for better visibility
     return baseSize / (distance * 0.5);
   }
-  
+
   double _distanceToCamera(Vector3 cameraPosition) {
     final dx = worldPosition.x - cameraPosition.x;
     final dy = worldPosition.y - cameraPosition.y;

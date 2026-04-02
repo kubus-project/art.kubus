@@ -331,7 +331,7 @@ class _DesktopArtworkDetailScreenState
 
     if (unique.isEmpty) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         child: AspectRatio(
           aspectRatio: 16 / 9,
           child: Container(
@@ -389,10 +389,10 @@ class _DesktopArtworkDetailScreenState
     return Padding(
       padding: const EdgeInsets.only(top: DetailSpacing.md),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
         decoration: BoxDecoration(
           color: scheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(KubusRadius.md),
           border: Border.all(color: scheme.outline.withValues(alpha: 0.18)),
         ),
         child: Column(
@@ -401,12 +401,14 @@ class _DesktopArtworkDetailScreenState
             Row(
               children: [
                 Icon(Icons.view_in_ar_rounded, color: color),
-                const SizedBox(width: 8),
+                const SizedBox(width: KubusSpacing.sm),
                 Text('AR experience', style: KubusTextStyles.sectionTitle),
                 const Spacer(),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: KubusSpacing.md,
+                    vertical: KubusSpacing.xs,
+                  ),
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(999),
@@ -422,14 +424,14 @@ class _DesktopArtworkDetailScreenState
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: KubusSpacing.sm),
             Text(
               'Print or share a marker so people can scan and unlock AR.',
               style: KubusTextStyles.sectionSubtitle.copyWith(
                 color: scheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xxs),
             if (ready)
               OutlinedButton.icon(
                 onPressed: () => Navigator.pushNamed(context, '/ar'),
@@ -543,7 +545,7 @@ class _DesktopArtworkDetailScreenState
     return Padding(
       padding: const EdgeInsets.only(top: DetailSpacing.lg),
       child: DetailCard(
-        padding: const EdgeInsets.all(DetailSpacing.md),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         backgroundColor: scheme.surfaceContainerHighest.withValues(alpha: 0.25),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1027,7 +1029,7 @@ class _DesktopArtworkDetailScreenState
     final scheme = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1038,7 +1040,7 @@ class _DesktopArtworkDetailScreenState
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
             OutlinedButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
@@ -1261,10 +1263,10 @@ class _DesktopArtworkDetailScreenState
     return Padding(
       padding: EdgeInsets.only(left: depth * 48.0),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
         decoration: BoxDecoration(
           color: scheme.surfaceContainerHighest.withValues(alpha: 0.3),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(KubusRadius.md),
           border: Border.all(color: scheme.outline.withValues(alpha: 0.12)),
         ),
         child: Row(
@@ -1275,7 +1277,7 @@ class _DesktopArtworkDetailScreenState
               wallet: comment.userId,
               radius: isReply ? 14 : 18,
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1291,7 +1293,7 @@ class _DesktopArtworkDetailScreenState
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: KubusSpacing.sm),
                       Text(
                         comment.timeAgo,
                         style: KubusTextStyles.navMetaLabel.copyWith(
@@ -1448,20 +1450,22 @@ class _DesktopArtworkDetailScreenState
                   fillColor:
                       scheme.surfaceContainerHighest.withValues(alpha: 0.35),
                   border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(KubusRadius.md)),
                 ),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
             ElevatedButton(
               onPressed: isSubmitting
                   ? null
                   : () => _submitComment(artwork, provider, isSignedIn),
               style: ElevatedButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.sm + KubusSpacing.xs,
+                  vertical: KubusSpacing.sm + KubusSpacing.xs,
+                ),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(KubusRadius.md)),
               ),
               child: isSubmitting
                   ? const SizedBox(

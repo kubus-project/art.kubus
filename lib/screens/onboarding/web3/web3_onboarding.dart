@@ -332,7 +332,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                       const SizedBox(height: KubusSpacing.xl),
                       LiquidGlassPanel(
                         padding: const EdgeInsets.all(KubusSpacing.lg),
-                        borderRadius: BorderRadius.circular(24),
+                        borderRadius: BorderRadius.circular(KubusRadius.xl),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [

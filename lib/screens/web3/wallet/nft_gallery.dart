@@ -56,7 +56,7 @@ class _NFTGalleryState extends State<NFTGallery> {
         title: Text(
           l10n.walletHomeActionNfts,
           style: KubusTypography.inter(
-            fontSize: 24,
+            fontSize: KubusHeaderMetrics.screenTitle,
             fontWeight: FontWeight.bold,
             color: scheme.onSurface,
           ),
@@ -87,14 +87,15 @@ class _NFTGalleryState extends State<NFTGallery> {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0, vertical: 24.0),
+                  horizontal: KubusSpacing.md,
+                  vertical: KubusSpacing.lg,
+                ),
                 child: SizedBox(
                   width: double.infinity,
                   child: EmptyStateCard(
                     icon: Icons.account_balance_wallet,
                     title: 'Connect your wallet',
-                    description:
-                        'Connect a wallet to view your collectibles.',
+                    description: 'Connect a wallet to view your collectibles.',
                     showAction: true,
                     actionLabel: 'Connect Wallet',
                     onAction: () =>
@@ -117,7 +118,9 @@ class _NFTGalleryState extends State<NFTGallery> {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0, vertical: 24.0),
+                  horizontal: KubusSpacing.md,
+                  vertical: KubusSpacing.lg,
+                ),
                 child: SizedBox(
                   width: double.infinity,
                   child: EmptyStateCard(
@@ -189,7 +192,7 @@ class _NFTGalleryState extends State<NFTGallery> {
     return Container(
       decoration: BoxDecoration(
         color: scheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(color: scheme.outline.withValues(alpha: 0.25)),
       ),
       child: Column(
@@ -198,8 +201,8 @@ class _NFTGalleryState extends State<NFTGallery> {
           Expanded(
             flex: 3,
             child: ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(KubusRadius.lg)),
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -217,10 +220,12 @@ class _NFTGalleryState extends State<NFTGallery> {
                     right: 12,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                        horizontal: KubusSpacing.sm,
+                        vertical: KubusSpacing.xxs * 2,
+                      ),
                       decoration: BoxDecoration(
                         color: scheme.surface.withValues(alpha: 0.85),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(KubusRadius.sm),
                         border: Border.all(
                             color: scheme.outline.withValues(alpha: 0.2)),
                       ),
@@ -241,21 +246,27 @@ class _NFTGalleryState extends State<NFTGallery> {
           Expanded(
             flex: 2,
             child: Padding(
-              padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+              padding: EdgeInsets.all(
+                isSmallScreen
+                    ? KubusSpacing.md - KubusSpacing.xxs
+                    : KubusSpacing.md,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
                     style: KubusTypography.inter(
-                      fontSize: isSmallScreen ? 13 : 15,
+                      fontSize: isSmallScreen
+                          ? KubusHeaderMetrics.sectionSubtitle
+                          : KubusHeaderMetrics.sectionTitle,
                       fontWeight: FontWeight.w700,
                       color: scheme.onSurface,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: KubusSpacing.xs + KubusSpacing.xxs),
                   Row(
                     children: [
                       Container(
@@ -328,4 +339,3 @@ class _NFTGalleryState extends State<NFTGallery> {
     return '${value.substring(0, 6)}…${value.substring(value.length - 6)}';
   }
 }
-

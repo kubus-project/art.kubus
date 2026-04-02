@@ -364,17 +364,19 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           height: MediaQuery.of(context).size.height * 0.6,
           decoration: BoxDecoration(
             color: theme.colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(KubusRadius.xl),
+            ),
           ),
           child: Column(
             children: [
               Container(
                   width: 40,
                   height: 4,
-                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  margin: const EdgeInsets.symmetric(vertical: KubusSpacing.md),
                   decoration: BoxDecoration(
                       color: theme.colorScheme.outline,
-                      borderRadius: BorderRadius.circular(2))),
+                      borderRadius: BorderRadius.circular(KubusRadius.xs))),
               Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
@@ -434,7 +436,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       itemBuilder: (context, index) {
                         final user = likes[index];
                         final subtitleParts = <String>[];
-                        if (user.username != null && user.username!.isNotEmpty) {
+                        if (user.username != null &&
+                            user.username!.isNotEmpty) {
                           subtitleParts.add('@${user.username}');
                         }
                         if (user.walletAddress != null &&
@@ -495,22 +498,26 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           height: MediaQuery.of(context).size.height * 0.6,
           decoration: BoxDecoration(
             color: theme.colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(KubusRadius.xl),
+            ),
           ),
           child: Column(
             children: [
               Container(
                 width: 40,
                 height: 4,
-                margin: const EdgeInsets.symmetric(vertical: 12),
+                margin: const EdgeInsets.symmetric(vertical: KubusSpacing.md),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.outline,
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(KubusRadius.xs),
                 ),
               ),
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.lg,
+                  vertical: KubusSpacing.sm,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -641,7 +648,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         height: MediaQuery.of(context).size.height * 0.7,
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(KubusRadius.xl),
+          ),
         ),
         child: Column(
           children: [
@@ -947,8 +956,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
               height: MediaQuery.of(context).size.height * 0.6,
               decoration: BoxDecoration(
                 color: theme.colorScheme.surface,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(KubusRadius.xl),
+                ),
               ),
               child: Column(
                 children: [
@@ -962,8 +972,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     ),
                   ),
                   Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: KubusSpacing.lg,
+                      vertical: KubusSpacing.sm,
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -995,7 +1007,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         decoration: InputDecoration(
                           hintText: l10n.communityComposerTextHint,
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(KubusRadius.md),
                           ),
                         ),
                       ),
@@ -1006,7 +1018,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(KubusRadius.lg),
                         onTap: () async {
                           final selection = await CommunitySubjectPicker.pick(
                             sheetContext,
@@ -1032,13 +1044,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           });
                         },
                         child: Container(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(KubusSpacing.md),
                           decoration: BoxDecoration(
                             color: hasSubject
                                 ? theme.colorScheme.primaryContainer
                                     .withValues(alpha: 0.2)
                                 : theme.colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(KubusRadius.lg),
                             border: Border.all(
                               color: hasSubject
                                   ? theme.colorScheme.primary
@@ -1052,7 +1064,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               if (preview?.imageUrl != null &&
                                   preview!.imageUrl!.isNotEmpty)
                                 ClipRRect(
-                                  borderRadius: BorderRadius.circular(10),
+                                  borderRadius:
+                                      BorderRadius.circular(KubusRadius.sm),
                                   child: Image.network(
                                     MediaUrlResolver.resolveDisplayUrl(
                                             preview.imageUrl) ??
@@ -1383,20 +1396,24 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           height: MediaQuery.of(context).size.height * 0.75,
           decoration: BoxDecoration(
             color: theme.colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(KubusRadius.xl),
+            ),
           ),
           child: Column(
             children: [
               Container(
                   width: 40,
                   height: 4,
-                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  margin: const EdgeInsets.symmetric(vertical: KubusSpacing.md),
                   decoration: BoxDecoration(
                       color: theme.colorScheme.outline,
-                      borderRadius: BorderRadius.circular(2))),
+                      borderRadius: BorderRadius.circular(KubusRadius.xs))),
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.lg,
+                  vertical: KubusSpacing.sm,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -1481,7 +1498,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           hintText: AppLocalizations.of(context)!
                               .postDetailRepostThoughtsHint,
                           border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12)),
+                              borderRadius:
+                                  BorderRadius.circular(KubusRadius.md)),
                           filled: true,
                           fillColor: theme.colorScheme.primaryContainer,
                         ),
@@ -1495,14 +1513,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             color: theme.colorScheme.onSurface
                                 .withValues(alpha: 0.7)),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: KubusSpacing.sm),
                       Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(KubusSpacing.md),
                         decoration: BoxDecoration(
                           border: Border.all(
                               color: theme.colorScheme.outline
                                   .withValues(alpha: 0.3)),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(KubusRadius.md),
                           color: theme.colorScheme.surface,
                         ),
                         child: Column(
@@ -1515,7 +1533,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                     avatarUrl: _post!.authorAvatar,
                                     radius: 16,
                                     enableProfileNavigation: false),
-                                const SizedBox(width: 8),
+                                const SizedBox(width: KubusSpacing.sm),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
@@ -1559,7 +1577,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                 _post!.imageUrl!.isNotEmpty) ...[
                               const SizedBox(height: 8),
                               ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius:
+                                    BorderRadius.circular(KubusRadius.sm),
                                 child: Image.network(
                                   MediaUrlResolver.resolveDisplayUrl(
                                           _post!.imageUrl) ??
@@ -1629,7 +1648,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           : _error != null
               ? Center(child: Text(_error!, style: KubusTypography.inter()))
               : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(KubusSpacing.md),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1806,7 +1825,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                                       content: next,
                                                     );
                                                     if (!mounted) return;
-                                                    if (!dialogContext.mounted) {
+                                                    if (!dialogContext
+                                                        .mounted) {
                                                       return;
                                                     }
                                                     Navigator.of(dialogContext)
@@ -2194,7 +2214,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               decoration: InputDecoration(
                                 hintText: l10n.postDetailWriteCommentHint,
                                 border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8)),
+                                    borderRadius:
+                                        BorderRadius.circular(KubusRadius.sm)),
                                 isDense: true,
                               ),
                             ),

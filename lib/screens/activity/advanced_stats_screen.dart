@@ -19,23 +19,22 @@ import '../../widgets/charts/stats_interactive_line_chart.dart';
 import '../../widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../utils/design_tokens.dart';
- 
 
 class AdvancedStatsScreen extends StatefulWidget {
   final String statType;
-  
+
   const AdvancedStatsScreen({super.key, required this.statType});
 
   @override
   State<AdvancedStatsScreen> createState() => _AdvancedStatsScreenState();
 }
 
-class _AdvancedStatsScreenState extends State<AdvancedStatsScreen> 
+class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
     with TickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   String _selectedTimeframe = '7 days';
-  
+
   @override
   void initState() {
     super.initState();
@@ -43,7 +42,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    
+
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
@@ -51,7 +50,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
       parent: _animationController,
       curve: Curves.easeInOut,
     ));
-    
+
     _animationController.forward();
   }
 
@@ -81,7 +80,8 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
 
     if (bucket == 'hour') {
       final endBucket = startOfHourUtc(now);
-      final startBucket = endBucket.subtract(const Duration(hours: 1) * (expected - 1));
+      final startBucket =
+          endBucket.subtract(const Duration(hours: 1) * (expected - 1));
       return List<String>.generate(
         expected,
         (i) {
@@ -94,7 +94,8 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
 
     if (bucket == 'week') {
       final endBucket = startOfWeekUtc(now);
-      final startBucket = endBucket.subtract(const Duration(days: 7) * (expected - 1));
+      final startBucket =
+          endBucket.subtract(const Duration(days: 7) * (expected - 1));
       return List<String>.generate(
         expected,
         (i) {
@@ -107,14 +108,23 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
 
     // Default: daily buckets
     final endBucket = startOfDayUtc(now);
-    final startBucket = endBucket.subtract(const Duration(days: 1) * (expected - 1));
+    final startBucket =
+        endBucket.subtract(const Duration(days: 1) * (expected - 1));
     return List<String>.generate(
       expected,
       (i) {
         final t = startBucket.add(const Duration(days: 1) * i);
         if (timeframe == '7d') {
           // Shorter labels when space is tight.
-          return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][t.weekday - 1];
+          return [
+            'Mon',
+            'Tue',
+            'Wed',
+            'Thu',
+            'Fri',
+            'Sat',
+            'Sun'
+          ][t.weekday - 1];
         }
         return '${t.month}/${t.day}';
       },
@@ -133,8 +143,11 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
     final profileProvider = context.watch<ProfileProvider>();
     final web3Provider = context.watch<Web3Provider>();
     final statsProvider = context.watch<StatsProvider>();
-    final wallet = (profileProvider.currentUser?.walletAddress ?? web3Provider.walletAddress).trim();
-    final stats = _buildStatsContext(statsProvider: statsProvider, walletAddress: wallet);
+    final wallet = (profileProvider.currentUser?.walletAddress ??
+            web3Provider.walletAddress)
+        .trim();
+    final stats =
+        _buildStatsContext(statsProvider: statsProvider, walletAddress: wallet);
 
     return AnimatedGradientBackground(
       child: Scaffold(
@@ -164,15 +177,15 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildTimeframeSelectorCard(),
-                const SizedBox(height: 20),
+                const SizedBox(height: KubusSpacing.lg),
                 _buildAdvancedChart(stats),
-                const SizedBox(height: 20),
+                const SizedBox(height: KubusSpacing.lg),
                 _buildDetailedMetrics(stats),
-                const SizedBox(height: 20),
+                const SizedBox(height: KubusSpacing.lg),
                 _buildComparativeAnalysis(stats),
-                const SizedBox(height: 20),
+                const SizedBox(height: KubusSpacing.lg),
                 _buildInsightsCard(stats),
-                const SizedBox(height: 20),
+                const SizedBox(height: KubusSpacing.lg),
                 _buildGoalsCard(stats),
               ],
             ),
@@ -184,10 +197,10 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
 
   Widget _buildTimeframeSelectorCard() {
     final timeframes = ['7 days', '30 days', '3 months', '1 year', 'All time'];
-    
+
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -198,9 +211,9 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                 fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: KubusSpacing.md),
             Wrap(
-              spacing: 8,
+              spacing: KubusSpacing.sm,
               children: timeframes.map((timeframe) {
                 final isSelected = _selectedTimeframe == timeframe;
                 return FilterChip(
@@ -211,7 +224,8 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                       _selectedTimeframe = timeframe;
                     });
                   },
-                  selectedColor: AppColorUtils.amberAccent.withValues(alpha: 0.2),
+                  selectedColor:
+                      AppColorUtils.amberAccent.withValues(alpha: 0.2),
                 );
               }).toList(),
             ),
@@ -241,7 +255,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
         showAction: false,
       );
     }
-    
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(KubusSpacing.lg),
@@ -267,7 +281,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: KubusSpacing.lg),
             SizedBox(
               height: 250,
               child: stats.isLoading && stats.chartData.isEmpty
@@ -301,7 +315,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                           gridColor: scheme.onSurface.withValues(alpha: 0.12),
                         ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: KubusSpacing.md),
             _buildChartLegend(stats),
           ],
         ),
@@ -313,7 +327,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
     final currentValue = stats.currentValueLabel;
     final change = stats.changePct;
     final isPositive = (change ?? 0) >= 0;
-    
+
     return Row(
       children: [
         Expanded(
@@ -324,7 +338,10 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                 'Current Value',
                 style: KubusTypography.inter(
                   fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
                 ),
               ),
               Text(
@@ -345,7 +362,10 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                 'Change ($_selectedTimeframe)',
                 style: KubusTypography.inter(
                   fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
                 ),
               ),
               Row(
@@ -353,9 +373,14 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                   Icon(
                     change == null
                         ? Icons.trending_flat
-                        : (isPositive ? Icons.trending_up : Icons.trending_down),
+                        : (isPositive
+                            ? Icons.trending_up
+                            : Icons.trending_down),
                     color: change == null
-                        ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)
+                        ? Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.5)
                         : (isPositive
                             ? KubusColorRoles.of(context).positiveAction
                             : KubusColorRoles.of(context).negativeAction),
@@ -368,7 +393,10 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: change == null
-                          ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)
+                          ? Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.7)
                           : (isPositive
                               ? KubusColorRoles.of(context).positiveAction
                               : KubusColorRoles.of(context).negativeAction),
@@ -385,10 +413,10 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
 
   Widget _buildDetailedMetrics(_StatsContext stats) {
     final metrics = stats.detailedMetrics;
-    
+
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -399,17 +427,18 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: KubusSpacing.md),
             if (metrics.isEmpty)
               const EmptyStateCard(
                 icon: Icons.analytics_outlined,
                 title: 'Not enough data',
-                description: 'More activity is required to compute detailed metrics.',
+                description:
+                    'More activity is required to compute detailed metrics.',
                 showAction: false,
               )
             else
               ...metrics.map((metric) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.only(bottom: KubusSpacing.md),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -436,7 +465,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
   Widget _buildComparativeAnalysis(_StatsContext stats) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -447,7 +476,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: KubusSpacing.md),
             _buildComparisonItem(
               'vs. Last Period',
               stats.changePctLabel,
@@ -475,7 +504,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
         ? Icons.remove
         : (isPositive ? Icons.arrow_upward : Icons.arrow_downward);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: KubusSpacing.md),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -490,7 +519,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                 color: resolvedColor,
                 size: 16,
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: KubusSpacing.xs),
               Text(
                 value,
                 style: KubusTypography.inter(
@@ -508,10 +537,10 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
 
   Widget _buildInsightsCard(_StatsContext stats) {
     final insights = stats.insights;
-    
+
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -521,7 +550,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                   Icons.lightbulb,
                   color: AppColorUtils.purpleAccent,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: KubusSpacing.sm),
                 Text(
                   'AI Insights',
                   style: KubusTypography.inter(
@@ -531,7 +560,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: KubusSpacing.md),
             if (insights.isEmpty)
               const EmptyStateCard(
                 icon: Icons.lightbulb_outline,
@@ -541,7 +570,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
               )
             else
               ...insights.map((insight) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.only(bottom: KubusSpacing.md),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -554,7 +583,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                             shape: BoxShape.circle,
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: KubusSpacing.md),
                         Expanded(
                           child: Text(
                             insight,
@@ -573,7 +602,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
   Widget _buildGoalsCard(_StatsContext stats) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -584,12 +613,24 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 16),
-            _buildGoalItem('Next Milestone', stats.nextMilestoneLabel, stats.nextMilestoneProgress),
-            const SizedBox(height: 12),
-            _buildGoalItem('Monthly Goal (projection)', stats.monthGoalLabel, stats.monthGoalProgress),
-            const SizedBox(height: 12),
-            _buildGoalItem('Annual Goal (projection)', stats.yearGoalLabel, stats.yearGoalProgress),
+            const SizedBox(height: KubusSpacing.md),
+            _buildGoalItem(
+              'Next Milestone',
+              stats.nextMilestoneLabel,
+              stats.nextMilestoneProgress,
+            ),
+            const SizedBox(height: KubusSpacing.sm),
+            _buildGoalItem(
+              'Monthly Goal (projection)',
+              stats.monthGoalLabel,
+              stats.monthGoalProgress,
+            ),
+            const SizedBox(height: KubusSpacing.sm),
+            _buildGoalItem(
+              'Annual Goal (projection)',
+              stats.yearGoalLabel,
+              stats.yearGoalProgress,
+            ),
           ],
         ),
       ),
@@ -598,7 +639,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
 
   Widget _buildGoalItem(String title, String target, double progress) {
     final scheme = Theme.of(context).colorScheme;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -699,7 +740,8 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
     final scheme = Theme.of(context).colorScheme;
 
     final statsProvider = context.read<StatsProvider>();
-    final metricLabel = widget.statType.trim().isEmpty ? 'Metric' : widget.statType.trim();
+    final metricLabel =
+        widget.statType.trim().isEmpty ? 'Metric' : widget.statType.trim();
     final title = '$metricLabel analytics';
 
     try {
@@ -763,8 +805,9 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
     final messenger = ScaffoldMessenger.of(context);
     final scheme = Theme.of(context).colorScheme;
 
-    final metricLabel =
-        widget.statType.trim().isEmpty ? 'Analytics' : '${widget.statType} Analytics';
+    final metricLabel = widget.statType.trim().isEmpty
+        ? 'Analytics'
+        : '${widget.statType} Analytics';
     final summary = StringBuffer()
       ..writeln(metricLabel)
       ..writeln('Period: ${stats.timeframeLabel}')
@@ -794,7 +837,8 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
     final analyticsEnabled = statsProvider.analyticsEnabled;
 
     final metricRaw = StatsApiService.metricFromUiStatType(widget.statType);
-    final metric = metricRaw.trim().isNotEmpty ? metricRaw.trim() : 'engagement';
+    final metric =
+        metricRaw.trim().isNotEmpty ? metricRaw.trim() : 'engagement';
 
     final timeframe = StatsApiService.timeframeFromLabel(_selectedTimeframe);
     final bucket = timeframe == '24h'
@@ -808,7 +852,9 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
 
     DateTime bucketStartUtc(DateTime dt) {
       final utc = dt.toUtc();
-      if (bucket == 'hour') return DateTime.utc(utc.year, utc.month, utc.day, utc.hour);
+      if (bucket == 'hour') {
+        return DateTime.utc(utc.year, utc.month, utc.day, utc.hour);
+      }
       if (bucket == 'week') {
         final startOfDay = DateTime.utc(utc.year, utc.month, utc.day);
         return startOfDay.subtract(Duration(days: startOfDay.weekday - 1));
@@ -912,16 +958,19 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                       : 30;
 
       final endBucket = bucket == 'hour'
-          ? DateTime.utc(windowEnd.year, windowEnd.month, windowEnd.day, windowEnd.hour)
+          ? DateTime.utc(
+              windowEnd.year, windowEnd.month, windowEnd.day, windowEnd.hour)
           : DateTime.utc(windowEnd.year, windowEnd.month, windowEnd.day);
-      final step = bucket == 'hour' ? const Duration(hours: 1) : const Duration(days: 1);
+      final step =
+          bucket == 'hour' ? const Duration(hours: 1) : const Duration(days: 1);
       final startBucket = endBucket.subtract(step * (expected - 1));
 
       final valuesByBucket = <int, int>{};
       for (final point in (s?.series ?? const <StatsSeriesPoint>[])) {
         final dt = point.t.toUtc();
         final key = bucket == 'hour'
-            ? DateTime.utc(dt.year, dt.month, dt.day, dt.hour).millisecondsSinceEpoch
+            ? DateTime.utc(dt.year, dt.month, dt.day, dt.hour)
+                .millisecondsSinceEpoch
             : DateTime.utc(dt.year, dt.month, dt.day).millisecondsSinceEpoch;
         valuesByBucket[key] = (valuesByBucket[key] ?? 0) + point.v;
       }
@@ -941,8 +990,10 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
       }).toList(growable: false);
     }
 
-    final rawValues = filledValues(series, windowEnd: currentTo.subtract(const Duration(milliseconds: 1)));
-    final prevRawValues = filledValues(prevSeries, windowEnd: prevTo.subtract(const Duration(milliseconds: 1)));
+    final rawValues = filledValues(series,
+        windowEnd: currentTo.subtract(const Duration(milliseconds: 1)));
+    final prevRawValues = filledValues(prevSeries,
+        windowEnd: prevTo.subtract(const Duration(milliseconds: 1)));
     final chartData = cumulative(rawValues);
 
     double sum(List<double> values) => values.fold(0.0, (a, b) => a + b);
@@ -961,7 +1012,8 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
         ? 'N/A'
         : '${changePct >= 0 ? '+' : '-'}${changePct.abs().toStringAsFixed(1)}%';
 
-    final currentValueLabel = _formatValue(chartData.isEmpty ? 0.0 : chartData.last);
+    final currentValueLabel =
+        _formatValue(chartData.isEmpty ? 0.0 : chartData.last);
 
     final detailedMetrics = <Map<String, String>>[];
     if (rawValues.isNotEmpty) {
@@ -987,17 +1039,22 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
     final insights = <String>[];
     if (rawValues.isNotEmpty) {
       final nonZero = rawValues.where((v) => v > 0).length;
-      insights.add('Activity recorded in $nonZero of ${rawValues.length} buckets.');
+      insights
+          .add('Activity recorded in $nonZero of ${rawValues.length} buckets.');
       if (changePct != null && changePct.abs() >= 0.1) {
-        insights.add('This period is ${changePct >= 0 ? 'up' : 'down'} vs the previous period.');
+        insights.add(
+            'This period is ${changePct >= 0 ? 'up' : 'down'} vs the previous period.');
       }
       final peakBucket = rawValues.reduce((a, b) => a > b ? a : b);
       insights.add('Peak bucket value: ${peakBucket.toInt()}.');
     }
 
-    final peakBucket = rawValues.isEmpty ? 0.0 : rawValues.reduce((a, b) => a > b ? a : b);
+    final peakBucket =
+        rawValues.isEmpty ? 0.0 : rawValues.reduce((a, b) => a > b ? a : b);
     final lastBucket = rawValues.isEmpty ? 0.0 : rawValues.last;
-    final vsBestBucketPct = peakBucket > 0 ? ((lastBucket - peakBucket) / peakBucket) * 100.0 : null;
+    final vsBestBucketPct = peakBucket > 0
+        ? ((lastBucket - peakBucket) / peakBucket) * 100.0
+        : null;
     final vsBestBucketLabel = vsBestBucketPct == null
         ? 'N/A'
         : '${vsBestBucketPct >= 0 ? '+' : '-'}${vsBestBucketPct.abs().toStringAsFixed(1)}%';
@@ -1042,13 +1099,16 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
       detailedMetrics: detailedMetrics,
       insights: insights,
       vsBestBucketLabel: vsBestBucketLabel,
-      vsBestBucketIsPositive: vsBestBucketPct == null ? null : (vsBestBucketPct >= 0),
+      vsBestBucketIsPositive:
+          vsBestBucketPct == null ? null : (vsBestBucketPct >= 0),
       nextMilestoneLabel: _formatValue(next),
       nextMilestoneProgress: next <= 0 ? 0.0 : (total / next).clamp(0.0, 1.0),
       monthGoalLabel: monthGoal <= 0 ? 'N/A' : _formatValue(monthGoal),
-      monthGoalProgress: monthGoal <= 0 ? 0.0 : (total / monthGoal).clamp(0.0, 1.0),
+      monthGoalProgress:
+          monthGoal <= 0 ? 0.0 : (total / monthGoal).clamp(0.0, 1.0),
       yearGoalLabel: yearGoal <= 0 ? 'N/A' : _formatValue(yearGoal),
-      yearGoalProgress: yearGoal <= 0 ? 0.0 : (total / yearGoal).clamp(0.0, 1.0),
+      yearGoalProgress:
+          yearGoal <= 0 ? 0.0 : (total / yearGoal).clamp(0.0, 1.0),
     );
   }
 
@@ -1134,7 +1194,7 @@ class LineChartPainter extends CustomPainter {
   final List<double> data;
   final Color accentColor;
   final Color backgroundColor;
-  
+
   LineChartPainter({
     required this.data,
     required this.accentColor,
@@ -1163,8 +1223,11 @@ class LineChartPainter extends CustomPainter {
     final fillPath = Path();
 
     for (int i = 0; i < data.length; i++) {
-      final x = data.length == 1 ? size.width / 2 : (i / (data.length - 1)) * size.width;
-      final normalizedValue = range == 0 ? 0.5 : ((data[i] - minValue) / safeRange);
+      final x = data.length == 1
+          ? size.width / 2
+          : (i / (data.length - 1)) * size.width;
+      final normalizedValue =
+          range == 0 ? 0.5 : ((data[i] - minValue) / safeRange);
       final y = size.height - normalizedValue * size.height;
 
       if (i == 0) {
@@ -1189,8 +1252,11 @@ class LineChartPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     for (int i = 0; i < data.length; i++) {
-      final x = data.length == 1 ? size.width / 2 : (i / (data.length - 1)) * size.width;
-      final normalizedValue = range == 0 ? 0.5 : ((data[i] - minValue) / safeRange);
+      final x = data.length == 1
+          ? size.width / 2
+          : (i / (data.length - 1)) * size.width;
+      final normalizedValue =
+          range == 0 ? 0.5 : ((data[i] - minValue) / safeRange);
       final y = size.height - normalizedValue * size.height;
       canvas.drawCircle(Offset(x, y), 3, pointPaint);
     }

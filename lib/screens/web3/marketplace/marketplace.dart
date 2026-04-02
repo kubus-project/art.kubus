@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../config/config.dart';
@@ -161,7 +161,8 @@ class _MarketplaceState extends State<Marketplace>
       context: context,
       builder: (context) => KubusAlertDialog(
         backgroundColor: colorScheme.surfaceContainerHighest,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(KubusRadius.lg)),
         title: Text(
           'Marketplace Settings',
           style: KubusTypography.inter(
@@ -273,7 +274,7 @@ class _MarketplaceState extends State<Marketplace>
             roles.web3MarketplaceAccent.withValues(alpha: 0.8),
           ],
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
       ),
       child: Row(
         children: [
@@ -285,7 +286,8 @@ class _MarketplaceState extends State<Marketplace>
                   .colorScheme
                   .onPrimary
                   .withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius:
+                  BorderRadius.circular(KubusRadius.lg + KubusRadius.xs),
             ),
             child: Icon(
               labsFeature.screenIcon,
@@ -343,7 +345,7 @@ class _MarketplaceState extends State<Marketplace>
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
       ),
       child: Row(
         children: [
@@ -367,7 +369,7 @@ class _MarketplaceState extends State<Marketplace>
         margin: const EdgeInsets.symmetric(horizontal: 2),
         decoration: BoxDecoration(
           color: isSelected ? themeProvider.accentColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(KubusRadius.sm),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -416,7 +418,7 @@ class _MarketplaceState extends State<Marketplace>
         }
 
         return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(KubusSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -439,7 +441,7 @@ class _MarketplaceState extends State<Marketplace>
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: AppColorUtils.tealAccent.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(KubusRadius.md),
                       border:
                           Border.all(color: AppColorUtils.tealAccent, width: 1),
                     ),
@@ -522,7 +524,7 @@ class _MarketplaceState extends State<Marketplace>
         }
 
         return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(KubusSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -666,7 +668,7 @@ class _MarketplaceState extends State<Marketplace>
         }
 
         return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(KubusSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -689,7 +691,8 @@ class _MarketplaceState extends State<Marketplace>
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: AppColorUtils.amberAccent.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(
+                          KubusRadius.lg + KubusRadius.xs),
                       border: Border.all(
                           color: AppColorUtils.amberAccent, width: 1),
                     ),
@@ -793,7 +796,7 @@ class _MarketplaceState extends State<Marketplace>
       child: Container(
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.primaryContainer,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(KubusRadius.lg),
           border: Border.all(
             color: isForSale
                 ? roles.warningAction
@@ -814,8 +817,8 @@ class _MarketplaceState extends State<Marketplace>
                     end: Alignment.bottomRight,
                     colors: _getSeriesGradientColors(series?.rarity),
                   ),
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(16)),
+                  borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(KubusRadius.lg)),
                 ),
                 child: Stack(
                   children: [
@@ -823,7 +826,7 @@ class _MarketplaceState extends State<Marketplace>
                     if (coverUrl != null)
                       ClipRRect(
                         borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(16)),
+                            top: Radius.circular(KubusRadius.lg)),
                         child: Image.network(
                           coverUrl,
                           width: double.infinity,
@@ -846,7 +849,7 @@ class _MarketplaceState extends State<Marketplace>
                               horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: roles.warningAction,
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(KubusRadius.md),
                           ),
                           child: Text(
                             'FOR SALE',
@@ -871,7 +874,7 @@ class _MarketplaceState extends State<Marketplace>
                               .colorScheme
                               .onSurface
                               .withValues(alpha: 0.7),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(KubusRadius.sm),
                         ),
                         child: Text(
                           '#${collectible.tokenId}',
@@ -1041,12 +1044,13 @@ class _MarketplaceState extends State<Marketplace>
         height: MediaQuery.of(context).size.height * 0.8,
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.primaryContainer,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(KubusRadius.lg + KubusRadius.xs)),
         ),
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(KubusSpacing.md),
               child: Column(
                 children: [
                   Container(
@@ -1111,7 +1115,8 @@ class _MarketplaceState extends State<Marketplace>
                               color: Theme.of(context)
                                   .colorScheme
                                   .secondaryContainer,
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius:
+                                  BorderRadius.circular(KubusRadius.sm),
                             ),
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
@@ -1222,7 +1227,7 @@ class _MarketplaceState extends State<Marketplace>
       builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(KubusRadius.lg),
         ),
         title: Text(
           'List NFT for Sale',
@@ -1261,11 +1266,12 @@ class _MarketplaceState extends State<Marketplace>
                           .colorScheme
                           .onSurface
                           .withValues(alpha: 0.4)),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(KubusRadius.sm),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderSide: BorderSide(color: themeProvider.accentColor),
-                  borderRadius: const BorderRadius.all(Radius.circular(8)),
+                  borderRadius:
+                      const BorderRadius.all(Radius.circular(KubusRadius.sm)),
                 ),
               ),
               keyboardType: TextInputType.number,
@@ -1350,7 +1356,7 @@ class _MarketplaceState extends State<Marketplace>
       builder: (context) => KubusAlertDialog(
         backgroundColor: scheme.surfaceContainerHighest,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(KubusRadius.lg),
         ),
         title: Text(
           l10n.marketplaceRemoveFromSaleTitle,
@@ -1415,7 +1421,7 @@ class _MarketplaceState extends State<Marketplace>
       child: Container(
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.primaryContainer,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(KubusRadius.lg),
           border: Border.all(
             color: hasARFeature
                 ? AppColorUtils.tealAccent
@@ -1436,15 +1442,15 @@ class _MarketplaceState extends State<Marketplace>
                     end: Alignment.bottomRight,
                     colors: _getSeriesGradientColors(entry.rarity),
                   ),
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(16)),
+                  borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(KubusRadius.lg)),
                 ),
                 child: Stack(
                   children: [
                     if (entry.coverUrl != null)
                       ClipRRect(
                         borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(16)),
+                            top: Radius.circular(KubusRadius.lg)),
                         child: Image.network(
                           entry.coverUrl!,
                           width: double.infinity,
@@ -1465,7 +1471,7 @@ class _MarketplaceState extends State<Marketplace>
                               horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: AppColorUtils.tealAccent,
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(KubusRadius.md),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -1498,7 +1504,7 @@ class _MarketplaceState extends State<Marketplace>
                               horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: KubusColorRoles.of(context).negativeAction,
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(KubusRadius.md),
                           ),
                           child: Text(
                             'SOLD OUT',
@@ -1522,7 +1528,7 @@ class _MarketplaceState extends State<Marketplace>
                                 .colorScheme
                                 .onSurface
                                 .withValues(alpha: 0.7),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(KubusRadius.sm),
                           ),
                           child: Text(
                             entry.rarity!.name.toUpperCase(),
@@ -1750,12 +1756,13 @@ class _MarketplaceState extends State<Marketplace>
         height: MediaQuery.of(context).size.height * 0.8,
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.primaryContainer,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(KubusRadius.lg + KubusRadius.xs)),
         ),
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(KubusSpacing.md),
               child: Column(
                 children: [
                   Container(
@@ -1880,7 +1887,8 @@ class _MarketplaceState extends State<Marketplace>
                                   Theme.of(context).colorScheme.onPrimary,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius:
+                                    BorderRadius.circular(KubusRadius.md),
                               ),
                             ),
                             child: Text(
@@ -1909,10 +1917,12 @@ class _MarketplaceState extends State<Marketplace>
                             );
                           },
                           icon: Container(
-                            padding: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.all(
+                                KubusSpacing.sm + KubusSpacing.xs),
                             decoration: BoxDecoration(
                               color: Colors.grey[800],
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius:
+                                  BorderRadius.circular(KubusRadius.md),
                             ),
                             child: Icon(
                               Icons.share,
@@ -1935,10 +1945,10 @@ class _MarketplaceState extends State<Marketplace>
 
   Widget _buildStatCard(String label, String value) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(KubusRadius.sm),
       ),
       child: Column(
         children: [
@@ -1976,8 +1986,8 @@ class _MarketplaceState extends State<Marketplace>
         context: context,
         builder: (context) => KubusAlertDialog(
           backgroundColor: colorScheme.surfaceContainerHighest,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(KubusRadius.lg)),
           title: Text(
             AppLocalizations.of(context)!.marketplaceMintConnectWalletTitle,
             style: KubusTypography.inter(
@@ -2027,7 +2037,7 @@ class _MarketplaceState extends State<Marketplace>
         builder: (context) => KubusAlertDialog(
           backgroundColor: Theme.of(context).colorScheme.primaryContainer,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(KubusRadius.lg),
           ),
           title: Row(
             children: [
@@ -2100,7 +2110,7 @@ class _MarketplaceState extends State<Marketplace>
       builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(KubusRadius.lg),
         ),
         title: Text(
           'Mint NFT',
@@ -2122,10 +2132,10 @@ class _MarketplaceState extends State<Marketplace>
             ),
             const SizedBox(height: 16),
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.secondaryContainer,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(KubusRadius.sm),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2237,7 +2247,7 @@ class _MarketplaceState extends State<Marketplace>
           backgroundColor:
               Theme.of(context).colorScheme.surfaceContainerHighest,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(KubusRadius.lg),
           ),
           title: Row(
             children: [
@@ -2306,7 +2316,7 @@ class _MarketplaceState extends State<Marketplace>
           backgroundColor:
               Theme.of(context).colorScheme.surfaceContainerHighest,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(KubusRadius.lg),
           ),
           title: Row(
             children: [
@@ -2357,4 +2367,3 @@ class _MarketplaceState extends State<Marketplace>
     }
   }
 }
-

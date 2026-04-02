@@ -120,20 +120,20 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
       child: Container(
         color: Colors.transparent,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(KubusSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildHeader(),
-              const SizedBox(height: 16),
+              const SizedBox(height: KubusSpacing.md),
               _buildOverviewCards(),
-              const SizedBox(height: 16),
+              const SizedBox(height: KubusSpacing.md),
               _buildChartSection(),
-              const SizedBox(height: 16),
+              const SizedBox(height: KubusSpacing.md),
               _buildDetailedMetrics(),
-              const SizedBox(height: 16),
+              const SizedBox(height: KubusSpacing.md),
               _buildTopArtworks(),
-              const SizedBox(height: 16),
+              const SizedBox(height: KubusSpacing.md),
               _buildRecentActivity(),
             ],
           ),
@@ -153,7 +153,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: KubusSpacing.xs),
         Text(
           'Track your artwork performance',
           style: KubusTextStyles.screenSubtitle.copyWith(
@@ -161,7 +161,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                 Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: KubusSpacing.md),
         if (!isDesktop) _buildPeriodSelector(),
       ],
     );
@@ -172,10 +172,13 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
     final timeframe = filters.artistTimeframe;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: KubusSpacing.md,
+        vertical: KubusSpacing.sm,
+      ),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
         border: Border.all(
             color:
                 Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2)),
@@ -189,7 +192,8 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
           color: Theme.of(context).colorScheme.onSurface,
         ),
         icon: Icon(Icons.arrow_drop_down,
-            color: Theme.of(context).colorScheme.onSurface, size: 20),
+            color: Theme.of(context).colorScheme.onSurface,
+            size: KubusHeaderMetrics.actionIcon),
         items: const <DropdownMenuItem<String>>[
           DropdownMenuItem(value: '7d', child: Text('Last 7 Days')),
           DropdownMenuItem(value: '30d', child: Text('Last 30 Days')),
@@ -725,10 +729,10 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
             : scheme.error;
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(KubusSpacing.sm),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
         border: Border.all(
             color:
                 Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
@@ -739,19 +743,22 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(6),
+                padding: const EdgeInsets.all(KubusSpacing.xxs * 2),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(KubusRadius.sm),
                 ),
                 child: Icon(icon, color: color, size: 14),
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.xxs * 2,
+                  vertical: KubusSpacing.xxs,
+                ),
                 decoration: BoxDecoration(
                   color: chipColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(KubusRadius.sm),
                 ),
                 child: Text(
                   change,
@@ -960,7 +967,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
           decoration: BoxDecoration(
             color:
                 Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(KubusRadius.lg),
             border: Border.all(
                 color: Theme.of(context)
                     .colorScheme
@@ -1182,7 +1189,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                     color: isSelected
                         ? Provider.of<ThemeProvider>(context).accentColor
                         : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(KubusRadius.sm),
                     border: Border.all(
                       color: isSelected
                           ? Provider.of<ThemeProvider>(context).accentColor
@@ -1226,7 +1233,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                       color: isSelected
                           ? Provider.of<ThemeProvider>(context).accentColor
                           : Colors.transparent,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(KubusRadius.sm),
                       border: Border.all(
                         color: isSelected
                             ? Provider.of<ThemeProvider>(context).accentColor
@@ -1410,10 +1417,10 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
 
   Widget _buildMetricItem(String label, String value, IconData icon) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(KubusSpacing.md),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
         border: Border.all(
             color:
                 Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
@@ -1426,7 +1433,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                   .onSurface
                   .withValues(alpha: 0.7),
               size: 20),
-          const SizedBox(width: 12),
+          const SizedBox(width: KubusSpacing.md),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1480,20 +1487,20 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: KubusSpacing.md),
             ...topArtworks.asMap().entries.map((entry) {
               final index = entry.key;
               final artworkData = entry.value;
 
               return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.only(bottom: KubusSpacing.sm),
+                padding: const EdgeInsets.all(KubusSpacing.md),
                 decoration: BoxDecoration(
                   color: Theme.of(context)
                       .colorScheme
                       .onPrimary
                       .withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
                   border: Border.all(
                       color: Theme.of(context)
                           .colorScheme
@@ -1507,7 +1514,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                       height: 40,
                       decoration: BoxDecoration(
                         color: Theme.of(context).colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(KubusRadius.sm),
                       ),
                       child: Center(
                         child: Text(
@@ -1518,7 +1525,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                         ),
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: KubusSpacing.md),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1611,7 +1618,7 @@ Widget _buildRecentActivity() {
                   .colorScheme
                   .onPrimary
                   .withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
               border: Border.all(
                   color: Theme.of(context)
                       .colorScheme
@@ -1622,7 +1629,7 @@ Widget _buildRecentActivity() {
               children: recent.isEmpty
                   ? [
                       Padding(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(KubusSpacing.md),
                         child: Text(
                           'No recent activity',
                           style: KubusTextStyles.sectionSubtitle.copyWith(
@@ -1636,7 +1643,7 @@ Widget _buildRecentActivity() {
                     ]
                   : recent.map((activity) {
                       return Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(KubusSpacing.md),
                         decoration: BoxDecoration(
                           border: Border(
                             bottom: BorderSide(
@@ -1655,7 +1662,8 @@ Widget _buildRecentActivity() {
                               decoration: BoxDecoration(
                                 color: themeProvider.accentColor
                                     .withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius:
+                                    BorderRadius.circular(KubusRadius.sm),
                               ),
                               child: Icon(
                                 activity['icon'] as IconData,
@@ -1663,7 +1671,7 @@ Widget _buildRecentActivity() {
                                 size: 16,
                               ),
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: KubusSpacing.md),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,

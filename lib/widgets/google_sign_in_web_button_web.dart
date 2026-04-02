@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:google_sign_in_platform_interface/google_sign_in_platform_interface.dart';
 import 'package:google_sign_in_web/google_sign_in_web.dart' as gweb;
 
 import '../services/google_auth_service.dart';
+import '../utils/design_tokens.dart';
 
 class GoogleSignInWebButton extends StatefulWidget {
   const GoogleSignInWebButton({
@@ -185,7 +185,7 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: widget.colorScheme.surface.withValues(alpha: 0.58),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(KubusRadius.sm),
                 ),
                 child: const Center(
                   child: SizedBox(
@@ -211,19 +211,18 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
       height: 56,
       decoration: BoxDecoration(
         color: scheme.surface.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(KubusRadius.sm),
         border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
       child: Row(
         children: [
           Icon(Icons.error_outline, color: scheme.error, size: 20),
-          const SizedBox(width: 12),
+          const SizedBox(width: KubusSpacing.sm + KubusSpacing.xxs),
           Expanded(
             child: Text(
               'Google Sign-In is not ready. Retry setup.',
-              style: GoogleFonts.inter(
-                fontSize: 13,
+              style: KubusTextStyles.navMetaLabel.copyWith(
                 fontWeight: FontWeight.w600,
                 color: scheme.onSurface,
               ),
@@ -233,7 +232,9 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
             onPressed: _initializing ? null : _retryInit,
             child: Text(
               _initializing ? 'Retrying…' : 'Retry',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+              style: KubusTextStyles.navLabel.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -254,7 +255,7 @@ class _GoogleSignInWebButtonState extends State<GoogleSignInWebButton> {
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: widget.colorScheme.surface.withValues(alpha: 0.92),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(KubusRadius.sm),
             border: Border.all(
               color: widget.colorScheme.outlineVariant.withValues(alpha: 0.45),
             ),

@@ -208,24 +208,25 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
                             key: _formKey,
                             child: Center(
                               child: ConstrainedBox(
-                                constraints: const BoxConstraints(maxWidth: 900),
+                                constraints:
+                                    const BoxConstraints(maxWidth: 900),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                              _buildCoverImageSection(themeProvider),
-                              const SizedBox(height: 24),
-                              _buildAvatarSection(themeProvider),
-                              const SizedBox(height: 32),
-                              _buildBasicInfoSection(themeProvider),
-                              const SizedBox(height: 24),
-                              _buildSocialLinksSection(themeProvider),
-                              const SizedBox(height: 24),
-                              if (_isArtist || _isInstitution) ...[
-                                _buildArtistInfoSection(themeProvider),
-                                const SizedBox(height: 24),
-                              ],
-                              _buildPrivacySection(themeProvider),
-                              const SizedBox(height: 32),
+                                    _buildCoverImageSection(themeProvider),
+                                    const SizedBox(height: 24),
+                                    _buildAvatarSection(themeProvider),
+                                    const SizedBox(height: 32),
+                                    _buildBasicInfoSection(themeProvider),
+                                    const SizedBox(height: 24),
+                                    _buildSocialLinksSection(themeProvider),
+                                    const SizedBox(height: 24),
+                                    if (_isArtist || _isInstitution) ...[
+                                      _buildArtistInfoSection(themeProvider),
+                                      const SizedBox(height: 24),
+                                    ],
+                                    _buildPrivacySection(themeProvider),
+                                    const SizedBox(height: 32),
                                   ],
                                 ),
                               ),
@@ -338,7 +339,12 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+            padding: const EdgeInsets.fromLTRB(
+              KubusSpacing.xl,
+              0,
+              KubusSpacing.xl,
+              KubusSpacing.xl,
+            ),
             child: GestureDetector(
               onTap: _pickCoverImage,
               child: MouseRegion(
@@ -348,7 +354,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
                   height: 200,
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(KubusRadius.lg),
                     border: Border.all(
                       color: themeProvider.accentColor.withValues(alpha: 0.3),
                       width: 2,
@@ -380,11 +386,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
                               color: themeProvider.accentColor
                                   .withValues(alpha: 0.6),
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: KubusSpacing.md),
                             Text(
                               l10n.profileEditCoverImageClickToUpload,
-                              style: KubusTypography.inter(
-                                fontSize: 15,
+                              style: KubusTextStyles.detailBody.copyWith(
                                 fontWeight: FontWeight.w500,
                                 color: Theme.of(context)
                                     .colorScheme
@@ -396,25 +401,31 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
                         )
                       : Container(
                           alignment: Alignment.bottomRight,
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(KubusSpacing.md),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 10),
+                              horizontal: KubusSpacing.md,
+                              vertical: KubusSpacing.sm +
+                                  KubusSpacing.xs +
+                                  KubusSpacing.xxs,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.black.withValues(alpha: 0.7),
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius:
+                                  BorderRadius.circular(KubusRadius.sm),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.edit,
-                                    color: Colors.white, size: 18),
-                                const SizedBox(width: 8),
+                                const Icon(
+                                  Icons.edit,
+                                  color: Colors.white,
+                                  size: KubusHeaderMetrics.actionIcon,
+                                ),
+                                const SizedBox(width: KubusSpacing.sm),
                                 Text(
                                   l10n.commonChangeCover,
-                                  style: KubusTypography.inter(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
+                                  style: KubusTextStyles.detailLabel.copyWith(
                                     color: Colors.white,
                                   ),
                                 ),
@@ -454,13 +465,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
                       width: 140,
                       height: 140,
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
+                        borderRadius: BorderRadius.circular(KubusRadius.lg),
                         border: Border.all(
                           color: themeProvider.accentColor,
                           width: 3,
                         ),
                       ),
-                      child: ClipOval(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(KubusRadius.lg),
                         child: _avatarUrl != null && _avatarUrl!.isNotEmpty
                             ? _buildAvatarWidget(_avatarUrl!, themeProvider)
                             : Icon(
@@ -474,10 +486,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
                       bottom: 0,
                       right: 0,
                       child: Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(KubusSpacing.md),
                         decoration: BoxDecoration(
                           color: themeProvider.accentColor,
-                          shape: BoxShape.circle,
+                          borderRadius: BorderRadius.circular(KubusRadius.sm),
                           border: Border.all(
                             color: Theme.of(context).colorScheme.surface,
                             width: 3,
@@ -493,7 +505,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
                         child: const Icon(
                           Icons.camera_alt,
                           color: Colors.white,
-                          size: 20,
+                          size: KubusHeaderMetrics.actionIcon,
                         ),
                       ),
                     ),
@@ -502,12 +514,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: KubusSpacing.md),
           Center(
             child: Text(
               l10n.profileEditAvatarClickToChange,
-              style: KubusTypography.inter(
-                fontSize: 14,
+              style: KubusTextStyles.detailCaption.copyWith(
                 color: Theme.of(context)
                     .colorScheme
                     .onSurface
@@ -531,7 +542,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
             subtitle: l10n.profileEditPublicProfileDetailsSubtitle,
             icon: Icons.person_outline,
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: KubusSpacing.lg),
           _buildTextField(
             label: l10n.profileEditUsernameLabel,
             controller: _usernameController,
@@ -547,7 +558,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
               return null;
             },
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
           _buildTextField(
             label: l10n.profileEditDisplayNameLabel,
             controller: _displayNameController,
@@ -560,7 +571,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
               return null;
             },
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
           _buildTextField(
             label: l10n.profileEditBioLabel,
             controller: _bioController,
@@ -585,21 +596,21 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
             subtitle: l10n.profileEditSocialLinksSubtitle,
             icon: Icons.link,
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: KubusSpacing.lg),
           _buildTextField(
             label: l10n.profileEditSocialTwitterLabel,
             controller: _twitterController,
             hint: l10n.profileEditSocialHandleHint,
             icon: Icons.alternate_email,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
           _buildTextField(
             label: l10n.profileEditSocialInstagramLabel,
             controller: _instagramController,
             hint: l10n.profileEditSocialHandleHint,
             icon: Icons.camera_alt_outlined,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
           _buildTextField(
             label: l10n.profileEditSocialWebsiteLabel,
             controller: _websiteController,
@@ -732,13 +743,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
       children: [
         Text(
           label,
-          style: KubusTypography.inter(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
+          style: KubusTextStyles.detailCardTitle.copyWith(
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: KubusSpacing.sm),
         TextFormField(
           controller: controller,
           maxLines: maxLines,
@@ -747,21 +756,23 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
           validator: validator,
           decoration: InputDecoration(
             hintText: hint,
-            prefixIcon: Icon(icon, size: 20),
+            prefixIcon: Icon(icon, size: KubusHeaderMetrics.actionIcon),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
             ),
             filled: true,
             fillColor: Theme.of(context)
                 .colorScheme
                 .primaryContainer
                 .withValues(alpha: 0.5),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: KubusSpacing.md,
+              vertical: KubusSpacing.sm + KubusSpacing.xs + KubusSpacing.xxs,
+            ),
           ),
-              style: KubusTextStyles.detailBody.copyWith(
-                fontSize: KubusHeaderMetrics.screenSubtitle,
-              ),
+          style: KubusTextStyles.detailBody.copyWith(
+            fontSize: KubusHeaderMetrics.screenSubtitle,
+          ),
         ),
       ],
     );
@@ -785,17 +796,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
             children: [
               Text(
                 title,
-                style: KubusTypography.inter(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
+                style: KubusTextStyles.detailCardTitle.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: KubusSpacing.xs),
               Text(
                 subtitle,
-                style: KubusTypography.inter(
-                  fontSize: 13,
+                style: KubusTextStyles.detailCaption.copyWith(
                   color: Theme.of(context)
                       .colorScheme
                       .onSurface

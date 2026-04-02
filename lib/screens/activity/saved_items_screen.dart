@@ -34,7 +34,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
@@ -117,13 +117,18 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
         : 'Save items to build your collection';
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.fromLTRB(
+        KubusSpacing.md,
+        KubusSpacing.md,
+        KubusSpacing.md,
+        KubusSpacing.sm,
+      ),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(KubusSpacing.lg),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(KubusRadius.xl),
           border: Border.all(
             color: theme.colorScheme.outline.withValues(alpha: 0.2),
           ),
@@ -165,11 +170,13 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: KubusSpacing.md,
+                    vertical: KubusSpacing.sm,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColorUtils.tealAccent.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(KubusRadius.xl),
                   ),
                   child: Text(
                     '${savedProvider.totalSavedCount} items',
@@ -181,7 +188,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: KubusSpacing.lg),
             Row(
               children: [
                 Expanded(
@@ -190,10 +197,11 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                     value: savedProvider.savedArtworksCount.toString(),
                     icon: Icons.palette_outlined,
                     isSelected: _activeCategory == SavedItemsCategory.artworks,
-                    onTap: () => _onCategorySelected(SavedItemsCategory.artworks),
+                    onTap: () =>
+                        _onCategorySelected(SavedItemsCategory.artworks),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: KubusSpacing.md),
                 Expanded(
                   child: _buildStatTile(
                     label: 'Posts',
@@ -203,7 +211,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                     onTap: () => _onCategorySelected(SavedItemsCategory.posts),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: KubusSpacing.md),
                 Expanded(
                   child: _buildStatTile(
                     label: 'Combined',
@@ -245,16 +253,16 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
       curve: Curves.easeOut,
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(color: borderColor),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(KubusRadius.lg),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(KubusSpacing.md),
             child: Row(
               children: [
                 Container(
@@ -262,14 +270,14 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                   height: 36,
                   decoration: BoxDecoration(
                     color: iconBgColor,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(KubusRadius.md),
                   ),
                   child: Icon(
                     icon,
                     color: AppColorUtils.tealAccent,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: KubusSpacing.md),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -278,7 +286,8 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                       style: KubusTypography.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                        color:
+                            theme.colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                     Text(
@@ -314,7 +323,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
 
     return ListView.builder(
       key: const PageStorageKey('saved-artworks-list'),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(KubusSpacing.md),
       itemCount: savedArtworkIds.length,
       itemBuilder: (context, index) {
         final artworkId = savedArtworkIds[index];
@@ -388,7 +397,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
           onRefresh: _refreshPosts,
           child: ListView.builder(
             key: const PageStorageKey('saved-posts-list'),
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(KubusSpacing.md),
             physics: const AlwaysScrollableScrollPhysics(),
             itemCount: savedPostIds.length,
             itemBuilder: (context, index) {
@@ -423,15 +432,14 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
 
     return ListView.builder(
       key: const PageStorageKey('saved-all-list'),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(KubusSpacing.md),
       itemCount: allSavedIds.length,
       itemBuilder: (context, index) {
         final itemId = allSavedIds[index];
 
         if (savedProvider.isArtworkSaved(itemId)) {
-          final artwork = artworkProvider.artworks
-              .where((a) => a.id == itemId)
-              .firstOrNull;
+          final artwork =
+              artworkProvider.artworks.where((a) => a.id == itemId).firstOrNull;
 
           if (artwork == null) {
             return _buildPlaceholderArtworkCard(itemId, savedProvider);
@@ -457,7 +465,8 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
     await future;
   }
 
-  Widget _buildEmptyTabState({required IconData icon, required String message}) {
+  Widget _buildEmptyTabState(
+      {required IconData icon, required String message}) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -465,7 +474,8 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
           Icon(
             icon,
             size: 64,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
           ),
           const SizedBox(height: 16),
           Text(
@@ -473,7 +483,10 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
             style: KubusTypography.inter(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -484,12 +497,12 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
   Widget _buildArtworkCard(Artwork artwork, SavedItemsProvider savedProvider) {
     final scheme = Theme.of(context).colorScheme;
     final savedTimestamp = savedProvider.getSavedTimestamp(artwork.id);
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: scheme.primaryContainer,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(
           color: scheme.outline,
         ),
@@ -498,9 +511,9 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
         onTap: () {
           openArtwork(context, artwork.id, source: 'saved_items');
         },
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(KubusSpacing.md),
           child: Row(
             children: [
               // Artwork thumbnail
@@ -509,7 +522,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                 height: 80,
                 decoration: BoxDecoration(
                   color: scheme.tertiary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
                   image: artwork.imageUrl != null
                       ? DecorationImage(
                           image: NetworkImage(artwork.imageUrl!),
@@ -546,7 +559,10 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                       artwork.artist,
                       style: KubusTypography.inter(
                         fontSize: 14,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -557,28 +573,40 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                         Icon(
                           Icons.favorite,
                           size: 14,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.5),
                         ),
                         const SizedBox(width: 4),
                         Text(
                           '${artwork.likesCount}',
                           style: KubusTypography.inter(
                             fontSize: 12,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.5),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Icon(
                           Icons.visibility,
                           size: 14,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.5),
                         ),
                         const SizedBox(width: 4),
                         Text(
                           '${artwork.viewsCount}',
                           style: KubusTypography.inter(
                             fontSize: 12,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.5),
                           ),
                         ),
                       ],
@@ -589,7 +617,10 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                         'Saved ${_formatTimestamp(savedTimestamp)}',
                         style: KubusTypography.inter(
                           fontSize: 11,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.4),
                         ),
                       ),
                     ],
@@ -598,7 +629,8 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
               ),
               // Unsave button
               IconButton(
-                onPressed: () => _confirmUnsave(artwork.id, 'artwork', savedProvider),
+                onPressed: () =>
+                    _confirmUnsave(artwork.id, 'artwork', savedProvider),
                 icon: Icon(
                   Icons.bookmark,
                   color: AppColorUtils.tealAccent,
@@ -611,21 +643,22 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
     );
   }
 
-  Widget _buildPlaceholderArtworkCard(String artworkId, SavedItemsProvider savedProvider) {
+  Widget _buildPlaceholderArtworkCard(
+      String artworkId, SavedItemsProvider savedProvider) {
     final scheme = Theme.of(context).colorScheme;
     final savedTimestamp = savedProvider.getSavedTimestamp(artworkId);
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: scheme.primaryContainer,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(
           color: scheme.outline,
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         child: Row(
           children: [
             Container(
@@ -633,7 +666,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
               height: 80,
               decoration: BoxDecoration(
                 color: scheme.tertiary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
               ),
               child: Icon(
                 Icons.palette,
@@ -659,7 +692,10 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                     'Loading details...',
                     style: KubusTypography.inter(
                       fontSize: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.5),
                     ),
                   ),
                   if (savedTimestamp != null) ...[
@@ -668,7 +704,10 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                       'Saved ${_formatTimestamp(savedTimestamp)}',
                       style: KubusTypography.inter(
                         fontSize: 11,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.4),
                       ),
                     ),
                   ],
@@ -676,7 +715,8 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
               ),
             ),
             IconButton(
-              onPressed: () => _confirmUnsave(artworkId, 'artwork', savedProvider),
+              onPressed: () =>
+                  _confirmUnsave(artworkId, 'artwork', savedProvider),
               icon: Icon(
                 Icons.bookmark,
                 color: AppColorUtils.tealAccent,
@@ -691,18 +731,18 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
   Widget _buildPostCard(CommunityPost post, SavedItemsProvider savedProvider) {
     final scheme = Theme.of(context).colorScheme;
     final savedTimestamp = savedProvider.getSavedTimestamp(post.id);
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: scheme.primaryContainer,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(
           color: Theme.of(context).colorScheme.outline,
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -743,7 +783,8 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                   ),
                 ),
                 IconButton(
-                  onPressed: () => _confirmUnsave(post.id, 'post', savedProvider),
+                  onPressed: () =>
+                      _confirmUnsave(post.id, 'post', savedProvider),
                   icon: Icon(
                     Icons.bookmark,
                     color: AppColorUtils.tealAccent,
@@ -764,7 +805,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
             if (post.imageUrl != null) ...[
               const SizedBox(height: 12),
               ClipRRect(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(KubusRadius.sm),
                 child: Image.network(
                   post.imageUrl!,
                   height: 150,
@@ -801,14 +842,20 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                 Icon(
                   Icons.comment_outlined,
                   size: 18,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
                 ),
                 const SizedBox(width: 4),
                 Text(
                   '${post.commentCount}',
                   style: KubusTypography.inter(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
                   ),
                 ),
                 const Spacer(),
@@ -817,7 +864,10 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                     'Saved ${_formatTimestamp(savedTimestamp)}',
                     style: KubusTypography.inter(
                       fontSize: 11,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.4),
                     ),
                   ),
               ],
@@ -828,21 +878,22 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
     );
   }
 
-  Widget _buildPlaceholderPostCard(String postId, SavedItemsProvider savedProvider) {
+  Widget _buildPlaceholderPostCard(
+      String postId, SavedItemsProvider savedProvider) {
     final scheme = Theme.of(context).colorScheme;
     final savedTimestamp = savedProvider.getSavedTimestamp(postId);
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: scheme.primaryContainer,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(
           color: scheme.outline,
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         child: Row(
           children: [
             Container(
@@ -850,7 +901,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
               height: 80,
               decoration: BoxDecoration(
                 color: scheme.secondary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
               ),
               child: Icon(
                 Icons.article,
@@ -908,7 +959,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
   String _formatTimestamp(DateTime timestamp) {
     final now = DateTime.now();
     final difference = now.difference(timestamp);
-    
+
     if (difference.inMinutes < 60) {
       return '${difference.inMinutes}m ago';
     } else if (difference.inHours < 24) {
@@ -922,7 +973,8 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
     }
   }
 
-  void _confirmUnsave(String itemId, String type, SavedItemsProvider savedProvider) {
+  void _confirmUnsave(
+      String itemId, String type, SavedItemsProvider savedProvider) {
     showKubusDialog(
       context: context,
       builder: (context) => KubusAlertDialog(
@@ -950,7 +1002,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                 savedProvider.removePost(itemId);
               }
               Navigator.pop(context);
-              
+
               ScaffoldMessenger.of(context).showKubusSnackBar(
                 SnackBar(
                   content: Text('Removed from saved items'),
@@ -993,10 +1045,11 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
           ),
           TextButton(
             onPressed: () {
-              final savedProvider = Provider.of<SavedItemsProvider>(context, listen: false);
+              final savedProvider =
+                  Provider.of<SavedItemsProvider>(context, listen: false);
               savedProvider.clearAll();
               Navigator.pop(context);
-              
+
               ScaffoldMessenger.of(context).showKubusSnackBar(
                 const SnackBar(
                   content: Text('All saved items cleared'),

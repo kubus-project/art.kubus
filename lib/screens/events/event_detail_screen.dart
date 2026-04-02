@@ -16,7 +16,6 @@ import '../../widgets/promotion/promotion_builder_sheet.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../widgets/glass_components.dart';
 import '../../utils/design_tokens.dart';
- 
 
 class EventDetailScreen extends StatefulWidget {
   final String eventId;
@@ -79,7 +78,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 
     final event = events.events.firstWhere(
       (e) => e.id == widget.eventId,
-      orElse: () => widget.initialEvent ?? KubusEvent(id: widget.eventId, title: 'Event'),
+      orElse: () =>
+          widget.initialEvent ?? KubusEvent(id: widget.eventId, title: 'Event'),
     );
 
     final exhibitions = events.exhibitionsForEvent(widget.eventId);
@@ -91,7 +91,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          title: Text(event.title, style: KubusTypography.inter(fontWeight: FontWeight.w600)),
+          title: Text(event.title,
+              style: KubusTypography.inter(fontWeight: FontWeight.w600)),
           actions: [
             if (event.lat != null && event.lng != null)
               IconButton(
@@ -117,7 +118,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               onPressed: () {
                 ShareService().showShareSheet(
                   context,
-                  target: ShareTarget.event(eventId: widget.eventId, title: event.title),
+                  target: ShareTarget.event(
+                      eventId: widget.eventId, title: event.title),
                   sourceScreen: 'event_detail',
                 );
               },
@@ -143,7 +145,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 1100),
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(KubusSpacing.md),
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final isWide = constraints.maxWidth >= 900;
@@ -194,7 +196,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 }
 
 class _EventDetailsCard extends StatelessWidget {
-  const _EventDetailsCard({required this.event, required this.exhibitionsCount});
+  const _EventDetailsCard(
+      {required this.event, required this.exhibitionsCount});
 
   final KubusEvent event;
   final int exhibitionsCount;
@@ -212,36 +215,48 @@ class _EventDetailsCard extends StatelessWidget {
     }
 
     final locationBits = <String>[];
-    if ((event.locationName ?? '').trim().isNotEmpty) locationBits.add(event.locationName!.trim());
-    if ((event.city ?? '').trim().isNotEmpty) locationBits.add(event.city!.trim());
-    if ((event.country ?? '').trim().isNotEmpty) locationBits.add(event.country!.trim());
+    if ((event.locationName ?? '').trim().isNotEmpty) {
+      locationBits.add(event.locationName!.trim());
+    }
+    if ((event.city ?? '').trim().isNotEmpty) {
+      locationBits.add(event.city!.trim());
+    }
+    if ((event.country ?? '').trim().isNotEmpty) {
+      locationBits.add(event.country!.trim());
+    }
     final location = locationBits.isNotEmpty ? locationBits.join(', ') : null;
 
     return Card(
       elevation: 0,
       color: scheme.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.7)),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Overview',
-              style: KubusTypography.inter(fontSize: 16, fontWeight: FontWeight.w700),
+              style: KubusTypography.inter(
+                  fontSize: 16, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 10),
             if (dateRange != null)
               _InfoRow(icon: Icons.schedule, label: dateRange),
             if (location != null)
               _InfoRow(icon: Icons.place_outlined, label: location),
-            _InfoRow(icon: Icons.collections_outlined, label: 'Exhibitions: $exhibitionsCount'),
+            _InfoRow(
+                icon: Icons.collections_outlined,
+                label: 'Exhibitions: $exhibitionsCount'),
             if ((event.description ?? '').trim().isNotEmpty) ...[
               const SizedBox(height: 12),
-              Text(event.description!, style: KubusTypography.inter(fontSize: 13, color: scheme.onSurface.withValues(alpha: 0.8))),
+              Text(event.description!,
+                  style: KubusTypography.inter(
+                      fontSize: 13,
+                      color: scheme.onSurface.withValues(alpha: 0.8))),
             ],
           ],
         ),
@@ -275,7 +290,8 @@ class _InfoRow extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: KubusTypography.inter(fontSize: 13, color: scheme.onSurface),
+              style:
+                  KubusTypography.inter(fontSize: 13, color: scheme.onSurface),
             ),
           ),
         ],
@@ -296,21 +312,24 @@ class _ExhibitionsPreview extends StatelessWidget {
       elevation: 0,
       color: scheme.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.7)),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         child: Row(
           children: [
-            Icon(Icons.collections_outlined, color: scheme.onSurface.withValues(alpha: 0.75)),
+            Icon(Icons.collections_outlined,
+                color: scheme.onSurface.withValues(alpha: 0.75)),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 exhibitionsCount == 0
                     ? 'No exhibitions yet.'
                     : 'This event includes $exhibitionsCount exhibition${exhibitionsCount == 1 ? '' : 's'}.',
-                style: KubusTypography.inter(fontSize: 13, color: scheme.onSurface.withValues(alpha: 0.8)),
+                style: KubusTypography.inter(
+                    fontSize: 13,
+                    color: scheme.onSurface.withValues(alpha: 0.8)),
               ),
             ),
           ],
@@ -319,4 +338,3 @@ class _ExhibitionsPreview extends StatelessWidget {
     );
   }
 }
-

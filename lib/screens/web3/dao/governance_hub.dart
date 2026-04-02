@@ -281,7 +281,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                         height: 56,
                         decoration: BoxDecoration(
                           color: accent.withValues(alpha: 0.18),
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(KubusRadius.lg),
                         ),
                         child: Icon(
                           KubusLabsFeature.dao.screenIcon,
@@ -365,7 +365,7 @@ class _GovernanceHubState extends State<GovernanceHub>
 
   Widget _buildStatCard(String label, String value) {
     final scheme = Theme.of(context).colorScheme;
-    final radius = BorderRadius.circular(8);
+    final radius = BorderRadius.circular(KubusRadius.sm);
     final statColor = _daoAccent;
     final glassStyle = KubusGlassStyle.resolve(
       context,
@@ -576,7 +576,7 @@ class _GovernanceHubState extends State<GovernanceHub>
         return Container(
           color: Colors.transparent,
           child: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(KubusSpacing.md),
             children: [
               if (reviews.isNotEmpty) _buildReviewQueue(reviews),
               ...activeProposals
@@ -646,7 +646,7 @@ class _GovernanceHubState extends State<GovernanceHub>
       padding: const EdgeInsets.all(KubusSpacing.md - KubusSpacing.xxs),
       decoration: BoxDecoration(
         color: colorScheme.onPrimary.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
         border: Border.all(color: colorScheme.onPrimary.withValues(alpha: 0.1)),
       ),
       child: Column(
@@ -1113,11 +1113,11 @@ class _GovernanceHubState extends State<GovernanceHub>
         proposal.hasQuorum ? l10n.daoQuorumReached : l10n.daoQuorumPending;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: KubusSpacing.sm + KubusSpacing.xxs),
+      padding: const EdgeInsets.all(KubusSpacing.md),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(
             color:
                 Theme.of(context).colorScheme.outline.withValues(alpha: 0.4)),
@@ -1128,11 +1128,13 @@ class _GovernanceHubState extends State<GovernanceHub>
           Row(
             children: [
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.md,
+                  vertical: KubusSpacing.sm,
+                ),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
                   border: Border.all(color: color.withValues(alpha: 0.6)),
                 ),
                 child: Text(
@@ -1154,14 +1156,14 @@ class _GovernanceHubState extends State<GovernanceHub>
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: KubusSpacing.md),
           Text(
             proposal.title,
             style: KubusTextStyles.sectionTitle.copyWith(
               color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: KubusSpacing.sm),
           Text(
             proposal.description,
             style: KubusTextStyles.sectionSubtitle.copyWith(
@@ -1172,7 +1174,7 @@ class _GovernanceHubState extends State<GovernanceHub>
               height: 1.4,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: KubusSpacing.md),
           Row(
             children: [
               Column(
@@ -1256,7 +1258,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                     backgroundColor: color,
                     foregroundColor: Theme.of(context).colorScheme.onSurface,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(KubusRadius.sm),
                     ),
                   ),
                   child: Text(AppLocalizations.of(context)!.daoVoteYesButton),
@@ -1276,7 +1278,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                             .onSurface
                             .withValues(alpha: 0.3)),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(KubusRadius.sm),
                     ),
                   ),
                   child: Text(AppLocalizations.of(context)!.daoVoteNoButton),
@@ -1336,7 +1338,7 @@ class _GovernanceHubState extends State<GovernanceHub>
         return Container(
           color: Colors.transparent,
           child: ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(KubusSpacing.md),
             itemCount: votingHistory.length,
             itemBuilder: (context, index) {
               final vote = votingHistory[index];
@@ -1352,10 +1354,10 @@ class _GovernanceHubState extends State<GovernanceHub>
                   isPassing ? roles.positiveAction : roles.negativeAction;
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(KubusSpacing.md),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(KubusRadius.lg),
                   border:
                       Border.all(color: scheme.outline.withValues(alpha: 0.25)),
                 ),
@@ -1377,7 +1379,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                               horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: accent.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(KubusRadius.md),
                             border: Border.all(
                               color: accent.withValues(alpha: 0.65),
                             ),
@@ -1448,7 +1450,7 @@ class _GovernanceHubState extends State<GovernanceHub>
     return Container(
       color: Colors.transparent,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1499,7 +1501,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                   foregroundColor: scheme.onPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(KubusRadius.md),
                   ),
                 ),
                 child: Text(
@@ -1546,17 +1548,17 @@ class _GovernanceHubState extends State<GovernanceHub>
             filled: true,
             fillColor: scheme.surfaceContainerHighest,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
               borderSide:
                   BorderSide(color: scheme.outline.withValues(alpha: 0.25)),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
               borderSide:
                   BorderSide(color: scheme.outline.withValues(alpha: 0.25)),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
               borderSide: BorderSide(color: _daoAccent),
             ),
           ),
@@ -1591,7 +1593,7 @@ class _GovernanceHubState extends State<GovernanceHub>
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
             color: scheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(KubusRadius.md),
             border: Border.all(color: scheme.outline.withValues(alpha: 0.4)),
           ),
           child: DropdownButton<String>(
@@ -1640,10 +1642,10 @@ class _GovernanceHubState extends State<GovernanceHub>
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(KubusSpacing.md),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
         border: Border.all(color: scheme.outline.withValues(alpha: 0.4)),
       ),
       child: Column(
@@ -1793,7 +1795,7 @@ class _GovernanceHubState extends State<GovernanceHub>
     return Container(
       color: Colors.transparent,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1848,7 +1850,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                 treasuryColor,
               ],
             ),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(KubusRadius.lg),
           ),
           child: Column(
             children: [
@@ -1969,11 +1971,11 @@ class _GovernanceHubState extends State<GovernanceHub>
             else
               ...transactions.map((tx) => Container(
                     margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(KubusSpacing.md),
                     decoration: BoxDecoration(
                       color:
                           Theme.of(context).colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(KubusRadius.md),
                       border: Border.all(
                           color: Theme.of(context).colorScheme.outline),
                     ),
@@ -1997,7 +1999,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                                         .colorScheme
                                         .primary
                                         .withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(KubusRadius.xl),
                           ),
                           child: Icon(
                             tx.type == 'allocation'
@@ -2136,7 +2138,7 @@ class _GovernanceHubState extends State<GovernanceHub>
     return Container(
       color: Colors.transparent,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -2278,7 +2280,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                         color: Theme.of(context)
                             .colorScheme
                             .surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(KubusRadius.md),
                         border: Border.all(
                           color: scheme.outline.withValues(alpha: 0.25),
                         ),
@@ -2290,7 +2292,8 @@ class _GovernanceHubState extends State<GovernanceHub>
                             height: 40,
                             decoration: BoxDecoration(
                               color: _daoAccent,
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius:
+                                  BorderRadius.circular(KubusRadius.xl),
                             ),
                             child: Center(
                               child: Text(
@@ -2401,7 +2404,7 @@ class _GovernanceHubState extends State<GovernanceHub>
               foregroundColor: scheme.onPrimary,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
               ),
             ),
           ),
@@ -2421,7 +2424,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                   side: BorderSide(color: Colors.grey[600]!),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(KubusRadius.md),
                   ),
                 ),
               ),
@@ -2439,7 +2442,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                   side: BorderSide(color: Colors.grey[600]!),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(KubusRadius.md),
                   ),
                 ),
               ),
@@ -2465,8 +2468,8 @@ class _GovernanceHubState extends State<GovernanceHub>
           return Container(
             decoration: BoxDecoration(
               color: scheme.surfaceContainerHighest,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(20)),
+              borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(KubusRadius.xl)),
             ),
             child: Column(
               children: [
@@ -2521,9 +2524,10 @@ class _GovernanceHubState extends State<GovernanceHub>
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: scheme.surfaceContainerHighest,
                                 foregroundColor: scheme.onSurface,
-                                padding: const EdgeInsets.all(16),
+                                padding: const EdgeInsets.all(KubusSpacing.md),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius:
+                                      BorderRadius.circular(KubusRadius.md),
                                 ),
                               ),
                               child: Row(
@@ -2533,7 +2537,8 @@ class _GovernanceHubState extends State<GovernanceHub>
                                     height: 40,
                                     decoration: BoxDecoration(
                                       color: _daoAccent,
-                                      borderRadius: BorderRadius.circular(20),
+                                      borderRadius:
+                                          BorderRadius.circular(KubusRadius.xl),
                                     ),
                                     child: Center(
                                       child: Text(
@@ -2890,7 +2895,8 @@ class _GovernanceHubState extends State<GovernanceHub>
           padding: const EdgeInsets.all(KubusSpacing.lg),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius:
+                BorderRadius.vertical(top: Radius.circular(KubusRadius.xl)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,

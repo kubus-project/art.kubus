@@ -99,7 +99,8 @@ class ArtistStudioCreateScreen extends StatelessWidget {
             if (createdId != null && createdId.isNotEmpty && context.mounted) {
               await navigator.push(
                 MaterialPageRoute(
-                  builder: (_) => CollectionDetailScreen(collectionId: createdId),
+                  builder: (_) =>
+                      CollectionDetailScreen(collectionId: createdId),
                 ),
               );
             }
@@ -118,7 +119,8 @@ class ArtistStudioCreateScreen extends StatelessWidget {
             }
             final navigator = Navigator.of(context);
             await navigator.push(
-              MaterialPageRoute(builder: (_) => const ExhibitionCreatorScreen()),
+              MaterialPageRoute(
+                  builder: (_) => const ExhibitionCreatorScreen()),
             );
           },
         ),
@@ -159,14 +161,14 @@ class _CreateOptionCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: scheme.surface,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(KubusRadius.lg),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(KubusSpacing.md),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(KubusRadius.lg),
             border: Border.all(color: scheme.outline.withValues(alpha: 0.12)),
           ),
           child: Row(
@@ -176,11 +178,11 @@ class _CreateOptionCard extends StatelessWidget {
                 height: 44,
                 decoration: BoxDecoration(
                   color: accent.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
                 ),
                 child: Icon(icon, color: accent),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: KubusSpacing.sm),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -216,4 +218,3 @@ class _CreateOptionCard extends StatelessWidget {
     );
   }
 }
-

@@ -570,7 +570,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         final surface = Theme.of(sheetContext).colorScheme.surface;
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(KubusSpacing.md),
             child: BackdropGlassSheet(
               padding: const EdgeInsets.symmetric(vertical: KubusSpacing.xs),
               backgroundColor: surface,
@@ -637,7 +637,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               width: double.infinity,
               height: hasCoverImage ? 160 : 100,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(KubusRadius.xl),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.08),
@@ -657,7 +657,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                     : null,
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(KubusRadius.xl),
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
@@ -946,7 +946,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                   elevation: user!.isFollowing ? 0 : 2,
                   shadowColor: Colors.black.withValues(alpha: 0.1),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(KubusRadius.md),
                   ),
                 ),
                 child: Text(
@@ -1043,7 +1043,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               elevation: 0,
               padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
               ),
             ),
             child: const Icon(Icons.message),
@@ -1059,7 +1059,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(KubusRadius.xl),
         border: Border.all(
           color:
               Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
@@ -1074,7 +1074,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               color: Provider.of<ThemeProvider>(context, listen: false)
                   .accentColor
                   .withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
             ),
             child: Icon(
               Icons.streetview,
@@ -1309,10 +1309,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
     return Container(
       width: 180,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(KubusSpacing.md),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(KubusRadius.xl),
         border: Border.all(
           color: isCompleted
               ? themeProvider.accentColor.withValues(alpha: 0.4)
@@ -1337,7 +1337,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                 height: 40,
                 decoration: BoxDecoration(
                   color: accent.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
                 ),
                 child: Icon(
                   _iconForAchievement(achievement),
@@ -1398,7 +1398,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                       .colorScheme
                       .secondaryContainer
                       .withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(KubusRadius.sm),
                 ),
                 child: Text(
                   '+${achievement.tokenReward}',
@@ -1411,7 +1411,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           ),
           const SizedBox(height: 8),
           ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(KubusRadius.sm),
             child: LinearProgressIndicator(
               value: ratio,
               minHeight: 6,
@@ -1481,10 +1481,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                     );
                   },
                   child: Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(KubusSpacing.md),
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(KubusRadius.lg),
                       border: Border.all(
                           color: Theme.of(context)
                               .colorScheme
@@ -1563,7 +1563,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                             post.imageUrl!.isNotEmpty) ...[
                           const SizedBox(height: 8),
                           ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(KubusRadius.sm),
                             child: Image.network(
                               MediaUrlResolver.resolveDisplayUrl(
                                       post.imageUrl) ??

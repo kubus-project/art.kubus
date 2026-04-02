@@ -704,641 +704,686 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                      // Cover Image section
-                      _buildSectionHeader(
-                          l10n.commonCoverImage, Icons.panorama),
-                      const SizedBox(height: 12),
-                      GestureDetector(
-                        onTap: _pickCoverImage,
-                        child: Container(
-                          width: double.infinity,
-                          height: 150,
-                          decoration: BoxDecoration(
-                            color:
-                                Theme.of(context).colorScheme.primaryContainer,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: themeProvider.accentColor
-                                  .withValues(alpha: 0.3),
-                              width: 2,
-                              style: BorderStyle.solid,
-                            ),
-                            image: _localCoverBytes != null
-                                ? DecorationImage(
-                                    image: MemoryImage(_localCoverBytes!),
-                                    fit: BoxFit.cover,
-                                  )
-                                : _coverImageUrl != null &&
-                                        _coverImageUrl!.isNotEmpty
-                                    ? DecorationImage(
-                                        image: NetworkImage(_coverImageUrl!),
-                                        fit: BoxFit.cover,
-                                        onError: (error, stackTrace) {
-                                          // Swallow image load errors (e.g., 404) so Flutter web
-                                          // doesn't surface them as unhandled zone errors.
-                                        },
+                            // Cover Image section
+                            _buildSectionHeader(
+                                l10n.commonCoverImage, Icons.panorama),
+                            const SizedBox(height: 12),
+                            GestureDetector(
+                              onTap: _pickCoverImage,
+                              child: Container(
+                                width: double.infinity,
+                                height: 150,
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primaryContainer,
+                                  borderRadius:
+                                      BorderRadius.circular(KubusRadius.lg),
+                                  border: Border.all(
+                                    color: themeProvider.accentColor
+                                        .withValues(alpha: 0.3),
+                                    width: 2,
+                                    style: BorderStyle.solid,
+                                  ),
+                                  image: _localCoverBytes != null
+                                      ? DecorationImage(
+                                          image: MemoryImage(_localCoverBytes!),
+                                          fit: BoxFit.cover,
+                                        )
+                                      : _coverImageUrl != null &&
+                                              _coverImageUrl!.isNotEmpty
+                                          ? DecorationImage(
+                                              image:
+                                                  NetworkImage(_coverImageUrl!),
+                                              fit: BoxFit.cover,
+                                              onError: (error, stackTrace) {
+                                                // Swallow image load errors (e.g., 404) so Flutter web
+                                                // doesn't surface them as unhandled zone errors.
+                                              },
+                                            )
+                                          : null,
+                                ),
+                                child: (_localCoverBytes == null &&
+                                        (_coverImageUrl == null ||
+                                            _coverImageUrl!.isEmpty))
+                                    ? Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.add_photo_alternate_outlined,
+                                            size: 40,
+                                            color: themeProvider.accentColor
+                                                .withValues(alpha: 0.6),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            l10n.profileEditCoverImageTapToAdd,
+                                            style: KubusTypography.inter(
+                                              fontSize: 14,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface
+                                                  .withValues(alpha: 0.6),
+                                            ),
+                                          ),
+                                        ],
                                       )
-                                    : null,
-                          ),
-                          child: (_localCoverBytes == null &&
-                                  (_coverImageUrl == null ||
-                                      _coverImageUrl!.isEmpty))
-                              ? Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.add_photo_alternate_outlined,
-                                      size: 40,
-                                      color: themeProvider.accentColor
-                                          .withValues(alpha: 0.6),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      l10n.profileEditCoverImageTapToAdd,
-                                      style: KubusTypography.inter(
-                                        fontSize: 14,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withValues(alpha: 0.6),
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              : Stack(
-                                  children: [
-                                    Positioned(
-                                      bottom: 12,
-                                      right: 12,
-                                      child: Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: Colors.black54,
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            const Icon(Icons.edit,
-                                                color: Colors.white, size: 16),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              l10n.commonChange,
-                                              style: KubusTypography.inter(
-                                                fontSize: 12,
-                                                color: Colors.white,
+                                    : Stack(
+                                        children: [
+                                          Positioned(
+                                            bottom: 12,
+                                            right: 12,
+                                            child: Container(
+                                              padding: const EdgeInsets.all(8),
+                                              decoration: BoxDecoration(
+                                                color: Colors.black54,
+                                                borderRadius:
+                                                    BorderRadius.circular(
+                                                        KubusRadius.sm),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(Icons.edit,
+                                                      color: Colors.white,
+                                                      size: 16),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    l10n.commonChange,
+                                                    style:
+                                                        KubusTypography.inter(
+                                                      fontSize: 12,
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
                                             ),
-                                          ],
-                                        ),
+                                          ),
+                                        ],
                                       ),
-                                    ),
-                                  ],
-                                ),
-                        ),
-                      ),
-                      const SizedBox(height: 32),
+                              ),
+                            ),
+                            const SizedBox(height: 32),
 
-                      // Avatar section
-                      _buildSectionHeader(
-                        l10n.profileEditProfilePictureTitle,
-                        Icons.account_circle,
-                      ),
-                      const SizedBox(height: 12),
-                      Center(
-                        child: Column(
-                          children: [
-                            GestureDetector(
-                              onTap: _pickAvatar,
-                              child: Stack(
+                            // Avatar section
+                            _buildSectionHeader(
+                              l10n.profileEditProfilePictureTitle,
+                              Icons.account_circle,
+                            ),
+                            const SizedBox(height: 12),
+                            Center(
+                              child: Column(
                                 children: [
-                                  Container(
-                                    width: 120,
-                                    height: 120,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: themeProvider.accentColor,
-                                        width: 3,
-                                      ),
-                                    ),
-                                    child: ClipOval(
-                                      child: _avatarUrl != null &&
-                                              _avatarUrl!.isNotEmpty
-                                          ? _buildAvatarWidget(
-                                              _avatarUrl!, themeProvider)
-                                          : Icon(
-                                              Icons.person,
-                                              size: 60,
+                                  GestureDetector(
+                                    onTap: _pickAvatar,
+                                    child: Stack(
+                                      children: [
+                                        Container(
+                                          width: 120,
+                                          height: 120,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
                                               color: themeProvider.accentColor,
+                                              width: 3,
                                             ),
+                                          ),
+                                          child: ClipOval(
+                                            child: _avatarUrl != null &&
+                                                    _avatarUrl!.isNotEmpty
+                                                ? _buildAvatarWidget(
+                                                    _avatarUrl!, themeProvider)
+                                                : Icon(
+                                                    Icons.person,
+                                                    size: 60,
+                                                    color: themeProvider
+                                                        .accentColor,
+                                                  ),
+                                          ),
+                                        ),
+                                        Positioned(
+                                          bottom: 0,
+                                          right: 0,
+                                          child: Container(
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              color: themeProvider.accentColor,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .surface,
+                                                width: 2,
+                                              ),
+                                            ),
+                                            child: const Icon(
+                                              Icons.camera_alt,
+                                              color: Colors.white,
+                                              size: 20,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  Positioned(
-                                    bottom: 0,
-                                    right: 0,
-                                    child: Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: themeProvider.accentColor,
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .surface,
-                                          width: 2,
-                                        ),
-                                      ),
-                                      child: const Icon(
-                                        Icons.camera_alt,
-                                        color: Colors.white,
-                                        size: 20,
-                                      ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    l10n.profileEditAvatarTapToChange,
+                                    style: KubusTypography.inter(
+                                      fontSize: 14,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.6),
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 32),
+
+                            // Basic Info Section
+                            _buildSectionHeader(
+                              l10n.profileEditBasicInformationTitle,
+                              Icons.person_outline,
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Username
                             Text(
-                              l10n.profileEditAvatarTapToChange,
+                              l10n.profileEditUsernameLabel,
                               style: KubusTypography.inter(
-                                fontSize: 14,
-                                color: Theme.of(context)
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              controller: _usernameController,
+                              decoration: InputDecoration(
+                                hintText: l10n.profileEditUsernameHint,
+                                prefixIcon: const Icon(Icons.alternate_email),
+                                border: OutlineInputBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(KubusRadius.md),
+                                ),
+                                filled: true,
+                                fillColor: Theme.of(context)
                                     .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.6),
+                                    .primaryContainer,
+                              ),
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return l10n.profileEditUsernameRequiredError;
+                                }
+                                if (value.trim().length < 3) {
+                                  return l10n.profileEditUsernameMinLengthError;
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 24),
+
+                            // Display Name
+                            Text(
+                              l10n.profileEditDisplayNameLabel,
+                              style: KubusTypography.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-
-                      // Basic Info Section
-                      _buildSectionHeader(
-                        l10n.profileEditBasicInformationTitle,
-                        Icons.person_outline,
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Username
-                      Text(
-                        l10n.profileEditUsernameLabel,
-                        style: KubusTypography.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _usernameController,
-                        decoration: InputDecoration(
-                          hintText: l10n.profileEditUsernameHint,
-                          prefixIcon: const Icon(Icons.alternate_email),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          filled: true,
-                          fillColor:
-                              Theme.of(context).colorScheme.primaryContainer,
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return l10n.profileEditUsernameRequiredError;
-                          }
-                          if (value.trim().length < 3) {
-                            return l10n.profileEditUsernameMinLengthError;
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Display Name
-                      Text(
-                        l10n.profileEditDisplayNameLabel,
-                        style: KubusTypography.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _displayNameController,
-                        decoration: InputDecoration(
-                          hintText: l10n.profileEditDisplayNameHint,
-                          prefixIcon: const Icon(Icons.person_outline),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          filled: true,
-                          fillColor:
-                              Theme.of(context).colorScheme.primaryContainer,
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return l10n.profileEditDisplayNameRequiredError;
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Bio
-                      Text(
-                        l10n.profileEditBioLabel,
-                        style: KubusTypography.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _bioController,
-                        maxLines: 4,
-                        maxLength: 200,
-                        decoration: InputDecoration(
-                          hintText: l10n.profileEditBioHint,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          filled: true,
-                          fillColor:
-                              Theme.of(context).colorScheme.primaryContainer,
-                          alignLabelWithHint: true,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Social Links Section
-                      Text(
-                        l10n.profileEditSocialLinksTitle,
-                        style: KubusTypography.inter(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Twitter
-                      TextFormField(
-                        controller: _twitterController,
-                        decoration: InputDecoration(
-                          hintText: l10n.profileEditSocialHandleHint,
-                          labelText: l10n.profileEditSocialTwitterLabel,
-                          prefixIcon: const Icon(Icons.alternate_email),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          filled: true,
-                          fillColor:
-                              Theme.of(context).colorScheme.primaryContainer,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Instagram
-                      TextFormField(
-                        controller: _instagramController,
-                        decoration: InputDecoration(
-                          hintText: l10n.profileEditSocialHandleHint,
-                          labelText: l10n.profileEditSocialInstagramLabel,
-                          prefixIcon: const Icon(Icons.camera_alt),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          filled: true,
-                          fillColor:
-                              Theme.of(context).colorScheme.primaryContainer,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Website
-                      TextFormField(
-                        controller: _websiteController,
-                        decoration: InputDecoration(
-                          hintText: l10n.profileEditSocialWebsiteHint,
-                          labelText: l10n.profileEditSocialWebsiteLabel,
-                          prefixIcon: const Icon(Icons.language),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          filled: true,
-                          fillColor:
-                              Theme.of(context).colorScheme.primaryContainer,
-                        ),
-                        validator: (value) {
-                          if (value != null && value.trim().isNotEmpty) {
-                            if (!value.startsWith('http://') &&
-                                !value.startsWith('https://')) {
-                              return l10n.profileEditSocialUrlInvalidError;
-                            }
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 32),
-
-                      // Artist-specific section (only shown for verified artists)
-                      if (_isArtist) ...[
-                        _buildSectionHeader(
-                          l10n.profileEditArtistInformationTitle,
-                          Icons.palette,
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Specialty
-                        Text(
-                          l10n.profileEditArtistSpecialtiesLabel,
-                          style: KubusTypography.inter(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        TextFormField(
-                          controller: _specialtyController,
-                          decoration: InputDecoration(
-                            hintText: l10n.profileEditArtistSpecialtiesHint,
-                            helperText: l10n.profileEditArtistSpecialtiesHelper,
-                            prefixIcon: const Icon(Icons.brush),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor:
-                                Theme.of(context).colorScheme.primaryContainer,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Years Active
-                        Text(
-                          l10n.profileEditArtistYearsActiveLabel,
-                          style: KubusTypography.inter(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        TextFormField(
-                          controller: _yearsActiveController,
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            hintText: l10n.profileEditArtistYearsActiveHint,
-                            prefixIcon: const Icon(Icons.calendar_today),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor:
-                                Theme.of(context).colorScheme.primaryContainer,
-                          ),
-                          validator: (value) {
-                            if (value != null && value.isNotEmpty) {
-                              final years = int.tryParse(value);
-                              if (years == null || years < 0) {
-                                return l10n
-                                    .profileEditArtistYearsActiveInvalidError;
-                              }
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 32),
-                      ],
-
-                      // Institution-specific section (only shown for verified institutions)
-                      if (_isInstitution) ...[
-                        _buildSectionHeader(
-                          l10n.profileEditInstitutionInformationTitle,
-                          Icons.business,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          l10n.profileEditInstitutionAboutTitle,
-                          style: KubusTypography.inter(
-                            fontSize: 14,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.7),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color:
-                                Theme.of(context).colorScheme.primaryContainer,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .outline
-                                  .withValues(alpha: 0.5),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.info_outline,
-                                color: themeProvider.accentColor,
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              controller: _displayNameController,
+                              decoration: InputDecoration(
+                                hintText: l10n.profileEditDisplayNameHint,
+                                prefixIcon: const Icon(Icons.person_outline),
+                                border: OutlineInputBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(KubusRadius.md),
+                                ),
+                                filled: true,
+                                fillColor: Theme.of(context)
+                                    .colorScheme
+                                    .primaryContainer,
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  l10n.profileEditInstitutionAboutBody,
-                                  style: KubusTypography.inter(
-                                    fontSize: 13,
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return l10n
+                                      .profileEditDisplayNameRequiredError;
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 24),
+
+                            // Bio
+                            Text(
+                              l10n.profileEditBioLabel,
+                              style: KubusTypography.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              controller: _bioController,
+                              maxLines: 4,
+                              maxLength: 200,
+                              decoration: InputDecoration(
+                                hintText: l10n.profileEditBioHint,
+                                border: OutlineInputBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(KubusRadius.md),
+                                ),
+                                filled: true,
+                                fillColor: Theme.of(context)
+                                    .colorScheme
+                                    .primaryContainer,
+                                alignLabelWithHint: true,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+
+                            // Social Links Section
+                            Text(
+                              l10n.profileEditSocialLinksTitle,
+                              style: KubusTypography.inter(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Twitter
+                            TextFormField(
+                              controller: _twitterController,
+                              decoration: InputDecoration(
+                                hintText: l10n.profileEditSocialHandleHint,
+                                labelText: l10n.profileEditSocialTwitterLabel,
+                                prefixIcon: const Icon(Icons.alternate_email),
+                                border: OutlineInputBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(KubusRadius.md),
+                                ),
+                                filled: true,
+                                fillColor: Theme.of(context)
+                                    .colorScheme
+                                    .primaryContainer,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Instagram
+                            TextFormField(
+                              controller: _instagramController,
+                              decoration: InputDecoration(
+                                hintText: l10n.profileEditSocialHandleHint,
+                                labelText: l10n.profileEditSocialInstagramLabel,
+                                prefixIcon: const Icon(Icons.camera_alt),
+                                border: OutlineInputBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(KubusRadius.md),
+                                ),
+                                filled: true,
+                                fillColor: Theme.of(context)
+                                    .colorScheme
+                                    .primaryContainer,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Website
+                            TextFormField(
+                              controller: _websiteController,
+                              decoration: InputDecoration(
+                                hintText: l10n.profileEditSocialWebsiteHint,
+                                labelText: l10n.profileEditSocialWebsiteLabel,
+                                prefixIcon: const Icon(Icons.language),
+                                border: OutlineInputBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(KubusRadius.md),
+                                ),
+                                filled: true,
+                                fillColor: Theme.of(context)
+                                    .colorScheme
+                                    .primaryContainer,
+                              ),
+                              validator: (value) {
+                                if (value != null && value.trim().isNotEmpty) {
+                                  if (!value.startsWith('http://') &&
+                                      !value.startsWith('https://')) {
+                                    return l10n
+                                        .profileEditSocialUrlInvalidError;
+                                  }
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 32),
+
+                            // Artist-specific section (only shown for verified artists)
+                            if (_isArtist) ...[
+                              _buildSectionHeader(
+                                l10n.profileEditArtistInformationTitle,
+                                Icons.palette,
+                              ),
+                              const SizedBox(height: 16),
+
+                              // Specialty
+                              Text(
+                                l10n.profileEditArtistSpecialtiesLabel,
+                                style: KubusTypography.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              TextFormField(
+                                controller: _specialtyController,
+                                decoration: InputDecoration(
+                                  hintText:
+                                      l10n.profileEditArtistSpecialtiesHint,
+                                  helperText:
+                                      l10n.profileEditArtistSpecialtiesHelper,
+                                  prefixIcon: const Icon(Icons.brush),
+                                  border: OutlineInputBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(KubusRadius.md),
+                                  ),
+                                  filled: true,
+                                  fillColor: Theme.of(context)
+                                      .colorScheme
+                                      .primaryContainer,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+
+                              // Years Active
+                              Text(
+                                l10n.profileEditArtistYearsActiveLabel,
+                                style: KubusTypography.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              TextFormField(
+                                controller: _yearsActiveController,
+                                keyboardType: TextInputType.number,
+                                decoration: InputDecoration(
+                                  hintText:
+                                      l10n.profileEditArtistYearsActiveHint,
+                                  prefixIcon: const Icon(Icons.calendar_today),
+                                  border: OutlineInputBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(KubusRadius.md),
+                                  ),
+                                  filled: true,
+                                  fillColor: Theme.of(context)
+                                      .colorScheme
+                                      .primaryContainer,
+                                ),
+                                validator: (value) {
+                                  if (value != null && value.isNotEmpty) {
+                                    final years = int.tryParse(value);
+                                    if (years == null || years < 0) {
+                                      return l10n
+                                          .profileEditArtistYearsActiveInvalidError;
+                                    }
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 32),
+                            ],
+
+                            // Institution-specific section (only shown for verified institutions)
+                            if (_isInstitution) ...[
+                              _buildSectionHeader(
+                                l10n.profileEditInstitutionInformationTitle,
+                                Icons.business,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                l10n.profileEditInstitutionAboutTitle,
+                                style: KubusTypography.inter(
+                                  fontSize: 14,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.7),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.all(KubusSpacing.md),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primaryContainer,
+                                  borderRadius:
+                                      BorderRadius.circular(KubusRadius.md),
+                                  border: Border.all(
                                     color: Theme.of(context)
                                         .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.8),
+                                        .outline
+                                        .withValues(alpha: 0.5),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                      ],
-
-                      // Privacy Settings Section
-                      _buildSectionHeader(l10n.settingsPrivacySettingsTileTitle,
-                          Icons.security),
-                      const SizedBox(height: 16),
-
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primaryContainer,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .outline
-                                .withValues(alpha: 0.5),
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            _buildPrivacySwitch(
-                              l10n.settingsPrivateProfileTitle,
-                              l10n.settingsPrivateProfileSubtitle,
-                              Icons.lock_outline,
-                              _privateProfile,
-                              (value) =>
-                                  setState(() => _privateProfile = value),
-                              switchKey: const Key(
-                                  'profile_edit_privacy_private_profile'),
-                            ),
-                            _buildDivider(),
-                            _buildPrivacySwitch(
-                              l10n.settingsShowActivityStatusTitle,
-                              l10n.settingsShowActivityStatusSubtitle,
-                              Icons.circle,
-                              _showActivityStatus,
-                              (value) => setState(() {
-                                _showActivityStatus = value;
-                                if (!value) _shareLastVisitedLocation = false;
-                              }),
-                              switchKey: const Key(
-                                  'profile_edit_privacy_show_activity_status'),
-                            ),
-                            _buildDivider(),
-                            _buildPrivacySwitch(
-                              l10n.settingsShareLastVisitedLocationTitle,
-                              l10n.settingsShareLastVisitedLocationSubtitle,
-                              Icons.place_outlined,
-                              _shareLastVisitedLocation,
-                              (value) => setState(
-                                  () => _shareLastVisitedLocation = value),
-                              enabled: _showActivityStatus,
-                              switchKey: const Key(
-                                  'profile_edit_privacy_share_last_visited_location'),
-                            ),
-                            _buildDivider(),
-                            _buildPrivacySwitch(
-                              l10n.settingsShowCollectionTitle,
-                              l10n.settingsShowCollectionSubtitle,
-                              Icons.collections,
-                              _showCollection,
-                              (value) =>
-                                  setState(() => _showCollection = value),
-                              switchKey: const Key(
-                                  'profile_edit_privacy_show_collection'),
-                            ),
-                            _buildDivider(),
-                            _buildPrivacySwitch(
-                              l10n.settingsAllowMessagesTitle,
-                              l10n.settingsAllowMessagesSubtitle,
-                              Icons.message_outlined,
-                              _allowMessages,
-                              (value) => setState(() => _allowMessages = value),
-                              switchKey: const Key(
-                                  'profile_edit_privacy_allow_messages'),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-
-                      // Role Status (read-only display)
-                      if (_isArtist || _isInstitution) ...[
-                        _buildSectionHeader(
-                          l10n.profileEditVerifiedStatusTitle,
-                          Icons.verified,
-                        ),
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                themeProvider.accentColor
-                                    .withValues(alpha: 0.1),
-                                themeProvider.accentColor
-                                    .withValues(alpha: 0.05),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: themeProvider.accentColor
-                                  .withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: themeProvider.accentColor
-                                      .withValues(alpha: 0.2),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  _isInstitution
-                                      ? Icons.business
-                                      : Icons.palette,
-                                  color: themeProvider.accentColor,
-                                  size: 24,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                child: Row(
                                   children: [
-                                    Text(
-                                      _isInstitution
-                                          ? l10n
-                                              .profileEditVerifiedInstitutionTitle
-                                          : l10n.profileEditVerifiedArtistTitle,
-                                      style: KubusTypography.inter(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface,
-                                      ),
+                                    Icon(
+                                      Icons.info_outline,
+                                      color: themeProvider.accentColor,
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _isInstitution
-                                          ? l10n
-                                              .profileEditVerifiedInstitutionSubtitle
-                                          : l10n
-                                              .profileEditVerifiedArtistSubtitle,
-                                      style: KubusTypography.inter(
-                                        fontSize: 13,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withValues(alpha: 0.7),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        l10n.profileEditInstitutionAboutBody,
+                                        style: KubusTypography.inter(
+                                          fontSize: 13,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.8),
+                                        ),
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                              Icon(
-                                Icons.check_circle,
-                                color: Theme.of(context).colorScheme.primary,
-                                size: 28,
-                              ),
+                              const SizedBox(height: 32),
                             ],
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                      ],
+
+                            // Privacy Settings Section
+                            _buildSectionHeader(
+                                l10n.settingsPrivacySettingsTileTitle,
+                                Icons.security),
+                            const SizedBox(height: 16),
+
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .primaryContainer,
+                                borderRadius:
+                                    BorderRadius.circular(KubusRadius.lg),
+                                border: Border.all(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .outline
+                                      .withValues(alpha: 0.5),
+                                ),
+                              ),
+                              child: Column(
+                                children: [
+                                  _buildPrivacySwitch(
+                                    l10n.settingsPrivateProfileTitle,
+                                    l10n.settingsPrivateProfileSubtitle,
+                                    Icons.lock_outline,
+                                    _privateProfile,
+                                    (value) =>
+                                        setState(() => _privateProfile = value),
+                                    switchKey: const Key(
+                                        'profile_edit_privacy_private_profile'),
+                                  ),
+                                  _buildDivider(),
+                                  _buildPrivacySwitch(
+                                    l10n.settingsShowActivityStatusTitle,
+                                    l10n.settingsShowActivityStatusSubtitle,
+                                    Icons.circle,
+                                    _showActivityStatus,
+                                    (value) => setState(() {
+                                      _showActivityStatus = value;
+                                      if (!value) {
+                                        _shareLastVisitedLocation = false;
+                                      }
+                                    }),
+                                    switchKey: const Key(
+                                        'profile_edit_privacy_show_activity_status'),
+                                  ),
+                                  _buildDivider(),
+                                  _buildPrivacySwitch(
+                                    l10n.settingsShareLastVisitedLocationTitle,
+                                    l10n.settingsShareLastVisitedLocationSubtitle,
+                                    Icons.place_outlined,
+                                    _shareLastVisitedLocation,
+                                    (value) => setState(() =>
+                                        _shareLastVisitedLocation = value),
+                                    enabled: _showActivityStatus,
+                                    switchKey: const Key(
+                                        'profile_edit_privacy_share_last_visited_location'),
+                                  ),
+                                  _buildDivider(),
+                                  _buildPrivacySwitch(
+                                    l10n.settingsShowCollectionTitle,
+                                    l10n.settingsShowCollectionSubtitle,
+                                    Icons.collections,
+                                    _showCollection,
+                                    (value) =>
+                                        setState(() => _showCollection = value),
+                                    switchKey: const Key(
+                                        'profile_edit_privacy_show_collection'),
+                                  ),
+                                  _buildDivider(),
+                                  _buildPrivacySwitch(
+                                    l10n.settingsAllowMessagesTitle,
+                                    l10n.settingsAllowMessagesSubtitle,
+                                    Icons.message_outlined,
+                                    _allowMessages,
+                                    (value) =>
+                                        setState(() => _allowMessages = value),
+                                    switchKey: const Key(
+                                        'profile_edit_privacy_allow_messages'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 32),
+
+                            // Role Status (read-only display)
+                            if (_isArtist || _isInstitution) ...[
+                              _buildSectionHeader(
+                                l10n.profileEditVerifiedStatusTitle,
+                                Icons.verified,
+                              ),
+                              const SizedBox(height: 16),
+                              Container(
+                                padding: const EdgeInsets.all(KubusSpacing.md),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      themeProvider.accentColor
+                                          .withValues(alpha: 0.1),
+                                      themeProvider.accentColor
+                                          .withValues(alpha: 0.05),
+                                    ],
+                                  ),
+                                  borderRadius:
+                                      BorderRadius.circular(KubusRadius.lg),
+                                  border: Border.all(
+                                    color: themeProvider.accentColor
+                                        .withValues(alpha: 0.3),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding:
+                                          const EdgeInsets.all(KubusSpacing.sm),
+                                      decoration: BoxDecoration(
+                                        color: themeProvider.accentColor
+                                            .withValues(alpha: 0.2),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        _isInstitution
+                                            ? Icons.business
+                                            : Icons.palette,
+                                        color: themeProvider.accentColor,
+                                        size: 24,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            _isInstitution
+                                                ? l10n
+                                                    .profileEditVerifiedInstitutionTitle
+                                                : l10n
+                                                    .profileEditVerifiedArtistTitle,
+                                            style: KubusTypography.inter(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            _isInstitution
+                                                ? l10n
+                                                    .profileEditVerifiedInstitutionSubtitle
+                                                : l10n
+                                                    .profileEditVerifiedArtistSubtitle,
+                                            style: KubusTypography.inter(
+                                              fontSize: 13,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface
+                                                  .withValues(alpha: 0.7),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Icon(
+                                      Icons.check_circle,
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                      size: 28,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 32),
+                            ],
                           ],
                         ),
                       ),

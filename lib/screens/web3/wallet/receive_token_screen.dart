@@ -17,9 +17,8 @@ class ReceiveTokenScreen extends StatefulWidget {
   State<ReceiveTokenScreen> createState() => _ReceiveTokenScreenState();
 }
 
-class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> 
+class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
     with TickerProviderStateMixin {
-  
   String _selectedToken = 'KUB8';
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
@@ -63,13 +62,14 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
+          icon: Icon(Icons.arrow_back,
+              color: Theme.of(context).colorScheme.onSurface),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
           l10n.receiveTokenTitle,
           style: KubusTypography.inter(
-            fontSize: 20,
+            fontSize: KubusHeaderMetrics.screenTitle,
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.onSurface,
           ),
@@ -77,11 +77,18 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final isTablet = constraints.maxWidth > 600 && constraints.maxWidth <= 800;
+          final isTablet =
+              constraints.maxWidth > 600 && constraints.maxWidth <= 800;
           final isWideScreen = constraints.maxWidth > 800;
-          
+
           return SingleChildScrollView(
-            padding: EdgeInsets.all(isWideScreen ? 32 : isTablet ? 28 : 24),
+            padding: EdgeInsets.all(
+              isWideScreen
+                  ? KubusSpacing.xl
+                  : isTablet
+                      ? KubusSpacing.lg + KubusSpacing.sm
+                      : KubusSpacing.lg,
+            ),
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 maxWidth: isWideScreen ? 600 : double.infinity,
@@ -90,11 +97,28 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                 child: Column(
                   children: [
                     _buildTokenSelector(),
-                    SizedBox(height: isWideScreen ? 40 : isTablet ? 36 : 32),
-                    _buildQRCode(walletAddress, hasWalletAddress, selectedToken),
-                    SizedBox(height: isWideScreen ? 40 : isTablet ? 36 : 32),
-                    _buildAddressSection(walletAddress, hasWalletAddress, selectedToken),
-                    SizedBox(height: isWideScreen ? 40 : isTablet ? 36 : 32),
+                    SizedBox(
+                        height: isWideScreen
+                            ? 40
+                            : isTablet
+                                ? 36
+                                : 32),
+                    _buildQRCode(
+                        walletAddress, hasWalletAddress, selectedToken),
+                    SizedBox(
+                        height: isWideScreen
+                            ? 40
+                            : isTablet
+                                ? 36
+                                : 32),
+                    _buildAddressSection(
+                        walletAddress, hasWalletAddress, selectedToken),
+                    SizedBox(
+                        height: isWideScreen
+                            ? 40
+                            : isTablet
+                                ? 36
+                                : 32),
                     _buildInstructions(),
                   ],
                 ),
@@ -136,33 +160,37 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
             Text(
               l10n.receiveTokenSelectTokenTitle,
               style: KubusTypography.inter(
-                fontSize: 18,
+                fontSize: KubusHeaderMetrics.sectionTitle,
                 fontWeight: FontWeight.bold,
                 color: theme.colorScheme.onSurface,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: KubusSpacing.md),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: tokens.map((token) {
                   final isSelected = token.symbol == _selectedToken;
                   return Padding(
-                    padding: const EdgeInsets.only(right: 12),
+                    padding: const EdgeInsets.only(right: KubusSpacing.md),
                     child: GestureDetector(
                       onTap: () {
                         setState(() => _selectedToken = token.symbol);
                       },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: KubusSpacing.md,
+                          vertical: KubusSpacing.sm + KubusSpacing.xxs,
+                        ),
                         decoration: BoxDecoration(
                           color: isSelected
                               ? accent.withValues(alpha: 0.2)
                               : theme.colorScheme.primaryContainer,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(KubusRadius.md),
                           border: Border.all(
-                            color: isSelected ? accent : theme.colorScheme.outline,
+                            color:
+                                isSelected ? accent : theme.colorScheme.outline,
                             width: isSelected ? 2 : 1,
                           ),
                         ),
@@ -170,14 +198,15 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             _buildTokenAvatar(token, isSelected: isSelected),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: KubusSpacing.sm),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   token.symbol,
                                   style: KubusTypography.inter(
-                                    fontSize: 15,
+                                    fontSize:
+                                        KubusHeaderMetrics.sectionSubtitle,
                                     fontWeight: FontWeight.w600,
                                     color: theme.colorScheme.onSurface,
                                   ),
@@ -185,11 +214,13 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                                 const SizedBox(height: 2),
                                 Text(
                                   l10n.receiveTokenBalanceLabel(
-                                    token.balance.toStringAsFixed(token.decimals >= 3 ? 3 : 2),
+                                    token.balance.toStringAsFixed(
+                                        token.decimals >= 3 ? 3 : 2),
                                   ),
                                   style: KubusTypography.inter(
-                                    fontSize: 11,
-                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                    fontSize: KubusSizes.badgeCountFontSize,
+                                    color: theme.colorScheme.onSurface
+                                        .withValues(alpha: 0.6),
                                   ),
                                 ),
                               ],
@@ -208,7 +239,8 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
     );
   }
 
-  Widget _buildQRCode(String? walletAddress, bool hasWalletAddress, Token? token) {
+  Widget _buildQRCode(
+      String? walletAddress, bool hasWalletAddress, Token? token) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final tokenSymbol = token?.symbol ?? _selectedToken;
@@ -222,7 +254,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
         padding: const EdgeInsets.all(KubusSpacing.lg),
         decoration: BoxDecoration(
           color: theme.colorScheme.primaryContainer,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(KubusRadius.xl),
           border: Border.all(color: theme.colorScheme.outline),
         ),
         child: Column(
@@ -232,18 +264,20 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
               height: 200,
               decoration: BoxDecoration(
                 color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(8.0),
+                padding: const EdgeInsets.all(KubusSpacing.sm),
                 child: hasWalletAddress
                     ? QrImageView(
                         data: qrData,
                         version: QrVersions.auto,
                         size: 184.0,
                         backgroundColor: theme.colorScheme.onPrimary,
-                        eyeStyle: QrEyeStyle(color: theme.colorScheme.onSurface),
-                        dataModuleStyle: QrDataModuleStyle(color: theme.colorScheme.onSurface),
+                        eyeStyle:
+                            QrEyeStyle(color: theme.colorScheme.onSurface),
+                        dataModuleStyle: QrDataModuleStyle(
+                            color: theme.colorScheme.onSurface),
                         errorStateBuilder: (cxt, err) {
                           final theme = Theme.of(cxt);
                           return Center(
@@ -270,13 +304,13 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                       ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: KubusSpacing.md),
             Text(
               l10n.receiveTokenScanToSend(tokenSymbol),
               style: KubusTypography.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onSurface,
+                color: theme.colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
@@ -286,7 +320,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                   : l10n.receiveTokenFinishSetupToShare,
               style: KubusTypography.inter(
                 fontSize: 14,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
               textAlign: TextAlign.center,
             ),
@@ -296,7 +330,8 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
     );
   }
 
-  Widget _buildAddressSection(String? walletAddress, bool hasWalletAddress, Token? token) {
+  Widget _buildAddressSection(
+      String? walletAddress, bool hasWalletAddress, Token? token) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final accent = Provider.of<ThemeProvider>(context).accentColor;
@@ -306,7 +341,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
       padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: theme.colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(color: theme.colorScheme.outline),
       ),
       child: Column(
@@ -337,7 +372,9 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                   ),
                   IconButton(
                     tooltip: l10n.receiveTokenCopyAddressTooltip,
-                    onPressed: hasWalletAddress ? () => _copyAddress(walletAddress) : null,
+                    onPressed: hasWalletAddress
+                        ? () => _copyAddress(walletAddress)
+                        : null,
                     icon: Icon(
                       Icons.copy,
                       color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -350,11 +387,12 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
           const SizedBox(height: 12),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(KubusSpacing.md),
             decoration: BoxDecoration(
               color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: theme.colorScheme.onSurface.withValues(alpha: 0.2)),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
+              border: Border.all(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.2)),
             ),
             child: hasWalletAddress
                 ? SelectableText(
@@ -379,15 +417,17 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: hasWalletAddress ? () => _copyAddress(walletAddress) : null,
+              onPressed:
+                  hasWalletAddress ? () => _copyAddress(walletAddress) : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: accent,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
                 ),
               ),
-              icon: Icon(Icons.content_copy, color: theme.colorScheme.onSurface, size: 18),
+              icon: Icon(Icons.content_copy,
+                  color: theme.colorScheme.onSurface, size: 18),
               label: Text(
                 l10n.receiveTokenCopyAddressButton,
                 style: KubusTypography.inter(
@@ -409,7 +449,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
       padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(color: Theme.of(context).colorScheme.outline),
       ),
       child: Column(
@@ -422,7 +462,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                 color: Provider.of<ThemeProvider>(context).accentColor,
                 size: 20,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: KubusSpacing.sm),
               Text(
                 l10n.receiveTokenHowToReceiveTitle(_selectedToken),
                 style: KubusTypography.inter(
@@ -433,36 +473,44 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: KubusSpacing.md),
           _buildInstructionStep(
             '1',
             l10n.receiveTokenStep1Title,
             l10n.receiveTokenStep1Description(_selectedToken),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: KubusSpacing.sm),
           _buildInstructionStep(
             '2',
             l10n.receiveTokenStep2Title,
             l10n.receiveTokenStep2Description,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: KubusSpacing.sm),
           _buildInstructionStep(
             '3',
             l10n.receiveTokenStep3Title,
             l10n.receiveTokenStep3Description,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: KubusSpacing.md),
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(KubusSpacing.sm),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.3)),
+              color: Theme.of(context)
+                  .colorScheme
+                  .errorContainer
+                  .withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(KubusRadius.sm),
+              border: Border.all(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .error
+                      .withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
-                Icon(Icons.warning_amber_outlined, color: Theme.of(context).colorScheme.error, size: 20),
-                const SizedBox(width: 8),
+                Icon(Icons.warning_amber_outlined,
+                    color: Theme.of(context).colorScheme.error, size: 20),
+                const SizedBox(width: KubusSpacing.sm),
                 Expanded(
                   child: Text(
                     l10n.receiveTokenWarningOnlySend(_selectedToken),
@@ -480,7 +528,8 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
     );
   }
 
-  Widget _buildInstructionStep(String number, String title, String description) {
+  Widget _buildInstructionStep(
+      String number, String title, String description) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -489,7 +538,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
           height: 24,
           decoration: BoxDecoration(
             color: Provider.of<ThemeProvider>(context).accentColor,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(KubusRadius.md),
           ),
           child: Center(
             child: Text(
@@ -520,7 +569,10 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                 description,
                 style: KubusTypography.inter(
                   fontSize: 13,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
                   height: 1.4,
                 ),
               ),
@@ -560,13 +612,16 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
     final tokenSymbol = token?.symbol ?? _selectedToken;
     final payload = _buildQrPayload(address, token);
     await SharePlus.instance.share(
-      ShareParams(text: l10n.receiveTokenShareText(tokenSymbol, address, payload)),
+      ShareParams(
+          text: l10n.receiveTokenShareText(tokenSymbol, address, payload)),
     );
   }
 
   String _buildQrPayload(String address, Token? token) {
     if (address.isEmpty) return '';
-    if (token == null || token.symbol.toUpperCase() == 'SOL' || token.contractAddress.toLowerCase() == 'native') {
+    if (token == null ||
+        token.symbol.toUpperCase() == 'SOL' ||
+        token.contractAddress.toLowerCase() == 'native') {
       return 'solana:$address';
     }
 
@@ -599,17 +654,19 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
       padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: theme.colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(color: theme.colorScheme.outline),
       ),
       child: Row(
         children: [
-          Icon(Icons.account_balance_wallet_outlined, color: theme.colorScheme.onSurface),
+          Icon(Icons.account_balance_wallet_outlined,
+              color: theme.colorScheme.onSurface),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               l10n.receiveTokenNoTokensMessage,
-              style: KubusTypography.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
+              style: KubusTypography.inter(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
             ),
           ),
         ],
@@ -619,7 +676,8 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
 
   Widget _buildTokenAvatar(Token token, {bool isSelected = false}) {
     final theme = Theme.of(context);
-    final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
+    final accent =
+        Provider.of<ThemeProvider>(context, listen: false).accentColor;
     final background = isSelected
         ? accent.withValues(alpha: 0.25)
         : theme.colorScheme.surfaceContainerHighest;
@@ -636,7 +694,8 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
         child: Image.network(
           token.logoUrl!,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _tokenInitialAvatar(token, background, theme),
+          errorBuilder: (_, __, ___) =>
+              _tokenInitialAvatar(token, background, theme),
           loadingBuilder: (context, child, progress) {
             if (progress == null) return child;
             return _tokenInitialAvatar(token, background, theme);
@@ -658,7 +717,9 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
       ),
       child: Center(
         child: Text(
-          token.symbol.isNotEmpty ? token.symbol.substring(0, 1).toUpperCase() : '?',
+          token.symbol.isNotEmpty
+              ? token.symbol.substring(0, 1).toUpperCase()
+              : '?',
           style: KubusTypography.inter(
             fontWeight: FontWeight.bold,
             color: theme.colorScheme.onSurface,
@@ -668,8 +729,3 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
     );
   }
 }
-
-
-
-
-

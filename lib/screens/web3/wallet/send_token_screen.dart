@@ -21,7 +21,7 @@ class SendTokenScreen extends StatefulWidget {
   State<SendTokenScreen> createState() => _SendTokenScreenState();
 }
 
-class _SendTokenScreenState extends State<SendTokenScreen> 
+class _SendTokenScreenState extends State<SendTokenScreen>
     with TickerProviderStateMixin {
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
@@ -30,7 +30,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
   String _addressError = '';
   String _amountError = '';
   double _estimatedGas = 0.0;
-  
+
   late AnimationController _animationController;
   late Animation<Offset> _slideAnimation;
 
@@ -71,13 +71,14 @@ class _SendTokenScreenState extends State<SendTokenScreen>
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
+          icon: Icon(Icons.arrow_back,
+              color: Theme.of(context).colorScheme.onSurface),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
           l10n.sendTokenTitle,
           style: KubusTypography.inter(
-            fontSize: 20,
+            fontSize: KubusHeaderMetrics.screenTitle,
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.onSurface,
           ),
@@ -88,16 +89,16 @@ class _SendTokenScreenState extends State<SendTokenScreen>
               return IconButton(
                 icon: Icon(
                   platformProvider.getQRScannerIcon(),
-                  color: platformProvider.supportsQRScanning 
-                    ? Theme.of(context).colorScheme.onSurface 
-                    : platformProvider.getUnsupportedFeatureColor(context),
+                  color: platformProvider.supportsQRScanning
+                      ? Theme.of(context).colorScheme.onSurface
+                      : platformProvider.getUnsupportedFeatureColor(context),
                 ),
-                onPressed: platformProvider.supportsQRScanning 
-                  ? _scanQRCode 
-                  : () => _showUnsupportedFeature(context, platformProvider),
-                tooltip: platformProvider.supportsQRScanning 
-                  ? l10n.sendTokenScanQrTooltip
-                  : l10n.sendTokenQrScannerUnavailableTooltip,
+                onPressed: platformProvider.supportsQRScanning
+                    ? _scanQRCode
+                    : () => _showUnsupportedFeature(context, platformProvider),
+                tooltip: platformProvider.supportsQRScanning
+                    ? l10n.sendTokenScanQrTooltip
+                    : l10n.sendTokenQrScannerUnavailableTooltip,
               );
             },
           ),
@@ -105,13 +106,20 @@ class _SendTokenScreenState extends State<SendTokenScreen>
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final isTablet = constraints.maxWidth > 600 && constraints.maxWidth <= 800;
+          final isTablet =
+              constraints.maxWidth > 600 && constraints.maxWidth <= 800;
           final isWideScreen = constraints.maxWidth > 800;
-          
+
           return SlideTransition(
             position: _slideAnimation,
             child: SingleChildScrollView(
-              padding: EdgeInsets.all(isWideScreen ? 32 : isTablet ? 28 : 24),
+              padding: EdgeInsets.all(
+                isWideScreen
+                    ? KubusSpacing.xl
+                    : isTablet
+                        ? KubusSpacing.lg + KubusSpacing.sm
+                        : KubusSpacing.lg,
+              ),
               child: ConstrainedBox(
                 constraints: BoxConstraints(
                   maxWidth: isWideScreen ? 600 : double.infinity,
@@ -121,13 +129,33 @@ class _SendTokenScreenState extends State<SendTokenScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildTokenSelector(),
-                      SizedBox(height: isWideScreen ? 32 : isTablet ? 28 : 24),
+                      SizedBox(
+                          height: isWideScreen
+                              ? 32
+                              : isTablet
+                                  ? 28
+                                  : 24),
                       _buildAddressInput(),
-                      SizedBox(height: isWideScreen ? 32 : isTablet ? 28 : 24),
+                      SizedBox(
+                          height: isWideScreen
+                              ? 32
+                              : isTablet
+                                  ? 28
+                                  : 24),
                       _buildAmountInput(),
-                      SizedBox(height: isWideScreen ? 32 : isTablet ? 28 : 24),
+                      SizedBox(
+                          height: isWideScreen
+                              ? 32
+                              : isTablet
+                                  ? 28
+                                  : 24),
                       _buildTransactionSummary(),
-                      SizedBox(height: isWideScreen ? 40 : isTablet ? 36 : 32),
+                      SizedBox(
+                          height: isWideScreen
+                              ? 40
+                              : isTablet
+                                  ? 36
+                                  : 32),
                       _buildSendButton(),
                     ],
                   ),
@@ -171,15 +199,15 @@ class _SendTokenScreenState extends State<SendTokenScreen>
             Text(
               l10n.sendTokenSelectTokenTitle,
               style: KubusTypography.inter(
-                fontSize: 18,
+                fontSize: KubusHeaderMetrics.sectionTitle,
                 fontWeight: FontWeight.bold,
                 color: theme.colorScheme.onSurface,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: KubusSpacing.md),
             Wrap(
-              spacing: 12,
-              runSpacing: 12,
+              spacing: KubusSpacing.md,
+              runSpacing: KubusSpacing.md,
               children: tokens.map((token) {
                 final isSelected = token.symbol == _selectedToken;
                 return GestureDetector(
@@ -192,12 +220,15 @@ class _SendTokenScreenState extends State<SendTokenScreen>
                   },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: KubusSpacing.md,
+                      vertical: KubusSpacing.sm + KubusSpacing.xxs,
+                    ),
                     decoration: BoxDecoration(
                       color: isSelected
                           ? accent.withValues(alpha: 0.15)
                           : theme.colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(KubusRadius.md),
                       border: Border.all(
                         color: isSelected ? accent : theme.colorScheme.outline,
                         width: isSelected ? 2 : 1,
@@ -207,14 +238,15 @@ class _SendTokenScreenState extends State<SendTokenScreen>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         _buildTokenAvatar(token, isSelected: isSelected),
-                        const SizedBox(width: 10),
+                        const SizedBox(
+                            width: KubusSpacing.sm + KubusSpacing.xxs),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               token.symbol,
                               style: KubusTypography.inter(
-                                fontSize: 15,
+                                fontSize: KubusHeaderMetrics.sectionSubtitle,
                                 fontWeight: FontWeight.w600,
                                 color: theme.colorScheme.onSurface,
                               ),
@@ -222,11 +254,13 @@ class _SendTokenScreenState extends State<SendTokenScreen>
                             const SizedBox(height: 2),
                             Text(
                               l10n.receiveTokenBalanceLabel(
-                                token.balance.toStringAsFixed(token.decimals >= 3 ? 3 : 2),
+                                token.balance.toStringAsFixed(
+                                    token.decimals >= 3 ? 3 : 2),
                               ),
                               style: KubusTypography.inter(
-                                fontSize: 11,
-                                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                fontSize: KubusSizes.badgeCountFontSize,
+                                color: theme.colorScheme.onSurface
+                                    .withValues(alpha: 0.6),
                               ),
                             ),
                           ],
@@ -251,46 +285,56 @@ class _SendTokenScreenState extends State<SendTokenScreen>
         Text(
           l10n.sendTokenRecipientAddressTitle,
           style: KubusTypography.inter(
-            fontSize: 18,
+            fontSize: KubusHeaderMetrics.sectionTitle,
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: KubusSpacing.md),
         Container(
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(KubusRadius.md),
             border: Border.all(
-              color: _addressError.isNotEmpty 
-                ? Theme.of(context).colorScheme.error
-                : Theme.of(context).colorScheme.outline,
+              color: _addressError.isNotEmpty
+                  ? Theme.of(context).colorScheme.error
+                  : Theme.of(context).colorScheme.outline,
             ),
           ),
           child: TextField(
             controller: _addressController,
-            style: KubusTypography.inter(color: Theme.of(context).colorScheme.onPrimary),
+            style: KubusTypography.inter(
+                color: Theme.of(context).colorScheme.onPrimary),
             onChanged: _validateAddress,
             decoration: InputDecoration(
               hintText: l10n.sendTokenRecipientAddressHint,
-              hintStyle: KubusTypography.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+              hintStyle: KubusTypography.inter(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6)),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.all(16),
+              contentPadding: const EdgeInsets.all(KubusSpacing.md),
               suffixIcon: Consumer<PlatformProvider>(
                 builder: (context, platformProvider, child) {
                   return IconButton(
                     icon: Icon(
                       platformProvider.getQRScannerIcon(),
-                      color: platformProvider.supportsQRScanning 
-                        ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)
-                        : platformProvider.getUnsupportedFeatureColor(context),
+                      color: platformProvider.supportsQRScanning
+                          ? Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6)
+                          : platformProvider
+                              .getUnsupportedFeatureColor(context),
                     ),
-                    onPressed: platformProvider.supportsQRScanning 
-                      ? _scanQRCode 
-                      : () => _showUnsupportedFeature(context, platformProvider),
-                    tooltip: platformProvider.supportsQRScanning 
-                      ? l10n.sendTokenScanQrTooltip
-                      : l10n.sendTokenQrScannerUnavailableTooltip,
+                    onPressed: platformProvider.supportsQRScanning
+                        ? _scanQRCode
+                        : () =>
+                            _showUnsupportedFeature(context, platformProvider),
+                    tooltip: platformProvider.supportsQRScanning
+                        ? l10n.sendTokenScanQrTooltip
+                        : l10n.sendTokenQrScannerUnavailableTooltip,
                   );
                 },
               ),
@@ -330,9 +374,12 @@ class _SendTokenScreenState extends State<SendTokenScreen>
             GestureDetector(
               onTap: _setMaxAmount,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
+                  color: Provider.of<ThemeProvider>(context)
+                      .accentColor
+                      .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(
                     color: Provider.of<ThemeProvider>(context).accentColor,
@@ -354,23 +401,29 @@ class _SendTokenScreenState extends State<SendTokenScreen>
         Container(
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(KubusRadius.md),
             border: Border.all(
-              color: _amountError.isNotEmpty 
-                ? Theme.of(context).colorScheme.error
-                : Theme.of(context).colorScheme.outline,
+              color: _amountError.isNotEmpty
+                  ? Theme.of(context).colorScheme.error
+                  : Theme.of(context).colorScheme.outline,
             ),
           ),
           child: TextField(
             controller: _amountController,
-            style: KubusTypography.inter(color: Theme.of(context).colorScheme.onPrimary, fontSize: 18),
+            style: KubusTypography.inter(
+                color: Theme.of(context).colorScheme.onPrimary, fontSize: 18),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             onChanged: _validateAmount,
             decoration: InputDecoration(
               hintText: '0.0',
-              hintStyle: KubusTypography.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 18),
+              hintStyle: KubusTypography.inter(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
+                  fontSize: 18),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.all(16),
+              contentPadding: const EdgeInsets.all(KubusSpacing.md),
               suffixIcon: Padding(
                 padding: const EdgeInsets.only(right: 16),
                 child: Center(
@@ -400,10 +453,12 @@ class _SendTokenScreenState extends State<SendTokenScreen>
         ],
         const SizedBox(height: 12),
         Text(
-          l10n.sendTokenAvailableLabel(_getTokenBalance(_selectedToken), _selectedToken),
+          l10n.sendTokenAvailableLabel(
+              _getTokenBalance(_selectedToken), _selectedToken),
           style: KubusTypography.inter(
             fontSize: 14,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ],
@@ -422,7 +477,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
       padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: theme.colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(color: theme.colorScheme.outline),
       ),
       child: Column(
@@ -436,28 +491,32 @@ class _SendTokenScreenState extends State<SendTokenScreen>
               color: theme.colorScheme.onSurface,
             ),
           ),
-          const SizedBox(height: 16),
-          _buildSummaryRow(l10n.sendTokenSummaryAmountLabel, '${amount.toStringAsFixed(4)} $_selectedToken'),
+          const SizedBox(height: KubusSpacing.md),
+          _buildSummaryRow(l10n.sendTokenSummaryAmountLabel,
+              '${amount.toStringAsFixed(4)} $_selectedToken'),
           if (projectFee > 0) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: KubusSpacing.sm),
             _buildSummaryRow(
-              l10n.sendTokenSummaryFeesLabel(_projectFeePercent.toStringAsFixed(1)),
+              l10n.sendTokenSummaryFeesLabel(
+                  _projectFeePercent.toStringAsFixed(1)),
               '${projectFee.toStringAsFixed(4)} $_selectedToken',
             ),
           ],
-          const SizedBox(height: 8),
+          const SizedBox(height: KubusSpacing.sm),
           _buildSummaryRow(
             l10n.sendTokenSummaryEstimatedDebitLabel,
             '${totalTokenDebit.toStringAsFixed(4)} $_selectedToken',
             isTotal: true,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: KubusSpacing.md),
           Divider(color: theme.colorScheme.onSurface.withValues(alpha: 0.2)),
-          const SizedBox(height: 12),
-          _buildSummaryRow(l10n.sendTokenSummaryUsdValueLabel, '\$${usdValue.toStringAsFixed(2)}'),
-          const SizedBox(height: 8),
-          _buildSummaryRow(l10n.sendTokenSummaryNetworkFeeLabel, '${_estimatedGas.toStringAsFixed(6)} SOL'),
-          const SizedBox(height: 10),
+          const SizedBox(height: KubusSpacing.md),
+          _buildSummaryRow(l10n.sendTokenSummaryUsdValueLabel,
+              '\$${usdValue.toStringAsFixed(2)}'),
+          const SizedBox(height: KubusSpacing.sm),
+          _buildSummaryRow(l10n.sendTokenSummaryNetworkFeeLabel,
+              '${_estimatedGas.toStringAsFixed(6)} SOL'),
+          const SizedBox(height: KubusSpacing.sm),
           Text(
             l10n.sendTokenNetworkFeeNote,
             style: KubusTypography.inter(
@@ -479,7 +538,8 @@ class _SendTokenScreenState extends State<SendTokenScreen>
           style: KubusTypography.inter(
             fontSize: isTotal ? 16 : 14,
             fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
         Text(
@@ -501,17 +561,19 @@ class _SendTokenScreenState extends State<SendTokenScreen>
       padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: theme.colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(color: theme.colorScheme.outline),
       ),
       child: Row(
         children: [
-          Icon(Icons.account_balance_wallet_outlined, color: theme.colorScheme.onSurface),
-          const SizedBox(width: 12),
+          Icon(Icons.account_balance_wallet_outlined,
+              color: theme.colorScheme.onSurface),
+          const SizedBox(width: KubusSpacing.md),
           Expanded(
             child: Text(
               l10n.sendTokenNoTokensMessage,
-              style: KubusTypography.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
+              style: KubusTypography.inter(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
             ),
           ),
         ],
@@ -525,7 +587,8 @@ class _SendTokenScreenState extends State<SendTokenScreen>
 
   Widget _buildTokenAvatar(Token token, {bool isSelected = false}) {
     final theme = Theme.of(context);
-    final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
+    final accent =
+        Provider.of<ThemeProvider>(context, listen: false).accentColor;
     final background = isSelected
         ? accent.withValues(alpha: 0.25)
         : theme.colorScheme.surfaceContainerHighest;
@@ -535,14 +598,15 @@ class _SendTokenScreenState extends State<SendTokenScreen>
         width: 32,
         height: 32,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(KubusRadius.lg),
           border: Border.all(color: isSelected ? accent : background),
         ),
         clipBehavior: Clip.antiAlias,
         child: Image.network(
           token.logoUrl!,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _tokenInitialAvatar(token, background, theme),
+          errorBuilder: (_, __, ___) =>
+              _tokenInitialAvatar(token, background, theme),
           loadingBuilder: (context, child, progress) {
             if (progress == null) return child;
             return _tokenInitialAvatar(token, background, theme);
@@ -560,11 +624,13 @@ class _SendTokenScreenState extends State<SendTokenScreen>
       height: 32,
       decoration: BoxDecoration(
         color: background,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
       ),
       child: Center(
         child: Text(
-          token.symbol.isNotEmpty ? token.symbol.substring(0, 1).toUpperCase() : '?',
+          token.symbol.isNotEmpty
+              ? token.symbol.substring(0, 1).toUpperCase()
+              : '?',
           style: KubusTypography.inter(
             fontWeight: FontWeight.bold,
             color: theme.colorScheme.onSurface,
@@ -593,7 +659,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
               backgroundColor: Provider.of<ThemeProvider>(context).accentColor,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
               ),
               elevation: 0,
             ),
@@ -638,8 +704,10 @@ class _SendTokenScreenState extends State<SendTokenScreen>
   void _validateAmount(String value) {
     final l10n = AppLocalizations.of(context)!;
     final amount = double.tryParse(value);
-    final balance = double.tryParse(_getTokenBalance(_selectedToken).replaceAll(',', '')) ?? 0.0;
-    
+    final balance =
+        double.tryParse(_getTokenBalance(_selectedToken).replaceAll(',', '')) ??
+            0.0;
+
     setState(() {
       if (value.isEmpty) {
         _amountError = l10n.sendTokenAmountRequiredError;
@@ -658,7 +726,9 @@ class _SendTokenScreenState extends State<SendTokenScreen>
     final l10n = AppLocalizations.of(context)!;
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final token = walletProvider.getTokenBySymbol(_selectedToken);
-    final balance = token?.balance ?? double.tryParse(_getTokenBalance(_selectedToken)) ?? 0.0;
+    final balance = token?.balance ??
+        double.tryParse(_getTokenBalance(_selectedToken)) ??
+        0.0;
     if (balance <= 0) {
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
@@ -669,7 +739,8 @@ class _SendTokenScreenState extends State<SendTokenScreen>
       return;
     }
 
-    final feeMultiplier = 1 + (ApiKeys.kubusTeamFeePct + ApiKeys.kubusTreasuryFeePct);
+    final feeMultiplier =
+        1 + (ApiKeys.kubusTeamFeePct + ApiKeys.kubusTreasuryFeePct);
     final maxSendable = balance / feeMultiplier;
     if (maxSendable <= 0) {
       ScaffoldMessenger.of(context).showKubusSnackBar(
@@ -682,9 +753,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
     }
 
     final decimals = token?.decimals ?? 3;
-    final displayPrecision = decimals < 2
-        ? 2
-        : (decimals > 6 ? 6 : decimals);
+    final displayPrecision = decimals < 2 ? 2 : (decimals > 6 ? 6 : decimals);
     _amountController.text = maxSendable.toStringAsFixed(displayPrecision);
     _validateAmount(_amountController.text);
   }
@@ -692,25 +761,35 @@ class _SendTokenScreenState extends State<SendTokenScreen>
   String _getTokenBalance(String token) {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     switch (token) {
-      case 'KUB8': 
-        final kub8Tokens = walletProvider.tokens.where((t) => t.symbol.toUpperCase() == 'KUB8');
-        return kub8Tokens.isNotEmpty ? kub8Tokens.first.balance.toStringAsFixed(2) : '0.00';
-      case 'SOL': 
-        final solTokens = walletProvider.tokens.where((t) => t.symbol.toUpperCase() == 'SOL');
-        return solTokens.isNotEmpty ? solTokens.first.balance.toStringAsFixed(3) : '0.000';
-      default: return '0.00';
+      case 'KUB8':
+        final kub8Tokens = walletProvider.tokens
+            .where((t) => t.symbol.toUpperCase() == 'KUB8');
+        return kub8Tokens.isNotEmpty
+            ? kub8Tokens.first.balance.toStringAsFixed(2)
+            : '0.00';
+      case 'SOL':
+        final solTokens =
+            walletProvider.tokens.where((t) => t.symbol.toUpperCase() == 'SOL');
+        return solTokens.isNotEmpty
+            ? solTokens.first.balance.toStringAsFixed(3)
+            : '0.000';
+      default:
+        return '0.00';
     }
   }
 
-  double get _projectFeePercent => (ApiKeys.kubusTeamFeePct + ApiKeys.kubusTreasuryFeePct) * 100;
+  double get _projectFeePercent =>
+      (ApiKeys.kubusTeamFeePct + ApiKeys.kubusTreasuryFeePct) * 100;
 
   double _calculateProjectFee(double amount) {
-    final totalFeeFraction = ApiKeys.kubusTeamFeePct + ApiKeys.kubusTreasuryFeePct;
+    final totalFeeFraction =
+        ApiKeys.kubusTeamFeePct + ApiKeys.kubusTreasuryFeePct;
     return amount * totalFeeFraction;
   }
 
   double _calculateUSDValue(double amount) {
-    final rate = {'KUB8': 0.20, 'SOL': 150.0, 'USDC': 1.0}[_selectedToken] ?? 0.0;
+    final rate =
+        {'KUB8': 0.20, 'SOL': 150.0, 'USDC': 1.0}[_selectedToken] ?? 0.0;
     return amount * rate;
   }
 
@@ -751,14 +830,14 @@ class _SendTokenScreenState extends State<SendTokenScreen>
       'SOL': 0.000005, // Base SOL fee
       'USDC': 0.001, // SOL fee for SPL token
     };
-    
+
     setState(() {
       _estimatedGas = fees[_selectedToken] ?? 0.001;
     });
   }
 
-
-  void _showUnsupportedFeature(BuildContext context, PlatformProvider platformProvider) {
+  void _showUnsupportedFeature(
+      BuildContext context, PlatformProvider platformProvider) {
     final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showKubusSnackBar(
       SnackBar(
@@ -770,14 +849,18 @@ class _SendTokenScreenState extends State<SendTokenScreen>
     );
   }
 
-  String _qrScannerUnsupportedMessage(AppLocalizations l10n, PlatformProvider platformProvider) {
+  String _qrScannerUnsupportedMessage(
+      AppLocalizations l10n, PlatformProvider platformProvider) {
     if (platformProvider.isWeb) return l10n.sendTokenQrScannerUnsupportedWeb;
-    if (platformProvider.isDesktop) return l10n.sendTokenQrScannerUnsupportedDesktop;
+    if (platformProvider.isDesktop) {
+      return l10n.sendTokenQrScannerUnsupportedDesktop;
+    }
     return l10n.sendTokenQrScannerUnsupportedPlatform;
   }
 
   String _formatScannedAmount(double amount) {
-    final formatted = amount >= 1 ? amount.toStringAsFixed(4) : amount.toStringAsFixed(8);
+    final formatted =
+        amount >= 1 ? amount.toStringAsFixed(4) : amount.toStringAsFixed(8);
     final trimmed = formatted
         .replaceFirst(RegExp(r'0+$'), '')
         .replaceFirst(RegExp(r'\.$'), '');
@@ -786,15 +869,16 @@ class _SendTokenScreenState extends State<SendTokenScreen>
 
   void _scanQRCode() async {
     final l10n = AppLocalizations.of(context)!;
-    final platformProvider = Provider.of<PlatformProvider>(context, listen: false);
+    final platformProvider =
+        Provider.of<PlatformProvider>(context, listen: false);
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    
+
     // Check if platform supports QR scanning
     if (!platformProvider.supportsQRScanning) {
       _showUnsupportedFeature(context, platformProvider);
       return;
     }
-    
+
     try {
       final result = await Navigator.push(
         context,
@@ -840,7 +924,8 @@ class _SendTokenScreenState extends State<SendTokenScreen>
           ? walletProvider.getTokenByMint(structured!.tokenMint!)
           : null;
       final bool hasAmount = structured?.hasAmount ?? false;
-      final String? amountText = hasAmount ? _formatScannedAmount(structured!.amount!) : null;
+      final String? amountText =
+          hasAmount ? _formatScannedAmount(structured!.amount!) : null;
 
       setState(() {
         _addressController.text = address;
@@ -860,7 +945,8 @@ class _SendTokenScreenState extends State<SendTokenScreen>
 
       final snackSegments = <String>[l10n.sendTokenQrScannedAddressLabel];
       if (detectedToken != null) {
-        snackSegments.add(l10n.sendTokenQrScannedTokenLabel(detectedToken.symbol));
+        snackSegments
+            .add(l10n.sendTokenQrScannedTokenLabel(detectedToken.symbol));
       }
       if (amountText != null) {
         snackSegments.add(l10n.sendTokenQrScannedAmountLabel(amountText));
@@ -894,7 +980,8 @@ class _SendTokenScreenState extends State<SendTokenScreen>
     setState(() => _isLoading = true);
 
     try {
-      final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+      final walletProvider =
+          Provider.of<WalletProvider>(context, listen: false);
       final amount = double.tryParse(_amountController.text.trim()) ?? 0;
       final toAddress = _addressController.text.trim();
 
@@ -916,7 +1003,8 @@ class _SendTokenScreenState extends State<SendTokenScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
-          content: Text(l10n.sendTokenSendSuccessToast(amount.toStringAsFixed(4), _selectedToken)),
+          content: Text(l10n.sendTokenSendSuccessToast(
+              amount.toStringAsFixed(4), _selectedToken)),
           backgroundColor: Theme.of(context).colorScheme.tertiary,
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 3),
@@ -940,6 +1028,3 @@ class _SendTokenScreenState extends State<SendTokenScreen>
     }
   }
 }
-
-
-

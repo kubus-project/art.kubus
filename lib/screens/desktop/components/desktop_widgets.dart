@@ -57,8 +57,7 @@ class _DesktopCardState extends State<DesktopCard> {
       tintBase: widget.backgroundColor ?? scheme.surface,
     );
 
-    final radius =
-        widget.borderRadius ?? BorderRadius.circular(KubusRadius.lg);
+    final radius = widget.borderRadius ?? BorderRadius.circular(KubusRadius.lg);
     final glassTint = widget.backgroundColor ?? glassStyle.tintColor;
 
     Widget content = AnimatedContainer(
@@ -316,10 +315,10 @@ class _DesktopStatCardState extends State<DesktopStatCard> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(KubusSpacing.sm),
                     decoration: BoxDecoration(
                       color: color.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(KubusRadius.sm),
                     ),
                     child: Icon(
                       widget.icon,
@@ -341,7 +340,7 @@ class _DesktopStatCardState extends State<DesktopStatCard> {
                           ),
                           decoration: BoxDecoration(
                             color: changeColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(KubusRadius.sm),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -353,7 +352,7 @@ class _DesktopStatCardState extends State<DesktopStatCard> {
                                 size: KubusHeaderMetrics.sectionSubtitle,
                                 color: changeColor,
                               ),
-                              const SizedBox(width: 2),
+                              const SizedBox(width: KubusSpacing.xxs),
                               Text(
                                 widget.change!,
                                 style: KubusTextStyles.statChange.copyWith(
@@ -570,11 +569,10 @@ class DesktopSearchBar extends StatelessWidget {
         borderWidth: 1,
         focusedBorderWidth: 2,
         blurSigma: glassStyle.blurSigma,
-        contentPadding:
-            const EdgeInsets.symmetric(
-              horizontal: KubusSpacing.md,
-              vertical: KubusSpacing.sm + KubusSpacing.xs,
-            ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: KubusSpacing.md,
+          vertical: KubusSpacing.sm + KubusSpacing.xs,
+        ),
         boxShadow: null,
         focusedBoxShadow: [
           BoxShadow(
@@ -664,7 +662,7 @@ class _DesktopTabBarState extends State<DesktopTabBar> {
                   color: Colors.transparent,
                   child: InkWell(
                     onTap: () => widget.onTabSelected(index),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(KubusRadius.sm),
                     child: AnimatedContainer(
                       duration: animationTheme.short,
                       padding: const EdgeInsets.symmetric(
@@ -677,7 +675,7 @@ class _DesktopTabBarState extends State<DesktopTabBar> {
                             : isHovered
                                 ? scheme.onSurface.withValues(alpha: 0.06)
                                 : Colors.transparent,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(KubusRadius.sm),
                       ),
                       child: Text(
                         widget.tabs[index],

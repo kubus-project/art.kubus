@@ -365,7 +365,7 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
     final button = buildKubusMapGlassSurface(
       context: context,
       kind: KubusMapGlassSurfaceKind.button,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(KubusRadius.md),
       tintBase: scheme.surfaceContainerHighest,
       padding: EdgeInsets.zero,
       onTap: onTap,
@@ -397,7 +397,7 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
         child: buildKubusMapGlassSurface(
           context: context,
           kind: KubusMapGlassSurfaceKind.card,
-          borderRadius: KubusRadius.circular(24),
+          borderRadius: BorderRadius.circular(KubusRadius.xl),
           tintBase: scheme.surface,
           padding: const EdgeInsets.all(KubusSpacing.xl),
           child: Column(
@@ -744,8 +744,8 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
               ),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
+                mainAxisSpacing: KubusSpacing.md,
+                crossAxisSpacing: KubusSpacing.md,
                 childAspectRatio: 0.92,
               ),
             ),
@@ -753,14 +753,15 @@ class _KubusNearbyArtPanelState extends State<KubusNearbyArtPanel> {
         else
           SliverPadding(
             padding: EdgeInsets.fromLTRB(
-              16,
-              isMobile ? 0 : 8,
-              16,
-              isMobile ? 24 : 16,
+              KubusSpacing.md,
+              isMobile ? 0 : KubusSpacing.sm,
+              KubusSpacing.md,
+              isMobile ? KubusSpacing.lg : KubusSpacing.md,
             ),
             sliver: SliverList.separated(
               itemCount: sorted.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              separatorBuilder: (_, __) =>
+                  const SizedBox(height: KubusSpacing.sm + KubusSpacing.xxs),
               itemBuilder: (context, index) {
                 final artwork = sorted[index];
                 final marker = widget.controller

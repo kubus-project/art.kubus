@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:art_kubus/widgets/glass_components.dart';
@@ -39,8 +39,9 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
   bool _didPlayEntrance = false;
 
   String _resolveWalletAddress({bool listen = false}) {
-    final profileProvider =
-        listen ? context.watch<ProfileProvider>() : context.read<ProfileProvider>();
+    final profileProvider = listen
+        ? context.watch<ProfileProvider>()
+        : context.read<ProfileProvider>();
     final web3Provider =
         listen ? context.watch<Web3Provider>() : context.read<Web3Provider>();
     return WalletUtils.coalesce(
@@ -74,7 +75,9 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
 
   DateTime _bucketStartUtc(DateTime dt, String bucket) {
     final utc = dt.toUtc();
-    if (bucket == 'hour') return DateTime.utc(utc.year, utc.month, utc.day, utc.hour);
+    if (bucket == 'hour') {
+      return DateTime.utc(utc.year, utc.month, utc.day, utc.hour);
+    }
     if (bucket == 'week') {
       final startOfDay = DateTime.utc(utc.year, utc.month, utc.day);
       return startOfDay.subtract(Duration(days: startOfDay.weekday - 1));
@@ -182,7 +185,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
       opacity: _fadeAnimation,
       child: Container(
         color: Colors.transparent,
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -259,13 +262,15 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
     };
 
     final filters = context.watch<AnalyticsFiltersProvider>();
-    final selectedTimeframe = labels.containsKey(filters.institutionTimeframe) ? filters.institutionTimeframe : '30d';
+    final selectedTimeframe = labels.containsKey(filters.institutionTimeframe)
+        ? filters.institutionTimeframe
+        : '30d';
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(
             color:
                 Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
@@ -285,7 +290,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
           InputDecorator(
             decoration: InputDecoration(
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(KubusRadius.sm),
                 borderSide: BorderSide(
                     color: Theme.of(context)
                         .colorScheme
@@ -293,7 +298,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                         .withValues(alpha: 0.2)),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(KubusRadius.sm),
                 borderSide: BorderSide(
                     color: Theme.of(context)
                         .colorScheme
@@ -327,7 +332,9 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                     .toList(growable: false),
                 onChanged: (value) {
                   if (value == null) return;
-                  context.read<AnalyticsFiltersProvider>().setInstitutionTimeframe(value);
+                  context
+                      .read<AnalyticsFiltersProvider>()
+                      .setInstitutionTimeframe(value);
                 },
               ),
             ),
@@ -385,14 +392,16 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                 child: EmptyStateCard(
                   icon: Icons.analytics_outlined,
                   title: 'Analytics disabled',
-                  description: 'Enable analytics in Settings to view charts and insights.',
+                  description:
+                      'Enable analytics in Settings to view charts and insights.',
                 ),
               ),
             ],
           );
         }
 
-        final timeframe = context.watch<AnalyticsFiltersProvider>().institutionTimeframe;
+        final timeframe =
+            context.watch<AnalyticsFiltersProvider>().institutionTimeframe;
         final bucket = _bucketForTimeframe(timeframe);
         final duration = _durationForTimeframe(timeframe);
         final now = DateTime.now().toUtc();
@@ -496,7 +505,8 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
             );
         final isLoading = currentLoading || prevLoading;
         final hasError = !isLoading &&
-            ((currentError != null && series == null) || (prevError != null && prevSeries == null));
+            ((currentError != null && series == null) ||
+                (prevError != null && prevSeries == null));
 
         final visitorGroups = <String>{'event', 'exhibition'};
         final artworkGroups = <String>{'artwork'};
@@ -518,12 +528,16 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                 : _formatNumber(artworkViewsThis);
         final visitorChange = (isLoading || hasError)
             ? '\u2014'
-            : _formatPercentChange(current: visitorsThis, previous: visitorsPrev);
+            : _formatPercentChange(
+                current: visitorsThis, previous: visitorsPrev);
         final artworkChange = (isLoading || hasError)
             ? '\u2014'
-            : _formatPercentChange(current: artworkViewsThis, previous: artworkViewsPrev);
+            : _formatPercentChange(
+                current: artworkViewsThis, previous: artworkViewsPrev);
 
-        final institution = institutionProvider.institutions.isNotEmpty ? institutionProvider.institutions.first : null;
+        final institution = institutionProvider.institutions.isNotEmpty
+            ? institutionProvider.institutions.first
+            : null;
         final events = institution != null
             ? institutionProvider.getEventsByInstitution(institution.id)
             : const <Event>[];
@@ -577,11 +591,13 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
             const SizedBox(height: 12),
             if (hasError) ...[
               Container(
-                padding: const EdgeInsets.all(12),
+                padding:
+                    const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
                 decoration: BoxDecoration(
                   color: scheme.errorContainer.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: scheme.error.withValues(alpha: 0.4)),
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
+                  border:
+                      Border.all(color: scheme.error.withValues(alpha: 0.4)),
                 ),
                 child: Row(
                   children: [
@@ -668,10 +684,10 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
 
   Widget _buildStatCard(Map<String, dynamic> stat) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(
             color:
                 Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
@@ -744,7 +760,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
       padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(
             color:
                 Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
@@ -797,14 +813,16 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
               child: EmptyStateCard(
                 icon: Icons.analytics_outlined,
                 title: 'Analytics disabled',
-                description: 'Enable analytics in Settings to view charts and insights.',
+                description:
+                    'Enable analytics in Settings to view charts and insights.',
                 showAction: false,
               ),
             ),
           );
         }
 
-        final timeframe = context.watch<AnalyticsFiltersProvider>().institutionTimeframe;
+        final timeframe =
+            context.watch<AnalyticsFiltersProvider>().institutionTimeframe;
         final bucket = _bucketForTimeframe(timeframe);
         final duration = _durationForTimeframe(timeframe);
         final now = DateTime.now().toUtc();
@@ -904,7 +922,8 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                     forceRefresh: true,
                   ));
                 },
-                icon: Icon(Icons.refresh, color: Theme.of(context).colorScheme.primary),
+                icon: Icon(Icons.refresh,
+                    color: Theme.of(context).colorScheme.primary),
                 label: Text(
                   'Retry loading visitors',
                   style: KubusTypography.inter(
@@ -925,7 +944,8 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
               child: EmptyStateCard(
                 icon: Icons.people_outline,
                 title: 'No visitors yet',
-                description: 'Views will appear once people visit your events and exhibitions.',
+                description:
+                    'Views will appear once people visit your events and exhibitions.',
                 showAction: false,
               ),
             ),
@@ -948,9 +968,12 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
           barColor: roles.web3InstitutionAccent,
           gridColor: scheme.onPrimary.withValues(alpha: 0.1),
           entries: buckets
-              .map((e) => StatsBarEntry(bucketStart: e.bucketStart, value: e.value))
+              .map((e) =>
+                  StatsBarEntry(bucketStart: e.bucketStart, value: e.value))
               .toList(growable: false),
-          xLabels: buckets.map((e) => labelFor(e.bucketStart)).toList(growable: false),
+          xLabels: buckets
+              .map((e) => labelFor(e.bucketStart))
+              .toList(growable: false),
         );
       },
     );
@@ -959,8 +982,9 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
   Widget _buildVisitorMetrics() {
     return Consumer<InstitutionProvider>(
       builder: (context, institutionProvider, child) {
-        final institution =
-            institutionProvider.institutions.isNotEmpty ? institutionProvider.institutions.first : null;
+        final institution = institutionProvider.institutions.isNotEmpty
+            ? institutionProvider.institutions.first
+            : null;
 
         final events = institution != null
             ? institutionProvider.getEventsByInstitution(institution.id)
@@ -985,10 +1009,12 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
             .map((e) => e.currentAttendees / e.capacity!)
             .toList();
         if (fillValues.isNotEmpty) {
-          avgFill = fillValues.fold<double>(0, (sum, v) => sum + v) / fillValues.length;
+          avgFill = fillValues.fold<double>(0, (sum, v) => sum + v) /
+              fillValues.length;
         }
-        final avgFillLabel =
-            avgFill == null ? '\u2014' : '${(avgFill * 100).toStringAsFixed(0)}%';
+        final avgFillLabel = avgFill == null
+            ? '\u2014'
+            : '${(avgFill * 100).toStringAsFixed(0)}%';
 
         final metrics = [
           {'label': 'Avg. Event Duration', 'value': avgDurationLabel},
@@ -1014,14 +1040,18 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                                 style: KubusTypography.inter(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: Theme.of(context).colorScheme.onSurface,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                               Text(
                                 metric['label']!,
                                 style: KubusTypography.inter(
                                   fontSize: 10,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.7),
                                 ),
                                 textAlign: TextAlign.center,
                               ),
@@ -1059,7 +1089,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
           decoration: BoxDecoration(
             color:
                 Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(KubusRadius.lg),
             border: Border.all(
                 color: Theme.of(context)
                     .colorScheme
@@ -1199,7 +1229,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
           decoration: BoxDecoration(
             color:
                 Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(KubusRadius.lg),
             border: Border.all(
                 color: Theme.of(context)
                     .colorScheme
@@ -1314,7 +1344,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
           decoration: BoxDecoration(
             color:
                 Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(KubusRadius.lg),
             border: Border.all(
                 color: Theme.of(context)
                     .colorScheme
@@ -1360,7 +1390,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
               color: KubusColorRoles.of(context)
                   .web3InstitutionAccent
                   .withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(KubusRadius.sm),
             ),
             child: Icon(
               Icons.image,
@@ -1465,14 +1495,16 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
     if (!statsProvider.analyticsEnabled) {
       messenger.showKubusSnackBar(
         SnackBar(
-          content: const Text('Analytics is disabled. Enable it in Settings to export.'),
+          content: const Text(
+              'Analytics is disabled. Enable it in Settings to export.'),
           backgroundColor: scheme.error,
         ),
       );
       return;
     }
 
-    final timeframe = context.read<AnalyticsFiltersProvider>().institutionTimeframe;
+    final timeframe =
+        context.read<AnalyticsFiltersProvider>().institutionTimeframe;
     final periodLabel = switch (timeframe) {
       '7d' => 'This Week',
       '30d' => 'This Month',
@@ -1526,7 +1558,8 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
       groups: const <String>{'artwork'},
     );
 
-    final totalVisitors = visitorBuckets.fold<int>(0, (sum, b) => sum + b.value);
+    final totalVisitors =
+        visitorBuckets.fold<int>(0, (sum, b) => sum + b.value);
     final artworkViews = artworkBuckets.fold<int>(0, (sum, b) => sum + b.value);
 
     final buffer = StringBuffer()
@@ -1541,7 +1574,9 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
       ..writeln('')
       ..writeln('bucketStartUtc,visitors,artworkViews');
 
-    final rowCount = visitorBuckets.length < artworkBuckets.length ? visitorBuckets.length : artworkBuckets.length;
+    final rowCount = visitorBuckets.length < artworkBuckets.length
+        ? visitorBuckets.length
+        : artworkBuckets.length;
     for (var i = 0; i < rowCount; i += 1) {
       buffer.writeln(
         '${visitorBuckets[i].bucketStart.toIso8601String()},${visitorBuckets[i].value},${artworkBuckets[i].value}',
@@ -1596,4 +1631,3 @@ class _BucketStat {
 
   const _BucketStat(this.bucketStart, this.value);
 }
-

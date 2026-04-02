@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -833,7 +833,7 @@ class _LinkedArtworksListState extends State<_LinkedArtworksList> {
             overflow: TextOverflow.ellipsis,
           ),
           leading: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(KubusRadius.sm),
             child: SizedBox(
               width: 44,
               height: 44,

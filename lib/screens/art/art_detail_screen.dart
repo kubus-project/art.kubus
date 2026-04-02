@@ -1598,8 +1598,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
             borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(24),
-              topRight: Radius.circular(24),
+              topLeft: Radius.circular(KubusRadius.xl),
+              topRight: Radius.circular(KubusRadius.xl),
             ),
           ),
           child: SafeArea(
@@ -1623,7 +1623,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: KubusSpacing.lg),
                   Text(
                     l10n.artworkCommentAddTitle,
                     style: KubusTypography.inter(
@@ -1632,10 +1632,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: KubusSpacing.lg),
                   if (_replyToAuthorName != null)
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.only(bottom: KubusSpacing.md),
                       child: Row(
                         children: [
                           Expanded(
@@ -1671,12 +1671,12 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                       hintText: l10n.artworkCommentAddHint,
                       hintStyle: KubusTypography.inter(),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(KubusRadius.md),
                       ),
                     ),
                     style: KubusTypography.inter(),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: KubusSpacing.md),
                   Row(
                     children: [
                       Expanded(
@@ -1696,7 +1696,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: KubusSpacing.md),
                       Expanded(
                         child: Consumer<ArtworkProvider>(
                           builder: (context, provider, child) {
@@ -1707,13 +1707,14 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: scheme.primary,
                                 foregroundColor: scheme.onPrimary,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: KubusSpacing.md,
+                                ),
                               ),
                               child: provider.isLoading('comment_${artwork.id}')
                                   ? SizedBox(
-                                      width: 20,
-                                      height: 20,
+                                      width: KubusSpacing.lg,
+                                      height: KubusSpacing.lg,
                                       child: InlineLoading(
                                           shape: BoxShape.circle,
                                           tileSize: 4.0,
@@ -1892,8 +1893,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
+            topLeft: Radius.circular(KubusRadius.xl),
+            topRight: Radius.circular(KubusRadius.xl),
           ),
         ),
         child: SafeArea(
@@ -1992,15 +1993,15 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(KubusRadius.md),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         decoration: BoxDecoration(
           border: Border.all(
             color:
                 Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
           ),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(KubusRadius.md),
         ),
         child: Row(
           children: [
@@ -2009,7 +2010,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
               size: 24,
               color: Theme.of(context).colorScheme.primary,
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: KubusSpacing.md),
             Text(
               title,
               style: KubusTypography.inter(

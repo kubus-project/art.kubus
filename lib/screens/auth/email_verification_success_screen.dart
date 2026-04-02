@@ -229,7 +229,8 @@ class _EmailVerificationSuccessScreenState
                                   ),
                                   decoration: BoxDecoration(
                                     color: scheme.surfaceContainerHighest,
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius:
+                                        BorderRadius.circular(KubusRadius.md),
                                   ),
                                   child: Column(
                                     children: [
@@ -272,7 +273,8 @@ class _EmailVerificationSuccessScreenState
                                   ),
                                   decoration: BoxDecoration(
                                     color: scheme.surfaceContainerHighest,
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius:
+                                        BorderRadius.circular(KubusRadius.md),
                                   ),
                                   child: Text(
                                     'You may now close this tab',

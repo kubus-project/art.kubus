@@ -18,10 +18,10 @@ class ExhibitionListScreen extends StatefulWidget {
 
   /// If true, shows the create FAB (for hosts).
   final bool canCreate;
-  
+
   /// Optional override to open exhibition details (desktop shell, etc.).
   final ValueChanged<Exhibition>? onOpenExhibition;
-  
+
   /// Optional override to open the exhibition creator (desktop shell, etc.).
   final VoidCallback? onCreateExhibition;
 
@@ -107,7 +107,8 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Exhibitions', style: KubusTypography.inter(fontWeight: FontWeight.w600)),
+        title: Text('Exhibitions',
+            style: KubusTypography.inter(fontWeight: FontWeight.w600)),
         actions: [
           IconButton(
             tooltip: 'Refresh',
@@ -121,7 +122,8 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
           ? FloatingActionButton.extended(
               onPressed: _createExhibition,
               icon: const Icon(Icons.add),
-              label: Text('Create', style: KubusTypography.inter(fontWeight: FontWeight.w600)),
+              label: Text('Create',
+                  style: KubusTypography.inter(fontWeight: FontWeight.w600)),
             )
           : null,
     );
@@ -135,16 +137,19 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.collections_bookmark_outlined, size: 48, color: scheme.onSurface.withValues(alpha: 0.4)),
+            Icon(Icons.collections_bookmark_outlined,
+                size: 48, color: scheme.onSurface.withValues(alpha: 0.4)),
             const SizedBox(height: 16),
             Text(
               'Exhibitions are not enabled',
-              style: KubusTypography.inter(fontSize: 16, fontWeight: FontWeight.w600),
+              style: KubusTypography.inter(
+                  fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
               'This feature is currently disabled.',
-              style: KubusTypography.inter(color: scheme.onSurface.withValues(alpha: 0.7)),
+              style: KubusTypography.inter(
+                  color: scheme.onSurface.withValues(alpha: 0.7)),
               textAlign: TextAlign.center,
             ),
           ],
@@ -160,15 +165,14 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
     return Column(
       children: [
         // Header with create button (always show when canCreate)
-        if (widget.canCreate)
-          _buildCreateHeader(scheme, themeProvider),
+        if (widget.canCreate) _buildCreateHeader(scheme, themeProvider),
 
         // Tab bar
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
             color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(KubusRadius.md),
           ),
           child: TabBar(
             controller: _tabController,
@@ -179,8 +183,10 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
             indicatorSize: TabBarIndicatorSize.tab,
             labelColor: Colors.white,
             unselectedLabelColor: scheme.onSurface.withValues(alpha: 0.7),
-            labelStyle: KubusTypography.inter(fontWeight: FontWeight.w600, fontSize: 13),
-            unselectedLabelStyle: KubusTypography.inter(fontWeight: FontWeight.w500, fontSize: 13),
+            labelStyle: KubusTypography.inter(
+                fontWeight: FontWeight.w600, fontSize: 13),
+            unselectedLabelStyle: KubusTypography.inter(
+                fontWeight: FontWeight.w500, fontSize: 13),
             dividerColor: Colors.transparent,
             tabs: const [
               Tab(text: 'My Exhibitions'),
@@ -214,7 +220,7 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
   Widget _buildCreateHeader(ColorScheme scheme, ThemeProvider themeProvider) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(KubusSpacing.md),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -224,7 +230,7 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
             themeProvider.accentColor.withValues(alpha: 0.05),
           ],
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(
           color: themeProvider.accentColor.withValues(alpha: 0.3),
         ),
@@ -236,7 +242,7 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
             height: 44,
             decoration: BoxDecoration(
               color: themeProvider.accentColor.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
             ),
             child: Icon(
               Icons.collections_bookmark,
@@ -272,7 +278,8 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
           FilledButton.icon(
             onPressed: _createExhibition,
             icon: const Icon(Icons.add, size: 18),
-            label: Text('New', style: KubusTypography.inter(fontWeight: FontWeight.w600)),
+            label: Text('New',
+                style: KubusTypography.inter(fontWeight: FontWeight.w600)),
             style: FilledButton.styleFrom(
               backgroundColor: themeProvider.accentColor,
               foregroundColor: Colors.white,
@@ -329,7 +336,7 @@ class _MyExhibitionsTab extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         itemCount: myExhibitions.length,
         itemBuilder: (context, index) {
           final exhibition = myExhibitions[index];
@@ -377,7 +384,8 @@ class _CollaboratingTab extends StatelessWidget {
       return _EmptyExhibitionsState(
         icon: Icons.group_outlined,
         title: 'No collaborations yet',
-        subtitle: 'When someone invites you to collaborate on an exhibition, it will appear here.',
+        subtitle:
+            'When someone invites you to collaborate on an exhibition, it will appear here.',
         onRefresh: onRefresh,
       );
     }
@@ -385,7 +393,7 @@ class _CollaboratingTab extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         itemCount: collaborating.length,
         itemBuilder: (context, index) {
           final exhibition = collaborating[index];
@@ -443,8 +451,10 @@ class _ExhibitionCard extends StatelessWidget {
 
     String? dateRange;
     if (exhibition.startsAt != null || exhibition.endsAt != null) {
-      final start = exhibition.startsAt != null ? _fmtDate(exhibition.startsAt!) : null;
-      final end = exhibition.endsAt != null ? _fmtDate(exhibition.endsAt!) : null;
+      final start =
+          exhibition.startsAt != null ? _fmtDate(exhibition.startsAt!) : null;
+      final end =
+          exhibition.endsAt != null ? _fmtDate(exhibition.endsAt!) : null;
       dateRange = [start, end].whereType<String>().join(' – ');
       if (dateRange.trim().isEmpty) dateRange = null;
     }
@@ -457,14 +467,14 @@ class _ExhibitionCard extends StatelessWidget {
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
       ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(KubusSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -477,11 +487,11 @@ class _ExhibitionCard extends StatelessWidget {
                     height: 56,
                     decoration: BoxDecoration(
                       color: themeProvider.accentColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(KubusRadius.md),
                     ),
                     child: coverUrl != null && coverUrl.isNotEmpty
                         ? ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(KubusRadius.md),
                             child: Image.network(
                               coverUrl,
                               fit: BoxFit.cover,
@@ -517,7 +527,9 @@ class _ExhibitionCard extends StatelessWidget {
                           children: [
                             _StatusChip(
                               label: isPublished ? 'Published' : 'Draft',
-                              color: isPublished ? const Color(0xFF4CAF50) : scheme.outline,
+                              color: isPublished
+                                  ? const Color(0xFF4CAF50)
+                                  : scheme.outline,
                             ),
                             const SizedBox(width: 8),
                             _StatusChip(
@@ -547,7 +559,9 @@ class _ExhibitionCard extends StatelessWidget {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.schedule, size: 14, color: scheme.onSurface.withValues(alpha: 0.6)),
+                          Icon(Icons.schedule,
+                              size: 14,
+                              color: scheme.onSurface.withValues(alpha: 0.6)),
                           const SizedBox(width: 4),
                           Text(
                             dateRange,
@@ -562,7 +576,9 @@ class _ExhibitionCard extends StatelessWidget {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.place_outlined, size: 14, color: scheme.onSurface.withValues(alpha: 0.6)),
+                          Icon(Icons.place_outlined,
+                              size: 14,
+                              color: scheme.onSurface.withValues(alpha: 0.6)),
                           const SizedBox(width: 4),
                           Text(
                             location,
@@ -582,7 +598,9 @@ class _ExhibitionCard extends StatelessWidget {
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    Icon(Icons.person_outline, size: 14, color: scheme.onSurface.withValues(alpha: 0.5)),
+                    Icon(Icons.person_outline,
+                        size: 14,
+                        color: scheme.onSurface.withValues(alpha: 0.5)),
                     const SizedBox(width: 4),
                     Text(
                       'Hosted by ${exhibition.host!.displayName ?? exhibition.host!.username ?? 'Unknown'}',
@@ -603,7 +621,20 @@ class _ExhibitionCard extends StatelessWidget {
 
   String _fmtDate(DateTime dt) {
     final d = dt.toLocal();
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
     return '${months[d.month - 1]} ${d.day}, ${d.year}';
   }
 }
@@ -667,14 +698,18 @@ class _EmptyExhibitionsState extends StatelessWidget {
               height: 80,
               decoration: BoxDecoration(
                 color: themeProvider.accentColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius:
+                    BorderRadius.circular(KubusRadius.lg + KubusRadius.xs),
               ),
-              child: Icon(icon, size: 40, color: themeProvider.accentColor.withValues(alpha: 0.7)),
+              child: Icon(icon,
+                  size: 40,
+                  color: themeProvider.accentColor.withValues(alpha: 0.7)),
             ),
             const SizedBox(height: 20),
             Text(
               title,
-              style: KubusTypography.inter(fontSize: 18, fontWeight: FontWeight.w600),
+              style: KubusTypography.inter(
+                  fontSize: 18, fontWeight: FontWeight.w600),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
@@ -691,13 +726,15 @@ class _EmptyExhibitionsState extends StatelessWidget {
               ElevatedButton.icon(
                 onPressed: onAction,
                 icon: const Icon(Icons.add),
-                label: Text(actionLabel!, style: KubusTypography.inter(fontWeight: FontWeight.w600)),
+                label: Text(actionLabel!,
+                    style: KubusTypography.inter(fontWeight: FontWeight.w600)),
               ),
             if (actionLabel == null)
               OutlinedButton.icon(
                 onPressed: onRefresh,
                 icon: const Icon(Icons.refresh),
-                label: Text('Refresh', style: KubusTypography.inter(fontWeight: FontWeight.w600)),
+                label: Text('Refresh',
+                    style: KubusTypography.inter(fontWeight: FontWeight.w600)),
               ),
           ],
         ),
@@ -705,4 +742,3 @@ class _EmptyExhibitionsState extends StatelessWidget {
     );
   }
 }
-

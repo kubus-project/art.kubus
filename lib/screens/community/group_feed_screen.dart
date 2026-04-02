@@ -100,8 +100,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                             : l10n.commonJoin;
                     return Padding(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
+                        horizontal: KubusSpacing.md,
+                        vertical: KubusSpacing.sm,
                       ),
                       child: ElevatedButton(
                         onPressed: isOwner
@@ -142,23 +142,23 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
               padding: const EdgeInsets.all(KubusSpacing.lg),
               children: [
                 _buildGroupHeader(summary),
-                const SizedBox(height: 16),
+                const SizedBox(height: KubusSpacing.md),
                 _buildComposer(summary, hub),
-                const SizedBox(height: 16),
+                const SizedBox(height: KubusSpacing.md),
                 if (error != null)
                   Container(
-                    padding: const EdgeInsets.all(16),
-                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(KubusSpacing.md),
+                    margin: const EdgeInsets.only(bottom: KubusSpacing.md),
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.errorContainer,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(KubusRadius.lg),
                     ),
                     child: Row(
                       children: [
                         Icon(Icons.warning,
                             color:
                                 Theme.of(context).colorScheme.onErrorContainer),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: KubusSpacing.md),
                         Expanded(
                           child: Text(
                             error,
@@ -186,7 +186,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                 ...posts.map(_buildGroupPostCard),
                 if (loading && posts.isNotEmpty)
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 32),
+                    padding:
+                        const EdgeInsets.symmetric(vertical: KubusSpacing.xl),
                     child: Center(
                       child: InlineLoading(
                         expand: false,
@@ -225,15 +226,15 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
 
     if (!isSignedIn) {
       return Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         decoration: BoxDecoration(
           color: scheme.surfaceContainer,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(KubusRadius.lg),
         ),
         child: Row(
           children: [
             Icon(Icons.login, color: scheme.onSurface.withValues(alpha: 0.7)),
-            const SizedBox(width: 12),
+            const SizedBox(width: KubusSpacing.md),
             Expanded(
               child: Text(
                 l10n.groupFeedSignInToPostLabel,
@@ -252,16 +253,16 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
 
     if (!isMember) {
       return Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         decoration: BoxDecoration(
           color: scheme.surfaceContainer,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(KubusRadius.lg),
         ),
         child: Row(
           children: [
             Icon(Icons.lock_outline,
                 color: scheme.onSurface.withValues(alpha: 0.7)),
-            const SizedBox(width: 12),
+            const SizedBox(width: KubusSpacing.md),
             Expanded(
               child: Text(
                 l10n.groupFeedJoinToPostLabel,
@@ -281,10 +282,10 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(KubusSpacing.md),
       decoration: BoxDecoration(
         color: scheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -298,15 +299,15 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
               filled: true,
               fillColor: scheme.surface,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
                 borderSide: BorderSide.none,
               ),
             ),
           ),
           if (_selectedImageBytes != null) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: KubusSpacing.md),
             ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
               child: Stack(
                 children: [
                   Image.memory(
@@ -335,9 +336,9 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
               ),
             ),
           ],
-          const SizedBox(height: 12),
+          const SizedBox(height: KubusSpacing.md),
           _buildComposerSubjectSelector(draft, hub),
-          const SizedBox(height: 12),
+          const SizedBox(height: KubusSpacing.md),
           Row(
             children: [
               IconButton(
@@ -611,12 +612,12 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       child: AnimatedContainer(
         duration: animationTheme.short,
         curve: animationTheme.defaultCurve,
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         decoration: BoxDecoration(
           color: hasSubject
               ? scheme.primaryContainer.withValues(alpha: 0.25)
               : scheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(KubusRadius.lg),
           border: Border.all(
             color: hasSubject
                 ? scheme.primary.withValues(alpha: 0.35)
@@ -627,7 +628,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
           children: [
             if (previewValue != null && imageUrl != null && imageUrl.isNotEmpty)
               ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
                 child: Image.network(
                   imageUrl,
                   width: 44,
@@ -898,7 +899,9 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
           height: MediaQuery.of(context).size.height * 0.6,
           decoration: BoxDecoration(
             color: theme.colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(KubusRadius.xl),
+            ),
           ),
           child: Column(
             children: [
@@ -972,7 +975,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                                   color: theme.colorScheme.onSurface,
                                 ),
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: KubusSpacing.sm),
                               Text(
                                 '${snapshot.error}',
                                 textAlign: TextAlign.center,
@@ -1069,7 +1072,9 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
         height: MediaQuery.of(context).size.height * 0.7,
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(KubusRadius.xl),
+          ),
         ),
         child: Column(
           children: [
@@ -1237,7 +1242,9 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
           height: MediaQuery.of(context).size.height * 0.75,
           decoration: BoxDecoration(
             color: theme.colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(KubusRadius.xl),
+            ),
           ),
           child: Column(
             children: [
@@ -1336,14 +1343,15 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                   decoration: InputDecoration(
                     hintText: l10n.postDetailRepostThoughtsHint,
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(KubusRadius.md),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: KubusSpacing.md),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: KubusSpacing.lg),
                 child: CommunityPostCard(
                   post: post,
                   accentColor: themeProvider.accentColor,
@@ -1375,7 +1383,9 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
         padding: const EdgeInsets.all(KubusSpacing.lg),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(KubusRadius.xl),
+          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

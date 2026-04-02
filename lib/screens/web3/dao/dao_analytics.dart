@@ -246,10 +246,10 @@ class DAOAnalytics extends StatelessWidget {
   Widget _metricCard(BuildContext context, String title, String value,
       IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(KubusSpacing.md),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
         border: Border.all(
             color:
                 Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
@@ -260,10 +260,10 @@ class DAOAnalytics extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(KubusSpacing.sm),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(KubusRadius.sm),
                 ),
                 child: Icon(icon, color: color, size: 16),
               ),
@@ -278,11 +278,10 @@ class DAOAnalytics extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: KubusSpacing.sm),
           Text(
             title,
-            style: KubusTypography.inter(
-              fontSize: 12,
+            style: KubusTextStyles.navMetaLabel.copyWith(
               color: Theme.of(context)
                   .colorScheme
                   .onSurface
@@ -297,10 +296,10 @@ class DAOAnalytics extends StatelessWidget {
   Widget _sectionCard(BuildContext context,
       {required String title, required Widget child}) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(KubusSpacing.md),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
         border: Border.all(
             color: Theme.of(context)
                 .colorScheme
@@ -312,13 +311,12 @@ class DAOAnalytics extends StatelessWidget {
         children: [
           Text(
             title,
-            style: KubusTypography.inter(
-              fontSize: 16,
+            style: KubusTextStyles.sectionTitle.copyWith(
               fontWeight: FontWeight.w700,
               color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: KubusSpacing.md),
           child,
         ],
       ),

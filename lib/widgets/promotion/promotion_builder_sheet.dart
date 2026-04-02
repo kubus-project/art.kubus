@@ -484,7 +484,7 @@ class _PromotionBuilderSheetState extends State<_PromotionBuilderSheet> {
               if (_loadingQuote)
                 const Center(
                   child: Padding(
-                    padding: EdgeInsets.all(16),
+                    padding: EdgeInsets.all(KubusSpacing.md),
                     child: CircularProgressIndicator(),
                   ),
                 ),
@@ -705,7 +705,7 @@ class _ScheduledPromotionTileState extends State<_ScheduledPromotionTile> {
                       ),
                       decoration: BoxDecoration(
                         color: statusColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(KubusRadius.sm),
                       ),
                       child: Text(
                         status.toUpperCase(),

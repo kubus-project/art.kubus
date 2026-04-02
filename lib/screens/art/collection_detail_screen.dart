@@ -165,7 +165,8 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(KubusRadius.xl)),
       ),
       builder: (_) => _CollectionEditSheet(
         collectionId: collection.id,
@@ -715,7 +716,7 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       secondary: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(KubusRadius.sm),
                         child: Container(
                           width: 44,
                           height: 44,

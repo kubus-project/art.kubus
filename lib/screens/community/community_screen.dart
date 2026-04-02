@@ -709,7 +709,8 @@ class _CommunityScreenState extends State<CommunityScreen>
         limit: 12,
       ),
     );
-    _communitySearchController.addListener(_handleCommunitySearchControllerChanged);
+    _communitySearchController
+        .addListener(_handleCommunitySearchControllerChanged);
     // Load following feed by default
     _communityPosts = _followingFeedPosts;
     _activeFeed = CommunityFeedType.following;
@@ -1693,11 +1694,13 @@ class _CommunityScreenState extends State<CommunityScreen>
                 child: GestureDetector(
                   onTap: _prependBufferedPosts,
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: KubusSpacing.md,
+                      vertical: KubusSpacing.sm,
+                    ),
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.primary,
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(KubusRadius.xl),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.08),
@@ -1751,14 +1754,14 @@ class _CommunityScreenState extends State<CommunityScreen>
         final listView = ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(
-            24,
-            20,
-            24,
-            20 + KubusLayout.mainBottomNavBarHeight,
+            KubusSpacing.lg,
+            KubusSpacing.lg,
+            KubusSpacing.lg,
+            KubusSpacing.lg + KubusLayout.mainBottomNavBarHeight,
           ),
           children: [
             _buildGroupSearchField(hub),
-            const SizedBox(height: 12),
+            const SizedBox(height: KubusSpacing.md),
             if (hub.groupsError != null)
               _buildGroupErrorBanner(hub.groupsError!),
             if (!hasGroups)
@@ -2135,10 +2138,10 @@ class _CommunityScreenState extends State<CommunityScreen>
       final contentMatch = post.content.toLowerCase().contains(rawQuery);
       final authorMatch = post.authorName.toLowerCase().contains(rawQuery) ||
           (post.authorUsername?.toLowerCase().contains(rawQuery) ?? false);
-      final tagMatch =
-          post.tags.any((tag) => tag.toLowerCase().contains(normalizedTagQuery));
-      final mentionMatch =
-          post.mentions.any((mention) => mention.toLowerCase().contains(rawQuery));
+      final tagMatch = post.tags
+          .any((tag) => tag.toLowerCase().contains(normalizedTagQuery));
+      final mentionMatch = post.mentions
+          .any((mention) => mention.toLowerCase().contains(rawQuery));
       final groupMatch =
           post.group?.name.toLowerCase().contains(rawQuery) ?? false;
       return contentMatch ||
@@ -2305,7 +2308,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       margin: const EdgeInsets.only(bottom: KubusSpacing.lg),
       decoration: BoxDecoration(
         color: scheme.primaryContainer,
-        borderRadius: KubusRadius.circular(20),
+        borderRadius: BorderRadius.circular(KubusRadius.xl),
         border: Border.all(color: scheme.outline.withValues(alpha: 0.4)),
       ),
       child: Column(
@@ -2343,8 +2346,8 @@ class _CommunityScreenState extends State<CommunityScreen>
           if (imageUrl != null)
             ClipRRect(
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
+                topLeft: Radius.circular(KubusRadius.md),
+                topRight: Radius.circular(KubusRadius.md),
               ),
               child: Image.network(
                 imageUrl,
@@ -2483,7 +2486,8 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 
   Widget _buildPostCardForPost(CommunityPost post) {
-    final sourceIndex = _communityPosts.indexWhere((item) => item.id == post.id);
+    final sourceIndex =
+        _communityPosts.indexWhere((item) => item.id == post.id);
     if (sourceIndex == -1) {
       return const SizedBox.shrink();
     }
@@ -2744,7 +2748,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                               hintText:
                                   l10n.communityCreateGroupDescriptionHint,
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius:
+                                    BorderRadius.circular(KubusRadius.md),
                               ),
                               filled: true,
                               fillColor: scheme.primaryContainer
@@ -3078,7 +3083,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                                       }
                                     }
                                   },
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius:
+                                      BorderRadius.circular(KubusRadius.md),
                                   child: Row(
                                     children: [
                                       AvatarWidget(
@@ -3195,8 +3201,9 @@ class _CommunityScreenState extends State<CommunityScreen>
                   height: MediaQuery.of(context).size.height * 0.9,
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surface,
-                    borderRadius:
-                        const BorderRadius.vertical(top: Radius.circular(24)),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(KubusRadius.xl),
+                    ),
                   ),
                   child: Column(
                     children: [
@@ -3332,10 +3339,10 @@ class _CommunityScreenState extends State<CommunityScreen>
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.primaryContainer,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(KubusRadius.md),
           border: Border.all(color: Theme.of(context).colorScheme.outline),
         ),
         child: Column(
@@ -3455,7 +3462,7 @@ class _CommunityScreenState extends State<CommunityScreen>
         filled: true,
         fillColor: scheme.primaryContainer.withValues(alpha: 0.4),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(KubusRadius.lg),
           borderSide: BorderSide.none,
         ),
         contentPadding: EdgeInsets.symmetric(
@@ -3572,7 +3579,7 @@ class _CommunityScreenState extends State<CommunityScreen>
         color: hasMedia
             ? scheme.primaryContainer.withValues(alpha: 0.2)
             : Colors.transparent,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(KubusRadius.xl),
       ),
       child: Row(
         children: [
@@ -3738,7 +3745,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       },
       leading: previewValue != null && imageUrl != null && imageUrl.isNotEmpty
           ? ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
               child: Image.network(
                 MediaUrlResolver.resolveDisplayUrl(imageUrl) ?? imageUrl,
                 width: 44,
@@ -3801,7 +3808,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       final lng = location.lng;
       currentChild = Container(
         key: const ValueKey('composer_location_attached'),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         decoration: BoxDecoration(
           color: scheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(18),
@@ -4097,8 +4104,9 @@ class _CommunityScreenState extends State<CommunityScreen>
               height: MediaQuery.of(context).size.height * 0.7,
               decoration: BoxDecoration(
                 color: scheme.surface,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(24)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(KubusRadius.xl),
+                ),
               ),
               child: Column(
                 children: [
@@ -4158,7 +4166,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                               )
                             : null,
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(KubusRadius.lg),
                           borderSide: BorderSide.none,
                         ),
                         filled: true,
@@ -4485,11 +4493,11 @@ class _CommunityScreenState extends State<CommunityScreen>
           height: 44,
           decoration: BoxDecoration(
             color: themeProvider.accentColor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(KubusRadius.sm),
           ),
           child: image != null
               ? ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(KubusRadius.sm),
                   child: Image.network(
                     MediaUrlResolver.resolveDisplayUrl(image.toString()) ??
                         MediaUrlResolver.resolve(image.toString()) ??
@@ -4657,7 +4665,9 @@ class _CommunityScreenState extends State<CommunityScreen>
         height: MediaQuery.of(context).size.height * 0.6,
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(KubusRadius.xl),
+          ),
         ),
         child: CommunityGroupPickerContent(
           title: 'Select group',
@@ -5179,7 +5189,9 @@ class _CommunityScreenState extends State<CommunityScreen>
           height: MediaQuery.of(context).size.height * 0.8,
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(KubusRadius.xl),
+            ),
           ),
           child: Column(
             children: [
@@ -5422,7 +5434,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
                           color: bubbleColor,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(KubusRadius.md),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -5707,7 +5719,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                             color: Provider.of<ThemeProvider>(context)
                                 .accentColor
                                 .withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(KubusRadius.sm),
                           ),
                           child: Row(
                             children: [
@@ -5894,7 +5906,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                                       .withValues(alpha: 0.8),
                                 ],
                               ),
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius:
+                                  BorderRadius.circular(KubusRadius.xl),
                             ),
                             child: IconButton(
                               onPressed: () async {
@@ -6028,7 +6041,9 @@ class _CommunityScreenState extends State<CommunityScreen>
           height: MediaQuery.of(context).size.height * 0.75,
           decoration: BoxDecoration(
             color: theme.colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(KubusRadius.xl),
+            ),
           ),
           child: Column(
             children: [
@@ -6132,7 +6147,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                         decoration: InputDecoration(
                           hintText: l10n.postDetailRepostThoughtsHint,
                           border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12)),
+                              borderRadius:
+                                  BorderRadius.circular(KubusRadius.md)),
                           filled: true,
                           fillColor: theme.colorScheme.primaryContainer,
                         ),
@@ -6146,12 +6162,12 @@ class _CommunityScreenState extends State<CommunityScreen>
                                   .withValues(alpha: 0.7))),
                       const SizedBox(height: 8),
                       Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(KubusSpacing.md),
                         decoration: BoxDecoration(
                           border: Border.all(
                               color: theme.colorScheme.outline
                                   .withValues(alpha: 0.3)),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(KubusRadius.md),
                           color: theme.colorScheme.surface,
                         ),
                         child: Column(
@@ -6193,7 +6209,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                                 post.imageUrl!.isNotEmpty) ...[
                               const SizedBox(height: 8),
                               ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius:
+                                    BorderRadius.circular(KubusRadius.sm),
                                 child: Image.network(
                                   MediaUrlResolver.resolveDisplayUrl(
                                           post.imageUrl) ??
@@ -6249,7 +6266,9 @@ class _CommunityScreenState extends State<CommunityScreen>
         height: MediaQuery.of(context).size.height * 0.7,
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(KubusRadius.xl),
+          ),
         ),
         child: Column(
           children: [
@@ -6394,7 +6413,9 @@ class _CommunityScreenState extends State<CommunityScreen>
       builder: (sheetContext) => Container(
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(KubusRadius.xl),
+          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

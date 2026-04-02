@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/themeprovider.dart';
 import '../providers/web3provider.dart';
@@ -147,8 +146,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           builder: (context, constraints) {
                             final screenWidth = constraints.crossAxisExtent;
                             final isSmallScreen = screenWidth < 375;
-                            final padding = isSmallScreen ? 16.0 : 24.0;
-                            final spacing = isSmallScreen ? 16.0 : 24.0;
+                            final padding = isSmallScreen
+                                ? KubusSpacing.lg
+                                : KubusChromeMetrics.cardPadding;
+                            final spacing = isSmallScreen
+                                ? KubusSpacing.lg
+                                : KubusChromeMetrics.cardPadding;
 
                             return SliverPadding(
                               padding: EdgeInsets.fromLTRB(
@@ -315,11 +318,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                                       web3Provider
                                                           .walletAddress,
                                                     ),
-                                                    style:
-                                                        GoogleFonts.robotoMono(
-                                                      fontSize:
-                                                          KubusHeaderMetrics
-                                                              .sectionSubtitle,
+                                                    style: KubusTextStyles
+                                                        .navMetaLabel
+                                                        .copyWith(
                                                       color: scheme.onSurface
                                                           .withValues(
                                                         alpha: 0.6,
@@ -479,9 +480,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final isMapSubjectResult =
         result.kind == KubusSearchResultKind.institution ||
             result.kind == KubusSearchResultKind.event;
-    if (isMapSubjectResult &&
-        markerId.isNotEmpty &&
-        result.position == null) {
+    if (isMapSubjectResult && markerId.isNotEmpty && result.position == null) {
       await ShareDeepLinkNavigation.open(
         context,
         ShareDeepLinkTarget(
@@ -591,7 +590,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 themeProvider.accentColor.withValues(alpha: 0.8),
               ],
             ),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(KubusRadius.xl),
             boxShadow: [
               BoxShadow(
                 color: themeProvider.accentColor.withValues(alpha: 0.3),
@@ -623,14 +622,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               ),
                             ),
                             if (isArtist) ...[
-                              const SizedBox(width: 8),
+                              const SizedBox(width: KubusSpacing.sm),
                               ArtistBadge(
                                 fontSize: isSmallScreen ? 9 : 10,
                                 useOnPrimary: true,
                               ),
                             ],
                             if (isInstitution) ...[
-                              const SizedBox(width: 8),
+                              const SizedBox(width: KubusSpacing.sm),
                               InstitutionBadge(
                                 fontSize: isSmallScreen ? 9 : 10,
                                 useOnPrimary: true,
@@ -699,7 +698,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       children: [
                         _buildBalanceChip(
                             'KUB8', kub8Balance.toStringAsFixed(2)),
-                        const SizedBox(width: 12),
+                        const SizedBox(
+                            width: KubusSpacing.sm + KubusSpacing.xs),
                         _buildBalanceChip('SOL', solBalance.toStringAsFixed(3)),
                       ],
                     );
@@ -713,7 +713,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     foregroundColor: AppColorUtils.tealAccent,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(KubusRadius.md),
                     ),
                   ),
                   icon: Icon(
@@ -752,7 +752,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(KubusRadius.sm),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -762,7 +762,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               height: 16,
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(KubusRadius.sm),
               ),
               child: Center(
                 child: Text(
@@ -773,7 +773,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
               ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: KubusSpacing.xs + KubusSpacing.xxs),
             Text(
               '$amount $symbol',
               style: KubusTextStyles.navMetaLabel.copyWith(
@@ -858,7 +858,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     padding:
                         const EdgeInsets.all(KubusChromeMetrics.cardPadding),
                     margin: EdgeInsets.zero,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(KubusRadius.lg),
                     blurSigma: KubusGlassEffects.blurSigmaLight,
                     backgroundColor: glassTint,
                     child: Row(
@@ -1000,7 +1000,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       surfaceType: KubusGlassSurfaceType.card,
       tintBase: scheme.surface,
     );
-    final radius = BorderRadius.circular(16);
+    final radius = BorderRadius.circular(KubusRadius.lg);
     final cardWidth = isSmallScreen ? 176.0 : 192.0;
     final cardHeight = isSmallScreen ? 116.0 : 96.0;
     final iconSize = isSmallScreen ? 18.0 : 20.0;
@@ -1094,7 +1094,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               iconSize: iconSize,
                               visitCount: visitCount,
                             ),
-                            const SizedBox(width: 14),
+                            const SizedBox(width: KubusSpacing.md),
                             Flexible(
                               child: Text(
                                 title,
@@ -1139,7 +1139,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 color.withValues(alpha: 0.10),
               ],
             ),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(KubusRadius.md),
             border: Border.all(
               color: color.withValues(alpha: 0.25),
               width: 1,
@@ -1159,7 +1159,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
                 color: color,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(KubusRadius.sm),
               ),
               constraints: const BoxConstraints(
                 minWidth: 16,
@@ -1594,7 +1594,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         ),
                         decoration: BoxDecoration(
                           color: roles.lockedFeature.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(KubusRadius.sm),
                           border: Border.all(
                               color:
                                   roles.lockedFeature.withValues(alpha: 0.3)),
@@ -1709,7 +1709,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       onTap: onTap,
       child: Container(
         height: 120, // Fixed height for consistent layout
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(KubusSpacing.md - KubusSpacing.xxs),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -1719,7 +1719,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               color.withValues(alpha: isLocked ? 0.02 : 0.05),
             ],
           ),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(KubusRadius.lg),
           border: Border.all(
             color: color.withValues(alpha: isLocked ? 0.1 : 0.3),
           ),
@@ -1746,7 +1746,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       height: 36,
                       decoration: BoxDecoration(
                         color: color.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(
+                            KubusRadius.sm + KubusRadius.xs),
                       ),
                       child: Icon(
                         icon,
@@ -1754,11 +1755,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         size: 18,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: KubusSpacing.sm),
                     Text(
                       title,
                       style: KubusTextStyles.navLabel.copyWith(
-                        fontSize: KubusChromeMetrics.navMetaLabel + 1,
+                        fontSize: KubusChromeMetrics.navMetaLabel,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
                       textAlign: TextAlign.center,
@@ -1767,7 +1768,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     Text(
                       subtitle,
                       style: KubusTextStyles.compactBadge.copyWith(
-                        fontSize: KubusChromeMetrics.navBadgeLabel + 2,
+                        fontSize: KubusChromeMetrics.navBadgeLabel + 1,
                         color: Theme.of(context)
                             .colorScheme
                             .onSurface
@@ -1782,7 +1783,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             if (isLocked)
               Positioned.fill(
                 child: Padding(
-                  padding: const EdgeInsets.only(top: 8),
+                  padding: const EdgeInsets.only(top: KubusSpacing.sm),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.start,
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -1792,7 +1793,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         height: 36,
                         decoration: BoxDecoration(
                           color: color.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(
+                              KubusRadius.sm + KubusRadius.xs),
                         ),
                         child: Icon(
                           icon,
@@ -1800,11 +1802,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           size: 18,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: KubusSpacing.sm),
                       Text(
                         title,
                         style: KubusTextStyles.navLabel.copyWith(
-                          fontSize: KubusChromeMetrics.navMetaLabel + 1,
+                          fontSize: KubusChromeMetrics.navMetaLabel,
                           color: Theme.of(context)
                               .colorScheme
                               .onSurface
@@ -1816,7 +1818,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       Text(
                         subtitle,
                         style: KubusTextStyles.compactBadge.copyWith(
-                          fontSize: KubusChromeMetrics.navBadgeLabel + 2,
+                          fontSize: KubusChromeMetrics.navBadgeLabel + 1,
                           color: Theme.of(context)
                               .colorScheme
                               .onSurface
@@ -1837,7 +1839,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   padding: const EdgeInsets.all(3),
                   decoration: BoxDecoration(
                     color: Colors.orange.withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(KubusRadius.sm),
                   ),
                   child: const Icon(
                     Icons.lock,
@@ -2351,13 +2353,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       if (!statsProvider.analyticsEnabled) {
                         return Container(
                           height: 200,
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(KubusSpacing.md),
                           decoration: BoxDecoration(
                             color: Theme.of(dialogContext)
                                 .colorScheme
                                 .surfaceContainerHighest
                                 .withValues(alpha: 0.5),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(KubusRadius.md),
                           ),
                           child: Center(
                             child: Text(
@@ -2430,13 +2432,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           (error != null && series == null)) {
                         return Container(
                           height: 200,
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(KubusSpacing.md),
                           decoration: BoxDecoration(
                             color: Theme.of(dialogContext)
                                 .colorScheme
                                 .onSurface
                                 .withValues(alpha: 0.05),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(KubusRadius.md),
                           ),
                           child: Center(
                             child: isLoading

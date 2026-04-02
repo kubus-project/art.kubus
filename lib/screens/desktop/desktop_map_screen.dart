@@ -2195,7 +2195,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: scheme.surface.withValues(alpha: isDark ? 0.88 : 0.92),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(KubusRadius.xl),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -2335,7 +2335,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                             horizontal: 12,
                           ),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(KubusRadius.md),
                           ),
                         ),
                       ),
@@ -2367,7 +2367,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                         ),
                         foregroundColor: accent,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(KubusRadius.md),
                         ),
                       ),
                     ),
@@ -2413,7 +2413,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                             ? accent.withValues(alpha: 0.08)
                             : null,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(KubusRadius.md),
                         ),
                       ),
                     ),
@@ -2467,7 +2467,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   side: BorderSide(color: accent),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(KubusRadius.md),
                   ),
                 ),
               ),
@@ -2531,7 +2531,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: scheme.surface.withValues(alpha: isDark ? 0.88 : 0.92),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(KubusRadius.xl),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -2666,7 +2666,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                           horizontal: 12,
                         ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(KubusRadius.md),
                         ),
                       ),
                     ),
@@ -2691,7 +2691,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     side: BorderSide(color: exhibitionAccent),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(KubusRadius.md),
                     ),
                   ),
                 ),
@@ -2739,7 +2739,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: scheme.surface.withValues(alpha: isDark ? 0.88 : 0.92),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(KubusRadius.xl),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -2876,7 +2876,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       horizontal: 12,
                     ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(KubusRadius.md),
                     ),
                   ),
                 ),
@@ -2946,7 +2946,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(KubusRadius.md),
                   ),
                 ),
                 child: Text(l10n.commonReset),
@@ -2969,7 +2969,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       : KubusColors.textPrimaryLight,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(KubusRadius.md),
                   ),
                 ),
                 child: Text(l10n.commonApply),
@@ -3023,7 +3023,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               buildKubusMapGlassSurface(
                 context: context,
                 kind: KubusMapGlassSurfaceKind.button,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(KubusRadius.sm),
                 tintBase: scheme.surface,
                 useBlur: useMapBlur,
                 padding:
@@ -3199,7 +3199,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       percentStyle: KubusTypography.textTheme.bodySmall?.copyWith(
         color: scheme.onSurface.withValues(alpha: 0.75),
       ),
-      glassPadding: const EdgeInsets.all(16),
+      glassPadding: const EdgeInsets.all(KubusSpacing.md),
       constraints: const BoxConstraints(maxWidth: 340),
       enableMouseRegion: true,
       mouseCursor: SystemMouseCursors.basic,
@@ -4565,7 +4565,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     ArtMarker marker,
     String? linkedInstitutionId,
   ) async {
-    final institutionId = (linkedInstitutionId ?? marker.subjectId ?? '').trim();
+    final institutionId =
+        (linkedInstitutionId ?? marker.subjectId ?? '').trim();
     final profileTargetId = InstitutionNavigation.resolveProfileTargetId(
       institutionId: institutionId,
       data: marker.metadata,
@@ -4786,7 +4787,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             children: [
               if (coverUrl != null && coverUrl.isNotEmpty)
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(KubusRadius.sm),
                   child: KubusCachedImage(
                     imageUrl: coverUrl,
                     width: double.infinity,

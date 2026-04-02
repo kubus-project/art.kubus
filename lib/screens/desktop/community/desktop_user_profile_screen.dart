@@ -692,8 +692,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           Stack(
             children: [
               ClipRRect(
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(KubusRadius.lg),
+                ),
                 child: Container(
                   height: hasCoverImage ? 120 : 70,
                   width: double.infinity,
@@ -737,8 +738,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                 Positioned.fill(
                   child: Container(
                     decoration: BoxDecoration(
-                      borderRadius:
-                          const BorderRadius.vertical(top: Radius.circular(16)),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(KubusRadius.lg),
+                      ),
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
@@ -755,7 +757,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           ),
           // Horizontal profile info layout
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(KubusSpacing.md),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -784,7 +786,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                     heroTag: widget.heroTag,
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: KubusSpacing.md),
                 // Name, username, bio
                 Expanded(
                   child: Column(
@@ -795,41 +797,40 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                           Flexible(
                             child: Text(
                               user!.name,
-                              style: KubusTypography.inter(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
+                              style: KubusTextStyles.screenTitle.copyWith(
                                 color: Theme.of(context).colorScheme.onSurface,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           if (isArtist) ...[
-                            const SizedBox(width: 8),
+                            const SizedBox(width: KubusSpacing.sm),
                             const ArtistBadge(),
                           ],
                           if (isInstitution) ...[
-                            const SizedBox(width: 8),
+                            const SizedBox(width: KubusSpacing.sm),
                             const InstitutionBadge(),
                           ],
                         ],
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: KubusSpacing.xs),
                       Text(
                         user!.username,
-                        style: KubusTypography.inter(
-                          fontSize: 14,
+                        style: KubusTextStyles.profileHandle.copyWith(
                           color: Theme.of(context)
                               .colorScheme
                               .onSurface
                               .withValues(alpha: 0.6),
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(
+                          height: KubusSpacing.xs +
+                              KubusSpacing.xs +
+                              KubusSpacing.xxs),
                       UserActivityStatusLine(
                         walletAddress: user!.id,
                         textAlign: TextAlign.start,
-                        textStyle: KubusTypography.inter(
-                          fontSize: 13,
+                        textStyle: KubusTextStyles.detailCaption.copyWith(
                           color: Theme.of(context)
                               .colorScheme
                               .onSurface
@@ -837,12 +838,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                         ),
                       ),
                       if (user!.bio.isNotEmpty) ...[
-                        const SizedBox(height: 10),
+                        const SizedBox(
+                            height: KubusSpacing.sm + KubusSpacing.xxs),
                         Text(
                           user!.bio,
-                          style: KubusTypography.inter(
-                            fontSize: 14,
-                            height: 1.4,
+                          style: KubusTextStyles.detailBody.copyWith(
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurface
@@ -852,17 +852,17 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
-                      const SizedBox(height: 10),
+                      const SizedBox(
+                          height: KubusSpacing.sm + KubusSpacing.xxs),
                       ProfileArtistInfoFields(
                         fieldOfWork: user!.fieldOfWork,
                         yearsActive: user!.yearsActive,
                         textAlign: TextAlign.left,
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: KubusSpacing.sm),
                       Text(
                         l10n.userProfileJoinedLabel(user!.joinedDate),
-                        style: KubusTypography.inter(
-                          fontSize: 12,
+                        style: KubusTextStyles.detailCaption.copyWith(
                           color: Theme.of(context)
                               .colorScheme
                               .onSurface
@@ -977,7 +977,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             height: 48,
             decoration: BoxDecoration(
               color: themeProvider.accentColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
             ),
             child: Icon(
               Icons.streetview,
@@ -991,17 +991,14 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               children: [
                 Text(
                   l10n.profilePerformancePublicStreetArtAddedTitle,
-                  style: KubusTypography.inter(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
+                  style: KubusTextStyles.detailCardTitle.copyWith(
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: KubusSpacing.xs),
                 Text(
                   l10n.userProfileArtistHighlightsSubtitle(user!.name),
-                  style: KubusTypography.inter(
-                    fontSize: 12,
+                  style: KubusTextStyles.detailCaption.copyWith(
                     color: Theme.of(context)
                         .colorScheme
                         .onSurface
@@ -1013,9 +1010,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           ),
           Text(
             _formatCount(_publicStreetArtAddedCount),
-            style: KubusTypography.inter(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
+            style: KubusTextStyles.statValue.copyWith(
               color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
@@ -1034,7 +1029,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           subtitle: l10n.userProfileArtistPortfolioDesktopSubtitle,
           icon: Icons.palette,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: KubusSpacing.md),
         if (_artistDataLoading && !_artistDataLoaded)
           DesktopCard(
             child: Container(
@@ -1057,7 +1052,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: _artistArtworks.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 16),
+              separatorBuilder: (_, __) =>
+                  const SizedBox(width: KubusSpacing.md),
               itemBuilder: (context, index) =>
                   _buildArtworkShowcaseCard(_artistArtworks[index], l10n),
             ),
@@ -1222,8 +1218,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ClipRRect(
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(16)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(KubusRadius.lg),
+                  ),
                   child: imageUrl != null
                       ? Image.network(
                           _normalizeMediaUrl(imageUrl) ?? '',
@@ -1236,7 +1233,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                       : _buildPlaceholderImage(160, Icons.image_outlined),
                 ),
                 Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(KubusSpacing.md),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1331,8 +1328,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(KubusRadius.lg),
+              ),
               child: imageUrl != null
                   ? Image.network(
                       _normalizeMediaUrl(imageUrl) ?? '',
@@ -1345,7 +1343,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                   : _buildPlaceholderImage(120, Icons.collections_outlined),
             ),
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(KubusSpacing.md),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1400,7 +1398,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       width: double.infinity,
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(KubusRadius.lg),
+        ),
       ),
       child: Center(
           child: Icon(icon,
@@ -1587,10 +1587,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding:
+                    const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
                 decoration: BoxDecoration(
                   color: accent.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
                 ),
                 child: Icon(_iconForAchievement(achievement),
                     color: accent, size: 24),
@@ -1603,7 +1604,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                       .colorScheme
                       .secondaryContainer
                       .withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(KubusRadius.sm),
                 ),
                 child: Text(
                   '+${achievement.tokenReward}',
@@ -1645,7 +1646,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           ),
           const SizedBox(height: 8),
           ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(KubusRadius.sm),
             child: LinearProgressIndicator(
               value: ratio,
               minHeight: 6,
@@ -1707,13 +1708,13 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               ..._posts.map((post) => _buildPostCard(post, themeProvider)),
               if (_loadingMore)
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(KubusSpacing.md),
                   alignment: Alignment.center,
                   child: const CircularProgressIndicator(),
                 )
               else if (_isLastPage)
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(KubusSpacing.md),
                   alignment: Alignment.center,
                   child: Text(
                     l10n.userProfileNoMorePostsLabel,
@@ -1814,7 +1815,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             if (post.imageUrl != null && post.imageUrl!.isNotEmpty) ...[
               const SizedBox(height: 16),
               ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
                 child: Image.network(
                   MediaUrlResolver.resolveDisplayUrl(post.imageUrl) ??
                       _normalizeMediaUrl(post.imageUrl) ??
@@ -2179,7 +2180,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(KubusRadius.xl),
+        ),
       ),
       builder: (context) => Container(
         padding: const EdgeInsets.all(KubusSpacing.lg),
@@ -2247,7 +2250,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(KubusRadius.lg),
+        ),
         title: Text(
           l10n.userProfileBlockDialogTitle(user?.name ?? targetWallet),
           style: KubusTypography.inter(
@@ -2309,7 +2314,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(KubusRadius.lg),
+        ),
         title: Text(
           l10n.userProfileReportDialogTitle(user?.name ?? ''),
           style: KubusTypography.inter(

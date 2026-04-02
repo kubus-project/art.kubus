@@ -44,7 +44,8 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
 
   bool get _isMobilePlatform {
     if (kIsWeb) return false;
-    return defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS;
+    return defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
   }
 
   Future<void> _completeAndExit() async {
@@ -95,8 +96,7 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
         SnackBar(content: Text(l10n.settingsPinSetSuccessToast)),
       );
 
-      final canOfferBiometrics =
-          _isMobilePlatform &&
+      final canOfferBiometrics = _isMobilePlatform &&
           !next.biometricsDeclined &&
           !next.biometricAuth &&
           await walletProvider.canUseBiometrics();
@@ -185,7 +185,8 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
       await _completeAndExit();
     } catch (_) {
       if (!mounted) return;
-      setState(() => _inlineError = AppLocalizations.of(context)!.commonActionFailedToast);
+      setState(() =>
+          _inlineError = AppLocalizations.of(context)!.commonActionFailedToast);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -250,10 +251,13 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
         ),
         const SizedBox(height: 10),
         TextButton(
-          onPressed: _busy ? null : () => context.read<SecurityGateProvider>().logout(),
+          onPressed: _busy
+              ? null
+              : () => context.read<SecurityGateProvider>().logout(),
           child: Text(
             l10n.settingsLogoutButton,
-            style: KubusTypography.inter(color: scheme.onSurface.withValues(alpha: 0.7)),
+            style: KubusTypography.inter(
+                color: scheme.onSurface.withValues(alpha: 0.7)),
           ),
         ),
       ],
@@ -332,7 +336,7 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               return SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(KubusSpacing.md),
                 keyboardDismissBehavior:
                     ScrollViewKeyboardDismissBehavior.onDrag,
                 child: ConstrainedBox(
@@ -343,7 +347,7 @@ class _SecuritySetupScreenState extends State<SecuritySetupScreen> {
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 560),
                       child: KubusCard(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(KubusSpacing.md),
                         color: scheme.surfaceContainerHighest,
                         child: AnimatedSwitcher(
                           duration: const Duration(milliseconds: 240),

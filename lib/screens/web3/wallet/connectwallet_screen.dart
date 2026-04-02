@@ -343,7 +343,7 @@ class _ConnectWalletState extends State<ConnectWallet>
         title: Text(
           _getStepTitle(l10n),
           style: KubusTypography.inter(
-            fontSize: 20,
+            fontSize: KubusHeaderMetrics.screenTitle,
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.onSurface,
           ),
@@ -416,14 +416,20 @@ class _ConnectWalletState extends State<ConnectWallet>
           child: SingleChildScrollView(
             padding: EdgeInsets.symmetric(
               horizontal: screenWidth * 0.05,
-              vertical: isSmallScreen ? 16 : 24,
+              vertical: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg,
             ),
             child: Column(
               children: [
-                SizedBox(height: isSmallScreen ? 16 : 32),
+                SizedBox(
+                  height: isSmallScreen ? KubusSpacing.md : KubusSpacing.xl,
+                ),
                 LiquidGlassPanel(
-                  padding: EdgeInsets.all(isSmallScreen ? 14 : 16),
-                  borderRadius: BorderRadius.circular(18),
+                  padding: EdgeInsets.all(
+                    isSmallScreen
+                        ? KubusSpacing.md - KubusSpacing.xxs
+                        : KubusSpacing.md,
+                  ),
+                  borderRadius: BorderRadius.circular(KubusRadius.lg),
                   child: Column(
                     children: [
                       GradientIconCard(
@@ -435,21 +441,22 @@ class _ConnectWalletState extends State<ConnectWallet>
                         height: isSmallScreen ? 84 : 100,
                         radius: 16,
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(
+                          height: KubusSpacing.sm + KubusSpacing.xxs),
                       Text(
                         l10n.connectWalletChooseTitle,
                         style: KubusTypography.inter(
-                          fontSize: isSmallScreen ? 22 : 24,
+                          fontSize: KubusHeaderMetrics.screenTitle,
                           fontWeight: FontWeight.w800,
                           color: colorScheme.onSurface,
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: KubusSpacing.sm),
                       Text(
                         l10n.connectWalletChooseDescription,
                         style: KubusTypography.inter(
-                          fontSize: isSmallScreen ? 13 : 14,
+                          fontSize: KubusHeaderMetrics.sectionSubtitle,
                           color: colorScheme.onSurface.withValues(alpha: 0.85),
                           height: 1.4,
                         ),
@@ -458,7 +465,9 @@ class _ConnectWalletState extends State<ConnectWallet>
                     ],
                   ),
                 ),
-                SizedBox(height: isSmallScreen ? 16 : 24),
+                SizedBox(
+                  height: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg,
+                ),
                 _buildActionButton(
                   icon: AuthWalletEntryOption.walletConnect.icon,
                   label: AuthWalletEntryOption.walletConnect.label(l10n),
@@ -485,7 +494,9 @@ class _ConnectWalletState extends State<ConnectWallet>
                   isSmallScreen: isSmallScreen,
                   isAdvanced: true,
                 ),
-                SizedBox(height: isSmallScreen ? 16 : 24),
+                SizedBox(
+                  height: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg,
+                ),
                 GestureDetector(
                   onTap: () => _showWeb3Guide(),
                   child: Text(
@@ -496,7 +507,9 @@ class _ConnectWalletState extends State<ConnectWallet>
                     ).copyWith(decoration: TextDecoration.underline),
                   ),
                 ),
-                SizedBox(height: isSmallScreen ? 16 : 24),
+                SizedBox(
+                  height: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg,
+                ),
               ],
             ),
           ),
@@ -569,7 +582,9 @@ class _ConnectWalletState extends State<ConnectWallet>
         padding:
             EdgeInsets.all(isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
         margin: EdgeInsets.zero,
-        borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 18),
+        borderRadius: BorderRadius.circular(
+          isSmallScreen ? KubusRadius.lg : KubusRadius.xl,
+        ),
         blurSigma: KubusGlassEffects.blurSigmaLight,
         backgroundColor: cardTint,
         child: Row(
@@ -584,7 +599,7 @@ class _ConnectWalletState extends State<ConnectWallet>
                 iconSize: isSmallScreen ? 24 : 28,
                 width: isSmallScreen ? 48 : 58,
                 height: isSmallScreen ? 48 : 58,
-                radius: isSmallScreen ? 14 : 16,
+                radius: isSmallScreen ? KubusRadius.sm : KubusRadius.md,
               ),
             ),
             SizedBox(width: isSmallScreen ? KubusSpacing.sm : KubusSpacing.md),
@@ -608,7 +623,7 @@ class _ConnectWalletState extends State<ConnectWallet>
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: KubusSpacing.sm,
-                            vertical: 4,
+                            vertical: KubusSpacing.xxs * 2,
                           ),
                           decoration: BoxDecoration(
                             color: scheme.secondary.withValues(alpha: 0.14),
@@ -625,7 +640,7 @@ class _ConnectWalletState extends State<ConnectWallet>
                         ),
                     ],
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: KubusSpacing.xxs + KubusSpacing.xxs),
                   Text(
                     description,
                     style: KubusTypography.textTheme.bodySmall?.copyWith(
@@ -661,12 +676,15 @@ class _ConnectWalletState extends State<ConnectWallet>
         child: SingleChildScrollView(
           padding: EdgeInsets.symmetric(
             horizontal: screenWidth * 0.05,
-            vertical: isSmallScreen ? 16 : 20,
+            vertical: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(height: isSmallScreen ? 12 : 16),
+              SizedBox(
+                  height: isSmallScreen
+                      ? KubusSpacing.sm + KubusSpacing.xxs
+                      : KubusSpacing.md),
               Center(
                 child: Column(
                   children: [
@@ -677,13 +695,17 @@ class _ConnectWalletState extends State<ConnectWallet>
                       iconSize: isSmallScreen ? 44 : 52,
                       width: isSmallScreen ? 88 : 100,
                       height: isSmallScreen ? 88 : 100,
-                      radius: 20,
+                      radius: KubusRadius.lg,
                     ),
-                    SizedBox(height: isSmallScreen ? 14 : 18),
+                    SizedBox(
+                        height:
+                            isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
                     Text(
                       l10n.connectWalletImportTitle,
                       style: KubusTypography.inter(
-                        fontSize: isSmallScreen ? 22 : 26,
+                        fontSize: isSmallScreen
+                            ? KubusHeaderMetrics.screenTitle
+                            : KubusHeaderMetrics.screenTitle + KubusSpacing.md,
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
@@ -691,11 +713,14 @@ class _ConnectWalletState extends State<ConnectWallet>
                   ],
                 ),
               ),
-              SizedBox(height: isSmallScreen ? 12 : 16),
+              SizedBox(
+                  height: isSmallScreen
+                      ? KubusSpacing.sm + KubusSpacing.xxs
+                      : KubusSpacing.md),
               Text(
                 l10n.connectWalletImportDescription,
                 style: KubusTypography.inter(
-                  fontSize: isSmallScreen ? 14 : 15,
+                  fontSize: KubusHeaderMetrics.sectionSubtitle,
                   color: Theme.of(context)
                       .colorScheme
                       .onSurface
@@ -703,7 +728,8 @@ class _ConnectWalletState extends State<ConnectWallet>
                   height: 1.5,
                 ),
               ),
-              SizedBox(height: isSmallScreen ? 20 : 24),
+              SizedBox(
+                  height: isSmallScreen ? KubusSpacing.lg : KubusSpacing.xl),
 
               // Mnemonic Input Field
               TextField(
@@ -719,7 +745,11 @@ class _ConnectWalletState extends State<ConnectWallet>
                   ),
                   filled: true,
                   fillColor: Theme.of(context).colorScheme.surface,
-                  contentPadding: EdgeInsets.all(isSmallScreen ? 12 : 14),
+                  contentPadding: EdgeInsets.all(
+                    isSmallScreen
+                        ? KubusSpacing.md - KubusSpacing.xxs
+                        : KubusSpacing.md,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: KubusRadius.circular(KubusRadius.md),
                     borderSide: BorderSide(
@@ -739,27 +769,40 @@ class _ConnectWalletState extends State<ConnectWallet>
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
-              SizedBox(height: isSmallScreen ? 12 : 14),
+              SizedBox(
+                  height: isSmallScreen
+                      ? KubusSpacing.sm + KubusSpacing.xxs
+                      : KubusSpacing.md),
 
               // Warning Box
               Container(
-                padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
+                padding: EdgeInsets.all(
+                  isSmallScreen
+                      ? KubusSpacing.md - KubusSpacing.xxs
+                      : KubusSpacing.md,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.orange.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(KubusRadius.sm),
                   border:
                       Border.all(color: Colors.orange.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
                     Icon(Icons.warning_amber_rounded,
-                        color: Colors.orange, size: isSmallScreen ? 20 : 22),
-                    SizedBox(width: isSmallScreen ? 10 : 12),
+                        color: Colors.orange,
+                        size: isSmallScreen
+                            ? KubusHeaderMetrics.actionIcon
+                            : KubusHeaderMetrics.actionIcon + KubusSpacing.xxs),
+                    SizedBox(
+                        width: isSmallScreen
+                            ? KubusSpacing.sm + KubusSpacing.xxs
+                            : KubusSpacing.md),
                     Expanded(
                       child: Text(
                         l10n.connectWalletImportWarning,
                         style: KubusTypography.inter(
-                          fontSize: isSmallScreen ? 11 : 12,
+                          fontSize: KubusSizes.badgeCountFontSize,
                           color: Theme.of(context)
                               .colorScheme
                               .onSurface
@@ -771,7 +814,8 @@ class _ConnectWalletState extends State<ConnectWallet>
                   ],
                 ),
               ),
-              SizedBox(height: isSmallScreen ? 20 : 24),
+              SizedBox(
+                  height: isSmallScreen ? KubusSpacing.lg : KubusSpacing.xl),
 
               // Connect Button
               KubusButton(
@@ -929,12 +973,15 @@ class _ConnectWalletState extends State<ConnectWallet>
         child: SingleChildScrollView(
           padding: EdgeInsets.symmetric(
             horizontal: screenWidth * 0.05,
-            vertical: isSmallScreen ? 16 : 20,
+            vertical: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(height: isSmallScreen ? 12 : 16),
+              SizedBox(
+                  height: isSmallScreen
+                      ? KubusSpacing.sm + KubusSpacing.xxs
+                      : KubusSpacing.md),
               Center(
                 child: Column(
                   children: [
@@ -945,13 +992,17 @@ class _ConnectWalletState extends State<ConnectWallet>
                       iconSize: isSmallScreen ? 44 : 52,
                       width: isSmallScreen ? 88 : 100,
                       height: isSmallScreen ? 88 : 100,
-                      radius: 20,
+                      radius: KubusRadius.lg,
                     ),
-                    SizedBox(height: isSmallScreen ? 14 : 18),
+                    SizedBox(
+                        height:
+                            isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
                     Text(
                       l10n.connectWalletCreateTitle,
                       style: KubusTypography.inter(
-                        fontSize: isSmallScreen ? 22 : 26,
+                        fontSize: isSmallScreen
+                            ? KubusHeaderMetrics.screenTitle
+                            : KubusHeaderMetrics.screenTitle + KubusSpacing.md,
                         fontWeight: FontWeight.bold,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
@@ -959,11 +1010,14 @@ class _ConnectWalletState extends State<ConnectWallet>
                   ],
                 ),
               ),
-              SizedBox(height: isSmallScreen ? 12 : 16),
+              SizedBox(
+                  height: isSmallScreen
+                      ? KubusSpacing.sm + KubusSpacing.xxs
+                      : KubusSpacing.md),
               Text(
                 l10n.connectWalletCreateDescription,
                 style: KubusTypography.inter(
-                  fontSize: isSmallScreen ? 14 : 15,
+                  fontSize: KubusHeaderMetrics.sectionSubtitle,
                   color: Theme.of(context)
                       .colorScheme
                       .onSurface
@@ -971,14 +1025,19 @@ class _ConnectWalletState extends State<ConnectWallet>
                   height: 1.5,
                 ),
               ),
-              SizedBox(height: isSmallScreen ? 20 : 24),
+              SizedBox(
+                  height: isSmallScreen ? KubusSpacing.lg : KubusSpacing.xl),
 
               // Info Box
               Container(
-                padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
+                padding: EdgeInsets.all(
+                  isSmallScreen
+                      ? KubusSpacing.md - KubusSpacing.xxs
+                      : KubusSpacing.md,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.green.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(KubusRadius.sm),
                   border:
                       Border.all(color: Colors.green.withValues(alpha: 0.3)),
                 ),
@@ -988,23 +1047,33 @@ class _ConnectWalletState extends State<ConnectWallet>
                     Row(
                       children: [
                         Icon(Icons.info_outline,
-                            color: Colors.green, size: isSmallScreen ? 20 : 22),
-                        SizedBox(width: isSmallScreen ? 10 : 12),
+                            color: Colors.green,
+                            size: isSmallScreen
+                                ? KubusHeaderMetrics.actionIcon
+                                : KubusHeaderMetrics.actionIcon +
+                                    KubusSpacing.xxs),
+                        SizedBox(
+                            width: isSmallScreen
+                                ? KubusSpacing.sm + KubusSpacing.xxs
+                                : KubusSpacing.md),
                         Text(
                           l10n.connectWalletCreateInfoTitle,
                           style: KubusTypography.inter(
-                            fontSize: isSmallScreen ? 14 : 15,
+                            fontSize: KubusHeaderMetrics.sectionSubtitle,
                             fontWeight: FontWeight.w600,
                             color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                       ],
                     ),
-                    SizedBox(height: isSmallScreen ? 10 : 12),
+                    SizedBox(
+                        height: isSmallScreen
+                            ? KubusSpacing.sm + KubusSpacing.xxs
+                            : KubusSpacing.md),
                     Text(
                       l10n.connectWalletCreateInfoBody,
                       style: KubusTypography.inter(
-                        fontSize: isSmallScreen ? 12 : 13,
+                        fontSize: KubusSizes.badgeCountFontSize,
                         color: Theme.of(context)
                             .colorScheme
                             .onSurface
@@ -1015,14 +1084,19 @@ class _ConnectWalletState extends State<ConnectWallet>
                   ],
                 ),
               ),
-              SizedBox(height: isSmallScreen ? 16 : 20),
+              SizedBox(
+                  height: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
 
               // Warning Box
               Container(
-                padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
+                padding: EdgeInsets.all(
+                  isSmallScreen
+                      ? KubusSpacing.md - KubusSpacing.xxs
+                      : KubusSpacing.md,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.orange.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(KubusRadius.sm),
                   border:
                       Border.all(color: Colors.orange.withValues(alpha: 0.3)),
                 ),
@@ -1030,13 +1104,19 @@ class _ConnectWalletState extends State<ConnectWallet>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Icon(Icons.warning_amber_rounded,
-                        color: Colors.orange, size: isSmallScreen ? 20 : 22),
-                    SizedBox(width: isSmallScreen ? 10 : 12),
+                        color: Colors.orange,
+                        size: isSmallScreen
+                            ? KubusHeaderMetrics.actionIcon
+                            : KubusHeaderMetrics.actionIcon + KubusSpacing.xxs),
+                    SizedBox(
+                        width: isSmallScreen
+                            ? KubusSpacing.sm + KubusSpacing.xxs
+                            : KubusSpacing.md),
                     Expanded(
                       child: Text(
                         l10n.connectWalletCreateWarning,
                         style: KubusTypography.inter(
-                          fontSize: isSmallScreen ? 11 : 12,
+                          fontSize: KubusSizes.badgeCountFontSize,
                           color: Theme.of(context)
                               .colorScheme
                               .onSurface
@@ -1048,7 +1128,8 @@ class _ConnectWalletState extends State<ConnectWallet>
                   ],
                 ),
               ),
-              SizedBox(height: isSmallScreen ? 20 : 24),
+              SizedBox(
+                  height: isSmallScreen ? KubusSpacing.lg : KubusSpacing.xl),
 
               // Generate Button
               KubusButton(
@@ -1110,12 +1191,15 @@ class _ConnectWalletState extends State<ConnectWallet>
         child: SingleChildScrollView(
           padding: EdgeInsets.symmetric(
             horizontal: screenWidth * 0.05,
-            vertical: isSmallScreen ? 16 : 20,
+            vertical: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(height: isSmallScreen ? 12 : 16),
+              SizedBox(
+                  height: isSmallScreen
+                      ? KubusSpacing.sm + KubusSpacing.xxs
+                      : KubusSpacing.md),
               Center(
                 child: Column(
                   children: [
@@ -1126,9 +1210,11 @@ class _ConnectWalletState extends State<ConnectWallet>
                       iconSize: isSmallScreen ? 44 : 52,
                       width: isSmallScreen ? 88 : 100,
                       height: isSmallScreen ? 88 : 100,
-                      radius: 20,
+                      radius: KubusRadius.lg,
                     ),
-                    SizedBox(height: isSmallScreen ? 14 : 18),
+                    SizedBox(
+                        height:
+                            isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
                     Text(
                       l10n.connectWalletWalletConnectTitle,
                       style: KubusTypography.textTheme.headlineMedium?.copyWith(
@@ -1156,7 +1242,8 @@ class _ConnectWalletState extends State<ConnectWallet>
               // Supported Wallets
               Container(
                 padding: EdgeInsets.all(
-                    isSmallScreen ? KubusSpacing.sm : KubusSpacing.md),
+                  isSmallScreen ? KubusSpacing.sm : KubusSpacing.md,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.blue.withValues(alpha: 0.1),
                   borderRadius: KubusRadius.circular(KubusRadius.sm),
@@ -1168,7 +1255,11 @@ class _ConnectWalletState extends State<ConnectWallet>
                     Row(
                       children: [
                         Icon(Icons.check_circle,
-                            color: Colors.blue, size: isSmallScreen ? 20 : 22),
+                            color: Colors.blue,
+                            size: isSmallScreen
+                                ? KubusHeaderMetrics.actionIcon
+                                : KubusHeaderMetrics.actionIcon +
+                                    KubusSpacing.xxs),
                         SizedBox(
                             width: isSmallScreen
                                 ? KubusSpacing.xs
@@ -1208,11 +1299,15 @@ class _ConnectWalletState extends State<ConnectWallet>
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
-              SizedBox(height: isSmallScreen ? 10 : 12),
+              SizedBox(
+                  height: isSmallScreen
+                      ? KubusSpacing.sm + KubusSpacing.xxs
+                      : KubusSpacing.md),
               _buildInstructionStep('1', l10n.connectWalletWalletConnectStep1),
               _buildInstructionStep('2', l10n.connectWalletWalletConnectStep2),
               _buildInstructionStep('3', l10n.connectWalletWalletConnectStep3),
-              SizedBox(height: isSmallScreen ? 16 : 20),
+              SizedBox(
+                  height: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
 
               // Quick connect without typing
 
@@ -1230,7 +1325,11 @@ class _ConnectWalletState extends State<ConnectWallet>
                   ),
                   filled: true,
                   fillColor: Theme.of(context).colorScheme.surface,
-                  contentPadding: EdgeInsets.all(isSmallScreen ? 10 : 12),
+                  contentPadding: EdgeInsets.all(
+                    isSmallScreen
+                        ? KubusSpacing.sm + KubusSpacing.xxs
+                        : KubusSpacing.md,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: KubusRadius.circular(KubusRadius.md),
                     borderSide: BorderSide(
@@ -1262,7 +1361,10 @@ class _ConnectWalletState extends State<ConnectWallet>
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
-              SizedBox(height: isSmallScreen ? 12 : 14),
+              SizedBox(
+                  height: isSmallScreen
+                      ? KubusSpacing.sm + KubusSpacing.xxs
+                      : KubusSpacing.md),
 
               // Info Box
               Container(
@@ -1423,7 +1525,7 @@ class _ConnectWalletState extends State<ConnectWallet>
                   height: 250,
                   decoration: BoxDecoration(
                     border: Border.all(color: Colors.white, width: 2),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(KubusRadius.md),
                   ),
                 ),
               ),
@@ -1437,7 +1539,7 @@ class _ConnectWalletState extends State<ConnectWallet>
                         horizontal: 24, vertical: 12),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.7),
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(KubusRadius.xl),
                     ),
                     child: Text(
                       l10n.connectWalletWalletConnectScanQrHint,
@@ -1752,7 +1854,6 @@ class _ConnectWalletState extends State<ConnectWallet>
     }
   }
 
-
   Widget _buildConnectedView() {
     final l10n = AppLocalizations.of(context)!;
     final screenWidth = MediaQuery.of(context).size.width;
@@ -1762,7 +1863,7 @@ class _ConnectWalletState extends State<ConnectWallet>
       child: Padding(
         padding: EdgeInsets.symmetric(
           horizontal: screenWidth * 0.06,
-          vertical: isSmallScreen ? 16 : 24,
+          vertical: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg,
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -1774,25 +1875,30 @@ class _ConnectWalletState extends State<ConnectWallet>
               iconSize: isSmallScreen ? 56 : 68,
               width: isSmallScreen ? 100 : 120,
               height: isSmallScreen ? 100 : 120,
-              radius: 28,
+              radius: KubusRadius.xl,
             ),
-            SizedBox(height: isSmallScreen ? 28 : 32),
+            SizedBox(height: isSmallScreen ? KubusSpacing.lg : KubusSpacing.xl),
             Text(
               l10n.connectWalletConnectedTitle,
               style: KubusTypography.inter(
-                fontSize: isSmallScreen ? 26 : 30,
+                fontSize: isSmallScreen
+                    ? KubusHeaderMetrics.screenTitle + KubusSpacing.md
+                    : KubusHeaderMetrics.screenTitle + KubusSpacing.lg,
                 fontWeight: FontWeight.bold,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: isSmallScreen ? 12 : 14),
+            SizedBox(
+                height: isSmallScreen
+                    ? KubusSpacing.sm + KubusSpacing.xxs
+                    : KubusSpacing.md),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.sm),
               child: Text(
                 l10n.connectWalletConnectedDescription,
                 style: KubusTypography.inter(
-                  fontSize: isSmallScreen ? 14 : 15,
+                  fontSize: KubusHeaderMetrics.sectionSubtitle,
                   color: Theme.of(context)
                       .colorScheme
                       .onSurface
@@ -1802,30 +1908,39 @@ class _ConnectWalletState extends State<ConnectWallet>
                 textAlign: TextAlign.center,
               ),
             ),
-            SizedBox(height: isSmallScreen ? 32 : 40),
+            SizedBox(
+                height: isSmallScreen
+                    ? KubusSpacing.xl
+                    : KubusSpacing.xl + KubusSpacing.sm),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(0xFF10B981),
-                  padding:
-                      EdgeInsets.symmetric(vertical: isSmallScreen ? 16 : 18),
+                  padding: EdgeInsets.symmetric(
+                    vertical: isSmallScreen
+                        ? KubusSpacing.md
+                        : KubusSpacing.md + KubusSpacing.xxs,
+                  ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(KubusRadius.md),
                   ),
                 ),
                 child: Text(
                   l10n.connectWalletConnectedStartExploringButton,
                   style: KubusTypography.inter(
-                    fontSize: isSmallScreen ? 17 : 18,
+                    fontSize: KubusHeaderMetrics.sectionTitle,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
                   ),
                 ),
               ),
             ),
-            SizedBox(height: isSmallScreen ? 12 : 14),
+            SizedBox(
+                height: isSmallScreen
+                    ? KubusSpacing.sm + KubusSpacing.xxs
+                    : KubusSpacing.md),
             TextButton(
               onPressed: () {
                 unawaited(
@@ -1836,7 +1951,7 @@ class _ConnectWalletState extends State<ConnectWallet>
               child: Text(
                 l10n.connectWalletConnectedDisconnectButton,
                 style: KubusTypography.inter(
-                  fontSize: isSmallScreen ? 14 : 15,
+                  fontSize: KubusHeaderMetrics.sectionSubtitle,
                   color: Theme.of(context)
                       .colorScheme
                       .onSurface
@@ -1856,7 +1971,9 @@ class _ConnectWalletState extends State<ConnectWallet>
       context: context,
       builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(KubusRadius.lg),
+        ),
         title: Text(
           l10n.connectWalletWeb3GuideTitle,
           style: KubusTypography.inter(
@@ -1877,7 +1994,7 @@ class _ConnectWalletState extends State<ConnectWallet>
                         .onSurface
                         .withValues(alpha: 0.6)),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: KubusSpacing.md),
               _buildFeaturePoint(
                   Icons.lock,
                   l10n.connectWalletWeb3GuideFeatureSecureTitle,

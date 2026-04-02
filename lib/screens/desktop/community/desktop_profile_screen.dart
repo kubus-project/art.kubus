@@ -527,8 +527,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     final coverImageUrl = _normalizeMediaUrl(user?.coverImage);
     final hasCoverImage = coverImageUrl != null && coverImageUrl.isNotEmpty;
     const avatarRadius = 44.0;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isCompact = screenWidth >= 1200;
 
     return DesktopCard(
       padding: EdgeInsets.zero,
@@ -539,7 +537,8 @@ class _ProfileScreenState extends State<ProfileScreen>
             children: [
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(DetailRadius.lg)),
+                  top: Radius.circular(KubusRadius.lg),
+                ),
                 child: Container(
                   height: hasCoverImage ? 140 : 80,
                   width: double.infinity,
@@ -583,8 +582,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                 Positioned.fill(
                   child: Container(
                     decoration: BoxDecoration(
-                      borderRadius:
-                          const BorderRadius.vertical(top: Radius.circular(16)),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(KubusRadius.lg),
+                      ),
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
@@ -601,7 +601,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
           // Compact horizontal layout for profile info
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(KubusSpacing.md),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -630,7 +630,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     showStatusIndicator: _showActivityStatus,
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: KubusSpacing.md),
                 // Name, username, bio
                 Expanded(
                   child: Column(
@@ -643,31 +643,33 @@ class _ProfileScreenState extends State<ProfileScreen>
                               user?.displayName ??
                                   user?.username ??
                                   'Art Enthusiast',
-                              style: KubusTypography.inter(
-                                fontSize: isCompact ? 22 : 20,
-                                fontWeight: FontWeight.bold,
+                              style: KubusTextStyles.screenTitle.copyWith(
                                 color: Theme.of(context).colorScheme.onSurface,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           if (isArtist) ...[
-                            const SizedBox(width: 12),
+                            const SizedBox(
+                                width: KubusSpacing.sm + KubusSpacing.xs),
                             const ArtistBadge(),
                           ],
                           if (isInstitution) ...[
-                            const SizedBox(width: 12),
+                            const SizedBox(
+                                width: KubusSpacing.sm + KubusSpacing.xs),
                             const InstitutionBadge(),
                           ],
                         ],
                       ),
                       if (user?.username != null &&
                           user?.displayName != null) ...[
-                        const SizedBox(height: 6),
+                        const SizedBox(
+                            height: KubusSpacing.xs +
+                                KubusSpacing.xs +
+                                KubusSpacing.xxs),
                         Text(
                           '@${user!.username}',
-                          style: KubusTypography.inter(
-                            fontSize: 15,
+                          style: KubusTextStyles.profileHandle.copyWith(
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurface
@@ -678,29 +680,33 @@ class _ProfileScreenState extends State<ProfileScreen>
                       const EmailVerificationStatusBadge(
                         dense: true,
                         alignment: Alignment.centerLeft,
-                        topSpacing: 8,
+                        topSpacing: KubusSpacing.sm,
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(
+                          height: KubusSpacing.xs +
+                              KubusSpacing.xs +
+                              KubusSpacing.xxs),
                       UserActivityStatusLine(
                         walletAddress: user?.walletAddress ?? '',
                         textAlign: TextAlign.start,
-                        textStyle: KubusTypography.inter(
-                          fontSize: 13,
+                        textStyle: KubusTextStyles.detailCaption.copyWith(
                           color: Theme.of(context)
                               .colorScheme
                               .onSurface
                               .withValues(alpha: 0.6),
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: KubusSpacing.md),
                       if (web3Provider.isConnected) ...[
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
+                            horizontal: KubusSpacing.md,
+                            vertical: KubusSpacing.sm,
+                          ),
                           decoration: BoxDecoration(
                             color: themeProvider.accentColor
                                 .withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(KubusRadius.xl),
                             border: Border.all(
                               color: themeProvider.accentColor
                                   .withValues(alpha: 0.3),
@@ -709,21 +715,17 @@ class _ProfileScreenState extends State<ProfileScreen>
                           child: Text(
                             web3Provider
                                 .formatAddress(web3Provider.walletAddress),
-                            style: KubusTypography.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
+                            style: KubusTextStyles.detailLabel.copyWith(
                               color: themeProvider.accentColor,
                             ),
                           ),
                         ),
                       ],
                       if (user?.bio != null && user!.bio.isNotEmpty) ...[
-                        const SizedBox(height: 16),
+                        const SizedBox(height: KubusSpacing.md),
                         Text(
                           user.bio,
-                          style: KubusTypography.inter(
-                            fontSize: 15,
-                            height: 1.5,
+                          style: KubusTextStyles.detailBody.copyWith(
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurface
@@ -733,7 +735,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
-                      const SizedBox(height: 12),
+                      const SizedBox(height: KubusSpacing.md),
                       ProfileArtistInfoFields(
                         fieldOfWork:
                             user?.artistInfo?.specialty ?? const <String>[],
@@ -742,25 +744,30 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                       // Social links
                       if (user?.social.isNotEmpty == true) ...[
-                        const SizedBox(height: 16),
+                        const SizedBox(height: KubusSpacing.md),
                         _buildSocialLinks(user!.social, themeProvider),
                       ],
                     ],
                   ),
                 ),
-                const SizedBox(width: 24),
+                const SizedBox(width: KubusSpacing.lg),
                 ElevatedButton.icon(
                   onPressed: _editProfile,
-                  icon: const Icon(Icons.edit_outlined, size: 20),
+                  icon: const Icon(
+                    Icons.edit_outlined,
+                    size: KubusHeaderMetrics.actionIcon,
+                  ),
                   label: Text(AppLocalizations.of(context)!
                       .settingsEditProfileTileTitle),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: themeProvider.accentColor,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 14),
+                      horizontal: KubusSpacing.lg,
+                      vertical: KubusSpacing.md - KubusSpacing.xxs,
+                    ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(KubusRadius.md),
                     ),
                   ),
                 ),
@@ -1301,14 +1308,18 @@ class _ProfileScreenState extends State<ProfileScreen>
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(DetailSpacing.md),
+            padding: const EdgeInsets.all(KubusSpacing.md),
             decoration: BoxDecoration(
               color: themeProvider.accentColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(DetailRadius.md),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
             ),
-            child: Icon(icon, color: themeProvider.accentColor, size: 24),
+            child: Icon(
+              icon,
+              color: themeProvider.accentColor,
+              size: KubusChromeMetrics.heroIcon,
+            ),
           ),
-          const SizedBox(width: DetailSpacing.lg),
+          const SizedBox(width: KubusSpacing.lg),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1316,15 +1327,17 @@ class _ProfileScreenState extends State<ProfileScreen>
               children: [
                 Text(
                   value,
-                  style: DetailTypography.cardTitle(context).copyWith(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                  style: KubusTextStyles.statValue.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 Text(
                   label,
-                  style: DetailTypography.caption(context).copyWith(
-                    fontSize: 12,
+                  style: KubusTextStyles.statLabel.copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -1365,7 +1378,8 @@ class _ProfileScreenState extends State<ProfileScreen>
               children: [
                 ClipRRect(
                   borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(DetailRadius.lg)),
+                    top: Radius.circular(KubusRadius.lg),
+                  ),
                   child: imageUrl != null
                       ? Image.network(
                           _normalizeMediaUrl(imageUrl) ?? '',
@@ -1378,26 +1392,29 @@ class _ProfileScreenState extends State<ProfileScreen>
                       : _buildPlaceholderImage(180, Icons.image_outlined),
                 ),
                 Padding(
-                  padding: const EdgeInsets.all(DetailSpacing.lg),
+                  padding: const EdgeInsets.all(KubusSpacing.lg),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         title,
-                        style: DetailTypography.cardTitle(context).copyWith(
-                          fontSize: 15,
+                        style: KubusTextStyles.detailCardTitle.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: DetailSpacing.xs),
+                      const SizedBox(height: KubusSpacing.xs),
                       Text(
                         category,
-                        style: DetailTypography.caption(context).copyWith(
-                          fontSize: 13,
+                        style: KubusTextStyles.detailCaption.copyWith(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.66),
                         ),
                       ),
-                      const SizedBox(height: DetailSpacing.sm),
+                      const SizedBox(height: KubusSpacing.sm),
                       Row(
                         children: [
                           Icon(
@@ -1408,11 +1425,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 .onSurface
                                 .withValues(alpha: 0.5),
                           ),
-                          const SizedBox(width: DetailSpacing.xs),
+                          const SizedBox(width: KubusSpacing.xs),
                           Text(
                             '$likesCount',
-                            style: DetailTypography.caption(context).copyWith(
-                              fontSize: 12,
+                            style: KubusTextStyles.detailCaption.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.66),
                             ),
                           ),
                         ],
@@ -1462,7 +1482,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           children: [
             ClipRRect(
               borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(DetailRadius.lg)),
+                top: Radius.circular(KubusRadius.lg),
+              ),
               child: imageUrl != null
                   ? Image.network(
                       _normalizeMediaUrl(imageUrl) ?? '',
@@ -1475,31 +1496,33 @@ class _ProfileScreenState extends State<ProfileScreen>
                   : _buildPlaceholderImage(140, Icons.collections_outlined),
             ),
             Padding(
-              padding: const EdgeInsets.all(DetailSpacing.lg),
+              padding: const EdgeInsets.all(KubusSpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
-                    style: DetailTypography.cardTitle(context).copyWith(
-                      fontSize: 14,
+                    style: KubusTextStyles.detailCardTitle.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: DetailSpacing.xs),
+                  const SizedBox(height: KubusSpacing.xs),
                   Text(
                     '$count artworks',
-                    style: DetailTypography.caption(context).copyWith(
-                      fontSize: 12,
+                    style: KubusTextStyles.detailCaption.copyWith(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.66),
                     ),
                   ),
                   if (description.isNotEmpty) ...[
-                    const SizedBox(height: DetailSpacing.xs),
+                    const SizedBox(height: KubusSpacing.xs),
                     Text(
                       description,
-                      style: DetailTypography.caption(context).copyWith(
-                        fontSize: 11,
+                      style: KubusTextStyles.detailCaption.copyWith(
                         color: Theme.of(context)
                             .colorScheme
                             .onSurface
@@ -1906,23 +1929,30 @@ class _ProfileScreenState extends State<ProfileScreen>
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding:
+                    const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
                 decoration: BoxDecoration(
                   color: accent.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
                 ),
-                child: Icon(_iconForAchievement(achievement),
-                    color: accent, size: 24),
+                child: Icon(
+                  _iconForAchievement(achievement),
+                  color: accent,
+                  size: KubusChromeMetrics.heroIcon,
+                ),
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.sm,
+                  vertical: KubusSpacing.xs,
+                ),
                 decoration: BoxDecoration(
                   color: Theme.of(context)
                       .colorScheme
                       .secondaryContainer
                       .withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(KubusRadius.sm),
                 ),
                 child: Text(
                   '+${achievement.tokenReward}',
@@ -1935,22 +1965,19 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: KubusSpacing.md),
           Text(
             achievement.title,
-            style: KubusTypography.inter(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
+            style: KubusTextStyles.detailCardTitle.copyWith(
               color: Theme.of(context).colorScheme.onSurface,
             ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: KubusSpacing.sm),
           Text(
             isCompleted ? 'Completed' : '${progress.currentProgress}/$required',
-            style: KubusTypography.inter(
-              fontSize: 13,
+            style: KubusTextStyles.detailCaption.copyWith(
               fontWeight: FontWeight.w600,
               color: isCompleted
                   ? themeProvider.accentColor
@@ -1960,9 +1987,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                       .withValues(alpha: 0.6),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: KubusSpacing.sm),
           ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(KubusRadius.sm),
             child: LinearProgressIndicator(
               value: ratio,
               minHeight: 6,
@@ -2121,7 +2148,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             if (post.imageUrl != null && post.imageUrl!.isNotEmpty) ...[
               const SizedBox(height: 16),
               ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
                 child: Image.network(
                   MediaUrlResolver.resolveDisplayUrl(post.imageUrl) ??
                       post.imageUrl!,
@@ -2493,7 +2520,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(KubusRadius.xl),
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(

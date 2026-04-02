@@ -306,7 +306,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                   height: 60,
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius:
+                        BorderRadius.circular(KubusRadius.lg + KubusRadius.xs),
                   ),
                   child: AvatarWidget(
                     wallet: profileProvider.currentUser?.walletAddress ?? '',
@@ -363,7 +364,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(KubusRadius.md),
                   ),
                   child: Icon(
                     Icons.edit,
@@ -431,10 +432,10 @@ class _SettingsScreenState extends State<SettingsScreen>
         );
       },
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(KubusRadius.md),
         ),
         child: Column(
           children: [
@@ -651,14 +652,14 @@ class _SettingsScreenState extends State<SettingsScreen>
       child: Container(
         width: isSmallScreen ? double.infinity : null,
         padding: EdgeInsets.symmetric(
-          vertical: isSmallScreen ? 16 : 12,
-          horizontal: isSmallScreen ? 16 : 8,
+          vertical: isSmallScreen ? KubusSpacing.md : KubusSpacing.sm,
+          horizontal: isSmallScreen ? KubusSpacing.md : KubusSpacing.sm,
         ),
         decoration: BoxDecoration(
           color: isSelected
               ? themeColor.withValues(alpha: 0.1)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(KubusRadius.sm),
           border: Border.all(
             color: isSelected ? themeColor : scheme.outline,
           ),
@@ -671,13 +672,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                     color: isSelected
                         ? themeColor
                         : scheme.onSurface.withValues(alpha: 0.6),
-                    size: 20,
+                    size: KubusHeaderMetrics.actionIcon,
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: KubusSpacing.md),
                   Text(
                     label,
-                    style: KubusTypography.inter(
-                      fontSize: 14,
+                    style: KubusTextStyles.navLabel.copyWith(
                       fontWeight:
                           isSelected ? FontWeight.w600 : FontWeight.normal,
                       color: isSelected
@@ -694,13 +694,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                     color: isSelected
                         ? themeColor
                         : scheme.onSurface.withValues(alpha: 0.6),
-                    size: 20,
+                    size: KubusHeaderMetrics.actionIcon,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: KubusSpacing.xs),
                   Text(
                     label,
-                    style: KubusTypography.inter(
-                      fontSize: 12,
+                    style: KubusTextStyles.navMetaLabel.copyWith(
                       fontWeight:
                           isSelected ? FontWeight.w600 : FontWeight.normal,
                       color: isSelected
@@ -729,33 +728,32 @@ class _SettingsScreenState extends State<SettingsScreen>
               Icon(
                 Icons.color_lens,
                 color: scheme.tertiary,
-                size: 20,
+                size: KubusHeaderMetrics.actionIcon,
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: KubusSpacing.md),
               Text(
                 l10n.settingsAccentColorTitle,
-                style: KubusTypography.inter(
-                  fontSize: 16,
+                style: KubusTextStyles.sectionTitle.copyWith(
                   fontWeight: FontWeight.w600,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: KubusSpacing.md),
           Wrap(
-            spacing: 12,
-            runSpacing: 12,
+            spacing: KubusSpacing.md,
+            runSpacing: KubusSpacing.md,
             children: ThemeProvider.availableAccentColors.map((color) {
               final isSelected = themeProvider.accentColor == color;
               return GestureDetector(
                 onTap: () => themeProvider.setAccentColor(color),
                 child: Container(
-                  width: 40,
-                  height: 40,
+                  width: KubusHeaderMetrics.searchBarHeight - 4,
+                  height: KubusHeaderMetrics.searchBarHeight - 4,
                   decoration: BoxDecoration(
                     color: color,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(KubusRadius.lg),
                     border: isSelected
                         ? Border.all(
                             color: Theme.of(context).colorScheme.onPrimary,
@@ -1171,8 +1169,8 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(KubusRadius.lg + KubusRadius.xs)),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -1657,7 +1655,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(KubusRadius.md),
             side: BorderSide(
               color: isDestructive
                   ? Colors.red.withValues(alpha: 0.3)
@@ -1807,9 +1805,9 @@ class _SettingsScreenState extends State<SettingsScreen>
       String name, String description, bool isSelected, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(KubusRadius.sm),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(KubusSpacing.md),
         decoration: BoxDecoration(
           border: Border.all(
             color: isSelected
@@ -1817,7 +1815,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 : Theme.of(context).colorScheme.outline,
             width: isSelected ? 2 : 1,
           ),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(KubusRadius.sm),
           color: isSelected
               ? Provider.of<ThemeProvider>(context)
                   .accentColor
@@ -1832,15 +1830,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ? Provider.of<ThemeProvider>(context).accentColor
                   : Theme.of(context).colorScheme.outline,
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: KubusSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     name,
-                    style: KubusTypography.inter(
-                      fontSize: 14,
+                    style: KubusTextStyles.navLabel.copyWith(
                       fontWeight: FontWeight.w600,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
@@ -3080,11 +3077,11 @@ class _SettingsScreenState extends State<SettingsScreen>
     final to = tx.toAddress ?? l10n.commonUnknown;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: KubusSpacing.sm),
+      padding: const EdgeInsets.all(KubusSpacing.md),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(KubusRadius.sm),
         border: Border.all(
           color: Theme.of(context).colorScheme.outline,
         ),
@@ -3621,7 +3618,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     final theme = Theme.of(context);
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(KubusRadius.lg),
       child: AnimatedContainer(
         duration: context.animationTheme.short,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -3629,7 +3626,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           color: isSelected
               ? theme.colorScheme.primaryContainer.withValues(alpha: 0.6)
               : theme.cardColor,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(KubusRadius.lg),
           border: Border.all(
             color: isSelected ? accentColor : theme.colorScheme.outlineVariant,
           ),

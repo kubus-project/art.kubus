@@ -106,7 +106,11 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
             child: ConstrainedBox(
               constraints: BoxConstraints(maxWidth: isLargeScreen ? 1000 : 600),
               child: SingleChildScrollView(
-                padding: EdgeInsets.all(isLargeScreen ? 48 : 24),
+                padding: EdgeInsets.all(
+                  isLargeScreen
+                      ? KubusSpacing.xl + KubusSpacing.md
+                      : KubusSpacing.lg,
+                ),
                 child: FadeTransition(
                   opacity: _fadeAnimation,
                   child: SlideTransition(
@@ -117,21 +121,25 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
                       children: [
                         // App Icon with AR Badge
                         _buildAppIcon(themeProvider),
-                        SizedBox(height: isLargeScreen ? 48 : 32),
+                        SizedBox(
+                          height: isLargeScreen
+                              ? KubusSpacing.xl + KubusSpacing.md
+                              : KubusSpacing.lg,
+                        ),
 
                         // Title
                         Text(
                           l10n.downloadAppExperienceInArTitle(featureName),
                           style: KubusTextStyles.heroTitle.copyWith(
                             fontSize: isLargeScreen
-                                ? KubusTypography
-                                    .textTheme.displayLarge!.fontSize
-                                : KubusTextStyles.heroTitle.fontSize,
+                                ? KubusHeaderMetrics.screenTitle +
+                                    KubusSpacing.md
+                                : KubusHeaderMetrics.screenTitle,
                             color: Theme.of(context).colorScheme.onSurface,
                           ),
                           textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: KubusSpacing.md),
 
                         // Description
                         Text(
@@ -139,9 +147,8 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
                               l10n.downloadAppDefaultDescription,
                           style: KubusTextStyles.heroSubtitle.copyWith(
                             fontSize: isLargeScreen
-                                ? KubusTypography
-                                    .textTheme.headlineSmall!.fontSize
-                                : KubusTypography.textTheme.bodyLarge!.fontSize,
+                                ? KubusHeaderMetrics.screenTitle
+                                : KubusHeaderMetrics.screenSubtitle,
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurface
@@ -150,19 +157,33 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
                           ),
                           textAlign: TextAlign.center,
                         ),
-                        SizedBox(height: isLargeScreen ? 56 : 40),
+                        SizedBox(
+                          height: isLargeScreen
+                              ? KubusSpacing.xl + KubusSpacing.xl
+                              : KubusSpacing.xl,
+                        ),
 
                         // Feature highlights
                         _buildFeatureHighlights(isLargeScreen),
-                        SizedBox(height: isLargeScreen ? 56 : 40),
+                        SizedBox(
+                          height: isLargeScreen
+                              ? KubusSpacing.xl + KubusSpacing.xl
+                              : KubusSpacing.xl,
+                        ),
 
                         // Download buttons
                         _buildDownloadButtons(themeProvider, isLargeScreen),
-                        SizedBox(height: isLargeScreen ? 40 : 32),
+                        SizedBox(
+                          height:
+                              isLargeScreen ? KubusSpacing.xl : KubusSpacing.lg,
+                        ),
 
                         // QR Code section
                         _buildQRSection(themeProvider, isLargeScreen),
-                        SizedBox(height: isLargeScreen ? 32 : 24),
+                        SizedBox(
+                          height:
+                              isLargeScreen ? KubusSpacing.lg : KubusSpacing.md,
+                        ),
 
                         // Continue browsing button
                         _buildContinueButton(themeProvider),
@@ -222,7 +243,10 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
           bottom: 0,
           right: 0,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(
+              horizontal: KubusSpacing.sm + KubusSpacing.xxs,
+              vertical: KubusSpacing.xxs + KubusSpacing.xxs,
+            ),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.tertiary,
               borderRadius: BorderRadius.circular(KubusRadius.xl),
@@ -257,8 +281,9 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
 
     return Wrap(
       alignment: WrapAlignment.center,
-      spacing: isLargeScreen ? 32 : 16,
-      runSpacing: isLargeScreen ? 24 : 16,
+      spacing:
+          isLargeScreen ? KubusSpacing.xl + KubusSpacing.xs : KubusSpacing.md,
+      runSpacing: isLargeScreen ? KubusSpacing.lg : KubusSpacing.md,
       children: features.map((feature) {
         return SizedBox(
           width: isLargeScreen ? 200 : 150,
@@ -269,13 +294,13 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
                 size: isLargeScreen ? 40 : 32,
                 color: Provider.of<ThemeProvider>(context).accentColor,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: KubusSpacing.md),
               Text(
                 feature['text'] as String,
                 style: KubusTextStyles.sectionSubtitle.copyWith(
                   fontSize: isLargeScreen
-                      ? KubusTextStyles.screenSubtitle.fontSize
-                      : KubusTextStyles.navMetaLabel.fontSize,
+                      ? KubusHeaderMetrics.screenSubtitle
+                      : KubusHeaderMetrics.sectionSubtitle,
                   color: Theme.of(context)
                       .colorScheme
                       .onSurface
@@ -299,16 +324,16 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
           l10n.downloadAppDownloadForLabel,
           style: KubusTextStyles.sectionTitle.copyWith(
             fontSize: isLargeScreen
-                ? KubusTypography.textTheme.headlineSmall!.fontSize
-                : KubusTextStyles.sectionTitle.fontSize,
+                ? KubusHeaderMetrics.screenTitle
+                : KubusHeaderMetrics.sectionTitle,
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: KubusSpacing.lg),
         Wrap(
           alignment: WrapAlignment.center,
-          spacing: 16,
-          runSpacing: 16,
+          spacing: KubusSpacing.md,
+          runSpacing: KubusSpacing.md,
           children: [
             // iOS App Store button
             _buildStoreButton(
@@ -343,16 +368,20 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(KubusRadius.md),
       child: Container(
         width: isLargeScreen ? 200 : 160,
         padding: EdgeInsets.symmetric(
-          vertical: isLargeScreen ? 16 : 14,
-          horizontal: isLargeScreen ? 24 : 20,
+          vertical: isLargeScreen
+              ? KubusSpacing.md
+              : KubusSpacing.md - KubusSpacing.xxs,
+          horizontal: isLargeScreen
+              ? KubusSpacing.lg
+              : KubusSpacing.lg - KubusSpacing.xxs,
         ),
         decoration: BoxDecoration(
           color: color,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(KubusRadius.md),
           boxShadow: [
             BoxShadow(
               color: color.withValues(alpha: 0.3),
@@ -365,13 +394,13 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, color: Colors.white, size: isLargeScreen ? 28 : 24),
-            const SizedBox(width: 12),
+            const SizedBox(width: KubusSpacing.md),
             Text(
               label,
               style: KubusTextStyles.sectionTitle.copyWith(
                 fontSize: isLargeScreen
-                    ? KubusTypography.textTheme.bodyLarge!.fontSize
-                    : KubusTextStyles.sectionTitle.fontSize,
+                    ? KubusHeaderMetrics.sectionTitle
+                    : KubusHeaderMetrics.sectionSubtitle,
                 color: Colors.white,
               ),
             ),
@@ -384,13 +413,15 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
   Widget _buildQRSection(ThemeProvider themeProvider, bool isLargeScreen) {
     final l10n = AppLocalizations.of(context)!;
     return Container(
-      padding: EdgeInsets.all(isLargeScreen ? 32 : 24),
+      padding: EdgeInsets.all(
+        isLargeScreen ? KubusSpacing.xl : KubusSpacing.lg,
+      ),
       decoration: BoxDecoration(
         color: Theme.of(context)
             .colorScheme
             .primaryContainer
             .withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(KubusRadius.xl),
         border: Border.all(
           color: themeProvider.accentColor.withValues(alpha: 0.2),
         ),
@@ -402,23 +433,23 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
             size: isLargeScreen ? 120 : 100,
             color: themeProvider.accentColor.withValues(alpha: 0.5),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: KubusSpacing.md),
           Text(
             l10n.downloadAppScanQrTitle,
             style: KubusTextStyles.sectionTitle.copyWith(
               fontSize: isLargeScreen
-                  ? KubusTypography.textTheme.headlineSmall!.fontSize
-                  : KubusTextStyles.sectionTitle.fontSize,
+                  ? KubusHeaderMetrics.screenTitle
+                  : KubusHeaderMetrics.sectionTitle,
               color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: KubusSpacing.xs + KubusSpacing.xxs),
           Text(
             l10n.downloadAppScanQrSubtitle,
             style: KubusTextStyles.sectionSubtitle.copyWith(
               fontSize: isLargeScreen
-                  ? KubusTextStyles.screenSubtitle.fontSize
-                  : KubusTextStyles.navMetaLabel.fontSize,
+                  ? KubusHeaderMetrics.screenSubtitle
+                  : KubusHeaderMetrics.sectionSubtitle,
               color: Theme.of(context)
                   .colorScheme
                   .onSurface
@@ -436,13 +467,16 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
     return TextButton(
       onPressed: () => Navigator.of(context).pop(),
       style: TextButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+        padding: const EdgeInsets.symmetric(
+          horizontal: KubusSpacing.xl,
+          vertical: KubusSpacing.md,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.arrow_back, size: 20, color: themeProvider.accentColor),
-          const SizedBox(width: 8),
+          const SizedBox(width: KubusSpacing.sm),
           Text(
             l10n.downloadAppContinueBrowsingButton,
             style: KubusTextStyles.sectionTitle.copyWith(

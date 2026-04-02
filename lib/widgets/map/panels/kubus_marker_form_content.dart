@@ -394,7 +394,7 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
               decoration: InputDecoration(
                 labelText: l10n.mapMarkerDialogSubjectTypeLabel,
                 border: OutlineInputBorder(
-                  borderRadius: KubusRadius.circular(8),
+                  borderRadius: BorderRadius.circular(KubusRadius.sm),
                 ),
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -426,7 +426,7 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
                       _subjectTypeLabel(l10n, _selectedSubjectType),
                     ),
                     border: OutlineInputBorder(
-                      borderRadius: KubusRadius.circular(8),
+                      borderRadius: BorderRadius.circular(KubusRadius.sm),
                     ),
                     contentPadding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -503,7 +503,7 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
                   initialValue: _selectedArAsset,
                   decoration: InputDecoration(
                     border: OutlineInputBorder(
-                      borderRadius: KubusRadius.circular(8),
+                      borderRadius: BorderRadius.circular(KubusRadius.sm),
                     ),
                     contentPadding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -527,7 +527,7 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
               decoration: InputDecoration(
                 labelText: l10n.mapMarkerDialogMarkerTitleLabel,
                 border: OutlineInputBorder(
-                  borderRadius: KubusRadius.circular(8),
+                  borderRadius: BorderRadius.circular(KubusRadius.sm),
                 ),
               ),
               validator: (value) {
@@ -547,7 +547,7 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
               decoration: InputDecoration(
                 labelText: l10n.mapMarkerDialogDescriptionLabel,
                 border: OutlineInputBorder(
-                  borderRadius: KubusRadius.circular(8),
+                  borderRadius: BorderRadius.circular(KubusRadius.sm),
                 ),
               ),
               validator: (value) {
@@ -592,7 +592,7 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
               decoration: InputDecoration(
                 labelText: l10n.mapMarkerDialogCategoryLabel,
                 border: OutlineInputBorder(
-                  borderRadius: KubusRadius.circular(8),
+                  borderRadius: BorderRadius.circular(KubusRadius.sm),
                 ),
               ),
             ),
@@ -603,7 +603,7 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
               decoration: InputDecoration(
                 labelText: l10n.mapMarkerDialogMarkerLayerLabel,
                 border: OutlineInputBorder(
-                  borderRadius: KubusRadius.circular(8),
+                  borderRadius: BorderRadius.circular(KubusRadius.sm),
                 ),
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -655,7 +655,7 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
                       decoration: InputDecoration(
                         labelText: l10n.mapMarkerDialogLatitudeLabel,
                         border: OutlineInputBorder(
-                          borderRadius: KubusRadius.circular(8),
+                          borderRadius: BorderRadius.circular(KubusRadius.sm),
                         ),
                       ),
                       keyboardType:
@@ -676,7 +676,7 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
                       decoration: InputDecoration(
                         labelText: l10n.mapMarkerDialogLongitudeLabel,
                         border: OutlineInputBorder(
-                          borderRadius: KubusRadius.circular(8),
+                          borderRadius: BorderRadius.circular(KubusRadius.sm),
                         ),
                       ),
                       keyboardType:
@@ -743,8 +743,8 @@ class _KubusMarkerFormContentState extends State<KubusMarkerFormContent> {
   Widget _hintBox(ColorScheme scheme, String text) {
     return LiquidGlassCard(
       margin: EdgeInsets.zero,
-      padding: const EdgeInsets.all(12),
-      borderRadius: KubusRadius.circular(8),
+      padding: const EdgeInsets.all(KubusSpacing.sm),
+      borderRadius: KubusRadius.circular(KubusRadius.sm),
       child: Text(
         text,
         style: KubusTypography.textTheme.bodyMedium?.copyWith(

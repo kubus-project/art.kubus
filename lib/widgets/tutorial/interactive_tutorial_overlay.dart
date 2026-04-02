@@ -351,7 +351,7 @@ class _CoachMarkPainter extends CustomPainter {
     try {
       final rrect = RRect.fromRectAndRadius(
         highlightRect!,
-        const Radius.circular(16),
+        const Radius.circular(KubusRadius.lg),
       );
       final maskedPath = Path()
         ..fillType = PathFillType.evenOdd

@@ -52,9 +52,8 @@ class _TokenSwapState extends State<TokenSwap> {
   }
 
   List<Token> _availableTokens(WalletProvider provider) {
-    final list = provider.tokens
-        .where((token) => token.type != TokenType.nft)
-        .toList();
+    final list =
+        provider.tokens.where((token) => token.type != TokenType.nft).toList();
     list.sort((a, b) => b.balance.compareTo(a.balance));
     return list;
   }
@@ -85,7 +84,8 @@ class _TokenSwapState extends State<TokenSwap> {
         if (!mounted) return;
         setState(() {
           _fromTokenSymbol = tokens.first.symbol;
-          _toTokenSymbol = tokens.length > 1 ? tokens[1].symbol : tokens.first.symbol;
+          _toTokenSymbol =
+              tokens.length > 1 ? tokens[1].symbol : tokens.first.symbol;
           _tokensInitialized = true;
         });
       });
@@ -101,7 +101,7 @@ class _TokenSwapState extends State<TokenSwap> {
         title: Text(
           'Token Swap',
           style: KubusTypography.inter(
-            fontSize: 22,
+            fontSize: KubusHeaderMetrics.screenTitle,
             fontWeight: FontWeight.bold,
             color: theme.colorScheme.onSurface,
           ),
@@ -140,8 +140,10 @@ class _TokenSwapState extends State<TokenSwap> {
 
                   return Padding(
                     padding: EdgeInsets.symmetric(
-                      horizontal: isWide ? (constraints.maxWidth - 680) / 2 : 24,
-                      vertical: 24,
+                      horizontal: isWide
+                          ? (constraints.maxWidth - 680) / 2
+                          : KubusSpacing.lg,
+                      vertical: KubusSpacing.lg,
                     ),
                     child: content,
                   );
@@ -176,21 +178,21 @@ class _TokenSwapState extends State<TokenSwap> {
       body: SafeArea(
         child: Center(
           child: Padding(
-            padding: const EdgeInsets.all(32),
+            padding: const EdgeInsets.all(KubusSpacing.xl),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.lock_clock, size: 64, color: swapColor),
-                const SizedBox(height: 20),
+                const SizedBox(height: KubusSpacing.lg),
                 Text(
                   'Read-only wallet session',
                   style: KubusTypography.inter(
-                    fontSize: 20,
+                    fontSize: KubusHeaderMetrics.screenTitle,
                     fontWeight: FontWeight.w700,
                     color: theme.colorScheme.onSurface,
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: KubusSpacing.md),
                 Text(
                   'Reconnect to enable signing and transfers.',
                   textAlign: TextAlign.center,
@@ -198,7 +200,7 @@ class _TokenSwapState extends State<TokenSwap> {
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: KubusSpacing.lg),
                 ElevatedButton(
                   onPressed: _handleReadOnlyReconnect,
                   style: ElevatedButton.styleFrom(
@@ -218,21 +220,22 @@ class _TokenSwapState extends State<TokenSwap> {
   Widget _buildEmptyState(ThemeData theme, Color swapColor) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(KubusSpacing.xl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.account_balance_wallet_outlined, size: 64, color: swapColor),
-            const SizedBox(height: 20),
+            Icon(Icons.account_balance_wallet_outlined,
+                size: 64, color: swapColor),
+            const SizedBox(height: KubusSpacing.lg),
             Text(
               'No tradable tokens yet',
               style: KubusTypography.inter(
-                fontSize: 20,
+                fontSize: KubusHeaderMetrics.screenTitle,
                 fontWeight: FontWeight.w600,
                 color: theme.colorScheme.onSurface,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: KubusSpacing.md),
             Text(
               'Add funds or receive tokens to enable swaps. Once you hold supported assets they will appear here automatically.',
               textAlign: TextAlign.center,
@@ -256,8 +259,9 @@ class _TokenSwapState extends State<TokenSwap> {
       padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
+        borderRadius: BorderRadius.circular(KubusRadius.xl),
+        border:
+            Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
         boxShadow: [
           BoxShadow(
             color: theme.shadowColor.withValues(alpha: 0.05),
@@ -300,15 +304,19 @@ class _TokenSwapState extends State<TokenSwap> {
   }) {
     final symbol = isFrom ? _fromTokenSymbol : _toTokenSymbol;
     final controller = isFrom ? _fromController : _toController;
-    final balance = symbol != null ? walletProvider.getTokenBalance(symbol).toStringAsFixed(6) : '0';
-    final token = symbol != null ? walletProvider.getTokenBySymbol(symbol) : null;
+    final balance = symbol != null
+        ? walletProvider.getTokenBalance(symbol).toStringAsFixed(6)
+        : '0';
+    final token =
+        symbol != null ? walletProvider.getTokenBySymbol(symbol) : null;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(KubusSpacing.md),
       decoration: BoxDecoration(
         color: theme.colorScheme.primaryContainer.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
+        border:
+            Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -330,7 +338,7 @@ class _TokenSwapState extends State<TokenSwap> {
                 ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: KubusSpacing.sm),
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -340,7 +348,8 @@ class _TokenSwapState extends State<TokenSwap> {
                   controller: controller,
                   readOnly: !isFrom,
                   showCursor: isFrom,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                   style: KubusTypography.inter(
                     fontSize: 28,
                     fontWeight: FontWeight.w600,
@@ -357,11 +366,12 @@ class _TokenSwapState extends State<TokenSwap> {
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: KubusSpacing.md),
               GestureDetector(
                 onTap: () => _selectToken(isFrom: isFrom, tokens: tokens),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surface,
                     borderRadius: BorderRadius.circular(999),
@@ -370,7 +380,8 @@ class _TokenSwapState extends State<TokenSwap> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _TokenAvatar(symbol: symbol, token: token, swapColor: swapColor),
+                      _TokenAvatar(
+                          symbol: symbol, token: token, swapColor: swapColor),
                       const SizedBox(width: 8),
                       Text(
                         symbol ?? 'Select',
@@ -381,7 +392,8 @@ class _TokenSwapState extends State<TokenSwap> {
                         ),
                       ),
                       const SizedBox(width: 2),
-                      Icon(Icons.keyboard_arrow_down, color: theme.colorScheme.onSurface),
+                      Icon(Icons.keyboard_arrow_down,
+                          color: theme.colorScheme.onSurface),
                     ],
                   ),
                 ),
@@ -445,7 +457,8 @@ class _TokenSwapState extends State<TokenSwap> {
             SizedBox(
               width: 22,
               height: 22,
-              child: CircularProgressIndicator(strokeWidth: 2.4, color: swapColor),
+              child:
+                  CircularProgressIndicator(strokeWidth: 2.4, color: swapColor),
             ),
             const SizedBox(width: 12),
             Text(
@@ -462,7 +475,8 @@ class _TokenSwapState extends State<TokenSwap> {
         swapColor,
         icon: Icons.route,
         title: 'Enter an amount',
-        subtitle: 'We will fetch live quotes with fees and min received once you type an amount.',
+        subtitle:
+            'We will fetch live quotes with fees and min received once you type an amount.',
       );
     }
 
@@ -471,7 +485,8 @@ class _TokenSwapState extends State<TokenSwap> {
     final priceImpact = (_quote!.priceImpactPct * 100).toStringAsFixed(2);
     final slippage = _quote!.slippagePercent.toStringAsFixed(2);
     final protocolFeePct =
-      ((ApiKeys.kubusTeamFeePct + ApiKeys.kubusTreasuryFeePct) * 100).toStringAsFixed(2);
+        ((ApiKeys.kubusTeamFeePct + ApiKeys.kubusTreasuryFeePct) * 100)
+            .toStringAsFixed(2);
 
     return Container(
       padding: const EdgeInsets.all(KubusSpacing.lg),
@@ -494,15 +509,18 @@ class _TokenSwapState extends State<TokenSwap> {
             ],
           ),
           const SizedBox(height: 16),
-          _quoteMetric(theme, 'Estimated output', '$output ${_toTokenSymbol ?? ''}'),
+          _quoteMetric(
+              theme, 'Estimated output', '$output ${_toTokenSymbol ?? ''}'),
           const SizedBox(height: 8),
-          _quoteMetric(theme, 'Min received (after slippage)', '$minReceived ${_toTokenSymbol ?? ''}'),
+          _quoteMetric(theme, 'Min received (after slippage)',
+              '$minReceived ${_toTokenSymbol ?? ''}'),
           const SizedBox(height: 8),
           _quoteMetric(theme, 'Price impact', '$priceImpact%'),
           const SizedBox(height: 8),
           _quoteMetric(theme, 'Slippage', '$slippage%'),
           const SizedBox(height: 8),
-          _quoteMetric(theme, 'Protocol fee', '$protocolFeePct% applied to output token'),
+          _quoteMetric(theme, 'Protocol fee',
+              '$protocolFeePct% applied to output token'),
           if (_quote!.routePlan.isNotEmpty) ...[
             const SizedBox(height: 12),
             Wrap(
@@ -511,8 +529,10 @@ class _TokenSwapState extends State<TokenSwap> {
               children: _quote!.routePlan.map((step) {
                 final label = step['label']?.toString() ?? 'Route';
                 return Chip(
-                  label: Text(label, style: KubusTypography.inter(fontSize: 12)),
-                  backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
+                  label:
+                      Text(label, style: KubusTypography.inter(fontSize: 12)),
+                  backgroundColor:
+                      theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
                 );
               }).toList(),
             ),
@@ -568,7 +588,8 @@ class _TokenSwapState extends State<TokenSwap> {
     return BoxDecoration(
       color: theme.colorScheme.surface,
       borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
+      border:
+          Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
     );
   }
 
@@ -578,7 +599,8 @@ class _TokenSwapState extends State<TokenSwap> {
       children: [
         Text(
           label,
-          style: KubusTypography.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
+          style: KubusTypography.inter(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
         ),
         Text(
           value,
@@ -603,9 +625,12 @@ class _TokenSwapState extends State<TokenSwap> {
             children: [
               Text(
                 'Slippage tolerance',
-                style: KubusTypography.inter(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
+                style: KubusTypography.inter(
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface),
               ),
-              Text('${_slippagePercent.toStringAsFixed(2)}%', style: KubusTypography.inter(color: swapColor)),
+              Text('${_slippagePercent.toStringAsFixed(2)}%',
+                  style: KubusTypography.inter(color: swapColor)),
             ],
           ),
           Slider(
@@ -625,12 +650,13 @@ class _TokenSwapState extends State<TokenSwap> {
     );
   }
 
-  Widget _buildSwapButton(ThemeData theme, Color swapColor, WalletProvider walletProvider) {
+  Widget _buildSwapButton(
+      ThemeData theme, Color swapColor, WalletProvider walletProvider) {
     final isDisabled = _isSubmitting ||
-      _fromTokenSymbol == null ||
-      _toTokenSymbol == null ||
-      _fromTokenSymbol == _toTokenSymbol ||
-      _quote == null;
+        _fromTokenSymbol == null ||
+        _toTokenSymbol == null ||
+        _fromTokenSymbol == _toTokenSymbol ||
+        _quote == null;
 
     return SizedBox(
       width: double.infinity,
@@ -640,16 +666,20 @@ class _TokenSwapState extends State<TokenSwap> {
           backgroundColor: swapColor,
           foregroundColor: theme.colorScheme.onPrimary,
           padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
         child: _isSubmitting
             ? SizedBox(
                 width: 20,
                 height: 20,
-                child: CircularProgressIndicator(color: theme.colorScheme.onPrimary, strokeWidth: 2),
+                child: CircularProgressIndicator(
+                    color: theme.colorScheme.onPrimary, strokeWidth: 2),
               )
             : Text(
-                _quote == null ? 'Enter amount' : 'Swap ${_fromTokenSymbol ?? ''} → ${_toTokenSymbol ?? ''}',
+                _quote == null
+                    ? 'Enter amount'
+                    : 'Swap ${_fromTokenSymbol ?? ''} → ${_toTokenSymbol ?? ''}',
                 style: KubusTypography.inter(fontWeight: FontWeight.w600),
               ),
       ),
@@ -664,17 +694,18 @@ class _TokenSwapState extends State<TokenSwap> {
         theme.colorScheme.primary,
         icon: Icons.history,
         title: 'No swaps yet',
-        subtitle: 'Executed swaps will appear here with detailed status once completed.',
+        subtitle:
+            'Executed swaps will appear here with detailed status once completed.',
       );
     }
 
     return ListView.separated(
       itemCount: swaps.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, __) => const SizedBox(height: KubusSpacing.md),
       itemBuilder: (context, index) {
         final tx = swaps[index];
         return Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(KubusSpacing.md),
           decoration: _infoDecoration(theme),
           child: Row(
             children: [
@@ -683,9 +714,10 @@ class _TokenSwapState extends State<TokenSwap> {
                 height: 44,
                 decoration: BoxDecoration(
                   color: theme.colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
                 ),
-                child: Icon(Icons.swap_horiz, color: theme.colorScheme.onSurface),
+                child:
+                    Icon(Icons.swap_horiz, color: theme.colorScheme.onSurface),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -694,19 +726,25 @@ class _TokenSwapState extends State<TokenSwap> {
                   children: [
                     Text(
                       tx.token,
-                      style: KubusTypography.inter(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
+                      style: KubusTypography.inter(
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurface),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       tx.timeAgo,
-                      style: KubusTypography.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+                      style: KubusTypography.inter(
+                          color: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.6)),
                     ),
                   ],
                 ),
               ),
               Text(
                 tx.amount.toStringAsFixed(4),
-                style: KubusTypography.inter(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
+                style: KubusTypography.inter(
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface),
               ),
             ],
           ),
@@ -789,7 +827,9 @@ class _TokenSwapState extends State<TokenSwap> {
       setState(() => _amountError = 'Enter an amount greater than zero');
       return;
     }
-    if (_fromTokenSymbol == null || _toTokenSymbol == null || _fromTokenSymbol == _toTokenSymbol) {
+    if (_fromTokenSymbol == null ||
+        _toTokenSymbol == null ||
+        _fromTokenSymbol == _toTokenSymbol) {
       setState(() => _amountError = 'Select two different tokens');
       return;
     }
@@ -807,7 +847,8 @@ class _TokenSwapState extends State<TokenSwap> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
-          content: Text('Swap submitted: ${_fromTokenSymbol!} → ${_toTokenSymbol!}'),
+          content:
+              Text('Swap submitted: ${_fromTokenSymbol!} → ${_toTokenSymbol!}'),
           backgroundColor: Theme.of(context).colorScheme.tertiary,
         ),
       );
@@ -816,7 +857,8 @@ class _TokenSwapState extends State<TokenSwap> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
-          content: Text(e.toString().replaceFirst('Exception: ', 'Swap failed: ')),
+          content:
+              Text(e.toString().replaceFirst('Exception: ', 'Swap failed: ')),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -827,7 +869,8 @@ class _TokenSwapState extends State<TokenSwap> {
     }
   }
 
-  Future<void> _selectToken({required bool isFrom, required List<Token> tokens}) async {
+  Future<void> _selectToken(
+      {required bool isFrom, required List<Token> tokens}) async {
     final currentSymbol = isFrom ? _fromTokenSymbol : _toTokenSymbol;
     final otherSymbol = isFrom ? _toTokenSymbol : _fromTokenSymbol;
 
@@ -836,7 +879,8 @@ class _TokenSwapState extends State<TokenSwap> {
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(KubusRadius.xl)),
       ),
       builder: (context) {
         return DraggableScrollableSheet(
@@ -851,14 +895,18 @@ class _TokenSwapState extends State<TokenSwap> {
               itemBuilder: (context, index) {
                 final token = tokens[index];
                 final isDisabled = isFrom
-                  ? (token.balance <= 0 || token.symbol == otherSymbol)
-                  : token.symbol == otherSymbol;
+                    ? (token.balance <= 0 || token.symbol == otherSymbol)
+                    : token.symbol == otherSymbol;
                 return ListTile(
                   enabled: !isDisabled,
-                  title: Text(token.name, style: KubusTypography.inter(fontWeight: FontWeight.w600)),
-                  subtitle: Text('${token.symbol} • Balance ${token.balance.toStringAsFixed(4)}'),
+                  title: Text(token.name,
+                      style:
+                          KubusTypography.inter(fontWeight: FontWeight.w600)),
+                  subtitle: Text(
+                      '${token.symbol} • Balance ${token.balance.toStringAsFixed(4)}'),
                   trailing: token.symbol == currentSymbol
-                      ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
+                      ? Icon(Icons.check,
+                          color: Theme.of(context).colorScheme.primary)
                       : null,
                   onTap: () => Navigator.pop(context, token.symbol),
                 );
@@ -874,7 +922,8 @@ class _TokenSwapState extends State<TokenSwap> {
     setState(() {
       if (isFrom) {
         _fromTokenSymbol = selected;
-        _fromController.selection = TextSelection.collapsed(offset: _fromController.text.length);
+        _fromController.selection =
+            TextSelection.collapsed(offset: _fromController.text.length);
       } else {
         _toTokenSymbol = selected;
       }
@@ -895,12 +944,14 @@ class _TokenSwapState extends State<TokenSwap> {
     final balance = token.balance;
     if (balance <= 0) return;
     _fromController.text = _formatAmount(balance);
-    _fromController.selection = TextSelection.collapsed(offset: _fromController.text.length);
+    _fromController.selection =
+        TextSelection.collapsed(offset: _fromController.text.length);
     _requestQuote();
   }
 
   String _formatAmount(double value) {
-    final formatted = value >= 1 ? value.toStringAsFixed(6) : value.toStringAsFixed(8);
+    final formatted =
+        value >= 1 ? value.toStringAsFixed(6) : value.toStringAsFixed(8);
     final trimmed = formatted
         .replaceFirst(RegExp(r'0+$'), '')
         .replaceFirst(RegExp(r'\.$'), '');
@@ -909,7 +960,8 @@ class _TokenSwapState extends State<TokenSwap> {
 }
 
 class _TokenAvatar extends StatelessWidget {
-  const _TokenAvatar({required this.symbol, required this.token, required this.swapColor});
+  const _TokenAvatar(
+      {required this.symbol, required this.token, required this.swapColor});
 
   final String? symbol;
   final Token? token;
@@ -922,7 +974,9 @@ class _TokenAvatar extends StatelessWidget {
       width: 28,
       height: 28,
       decoration: BoxDecoration(
-        color: token != null ? swapColor.withValues(alpha: 0.2) : theme.colorScheme.primaryContainer,
+        color: token != null
+            ? swapColor.withValues(alpha: 0.2)
+            : theme.colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Center(
@@ -938,9 +992,3 @@ class _TokenAvatar extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-

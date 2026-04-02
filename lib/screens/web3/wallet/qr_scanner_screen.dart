@@ -91,6 +91,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
         title: Text(
           l10n.qrScannerTitle,
           style: KubusTypography.inter(
+            fontSize: KubusHeaderMetrics.sectionTitle,
             color: theme.colorScheme.onSurface,
             fontWeight: FontWeight.w600,
           ),
@@ -123,10 +124,11 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     );
   }
 
-  Widget _buildWebNotSupported(ThemeData theme, Color accent, AppLocalizations l10n) {
+  Widget _buildWebNotSupported(
+      ThemeData theme, Color accent, AppLocalizations l10n) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(KubusSpacing.xl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -140,16 +142,16 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
               l10n.qrScannerWebUnavailableTitle,
               style: KubusTypography.inter(
                 color: theme.colorScheme.onSurface,
-                fontSize: 24,
+                fontSize: KubusHeaderMetrics.screenTitle,
                 fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: KubusSpacing.md),
             Text(
               l10n.qrScannerWebUnavailableDescription,
               style: KubusTypography.inter(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                fontSize: 16,
+                fontSize: KubusHeaderMetrics.sectionTitle,
                 height: 1.4,
               ),
               textAlign: TextAlign.center,
@@ -160,8 +162,13 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: accent,
                 foregroundColor: theme.colorScheme.onPrimary,
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.xl,
+                  vertical: KubusSpacing.md,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
+                ),
               ),
               child: Text(
                 l10n.qrScannerGoBackButton,
@@ -174,7 +181,8 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     );
   }
 
-  Widget _buildMobileScanner(ThemeData theme, Color accent, AppLocalizations l10n) {
+  Widget _buildMobileScanner(
+      ThemeData theme, Color accent, AppLocalizations l10n) {
     if (_scannerState == _ScannerState.initializing) {
       return _buildLoadingState(theme, accent, l10n);
     }
@@ -206,7 +214,8 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     );
   }
 
-  Widget _buildLoadingState(ThemeData theme, Color accent, AppLocalizations l10n) {
+  Widget _buildLoadingState(
+      ThemeData theme, Color accent, AppLocalizations l10n) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -222,7 +231,8 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     );
   }
 
-  Widget _buildPermissionNotice(ThemeData theme, Color accent, AppLocalizations l10n) {
+  Widget _buildPermissionNotice(
+      ThemeData theme, Color accent, AppLocalizations l10n) {
     final permanentlyDenied = _permissionStatus?.isPermanentlyDenied ?? false;
     final actionLabel = permanentlyDenied
         ? l10n.qrScannerOpenSettingsButton
@@ -237,7 +247,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(KubusSpacing.xl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -248,7 +258,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
               textAlign: TextAlign.center,
               style: KubusTypography.inter(
                 color: theme.colorScheme.onSurface,
-                fontSize: 22,
+                fontSize: KubusHeaderMetrics.screenTitle,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -268,8 +278,11 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: accent,
                 foregroundColor: theme.colorScheme.onPrimary,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
+                ),
               ),
             ),
           ],
@@ -278,7 +291,8 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     );
   }
 
-  Widget _buildCameraError(ThemeData theme, MobileScannerException error, AppLocalizations l10n) {
+  Widget _buildCameraError(
+      ThemeData theme, MobileScannerException error, AppLocalizations l10n) {
     if (kDebugMode) {
       debugPrint('QRScannerScreen: camera error: ${error.errorCode.name}');
     }
@@ -342,17 +356,26 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
         height: 46,
         decoration: BoxDecoration(
           border: Border(
-            top: alignment.y == -1 ? BorderSide(color: accent, width: 4) : BorderSide.none,
-            bottom: alignment.y == 1 ? BorderSide(color: accent, width: 4) : BorderSide.none,
-            left: alignment.x == -1 ? BorderSide(color: accent, width: 4) : BorderSide.none,
-            right: alignment.x == 1 ? BorderSide(color: accent, width: 4) : BorderSide.none,
+            top: alignment.y == -1
+                ? BorderSide(color: accent, width: 4)
+                : BorderSide.none,
+            bottom: alignment.y == 1
+                ? BorderSide(color: accent, width: 4)
+                : BorderSide.none,
+            left: alignment.x == -1
+                ? BorderSide(color: accent, width: 4)
+                : BorderSide.none,
+            right: alignment.x == 1
+                ? BorderSide(color: accent, width: 4)
+                : BorderSide.none,
           ),
         ),
       ),
     );
   }
 
-  Widget _buildStatusPanel(ThemeData theme, Color accent, AppLocalizations l10n) {
+  Widget _buildStatusPanel(
+      ThemeData theme, Color accent, AppLocalizations l10n) {
     final isSuccess = _scannerState == _ScannerState.success;
     final isError = _scannerState == _ScannerState.error;
 
@@ -368,7 +391,8 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       iconColor = accent;
     } else if (isError) {
       title = l10n.qrScannerStatusUnsupportedQrTitle;
-      description = _errorMessage ?? l10n.qrScannerStatusUnsupportedQrDescription;
+      description =
+          _errorMessage ?? l10n.qrScannerStatusUnsupportedQrDescription;
       icon = Icons.error_outline;
       iconColor = theme.colorScheme.error;
     } else {
@@ -383,7 +407,9 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        border: Border(top: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.2))),
+        border: Border(
+            top: BorderSide(
+                color: theme.colorScheme.outline.withValues(alpha: 0.2))),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -408,18 +434,23 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
           ),
           if (isSuccess && _scanResult != null && _scanResult!.hasAmount) ...[
             const SizedBox(height: 12),
-            _buildMetaChip(theme, label: l10n.qrScannerMetaAmountLabel, value: _formatAmount(_scanResult!.amount!)),
+            _buildMetaChip(theme,
+                label: l10n.qrScannerMetaAmountLabel,
+                value: _formatAmount(_scanResult!.amount!)),
           ],
           if (isSuccess && _scanResult?.tokenMint != null) ...[
             const SizedBox(height: 8),
-            _buildMetaChip(theme, label: l10n.qrScannerMetaMintLabel, value: _formatAddress(_scanResult!.tokenMint!)),
+            _buildMetaChip(theme,
+                label: l10n.qrScannerMetaMintLabel,
+                value: _formatAddress(_scanResult!.tokenMint!)),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildMetaChip(ThemeData theme, {required String label, required String value}) {
+  Widget _buildMetaChip(ThemeData theme,
+      {required String label, required String value}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -497,9 +528,9 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     return '${value.substring(0, 6)}...${value.substring(value.length - 4)}';
   }
 
-
   String _formatAmount(double amount) {
-    final formatted = amount >= 1 ? amount.toStringAsFixed(4) : amount.toStringAsFixed(8);
+    final formatted =
+        amount >= 1 ? amount.toStringAsFixed(4) : amount.toStringAsFixed(8);
     final trimmed = formatted
         .replaceFirst(RegExp(r'0+$'), '')
         .replaceFirst(RegExp(r'\.$'), '');
@@ -550,6 +581,3 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     }
   }
 }
-
-
-

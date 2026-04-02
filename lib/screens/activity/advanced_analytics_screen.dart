@@ -809,7 +809,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
             scheme.tertiary.withValues(alpha: 0.05),
           ],
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(
           color: scheme.tertiary.withValues(alpha: 0.3),
         ),
@@ -824,7 +824,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
               color: Colors.white.withValues(alpha: 0.8),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: KubusSpacing.sm),
           Row(
             children: [
               Text(
@@ -835,23 +835,25 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
                   color: Colors.white,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: KubusSpacing.md),
               if (analytics.isLoading && analytics.chartData.isEmpty)
                 InlineLoading(
                   width: 26,
                   height: 12,
                   tileSize: 4.0,
                   color: scheme.tertiary,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(KubusRadius.sm),
                 )
               else
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: KubusSpacing.sm,
+                    vertical: KubusSpacing.xs,
+                  ),
                   decoration: BoxDecoration(
                     color: (isPositive ? Colors.green : Colors.red)
                         .withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(KubusRadius.md),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -861,7 +863,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
                         color: isPositive ? Colors.green : Colors.red,
                         size: 16,
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: KubusSpacing.xs),
                       Text(
                         changeLabel,
                         style: KubusTypography.inter(
@@ -875,7 +877,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
                 ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: KubusSpacing.sm),
           Text(
             l10n.analyticsVsPreviousPeriod(analytics.periodLabel),
             style: KubusTypography.inter(
@@ -944,7 +946,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
@@ -958,7 +960,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: KubusSpacing.md),
           SizedBox(
             height: 220,
             child: analytics.isLoading && analytics.chartData.isEmpty
@@ -991,7 +993,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
                         height: 220,
                         gridColor: scheme.onSurface.withValues(alpha: 0.18),
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 4, vertical: 6),
+                          horizontal: KubusSpacing.xs,
+                          vertical: KubusSpacing.sm,
+                        ),
                       ),
           ),
         ],
@@ -1015,24 +1019,24 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
             color: Colors.white,
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: KubusSpacing.md),
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: compact ? 1 : 2,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
+            crossAxisSpacing: KubusSpacing.md,
+            mainAxisSpacing: KubusSpacing.md,
             childAspectRatio: compact ? 2.6 : 1.5,
           ),
           itemCount: metrics.length,
           itemBuilder: (context, index) {
             final metric = metrics[index];
             return Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(KubusSpacing.md),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(KubusRadius.md),
                 border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
               ),
               child: Column(
@@ -1078,7 +1082,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
@@ -1092,11 +1096,11 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: KubusSpacing.md),
           SizedBox(
             height: 10,
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(KubusRadius.sm),
               child: InlineLoading(
                 progress: progress,
                 tileSize: 8.0,
@@ -1105,7 +1109,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: KubusSpacing.sm),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -1137,7 +1141,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
@@ -1151,7 +1155,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: KubusSpacing.md),
           _buildTrendItem(
             l10n.analyticsTrendOverall,
             analytics.trendLabel,
@@ -1219,7 +1223,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: scheme.onSurface.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(color: scheme.onSurface.withValues(alpha: 0.10)),
       ),
       child: Column(
@@ -1233,7 +1237,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
               color: scheme.onSurface,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: KubusSpacing.md),
           Expanded(
             child: analytics.seasonalityData.isEmpty
                 ? EmptyStateCard(
@@ -1290,7 +1294,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
@@ -1323,7 +1327,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
 
   Widget _buildProjectionItem(String period, String growth, Color color) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -1338,7 +1342,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(KubusRadius.sm),
             ),
             child: Text(
               growth,
@@ -1368,7 +1372,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
             scheme.secondary.withValues(alpha: 0.10),
           ],
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(color: scheme.primary.withValues(alpha: 0.3)),
       ),
       child: Column(
@@ -1411,7 +1415,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, color: color, size: 16),
-          const SizedBox(width: 12),
+          const SizedBox(width: KubusSpacing.md),
           Expanded(
             child: Text(
               text,
@@ -1433,7 +1437,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
@@ -1507,7 +1511,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
@@ -1554,7 +1558,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(KubusRadius.sm),
             ),
             child: Icon(icon, color: color, size: 16),
           ),
@@ -1594,7 +1598,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
@@ -1681,7 +1685,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
@@ -1713,7 +1717,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
         border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
@@ -2258,8 +2262,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           content: Text(l10n.analyticsShareUnavailable),
           backgroundColor: scheme.error,
           behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(KubusRadius.md),
+          ),
         ),
       );
     }
