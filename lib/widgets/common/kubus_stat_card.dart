@@ -193,7 +193,6 @@ class KubusStatCard extends StatelessWidget {
     final devicePixelRatio = mediaQuery?.devicePixelRatio ?? 1.0;
     final textScale = mediaQuery?.textScaler.scale(1.0) ?? 1.0;
     final isDesktopLike = screenWidth >= 900;
-    final isUltraWideDesktop = screenWidth >= 1800;
 
     final densityScale = devicePixelRatio >= 3.0
         ? 0.90
@@ -202,32 +201,10 @@ class KubusStatCard extends StatelessWidget {
             : 1.0;
     final textScaleCompensation =
         textScale > 1.0 ? (1 / textScale.clamp(1.0, 1.25)) : 1.0;
-    final watermarkScale = (densityScale *
-            textScaleCompensation *
-            (isUltraWideDesktop ? 0.94 : 1.0))
-        .clamp(
-      0.86,
-      1.10,
+    final watermarkScale = (densityScale * textScaleCompensation).clamp(
+      0.9,
+      1.08,
     );
-
-    final watermarkOpacity = (0.15 +
-            (isDesktopLike ? -0.01 : 0.0) +
-            (isUltraWideDesktop ? -0.02 : 0.0) +
-            (devicePixelRatio >= 3.0
-                ? -0.02
-                : devicePixelRatio <= 1.5
-                    ? 0.01
-                    : 0.0))
-        .clamp(0.11, 0.18);
-    final iconOpacity = (0.55 +
-            (isDesktopLike ? -0.07 : 0.0) +
-            (isUltraWideDesktop ? -0.06 : 0.0) +
-            (devicePixelRatio >= 3.0
-                ? -0.03
-                : devicePixelRatio <= 1.5
-                    ? 0.01
-                    : 0.0))
-        .clamp(0.42, 0.58);
 
     final valueTypeScale = (isDesktopLike ? 1.0 : 0.97) *
         (textScale > 1.0 ? (1 / textScale.clamp(1.0, 1.20)) : 1.0);
@@ -252,8 +229,6 @@ class KubusStatCard extends StatelessWidget {
       factor: valueTypeScale,
     );
 
-    final iconBackgroundSize = (iconBoxSize + KubusSpacing.lg) * watermarkScale;
-    final iconForegroundSize = (iconSize + KubusSpacing.sm) * watermarkScale;
     final valueTitleGap = devicePixelRatio >= 3.0
         ? KubusSpacing.xxs
         : (isDesktopLike
@@ -266,20 +241,35 @@ class KubusStatCard extends StatelessWidget {
         if (shouldShowIcon)
           Positioned.fill(
             child: IgnorePointer(
-              child: Align(
-                alignment: Alignment.center,
-                child: Container(
-                  width: iconBackgroundSize,
-                  height: iconBackgroundSize,
-                  decoration: BoxDecoration(
-                    color: effectiveAccent.withValues(alpha: watermarkOpacity),
-                    borderRadius: BorderRadius.circular(KubusRadius.md),
-                  ),
-                  child: Icon(
-                    icon,
-                    color: effectiveAccent.withValues(alpha: iconOpacity),
-                    size: iconForegroundSize,
-                  ),
+              child: ClipRect(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final maxWidth = constraints.maxWidth.isFinite
+                        ? constraints.maxWidth
+                        : minHeight;
+                    final maxHeight = constraints.maxHeight.isFinite
+                        ? constraints.maxHeight
+                        : minHeight;
+
+                    final fallbackBase = iconSize + iconBoxSize;
+                    final baseWidth = maxWidth > 0 ? maxWidth : fallbackBase;
+                    final minSpan =
+                        maxHeight > 0 ? maxHeight * 1.2 : fallbackBase * 1.2;
+                    final iconWatermarkSize =
+                        (baseWidth * 1.2 * watermarkScale).clamp(
+                      minSpan,
+                      baseWidth * 1.5,
+                    );
+
+                    return Align(
+                      alignment: Alignment.center,
+                      child: Icon(
+                        icon,
+                        color: effectiveAccent.withValues(alpha: 0.05),
+                        size: iconWatermarkSize,
+                      ),
+                    );
+                  },
                 ),
               ),
             ),

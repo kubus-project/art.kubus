@@ -189,15 +189,24 @@ class KubusSidebarStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return KubusStatCard(
       title: title,
       value: value,
       icon: icon,
       accent: accent,
       layout: KubusStatCardLayout.centered,
+      showIcon: true,
       minHeight: minHeight,
       padding: const EdgeInsets.all(KubusSpacing.md),
       titleMaxLines: 2,
+      borderColor: accent.withValues(alpha: 0.26),
+      titleStyle: KubusTextStyles.statLabel.copyWith(
+        color: scheme.onSurface.withValues(alpha: 0.84),
+      ),
+      valueStyle: KubusTextStyles.statValue.copyWith(
+        color: scheme.onSurface,
+      ),
     );
   }
 }

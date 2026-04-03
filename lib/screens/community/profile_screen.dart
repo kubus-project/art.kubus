@@ -5,7 +5,6 @@ import '../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../utils/wallet_utils.dart';
-import '../../utils/kubus_color_roles.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/keyboard_inset_resolver.dart';
 import 'package:shared_preferences/shared_preferences.dart';
