@@ -1340,8 +1340,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     required bool isVerticalLayout,
   }) {
     if (isVerticalLayout) return 84;
-    if (showIconOnly) return 112;
-    return 104;
+    if (showIconOnly) return 104;
+    return 96;
   }
 
   Widget _buildStatCard(String title, String value, IconData icon,

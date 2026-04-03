@@ -178,7 +178,7 @@ class KubusSidebarStatCard extends StatelessWidget {
     required this.value,
     required this.icon,
     required this.accent,
-    this.minHeight = 132,
+    this.minHeight = 116,
   });
 
   final String title;
@@ -198,7 +198,7 @@ class KubusSidebarStatCard extends StatelessWidget {
       layout: KubusStatCardLayout.centered,
       showIcon: true,
       minHeight: minHeight,
-      padding: const EdgeInsets.all(KubusSpacing.md),
+      padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
       titleMaxLines: 2,
       borderColor: accent.withValues(alpha: 0.26),
       titleStyle: KubusTextStyles.statLabel.copyWith(

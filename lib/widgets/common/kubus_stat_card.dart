@@ -22,7 +22,7 @@ class KubusStatCard extends StatelessWidget {
     this.titleStyle,
     this.valueStyle,
     this.padding = const EdgeInsets.all(KubusChromeMetrics.compactCardPadding),
-    this.minHeight = 112,
+    this.minHeight = 104,
     this.titleMaxLines = 1,
     this.iconBoxSize = KubusSizes.sidebarActionIconBox - KubusSpacing.sm,
     this.iconSize = KubusSizes.sidebarActionIcon,
@@ -56,10 +56,16 @@ class KubusStatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final screenWidth = MediaQuery.maybeOf(context)?.size.width ?? 0;
+    final isUltraWide = screenWidth >= 1800;
     final effectiveAccent = accent ?? scheme.primary;
     final shouldShowIcon = showIcon && icon != null;
     final effectiveRadius =
         borderRadius ?? BorderRadius.circular(KubusRadius.md);
+    final effectiveMinHeight =
+        (layout == KubusStatCardLayout.centered && isUltraWide && minHeight > 0)
+            ? (minHeight - 6).clamp(0.0, double.infinity)
+            : minHeight;
     final glassStyle = KubusGlassStyle.resolve(
       context,
       surfaceType: KubusGlassSurfaceType.card,
@@ -85,7 +91,7 @@ class KubusStatCard extends StatelessWidget {
         backgroundColor: glassStyle.tintColor,
         onTap: onTap,
         child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: minHeight),
+          constraints: BoxConstraints(minHeight: effectiveMinHeight),
           child: layout == KubusStatCardLayout.centered
               ? _buildCenteredContent(
                   context: context,
@@ -111,9 +117,11 @@ class KubusStatCard extends StatelessWidget {
     required bool shouldShowIcon,
   }) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             if (shouldShowIcon) ...[
@@ -141,6 +149,7 @@ class KubusStatCard extends StatelessWidget {
                   title,
                   maxLines: titleMaxLines,
                   overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                   style: titleStyle ??
                       KubusTextStyles.actionTileTitle.copyWith(
                         fontSize: 15,
@@ -156,8 +165,7 @@ class KubusStatCard extends StatelessWidget {
               ),
           ],
         ),
-        const Spacer(),
-        const SizedBox(height: KubusSpacing.xs),
+        const SizedBox(height: KubusSpacing.sm),
         Center(
           child: SizedBox(
             width: double.infinity,
@@ -190,25 +198,29 @@ class KubusStatCard extends StatelessWidget {
   }) {
     final mediaQuery = MediaQuery.maybeOf(context);
     final screenWidth = mediaQuery?.size.width ?? 0;
+    final isUltraWide = screenWidth >= 1800;
     final devicePixelRatio = mediaQuery?.devicePixelRatio ?? 1.0;
     final textScale = mediaQuery?.textScaler.scale(1.0) ?? 1.0;
     final isDesktopLike = screenWidth >= 900;
 
     final densityScale = devicePixelRatio >= 3.0
-        ? 0.90
+        ? 0.92
         : devicePixelRatio <= 1.5
-            ? 1.06
-            : 1.0;
+            ? 1.02
+            : 0.98;
     final textScaleCompensation =
         textScale > 1.0 ? (1 / textScale.clamp(1.0, 1.25)) : 1.0;
     final watermarkScale = (densityScale * textScaleCompensation).clamp(
-      0.9,
-      1.08,
+      0.94,
+      1.06,
     );
 
-    final valueTypeScale = (isDesktopLike ? 1.0 : 0.97) *
+    final ultraWideTypeScale = isUltraWide ? 0.96 : 1.0;
+    final valueTypeScale = (isDesktopLike ? 0.95 : 0.93) *
+        ultraWideTypeScale *
         (textScale > 1.0 ? (1 / textScale.clamp(1.0, 1.20)) : 1.0);
-    final titleTypeScale = (isDesktopLike ? 0.98 : 0.95) *
+    final titleTypeScale = (isDesktopLike ? 0.93 : 0.90) *
+        ultraWideTypeScale *
         (textScale > 1.0 ? (1 / textScale.clamp(1.0, 1.20)) : 1.0);
 
     final titleTextStyle = titleStyle ??
@@ -229,11 +241,9 @@ class KubusStatCard extends StatelessWidget {
       factor: valueTypeScale,
     );
 
-    final valueTitleGap = devicePixelRatio >= 3.0
+    final valueTitleGap = isUltraWide
         ? KubusSpacing.xxs
-        : (isDesktopLike
-            ? KubusSpacing.xs
-            : KubusSpacing.xs + KubusSpacing.xxs);
+        : (devicePixelRatio >= 3.0 ? KubusSpacing.xxs : KubusSpacing.xs);
 
     return Stack(
       children: [
@@ -253,11 +263,12 @@ class KubusStatCard extends StatelessWidget {
                     final fallbackBase = iconSize + iconBoxSize;
                     final safeWidth = maxWidth > 0 ? maxWidth : fallbackBase;
                     final safeHeight = maxHeight > 0 ? maxHeight : fallbackBase;
-                    final widthDrivenSize = safeWidth * 1.04 * watermarkScale;
-                    final minHeightCoverage = safeHeight * 1.12;
-                    final maxAllowedSize = safeWidth * 1.10;
+                    final widthDrivenSize = safeWidth * 1.32;
+                    final minHeightCoverage = safeHeight * 1.34;
+                    final maxAllowedSize = safeWidth * 1.56;
                     final iconWatermarkSize = widthDrivenSize.clamp(
-                        minHeightCoverage, maxAllowedSize);
+                            minHeightCoverage, maxAllowedSize) *
+                        watermarkScale;
 
                     return Align(
                       alignment: Alignment.center,
@@ -281,13 +292,9 @@ class KubusStatCard extends StatelessWidget {
               isPositive: isPositiveChange,
             ),
           ),
-        Padding(
-          padding: EdgeInsets.only(
-            top: change == null
-                ? 0
-                : (isDesktopLike ? KubusSpacing.md : KubusSpacing.lg),
-          ),
+        Center(
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
