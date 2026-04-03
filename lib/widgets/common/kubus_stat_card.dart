@@ -236,7 +236,6 @@ class KubusStatCard extends StatelessWidget {
             : KubusSpacing.xs + KubusSpacing.xxs);
 
     return Stack(
-      fit: StackFit.expand,
       children: [
         if (shouldShowIcon)
           Positioned.fill(
@@ -252,14 +251,13 @@ class KubusStatCard extends StatelessWidget {
                         : minHeight;
 
                     final fallbackBase = iconSize + iconBoxSize;
-                    final baseWidth = maxWidth > 0 ? maxWidth : fallbackBase;
-                    final minSpan =
-                        maxHeight > 0 ? maxHeight * 1.2 : fallbackBase * 1.2;
-                    final iconWatermarkSize =
-                        (baseWidth * 1.2 * watermarkScale).clamp(
-                      minSpan,
-                      baseWidth * 1.5,
-                    );
+                    final safeWidth = maxWidth > 0 ? maxWidth : fallbackBase;
+                    final safeHeight = maxHeight > 0 ? maxHeight : fallbackBase;
+                    final widthDrivenSize = safeWidth * 1.04 * watermarkScale;
+                    final minHeightCoverage = safeHeight * 1.12;
+                    final maxAllowedSize = safeWidth * 1.10;
+                    final iconWatermarkSize = widthDrivenSize.clamp(
+                        minHeightCoverage, maxAllowedSize);
 
                     return Align(
                       alignment: Alignment.center,
@@ -283,41 +281,39 @@ class KubusStatCard extends StatelessWidget {
               isPositive: isPositiveChange,
             ),
           ),
-        Positioned.fill(
-          child: Padding(
-            padding: EdgeInsets.only(
-              top: change == null
-                  ? 0
-                  : (isDesktopLike ? KubusSpacing.md : KubusSpacing.lg),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                SizedBox(
-                  width: double.infinity,
-                  child: FittedBox(
-                    alignment: Alignment.center,
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      value,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: effectiveValueStyle,
-                    ),
+        Padding(
+          padding: EdgeInsets.only(
+            top: change == null
+                ? 0
+                : (isDesktopLike ? KubusSpacing.md : KubusSpacing.lg),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: double.infinity,
+                child: FittedBox(
+                  alignment: Alignment.center,
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: effectiveValueStyle,
                   ),
                 ),
-                SizedBox(height: valueTitleGap),
-                Text(
-                  title,
-                  style: effectiveTitleStyle,
-                  textAlign: TextAlign.center,
-                  maxLines: titleMaxLines,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
+              ),
+              SizedBox(height: valueTitleGap),
+              Text(
+                title,
+                style: effectiveTitleStyle,
+                textAlign: TextAlign.center,
+                maxLines: titleMaxLines,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
         ),
       ],

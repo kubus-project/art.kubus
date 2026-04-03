@@ -274,6 +274,13 @@ class _ProfileScreenState extends State<ProfileScreen>
         builder: (context, constraints) {
           bool isSmallScreen = constraints.maxWidth < 375;
           bool isVerySmallScreen = constraints.maxWidth < 320;
+          const avatarRadius = 44.0;
+          const avatarCornerRadiusFactor =
+              AvatarWidget.defaultCornerRadiusFactor;
+          const avatarSpacingBelowCover = KubusSpacing.md + KubusSpacing.xs;
+          const avatarShadowAlpha = 0.10;
+          const avatarShadowBlur = 8.0;
+          const avatarShadowOffsetY = 2.0;
 
           final coverImageUrl =
               _normalizeMediaUrl(profileProvider.currentUser?.coverImage);
@@ -520,42 +527,42 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ],
                     ),
                   ),
-                  // Avatar positioned at bottom of cover, overlapping
-                  Positioned(
-                    bottom: -(isVerySmallScreen
-                        ? 40.0
-                        : isSmallScreen
-                            ? 45.0
-                            : 50.0),
-                    left: 0,
-                    right: 0,
-                    child: Center(
-                      child: AvatarWidget(
-                        wallet:
-                            profileProvider.currentUser?.walletAddress ?? '',
-                        avatarUrl: profileProvider.currentUser?.avatar,
-                        radius: isVerySmallScreen
-                            ? 40
-                            : isSmallScreen
-                                ? 45
-                                : 50,
-                        borderWidth: DetailSpacing.xs,
-                        borderColor: Theme.of(context).colorScheme.surface,
-                        cornerRadiusFactor: 0.22,
-                        enableProfileNavigation: false,
-                        showStatusIndicator: _showActivityStatus,
-                      ),
-                    ),
-                  ),
                 ],
               ),
-              // Spacing for avatar overflow
-              SizedBox(
-                  height: isVerySmallScreen
-                      ? 48
-                      : isSmallScreen
-                          ? 53
-                          : 58),
+              const SizedBox(height: KubusSpacing.md),
+              Center(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(
+                      AvatarWidget.shapeRadiusFor(
+                        radius: avatarRadius,
+                        cornerRadiusFactor: avatarCornerRadiusFactor,
+                      ),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Theme.of(context)
+                            .shadowColor
+                            .withValues(alpha: avatarShadowAlpha),
+                        blurRadius: avatarShadowBlur,
+                        offset: const Offset(0, avatarShadowOffsetY),
+                      ),
+                    ],
+                  ),
+                  child: AvatarWidget(
+                    wallet: profileProvider.currentUser?.walletAddress ?? '',
+                    avatarUrl: profileProvider.currentUser?.avatar,
+                    radius: avatarRadius,
+                    borderWidth: 3,
+                    borderColor: Theme.of(context).colorScheme.surface,
+                    cornerRadiusFactor: avatarCornerRadiusFactor,
+                    enableProfileNavigation: false,
+                    showStatusIndicator: _showActivityStatus,
+                  ),
+                ),
+              ),
+              // Spacing after avatar
+              SizedBox(height: avatarSpacingBelowCover),
               // Rest of profile content
               Container(
                 padding:

@@ -301,6 +301,9 @@ class _AvatarWidgetState extends State<AvatarWidget>
     }
 
     if (widget.borderWidth > 0) {
+      final innerRadiusValue =
+          (shapeRadius - widget.borderWidth).clamp(0.0, shapeRadius);
+      final innerBorderRadius = BorderRadius.circular(innerRadiusValue);
       content = Container(
         width: size,
         height: size,
@@ -311,9 +314,14 @@ class _AvatarWidgetState extends State<AvatarWidget>
             width: widget.borderWidth,
           ),
         ),
-        child: ClipRRect(
-          borderRadius: borderRadius,
-          child: content,
+        child: Padding(
+          padding: EdgeInsets.all(widget.borderWidth),
+          child: ClipRRect(
+            borderRadius: innerBorderRadius,
+            child: SizedBox.expand(
+              child: content,
+            ),
+          ),
         ),
       );
     }

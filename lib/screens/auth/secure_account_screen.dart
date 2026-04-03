@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/app_mode_provider.dart';
@@ -122,6 +123,27 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
     _inlineError = null;
   }
 
+  String? _extractBackendMessage(Object error) {
+    if (error is! BackendApiRequestException) return null;
+    final raw = (error.body ?? '').trim();
+    if (raw.isEmpty) return null;
+
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map<String, dynamic>) {
+        final message =
+            (decoded['error'] ?? decoded['message'] ?? decoded['detail'] ?? '')
+                .toString()
+                .trim();
+        return message.isEmpty ? null : message;
+      }
+    } catch (_) {
+      // Ignore decode errors and fall back to generic strings.
+    }
+
+    return null;
+  }
+
   Future<void> _submit() async {
     if (_isSubmitting) return;
 
@@ -198,6 +220,12 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
             ? response['data'] as Map<String, dynamic>
             : response;
         final emailVerificationSent = payload['emailVerificationSent'] == true;
+        final responseMessage = (response['message'] ??
+                payload['message'] ??
+                payload['emailDeliveryMessage'] ??
+                '')
+            .toString()
+            .trim();
 
         if (!mounted) return;
         if (emailVerificationSent) {
@@ -208,7 +236,9 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
         } else {
           setState(() {
             _verificationSent = false;
-            _inlineError = l10n.authVerifyEmailResendFailedInline;
+            _inlineError = responseMessage.isNotEmpty
+                ? responseMessage
+                : l10n.authVerifyEmailResendFailedInline;
           });
         }
       }
@@ -217,7 +247,9 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
         debugPrint('SecureAccountScreen: submit failed: $e');
       }
       if (!mounted) return;
-      setState(() => _inlineError = l10n.authRegistrationFailed);
+      final backendMessage = _extractBackendMessage(e);
+      setState(
+          () => _inlineError = backendMessage ?? l10n.authRegistrationFailed);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -259,9 +291,11 @@ class _SecureAccountScreenState extends State<SecureAccountScreen> {
       } else {
         setState(() => _inlineError = l10n.authVerifyEmailResendFailedInline);
       }
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
-      setState(() => _inlineError = l10n.authVerifyEmailResendFailedInline);
+      final backendMessage = _extractBackendMessage(e);
+      setState(() => _inlineError =
+          backendMessage ?? l10n.authVerifyEmailResendFailedInline);
     } finally {
       if (mounted) setState(() => _isResending = false);
     }
