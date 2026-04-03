@@ -19,8 +19,8 @@ class KubusStatCard extends StatelessWidget {
     this.padding = const EdgeInsets.all(KubusChromeMetrics.compactCardPadding),
     this.minHeight = 112,
     this.titleMaxLines = 1,
-    this.iconBoxSize = KubusSizes.sidebarActionIconBox - KubusSpacing.xxs,
-    this.iconSize = KubusSizes.sidebarActionIcon + KubusSpacing.xxs,
+    this.iconBoxSize = KubusSizes.sidebarActionIconBox - KubusSpacing.sm,
+    this.iconSize = KubusSizes.sidebarActionIcon,
     this.borderRadius,
     this.change,
     this.isPositiveChange = true,
@@ -124,20 +124,23 @@ class KubusStatCard extends StatelessWidget {
               ),
               const Spacer(),
               const SizedBox(height: KubusSpacing.xs),
-              SizedBox(
-                width: double.infinity,
-                child: FittedBox(
-                  alignment: Alignment.centerLeft,
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    value,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: valueStyle ??
-                        KubusTextStyles.sectionTitle.copyWith(
-                          fontSize: KubusHeaderMetrics.sectionTitle + 1,
-                          color: scheme.onSurface,
-                        ),
+              Center(
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FittedBox(
+                    alignment: Alignment.center,
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: valueStyle ??
+                          KubusTextStyles.sectionTitle.copyWith(
+                            fontSize: KubusHeaderMetrics.sectionTitle + 2,
+                            color: scheme.onSurface,
+                          ),
+                    ),
                   ),
                 ),
               ),
