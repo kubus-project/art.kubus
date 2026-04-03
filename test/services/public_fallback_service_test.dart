@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 enum _HealthState {
   bothDown,
   standbyWritable,
+  hintedStandbyWritable,
 }
 
 void main() {
@@ -48,6 +49,19 @@ void main() {
                 );
               }
               throw Exception('offline');
+            case _HealthState.hintedStandbyWritable:
+              if (request.url.host == 'bapi.kubus.site') {
+                return http.Response(
+                  jsonEncode(<String, dynamic>{
+                    'writable': true,
+                    'databaseRole': 'primary',
+                    'switchRecommended': true,
+                    'preferredWriteBaseUrl': AppConfig.standbyApiUrl,
+                  }),
+                  200,
+                );
+              }
+              throw Exception('offline');
           }
         }),
       );
@@ -68,6 +82,61 @@ void main() {
 
       await service.refreshBackendMode();
       expect(service.mode, AppRuntimeMode.standby);
+    },
+  );
+
+  test(
+    'switch hint exits IPFS fallback immediately when standby becomes writable',
+    () async {
+      var healthState = _HealthState.bothDown;
+
+      service.bindHttpClient(
+        MockClient((request) async {
+          if (request.url.path != '/health/writable') {
+            return http.Response('Not Found', 404);
+          }
+
+          switch (healthState) {
+            case _HealthState.bothDown:
+              throw Exception('offline');
+            case _HealthState.standbyWritable:
+              if (request.url.host == 'bapi.kubus.site') {
+                return http.Response(
+                  jsonEncode(<String, dynamic>{
+                    'writable': true,
+                    'databaseRole': 'primary',
+                  }),
+                  200,
+                );
+              }
+              throw Exception('offline');
+            case _HealthState.hintedStandbyWritable:
+              if (request.url.host == 'bapi.kubus.site') {
+                return http.Response(
+                  jsonEncode(<String, dynamic>{
+                    'writable': true,
+                    'databaseRole': 'primary',
+                    'switchRecommended': true,
+                    'preferredWriteBaseUrl': AppConfig.standbyApiUrl,
+                  }),
+                  200,
+                );
+              }
+              throw Exception('offline');
+          }
+        }),
+      );
+
+      await service.refreshBackendMode();
+      await service.refreshBackendMode();
+      await service.refreshBackendMode();
+      expect(service.mode, AppRuntimeMode.ipfsFallback);
+
+      healthState = _HealthState.hintedStandbyWritable;
+      await service.refreshBackendMode();
+
+      expect(service.mode, AppRuntimeMode.standby);
+      expect(service.consecutiveRecoverySuccesses, 0);
     },
   );
 

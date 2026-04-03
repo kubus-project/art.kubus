@@ -22,6 +22,12 @@ class BackendWritableStatusRecord {
     required this.writable,
     required this.databaseRole,
     required this.checkedAt,
+    this.preferredWriteBaseUrl,
+    this.preferredReadBaseUrl,
+    this.nodeApiBaseUrl,
+    this.peerApiBaseUrl,
+    this.switchRecommended = false,
+    this.switchReason,
     this.statusCode,
     this.error,
   });
@@ -31,6 +37,12 @@ class BackendWritableStatusRecord {
   final bool writable;
   final String databaseRole;
   final DateTime checkedAt;
+  final String? preferredWriteBaseUrl;
+  final String? preferredReadBaseUrl;
+  final String? nodeApiBaseUrl;
+  final String? peerApiBaseUrl;
+  final bool switchRecommended;
+  final String? switchReason;
   final int? statusCode;
   final String? error;
 }
@@ -204,22 +216,32 @@ class PublicFallbackService extends ChangeNotifier {
         _primaryStatus = results[0];
         _standbyStatus = results[1];
 
+        final hintedMode = _resolveHintedMode(
+          primary: _primaryStatus!,
+          standby: _standbyStatus!,
+        );
         final writableMode = _resolveWritableMode(
           primary: _primaryStatus!,
           standby: _standbyStatus!,
         );
+        final preferredMode = hintedMode ?? writableMode;
 
-        if (writableMode != null) {
+        if (preferredMode != null) {
           _consecutiveDualFailures = 0;
           if (_mode == AppRuntimeMode.ipfsFallback) {
-            _consecutiveRecoverySuccesses += 1;
-            if (_consecutiveRecoverySuccesses >=
-                AppConfig.backendRecoverySuccessThreshold) {
-              _setMode(writableMode);
+            if (hintedMode != null) {
+              _consecutiveRecoverySuccesses = 0;
+              _setMode(preferredMode);
+            } else {
+              _consecutiveRecoverySuccesses += 1;
+              if (_consecutiveRecoverySuccesses >=
+                  AppConfig.backendRecoverySuccessThreshold) {
+                _setMode(preferredMode);
+              }
             }
           } else {
             _consecutiveRecoverySuccesses = 0;
-            _setMode(writableMode);
+            _setMode(preferredMode);
           }
         } else {
           _consecutiveRecoverySuccesses = 0;
@@ -455,7 +477,7 @@ class PublicFallbackService extends ChangeNotifier {
 
   Future<BackendWritableStatusRecord> _fetchWritableStatus(
       String baseUrl) async {
-    final checkedAt = DateTime.now().toUtc();
+    final localCheckedAt = DateTime.now().toUtc();
     final uri = Uri.parse('${_normalizeBaseUrlValue(baseUrl)}/health/writable');
     try {
       final response = await _client.get(
@@ -478,10 +500,26 @@ class PublicFallbackService extends ChangeNotifier {
               .toString()
               .trim()
               .toLowerCase();
+      final checkedAt = DateTime.tryParse(
+            (payload?['checkedAt'] ?? '').toString(),
+          )?.toUtc() ??
+          localCheckedAt;
       final writable = response.statusCode == 200 &&
           (payload?['writable'] == null || payload?['writable'] == true);
       final reachable = response.statusCode == 200 ||
           (response.statusCode == 503 && databaseRole.isNotEmpty);
+      final preferredWriteBaseUrl =
+          _normalizeOptionalBaseUrl(payload?['preferredWriteBaseUrl']);
+      final preferredReadBaseUrl =
+          _normalizeOptionalBaseUrl(payload?['preferredReadBaseUrl']);
+      final nodeApiBaseUrl = _normalizeOptionalBaseUrl(
+        payload?['nodeApiBaseUrl'] ?? payload?['apiBaseUrl'],
+      );
+      final peerApiBaseUrl = _normalizeOptionalBaseUrl(
+        payload?['peerApiBaseUrl'] ?? payload?['fallbackApiBaseUrl'],
+      );
+      final switchRecommended = _parseBoolFlag(payload?['switchRecommended']);
+      final switchReason = (payload?['switchReason'] ?? '').toString().trim();
 
       return BackendWritableStatusRecord(
         baseUrl: baseUrl,
@@ -489,6 +527,12 @@ class PublicFallbackService extends ChangeNotifier {
         writable: writable,
         databaseRole: databaseRole.isEmpty ? 'unavailable' : databaseRole,
         checkedAt: checkedAt,
+        preferredWriteBaseUrl: preferredWriteBaseUrl,
+        preferredReadBaseUrl: preferredReadBaseUrl,
+        nodeApiBaseUrl: nodeApiBaseUrl,
+        peerApiBaseUrl: peerApiBaseUrl,
+        switchRecommended: switchRecommended,
+        switchReason: switchReason.isEmpty ? null : switchReason,
         statusCode: response.statusCode,
         error: payload?['error']?.toString(),
       );
@@ -498,10 +542,46 @@ class PublicFallbackService extends ChangeNotifier {
         reachable: false,
         writable: false,
         databaseRole: 'unavailable',
-        checkedAt: checkedAt,
+        checkedAt: localCheckedAt,
         error: error.toString(),
       );
     }
+  }
+
+  AppRuntimeMode? _resolveHintedMode({
+    required BackendWritableStatusRecord primary,
+    required BackendWritableStatusRecord standby,
+  }) {
+    final preferredTargets = <String>[];
+
+    for (final status in <BackendWritableStatusRecord>[primary, standby]) {
+      final preferred = status.preferredWriteBaseUrl;
+      if (preferred == null || preferred.isEmpty) {
+        continue;
+      }
+
+      if (status.switchRecommended) {
+        preferredTargets.insert(0, preferred);
+      } else {
+        preferredTargets.add(preferred);
+      }
+    }
+
+    for (final preferred in preferredTargets) {
+      if (_isSameBaseUrl(preferred, AppConfig.baseApiUrl) &&
+          primary.reachable &&
+          primary.writable) {
+        return AppRuntimeMode.live;
+      }
+
+      if (_isSameBaseUrl(preferred, AppConfig.standbyApiUrl) &&
+          standby.reachable &&
+          standby.writable) {
+        return AppRuntimeMode.standby;
+      }
+    }
+
+    return null;
   }
 
   AppRuntimeMode? _resolveWritableMode({
@@ -538,6 +618,42 @@ class PublicFallbackService extends ChangeNotifier {
     return trimmed.endsWith('/')
         ? trimmed.substring(0, trimmed.length - 1)
         : trimmed;
+  }
+
+  String? _normalizeOptionalBaseUrl(dynamic baseUrl) {
+    final raw = (baseUrl ?? '').toString().trim();
+    if (raw.isEmpty) {
+      return null;
+    }
+    return _normalizeBaseUrl(raw);
+  }
+
+  bool _parseBoolFlag(dynamic rawValue) {
+    if (rawValue is bool) {
+      return rawValue;
+    }
+
+    if (rawValue is num) {
+      return rawValue != 0;
+    }
+
+    if (rawValue is String) {
+      final normalized = rawValue.trim().toLowerCase();
+      return normalized == 'true' ||
+          normalized == '1' ||
+          normalized == 'yes' ||
+          normalized == 'y' ||
+          normalized == 'on';
+    }
+
+    return false;
+  }
+
+  bool _isSameBaseUrl(String? left, String right) {
+    if (left == null || left.trim().isEmpty) {
+      return false;
+    }
+    return _normalizeBaseUrl(left) == _normalizeBaseUrl(right);
   }
 
   String _normalizeBaseUrlValue(String baseUrl) => _normalizeBaseUrl(baseUrl);
