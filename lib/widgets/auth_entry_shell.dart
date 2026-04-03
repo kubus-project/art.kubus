@@ -95,13 +95,15 @@ class AuthEntryShell extends StatelessWidget {
                             Expanded(
                               child: isDesktop
                                   ? Center(
-                                      child: Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Expanded(
-                                            child: Align(
-                                              alignment: Alignment.topLeft,
+                                      child: ConstrainedBox(
+                                        constraints: const BoxConstraints(
+                                          maxWidth: 1120,
+                                        ),
+                                        child: Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Expanded(
                                               child: _HeroColumn(
                                                 title: title,
                                                 subtitle: subtitle,
@@ -113,52 +115,74 @@ class AuthEntryShell extends StatelessWidget {
                                                 compact: compactSurface,
                                               ),
                                             ),
-                                          ),
-                                          const SizedBox(
-                                              width: KubusSpacing.xl),
-                                          Flexible(
-                                            child: Align(
-                                              alignment: Alignment.topCenter,
-                                              child: ConstrainedBox(
-                                                constraints:
-                                                    const BoxConstraints(
-                                                  maxWidth: 470,
-                                                ),
-                                                child: _FormSurface(
-                                                  footer: footer,
-                                                  compact: compactSurface,
-                                                  child: form,
-                                                ),
+                                            const SizedBox(
+                                                width: KubusSpacing.xl),
+                                            SizedBox(
+                                              width: 440,
+                                              child: _FormSurface(
+                                                footer: footer,
+                                                compact: compactSurface,
+                                                child: form,
                                               ),
                                             ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
                                     )
                                   : Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.stretch,
                                       children: [
-                                        if (!keyboardVisible) ...[
-                                          Text(
-                                            subtitle,
-                                            style: theme.textTheme.bodyMedium
-                                                ?.copyWith(
-                                              color: theme.colorScheme.onSurface
-                                                  .withValues(alpha: 0.72),
-                                              height: 1.45,
-                                            ),
-                                          ),
-                                          const SizedBox(
-                                            height: KubusSpacing.md,
-                                          ),
-                                        ],
                                         Expanded(
-                                          child: _FormSurface(
-                                            footer:
-                                                keyboardVisible ? null : footer,
-                                            compact: compactSurface,
-                                            child: form,
+                                          child: Center(
+                                            child: SingleChildScrollView(
+                                              padding: EdgeInsets.only(
+                                                bottom: keyboardVisible
+                                                    ? KubusSpacing.sm
+                                                    : 0,
+                                              ),
+                                              child: ConstrainedBox(
+                                                constraints:
+                                                    const BoxConstraints(
+                                                  maxWidth: 560,
+                                                ),
+                                                child: Column(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment
+                                                          .stretch,
+                                                  children: [
+                                                    if (!keyboardVisible) ...[
+                                                      Text(
+                                                        subtitle,
+                                                        style: theme.textTheme
+                                                            .bodyMedium
+                                                            ?.copyWith(
+                                                          color: theme
+                                                              .colorScheme
+                                                              .onSurface
+                                                              .withValues(
+                                                                  alpha: 0.72),
+                                                          height: 1.45,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(
+                                                        height:
+                                                            KubusSpacing.md,
+                                                      ),
+                                                    ],
+                                                    _FormSurface(
+                                                      footer: keyboardVisible
+                                                          ? null
+                                                          : footer,
+                                                      compact: compactSurface,
+                                                      child: form,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -276,6 +300,7 @@ class _HeroColumn extends StatelessWidget {
     final scheme = theme.colorScheme;
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(

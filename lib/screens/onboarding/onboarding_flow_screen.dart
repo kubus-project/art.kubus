@@ -2778,10 +2778,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(
                           maxWidth: 1120,
-                          maxHeight: 640,
                         ),
                         child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
                               child: _WelcomeHeroColumn(
@@ -3305,6 +3304,7 @@ class _WelcomeHeroColumn extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Column(
+      mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -3411,6 +3411,7 @@ class _WelcomeDecisionPanel extends StatelessWidget {
       child: Padding(
         padding: EdgeInsets.all(compact ? KubusSpacing.lg : KubusSpacing.xl),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (compact)
@@ -3426,18 +3427,15 @@ class _WelcomeDecisionPanel extends StatelessWidget {
                 ),
               )
             else
-              Expanded(
-                child: _WelcomeChoiceCard(
-                  compact: compact,
-                  fillHeight: true,
-                  icon: Icons.travel_explore_rounded,
-                  title: discoverTitle,
-                  body: discoverBody,
-                  action: KubusButton(
-                    onPressed: () => unawaited(onSelectGuest()),
-                    label: discoverTitle,
-                    isFullWidth: true,
-                  ),
+              _WelcomeChoiceCard(
+                compact: compact,
+                icon: Icons.travel_explore_rounded,
+                title: discoverTitle,
+                body: discoverBody,
+                action: KubusButton(
+                  onPressed: () => unawaited(onSelectGuest()),
+                  label: discoverTitle,
+                  isFullWidth: true,
                 ),
               ),
             const SizedBox(height: KubusSpacing.md),
@@ -3454,18 +3452,15 @@ class _WelcomeDecisionPanel extends StatelessWidget {
                 ),
               )
             else
-              Expanded(
-                child: _WelcomeChoiceCard(
-                  compact: compact,
-                  fillHeight: true,
-                  icon: Icons.person_add_alt_1_rounded,
-                  title: createTitle,
-                  body: createBody,
-                  action: KubusOutlineButton(
-                    onPressed: () => unawaited(onSelectAccount()),
-                    label: createTitle,
-                    isFullWidth: true,
-                  ),
+              _WelcomeChoiceCard(
+                compact: compact,
+                icon: Icons.person_add_alt_1_rounded,
+                title: createTitle,
+                body: createBody,
+                action: KubusOutlineButton(
+                  onPressed: () => unawaited(onSelectAccount()),
+                  label: createTitle,
+                  isFullWidth: true,
                 ),
               ),
             const SizedBox(height: KubusSpacing.lg),
@@ -3492,7 +3487,6 @@ class _WelcomeChoiceCard extends StatelessWidget {
     required this.title,
     required this.body,
     required this.action,
-    this.fillHeight = false,
   });
 
   final bool compact;
@@ -3500,7 +3494,6 @@ class _WelcomeChoiceCard extends StatelessWidget {
   final String title;
   final String body;
   final Widget action;
-  final bool fillHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -3513,7 +3506,7 @@ class _WelcomeChoiceCard extends StatelessWidget {
       child: Padding(
         padding: EdgeInsets.all(compact ? KubusSpacing.md : KubusSpacing.lg),
         child: Column(
-          mainAxisSize: fillHeight ? MainAxisSize.max : MainAxisSize.min,
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(icon, color: scheme.onSurface, size: compact ? 22 : 26),
@@ -3537,7 +3530,6 @@ class _WelcomeChoiceCard extends StatelessWidget {
                     height: 1.45,
                   ),
             ),
-            if (fillHeight) const Spacer(),
             const SizedBox(height: KubusSpacing.md),
             action,
           ],

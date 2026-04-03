@@ -944,13 +944,6 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       isDark ? 0.24 : 0.14,
     )!;
 
-    final viewportHeight = MediaQuery.sizeOf(context).height;
-    final reservedHeight = compactLayout ? 180.0 : 250.0;
-    final minHeight = compactLayout ? 320.0 : 420.0;
-    final maxHeight = compactLayout ? 680.0 : 760.0;
-    final inlinePanelHeight =
-        (viewportHeight - reservedHeight).clamp(minHeight, maxHeight);
-
     final registerMethods = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1077,22 +1070,14 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       ],
     );
 
-    final inlineWallet = ConstrainedBox(
-      constraints: BoxConstraints(
-        minHeight: minHeight,
-        maxHeight: maxHeight,
-      ),
-      child: SizedBox(
-        height: inlinePanelHeight,
-        child: ConnectWallet(
-          embedded: true,
-          initialStep: _walletInlineInitialStep,
-          telemetryAuthFlow: 'signup',
-          requiredWalletAddress: _walletInlineRequiredWalletAddress,
-          onRequestClose: () => _completeInlineWalletFlow(),
-          onFlowComplete: (result) => _completeInlineWalletFlow(result),
-        ),
-      ),
+    final inlineWallet = ConnectWallet(
+      embedded: true,
+      authInline: true,
+      initialStep: _walletInlineInitialStep,
+      telemetryAuthFlow: 'signup',
+      requiredWalletAddress: _walletInlineRequiredWalletAddress,
+      onRequestClose: () => _completeInlineWalletFlow(),
+      onFlowComplete: (result) => _completeInlineWalletFlow(result),
     );
 
     return AnimatedSwitcher(

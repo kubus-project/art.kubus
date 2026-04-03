@@ -648,6 +648,8 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
     required String artworkId,
     required bool publish,
   }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final savedToastMessage = AppLocalizations.of(context)!.commonSavedToast;
     final profileProvider = context.read<ProfileProvider>();
     final walletProvider = context.read<WalletProvider>();
     final canProceed = await WalletActionGuard.ensureSignerAccess(
@@ -666,8 +668,8 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
     }
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showKubusSnackBar(
-      SnackBar(content: Text(AppLocalizations.of(context)!.commonSavedToast)),
+    messenger.showKubusSnackBar(
+      SnackBar(content: Text(savedToastMessage)),
     );
   }
 }

@@ -35,6 +35,7 @@ class ConnectWallet extends StatefulWidget {
   final String? telemetryAuthFlow;
   final String? requiredWalletAddress;
   final bool embedded;
+  final bool authInline;
   final ValueChanged<Object?>? onFlowComplete;
   final VoidCallback? onRequestClose;
 
@@ -44,6 +45,7 @@ class ConnectWallet extends StatefulWidget {
     this.telemetryAuthFlow,
     this.requiredWalletAddress,
     this.embedded = false,
+    this.authInline = false,
     this.onFlowComplete,
     this.onRequestClose,
   });
@@ -371,6 +373,10 @@ class _ConnectWalletState extends State<ConnectWallet>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    if (widget.authInline) {
+      return _buildAuthInlineContainer();
+    }
+
     if (widget.embedded) {
       final scheme = Theme.of(context).colorScheme;
       return Material(
@@ -497,6 +503,476 @@ class _ConnectWalletState extends State<ConnectWallet>
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildAuthInlineContainer() {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final walletProvider = Provider.of<WalletProvider?>(context);
+    final canTransact = walletProvider?.canTransact ?? false;
+
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: _handlePrimaryBackOrClose,
+              style: TextButton.styleFrom(
+                foregroundColor: scheme.onSurface.withValues(alpha: 0.82),
+              ),
+              child: Text(l10n.commonBack),
+            ),
+          ),
+          Text(
+            _getStepTitle(l10n),
+            style: KubusTypography.textTheme.titleMedium?.copyWith(
+                  color: scheme.onSurface,
+                  fontWeight: FontWeight.w800,
+                ) ??
+                KubusTypography.inter(
+                  fontSize: KubusHeaderMetrics.sectionTitle,
+                  fontWeight: FontWeight.bold,
+                  color: scheme.onSurface,
+                ),
+          ),
+          const SizedBox(height: KubusSpacing.xs),
+          Text(
+            _getStepSubtitle(l10n),
+            style: KubusTypography.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.68),
+                  height: 1.4,
+                ) ??
+                KubusTypography.inter(
+                  fontSize: KubusSizes.badgeCountFontSize,
+                  color: scheme.onSurface.withValues(alpha: 0.68),
+                  height: 1.4,
+                ),
+          ),
+          const SizedBox(height: KubusSpacing.md),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            switchInCurve: Curves.easeOut,
+            switchOutCurve: Curves.easeIn,
+            child: KeyedSubtree(
+              key: ValueKey<String>(
+                canTransact ? 'auth-inline-connected' : 'auth-inline-step-$_currentStep',
+              ),
+              child: canTransact
+                  ? _buildAuthInlineConnectedView()
+                  : _buildAuthInlineStepContent(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getStepSubtitle(AppLocalizations l10n) {
+    switch (_currentStep) {
+      case 1:
+        return l10n.connectWalletImportDescription;
+      case 2:
+        return l10n.connectWalletCreateDescription;
+      case 3:
+        return l10n.connectWalletWalletConnectDescription;
+      case 0:
+      default:
+        return l10n.connectWalletChooseDescription;
+    }
+  }
+
+  Widget _buildAuthInlineStepContent() {
+    switch (_currentStep) {
+      case 0:
+        return _buildAuthInlineChooseOptionView();
+      case 1:
+        return _buildAuthInlineConnectWithMnemonicView();
+      case 2:
+        return _buildAuthInlineCreateNewWalletView();
+      case 3:
+        return _buildAuthInlineWalletConnectView();
+      default:
+        return _buildAuthInlineChooseOptionView();
+    }
+  }
+
+  Widget _buildAuthInlineChooseOptionView() {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final buttonSurface = scheme.surface.withValues(alpha: 0.72);
+    final advancedLabel = l10n.connectWalletAdvancedBadge;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        KubusButton(
+          onPressed: () => setState(() => _currentStep = 3),
+          icon: AuthWalletEntryOption.walletConnect.icon,
+          label: AuthWalletEntryOption.walletConnect.label(l10n),
+          variant: KubusButtonVariant.secondary,
+          backgroundColor: buttonSurface,
+          foregroundColor: scheme.onSurface,
+          isFullWidth: true,
+        ),
+        const SizedBox(height: KubusSpacing.sm),
+        KubusButton(
+          onPressed: () => setState(() => _currentStep = 2),
+          icon: AuthWalletEntryOption.createNewWallet.icon,
+          label: AuthWalletEntryOption.createNewWallet.label(l10n),
+          variant: KubusButtonVariant.secondary,
+          backgroundColor: buttonSurface,
+          foregroundColor: scheme.onSurface,
+          isFullWidth: true,
+        ),
+        const SizedBox(height: KubusSpacing.xxs),
+        _buildInlineAdvancedBadge(advancedLabel),
+        const SizedBox(height: KubusSpacing.sm),
+        KubusButton(
+          onPressed: () => setState(() => _currentStep = 1),
+          icon: AuthWalletEntryOption.linkExistingWallet.icon,
+          label: AuthWalletEntryOption.linkExistingWallet.label(l10n),
+          variant: KubusButtonVariant.secondary,
+          backgroundColor: buttonSurface,
+          foregroundColor: scheme.onSurface,
+          isFullWidth: true,
+        ),
+        const SizedBox(height: KubusSpacing.xxs),
+        _buildInlineAdvancedBadge(advancedLabel),
+      ],
+    );
+  }
+
+  Widget _buildInlineAdvancedBadge(String label) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: KubusSpacing.sm,
+          vertical: KubusSpacing.xxs,
+        ),
+        decoration: BoxDecoration(
+          color: scheme.secondary.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          label,
+          style: KubusTypography.textTheme.labelSmall?.copyWith(
+                color: scheme.secondary,
+                fontWeight: FontWeight.w700,
+              ) ??
+              KubusTypography.inter(
+                fontSize: KubusSizes.badgeCountFontSize,
+                color: scheme.secondary,
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAuthInlineConnectWithMnemonicView() {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          controller: _mnemonicController,
+          maxLines: 3,
+          decoration: InputDecoration(
+            hintText: l10n.connectWalletImportHint,
+            hintStyle: KubusTypography.textTheme.bodyMedium?.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.45),
+            ),
+            filled: true,
+            fillColor: scheme.surface.withValues(alpha: 0.56),
+            contentPadding: const EdgeInsets.all(KubusSpacing.md),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(KubusRadius.md),
+              borderSide: BorderSide(
+                color: scheme.outlineVariant.withValues(alpha: 0.22),
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(KubusRadius.md),
+              borderSide: BorderSide(
+                color: scheme.outlineVariant.withValues(alpha: 0.22),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(KubusRadius.md),
+              borderSide: BorderSide(
+                color: scheme.primary.withValues(alpha: 0.75),
+                width: 1.5,
+              ),
+            ),
+          ),
+          style: KubusTypography.textTheme.bodyLarge?.copyWith(
+            color: scheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: KubusSpacing.sm),
+        Container(
+          padding: const EdgeInsets.all(KubusSpacing.sm),
+          decoration: BoxDecoration(
+            color: scheme.tertiaryContainer.withValues(alpha: 0.4),
+            borderRadius: BorderRadius.circular(KubusRadius.sm),
+            border: Border.all(
+              color: scheme.tertiary.withValues(alpha: 0.28),
+            ),
+          ),
+          child: Text(
+            l10n.connectWalletImportWarning,
+            style: KubusTypography.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.76),
+                  height: 1.35,
+                ) ??
+                KubusTypography.inter(
+                  fontSize: KubusSizes.badgeCountFontSize,
+                  color: scheme.onSurface.withValues(alpha: 0.76),
+                  height: 1.35,
+                ),
+          ),
+        ),
+        const SizedBox(height: KubusSpacing.md),
+        KubusButton(
+          onPressed: _isLoading ? null : _importWalletFromMnemonic,
+          isLoading: _isLoading,
+          label: l10n.connectWalletImportButton,
+          isFullWidth: true,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAuthInlineCreateNewWalletView() {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(KubusSpacing.sm),
+          decoration: BoxDecoration(
+            color: scheme.primaryContainer.withValues(alpha: 0.52),
+            borderRadius: BorderRadius.circular(KubusRadius.sm),
+            border: Border.all(
+              color: scheme.primary.withValues(alpha: 0.24),
+            ),
+          ),
+          child: Text(
+            l10n.connectWalletCreateInfoBody,
+            style: KubusTypography.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.78),
+                  height: 1.35,
+                ) ??
+                KubusTypography.inter(
+                  fontSize: KubusSizes.badgeCountFontSize,
+                  color: scheme.onSurface.withValues(alpha: 0.78),
+                  height: 1.35,
+                ),
+          ),
+        ),
+        const SizedBox(height: KubusSpacing.sm),
+        Container(
+          padding: const EdgeInsets.all(KubusSpacing.sm),
+          decoration: BoxDecoration(
+            color: scheme.tertiaryContainer.withValues(alpha: 0.4),
+            borderRadius: BorderRadius.circular(KubusRadius.sm),
+            border: Border.all(
+              color: scheme.tertiary.withValues(alpha: 0.28),
+            ),
+          ),
+          child: Text(
+            l10n.connectWalletCreateWarning,
+            style: KubusTypography.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.76),
+                  height: 1.35,
+                ) ??
+                KubusTypography.inter(
+                  fontSize: KubusSizes.badgeCountFontSize,
+                  color: scheme.onSurface.withValues(alpha: 0.76),
+                  height: 1.35,
+                ),
+          ),
+        ),
+        const SizedBox(height: KubusSpacing.md),
+        KubusButton(
+          onPressed: _isLoading ? null : _generateNewWallet,
+          isLoading: _isLoading,
+          label: l10n.connectWalletCreateGenerateButton,
+          isFullWidth: true,
+        ),
+        const SizedBox(height: KubusSpacing.sm),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: () => setState(() => _currentStep = 1),
+            style: TextButton.styleFrom(
+              foregroundColor: scheme.onSurface.withValues(alpha: 0.82),
+            ),
+            child: Text(l10n.connectWalletCreateAlreadyHaveWalletLink),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAuthInlineWalletConnectView() {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final isNarrow = MediaQuery.of(context).size.width < 360;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          controller: _wcUriController,
+          maxLines: 2,
+          decoration: InputDecoration(
+            hintText: l10n.connectWalletWalletConnectUriHint,
+            hintStyle: KubusTypography.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.45),
+            ),
+            filled: true,
+            fillColor: scheme.surface.withValues(alpha: 0.56),
+            contentPadding: const EdgeInsets.all(KubusSpacing.md),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(KubusRadius.md),
+              borderSide: BorderSide(
+                color: scheme.outlineVariant.withValues(alpha: 0.22),
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(KubusRadius.md),
+              borderSide: BorderSide(
+                color: scheme.outlineVariant.withValues(alpha: 0.22),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(KubusRadius.md),
+              borderSide: BorderSide(
+                color: scheme.primary.withValues(alpha: 0.75),
+                width: 1.5,
+              ),
+            ),
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.paste),
+              onPressed: () async {
+                final clipboardData = await Clipboard.getData('text/plain');
+                if (clipboardData?.text == null) return;
+                setState(() => _wcUriController.text = clipboardData!.text!);
+              },
+            ),
+          ),
+          style: KubusTypography.textTheme.bodyMedium?.copyWith(
+            color: scheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: KubusSpacing.md),
+        if (isNarrow) ...[
+          KubusButton(
+            onPressed: _isLoading ? null : _quickWalletConnect,
+            isLoading: _isLoading,
+            icon: Icons.flash_on_rounded,
+            label: l10n.connectWalletWalletConnectQuickConnectLabel,
+            isFullWidth: true,
+          ),
+          const SizedBox(height: KubusSpacing.xs),
+          KubusButton(
+            onPressed: _isLoading ? null : _connectWithWalletConnect,
+            isLoading: _isLoading,
+            label: l10n.connectWalletWalletConnectConnectButton,
+            variant: KubusButtonVariant.secondary,
+            isFullWidth: true,
+          ),
+        ] else ...[
+          Row(
+            children: [
+              Expanded(
+                child: KubusButton(
+                  onPressed: _isLoading ? null : _scanQRCode,
+                  icon: Icons.qr_code_scanner,
+                  label: l10n.connectWalletWalletConnectScanQrButton,
+                  variant: KubusButtonVariant.secondary,
+                ),
+              ),
+              const SizedBox(width: KubusSpacing.sm),
+              Expanded(
+                child: KubusButton(
+                  onPressed: _isLoading ? null : _connectWithWalletConnect,
+                  isLoading: _isLoading,
+                  label: l10n.connectWalletWalletConnectConnectButton,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildAuthInlineConnectedView() {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(KubusSpacing.sm),
+          decoration: BoxDecoration(
+            color: scheme.primaryContainer.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(KubusRadius.sm),
+            border: Border.all(
+              color: scheme.primary.withValues(alpha: 0.24),
+            ),
+          ),
+          child: Text(
+            l10n.connectWalletConnectedDescription,
+            style: KubusTypography.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.78),
+                  height: 1.35,
+                ) ??
+                KubusTypography.inter(
+                  fontSize: KubusSizes.badgeCountFontSize,
+                  color: scheme.onSurface.withValues(alpha: 0.78),
+                  height: 1.35,
+                ),
+          ),
+        ),
+        const SizedBox(height: KubusSpacing.md),
+        KubusButton(
+          onPressed: () => _closeFlow(_authEntryPayload),
+          label: l10n.connectWalletConnectedStartExploringButton,
+          isFullWidth: true,
+        ),
+        const SizedBox(height: KubusSpacing.xs),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: () {
+              final walletProvider =
+                  Provider.of<WalletProvider?>(context, listen: false);
+              if (walletProvider == null) {
+                return;
+              }
+              unawaited(walletProvider.disconnectWallet());
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: scheme.onSurface.withValues(alpha: 0.82),
+            ),
+            child: Text(l10n.connectWalletConnectedDisconnectButton),
+          ),
+        ),
+      ],
     );
   }
 

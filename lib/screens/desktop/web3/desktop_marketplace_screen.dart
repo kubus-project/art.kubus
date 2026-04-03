@@ -79,7 +79,6 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final themeProvider = Provider.of<ThemeProvider>(context);
     final animationTheme = context.animationTheme;
     final screenWidth = MediaQuery.of(context).size.width;

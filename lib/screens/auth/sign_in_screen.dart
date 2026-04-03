@@ -959,12 +959,6 @@ class _SignInScreenState extends State<SignInScreen> {
       isDark ? 0.24 : 0.14,
     )!;
 
-    final reservedHeight = compactLayout ? 180.0 : 250.0;
-    final minHeight = compactLayout ? 320.0 : 420.0;
-    final maxHeight = compactLayout ? 680.0 : 760.0;
-    final inlinePanelHeight =
-        (viewportSize.height - reservedHeight).clamp(minHeight, maxHeight);
-
     final authMethods = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1110,22 +1104,14 @@ class _SignInScreenState extends State<SignInScreen> {
       ],
     );
 
-    final inlineWallet = ConstrainedBox(
-      constraints: BoxConstraints(
-        minHeight: minHeight,
-        maxHeight: maxHeight,
-      ),
-      child: SizedBox(
-        height: inlinePanelHeight,
-        child: ConnectWallet(
-          embedded: true,
-          initialStep: _walletInlineInitialStep,
-          telemetryAuthFlow: 'signin',
-          requiredWalletAddress: _walletInlineRequiredWalletAddress,
-          onRequestClose: () => _completeInlineWalletFlow(),
-          onFlowComplete: (result) => _completeInlineWalletFlow(result),
-        ),
-      ),
+    final inlineWallet = ConnectWallet(
+      embedded: true,
+      authInline: true,
+      initialStep: _walletInlineInitialStep,
+      telemetryAuthFlow: 'signin',
+      requiredWalletAddress: _walletInlineRequiredWalletAddress,
+      onRequestClose: () => _completeInlineWalletFlow(),
+      onFlowComplete: (result) => _completeInlineWalletFlow(result),
     );
 
     return AnimatedSwitcher(
