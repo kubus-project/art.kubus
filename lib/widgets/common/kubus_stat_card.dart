@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
@@ -82,7 +83,8 @@ class KubusStatCard extends StatelessWidget {
         ),
       ),
       child: LiquidGlassCard(
-        padding: padding,
+        padding:
+            layout == KubusStatCardLayout.centered ? EdgeInsets.zero : padding,
         margin: EdgeInsets.zero,
         borderRadius: effectiveRadius,
         showBorder: false,
@@ -98,6 +100,7 @@ class KubusStatCard extends StatelessWidget {
                   scheme: scheme,
                   effectiveAccent: effectiveAccent,
                   shouldShowIcon: shouldShowIcon,
+                  contentPadding: padding,
                 )
               : _buildStandardContent(
                   context: context,
@@ -195,6 +198,7 @@ class KubusStatCard extends StatelessWidget {
     required ColorScheme scheme,
     required Color effectiveAccent,
     required bool shouldShowIcon,
+    required EdgeInsetsGeometry contentPadding,
   }) {
     final mediaQuery = MediaQuery.maybeOf(context);
     final screenWidth = mediaQuery?.size.width ?? 0;
@@ -246,6 +250,7 @@ class KubusStatCard extends StatelessWidget {
         : (devicePixelRatio >= 3.0 ? KubusSpacing.xxs : KubusSpacing.xs);
 
     return Stack(
+      fit: StackFit.expand,
       children: [
         if (shouldShowIcon)
           Positioned.fill(
@@ -263,15 +268,39 @@ class KubusStatCard extends StatelessWidget {
                     final fallbackBase = iconSize + iconBoxSize;
                     final safeWidth = maxWidth > 0 ? maxWidth : fallbackBase;
                     final safeHeight = maxHeight > 0 ? maxHeight : fallbackBase;
-                    final widthDrivenSize = safeWidth * 1.32;
-                    final minHeightCoverage = safeHeight * 1.34;
-                    final maxAllowedSize = safeWidth * 1.56;
-                    final iconWatermarkSize = widthDrivenSize.clamp(
-                            minHeightCoverage, maxAllowedSize) *
-                        watermarkScale;
+                    final aspectRatio =
+                        safeHeight <= 0 ? 1.0 : (safeWidth / safeHeight);
+                    final longestSide = math.max(safeWidth, safeHeight);
+                    final glyphCompensation = _watermarkGlyphCompensation(icon);
+
+                    final baseScale = aspectRatio >= 1.6
+                        ? 1.08
+                        : (aspectRatio <= 0.85 ? 1.22 : 1.14);
+                    final minWidthCoverage =
+                        safeWidth * (aspectRatio >= 1.6 ? 1.02 : 1.08);
+                    final minHeightCoverage =
+                        safeHeight * (aspectRatio >= 1.6 ? 1.16 : 1.24);
+                    final maxAllowedSize =
+                        longestSide * (aspectRatio >= 1.6 ? 1.22 : 1.40);
+
+                    final baseWatermarkSize = (longestSide * baseScale).clamp(
+                      math.max(minWidthCoverage, minHeightCoverage),
+                      maxAllowedSize,
+                    );
+
+                    final iconWatermarkSize =
+                        (baseWatermarkSize * glyphCompensation * watermarkScale)
+                            .clamp(
+                      math.max(minWidthCoverage, minHeightCoverage) * 0.92,
+                      maxAllowedSize * 1.04,
+                    );
+
+                    final watermarkAlignment = aspectRatio >= 1.6
+                        ? Alignment.bottomCenter
+                        : Alignment.center;
 
                     return Align(
-                      alignment: Alignment.center,
+                      alignment: watermarkAlignment,
                       child: Icon(
                         icon,
                         color: effectiveAccent.withValues(alpha: 0.05),
@@ -292,35 +321,40 @@ class KubusStatCard extends StatelessWidget {
               isPositive: isPositiveChange,
             ),
           ),
-        Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              SizedBox(
-                width: double.infinity,
-                child: FittedBox(
-                  alignment: Alignment.center,
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    value,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: effectiveValueStyle,
+        Positioned.fill(
+          child: Center(
+            child: Padding(
+              padding: contentPadding,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: FittedBox(
+                      alignment: Alignment.center,
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        value,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: effectiveValueStyle,
+                      ),
+                    ),
                   ),
-                ),
+                  SizedBox(height: valueTitleGap),
+                  Text(
+                    title,
+                    style: effectiveTitleStyle,
+                    textAlign: TextAlign.center,
+                    maxLines: titleMaxLines,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
-              SizedBox(height: valueTitleGap),
-              Text(
-                title,
-                style: effectiveTitleStyle,
-                textAlign: TextAlign.center,
-                maxLines: titleMaxLines,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+            ),
           ),
         ),
       ],
@@ -333,6 +367,45 @@ class KubusStatCard extends StatelessWidget {
       return style;
     }
     return style.copyWith(fontSize: fontSize * factor);
+  }
+
+  double _watermarkGlyphCompensation(IconData? glyph) {
+    if (glyph == null) {
+      return 1.0;
+    }
+
+    final codePoint = glyph.codePoint;
+
+    if (codePoint == Icons.account_balance.codePoint ||
+        codePoint == Icons.account_balance_wallet.codePoint ||
+        codePoint == Icons.account_balance_wallet_outlined.codePoint ||
+        codePoint == Icons.token.codePoint ||
+        codePoint == Icons.token_outlined.codePoint ||
+        codePoint == Icons.home_work_outlined.codePoint) {
+      return 0.90;
+    }
+
+    if (codePoint == Icons.palette.codePoint ||
+        codePoint == Icons.palette_outlined.codePoint ||
+        codePoint == Icons.visibility.codePoint ||
+        codePoint == Icons.visibility_outlined.codePoint ||
+        codePoint == Icons.explore.codePoint ||
+        codePoint == Icons.explore_outlined.codePoint ||
+        codePoint == Icons.show_chart.codePoint) {
+      return 0.96;
+    }
+
+    if (codePoint == Icons.people.codePoint ||
+        codePoint == Icons.people_outline.codePoint ||
+        codePoint == Icons.person_add.codePoint ||
+        codePoint == Icons.person_add_outlined.codePoint ||
+        codePoint == Icons.groups.codePoint ||
+        codePoint == Icons.groups_outlined.codePoint ||
+        codePoint == Icons.streetview.codePoint) {
+      return 1.04;
+    }
+
+    return 1.0;
   }
 }
 
