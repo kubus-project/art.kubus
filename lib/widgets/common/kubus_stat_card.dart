@@ -250,65 +250,62 @@ class KubusStatCard extends StatelessWidget {
         : (devicePixelRatio >= 3.0 ? KubusSpacing.xxs : KubusSpacing.xs);
 
     return Stack(
-      fit: StackFit.expand,
       children: [
         if (shouldShowIcon)
-          Positioned.fill(
-            child: IgnorePointer(
-              child: ClipRect(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final maxWidth = constraints.maxWidth.isFinite
-                        ? constraints.maxWidth
-                        : minHeight;
-                    final maxHeight = constraints.maxHeight.isFinite
-                        ? constraints.maxHeight
-                        : minHeight;
+          IgnorePointer(
+            child: ClipRect(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final maxWidth = constraints.maxWidth.isFinite
+                      ? constraints.maxWidth
+                      : minHeight;
+                  final maxHeight = constraints.maxHeight.isFinite
+                      ? constraints.maxHeight
+                      : minHeight;
 
-                    final fallbackBase = iconSize + iconBoxSize;
-                    final safeWidth = maxWidth > 0 ? maxWidth : fallbackBase;
-                    final safeHeight = maxHeight > 0 ? maxHeight : fallbackBase;
-                    final aspectRatio =
-                        safeHeight <= 0 ? 1.0 : (safeWidth / safeHeight);
-                    final longestSide = math.max(safeWidth, safeHeight);
-                    final glyphCompensation = _watermarkGlyphCompensation(icon);
+                  final fallbackBase = iconSize + iconBoxSize;
+                  final safeWidth = maxWidth > 0 ? maxWidth : fallbackBase;
+                  final safeHeight = maxHeight > 0 ? maxHeight : fallbackBase;
+                  final aspectRatio =
+                      safeHeight <= 0 ? 1.0 : (safeWidth / safeHeight);
+                  final longestSide = math.max(safeWidth, safeHeight);
+                  final glyphCompensation = _watermarkGlyphCompensation(icon);
 
-                    final baseScale = aspectRatio >= 1.6
-                        ? 1.08
-                        : (aspectRatio <= 0.85 ? 1.22 : 1.14);
-                    final minWidthCoverage =
-                        safeWidth * (aspectRatio >= 1.6 ? 1.02 : 1.08);
-                    final minHeightCoverage =
-                        safeHeight * (aspectRatio >= 1.6 ? 1.16 : 1.24);
-                    final maxAllowedSize =
-                        longestSide * (aspectRatio >= 1.6 ? 1.22 : 1.40);
+                  final baseScale = aspectRatio >= 1.6
+                      ? 1.02
+                      : (aspectRatio <= 0.85 ? 1.22 : 1.14);
+                  final minWidthCoverage =
+                      safeWidth * (aspectRatio >= 1.6 ? 1.02 : 1.08);
+                  final minHeightCoverage =
+                      safeHeight * (aspectRatio >= 1.6 ? 1.16 : 1.24);
+                  final maxAllowedSize =
+                      longestSide * (aspectRatio >= 1.6 ? 1.18 : 1.40);
 
-                    final baseWatermarkSize = (longestSide * baseScale).clamp(
-                      math.max(minWidthCoverage, minHeightCoverage),
-                      maxAllowedSize,
-                    );
+                  final baseWatermarkSize = (longestSide * baseScale).clamp(
+                    math.max(minWidthCoverage, minHeightCoverage),
+                    maxAllowedSize,
+                  );
 
-                    final iconWatermarkSize =
-                        (baseWatermarkSize * glyphCompensation * watermarkScale)
-                            .clamp(
-                      math.max(minWidthCoverage, minHeightCoverage) * 0.92,
-                      maxAllowedSize * 1.04,
-                    );
+                  final iconWatermarkSize =
+                      (baseWatermarkSize * glyphCompensation * watermarkScale)
+                          .clamp(
+                    math.max(minWidthCoverage, minHeightCoverage) * 0.92,
+                    maxAllowedSize * 1.04,
+                  );
 
-                    final watermarkAlignment = aspectRatio >= 1.6
-                        ? Alignment.bottomCenter
-                        : Alignment.center;
+                  final watermarkAlignment = aspectRatio >= 1.6
+                      ? Alignment.bottomCenter
+                      : Alignment.center;
 
-                    return Align(
-                      alignment: watermarkAlignment,
-                      child: Icon(
-                        icon,
-                        color: effectiveAccent.withValues(alpha: 0.05),
-                        size: iconWatermarkSize,
-                      ),
-                    );
-                  },
-                ),
+                  return Align(
+                    alignment: watermarkAlignment,
+                    child: Icon(
+                      icon,
+                      color: effectiveAccent.withValues(alpha: 0.05),
+                      size: iconWatermarkSize,
+                    ),
+                  );
+                },
               ),
             ),
           ),
@@ -321,39 +318,37 @@ class KubusStatCard extends StatelessWidget {
               isPositive: isPositiveChange,
             ),
           ),
-        Positioned.fill(
-          child: Center(
-            child: Padding(
-              padding: contentPadding,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: double.infinity,
-                    child: FittedBox(
-                      alignment: Alignment.center,
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        value,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: effectiveValueStyle,
-                      ),
+        Center(
+          child: Padding(
+            padding: contentPadding,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: FittedBox(
+                    alignment: Alignment.center,
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: effectiveValueStyle,
                     ),
                   ),
-                  SizedBox(height: valueTitleGap),
-                  Text(
-                    title,
-                    style: effectiveTitleStyle,
-                    textAlign: TextAlign.center,
-                    maxLines: titleMaxLines,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
+                ),
+                SizedBox(height: valueTitleGap),
+                Text(
+                  title,
+                  style: effectiveTitleStyle,
+                  textAlign: TextAlign.center,
+                  maxLines: titleMaxLines,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
         ),
