@@ -5,11 +5,14 @@ import '../../../l10n/app_localizations.dart';
 import '../../../config/config.dart';
 import '../../../models/collectible.dart';
 import '../../../providers/collectibles_provider.dart';
+import '../../../providers/profile_provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../models/wallet.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/media_url_resolver.dart';
+import '../../../utils/wallet_action_guard.dart';
+import '../../../utils/wallet_reconnect_action.dart';
 import '../../../widgets/detail/detail_shell_components.dart';
 import '../components/desktop_widgets.dart';
 import '../../../widgets/empty_state_card.dart';
@@ -332,12 +335,18 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
 
   Widget _buildHeader(
       ThemeProvider themeProvider, WalletProvider walletProvider) {
-    final canTransact = walletProvider.canTransact;
+    final l10n = AppLocalizations.of(context)!;
+    final profileProvider = Provider.of<ProfileProvider>(context);
+    final access = WalletSessionAccessSnapshot.fromProviders(
+      profileProvider: profileProvider,
+      walletProvider: walletProvider,
+    );
+    final canTransact = access.canTransact;
     final network = walletProvider.currentSolanaNetwork;
     final walletAddress = (walletProvider.currentWalletAddress ?? '').trim();
     final statusColor = canTransact
         ? Theme.of(context).colorScheme.tertiary
-        : walletProvider.hasWalletIdentity
+        : access.hasWalletIdentity
             ? Theme.of(context).colorScheme.primary
             : Theme.of(context).colorScheme.secondary;
 
@@ -361,8 +370,8 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                     child: KubusScreenHeaderBar(
                       title: 'Wallet',
                       subtitle: canTransact
-                          ? 'Connected to $network'
-                          : 'Read-only on $network',
+                          ? '${l10n.settingsWalletConnectionConnected} · $network'
+                          : '${l10n.walletSessionSignerMissing} · $network',
                       padding: EdgeInsets.zero,
                       minHeight: KubusHeaderMetrics.headerMinHeight,
                       subtitleStyle: KubusTextStyles.screenSubtitle.copyWith(
@@ -401,7 +410,9 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                   runSpacing: DetailSpacing.sm,
                   children: [
                     _buildWalletStatusChip(
-                      label: canTransact ? 'Transacting' : 'Read only',
+                      label: canTransact
+                          ? l10n.walletSessionSignerReady
+                          : l10n.walletSessionSignerMissing,
                       icon: canTransact ? Icons.lock_open : Icons.visibility,
                       color: statusColor,
                     ),
@@ -413,6 +424,35 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                     _buildCopyAddressChip(walletAddress),
                   ],
                 ),
+                if (access.isReadOnlySession) ...[
+                  SizedBox(height: DetailSpacing.md),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          l10n.walletReconnectManualRequiredToast,
+                          style: KubusTextStyles.sectionSubtitle.copyWith(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.72),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: DetailSpacing.md),
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          await WalletReconnectAction.handleReadOnlyReconnect(
+                            context: context,
+                            walletProvider: walletProvider,
+                          );
+                        },
+                        icon: const Icon(Icons.refresh),
+                        label: Text(l10n.commonReconnect),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ],
           ),

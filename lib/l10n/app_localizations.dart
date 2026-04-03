@@ -119,6 +119,12 @@ abstract class AppLocalizations {
   /// **'Sign in'**
   String get commonSignIn;
 
+  /// No description provided for @commonReconnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnect'**
+  String get commonReconnect;
+
   /// No description provided for @commonClear.
   ///
   /// In en, this message translates to:
@@ -2932,6 +2938,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Not connected'**
   String get settingsWalletConnectionNotConnected;
+
+  /// No description provided for @walletSessionAccountSignedIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in'**
+  String get walletSessionAccountSignedIn;
+
+  /// No description provided for @walletSessionAccountSignedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed out'**
+  String get walletSessionAccountSignedOut;
+
+  /// No description provided for @walletSessionSignerReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to sign'**
+  String get walletSessionSignerReady;
+
+  /// No description provided for @walletSessionSignerMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Read-only (no signer)'**
+  String get walletSessionSignerMissing;
+
+  /// No description provided for @walletSessionStatusSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Account: {accountStatus} · Wallet: {walletStatus} · Signer: {signerStatus}'**
+  String walletSessionStatusSummary(Object accountStatus, Object walletStatus, Object signerStatus);
+
+  /// No description provided for @walletActionSignInRequiredToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to continue.'**
+  String get walletActionSignInRequiredToast;
+
+  /// No description provided for @walletActionConnectWalletRequiredToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect your wallet to continue.'**
+  String get walletActionConnectWalletRequiredToast;
 
   /// No description provided for @settingsNetworkTileTitle.
   ///

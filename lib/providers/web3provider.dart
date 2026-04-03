@@ -48,9 +48,10 @@ class Web3Provider extends ChangeNotifier {
   }
 
   bool get hasWalletIdentity => _walletProvider?.hasWalletIdentity ?? false;
+  bool get hasSigner => _walletProvider?.hasSigner ?? false;
   bool get canTransact => _walletProvider?.canTransact ?? false;
   bool get isReadOnlySession => _walletProvider?.isReadOnlySession ?? false;
-  bool get isConnected => canTransact;
+  bool get isConnected => hasWalletIdentity;
   Wallet? get wallet => _walletProvider?.wallet;
   String get walletAddress => _walletProvider?.currentWalletAddress ?? '';
   double get solBalance => wallet?.getTokenBySymbol('SOL')?.balance ?? 0.0;

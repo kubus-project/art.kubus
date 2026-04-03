@@ -379,7 +379,7 @@ class _WalletHomeState extends State<WalletHome> {
                                   : KubusSpacing.lg,
                             ),
                             Text(
-                              'Reconnect to enable signing and transfers.',
+                              l10n.walletReconnectManualRequiredToast,
                               style: KubusTypography.inter(
                                 fontSize: KubusHeaderMetrics.sectionSubtitle,
                                 fontWeight: FontWeight.w500,

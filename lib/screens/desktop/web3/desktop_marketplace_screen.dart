@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../models/collectible.dart';
 import '../../../providers/collectibles_provider.dart';
+import '../../../providers/profile_provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/web3provider.dart';
+import '../../../providers/wallet_provider.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/kubus_labs_feature.dart';
 import '../../../utils/marketplace_value_formatter.dart';
+import '../../../utils/wallet_action_guard.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../widgets/artwork_creator_byline.dart';
@@ -75,6 +79,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final themeProvider = Provider.of<ThemeProvider>(context);
     final animationTheme = context.animationTheme;
     final screenWidth = MediaQuery.of(context).size.width;
@@ -133,6 +138,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
   }
 
   Widget _buildHeader(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(KubusSpacing.lg + KubusSpacing.xs),
       child: Row(
@@ -162,24 +168,37 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
             ),
           ),
           const SizedBox(width: KubusSpacing.lg),
-          Consumer<Web3Provider>(
-            builder: (context, web3Provider, _) {
+          Consumer3<Web3Provider, WalletProvider, ProfileProvider>(
+            builder:
+                (context, web3Provider, walletProvider, profileProvider, _) {
+              final canCreate = web3Provider.canTransact;
+              final hasWalletIdentity = walletProvider.hasWalletIdentity;
               return ElevatedButton.icon(
-                onPressed: web3Provider.isConnected
-                    ? () {
-                        // Create NFT
-                      }
-                    : () {
-                        Navigator.of(context).pushNamed('/connect-wallet');
-                      },
+                onPressed: () async {
+                  if (canCreate) {
+                    // Create NFT
+                    return;
+                  }
+                  await WalletActionGuard.ensureSignerAccess(
+                    context: context,
+                    profileProvider: profileProvider,
+                    walletProvider: walletProvider,
+                  );
+                },
                 icon: Icon(
-                  web3Provider.isConnected
+                  canCreate
                       ? Icons.add
-                      : Icons.account_balance_wallet,
+                      : hasWalletIdentity
+                          ? Icons.refresh
+                          : Icons.account_balance_wallet,
                   size: KubusHeaderMetrics.actionIcon,
                 ),
                 label: Text(
-                  web3Provider.isConnected ? 'Create' : 'Connect Wallet',
+                  canCreate
+                      ? l10n.commonCreate
+                      : hasWalletIdentity
+                          ? l10n.commonReconnect
+                          : l10n.authConnectWalletButton,
                   style: KubusTextStyles.detailButton,
                 ),
                 style: ElevatedButton.styleFrom(

@@ -901,37 +901,22 @@ class _DesktopShellState extends State<DesktopShell>
     final navigator = Navigator.of(context);
     navigator.push(
       MaterialPageRoute(
-        builder: (_) => const SignInScreen(),
-        settings: const RouteSettings(name: '/sign-in'),
+        builder: (_) => web3.Web3OnboardingScreen(
+          featureKey: Web3FeaturesOnboardingData.featureKey,
+          featureTitle: Web3FeaturesOnboardingData.featureTitle(l10n),
+          pages: Web3FeaturesOnboardingData.pages(l10n),
+          onComplete: () {
+            navigator.pushReplacement(
+              MaterialPageRoute(
+                builder: (_) => const SignInScreen(
+                  openWalletFlowOnStart: true,
+                ),
+                settings: const RouteSettings(name: '/sign-in'),
+              ),
+            );
+          },
+        ),
       ),
     );
-
-    // Layer Web3 onboarding over the sign-in screen so users see context before connecting wallets
-    Future.microtask(() {
-      navigator.push(
-        MaterialPageRoute(
-          builder: (_) => web3.Web3OnboardingScreen(
-            featureKey: Web3FeaturesOnboardingData.featureKey,
-            featureTitle: Web3FeaturesOnboardingData.featureTitle(l10n),
-            pages: Web3FeaturesOnboardingData.pages(l10n),
-            onComplete: () {
-              if (mounted) {
-                setState(() {
-                  _activeRoute = _walletRoute;
-                  _screenStack.clear();
-                });
-                _syncTelemetry();
-              }
-              navigator.push(
-                MaterialPageRoute(
-                  builder: (_) => const ConnectWallet(),
-                  settings: const RouteSettings(name: '/connect-wallet'),
-                ),
-              );
-            },
-          ),
-        ),
-      );
-    });
   }
 }

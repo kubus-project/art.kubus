@@ -26,7 +26,7 @@ import 'package:art_kubus/widgets/auth_entry_shell.dart';
 import 'package:art_kubus/widgets/email_registration_form.dart';
 import 'package:art_kubus/widgets/google_sign_in_button.dart';
 import 'package:art_kubus/widgets/google_sign_in_web_button.dart';
-import 'package:art_kubus/widgets/auth_wallet_entry_menu.dart';
+import 'package:art_kubus/widgets/auth_wallet_flow_sheet.dart';
 import 'package:art_kubus/widgets/kubus_button.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/wallet_backup_prompts.dart';
@@ -82,6 +82,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
   String? _confirmPasswordError;
   String? _usernameError;
   bool _showCompactEmailForm = false;
+  bool _walletFlowOpening = false;
 
   Map<String, dynamic>? _decodeAuthErrorPayload(Object error) {
     Map<String, dynamic>? tryDecode(String raw) {
@@ -608,15 +609,9 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
   }
 
   Future<bool> _requireSignerForWallet(String walletAddress) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ConnectWallet(
-          initialStep: 1,
-          telemetryAuthFlow: 'signin',
-          requiredWalletAddress: walletAddress,
-        ),
-        settings: const RouteSettings(name: '/connect-wallet/import-required'),
-      ),
+    await _showConnectWalletFlow(
+      initialStep: 1,
+      requiredWalletAddress: walletAddress,
     );
     if (!mounted) return false;
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
@@ -763,38 +758,63 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     Navigator.of(context).pushReplacementNamed('/sign-in');
   }
 
-  Future<void> _openConnectWalletRoute({
-    required int initialStep,
-    required String routeName,
+  Future<void> _showConnectWalletFlow({
+    int initialStep = 0,
+    String? requiredWalletAddress,
   }) async {
-    final hadAuth =
-        (BackendApiService().getAuthToken() ?? '').trim().isNotEmpty;
-    final routeResult = await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ConnectWallet(
-          initialStep: initialStep,
-          telemetryAuthFlow: 'signup',
-        ),
-        settings: RouteSettings(name: routeName),
-      ),
-    );
-    if (!mounted) return;
+    if (_walletFlowOpening) return;
 
-    final hasAuthNow =
-        (BackendApiService().getAuthToken() ?? '').trim().isNotEmpty;
-    if (!hadAuth && hasAuthNow) {
+    final api = BackendApiService();
+    final hadAuth = (api.getAuthToken() ?? '').trim().isNotEmpty;
+    _walletFlowOpening = true;
+    try {
+      final routeResult = await showAuthWalletFlowSheet(
+        context: context,
+        telemetryAuthFlow: 'signup',
+        initialStep: initialStep,
+        requiredWalletAddress: requiredWalletAddress,
+      );
+      if (!mounted) return;
+
       if (routeResult is Map<String, dynamic>) {
         await _handleAuthSuccess(routeResult);
         return;
       }
-      if (widget.embedded) {
-        if (widget.onAuthSuccess != null) {
-          await widget.onAuthSuccess!();
+
+      final hasAuthNow = (api.getAuthToken() ?? '').trim().isNotEmpty;
+      if (!hadAuth && hasAuthNow) {
+        final hydratedPayload = await _resolveAuthPayloadFromCurrentSession();
+        if (!mounted) return;
+        if (hydratedPayload != null) {
+          await _handleAuthSuccess(hydratedPayload);
         }
-      } else {
-        Navigator.of(context).pushReplacementNamed('/main');
       }
+    } finally {
+      _walletFlowOpening = false;
     }
+  }
+
+  Future<Map<String, dynamic>?> _resolveAuthPayloadFromCurrentSession() async {
+    final api = BackendApiService();
+
+    final profile = await api.getMyProfile();
+    final profileData = profile['data'];
+    if (profile['success'] == true && profileData is Map<String, dynamic>) {
+      return <String, dynamic>{
+        'data': <String, dynamic>{'user': profileData},
+      };
+    }
+
+    final walletAddress = (api.getCurrentAuthWalletAddress() ?? '').trim();
+    if (walletAddress.isEmpty) {
+      return null;
+    }
+
+    return <String, dynamic>{
+      'data': <String, dynamic>{
+        'user': <String, dynamic>{'walletAddress': walletAddress},
+      },
+    };
   }
 
   String? _signerBackedWalletForGoogleAuth() {
@@ -813,15 +833,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       return;
     }
     unawaited(TelemetryService().trackSignUpAttempt(method: 'wallet'));
-    final option = await showAuthWalletEntryMenu(
-      context: context,
-      description: l10n.authConnectWalletModalDescriptionRegister,
-    );
-    if (!mounted || option == null) return;
-    await _openConnectWalletRoute(
-      initialStep: option.initialStep,
-      routeName: option.routeName,
-    );
+    await _showConnectWalletFlow();
   }
 
   @override

@@ -34,12 +34,14 @@ class ConnectWallet extends StatefulWidget {
   final int initialStep;
   final String? telemetryAuthFlow;
   final String? requiredWalletAddress;
+  final bool embedded;
 
   const ConnectWallet({
     super.key,
     this.initialStep = 0,
     this.telemetryAuthFlow,
     this.requiredWalletAddress,
+    this.embedded = false,
   });
 
   @override
@@ -124,6 +126,11 @@ class _ConnectWalletState extends State<ConnectWallet>
     final bgMid = (Color.lerp(bgStart, bgEnd, 0.55) ?? bgEnd)
         .withValues(alpha: isDark ? 0.40 : 0.50);
     return <Color>[bgStart, bgMid, bgEnd, bgStart];
+  }
+
+  Color _accentColor(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider?>(context);
+    return themeProvider?.accentColor ?? Theme.of(context).colorScheme.primary;
   }
 
   String? _normalizedAuthFlow() {
@@ -321,6 +328,89 @@ class _ConnectWalletState extends State<ConnectWallet>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    if (widget.embedded) {
+      final scheme = Theme.of(context).colorScheme;
+      return Material(
+        color: Colors.transparent,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: scheme.surface.withValues(alpha: 0.92),
+            borderRadius: BorderRadius.circular(KubusRadius.xl),
+            border: Border.all(
+              color: scheme.outlineVariant.withValues(alpha: 0.2),
+            ),
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  KubusSpacing.md,
+                  KubusSpacing.md,
+                  KubusSpacing.sm,
+                  KubusSpacing.sm,
+                ),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        _currentStep > 0
+                            ? Icons.arrow_back
+                            : Icons.close,
+                        color: scheme.onSurface,
+                      ),
+                      onPressed: () {
+                        if (_currentStep > 0) {
+                          setState(() => _currentStep--);
+                        } else {
+                          Navigator.of(context).pop();
+                        }
+                      },
+                    ),
+                    Expanded(
+                      child: Text(
+                        _getStepTitle(l10n),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: KubusTypography.inter(
+                          fontSize: KubusHeaderMetrics.sectionTitle,
+                          fontWeight: FontWeight.bold,
+                          color: scheme.onSurface,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: _backgroundPaletteForStep(context),
+                    ),
+                  ),
+                  child: SizedBox.expand(
+                    child: Builder(
+                      builder: (context) {
+                        final walletProvider =
+                            Provider.of<WalletProvider?>(context);
+                        if (walletProvider?.canTransact ?? false) {
+                          return _buildConnectedView();
+                        }
+                        return _buildStepContent();
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: true,
@@ -354,13 +444,13 @@ class _ConnectWalletState extends State<ConnectWallet>
         intensity: 0.2,
         colors: _backgroundPaletteForStep(context),
         child: SizedBox.expand(
-          child: Consumer<WalletProvider>(
-            builder: (context, walletProvider, child) {
-              if (walletProvider.canTransact) {
+          child: Builder(
+            builder: (context) {
+              final walletProvider = Provider.of<WalletProvider?>(context);
+              if (walletProvider?.canTransact ?? false) {
                 return _buildConnectedView();
-              } else {
-                return _buildStepContent();
               }
+              return _buildStepContent();
             },
           ),
         ),
@@ -404,8 +494,7 @@ class _ConnectWalletState extends State<ConnectWallet>
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenHeight < 700 || screenWidth < 360;
     final colorScheme = Theme.of(context).colorScheme;
-    final accent =
-        Provider.of<ThemeProvider>(context, listen: false).accentColor;
+    final accent = _accentColor(context);
 
     return FadeTransition(
       opacity: _fadeAnimation,
@@ -526,8 +615,7 @@ class _ConnectWalletState extends State<ConnectWallet>
     required bool isSmallScreen,
     bool isAdvanced = false,
   }) {
-    final accent =
-        Provider.of<ThemeProvider>(context, listen: false).accentColor;
+    final accent = _accentColor(context);
     final colorScheme = Theme.of(context).colorScheme;
     final iconColor =
         icon == Icons.qr_code_scanner || icon == Icons.qr_code_2_outlined
@@ -871,11 +959,27 @@ class _ConnectWalletState extends State<ConnectWallet>
 
     try {
       final walletProvider =
-          Provider.of<WalletProvider>(context, listen: false);
-      final gate = Provider.of<SecurityGateProvider>(context, listen: false);
+          Provider.of<WalletProvider?>(context, listen: false);
+      final gate =
+          Provider.of<SecurityGateProvider?>(context, listen: false);
       final navigator = Navigator.of(context);
       final profileProvider =
-          Provider.of<ProfileProvider>(context, listen: false);
+          Provider.of<ProfileProvider?>(context, listen: false);
+
+      if (walletProvider == null || gate == null || profileProvider == null) {
+        setState(() {
+          _isLoading = false;
+        });
+        messenger.showKubusSnackBar(
+          SnackBar(
+            content: Text(l10n.connectWalletImportFailedToast),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
       final requiredWalletAddress = (widget.requiredWalletAddress ?? '').trim();
       if (requiredWalletAddress.isNotEmpty) {
         final derivedAddress =
@@ -1617,7 +1721,21 @@ class _ConnectWalletState extends State<ConnectWallet>
 
     try {
       final walletProvider =
-          Provider.of<WalletProvider>(context, listen: false);
+          Provider.of<WalletProvider?>(context, listen: false);
+      if (walletProvider == null) {
+        setState(() {
+          _isLoading = false;
+          _currentStep = 0;
+        });
+        messenger.showKubusSnackBar(
+          SnackBar(
+            content: Text(l10n.connectWalletWalletConnectNeedsLocalWalletToast),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
       final walletAddress = walletProvider.currentWalletAddress;
       if (!walletProvider.canTransact ||
           walletAddress == null ||
@@ -1654,11 +1772,27 @@ class _ConnectWalletState extends State<ConnectWallet>
           final messenger = ScaffoldMessenger.of(context);
           final navigator = Navigator.of(context);
           final walletProvider =
-              Provider.of<WalletProvider>(context, listen: false);
+              Provider.of<WalletProvider?>(context, listen: false);
           final gate =
-              Provider.of<SecurityGateProvider>(context, listen: false);
+              Provider.of<SecurityGateProvider?>(context, listen: false);
           final profileProvider =
-              Provider.of<ProfileProvider>(context, listen: false);
+              Provider.of<ProfileProvider?>(context, listen: false);
+
+          if (walletProvider == null || gate == null || profileProvider == null) {
+            setState(() {
+              _isLoading = false;
+            });
+            messenger.showKubusSnackBar(
+              SnackBar(
+                content:
+                    Text(l10n.connectWalletWalletConnectConnectionErrorToast),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+            return;
+          }
+
           messenger.clearSnackBars();
           if (!_isAuthEntryFlow) {
             messenger.showKubusSnackBar(
@@ -1769,10 +1903,25 @@ class _ConnectWalletState extends State<ConnectWallet>
 
     try {
       final walletProvider =
-          Provider.of<WalletProvider>(context, listen: false);
-      final gate = Provider.of<SecurityGateProvider>(context, listen: false);
+          Provider.of<WalletProvider?>(context, listen: false);
+      final gate =
+          Provider.of<SecurityGateProvider?>(context, listen: false);
       final profileProvider =
-          Provider.of<ProfileProvider>(context, listen: false);
+          Provider.of<ProfileProvider?>(context, listen: false);
+
+      if (walletProvider == null || gate == null || profileProvider == null) {
+        setState(() {
+          _isLoading = false;
+        });
+        messenger.showKubusSnackBar(
+          SnackBar(
+            content: Text(l10n.connectWalletCreateFailedToast),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
 
       final result = await walletProvider.createWallet();
 
@@ -1943,10 +2092,12 @@ class _ConnectWalletState extends State<ConnectWallet>
                     : KubusSpacing.md),
             TextButton(
               onPressed: () {
-                unawaited(
-                  Provider.of<WalletProvider>(context, listen: false)
-                      .disconnectWallet(),
-                );
+                final walletProvider =
+                    Provider.of<WalletProvider?>(context, listen: false);
+                if (walletProvider == null) {
+                  return;
+                }
+                unawaited(walletProvider.disconnectWallet());
               },
               child: Text(
                 l10n.connectWalletConnectedDisconnectButton,
@@ -2039,7 +2190,7 @@ class _ConnectWalletState extends State<ConnectWallet>
           Icon(
             icon,
             size: 24,
-            color: Provider.of<ThemeProvider>(context).accentColor,
+            color: _accentColor(context),
           ),
           const SizedBox(width: 12),
           Expanded(

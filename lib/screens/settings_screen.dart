@@ -41,6 +41,7 @@ import '../../config/config.dart';
 import '../utils/map_performance_debug.dart';
 import '../providers/locale_provider.dart';
 import '../utils/wallet_backup_status.dart';
+import '../utils/wallet_action_guard.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/utils/wallet_reconnect_action.dart';
 
@@ -278,6 +279,10 @@ class _SettingsScreenState extends State<SettingsScreen>
     final web3Provider = Provider.of<Web3Provider>(context);
     final walletProvider = Provider.of<WalletProvider>(context);
     final profileProvider = Provider.of<ProfileProvider>(context);
+    final access = WalletSessionAccessSnapshot.fromProviders(
+      profileProvider: profileProvider,
+      walletProvider: walletProvider,
+    );
     final scheme = Theme.of(context).colorScheme;
     final headerColor = scheme.secondary;
     const avatarRadius = 30.0;
@@ -346,9 +351,18 @@ class _SettingsScreenState extends State<SettingsScreen>
                             color: Colors.white.withValues(alpha: 0.8),
                           ),
                         ),
+                        Text(
+                          access.settingsStatusSummary(l10n),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: KubusTypography.inter(
+                            fontSize: 12,
+                            color: Colors.white.withValues(alpha: 0.78),
+                          ),
+                        ),
                         if (walletProvider.isReadOnlySession)
                           Text(
-                            'Read-only wallet session',
+                            l10n.walletReconnectManualRequiredToast,
                             style: KubusTypography.inter(
                               fontSize: 12,
                               color: Colors.white.withValues(alpha: 0.75),
@@ -1281,12 +1295,13 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   Widget _buildWalletSection(AppLocalizations l10n) {
     final walletProvider = Provider.of<WalletProvider>(context);
+    final profileProvider = Provider.of<ProfileProvider>(context);
+    final access = WalletSessionAccessSnapshot.fromProviders(
+      profileProvider: profileProvider,
+      walletProvider: walletProvider,
+    );
     final scheme = Theme.of(context).colorScheme;
-    final walletStatusLabel = walletProvider.isReadOnlySession
-        ? '${l10n.settingsWalletConnectionConnected} (read-only)'
-        : walletProvider.hasWalletIdentity
-            ? l10n.settingsWalletConnectionConnected
-            : l10n.settingsWalletConnectionNotConnected;
+    final walletStatusLabel = access.settingsStatusSummary(l10n);
     return _buildSection(
       l10n.settingsWalletSectionTitle,
       Icons.account_balance_wallet,

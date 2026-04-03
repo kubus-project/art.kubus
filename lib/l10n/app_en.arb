@@ -4,6 +4,7 @@
   "appExitConfirmBackHint": "Swipe or press back again to exit the app.",
   "commonCancel": "Cancel",
   "commonSignIn": "Sign in",
+  "commonReconnect": "Reconnect",
   "commonClear": "Clear",
   "commonClose": "Close",
   "commonContinue": "Continue",
@@ -549,6 +550,20 @@
   "settingsWalletConnectionTileTitle": "Wallet connection",
   "settingsWalletConnectionConnected": "Connected",
   "settingsWalletConnectionNotConnected": "Not connected",
+  "walletSessionAccountSignedIn": "Signed in",
+  "walletSessionAccountSignedOut": "Signed out",
+  "walletSessionSignerReady": "Ready to sign",
+  "walletSessionSignerMissing": "Read-only (no signer)",
+  "walletSessionStatusSummary": "Account: {accountStatus} · Wallet: {walletStatus} · Signer: {signerStatus}",
+  "@walletSessionStatusSummary": {
+    "placeholders": {
+      "accountStatus": {},
+      "walletStatus": {},
+      "signerStatus": {}
+    }
+  },
+  "walletActionSignInRequiredToast": "Sign in to continue.",
+  "walletActionConnectWalletRequiredToast": "Connect your wallet to continue.",
   "settingsNetworkTileTitle": "Network",
   "settingsCurrentNetworkValue": "Current: {network}",
   "@settingsCurrentNetworkValue": {

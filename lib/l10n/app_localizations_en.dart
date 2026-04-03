@@ -21,6 +21,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonSignIn => 'Sign in';
 
   @override
+  String get commonReconnect => 'Reconnect';
+
+  @override
   String get commonClear => 'Clear';
 
   @override
@@ -1450,6 +1453,29 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsWalletConnectionNotConnected => 'Not connected';
+
+  @override
+  String get walletSessionAccountSignedIn => 'Signed in';
+
+  @override
+  String get walletSessionAccountSignedOut => 'Signed out';
+
+  @override
+  String get walletSessionSignerReady => 'Ready to sign';
+
+  @override
+  String get walletSessionSignerMissing => 'Read-only (no signer)';
+
+  @override
+  String walletSessionStatusSummary(Object accountStatus, Object walletStatus, Object signerStatus) {
+    return 'Account: $accountStatus · Wallet: $walletStatus · Signer: $signerStatus';
+  }
+
+  @override
+  String get walletActionSignInRequiredToast => 'Sign in to continue.';
+
+  @override
+  String get walletActionConnectWalletRequiredToast => 'Connect your wallet to continue.';
 
   @override
   String get settingsNetworkTileTitle => 'Network';

@@ -7,9 +7,12 @@ import '../../../models/artwork.dart';
 import '../../../models/promotion.dart';
 import '../../../models/portfolio_entry.dart';
 import '../../../providers/portfolio_provider.dart';
+import '../../../providers/profile_provider.dart';
+import '../../../providers/wallet_provider.dart';
 import '../../../utils/artwork_media_resolver.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../utils/artwork_edit_navigation.dart';
+import '../../../utils/wallet_action_guard.dart';
 import '../../../utils/design_tokens.dart';
 import '../../art/collection_detail_screen.dart';
 import '../../events/exhibition_detail_screen.dart';
@@ -497,14 +500,20 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
             source: 'artist_portfolio');
         return;
       case 'publish':
-        await provider.publishArtwork(artwork.id);
-        messenger
-            .showKubusSnackBar(SnackBar(content: Text(l10n.commonSavedToast)));
+        await _runPublishActionWithGuard(
+          context: context,
+          provider: provider,
+          artworkId: artwork.id,
+          publish: true,
+        );
         return;
       case 'unpublish':
-        await provider.unpublishArtwork(artwork.id);
-        messenger
-            .showKubusSnackBar(SnackBar(content: Text(l10n.commonSavedToast)));
+        await _runPublishActionWithGuard(
+          context: context,
+          provider: provider,
+          artworkId: artwork.id,
+          publish: false,
+        );
         return;
       case 'delete':
         final confirmed = await _confirmDeleteArtwork(context, artwork.title);
@@ -592,11 +601,12 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
                     : l10n.exhibitionCreatorPublishTitle),
                 onTap: () async {
                   Navigator.of(sheetContext).pop();
-                  if (isPublished) {
-                    await provider.unpublishArtwork(artwork.id);
-                  } else {
-                    await provider.publishArtwork(artwork.id);
-                  }
+                  await _runPublishActionWithGuard(
+                    context: context,
+                    provider: provider,
+                    artworkId: artwork.id,
+                    publish: !isPublished,
+                  );
                 },
               ),
               ListTile(
@@ -629,6 +639,35 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
           ),
         );
       },
+    );
+  }
+
+  Future<void> _runPublishActionWithGuard({
+    required BuildContext context,
+    required PortfolioProvider provider,
+    required String artworkId,
+    required bool publish,
+  }) async {
+    final profileProvider = context.read<ProfileProvider>();
+    final walletProvider = context.read<WalletProvider>();
+    final canProceed = await WalletActionGuard.ensureSignerAccess(
+      context: context,
+      profileProvider: profileProvider,
+      walletProvider: walletProvider,
+    );
+    if (!mounted || !canProceed) {
+      return;
+    }
+
+    if (publish) {
+      await provider.publishArtwork(artworkId);
+    } else {
+      await provider.unpublishArtwork(artworkId);
+    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showKubusSnackBar(
+      SnackBar(content: Text(AppLocalizations.of(context)!.commonSavedToast)),
     );
   }
 }

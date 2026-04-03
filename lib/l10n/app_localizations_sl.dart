@@ -21,6 +21,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get commonSignIn => 'Prijava';
 
   @override
+  String get commonReconnect => 'Ponovno poveži';
+
+  @override
   String get commonClear => 'Počisti';
 
   @override
@@ -1450,6 +1453,29 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get settingsWalletConnectionNotConnected => 'Ni povezano';
+
+  @override
+  String get walletSessionAccountSignedIn => 'Prijavljen/-a';
+
+  @override
+  String get walletSessionAccountSignedOut => 'Odjavljen/-a';
+
+  @override
+  String get walletSessionSignerReady => 'Pripravljeno za podpis';
+
+  @override
+  String get walletSessionSignerMissing => 'Samo za branje (brez podpisnika)';
+
+  @override
+  String walletSessionStatusSummary(Object accountStatus, Object walletStatus, Object signerStatus) {
+    return 'Račun: $accountStatus · Denarnica: $walletStatus · Podpisnik: $signerStatus';
+  }
+
+  @override
+  String get walletActionSignInRequiredToast => 'Za nadaljevanje se prijavi.';
+
+  @override
+  String get walletActionConnectWalletRequiredToast => 'Za nadaljevanje poveži denarnico.';
 
   @override
   String get settingsNetworkTileTitle => 'Omrežje';

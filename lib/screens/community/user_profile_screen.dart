@@ -627,6 +627,16 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         !coverUrlIsKnownBad;
     const avatarRadius = 45.0;
     const avatarCornerRadiusFactor = AvatarWidget.defaultCornerRadiusFactor;
+    const avatarRingPadding = 4.0;
+
+    final avatarShapeRadius = AvatarWidget.shapeRadiusFor(
+      radius: avatarRadius,
+      cornerRadiusFactor: avatarCornerRadiusFactor,
+    );
+    final avatarRingShapeRadius = AvatarWidget.shapeRadiusFor(
+      radius: avatarRadius + avatarRingPadding,
+      cornerRadiusFactor: avatarCornerRadiusFactor,
+    );
 
     return Column(
       children: [
@@ -721,11 +731,19 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               child: Center(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surface
+                        .withValues(alpha: 0.9),
                     borderRadius: BorderRadius.circular(
-                      AvatarWidget.shapeRadiusFor(
-                        radius: avatarRadius,
-                        cornerRadiusFactor: avatarCornerRadiusFactor,
-                      ),
+                      avatarRingShapeRadius,
+                    ),
+                    border: Border.all(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .outline
+                          .withValues(alpha: 0.28),
+                      width: 1.2,
                     ),
                     boxShadow: [
                       BoxShadow(
@@ -735,15 +753,21 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                       ),
                     ],
                   ),
-                  child: AvatarWidget(
-                    wallet: user!.id,
-                    avatarUrl: user!.profileImageUrl,
-                    radius: avatarRadius,
-                    borderWidth: 5,
-                    borderColor: Theme.of(context).colorScheme.surface,
-                    cornerRadiusFactor: avatarCornerRadiusFactor,
-                    enableProfileNavigation: false,
-                    heroTag: widget.heroTag,
+                  child: Padding(
+                    padding: const EdgeInsets.all(avatarRingPadding),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(avatarShapeRadius),
+                      child: AvatarWidget(
+                        wallet: user!.id,
+                        avatarUrl: user!.profileImageUrl,
+                        radius: avatarRadius,
+                        borderWidth: 0,
+                        borderColor: Colors.transparent,
+                        cornerRadiusFactor: avatarCornerRadiusFactor,
+                        enableProfileNavigation: false,
+                        heroTag: widget.heroTag,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -754,79 +778,97 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         const SizedBox(height: 48),
 
         // Name and Username
-        Align(
-          alignment: Alignment.center,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
+        LiquidGlassCard(
+          margin: EdgeInsets.zero,
+          borderRadius: BorderRadius.circular(KubusRadius.xl),
+          padding: const EdgeInsets.symmetric(
+            horizontal: KubusSpacing.lg,
+            vertical: KubusSpacing.md,
+          ),
+          child: Column(
             children: [
-              Flexible(
-                child: Text(
-                  user!.name,
-                  style: KubusTextStyles.heroTitle.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+              Align(
+                alignment: Alignment.center,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        user!.name,
+                        style: KubusTextStyles.heroTitle.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (user!.isVerified) ...[
+                      const SizedBox(width: KubusSpacing.sm),
+                      Icon(
+                        Icons.verified,
+                        color: themeProvider.accentColor,
+                        size: KubusHeaderMetrics.actionIcon,
+                      ),
+                    ],
+                    if (isArtist) ...[
+                      const SizedBox(width: KubusSpacing.sm),
+                      const ArtistBadge(),
+                    ],
+                    if (isInstitution) ...[
+                      const SizedBox(width: KubusSpacing.sm),
+                      const InstitutionBadge(),
+                    ],
+                  ],
                 ),
               ),
-              if (user!.isVerified) ...[
-                const SizedBox(width: KubusSpacing.sm),
-                Icon(
-                  Icons.verified,
-                  color: themeProvider.accentColor,
-                  size: KubusHeaderMetrics.actionIcon,
+              const SizedBox(height: KubusSpacing.xs),
+              Text(
+                user!.username,
+                style: KubusTextStyles.sectionTitle.copyWith(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.7),
                 ),
-              ],
-              if (isArtist) ...[
-                const SizedBox(width: KubusSpacing.sm),
-                const ArtistBadge(),
-              ],
-              if (isInstitution) ...[
-                const SizedBox(width: KubusSpacing.sm),
-                const InstitutionBadge(),
-              ],
+              ),
+              const SizedBox(height: KubusSpacing.sm - KubusSpacing.xxs),
+              UserActivityStatusLine(
+                walletAddress: user!.id,
+                textAlign: TextAlign.center,
+                textStyle: KubusTextStyles.sectionSubtitle.copyWith(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
+                ),
+              ),
+              const SizedBox(height: KubusSpacing.md),
+
+              // Bio
+              Text(
+                user!.bio,
+                style: KubusTextStyles.detailBody.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: KubusSpacing.sm),
+              ProfileArtistInfoFields(
+                fieldOfWork: user!.fieldOfWork,
+                yearsActive: user!.yearsActive,
+              ),
+              const SizedBox(height: KubusSpacing.sm),
+
+              // Join Date
+              Text(
+                user!.joinedDate,
+                style: KubusTextStyles.detailCaption.copyWith(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.5),
+                ),
+              ),
             ],
-          ),
-        ),
-        const SizedBox(height: KubusSpacing.xs),
-        Text(
-          user!.username,
-          style: KubusTextStyles.sectionTitle.copyWith(
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-          ),
-        ),
-        const SizedBox(height: KubusSpacing.sm - KubusSpacing.xxs),
-        UserActivityStatusLine(
-          walletAddress: user!.id,
-          textAlign: TextAlign.center,
-          textStyle: KubusTextStyles.sectionSubtitle.copyWith(
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-          ),
-        ),
-        const SizedBox(height: KubusSpacing.md),
-
-        // Bio
-        Text(
-          user!.bio,
-          style: KubusTextStyles.detailBody.copyWith(
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: KubusSpacing.sm),
-        ProfileArtistInfoFields(
-          fieldOfWork: user!.fieldOfWork,
-          yearsActive: user!.yearsActive,
-        ),
-        const SizedBox(height: KubusSpacing.sm),
-
-        // Join Date
-        Text(
-          user!.joinedDate,
-          style: KubusTextStyles.detailCaption.copyWith(
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
           ),
         ),
       ],

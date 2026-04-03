@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 import '../../../config/api_keys.dart';
@@ -70,10 +71,11 @@ class _TokenSwapState extends State<TokenSwap> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     const swapColor = AppColorUtils.greenAccent;
     final walletProvider = context.watch<WalletProvider>();
     if (walletProvider.hasWalletIdentity && !walletProvider.canTransact) {
-      return _buildReadOnlyState(theme, swapColor);
+      return _buildReadOnlyState(theme, swapColor, l10n);
     }
     final tokens = _availableTokens(walletProvider);
     final hasTokens = tokens.isNotEmpty;
@@ -154,7 +156,11 @@ class _TokenSwapState extends State<TokenSwap> {
     );
   }
 
-  Widget _buildReadOnlyState(ThemeData theme, Color swapColor) {
+  Widget _buildReadOnlyState(
+    ThemeData theme,
+    Color swapColor,
+    AppLocalizations l10n,
+  ) {
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
@@ -185,7 +191,7 @@ class _TokenSwapState extends State<TokenSwap> {
                 Icon(Icons.lock_clock, size: 64, color: swapColor),
                 const SizedBox(height: KubusSpacing.lg),
                 Text(
-                  'Read-only wallet session',
+                  l10n.settingsBackupStatusReadOnly,
                   style: KubusTypography.inter(
                     fontSize: KubusHeaderMetrics.screenTitle,
                     fontWeight: FontWeight.w700,
@@ -194,7 +200,7 @@ class _TokenSwapState extends State<TokenSwap> {
                 ),
                 const SizedBox(height: KubusSpacing.md),
                 Text(
-                  'Reconnect to enable signing and transfers.',
+                  l10n.walletReconnectManualRequiredToast,
                   textAlign: TextAlign.center,
                   style: KubusTypography.inter(
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
@@ -207,7 +213,7 @@ class _TokenSwapState extends State<TokenSwap> {
                     backgroundColor: swapColor,
                     foregroundColor: theme.colorScheme.onPrimary,
                   ),
-                  child: const Text('Reconnect'),
+                  child: Text(l10n.commonReconnect),
                 ),
               ],
             ),

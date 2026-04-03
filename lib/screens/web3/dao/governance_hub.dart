@@ -8,10 +8,12 @@ import '../../onboarding/web3/web3_onboarding.dart';
 import '../../onboarding/web3/onboarding_data.dart';
 import '../../../providers/dao_provider.dart';
 import '../../../providers/web3provider.dart';
+import '../../../providers/wallet_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../models/dao.dart';
 import '../../../utils/wallet_utils.dart';
+import '../../../utils/wallet_action_guard.dart';
 import '../../../config/config.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
@@ -387,23 +389,27 @@ class _GovernanceHubState extends State<GovernanceHub>
     bool showIcon = true,
   }) {
     final statColor = _daoAccent;
-    return KubusStatCard(
-      title: label,
-      value: value,
-      icon: icon,
-      showIcon: showIcon,
-      layout: KubusStatCardLayout.centered,
-      accent: statColor,
-      minHeight: 104,
-      padding: const EdgeInsets.all(10),
-      titleMaxLines: 2,
-      iconBoxSize: KubusSizes.sidebarActionIconBox - KubusSpacing.md,
-      iconSize: KubusSizes.sidebarActionIcon - KubusSpacing.xs,
-      titleStyle: KubusTextStyles.statLabel.copyWith(
-        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
-      ),
-      valueStyle: KubusTextStyles.statValue.copyWith(
-        color: Theme.of(context).colorScheme.onSurface,
+    const cardHeight = 104.0;
+    return SizedBox(
+      height: cardHeight,
+      child: KubusStatCard(
+        title: label,
+        value: value,
+        icon: icon,
+        showIcon: showIcon,
+        layout: KubusStatCardLayout.centered,
+        accent: statColor,
+        minHeight: cardHeight,
+        padding: const EdgeInsets.all(10),
+        titleMaxLines: 2,
+        iconBoxSize: KubusSizes.sidebarActionIconBox - KubusSpacing.md,
+        iconSize: KubusSizes.sidebarActionIcon - KubusSpacing.xs,
+        titleStyle: KubusTextStyles.statLabel.copyWith(
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+        ),
+        valueStyle: KubusTextStyles.statValue.copyWith(
+          color: Theme.of(context).colorScheme.onSurface,
+        ),
       ),
     );
   }
@@ -1660,7 +1666,7 @@ class _GovernanceHubState extends State<GovernanceHub>
           ),
           const SizedBox(height: 12),
           _buildRequirementItem(l10n.daoProposalRequirementWalletConnected,
-              Provider.of<Web3Provider>(context, listen: false).isConnected),
+              Provider.of<Web3Provider>(context, listen: false).canTransact),
           _buildRequirementItem(
               l10n.daoProposalRequirementClearlyDefined, true),
           _buildRequirementItem(l10n.daoProposalRequirementVotingPeriod, true),
@@ -1712,7 +1718,21 @@ class _GovernanceHubState extends State<GovernanceHub>
 
     final daoProvider = context.read<DAOProvider>();
     final web3Provider = context.read<Web3Provider>();
-    final wallet = web3Provider.walletAddress;
+    final walletProvider = context.read<WalletProvider>();
+    final profileProvider = context.read<ProfileProvider>();
+
+    final canProceed = await WalletActionGuard.ensureSignerAccess(
+      context: context,
+      profileProvider: profileProvider,
+      walletProvider: walletProvider,
+    );
+    if (!mounted || !canProceed) {
+      return;
+    }
+
+    final wallet =
+        (walletProvider.currentWalletAddress ?? web3Provider.walletAddress)
+            .trim();
 
     if (wallet.isEmpty) {
       messenger.showKubusSnackBar(
@@ -2833,9 +2853,23 @@ class _GovernanceHubState extends State<GovernanceHub>
   Future<void> _voteOnProposal(String proposalId, bool isYes) async {
     final daoProvider = context.read<DAOProvider>();
     final web3Provider = context.read<Web3Provider>();
-    final wallet = web3Provider.walletAddress;
+    final walletProvider = context.read<WalletProvider>();
+    final profileProvider = context.read<ProfileProvider>();
     final messenger = ScaffoldMessenger.of(context);
     final scheme = Theme.of(context).colorScheme;
+
+    final canProceed = await WalletActionGuard.ensureSignerAccess(
+      context: context,
+      profileProvider: profileProvider,
+      walletProvider: walletProvider,
+    );
+    if (!mounted || !canProceed) {
+      return;
+    }
+
+    final wallet =
+        (walletProvider.currentWalletAddress ?? web3Provider.walletAddress)
+            .trim();
 
     if (wallet.isEmpty) {
       messenger.showKubusSnackBar(

@@ -165,6 +165,43 @@ void main() {
     expect(result.single['id'], 'self-collection');
   });
 
+  test(
+      'getCollections generic 500 does not increment outage counters or switch to standby',
+      () async {
+    final requests = <http.Request>[];
+    final fallbackService = PublicFallbackService();
+    final api = BackendApiService();
+
+    api.setHttpClient(MockClient((request) async {
+      requests.add(request);
+      return http.Response(
+        jsonEncode(<String, Object?>{
+          'success': false,
+          'error': 'internal server error',
+        }),
+        500,
+        headers: const <String, String>{'content-type': 'application/json'},
+      );
+    }));
+
+    final result = await api.getCollections(
+      walletAddress: 'WalletOther11111111111111111111111111111',
+      limit: 6,
+    );
+
+    expect(result, isEmpty);
+    expect(fallbackService.mode, AppRuntimeMode.live);
+    expect(fallbackService.consecutiveDualFailures, 0);
+    expect(requests, isNotEmpty);
+    expect(
+      requests.every((request) =>
+          request.url.host == Uri.parse(AppConfig.baseApiUrl).host),
+      isTrue,
+      reason:
+          'Generic 500 responses should not be treated as dual-backend outage signals.',
+    );
+  });
+
   test('queueable mutation failures do not increment dual-backend outages',
       () async {
     final fallbackService = PublicFallbackService();

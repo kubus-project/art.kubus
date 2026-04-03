@@ -22,7 +22,7 @@ import '../../services/wallet_session_sync_service.dart';
 import '../../widgets/google_sign_in_button.dart';
 import '../../widgets/google_sign_in_web_button.dart';
 import '../../widgets/secure_account_password_prompt.dart';
-import '../../widgets/auth_wallet_entry_menu.dart';
+import '../../widgets/auth_wallet_flow_sheet.dart';
 import '../../widgets/kubus_button.dart';
 import '../../widgets/auth_entry_shell.dart';
 import '../../utils/design_tokens.dart';
@@ -45,6 +45,7 @@ class SignInScreen extends StatefulWidget {
     this.initialEmail,
     this.onAuthSuccess,
     this.embedded = false,
+    this.openWalletFlowOnStart = false,
     this.onVerificationRequired,
     this.onSwitchToRegister,
   });
@@ -54,6 +55,7 @@ class SignInScreen extends StatefulWidget {
   final String? initialEmail;
   final FutureOr<void> Function(Map<String, dynamic> payload)? onAuthSuccess;
   final bool embedded;
+  final bool openWalletFlowOnStart;
   final ValueChanged<String>? onVerificationRequired;
   final VoidCallback? onSwitchToRegister;
 
@@ -73,6 +75,7 @@ class _SignInScreenState extends State<SignInScreen> {
   String _googleAuthDiagStage = 'idle';
   String? _googleAuthDiagCode;
   bool _showCompactEmailForm = false;
+  bool _walletFlowOpening = false;
 
   @override
   void initState() {
@@ -84,6 +87,12 @@ class _SignInScreenState extends State<SignInScreen> {
     // Preload rate-limit cooldown so the Google sign-in click handler can
     // start the popup flow without awaiting (browser user-activation rules).
     unawaited(_loadGoogleAuthCooldown());
+
+    if (widget.openWalletFlowOnStart) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        unawaited(_showConnectWalletFlow());
+      });
+    }
   }
 
   Future<void> _loadGoogleAuthCooldown() async {
@@ -554,15 +563,9 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   Future<bool> _requireSignerForWallet(String walletAddress) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ConnectWallet(
-          initialStep: 1,
-          telemetryAuthFlow: 'signin',
-          requiredWalletAddress: walletAddress,
-        ),
-        settings: const RouteSettings(name: '/connect-wallet/import-required'),
-      ),
+    await _showConnectWalletFlow(
+      initialStep: 1,
+      requiredWalletAddress: walletAddress,
     );
     if (!mounted) return false;
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
@@ -764,25 +767,34 @@ class _SignInScreenState extends State<SignInScreen> {
     );
   }
 
-  Future<void> _openConnectWalletRoute(AuthWalletEntryOption option) async {
-    final routeResult = await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ConnectWallet(
-          initialStep: option.initialStep,
-          telemetryAuthFlow: 'signin',
-        ),
-        settings: RouteSettings(name: option.routeName),
-      ),
-    );
-    if (!mounted) return;
-    final hasAuthNow =
-        (BackendApiService().getAuthToken() ?? '').trim().isNotEmpty;
-    if (hasAuthNow && routeResult is Map<String, dynamic>) {
-      await _handleAuthSuccess(routeResult);
+  Future<Map<String, dynamic>?> _resolveAuthPayloadFromCurrentSession() async {
+    final api = BackendApiService();
+
+    final profile = await api.getMyProfile();
+    final profileData = profile['data'];
+    if (profile['success'] == true && profileData is Map<String, dynamic>) {
+      return <String, dynamic>{
+        'data': <String, dynamic>{'user': profileData},
+      };
     }
+
+    final walletAddress = (api.getCurrentAuthWalletAddress() ?? '').trim();
+    if (walletAddress.isEmpty) {
+      return null;
+    }
+
+    return <String, dynamic>{
+      'data': <String, dynamic>{
+        'user': <String, dynamic>{'walletAddress': walletAddress},
+      },
+    };
   }
 
-  void _showConnectWalletModal() {
+  Future<void> _showConnectWalletFlow({
+    int initialStep = 0,
+    String? requiredWalletAddress,
+  }) async {
+    if (_walletFlowOpening) return;
     final l10n = AppLocalizations.of(context)!;
     if (!AppConfig.enableWalletConnect || !AppConfig.enableWeb3) {
       ScaffoldMessenger.of(context).showKubusSnackBar(
@@ -790,15 +802,35 @@ class _SignInScreenState extends State<SignInScreen> {
       return;
     }
 
-    unawaited(TelemetryService().trackSignInAttempt(method: 'wallet'));
-    unawaited(() async {
-      final option = await showAuthWalletEntryMenu(
+    _walletFlowOpening = true;
+    try {
+      final api = BackendApiService();
+      final hadAuthBeforeOpen = (api.getAuthToken() ?? '').trim().isNotEmpty;
+      unawaited(TelemetryService().trackSignInAttempt(method: 'wallet'));
+      final routeResult = await showAuthWalletFlowSheet(
         context: context,
-        description: l10n.authConnectWalletModalDescriptionSignIn,
+        telemetryAuthFlow: 'signin',
+        initialStep: initialStep,
+        requiredWalletAddress: requiredWalletAddress,
       );
-      if (!mounted || option == null) return;
-      await _openConnectWalletRoute(option);
-    }());
+      if (!mounted) return;
+
+      if (routeResult is Map<String, dynamic>) {
+        await _handleAuthSuccess(routeResult);
+        return;
+      }
+
+      final hasAuthNow = (api.getAuthToken() ?? '').trim().isNotEmpty;
+      if (!hasAuthNow || hadAuthBeforeOpen) return;
+
+      final hydratedPayload = await _resolveAuthPayloadFromCurrentSession();
+      if (!mounted) return;
+      if (hydratedPayload != null) {
+        await _handleAuthSuccess(hydratedPayload);
+      }
+    } finally {
+      _walletFlowOpening = false;
+    }
   }
 
   @override
@@ -919,7 +951,7 @@ class _SignInScreenState extends State<SignInScreen> {
         ],
         if (!showEmailForm && enableWallet) ...[
           KubusButton(
-            onPressed: _showConnectWalletModal,
+            onPressed: () => unawaited(_showConnectWalletFlow()),
             icon: Icons.account_balance_wallet_outlined,
             label: l10n.authConnectWalletButton,
             variant: KubusButtonVariant.secondary,

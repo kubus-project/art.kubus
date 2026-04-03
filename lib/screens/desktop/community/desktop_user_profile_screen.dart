@@ -40,6 +40,7 @@ import '../components/desktop_widgets.dart';
 import '../../art/collection_detail_screen.dart';
 import '../desktop_shell.dart';
 import '../../../config/config.dart';
+import '../../../utils/kubus_color_roles.dart';
 import '../../activity/advanced_analytics_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
@@ -684,6 +685,16 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     final hasCoverImage = coverImageUrl != null && coverImageUrl.isNotEmpty;
     const avatarRadius = 44.0;
     const avatarCornerRadiusFactor = AvatarWidget.defaultCornerRadiusFactor;
+    const avatarRingPadding = 4.0;
+
+    final avatarShapeRadius = AvatarWidget.shapeRadiusFor(
+      radius: avatarRadius,
+      cornerRadiusFactor: avatarCornerRadiusFactor,
+    );
+    final avatarRingShapeRadius = AvatarWidget.shapeRadiusFor(
+      radius: avatarRadius + avatarRingPadding,
+      cornerRadiusFactor: avatarCornerRadiusFactor,
+    );
 
     return DesktopCard(
       padding: EdgeInsets.zero,
@@ -697,7 +708,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                   top: Radius.circular(KubusRadius.lg),
                 ),
                 child: Container(
-                  height: hasCoverImage ? 120 : 70,
+                  height: hasCoverImage ? 164 : 108,
                   width: double.infinity,
                   decoration: hasCoverImage
                       ? null
@@ -759,126 +770,145 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           // Horizontal profile info layout
           Padding(
             padding: const EdgeInsets.all(KubusSpacing.md),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Avatar
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(
-                      AvatarWidget.shapeRadiusFor(
-                        radius: avatarRadius,
-                        cornerRadiusFactor: avatarCornerRadiusFactor,
+            child: LiquidGlassCard(
+              margin: EdgeInsets.zero,
+              borderRadius: BorderRadius.circular(KubusRadius.lg),
+              padding: const EdgeInsets.all(KubusSpacing.md),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Avatar
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surface
+                          .withValues(alpha: 0.9),
+                      borderRadius:
+                          BorderRadius.circular(avatarRingShapeRadius),
+                      border: Border.all(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .outline
+                            .withValues(alpha: 0.28),
+                        width: 1.2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Theme.of(context)
+                              .shadowColor
+                              .withValues(alpha: 0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(avatarRingPadding),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(avatarShapeRadius),
+                        child: AvatarWidget(
+                          wallet: user!.id,
+                          avatarUrl: user!.profileImageUrl,
+                          radius: avatarRadius,
+                          borderWidth: 0,
+                          borderColor: Colors.transparent,
+                          cornerRadiusFactor: avatarCornerRadiusFactor,
+                          enableProfileNavigation: false,
+                          heroTag: widget.heroTag,
+                        ),
                       ),
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Theme.of(context)
-                            .shadowColor
-                            .withValues(alpha: 0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
                   ),
-                  child: AvatarWidget(
-                    wallet: user!.id,
-                    avatarUrl: user!.profileImageUrl,
-                    radius: avatarRadius,
-                    borderWidth: 3,
-                    borderColor: Theme.of(context).colorScheme.surface,
-                    cornerRadiusFactor: avatarCornerRadiusFactor,
-                    enableProfileNavigation: false,
-                    heroTag: widget.heroTag,
-                  ),
-                ),
-                const SizedBox(width: KubusSpacing.md),
-                // Name, username, bio
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              user!.name,
-                              style: KubusTextStyles.screenTitle.copyWith(
-                                color: Theme.of(context).colorScheme.onSurface,
+                  const SizedBox(width: KubusSpacing.md),
+                  // Name, username, bio
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                user!.name,
+                                style: KubusTextStyles.screenTitle.copyWith(
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                          if (isArtist) ...[
-                            const SizedBox(width: KubusSpacing.sm),
-                            const ArtistBadge(),
+                            if (isArtist) ...[
+                              const SizedBox(width: KubusSpacing.sm),
+                              const ArtistBadge(),
+                            ],
+                            if (isInstitution) ...[
+                              const SizedBox(width: KubusSpacing.sm),
+                              const InstitutionBadge(),
+                            ],
                           ],
-                          if (isInstitution) ...[
-                            const SizedBox(width: KubusSpacing.sm),
-                            const InstitutionBadge(),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: KubusSpacing.xs),
-                      Text(
-                        user!.username,
-                        style: KubusTextStyles.profileHandle.copyWith(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.6),
                         ),
-                      ),
-                      const SizedBox(
-                          height: KubusSpacing.xs +
-                              KubusSpacing.xs +
-                              KubusSpacing.xxs),
-                      UserActivityStatusLine(
-                        walletAddress: user!.id,
-                        textAlign: TextAlign.start,
-                        textStyle: KubusTextStyles.detailCaption.copyWith(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.6),
-                        ),
-                      ),
-                      if (user!.bio.isNotEmpty) ...[
-                        const SizedBox(
-                            height: KubusSpacing.sm + KubusSpacing.xxs),
+                        const SizedBox(height: KubusSpacing.xs),
                         Text(
-                          user!.bio,
-                          style: KubusTextStyles.detailBody.copyWith(
+                          user!.username,
+                          style: KubusTextStyles.profileHandle.copyWith(
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurface
-                                .withValues(alpha: 0.8),
+                                .withValues(alpha: 0.6),
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(
+                            height: KubusSpacing.xs +
+                                KubusSpacing.xs +
+                                KubusSpacing.xxs),
+                        UserActivityStatusLine(
+                          walletAddress: user!.id,
+                          textAlign: TextAlign.start,
+                          textStyle: KubusTextStyles.detailCaption.copyWith(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.6),
+                          ),
+                        ),
+                        if (user!.bio.isNotEmpty) ...[
+                          const SizedBox(
+                              height: KubusSpacing.sm + KubusSpacing.xxs),
+                          Text(
+                            user!.bio,
+                            style: KubusTextStyles.detailBody.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.8),
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                        const SizedBox(
+                            height: KubusSpacing.sm + KubusSpacing.xxs),
+                        ProfileArtistInfoFields(
+                          fieldOfWork: user!.fieldOfWork,
+                          yearsActive: user!.yearsActive,
+                          textAlign: TextAlign.left,
+                        ),
+                        const SizedBox(height: KubusSpacing.sm),
+                        Text(
+                          l10n.userProfileJoinedLabel(user!.joinedDate),
+                          style: KubusTextStyles.detailCaption.copyWith(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.5),
+                          ),
                         ),
                       ],
-                      const SizedBox(
-                          height: KubusSpacing.sm + KubusSpacing.xxs),
-                      ProfileArtistInfoFields(
-                        fieldOfWork: user!.fieldOfWork,
-                        yearsActive: user!.yearsActive,
-                        textAlign: TextAlign.left,
-                      ),
-                      const SizedBox(height: KubusSpacing.sm),
-                      Text(
-                        l10n.userProfileJoinedLabel(user!.joinedDate),
-                        style: KubusTextStyles.detailCaption.copyWith(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.5),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
@@ -890,6 +920,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       ThemeProvider themeProvider, bool isLarge, AppLocalizations l10n) {
     final screenWidth = MediaQuery.of(context).size.width;
     final maxCols = screenWidth >= 1400 ? 4 : (isLarge ? 4 : 2);
+    final artworksCount = _artistArtworks.length;
 
     return DesktopGrid(
       minCrossAxisCount: 2,
@@ -901,11 +932,17 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           label: l10n.userProfilePostsStatLabel,
           value: _formatCount(user!.postsCount),
           icon: Icons.article_outlined,
+          color: _profileStatAccentForIcon(Icons.article_outlined),
+          centeredWatermarkAlignment: Alignment.center,
+          centeredWatermarkScale: 0.84,
         ),
         DesktopStatCard(
           label: l10n.userProfileFollowersStatLabel,
           value: _formatCount(user!.followersCount),
           icon: Icons.people_outline,
+          color: _profileStatAccentForIcon(Icons.people_outline),
+          centeredWatermarkAlignment: Alignment.center,
+          centeredWatermarkScale: 0.84,
           onTap: () async {
             try {
               await _loadUserStats(forceRefresh: true);
@@ -919,6 +956,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           label: l10n.userProfileFollowingStatLabel,
           value: _formatCount(user!.followingCount),
           icon: Icons.person_add_outlined,
+          color: _profileStatAccentForIcon(Icons.person_add_outlined),
+          centeredWatermarkAlignment: Alignment.center,
+          centeredWatermarkScale: 0.84,
           onTap: () async {
             try {
               await _loadUserStats(forceRefresh: true);
@@ -929,13 +969,39 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           },
         ),
         DesktopStatCard(
-          label: l10n.userProfileAchievementsTitle,
-          value: (user!.achievementProgress.where((p) => p.isCompleted).length)
-              .toString(),
-          icon: Icons.emoji_events_outlined,
+          label: l10n.userProfileArtworksTitle,
+          value: _formatCount(artworksCount),
+          icon: Icons.palette_outlined,
+          color: _profileStatAccentForIcon(Icons.palette_outlined),
+          centeredWatermarkAlignment: Alignment.center,
+          centeredWatermarkScale: 0.84,
         ),
       ],
     );
+  }
+
+  Color _profileStatAccentForIcon(IconData icon) {
+    final roles = KubusColorRoles.of(context);
+    final codePoint = icon.codePoint;
+
+    if (codePoint == Icons.palette.codePoint ||
+        codePoint == Icons.palette_outlined.codePoint) {
+      return roles.web3ArtistStudioAccent;
+    }
+    if (codePoint == Icons.article.codePoint ||
+        codePoint == Icons.article_outlined.codePoint) {
+      return roles.statBlue;
+    }
+    if (codePoint == Icons.people.codePoint ||
+        codePoint == Icons.people_outline.codePoint) {
+      return roles.statCoral;
+    }
+    if (codePoint == Icons.person_add.codePoint ||
+        codePoint == Icons.person_add_outlined.codePoint) {
+      return roles.statTeal;
+    }
+
+    return Theme.of(context).colorScheme.primary;
   }
 
   Widget _buildActionButtons(

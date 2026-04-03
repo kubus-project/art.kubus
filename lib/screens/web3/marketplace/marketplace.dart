@@ -9,12 +9,15 @@ import '../../onboarding/web3/web3_onboarding.dart';
 import '../../onboarding/web3/onboarding_data.dart';
 import '../../../providers/collectibles_provider.dart';
 import '../../../providers/web3provider.dart';
+import '../../../providers/profile_provider.dart';
+import '../../../providers/wallet_provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/navigation_provider.dart';
 import '../../../models/collectible.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../utils/marketplace_value_formatter.dart';
 import '../../../utils/rarity_ui.dart';
+import '../../../utils/wallet_action_guard.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/kubus_labs_feature.dart';
@@ -584,6 +587,12 @@ class _MarketplaceState extends State<Marketplace>
     return Consumer3<CollectiblesProvider, Web3Provider, ThemeProvider>(
       builder:
           (context, collectiblesProvider, web3Provider, themeProvider, child) {
+        final profileProvider = context.watch<ProfileProvider>();
+        final walletProvider = context.watch<WalletProvider>();
+        final access = WalletSessionAccessSnapshot.fromProviders(
+          profileProvider: profileProvider,
+          walletProvider: walletProvider,
+        );
         // Show user's collectibles using real wallet address
         final walletAddress = web3Provider.walletAddress;
         final myCollectibles = walletAddress.isNotEmpty
@@ -597,7 +606,7 @@ class _MarketplaceState extends State<Marketplace>
             : <dynamic>[];
 
         // Check if wallet is connected
-        if (!web3Provider.isConnected) {
+        if (!access.hasWalletIdentity) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -673,6 +682,51 @@ class _MarketplaceState extends State<Marketplace>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (access.isReadOnlySession)
+                Container(
+                  margin: const EdgeInsets.only(bottom: KubusSpacing.md),
+                  padding: const EdgeInsets.all(KubusSpacing.md),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(KubusRadius.md),
+                    border: Border.all(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .outline
+                          .withValues(alpha: 0.4),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          AppLocalizations.of(context)!
+                              .walletReconnectManualRequiredToast,
+                          style: KubusTypography.inter(
+                            fontSize: 13,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.8),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: KubusSpacing.md),
+                      ElevatedButton(
+                        onPressed: () async {
+                          await WalletActionGuard.ensureSignerAccess(
+                            context: context,
+                            profileProvider: profileProvider,
+                            walletProvider: walletProvider,
+                          );
+                        },
+                        child: Text(AppLocalizations.of(context)!.commonReconnect),
+                      ),
+                    ],
+                  ),
+                ),
               Row(
                 children: [
                   Expanded(
@@ -1219,7 +1273,18 @@ class _MarketplaceState extends State<Marketplace>
     return '${date.day}/${date.month}/${date.year}';
   }
 
-  void _listForSale(Collectible collectible, String entryTitle) {
+  Future<void> _listForSale(Collectible collectible, String entryTitle) async {
+    final profileProvider = context.read<ProfileProvider>();
+    final walletProvider = context.read<WalletProvider>();
+    final canProceed = await WalletActionGuard.ensureSignerAccess(
+      context: context,
+      profileProvider: profileProvider,
+      walletProvider: walletProvider,
+    );
+    if (!mounted || !canProceed) {
+      return;
+    }
+
     final priceController = TextEditingController();
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
 
@@ -1321,6 +1386,17 @@ class _MarketplaceState extends State<Marketplace>
       Collectible collectible, String price) async {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    final profileProvider = context.read<ProfileProvider>();
+    final walletProvider = context.read<WalletProvider>();
+    final canProceed = await WalletActionGuard.ensureSignerAccess(
+      context: context,
+      profileProvider: profileProvider,
+      walletProvider: walletProvider,
+    );
+    if (!mounted || !canProceed) {
+      return;
+    }
+
     try {
       final collectiblesProvider = context.read<CollectiblesProvider>();
       await collectiblesProvider.listCollectibleForSale(
@@ -1979,58 +2055,18 @@ class _MarketplaceState extends State<Marketplace>
     );
   }
 
-  void _mintNFT(CollectibleSeries series) {
+  Future<void> _mintNFT(CollectibleSeries series) async {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-    final web3Provider = context.read<Web3Provider>();
+    final profileProvider = context.read<ProfileProvider>();
+    final walletProvider = context.read<WalletProvider>();
     final colorScheme = Theme.of(context).colorScheme;
 
-    if (!web3Provider.isConnected || web3Provider.walletAddress.isEmpty) {
-      showKubusDialog(
-        context: context,
-        builder: (context) => KubusAlertDialog(
-          backgroundColor: colorScheme.surfaceContainerHighest,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(KubusRadius.lg)),
-          title: Text(
-            AppLocalizations.of(context)!.marketplaceMintConnectWalletTitle,
-            style: KubusTypography.inter(
-              color: colorScheme.onSurface,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: Text(
-            AppLocalizations.of(context)!
-                .marketplaceMintConnectWalletDescription,
-            style: KubusTypography.inter(
-              color: colorScheme.onSurface.withValues(alpha: 0.8),
-              height: 1.5,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                AppLocalizations.of(context)!.commonCancel,
-                style: KubusTypography.inter(
-                    color: colorScheme.onSurface.withValues(alpha: 0.7)),
-              ),
-            ),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).pushNamed('/connect-wallet');
-              },
-              icon: const Icon(Icons.link),
-              label:
-                  Text(AppLocalizations.of(context)!.authConnectWalletButton),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: themeProvider.accentColor,
-                foregroundColor: colorScheme.onPrimary,
-              ),
-            ),
-          ],
-        ),
-      );
+    final canProceed = await WalletActionGuard.ensureSignerAccess(
+      context: context,
+      profileProvider: profileProvider,
+      walletProvider: walletProvider,
+    );
+    if (!mounted || !canProceed) {
       return;
     }
 
@@ -2203,12 +2239,22 @@ class _MarketplaceState extends State<Marketplace>
   Future<void> _processMint(CollectibleSeries series) async {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     var loadingShown = false;
+    final profileProvider = context.read<ProfileProvider>();
+    final walletProvider = context.read<WalletProvider>();
+
+    final canProceed = await WalletActionGuard.ensureSignerAccess(
+      context: context,
+      profileProvider: profileProvider,
+      walletProvider: walletProvider,
+    );
+    if (!mounted || !canProceed) {
+      return;
+    }
 
     try {
       final collectiblesProvider = context.read<CollectiblesProvider>();
-      final web3Provider = context.read<Web3Provider>();
-      final walletAddress = web3Provider.walletAddress.trim();
-      if (!web3Provider.isConnected || walletAddress.isEmpty) {
+      final walletAddress = (walletProvider.currentWalletAddress ?? '').trim();
+      if (walletAddress.isEmpty) {
         throw Exception('Connect wallet to mint');
       }
 

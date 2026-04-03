@@ -4,6 +4,7 @@
   "appExitConfirmBackHint": "Za izhod iz aplikacije še enkrat povleci ali pritisni nazaj.",
   "commonCancel": "Prekliči",
   "commonSignIn": "Prijava",
+  "commonReconnect": "Ponovno poveži",
   "commonClear": "Počisti",
   "commonClose": "Zapri",
   "commonContinue": "Nadaljuj",
@@ -549,6 +550,20 @@
   "settingsWalletConnectionTileTitle": "Povezava denarnice",
   "settingsWalletConnectionConnected": "Povezano",
   "settingsWalletConnectionNotConnected": "Ni povezano",
+  "walletSessionAccountSignedIn": "Prijavljen/-a",
+  "walletSessionAccountSignedOut": "Odjavljen/-a",
+  "walletSessionSignerReady": "Pripravljeno za podpis",
+  "walletSessionSignerMissing": "Samo za branje (brez podpisnika)",
+  "walletSessionStatusSummary": "Račun: {accountStatus} · Denarnica: {walletStatus} · Podpisnik: {signerStatus}",
+  "@walletSessionStatusSummary": {
+    "placeholders": {
+      "accountStatus": {},
+      "walletStatus": {},
+      "signerStatus": {}
+    }
+  },
+  "walletActionSignInRequiredToast": "Za nadaljevanje se prijavi.",
+  "walletActionConnectWalletRequiredToast": "Za nadaljevanje poveži denarnico.",
   "settingsNetworkTileTitle": "Omrežje",
   "settingsCurrentNetworkValue": "Trenutno: {network}",
   "@settingsCurrentNetworkValue": {

@@ -36,6 +36,7 @@ import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/glass_components.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/wallet_backup_status.dart';
+import '../../utils/wallet_action_guard.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/utils/wallet_reconnect_action.dart';
 
@@ -766,14 +767,15 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     final l10n = AppLocalizations.of(context)!;
     final web3Provider = Provider.of<Web3Provider>(context);
     final walletProvider = Provider.of<WalletProvider>(context);
-    final hasWalletIdentity = walletProvider.hasWalletIdentity;
-    final canTransact = walletProvider.canTransact;
+    final profileProvider = Provider.of<ProfileProvider>(context);
+    final access = WalletSessionAccessSnapshot.fromProviders(
+      profileProvider: profileProvider,
+      walletProvider: walletProvider,
+    );
+    final hasWalletIdentity = access.hasWalletIdentity;
+    final canTransact = access.canTransact;
     final walletAddress = (walletProvider.currentWalletAddress ?? '').trim();
-    final walletStatusLabel = walletProvider.isReadOnlySession
-        ? '${l10n.settingsWalletConnectionConnected} (read-only)'
-        : hasWalletIdentity
-            ? l10n.settingsWalletConnectionConnected
-            : l10n.settingsWalletConnectionNotConnected;
+    final walletStatusLabel = access.walletStatusLabel(l10n);
     final statusColor = canTransact
         ? Theme.of(context).colorScheme.tertiary
         : hasWalletIdentity
@@ -825,6 +827,15 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                                 color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
+                            Text(
+                              access.settingsStatusSummary(l10n),
+                              style: KubusTextStyles.navMetaLabel.copyWith(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.72),
+                              ),
+                            ),
                             if (hasWalletIdentity)
                               Text(
                                 web3Provider.formatAddress(walletAddress),
@@ -837,7 +848,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                               ),
                             if (walletProvider.isReadOnlySession)
                               Text(
-                                'Reconnect to enable signing and transfers.',
+                                  l10n.walletReconnectManualRequiredToast,
                                 style: KubusTextStyles.navMetaLabel.copyWith(
                                   color: Theme.of(context)
                                       .colorScheme
@@ -867,7 +878,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                           ),
                           label: Text(
                             walletProvider.isReadOnlySession
-                                ? 'Reconnect'
+                              ? l10n.commonReconnect
                                 : l10n.desktopSettingsViewWalletButton,
                           ),
                           style: ElevatedButton.styleFrom(

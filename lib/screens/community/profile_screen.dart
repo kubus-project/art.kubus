@@ -282,6 +282,16 @@ class _ProfileScreenState extends State<ProfileScreen>
           const avatarShadowAlpha = 0.10;
           const avatarShadowBlur = 8.0;
           const avatarShadowOffsetY = 2.0;
+          const avatarRingPadding = 4.0;
+
+          final avatarShapeRadius = AvatarWidget.shapeRadiusFor(
+            radius: avatarRadius,
+            cornerRadiusFactor: avatarCornerRadiusFactor,
+          );
+          final avatarRingShapeRadius = AvatarWidget.shapeRadiusFor(
+            radius: avatarRadius + avatarRingPadding,
+            cornerRadiusFactor: avatarCornerRadiusFactor,
+          );
 
           final coverImageUrl =
               _normalizeMediaUrl(profileProvider.currentUser?.coverImage);
@@ -534,11 +544,19 @@ class _ProfileScreenState extends State<ProfileScreen>
               Center(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surface
+                        .withValues(alpha: 0.9),
                     borderRadius: BorderRadius.circular(
-                      AvatarWidget.shapeRadiusFor(
-                        radius: avatarRadius,
-                        cornerRadiusFactor: avatarCornerRadiusFactor,
-                      ),
+                      avatarRingShapeRadius,
+                    ),
+                    border: Border.all(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .outline
+                          .withValues(alpha: 0.28),
+                      width: 1.2,
                     ),
                     boxShadow: [
                       BoxShadow(
@@ -550,24 +568,36 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                     ],
                   ),
-                  child: AvatarWidget(
-                    wallet: profileProvider.currentUser?.walletAddress ?? '',
-                    avatarUrl: profileProvider.currentUser?.avatar,
-                    radius: avatarRadius,
-                    borderWidth: 3,
-                    borderColor: Theme.of(context).colorScheme.surface,
-                    cornerRadiusFactor: avatarCornerRadiusFactor,
-                    enableProfileNavigation: false,
-                    showStatusIndicator: _showActivityStatus,
+                  child: Padding(
+                    padding: const EdgeInsets.all(avatarRingPadding),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(avatarShapeRadius),
+                      child: AvatarWidget(
+                        wallet:
+                            profileProvider.currentUser?.walletAddress ?? '',
+                        avatarUrl: profileProvider.currentUser?.avatar,
+                        radius: avatarRadius,
+                        borderWidth: 0,
+                        borderColor: Colors.transparent,
+                        cornerRadiusFactor: avatarCornerRadiusFactor,
+                        enableProfileNavigation: false,
+                        showStatusIndicator: _showActivityStatus,
+                      ),
+                    ),
                   ),
                 ),
               ),
               // Spacing after avatar
               SizedBox(height: avatarSpacingBelowCover),
               // Rest of profile content
-              Container(
-                padding:
+              LiquidGlassCard(
+                margin:
                     EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24),
+                borderRadius: BorderRadius.circular(KubusRadius.xl),
+                padding: EdgeInsets.symmetric(
+                  horizontal: isSmallScreen ? 16 : 24,
+                  vertical: isSmallScreen ? 14 : 18,
+                ),
                 child: Column(
                   children: [
                     Align(
@@ -2393,10 +2423,12 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (codePoint == Icons.group.codePoint ||
         codePoint == Icons.groups.codePoint ||
         codePoint == Icons.people.codePoint ||
-        codePoint == Icons.people_outline.codePoint ||
-        codePoint == Icons.person_add.codePoint ||
-        codePoint == Icons.person_add_outlined.codePoint) {
+        codePoint == Icons.people_outline.codePoint) {
       return roles.statCoral;
+    }
+    if (codePoint == Icons.person_add.codePoint ||
+        codePoint == Icons.person_add_outlined.codePoint) {
+      return roles.statTeal;
     }
     if (codePoint == Icons.streetview.codePoint) {
       return roles.statAmber;

@@ -12,7 +12,6 @@ import '../web3/artist/artwork_ar_manager_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/artwork_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/attendance_provider.dart';
@@ -27,6 +26,7 @@ import '../../utils/app_animations.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/map_navigation.dart';
 import '../../utils/artwork_edit_navigation.dart';
+import '../../utils/wallet_action_guard.dart';
 import '../../utils/wallet_utils.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../config/config.dart';
@@ -812,6 +812,16 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                   foregroundColor: scheme.primary,
                   onPressed: () async {
                     if (!canManage) return;
+                    final profileProvider = context.read<ProfileProvider>();
+                    final walletProvider = context.read<WalletProvider>();
+                    final canProceed = await WalletActionGuard.ensureSignerAccess(
+                      context: context,
+                      profileProvider: profileProvider,
+                      walletProvider: walletProvider,
+                    );
+                    if (!mounted || !canProceed) {
+                      return;
+                    }
                     final messenger = ScaffoldMessenger.of(context);
                     final provider = context.read<ArtworkProvider>();
                     try {
@@ -896,8 +906,18 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
               label: l10n.artworkDetailMintNft,
               backgroundColor: scheme.tertiaryContainer.withValues(alpha: 0.85),
               foregroundColor: scheme.onTertiaryContainer,
-              onPressed: () {
+              onPressed: () async {
                 if (!canMint) return;
+                final profileProvider = context.read<ProfileProvider>();
+                final walletProvider = context.read<WalletProvider>();
+                final canProceed = await WalletActionGuard.ensureSignerAccess(
+                  context: context,
+                  profileProvider: profileProvider,
+                  walletProvider: walletProvider,
+                );
+                if (!mounted || !canProceed) {
+                  return;
+                }
                 _showMintNFTDialog(artwork);
               },
             ),
@@ -2149,22 +2169,17 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   }
 
   Future<void> _showMintNFTDialog(Artwork artwork) async {
-    final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString('user_id');
-    final walletAddress = prefs.getString('wallet_address');
-
-    if (userId == null || walletAddress == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showKubusSnackBar(
-          SnackBar(
-            content: Text('Please connect your wallet first',
-                style: KubusTypography.inter()),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+    final profileProvider = context.read<ProfileProvider>();
+    final walletProvider = context.read<WalletProvider>();
+    final canProceed = await WalletActionGuard.ensureSignerAccess(
+      context: context,
+      profileProvider: profileProvider,
+      walletProvider: walletProvider,
+    );
+    if (!mounted || !canProceed) {
       return;
     }
+
     if (!mounted) return;
 
     final nameController = TextEditingController(text: artwork.title);
@@ -2335,8 +2350,29 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     required double royaltyPercentage,
     required CollectibleType type,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final walletAddress = prefs.getString('wallet_address') ?? '';
+    final walletProvider = context.read<WalletProvider>();
+    final profileProvider = context.read<ProfileProvider>();
+    final canProceed = await WalletActionGuard.ensureSignerAccess(
+      context: context,
+      profileProvider: profileProvider,
+      walletProvider: walletProvider,
+    );
+    if (!mounted || !canProceed) {
+      return;
+    }
+
+    final walletAddress = (walletProvider.currentWalletAddress ?? '').trim();
+    if (walletAddress.isEmpty) {
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!
+              .walletActionConnectWalletRequiredToast),
+        ),
+        tone: KubusSnackBarTone.warning,
+      );
+      return;
+    }
+
     if (!mounted) return;
 
     showKubusDialog(

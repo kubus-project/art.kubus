@@ -1615,9 +1615,21 @@ class BackendApiService
   bool _isFallbackEligibleReadError(Object error) {
     final status = _tryParseRequestFailedStatus(error);
     if (status == null) {
-      return true;
+      final message = error.toString().toLowerCase();
+      return message.contains('timeout') ||
+          message.contains('timed out') ||
+          message.contains('socketexception') ||
+          message.contains('clientexception') ||
+          message.contains('failed host lookup') ||
+          message.contains('connection closed') ||
+          message.contains('network') ||
+          message.contains('cors');
     }
-    return status >= 500;
+
+    // Only treat gateway/outage-style responses as failover triggers.
+    // Generic 500 application errors should not move the app into public
+    // snapshot mode when the primary API is still the source of truth.
+    return const <int>{502, 503, 504, 522, 523, 524, 530}.contains(status);
   }
 
   Future<R> _performPublicRead<R>({
