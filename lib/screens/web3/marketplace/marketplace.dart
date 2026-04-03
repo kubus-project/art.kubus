@@ -23,6 +23,7 @@ import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/common/kubus_labs_adornment.dart';
+import 'package:art_kubus/widgets/common/kubus_stat_card.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 
 class Marketplace extends StatefulWidget {
@@ -1832,17 +1833,26 @@ class _MarketplaceState extends State<Marketplace>
                         children: [
                           Expanded(
                             child: _buildStatCard(
-                                'Total Supply', '${series.totalSupply}'),
+                              'Total Supply',
+                              '${series.totalSupply}',
+                              icon: Icons.layers_outlined,
+                            ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: _buildStatCard(
-                                'Minted', '${series.mintedCount}'),
+                              'Minted',
+                              '${series.mintedCount}',
+                              icon: Icons.check_circle_outline,
+                            ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: _buildStatCard('Available',
-                                '${series.totalSupply - series.mintedCount}'),
+                            child: _buildStatCard(
+                              'Available',
+                              '${series.totalSupply - series.mintedCount}',
+                              icon: Icons.storefront_outlined,
+                            ),
                           ),
                         ],
                       ),
@@ -1857,6 +1867,7 @@ class _MarketplaceState extends State<Marketplace>
                             MarketplaceValueFormatter.formatDisplayValue(
                               entry.displayValue,
                             ),
+                            icon: Icons.sell_outlined,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -1864,6 +1875,7 @@ class _MarketplaceState extends State<Marketplace>
                           child: _buildStatCard(
                             'Rarity',
                             entry.rarity?.name.toUpperCase() ?? 'NFT',
+                            icon: Icons.auto_awesome_outlined,
                           ),
                         ),
                       ],
@@ -1943,35 +1955,23 @@ class _MarketplaceState extends State<Marketplace>
     );
   }
 
-  Widget _buildStatCard(String label, String value) {
-    return Container(
+  Widget _buildStatCard(String label, String value, {IconData? icon}) {
+    final scheme = Theme.of(context).colorScheme;
+    return KubusStatCard(
+      title: label,
+      value: value,
+      icon: icon,
+      accent: scheme.secondary,
+      tintBase: scheme.surface,
+      minHeight: 88,
       padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(KubusRadius.sm),
+      titleStyle: KubusTextStyles.detailCaption.copyWith(
+        fontSize: 11,
+        color: scheme.onSurface.withValues(alpha: 0.66),
       ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: KubusTypography.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: KubusTypography.inter(
-              fontSize: 12,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.6),
-            ),
-          ),
-        ],
+      valueStyle: KubusTextStyles.detailCardTitle.copyWith(
+        color: scheme.onSurface,
+        fontWeight: FontWeight.w700,
       ),
     );
   }

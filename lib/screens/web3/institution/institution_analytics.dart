@@ -21,6 +21,7 @@ import '../../../widgets/charts/stats_interactive_bar_chart.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/empty_state_card.dart';
+import '../../../widgets/common/kubus_stat_card.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/design_tokens.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -554,24 +555,28 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
           {
             'title': 'Total Visitors',
             'value': visitorValue,
+            'icon': Icons.people_outline,
             'change': visitorChange,
             'positive': visitorsThis >= visitorsPrev,
           },
           {
             'title': 'Active Events',
             'value': activeEvents.toString(),
+            'icon': Icons.event_available_outlined,
             'change': '\u2014',
             'positive': true,
           },
           {
             'title': 'Artwork Views',
             'value': artworkValue,
+            'icon': Icons.visibility_outlined,
             'change': artworkChange,
             'positive': artworkViewsThis >= artworkViewsPrev,
           },
           {
             'title': 'Revenue',
             'value': '\$${_formatRevenue(totalRevenue)}',
+            'icon': Icons.payments_outlined,
             'change': '\u2014',
             'positive': true,
           },
@@ -683,74 +688,24 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
   }
 
   Widget _buildStatCard(Map<String, dynamic> stat) {
-    return Container(
+    final change = stat['change']?.toString() ?? '';
+    final hasChange = change.isNotEmpty && change != '\u2014';
+    return KubusStatCard(
+      title: stat['title'].toString(),
+      value: stat['value'].toString(),
+      icon: stat['icon'] as IconData?,
+      accent: Theme.of(context).colorScheme.primary,
+      tintBase: Theme.of(context).colorScheme.surface,
+      minHeight: 116,
       padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
-        border: Border.all(
-            color:
-                Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
+      change: hasChange ? change : null,
+      isPositiveChange: stat['positive'] == true,
+      titleStyle: KubusTextStyles.detailCaption.copyWith(
+        fontSize: 11,
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.72),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Flexible(
-            child: Text(
-              stat['title'],
-              style: KubusTypography.inter(
-                fontSize: 10,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.7),
-              ),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Flexible(
-            child: Text(
-              stat['value'],
-              style: KubusTypography.inter(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Flexible(
-            child: Row(
-              children: [
-                Icon(
-                  stat['positive'] ? Icons.trending_up : Icons.trending_down,
-                  color: stat['positive']
-                      ? KubusColorRoles.of(context).positiveAction
-                      : KubusColorRoles.of(context).negativeAction,
-                  size: 14,
-                ),
-                const SizedBox(width: 4),
-                Flexible(
-                  child: Text(
-                    stat['change'],
-                    style: KubusTypography.inter(
-                      fontSize: 10,
-                      color: stat['positive']
-                          ? KubusColorRoles.of(context).positiveAction
-                          : KubusColorRoles.of(context).negativeAction,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+      valueStyle: KubusTextStyles.sectionTitle.copyWith(
+        color: Theme.of(context).colorScheme.onSurface,
       ),
     );
   }

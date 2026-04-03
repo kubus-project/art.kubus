@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../utils/design_tokens.dart';
 import '../utils/kubus_color_roles.dart';
+import 'common/kubus_stat_card.dart';
 import 'glass_components.dart';
 
 enum KubusActionSemantic {
@@ -188,88 +189,13 @@ class KubusSidebarStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final radius = BorderRadius.circular(KubusRadius.md);
-    final glassStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.card,
-      tintBase: accent,
-    );
-
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        border: Border.all(
-          color: accent.withValues(alpha: 0.22),
-          width: KubusSizes.hairline,
-        ),
-      ),
-      child: LiquidGlassCard(
-        padding: const EdgeInsets.all(KubusSpacing.md),
-        margin: EdgeInsets.zero,
-        borderRadius: radius,
-        showBorder: false,
-        blurSigma: glassStyle.blurSigma,
-        fallbackMinOpacity: glassStyle.fallbackMinOpacity,
-        backgroundColor: glassStyle.tintColor,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: minHeight),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: KubusSizes.sidebarActionIconBox - KubusSpacing.xs,
-                    height: KubusSizes.sidebarActionIconBox - KubusSpacing.xs,
-                    decoration: BoxDecoration(
-                      color: accent.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(KubusRadius.sm),
-                    ),
-                    child: Icon(
-                      icon,
-                      color: accent,
-                      size: KubusSizes.sidebarActionIcon,
-                    ),
-                  ),
-                  const SizedBox(width: KubusSpacing.sm),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: KubusSpacing.xxs),
-                      child: Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: KubusTextStyles.actionTileTitle.copyWith(
-                          color: scheme.onSurface,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const Spacer(),
-              SizedBox(
-                width: double.infinity,
-                child: FittedBox(
-                  alignment: Alignment.centerLeft,
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    value,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: KubusTextStyles.sectionTitle.copyWith(
-                      color: scheme.onSurface,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return KubusStatCard(
+      title: title,
+      value: value,
+      icon: icon,
+      accent: accent,
+      minHeight: minHeight,
+      padding: const EdgeInsets.all(KubusSpacing.md),
     );
   }
 }

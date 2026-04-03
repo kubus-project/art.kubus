@@ -131,6 +131,35 @@ class _SignInScreenState extends State<SignInScreen> {
     return error.runtimeType.toString();
   }
 
+  bool _isEmailPasswordNotConfigured(Object error) {
+    if (error is! BackendApiRequestException) {
+      return false;
+    }
+    if (error.statusCode != 400) {
+      return false;
+    }
+
+    try {
+      final decoded = jsonDecode((error.body ?? '').toString().trim());
+      if (decoded is Map<String, dynamic>) {
+        final code =
+            (decoded['errorCode'] ?? '').toString().trim().toUpperCase();
+        if (code == 'EMAIL_PASSWORD_NOT_CONFIGURED') {
+          return true;
+        }
+        final rawError =
+            (decoded['error'] ?? '').toString().trim().toLowerCase();
+        if (rawError.contains('password not set for this account')) {
+          return true;
+        }
+      }
+    } catch (_) {
+      // Fall through to false.
+    }
+
+    return false;
+  }
+
   Future<bool> _maybeRouteToStructuredOnboarding({
     required SharedPreferences prefs,
     required ProfileProvider profileProvider,
@@ -569,6 +598,17 @@ class _SignInScreenState extends State<SignInScreen> {
       unawaited(TelemetryService().trackSignInFailure(
           method: 'email', errorClass: e.runtimeType.toString()));
       if (!mounted) return;
+      if (_isEmailPasswordNotConfigured(e)) {
+        ScaffoldMessenger.of(context).showKubusSnackBar(
+          const SnackBar(
+            content: Text(
+              'This account is currently wallet-only. Sign in with wallet, then open Secure account to add email + password.',
+            ),
+          ),
+          tone: KubusSnackBarTone.error,
+        );
+        return;
+      }
       if (e is BackendApiRequestException && e.statusCode == 403) {
         try {
           final decoded = jsonDecode((e.body ?? '').toString());

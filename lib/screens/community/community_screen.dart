@@ -11,7 +11,6 @@ import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../config/config.dart';
 import '../../utils/wallet_utils.dart';
-import '../../utils/user_identity_display.dart';
 import '../../utils/creator_display_format.dart';
 import '../../utils/search_suggestions.dart';
 import '../../utils/user_profile_navigation.dart';
@@ -21,6 +20,7 @@ import '../../widgets/topbar_icon.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/common/keyboard_inset_padding.dart';
 import '../../widgets/empty_state_card.dart';
+import '../../widgets/profile_identity_summary.dart';
 import '../../widgets/community/community_post_card.dart';
 import '../../widgets/community/community_post_options_sheet.dart';
 import '../../widgets/community/community_subject_picker.dart';
@@ -4451,32 +4451,25 @@ class _CommunityScreenState extends State<CommunityScreen>
         onTap: onTap,
       );
     } else if (searchType == 'profiles') {
-      final identity = UserIdentityDisplayUtils.fromProfileMap(result);
-      final wallet = WalletUtils.resolveFromMap(result);
-      final avatar =
-          result['avatar'] ?? result['avatar_url'] ?? result['profileImage'];
+      final identity = ProfileIdentityData.fromProfileMap(
+        result,
+        fallbackLabel: AppLocalizations.of(context)?.commonUnknownArtist ??
+            'Unknown artist',
+      );
 
       return ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
-        leading: AvatarWidget(
-          wallet: wallet,
-          avatarUrl: avatar,
-          radius: 20,
+        title: ProfileIdentitySummary(
+          identity: identity,
+          layout: ProfileIdentityLayout.row,
+          avatarRadius: 20,
           allowFabricatedFallback: true,
+          titleStyle: KubusTypography.inter(fontWeight: FontWeight.w600),
+          subtitleStyle: KubusTypography.inter(
+            fontSize: 12,
+            color: scheme.onSurface.withValues(alpha: 0.6),
+          ),
         ),
-        title: Text(
-          identity.name,
-          style: KubusTypography.inter(fontWeight: FontWeight.w600),
-        ),
-        subtitle: identity.handle == null
-            ? null
-            : Text(
-                identity.handle!,
-                style: KubusTypography.inter(
-                  fontSize: 12,
-                  color: scheme.onSurface.withValues(alpha: 0.6),
-                ),
-              ),
         trailing: const Icon(Icons.add_circle_outline, size: 20),
         onTap: onTap,
       );

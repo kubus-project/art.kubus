@@ -3848,6 +3848,30 @@ class _FinishVerificationSignInPanelState
   bool _submitting = false;
   String? _inlineError;
 
+  bool _isEmailPasswordNotConfigured(BackendApiRequestException error) {
+    if (error.statusCode != 400) {
+      return false;
+    }
+    try {
+      final decoded = jsonDecode((error.body ?? '').toString().trim());
+      if (decoded is Map<String, dynamic>) {
+        final code =
+            (decoded['errorCode'] ?? '').toString().trim().toUpperCase();
+        if (code == 'EMAIL_PASSWORD_NOT_CONFIGURED') {
+          return true;
+        }
+        final rawError =
+            (decoded['error'] ?? '').toString().trim().toLowerCase();
+        if (rawError.contains('password not set for this account')) {
+          return true;
+        }
+      }
+    } catch (_) {
+      // Ignore parse errors and fall back to false.
+    }
+    return false;
+  }
+
   @override
   void dispose() {
     _passwordController.dispose();
@@ -3883,6 +3907,13 @@ class _FinishVerificationSignInPanelState
       await widget.onAuthSuccess(result);
     } on BackendApiRequestException catch (error) {
       if (!mounted) return;
+      if (_isEmailPasswordNotConfigured(error)) {
+        setState(() {
+          _inlineError =
+              'This account is currently wallet-only. Sign in with wallet, then open Secure account to add email + password.';
+        });
+        return;
+      }
       var requiresVerification = false;
       if (error.statusCode == 403) {
         try {

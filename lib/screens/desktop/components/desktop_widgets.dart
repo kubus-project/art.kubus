@@ -4,8 +4,8 @@ import '../../../l10n/app_localizations.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/design_tokens.dart';
-import '../../../utils/kubus_color_roles.dart';
 import '../../../widgets/glass_components.dart';
+import '../../../widgets/common/kubus_stat_card.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 import '../../../widgets/search/kubus_search_bar.dart';
 
@@ -266,15 +266,8 @@ class _DesktopStatCardState extends State<DesktopStatCard> {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final color = widget.color ?? themeProvider.accentColor;
     final animationTheme = context.animationTheme;
-    final scheme = Theme.of(context).colorScheme;
-    final glassStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.card,
-      tintBase: color,
-    );
 
     final radius = BorderRadius.circular(KubusRadius.md);
-    final glassTint = glassStyle.tintColor;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -284,11 +277,6 @@ class _DesktopStatCardState extends State<DesktopStatCard> {
         curve: animationTheme.defaultCurve,
         decoration: BoxDecoration(
           borderRadius: radius,
-          border: Border.all(
-            color: _isHovered
-                ? color.withValues(alpha: 0.3)
-                : scheme.outline.withValues(alpha: 0.2),
-          ),
           boxShadow: _isHovered
               ? [
                   BoxShadow(
@@ -299,89 +287,20 @@ class _DesktopStatCardState extends State<DesktopStatCard> {
                 ]
               : null,
         ),
-        child: LiquidGlassPanel(
-          padding: const EdgeInsets.all(KubusChromeMetrics.compactCardPadding),
-          margin: EdgeInsets.zero,
-          borderRadius: radius,
-          blurSigma: glassStyle.blurSigma,
-          fallbackMinOpacity: glassStyle.fallbackMinOpacity,
-          showBorder: false,
-          backgroundColor: glassTint,
+        child: KubusStatCard(
+          title: widget.label,
+          value: widget.value,
+          icon: widget.icon,
+          accent: color,
+          change: widget.change,
+          isPositiveChange: widget.isPositive,
+          minHeight: 160,
+          valueStyle: KubusTextStyles.statValue,
+          titleStyle: KubusTextStyles.actionTileTitle,
+          borderColor: _isHovered
+              ? color.withValues(alpha: 0.3)
+              : Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
           onTap: widget.onTap,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(KubusSpacing.sm),
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(KubusRadius.sm),
-                    ),
-                    child: Icon(
-                      widget.icon,
-                      color: color,
-                      size: KubusSizes.sidebarActionIcon,
-                    ),
-                  ),
-                  if (widget.change != null)
-                    Builder(
-                      builder: (context) {
-                        final roles = KubusColorRoles.of(context);
-                        final changeColor = widget.isPositive
-                            ? roles.positiveAction
-                            : roles.negativeAction;
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: changeColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(KubusRadius.sm),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                widget.isPositive
-                                    ? Icons.arrow_upward
-                                    : Icons.arrow_downward,
-                                size: KubusHeaderMetrics.sectionSubtitle,
-                                color: changeColor,
-                              ),
-                              const SizedBox(width: KubusSpacing.xxs),
-                              Text(
-                                widget.change!,
-                                style: KubusTextStyles.statChange.copyWith(
-                                  color: changeColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                ],
-              ),
-              const Spacer(),
-              Text(
-                widget.value,
-                style: KubusTextStyles.statValue.copyWith(
-                  color: scheme.onSurface,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                widget.label,
-                style: KubusTextStyles.statLabel.copyWith(
-                  color: scheme.onSurface.withValues(alpha: 0.6),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

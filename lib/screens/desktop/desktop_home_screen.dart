@@ -25,7 +25,6 @@ import '../../models/wallet.dart';
 import '../../models/promotion.dart';
 import '../../community/community_interactions.dart';
 import '../../widgets/app_logo.dart';
-import '../../widgets/avatar_widget.dart';
 import '../../widgets/artist_badge.dart';
 import '../../widgets/institution_badge.dart';
 import '../../widgets/empty_state_card.dart';
@@ -34,6 +33,7 @@ import '../../widgets/topbar_icon.dart';
 import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/glass_components.dart';
+import '../../widgets/profile_identity_summary.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/activity_navigation.dart';
 import '../../utils/artwork_navigation.dart';
@@ -1729,6 +1729,9 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   }
 
   Widget _buildHomeRailCard(HomeRailItem item, int index, int total) {
+    if (item.entityType == PromotionEntityType.profile) {
+      return _buildProfileHomeRailCard(item, index, total);
+    }
     final subtitle = _buildHomeRailCardSubtitle(item);
     final canOpen = _hasHomeRailDestination(item);
     return DesktopCard(
@@ -1808,6 +1811,45 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileHomeRailCard(HomeRailItem item, int index, int total) {
+    final l10n = AppLocalizations.of(context)!;
+    final identity = ProfileIdentityData.fromHomeRailItem(
+      item,
+      fallbackLabel: l10n.desktopHomeCreatorFallbackName,
+    );
+    final scheme = Theme.of(context).colorScheme;
+    final canOpen = _hasHomeRailDestination(item);
+    return DesktopCard(
+      width: 240,
+      margin: EdgeInsets.only(right: index < total - 1 ? DetailSpacing.lg : 0),
+      padding: const EdgeInsets.all(DetailSpacing.lg),
+      onTap: canOpen ? () => _openHomeRailItem(item) : null,
+      child: Stack(
+        children: [
+          Align(
+            alignment: Alignment.center,
+            child: ProfileIdentitySummary(
+              identity: identity,
+              layout: ProfileIdentityLayout.stacked,
+              avatarRadius: 34,
+              allowFabricatedFallback: true,
+              titleStyle: KubusTextStyles.detailCardTitle,
+              subtitleStyle: KubusTextStyles.navMetaLabel.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.62),
+              ),
+            ),
+          ),
+          if (item.promotion.isPromoted)
+            const Positioned(
+              top: 0,
+              left: 0,
+              child: Icon(Icons.star, color: Colors.amber, size: 18),
+            ),
         ],
       ),
     );
@@ -2353,53 +2395,37 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       padding: const EdgeInsets.all(DetailSpacing.sm + 2),
       margin: const EdgeInsets.only(bottom: DetailSpacing.sm),
       borderRadius: BorderRadius.circular(DetailRadius.md),
-      child: Row(
-        children: [
-          AvatarWidget(
-            avatarUrl: avatarUrl,
-            wallet: wallet,
-            radius: 20,
-            allowFabricatedFallback: true,
+      child: ProfileIdentitySummary(
+        identity: ProfileIdentityData.fromValues(
+          fallbackLabel: l10n.desktopHomeCreatorFallbackName,
+          displayName: displayName,
+          username: handle,
+          userId: userId,
+          wallet: wallet,
+          avatarUrl: avatarUrl?.toString(),
+        ),
+        layout: ProfileIdentityLayout.row,
+        avatarRadius: 20,
+        allowFabricatedFallback: true,
+        titleStyle: KubusTextStyles.detailCardTitle,
+        subtitleStyle: KubusTextStyles.navMetaLabel,
+        trailing: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: Theme.of(context)
+                .colorScheme
+                .secondary
+                .withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(DetailRadius.md),
           ),
-          const SizedBox(width: DetailSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  displayName,
-                  style: KubusTextStyles.detailCardTitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (handle != null)
-                  Text(
-                    handle,
-                    style: KubusTextStyles.navMetaLabel,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-              ],
+          child: Text(
+            l10n.desktopHomePostsCount(creator['postCount'] as int? ?? 0),
+            style: KubusTextStyles.navMetaLabel.copyWith(
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.secondary,
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: Theme.of(context)
-                  .colorScheme
-                  .secondary
-                  .withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(DetailRadius.md),
-            ),
-            child: Text(
-              l10n.desktopHomePostsCount(creator['postCount'] as int? ?? 0),
-              style: KubusTextStyles.navMetaLabel.copyWith(
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.secondary,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

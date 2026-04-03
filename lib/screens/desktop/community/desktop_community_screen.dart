@@ -47,7 +47,6 @@ import '../../../utils/search_suggestions.dart';
 import '../../../utils/share_deep_link_navigation.dart';
 import '../../../utils/user_profile_navigation.dart';
 import '../../../utils/wallet_utils.dart';
-import '../../../utils/user_identity_display.dart';
 import '../../../utils/community_subject_navigation.dart';
 import '../../../widgets/glass_components.dart';
 import '../../../widgets/community/community_composer_controls.dart';
@@ -60,6 +59,7 @@ import '../desktop_shell.dart';
 import '../../../widgets/community/community_expandable_fab.dart';
 import '../../../widgets/community/community_group_picker_content.dart';
 import '../../../widgets/community/community_likes_sheet.dart';
+import '../../../widgets/profile_identity_summary.dart';
 import '../../community/group_feed_screen.dart';
 import '../../community/conversation_screen.dart';
 import '../../community/post_detail_screen.dart';
@@ -1918,6 +1918,11 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       return null;
     }
 
+    final identity = ProfileIdentityData.fromHomeRailItem(
+      item,
+      fallbackLabel: 'Creator',
+    );
+
     return <String, dynamic>{
       ...item.raw,
       'id': item.entityType == PromotionEntityType.institution
@@ -1926,12 +1931,12 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       'entityType': item.entityType.apiValue,
       if (institutionId.isNotEmpty) 'institutionId': institutionId,
       if (profileTargetId != null) 'profileTargetId': profileTargetId,
-      'displayName': item.title,
-      'username': item.raw['username'] ?? item.raw['handle'],
+      'displayName': identity.label,
+      'username': identity.username ?? item.raw['username'] ?? item.raw['handle'],
       if (profileTargetId != null) 'walletAddress': profileTargetId,
       if (profileTargetId != null) 'wallet': profileTargetId,
-      'avatarUrl': item.imageUrl,
-      'avatar': item.imageUrl,
+      if (identity.avatarUrl != null) 'avatarUrl': identity.avatarUrl,
+      if (identity.avatarUrl != null) 'avatar': identity.avatarUrl,
       'verified': item.raw['verified'] ?? false,
     };
   }
@@ -5041,6 +5046,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final selection = await showKubusDialog<String>(
       context: context,
       builder: (dialogContext) {
+        final l10n = AppLocalizations.of(dialogContext)!;
         return StatefulBuilder(
           builder: (context, setDialogState) {
             Future<void> runSearch(String query) async {
@@ -5169,61 +5175,43 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                   ),
                                   itemBuilder: (_, index) {
                                     final profile = results[index];
-                                    final identity =
-                                        UserIdentityDisplayUtils.fromProfileMap(
-                                      Map<String, dynamic>.from(
-                                        profile.map(
-                                          (k, v) => MapEntry(k.toString(), v),
-                                        ),
-                                      ),
-                                    );
-                                    final handle = _sanitizeHandle(
-                                      profile['username'] ??
-                                          profile['handle'] ??
-                                          profile['id'] ??
-                                          '',
-                                    );
                                     final wallet = (profile['wallet_address'] ??
                                                 profile['wallet'] ??
                                                 profile['id'])
                                             ?.toString() ??
                                         '';
-                                    final avatarUrl = profile['avatar'] ??
-                                        profile['avatar_url'] ??
-                                        profile['profileImageUrl'];
+                                    final profileIdentity =
+                                        ProfileIdentityData.fromProfileMap(
+                                      profile,
+                                      fallbackLabel:
+                                          l10n.desktopHomeCreatorFallbackName,
+                                      fallbackUserId: wallet,
+                                    );
                                     return ListTile(
                                       contentPadding:
                                           const EdgeInsets.symmetric(
                                               vertical: 6),
-                                      leading: AvatarWidget(
-                                        avatarUrl: avatarUrl?.toString(),
-                                        wallet: wallet,
-                                        radius: 20,
+                                      title: ProfileIdentitySummary(
+                                        identity: profileIdentity,
+                                        layout: ProfileIdentityLayout.row,
+                                        avatarRadius: 20,
                                         allowFabricatedFallback: true,
-                                      ),
-                                      title: Text(
-                                        identity.name,
-                                        style:
+                                        titleStyle:
                                             KubusTextStyles.navLabel.copyWith(
                                           fontWeight: FontWeight.w600,
                                           color: Theme.of(context)
                                               .colorScheme
                                               .onSurface,
                                         ),
+                                        subtitleStyle: KubusTextStyles
+                                            .navMetaLabel
+                                            .copyWith(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.6),
+                                        ),
                                       ),
-                                      subtitle: identity.handle == null
-                                          ? null
-                                          : Text(
-                                              identity.handle!,
-                                              style: KubusTextStyles
-                                                  .navMetaLabel
-                                                  .copyWith(
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .onSurface
-                                                    .withValues(alpha: 0.6),
-                                              ),
-                                            ),
                                       trailing: Icon(
                                           Icons.person_add_alt_1_outlined,
                                           color: Theme.of(context)
@@ -5231,8 +5219,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                               .onSurface
                                               .withValues(alpha: 0.4)),
                                       onTap: () => Navigator.of(dialogContext)
-                                          .pop(handle.isNotEmpty
-                                              ? handle
+                                          .pop(profileIdentity.username != null &&
+                                                  profileIdentity.username!
+                                                      .isNotEmpty
+                                              ? profileIdentity.username
                                               : wallet),
                                     );
                                   },
@@ -5858,20 +5848,11 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       .toString();
               final isInstitutionSuggestion =
                   entityType == PromotionEntityType.institution.apiValue;
-              final displayName = (artist['displayName'] ??
-                      artist['name'] ??
-                      artist['username'] ??
-                      l10n.desktopHomeCreatorFallbackName)
-                  .toString();
               final handle = (artist['username'] ??
                       artist['walletAddress'] ??
                       artist['wallet'] ??
                       '')
                   .toString();
-              final avatar = (artist['avatar'] ??
-                      artist['avatarUrl'] ??
-                      artist['profileImage'])
-                  ?.toString();
               final institutionId =
                   (artist['institutionId'] ?? artist['id'])?.toString() ?? '';
               final walletAddress = (artist['profileTargetId'] ??
@@ -5890,6 +5871,11 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   canFollow && _followingWallets.contains(canonicalWallet);
               final isFollowBusy = canFollow &&
                   _followRequestsInFlight.contains(canonicalWallet);
+              final identity = ProfileIdentityData.fromProfileMap(
+                artist,
+                fallbackLabel: l10n.desktopHomeCreatorFallbackName,
+                fallbackUserId: navigationId,
+              );
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: DesktopCard(
@@ -5900,72 +5886,54 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                 context,
                                 institutionId: navigationId,
                                 profileTargetId: walletAddress,
-                                title: displayName,
+                                title: identity.label,
                                 openProfileTarget: (profileTargetId) =>
                                     _openUserProfileModal(
                                   userId: profileTargetId,
-                                  username: handle.isEmpty ? null : handle,
+                                  username: identity.username,
                                 ),
                               ))
                       : (navigationId.isEmpty
                           ? null
                           : () => _openUserProfileModal(
                                 userId: navigationId,
-                                username: handle.isEmpty ? null : handle,
+                                username: identity.username,
                               )),
                   child: Row(
                     children: [
-                      AvatarWidget(
-                        avatarUrl: avatar,
-                        wallet: walletAddress?.trim().isNotEmpty == true
-                            ? walletAddress!
-                            : (isInstitutionSuggestion
-                                ? displayName
-                                : (navigationId.isNotEmpty
-                                    ? navigationId
-                                    : displayName)),
-                        radius: 22,
-                        allowFabricatedFallback: true,
-                      ),
-                      if (artist['verified'] == true) ...[
-                        const SizedBox(width: 6),
-                        Icon(Icons.verified,
-                            color: themeProvider.accentColor, size: 16),
-                      ],
-                      const SizedBox(width: 12),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              displayName,
-                              style: KubusTextStyles.detailCardTitle.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            if (handle.isNotEmpty)
-                              Text(
-                                '@$handle',
-                                style: KubusTextStyles.navMetaLabel.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.6),
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                          ],
+                        child: ProfileIdentitySummary(
+                          identity: identity,
+                          layout: ProfileIdentityLayout.row,
+                          avatarRadius: 22,
+                          allowFabricatedFallback: true,
+                          titleStyle: KubusTextStyles.detailCardTitle.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                          subtitleStyle: KubusTextStyles.navMetaLabel.copyWith(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.6),
+                          ),
+                          titleSuffix: artist['verified'] == true
+                              ? Icon(
+                                  Icons.verified,
+                                  color: themeProvider.accentColor,
+                                  size: 16,
+                                )
+                              : null,
                         ),
                       ),
+                      const SizedBox(width: 12),
                       if (canFollow || isFollowBusy)
                         TextButton(
                           onPressed: (!canFollow || isFollowBusy)
                               ? null
                               : () => _toggleSuggestedFollow(
                                     walletAddress: canonicalWallet,
-                                    displayName: displayName,
+                                    displayName: identity.label,
                                   ),
                           child: Text(
                             isFollowing

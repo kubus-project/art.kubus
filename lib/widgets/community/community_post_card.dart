@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:art_kubus/models/community_group.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -10,9 +12,10 @@ import '../../utils/app_animations.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/media_url_resolver.dart';
-import '../avatar_widget.dart';
+import '../../utils/user_profile_navigation.dart';
 import '../inline_loading.dart';
 import '../glass_components.dart';
+import '../profile_identity_summary.dart';
 import 'community_author_role_badges.dart';
 
 class CommunityPostCard extends StatelessWidget {
@@ -98,62 +101,40 @@ class CommunityPostCard extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          AvatarWidget(
-                            wallet: (post.authorWallet ?? post.authorId),
-                            avatarUrl: post.authorAvatar,
-                            radius: 20,
-                            allowFabricatedFallback: true,
-                          ),
-                          const SizedBox(
-                              width: KubusSpacing.sm + KubusSpacing.xs),
                           Expanded(
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.opaque,
+                            child: ProfileIdentitySummary(
+                              identity: ProfileIdentityData.fromValues(
+                                fallbackLabel:
+                                    l10n?.commonUnknownArtist ?? 'Unknown artist',
+                                displayName: post.authorName,
+                                username: post.authorUsername,
+                                userId: post.authorWallet ?? post.authorId,
+                                wallet: post.authorWallet ?? post.authorId,
+                                avatarUrl: post.authorAvatar,
+                              ),
+                              layout: ProfileIdentityLayout.row,
+                              avatarRadius: 20,
+                              allowFabricatedFallback: true,
                               onTap: onOpenAuthorProfile,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Flexible(
-                                        fit: FlexFit.loose,
-                                        child: Text(
-                                          post.authorName,
-                                          style: KubusTextStyles.sectionTitle
-                                              .copyWith(
-                                            fontSize: isSmallScreen
-                                                ? KubusChromeMetrics.navLabel
-                                                : KubusHeaderMetrics
-                                                    .sectionTitle,
-                                            fontWeight: FontWeight.w700,
-                                            color: scheme.onSurface,
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                      CommunityAuthorRoleBadges(
-                                        post: post,
-                                        fontSize: isSmallScreen ? 8.5 : 9.5,
-                                        iconOnly: false,
-                                      ),
-                                    ],
-                                  ),
-                                  if ((post.authorUsername ?? '')
-                                      .trim()
-                                      .isNotEmpty)
-                                    Text(
-                                      '@${post.authorUsername!.trim()}',
-                                      style: KubusTextStyles.sectionSubtitle
-                                          .copyWith(
-                                        fontSize: isSmallScreen
-                                            ? KubusChromeMetrics.navMetaLabel
-                                            : KubusHeaderMetrics.screenSubtitle,
-                                        color: scheme.onSurface
-                                            .withValues(alpha: 0.6),
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                ],
+                              titleStyle:
+                                  KubusTextStyles.sectionTitle.copyWith(
+                                fontSize: isSmallScreen
+                                    ? KubusChromeMetrics.navLabel
+                                    : KubusHeaderMetrics.sectionTitle,
+                                fontWeight: FontWeight.w700,
+                                color: scheme.onSurface,
+                              ),
+                              subtitleStyle:
+                                  KubusTextStyles.sectionSubtitle.copyWith(
+                                fontSize: isSmallScreen
+                                    ? KubusChromeMetrics.navMetaLabel
+                                    : KubusHeaderMetrics.screenSubtitle,
+                                color: scheme.onSurface.withValues(alpha: 0.6),
+                              ),
+                              titleSuffix: CommunityAuthorRoleBadges(
+                                post: post,
+                                fontSize: isSmallScreen ? 8.5 : 9.5,
+                                iconOnly: false,
                               ),
                             ),
                           ),
@@ -686,6 +667,7 @@ class _RepostInnerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
@@ -715,46 +697,45 @@ class _RepostInnerCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  AvatarWidget(
-                    wallet: post.authorWallet ?? post.authorId,
-                    avatarUrl: post.authorAvatar,
-                    radius: 16,
-                    allowFabricatedFallback: true,
-                  ),
-                  const SizedBox(width: KubusSpacing.sm),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              fit: FlexFit.loose,
-                              child: Text(
-                                post.authorName,
-                                style: KubusTextStyles.navMetaLabel.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: scheme.onSurface,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            CommunityAuthorRoleBadges(
-                              post: post,
-                              fontSize: 8,
-                              iconOnly: false,
-                            ),
-                          ],
-                        ),
-                        if (originalHandle.isNotEmpty)
-                          Text(
-                            '@$originalHandle',
-                            style: KubusTextStyles.navMetaLabel.copyWith(
-                              color: scheme.onSurface.withValues(alpha: 0.6),
-                            ),
-                            overflow: TextOverflow.ellipsis,
+                    child: ProfileIdentitySummary(
+                      identity: ProfileIdentityData.fromValues(
+                        fallbackLabel:
+                            l10n?.commonUnknownArtist ?? 'Unknown artist',
+                        displayName: post.authorName,
+                        username: originalHandle,
+                        userId: post.authorWallet ?? post.authorId,
+                        wallet: post.authorWallet ?? post.authorId,
+                        avatarUrl: post.authorAvatar,
+                      ),
+                      layout: ProfileIdentityLayout.row,
+                      avatarRadius: 16,
+                      allowFabricatedFallback: true,
+                      onTap: () {
+                        final userId =
+                            (post.authorWallet ?? post.authorId).trim();
+                        if (userId.isEmpty) return;
+                        unawaited(
+                          UserProfileNavigation.open(
+                            context,
+                            userId: userId,
+                            username:
+                                originalHandle.isEmpty ? null : originalHandle,
                           ),
-                      ],
+                        );
+                      },
+                      titleStyle: KubusTextStyles.navMetaLabel.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: scheme.onSurface,
+                      ),
+                      subtitleStyle: KubusTextStyles.navMetaLabel.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                      titleSuffix: CommunityAuthorRoleBadges(
+                        post: post,
+                        fontSize: 8,
+                        iconOnly: false,
+                      ),
                     ),
                   ),
                   Text(

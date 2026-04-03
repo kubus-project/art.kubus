@@ -36,6 +36,7 @@ import '../../widgets/user_activity_status_line.dart';
 import '../../widgets/topbar_icon.dart';
 import '../../widgets/common/kubus_glass_icon_button.dart';
 import '../../widgets/common/kubus_screen_header.dart';
+import '../../widgets/common/kubus_stat_card.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/profile_artist_info_fields.dart';
 import '../../widgets/detail/detail_shell_components.dart';
@@ -934,34 +935,31 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildStatCard(String title, String value, IconData icon,
       {bool isSmallScreen = false, VoidCallback? onTap}) {
-    return GestureDetector(
+    final accent = Provider.of<ThemeProvider>(context).accentColor;
+    return KubusStatCard(
+      title: title,
+      value: value,
+      icon: icon,
+      accent: accent,
       onTap: onTap,
-      child: DetailCard(
-        padding:
-            EdgeInsets.all(isSmallScreen ? DetailSpacing.sm : DetailSpacing.md),
-        borderRadius: DetailRadius.md,
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              color: Provider.of<ThemeProvider>(context).accentColor,
-              size: isSmallScreen ? 16 : 18,
-            ),
-            SizedBox(
-                height: isSmallScreen ? DetailSpacing.xs : DetailSpacing.sm),
-            Text(value,
-                style: DetailTypography.cardTitle(context)
-                    .copyWith(fontSize: isSmallScreen ? 10 : 12)),
-            Text(
-              title,
-              style: DetailTypography.label(context)
-                  .copyWith(fontSize: isSmallScreen ? 7 : 8),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
+      minHeight: isSmallScreen ? 88 : 96,
+      padding: EdgeInsets.all(
+        isSmallScreen ? KubusSpacing.sm : KubusChromeMetrics.compactCardPadding,
+      ),
+      iconBoxSize: isSmallScreen
+          ? KubusSizes.sidebarActionIconBox - KubusSpacing.md
+          : KubusSizes.sidebarActionIconBox - KubusSpacing.sm,
+      iconSize: isSmallScreen
+          ? KubusSizes.sidebarActionIcon - KubusSpacing.xs
+          : KubusSizes.sidebarActionIcon - KubusSpacing.xxs,
+      titleStyle: KubusTextStyles.detailCaption.copyWith(
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.72),
+        fontSize: isSmallScreen ? 11 : 12,
+      ),
+      valueStyle: KubusTextStyles.detailCardTitle.copyWith(
+        color: Theme.of(context).colorScheme.onSurface,
+        fontSize: isSmallScreen ? 14 : 15,
+        fontWeight: FontWeight.w700,
       ),
     );
   }
