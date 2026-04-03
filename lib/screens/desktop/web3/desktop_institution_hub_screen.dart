@@ -503,7 +503,7 @@ class _DesktopInstitutionHubScreenState
                   .copyWith(color: scheme.onSurface),
             ),
             const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
-            _buildStatsGrid(themeProvider),
+            _buildStatsGrid(),
             const SizedBox(height: KubusSpacing.lg),
 
             // Upcoming events
@@ -699,8 +699,7 @@ class _DesktopInstitutionHubScreenState
     );
   }
 
-  Widget _buildStatsGrid(ThemeProvider themeProvider) {
-    final scheme = Theme.of(context).colorScheme;
+  Widget _buildStatsGrid() {
     final roles = KubusColorRoles.of(context);
     final statsProvider = context.watch<StatsProvider>();
     final wallet = _resolveWalletAddress(listen: true);
@@ -761,7 +760,7 @@ class _DesktopInstitutionHubScreenState
                 'Events',
                 displayCount(events),
                 Icons.event_outlined,
-                scheme.primary,
+                roles.web3InstitutionAccent,
               ),
             ),
             const SizedBox(width: KubusSpacing.sm),
@@ -770,7 +769,7 @@ class _DesktopInstitutionHubScreenState
                 'Visitors',
                 displayCount(visitors),
                 Icons.people_outline,
-                scheme.secondary,
+                roles.statTeal,
               ),
             ),
           ],
@@ -783,7 +782,7 @@ class _DesktopInstitutionHubScreenState
                 'Artworks',
                 displayCount(artworks),
                 Icons.collections_outlined,
-                scheme.tertiary,
+                roles.statCoral,
               ),
             ),
             const SizedBox(width: KubusSpacing.sm),

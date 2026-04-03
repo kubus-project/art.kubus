@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../utils/category_accent_color.dart';
 import '../../../utils/wallet_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../providers/themeprovider.dart';
@@ -44,6 +43,7 @@ import '../../collab/invites_inbox_screen.dart';
 import '../../activity/view_history_screen.dart';
 import '../../events/event_detail_screen.dart';
 import '../../../config/config.dart';
+import '../../../utils/kubus_color_roles.dart';
 import '../../activity/advanced_analytics_screen.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import '../../../widgets/common/kubus_stat_card.dart';
@@ -233,9 +233,9 @@ class _ProfileScreenState extends State<ProfileScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildPerformanceStatsSection(themeProvider),
+              _buildPerformanceStatsSection(),
               const SizedBox(height: DetailSpacing.lg),
-              _buildAchievementsSection(themeProvider),
+              _buildAchievementsSection(),
             ],
           ),
         ),
@@ -295,9 +295,9 @@ class _ProfileScreenState extends State<ProfileScreen>
           _buildViewedArtworksSection(themeProvider),
           const SizedBox(height: DetailSpacing.lg),
         ],
-        _buildPerformanceStatsSection(themeProvider),
+        _buildPerformanceStatsSection(),
         const SizedBox(height: DetailSpacing.lg),
-        _buildAchievementsSection(themeProvider),
+        _buildAchievementsSection(),
         const SizedBox(height: DetailSpacing.lg),
         _buildPostsSection(themeProvider),
       ],
@@ -804,11 +804,17 @@ class _ProfileScreenState extends State<ProfileScreen>
           label: l10n.userProfilePostsStatLabel,
           value: profileProvider.formattedPostsCount,
           icon: Icons.article_outlined,
+          color: _profileStatAccentForIcon(Icons.article_outlined),
+          centeredWatermarkAlignment: Alignment.center,
+          centeredWatermarkScale: 0.84,
         ),
         DesktopStatCard(
           label: l10n.userProfileFollowersStatLabel,
           value: profileProvider.formattedFollowersCount,
           icon: Icons.people_outline,
+          color: _profileStatAccentForIcon(Icons.people_outline),
+          centeredWatermarkAlignment: Alignment.center,
+          centeredWatermarkScale: 0.84,
           onTap: () => ProfileScreenMethods.showFollowers(context,
               walletAddress: wallet),
         ),
@@ -816,6 +822,9 @@ class _ProfileScreenState extends State<ProfileScreen>
           label: l10n.userProfileFollowingStatLabel,
           value: profileProvider.formattedFollowingCount,
           icon: Icons.person_add_outlined,
+          color: _profileStatAccentForIcon(Icons.person_add_outlined),
+          centeredWatermarkAlignment: Alignment.center,
+          centeredWatermarkScale: 0.84,
           onTap: () => ProfileScreenMethods.showFollowing(context,
               walletAddress: wallet),
         ),
@@ -823,6 +832,9 @@ class _ProfileScreenState extends State<ProfileScreen>
           label: l10n.userProfileArtworksTitle,
           value: profileProvider.formattedArtworksCount,
           icon: Icons.palette_outlined,
+          color: _profileStatAccentForIcon(Icons.palette_outlined),
+          centeredWatermarkAlignment: Alignment.center,
+          centeredWatermarkScale: 0.84,
           onTap: () => ProfileScreenMethods.showArtworks(context),
         ),
       ],
@@ -1157,7 +1169,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildPerformanceStatsSection(ThemeProvider themeProvider) {
+  Widget _buildPerformanceStatsSection() {
     return Consumer3<ProfileProvider, ArtworkProvider, StatsProvider>(
       builder: (context, profileProvider, artworkProvider, statsProvider, _) {
         final l10n = AppLocalizations.of(context)!;
@@ -1275,31 +1287,26 @@ class _ProfileScreenState extends State<ProfileScreen>
                   l10n.profilePerformanceArtworksViewedTitle,
                   _formatStatCount(viewedCount),
                   Icons.visibility_outlined,
-                  themeProvider,
                 ),
                 _buildPerformanceStatCard(
                   l10n.profilePerformanceDiscoveriesTitle,
                   discoveriesLabel,
                   Icons.explore_outlined,
-                  themeProvider,
                 ),
                 _buildPerformanceStatCard(
                   l10n.desktopProfilePerformanceCreatedTitle,
                   createdLabel,
                   Icons.create_outlined,
-                  themeProvider,
                 ),
                 _buildPerformanceStatCard(
                   l10n.desktopProfilePerformanceNftsOwnedTitle,
                   nftsLabel,
                   Icons.token_outlined,
-                  themeProvider,
                 ),
                 _buildPerformanceStatCard(
                   l10n.profilePerformancePublicStreetArtAddedTitle,
                   publicStreetArtAddedLabel,
                   Icons.streetview,
-                  themeProvider,
                 ),
               ],
             ),
@@ -1309,11 +1316,11 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildPerformanceStatCard(
-      String label, String value, IconData icon, ThemeProvider themeProvider) {
+  Widget _buildPerformanceStatCard(String label, String value, IconData icon) {
     final mediaQuery = MediaQuery.of(context);
     final desktopDense = mediaQuery.size.width < 1480;
     final highDensity = mediaQuery.devicePixelRatio >= 2.0;
+    final accent = _profileStatAccentForIcon(icon);
     final iconBox = desktopDense
         ? KubusChromeMetrics.heroIconBox - KubusSpacing.sm
         : KubusChromeMetrics.heroIconBox;
@@ -1328,7 +1335,9 @@ class _ProfileScreenState extends State<ProfileScreen>
       value: value,
       icon: icon,
       layout: KubusStatCardLayout.centered,
-      accent: themeProvider.accentColor,
+      accent: accent,
+      centeredWatermarkAlignment: Alignment.center,
+      centeredWatermarkScale: desktopDense ? 0.82 : 0.86,
       minHeight: 0,
       padding: const EdgeInsets.all(KubusSpacing.md),
       titleMaxLines: 1,
@@ -1748,7 +1757,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildAchievementsSection(ThemeProvider themeProvider) {
+  Widget _buildAchievementsSection() {
     return Consumer<TaskProvider>(
       builder: (context, taskProvider, _) {
         final l10n = AppLocalizations.of(context)!;
@@ -1797,7 +1806,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               DesktopGrid(
                 minCrossAxisCount: 2,
                 maxCrossAxisCount: 3,
-                childAspectRatio: 1.2,
+                childAspectRatio: 1.25,
                 children: displayAchievements.map((achievement) {
                   final progress = progressById[achievement.id] ??
                       AchievementProgress(
@@ -1805,7 +1814,39 @@ class _ProfileScreenState extends State<ProfileScreen>
                         currentProgress: 0,
                         isCompleted: false,
                       );
-                  return _buildAchievementCard(achievement, progress);
+                  final required = achievement.requiredCount > 0
+                      ? achievement.requiredCount
+                      : 1;
+                  final unlocked = progress.isCompleted ||
+                      progress.currentProgress >= required;
+                  final progressLabel = unlocked
+                      ? '+${achievement.tokenReward} KUB8'
+                      : '${progress.currentProgress}/$required';
+
+                  return KubusStatCard(
+                    title: achievement.title,
+                    value: progressLabel,
+                    icon: _iconForAchievement(achievement),
+                    layout: KubusStatCardLayout.centered,
+                    accent: _achievementAccentForDefinition(achievement),
+                    centeredWatermarkAlignment: Alignment.center,
+                    centeredWatermarkScale: 0.84,
+                    minHeight: 0,
+                    padding: const EdgeInsets.all(KubusSpacing.md),
+                    titleMaxLines: 2,
+                    titleStyle: KubusTextStyles.detailCaption.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: unlocked ? 0.84 : 0.7),
+                    ),
+                    valueStyle: KubusTextStyles.detailCardTitle.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  );
                 }).toList(),
               ),
           ],
@@ -1814,49 +1855,97 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  String _categoryForAchievement(achievement_svc.AchievementDefinition def) {
-    if (def.isPOAP) return 'Events';
+  Color _profileStatAccentForIcon(IconData icon) {
+    final roles = KubusColorRoles.of(context);
+    final codePoint = icon.codePoint;
+
+    if (codePoint == Icons.palette.codePoint ||
+        codePoint == Icons.palette_outlined.codePoint) {
+      return roles.web3ArtistStudioAccent;
+    }
+    if (codePoint == Icons.collections.codePoint ||
+        codePoint == Icons.collections_outlined.codePoint) {
+      return roles.web3InstitutionAccent;
+    }
+    if (codePoint == Icons.article.codePoint ||
+        codePoint == Icons.article_outlined.codePoint) {
+      return roles.statBlue;
+    }
+    if (codePoint == Icons.visibility.codePoint ||
+        codePoint == Icons.visibility_outlined.codePoint) {
+      return roles.statTeal;
+    }
+    if (codePoint == Icons.location_on.codePoint ||
+        codePoint == Icons.explore.codePoint ||
+        codePoint == Icons.explore_outlined.codePoint) {
+      return roles.statBlue;
+    }
+    if (codePoint == Icons.auto_fix_high.codePoint ||
+        codePoint == Icons.create.codePoint ||
+        codePoint == Icons.create_outlined.codePoint) {
+      return roles.statGreen;
+    }
+    if (codePoint == Icons.group.codePoint ||
+        codePoint == Icons.groups.codePoint ||
+        codePoint == Icons.people.codePoint ||
+        codePoint == Icons.people_outline.codePoint ||
+        codePoint == Icons.person_add.codePoint ||
+        codePoint == Icons.person_add_outlined.codePoint) {
+      return roles.statCoral;
+    }
+    if (codePoint == Icons.streetview.codePoint) {
+      return roles.statAmber;
+    }
+    if (codePoint == Icons.token.codePoint ||
+        codePoint == Icons.token_outlined.codePoint) {
+      return roles.web3MarketplaceAccent;
+    }
+
+    return Theme.of(context).colorScheme.primary;
+  }
+
+  Color _achievementAccentForDefinition(
+      achievement_svc.AchievementDefinition def) {
+    final roles = KubusColorRoles.of(context);
+
     switch (def.type) {
       case achievement_svc.AchievementType.firstDiscovery:
       case achievement_svc.AchievementType.artExplorer:
       case achievement_svc.AchievementType.artMaster:
       case achievement_svc.AchievementType.artLegend:
-        return 'Discovery';
+        return roles.statBlue;
       case achievement_svc.AchievementType.firstARView:
       case achievement_svc.AchievementType.arEnthusiast:
       case achievement_svc.AchievementType.arPro:
-        return 'AR';
+        return roles.statTeal;
       case achievement_svc.AchievementType.firstNFTMint:
       case achievement_svc.AchievementType.nftCollector:
       case achievement_svc.AchievementType.nftTrader:
-        return 'NFT';
+      case achievement_svc.AchievementType.firstTrade:
+      case achievement_svc.AchievementType.smartTrader:
+      case achievement_svc.AchievementType.marketMaster:
+        return roles.web3MarketplaceAccent;
       case achievement_svc.AchievementType.firstPost:
       case achievement_svc.AchievementType.influencer:
       case achievement_svc.AchievementType.communityBuilder:
-        return 'Community';
       case achievement_svc.AchievementType.firstLike:
       case achievement_svc.AchievementType.popularCreator:
       case achievement_svc.AchievementType.firstComment:
       case achievement_svc.AchievementType.commentator:
-        return 'Social';
-      case achievement_svc.AchievementType.firstTrade:
-      case achievement_svc.AchievementType.smartTrader:
-      case achievement_svc.AchievementType.marketMaster:
-        return 'Trading';
-      case achievement_svc.AchievementType.earlyAdopter:
-      case achievement_svc.AchievementType.betaTester:
-      case achievement_svc.AchievementType.artSupporter:
-        return 'Special';
+        return roles.statCoral;
       case achievement_svc.AchievementType.eventAttendee:
       case achievement_svc.AchievementType.galleryVisitor:
       case achievement_svc.AchievementType.workshopParticipant:
-        return 'Events';
+        return roles.web3InstitutionAccent;
       case achievement_svc.AchievementType.streetArtSpotter:
       case achievement_svc.AchievementType.streetArtScout:
       case achievement_svc.AchievementType.streetArtCurator:
       case achievement_svc.AchievementType.streetArtPatron:
-        return AppLocalizations.of(context)!
-            .userProfileAchievementCategoryStreetArt;
+        return roles.statAmber;
+      case achievement_svc.AchievementType.earlyAdopter:
+      case achievement_svc.AchievementType.betaTester:
+      case achievement_svc.AchievementType.artSupporter:
+        return roles.web3DaoAccent;
     }
   }
 
@@ -1904,105 +1993,6 @@ class _ProfileScreenState extends State<ProfileScreen>
       case achievement_svc.AchievementType.streetArtPatron:
         return Icons.streetview;
     }
-  }
-
-  Widget _buildAchievementCard(
-    achievement_svc.AchievementDefinition achievement,
-    AchievementProgress progress,
-  ) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-    final required =
-        achievement.requiredCount > 0 ? achievement.requiredCount : 1;
-    final ratio = (progress.currentProgress / required).clamp(0.0, 1.0);
-    final isCompleted = progress.isCompleted || ratio >= 1.0;
-    final accent = CategoryAccentColor.resolve(
-      context,
-      _categoryForAchievement(achievement),
-    );
-
-    return DesktopCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding:
-                    const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                ),
-                child: Icon(
-                  _iconForAchievement(achievement),
-                  color: accent,
-                  size: KubusChromeMetrics.heroIcon,
-                ),
-              ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: KubusSpacing.sm,
-                  vertical: KubusSpacing.xs,
-                ),
-                decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .secondaryContainer
-                      .withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(KubusRadius.sm),
-                ),
-                child: Text(
-                  '+${achievement.tokenReward}',
-                  style: KubusTypography.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSecondaryContainer,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: KubusSpacing.md),
-          Text(
-            achievement.title,
-            style: KubusTextStyles.detailCardTitle.copyWith(
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: KubusSpacing.sm),
-          Text(
-            isCompleted ? 'Completed' : '${progress.currentProgress}/$required',
-            style: KubusTextStyles.detailCaption.copyWith(
-              fontWeight: FontWeight.w600,
-              color: isCompleted
-                  ? themeProvider.accentColor
-                  : Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.6),
-            ),
-          ),
-          const SizedBox(height: KubusSpacing.sm),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(KubusRadius.sm),
-            child: LinearProgressIndicator(
-              value: ratio,
-              minHeight: 6,
-              backgroundColor: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.08),
-              valueColor: AlwaysStoppedAnimation<Color>(
-                isCompleted ? themeProvider.accentColor : accent,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildPostsSection(ThemeProvider themeProvider) {

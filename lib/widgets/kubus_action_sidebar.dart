@@ -172,13 +172,16 @@ class _KubusActionSidebarTileState extends State<KubusActionSidebarTile> {
 }
 
 class KubusSidebarStatCard extends StatelessWidget {
+  static const Alignment watermarkAlignment = Alignment.center;
+  static const double watermarkScale = 0.84;
+
   const KubusSidebarStatCard({
     super.key,
     required this.title,
     required this.value,
     required this.icon,
     required this.accent,
-    this.minHeight = 116,
+    this.minHeight = 0,
   });
 
   final String title;
@@ -190,22 +193,27 @@ class KubusSidebarStatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return KubusStatCard(
-      title: title,
-      value: value,
-      icon: icon,
-      accent: accent,
-      layout: KubusStatCardLayout.centered,
-      showIcon: true,
-      minHeight: minHeight,
-      padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
-      titleMaxLines: 2,
-      borderColor: accent.withValues(alpha: 0.26),
-      titleStyle: KubusTextStyles.statLabel.copyWith(
-        color: scheme.onSurface.withValues(alpha: 0.84),
-      ),
-      valueStyle: KubusTextStyles.statValue.copyWith(
-        color: scheme.onSurface,
+    return AspectRatio(
+      aspectRatio: 1,
+      child: KubusStatCard(
+        title: title,
+        value: value,
+        icon: icon,
+        accent: accent,
+        layout: KubusStatCardLayout.centered,
+        showIcon: true,
+        centeredWatermarkAlignment: watermarkAlignment,
+        centeredWatermarkScale: watermarkScale,
+        minHeight: minHeight,
+        padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
+        titleMaxLines: 2,
+        borderColor: accent.withValues(alpha: 0.26),
+        titleStyle: KubusTextStyles.statLabel.copyWith(
+          color: scheme.onSurface.withValues(alpha: 0.84),
+        ),
+        valueStyle: KubusTextStyles.statValue.copyWith(
+          color: scheme.onSurface,
+        ),
       ),
     );
   }

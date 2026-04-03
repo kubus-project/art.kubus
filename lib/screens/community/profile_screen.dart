@@ -50,6 +50,7 @@ import '../../widgets/secure_account_banner_card.dart';
 import '../../widgets/wallet_backup_banner_card.dart';
 import '../../models/dao.dart';
 import '../../config/config.dart';
+import '../../utils/kubus_color_roles.dart';
 import '../activity/advanced_analytics_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
@@ -941,7 +942,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildStatCard(String title, String value, IconData icon,
       {bool isSmallScreen = false, VoidCallback? onTap}) {
-    final accent = Provider.of<ThemeProvider>(context).accentColor;
+    final accent = _profileStatAccentForIcon(icon);
     return KubusStatCard(
       title: title,
       value: value,
@@ -949,6 +950,8 @@ class _ProfileScreenState extends State<ProfileScreen>
       layout: KubusStatCardLayout.centered,
       accent: accent,
       onTap: onTap,
+      centeredWatermarkAlignment: Alignment.center,
+      centeredWatermarkScale: isSmallScreen ? 0.82 : 0.86,
       minHeight: isSmallScreen ? 88 : 96,
       padding: EdgeInsets.all(
         isSmallScreen ? KubusSpacing.sm : KubusChromeMetrics.compactCardPadding,
@@ -2045,65 +2048,68 @@ class _ProfileScreenState extends State<ProfileScreen>
                           .userProfileAchievementsEmptyDescription,
                       icon: Icons.emoji_events,
                     )
-                  : Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: displayAchievements.map((achievement) {
-                        final progress = progressById[achievement.id] ??
-                            AchievementProgress(
-                              achievementId: achievement.id,
-                              currentProgress: 0,
-                              isCompleted: false,
+                  : LayoutBuilder(
+                      builder: (context, constraints) {
+                        final cardWidth = constraints.maxWidth < 420
+                            ? ((constraints.maxWidth - 12) / 2)
+                            : 160.0;
+                        return Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: displayAchievements.map((achievement) {
+                            final progress = progressById[achievement.id] ??
+                                AchievementProgress(
+                                  achievementId: achievement.id,
+                                  currentProgress: 0,
+                                  isCompleted: false,
+                                );
+                            final required = achievement.requiredCount > 0
+                                ? achievement.requiredCount
+                                : 1;
+                            final unlocked = progress.isCompleted ||
+                                progress.currentProgress >= required;
+                            final progressLabel = unlocked
+                                ? '+${achievement.tokenReward} KUB8'
+                                : '${progress.currentProgress}/$required';
+
+                            return SizedBox(
+                              width: cardWidth,
+                              child: KubusStatCard(
+                                title: achievement.title,
+                                value: progressLabel,
+                                icon: iconFor(achievement),
+                                layout: KubusStatCardLayout.centered,
+                                accent: _achievementAccentForDefinition(
+                                    achievement),
+                                centeredWatermarkAlignment: Alignment.center,
+                                centeredWatermarkScale: 0.84,
+                                minHeight: 96,
+                                padding: const EdgeInsets.all(KubusSpacing.sm),
+                                titleMaxLines: 2,
+                                titleStyle:
+                                    KubusTextStyles.detailCaption.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: unlocked ? 0.84 : 0.7),
+                                ),
+                                valueStyle:
+                                    KubusTextStyles.detailCardTitle.copyWith(
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                             );
-                        final required = achievement.requiredCount > 0
-                            ? achievement.requiredCount
-                            : 1;
-                        final unlocked = progress.isCompleted ||
-                            progress.currentProgress >= required;
-                        return _buildAchievementBadge(
-                          achievement.title,
-                          iconFor(achievement),
-                          unlocked,
+                          }).toList(),
                         );
-                      }).toList(),
+                      },
                     ),
             ],
           );
         },
-      ),
-    );
-  }
-
-  Widget _buildAchievementBadge(String title, IconData icon, bool unlocked) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final scheme = Theme.of(context).colorScheme;
-
-    return LiquidGlassCard(
-      padding: const EdgeInsets.all(KubusSpacing.md),
-      borderRadius: BorderRadius.circular(KubusRadius.md),
-      backgroundColor: unlocked
-          ? themeProvider.accentColor.withValues(alpha: 0.12)
-          : scheme.surface.withValues(alpha: 0.14),
-      child: Column(
-        children: [
-          Icon(
-            icon,
-            color: unlocked
-                ? themeProvider.accentColor
-                : scheme.onSurface.withValues(alpha: 0.4),
-            size: 24,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: KubusTextStyles.compactBadge.copyWith(
-              fontWeight: FontWeight.w700,
-              color: unlocked
-                  ? scheme.onSurface
-                  : scheme.onSurface.withValues(alpha: 0.4),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -2307,7 +2313,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     final mediaQuery = MediaQuery.of(context);
     final compact = mediaQuery.size.width < 375;
     final highDensity = mediaQuery.devicePixelRatio >= 3.0;
-    final accent = Provider.of<ThemeProvider>(context).accentColor;
+    final accent = _profileStatAccentForIcon(icon);
     final valueFontSize = compact ? 15.5 : 16.5;
     final titleFontSize = compact ? 10.5 : 11.5;
     final tunedIconBoxSize = compact
@@ -2322,6 +2328,8 @@ class _ProfileScreenState extends State<ProfileScreen>
       icon: icon,
       layout: KubusStatCardLayout.centered,
       accent: accent,
+      centeredWatermarkAlignment: Alignment.center,
+      centeredWatermarkScale: compact ? 0.82 : 0.86,
       minHeight: 80,
       padding: const EdgeInsets.all(KubusSpacing.md),
       titleMaxLines: 1,
@@ -2354,6 +2362,96 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
 
     return cardContent;
+  }
+
+  Color _profileStatAccentForIcon(IconData icon) {
+    final roles = KubusColorRoles.of(context);
+    final codePoint = icon.codePoint;
+
+    if (codePoint == Icons.palette.codePoint ||
+        codePoint == Icons.palette_outlined.codePoint) {
+      return roles.web3ArtistStudioAccent;
+    }
+    if (codePoint == Icons.collections.codePoint ||
+        codePoint == Icons.collections_outlined.codePoint) {
+      return roles.web3InstitutionAccent;
+    }
+    if (codePoint == Icons.visibility.codePoint ||
+        codePoint == Icons.visibility_outlined.codePoint) {
+      return roles.statTeal;
+    }
+    if (codePoint == Icons.location_on.codePoint ||
+        codePoint == Icons.explore.codePoint ||
+        codePoint == Icons.explore_outlined.codePoint) {
+      return roles.statBlue;
+    }
+    if (codePoint == Icons.auto_fix_high.codePoint ||
+        codePoint == Icons.create.codePoint ||
+        codePoint == Icons.create_outlined.codePoint) {
+      return roles.statGreen;
+    }
+    if (codePoint == Icons.group.codePoint ||
+        codePoint == Icons.groups.codePoint ||
+        codePoint == Icons.people.codePoint ||
+        codePoint == Icons.people_outline.codePoint ||
+        codePoint == Icons.person_add.codePoint ||
+        codePoint == Icons.person_add_outlined.codePoint) {
+      return roles.statCoral;
+    }
+    if (codePoint == Icons.streetview.codePoint) {
+      return roles.statAmber;
+    }
+    if (codePoint == Icons.token.codePoint ||
+        codePoint == Icons.token_outlined.codePoint) {
+      return roles.web3MarketplaceAccent;
+    }
+
+    return Theme.of(context).colorScheme.primary;
+  }
+
+  Color _achievementAccentForDefinition(
+      achievement_svc.AchievementDefinition def) {
+    final roles = KubusColorRoles.of(context);
+
+    switch (def.type) {
+      case achievement_svc.AchievementType.firstDiscovery:
+      case achievement_svc.AchievementType.artExplorer:
+      case achievement_svc.AchievementType.artMaster:
+      case achievement_svc.AchievementType.artLegend:
+        return roles.statBlue;
+      case achievement_svc.AchievementType.firstARView:
+      case achievement_svc.AchievementType.arEnthusiast:
+      case achievement_svc.AchievementType.arPro:
+        return roles.statTeal;
+      case achievement_svc.AchievementType.firstNFTMint:
+      case achievement_svc.AchievementType.nftCollector:
+      case achievement_svc.AchievementType.nftTrader:
+      case achievement_svc.AchievementType.firstTrade:
+      case achievement_svc.AchievementType.smartTrader:
+      case achievement_svc.AchievementType.marketMaster:
+        return roles.web3MarketplaceAccent;
+      case achievement_svc.AchievementType.firstPost:
+      case achievement_svc.AchievementType.influencer:
+      case achievement_svc.AchievementType.communityBuilder:
+      case achievement_svc.AchievementType.firstLike:
+      case achievement_svc.AchievementType.popularCreator:
+      case achievement_svc.AchievementType.firstComment:
+      case achievement_svc.AchievementType.commentator:
+        return roles.statCoral;
+      case achievement_svc.AchievementType.eventAttendee:
+      case achievement_svc.AchievementType.galleryVisitor:
+      case achievement_svc.AchievementType.workshopParticipant:
+        return roles.web3InstitutionAccent;
+      case achievement_svc.AchievementType.streetArtSpotter:
+      case achievement_svc.AchievementType.streetArtScout:
+      case achievement_svc.AchievementType.streetArtCurator:
+      case achievement_svc.AchievementType.streetArtPatron:
+        return roles.statAmber;
+      case achievement_svc.AchievementType.earlyAdopter:
+      case achievement_svc.AchievementType.betaTester:
+      case achievement_svc.AchievementType.artSupporter:
+        return roles.web3DaoAccent;
+    }
   }
 
   // Navigation and interaction methods

@@ -32,6 +32,8 @@ class KubusStatCard extends StatelessWidget {
     this.isPositiveChange = true,
     this.layout = KubusStatCardLayout.standard,
     this.showIcon = true,
+    this.centeredWatermarkAlignment,
+    this.centeredWatermarkScale = 1.0,
   });
 
   final String title;
@@ -53,6 +55,8 @@ class KubusStatCard extends StatelessWidget {
   final bool isPositiveChange;
   final KubusStatCardLayout layout;
   final bool showIcon;
+  final Alignment? centeredWatermarkAlignment;
+  final double centeredWatermarkScale;
 
   @override
   Widget build(BuildContext context) {
@@ -101,6 +105,8 @@ class KubusStatCard extends StatelessWidget {
                   effectiveAccent: effectiveAccent,
                   shouldShowIcon: shouldShowIcon,
                   contentPadding: padding,
+                  centeredWatermarkAlignment: centeredWatermarkAlignment,
+                  centeredWatermarkScale: centeredWatermarkScale,
                 )
               : _buildStandardContent(
                   context: context,
@@ -199,6 +205,8 @@ class KubusStatCard extends StatelessWidget {
     required Color effectiveAccent,
     required bool shouldShowIcon,
     required EdgeInsetsGeometry contentPadding,
+    required Alignment? centeredWatermarkAlignment,
+    required double centeredWatermarkScale,
   }) {
     final mediaQuery = MediaQuery.maybeOf(context);
     final screenWidth = mediaQuery?.size.width ?? 0;
@@ -286,16 +294,19 @@ class KubusStatCard extends StatelessWidget {
                     maxAllowedSize,
                   );
 
-                  final iconWatermarkSize =
-                      (baseWatermarkSize * glyphCompensation * watermarkScale)
+                  final iconWatermarkSize = (baseWatermarkSize *
+                              glyphCompensation *
+                              watermarkScale)
                           .clamp(
-                    math.max(minWidthCoverage, minHeightCoverage) * 0.92,
-                    maxAllowedSize * 1.04,
-                  );
+                        math.max(minWidthCoverage, minHeightCoverage) * 0.92,
+                        maxAllowedSize * 1.04,
+                      ) *
+                      centeredWatermarkScale.clamp(0.75, 1.2);
 
-                  final watermarkAlignment = aspectRatio >= 1.6
-                      ? Alignment.bottomCenter
-                      : Alignment.center;
+                  final watermarkAlignment = centeredWatermarkAlignment ??
+                      (aspectRatio >= 1.6
+                          ? Alignment.bottomCenter
+                          : Alignment.center);
 
                   return Align(
                     alignment: watermarkAlignment,

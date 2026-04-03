@@ -572,7 +572,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                   .copyWith(color: scheme.onSurface),
             ),
             const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
-            _buildStatsGrid(themeProvider),
+            _buildStatsGrid(),
             const SizedBox(height: KubusSpacing.lg),
 
             if (section == DesktopArtistStudioSection.gallery) ...[
@@ -779,9 +779,9 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
     );
   }
 
-  Widget _buildStatsGrid(ThemeProvider themeProvider) {
+  Widget _buildStatsGrid() {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
     final statsProvider = context.watch<StatsProvider>();
     final wallet = _resolveWalletAddress(listen: true);
 
@@ -830,7 +830,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                 l10n.desktopArtistStudioStatArtworks,
                 displayCount(artworks),
                 Icons.collections_outlined,
-                themeProvider.accentColor,
+                roles.web3ArtistStudioAccent,
               ),
             ),
             const SizedBox(width: KubusSpacing.sm),
@@ -839,7 +839,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                 l10n.desktopArtistStudioStatViews,
                 displayCount(views),
                 Icons.visibility_outlined,
-                scheme.secondary,
+                roles.statTeal,
               ),
             ),
           ],
@@ -852,7 +852,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                 l10n.desktopArtistStudioStatLikes,
                 displayCount(likes),
                 Icons.favorite_outline,
-                scheme.tertiary,
+                roles.statCoral,
               ),
             ),
             const SizedBox(width: KubusSpacing.sm),
@@ -861,7 +861,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                 l10n.desktopArtistStudioStatSales,
                 displayKub8(earnedKub8),
                 Icons.attach_money,
-                scheme.primary,
+                roles.positiveAction,
               ),
             ),
           ],

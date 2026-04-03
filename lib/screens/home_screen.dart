@@ -1382,6 +1382,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               icon: icon,
               layout: KubusStatCardLayout.centered,
               showIcon: showIconOnly,
+              centeredWatermarkAlignment: Alignment.center,
+              centeredWatermarkScale: showIconOnly ? 0.86 : 1.0,
               accent: statColor,
               tintBase: scheme.surface,
               onTap: () => _showStatsDialog(title, icon),

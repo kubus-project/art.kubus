@@ -1108,6 +1108,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                         : discoveredCount.toString(),
                     icon: Icons.explore,
                     color: AppColorUtils.tealAccent,
+                    centeredWatermarkAlignment: Alignment.center,
+                    centeredWatermarkScale: 0.84,
                   ),
                 ),
                 SizedBox(
@@ -1118,6 +1120,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     value: arSessions.toString(),
                     icon: Icons.view_in_ar,
                     color: AppColorUtils.purpleAccent,
+                    centeredWatermarkAlignment: Alignment.center,
+                    centeredWatermarkScale: 0.84,
                   ),
                 ),
                 SizedBox(
@@ -1128,6 +1132,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     value: web3Provider.isConnected ? nftCount.toString() : '0',
                     icon: Icons.collections,
                     color: AppColorUtils.coralAccent,
+                    centeredWatermarkAlignment: Alignment.center,
+                    centeredWatermarkScale: 0.84,
                   ),
                 ),
                 SizedBox(
@@ -1138,6 +1144,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     value: kub8Earned,
                     icon: Icons.monetization_on,
                     color: roles.achievementGold,
+                    centeredWatermarkAlignment: Alignment.center,
+                    centeredWatermarkScale: 0.84,
                   ),
                 ),
               ],
@@ -2412,10 +2420,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: Theme.of(context)
-                .colorScheme
-                .secondary
-                .withValues(alpha: 0.12),
+            color:
+                Theme.of(context).colorScheme.secondary.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(DetailRadius.md),
           ),
           child: Text(
@@ -2896,9 +2902,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     final isMapSubjectResult =
         result.kind == KubusSearchResultKind.institution ||
             result.kind == KubusSearchResultKind.event;
-    if (isMapSubjectResult &&
-        markerId.isNotEmpty &&
-        result.position == null) {
+    if (isMapSubjectResult && markerId.isNotEmpty && result.position == null) {
       await ShareDeepLinkNavigation.open(
         context,
         ShareDeepLinkTarget(

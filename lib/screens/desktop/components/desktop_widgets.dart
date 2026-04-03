@@ -242,6 +242,8 @@ class DesktopStatCard extends StatefulWidget {
   final String? change;
   final bool isPositive;
   final VoidCallback? onTap;
+  final Alignment? centeredWatermarkAlignment;
+  final double centeredWatermarkScale;
 
   const DesktopStatCard({
     super.key,
@@ -252,6 +254,8 @@ class DesktopStatCard extends StatefulWidget {
     this.change,
     this.isPositive = true,
     this.onTap,
+    this.centeredWatermarkAlignment,
+    this.centeredWatermarkScale = 1.0,
   });
 
   @override
@@ -293,6 +297,8 @@ class _DesktopStatCardState extends State<DesktopStatCard> {
           icon: widget.icon,
           layout: KubusStatCardLayout.centered,
           accent: color,
+          centeredWatermarkAlignment: widget.centeredWatermarkAlignment,
+          centeredWatermarkScale: widget.centeredWatermarkScale,
           change: widget.change,
           isPositiveChange: widget.isPositive,
           minHeight: 136,
