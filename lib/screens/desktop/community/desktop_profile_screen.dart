@@ -46,6 +46,7 @@ import '../../events/event_detail_screen.dart';
 import '../../../config/config.dart';
 import '../../activity/advanced_analytics_screen.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
+import '../../../widgets/common/kubus_stat_card.dart';
 
 /// Desktop profile screen with clean card-based layout
 /// Features: Profile header, stats cards, achievements, posts feed
@@ -1310,46 +1311,37 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildPerformanceStatCard(
       String label, String value, IconData icon, ThemeProvider themeProvider) {
-    return DesktopCard(
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(KubusSpacing.md),
-            decoration: BoxDecoration(
-              color: themeProvider.accentColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-            ),
-            child: Icon(
-              icon,
-              color: themeProvider.accentColor,
-              size: KubusChromeMetrics.heroIcon,
-            ),
-          ),
-          const SizedBox(width: KubusSpacing.lg),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  value,
-                  style: KubusTextStyles.statValue.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                Text(
-                  label,
-                  style: KubusTextStyles.statLabel.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+    final mediaQuery = MediaQuery.of(context);
+    final desktopDense = mediaQuery.size.width < 1480;
+    final highDensity = mediaQuery.devicePixelRatio >= 2.0;
+    final iconBox = desktopDense
+        ? KubusChromeMetrics.heroIconBox - KubusSpacing.sm
+        : KubusChromeMetrics.heroIconBox;
+    final iconSize = highDensity
+        ? KubusChromeMetrics.heroIcon - KubusSpacing.xs
+        : KubusChromeMetrics.heroIcon;
+    final valueFontSize = desktopDense ? 24.0 : 26.0;
+    final titleFontSize = desktopDense ? 11.5 : 12.0;
+
+    return KubusStatCard(
+      title: label,
+      value: value,
+      icon: icon,
+      layout: KubusStatCardLayout.centered,
+      accent: themeProvider.accentColor,
+      minHeight: 0,
+      padding: const EdgeInsets.all(KubusSpacing.md),
+      titleMaxLines: 1,
+      iconBoxSize: iconBox,
+      iconSize: iconSize,
+      titleStyle: KubusTextStyles.statLabel.copyWith(
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+        fontSize: titleFontSize,
+      ),
+      valueStyle: KubusTextStyles.statValue.copyWith(
+        color: Theme.of(context).colorScheme.onSurface,
+        fontSize: valueFontSize,
+        fontWeight: FontWeight.w700,
       ),
     );
   }

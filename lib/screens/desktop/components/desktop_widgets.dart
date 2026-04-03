@@ -291,10 +291,12 @@ class _DesktopStatCardState extends State<DesktopStatCard> {
           title: widget.label,
           value: widget.value,
           icon: widget.icon,
+          layout: KubusStatCardLayout.centered,
           accent: color,
           change: widget.change,
           isPositiveChange: widget.isPositive,
           minHeight: 160,
+          titleMaxLines: 2,
           valueStyle: KubusTextStyles.statValue,
           titleStyle: KubusTextStyles.actionTileTitle,
           borderColor: _isHovered

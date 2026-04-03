@@ -940,12 +940,14 @@ class _ProfileScreenState extends State<ProfileScreen>
       title: title,
       value: value,
       icon: icon,
+      layout: KubusStatCardLayout.centered,
       accent: accent,
       onTap: onTap,
       minHeight: isSmallScreen ? 88 : 96,
       padding: EdgeInsets.all(
         isSmallScreen ? KubusSpacing.sm : KubusChromeMetrics.compactCardPadding,
       ),
+      titleMaxLines: 2,
       iconBoxSize: isSmallScreen
           ? KubusSizes.sidebarActionIconBox - KubusSpacing.md
           : KubusSizes.sidebarActionIconBox - KubusSpacing.sm,
@@ -2296,81 +2298,40 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildPerformanceCard(
       String title, String value, IconData icon, String? change) {
-    final scheme = Theme.of(context).colorScheme;
+    final mediaQuery = MediaQuery.of(context);
+    final compact = mediaQuery.size.width < 375;
+    final highDensity = mediaQuery.devicePixelRatio >= 3.0;
     final accent = Provider.of<ThemeProvider>(context).accentColor;
-    Widget cardContent = LiquidGlassCard(
-      padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
-      borderRadius: BorderRadius.circular(KubusRadius.md),
-      child: Row(
-        children: [
-          Container(
-            width: KubusChromeMetrics.heroIconBox,
-            height: KubusChromeMetrics.heroIconBox,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  accent.withValues(alpha: 0.22),
-                  accent.withValues(alpha: 0.08),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              border: Border.all(
-                color: accent.withValues(alpha: 0.20),
-              ),
-            ),
-            child: Icon(
-              icon,
-              color: accent,
-              size: KubusHeaderMetrics.actionIcon,
-            ),
-          ),
-          const SizedBox(width: KubusSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: KubusTextStyles.detailCaption.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.68),
-                  ),
-                ),
-                const SizedBox(height: KubusSpacing.xxs),
-                Text(
-                  value,
-                  style: KubusTextStyles.detailCardTitle.copyWith(
-                    color: scheme.onSurface,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (change != null)
-            Builder(
-              builder: (context) {
-                final positiveColor =
-                    KubusColorRoles.of(context).positiveAction;
-                return FrostedContainer(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: KubusSpacing.sm,
-                    vertical: KubusSpacing.xs,
-                  ),
-                  borderRadius: BorderRadius.circular(KubusRadius.sm),
-                  backgroundColor: positiveColor.withValues(alpha: 0.12),
-                  child: Text(
-                    change,
-                    style: KubusTextStyles.compactBadge.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: positiveColor,
-                    ),
-                  ),
-                );
-              },
-            ),
-        ],
+    final valueFontSize = compact ? 15.5 : 16.5;
+    final titleFontSize = compact ? 10.5 : 11.5;
+    final tunedIconBoxSize = compact
+        ? KubusChromeMetrics.heroIconBox - KubusSpacing.sm
+        : KubusChromeMetrics.heroIconBox;
+    final tunedIconSize = highDensity
+        ? KubusHeaderMetrics.actionIcon - KubusSpacing.xs
+        : KubusHeaderMetrics.actionIcon;
+    Widget cardContent = KubusStatCard(
+      title: title,
+      value: value,
+      icon: icon,
+      layout: KubusStatCardLayout.centered,
+      accent: accent,
+      minHeight: 80,
+      padding: const EdgeInsets.all(KubusSpacing.md),
+      titleMaxLines: 1,
+      iconBoxSize: tunedIconBoxSize,
+      iconSize: tunedIconSize,
+      titleStyle: KubusTextStyles.detailCaption.copyWith(
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.68),
+        fontSize: titleFontSize,
       ),
+      valueStyle: KubusTextStyles.detailCardTitle.copyWith(
+        color: Theme.of(context).colorScheme.onSurface,
+        fontSize: valueFontSize,
+        fontWeight: FontWeight.w700,
+      ),
+      change: change,
+      isPositiveChange: true,
     );
 
     // Make KUB8-related cards tappable to open wallet

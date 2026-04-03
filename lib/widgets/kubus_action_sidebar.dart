@@ -194,8 +194,10 @@ class KubusSidebarStatCard extends StatelessWidget {
       value: value,
       icon: icon,
       accent: accent,
+      layout: KubusStatCardLayout.centered,
       minHeight: minHeight,
       padding: const EdgeInsets.all(KubusSpacing.md),
+      titleMaxLines: 2,
     );
   }
 }

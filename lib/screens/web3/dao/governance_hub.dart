@@ -19,6 +19,7 @@ import '../../../utils/kubus_labs_feature.dart';
 import '../../../utils/design_tokens.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/common/kubus_labs_adornment.dart';
+import 'package:art_kubus/widgets/common/kubus_stat_card.dart';
 import '../../../widgets/topbar_icon.dart';
 
 class GovernanceHub extends StatefulWidget {
@@ -349,6 +350,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                         child: _buildStatCard(
                           l10n.daoHubStatYourVotingPowerLabel,
                           votingPower,
+                          Icons.how_to_vote_outlined,
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -356,6 +358,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                         child: _buildStatCard(
                           l10n.daoHubStatActiveProposalsLabel,
                           activeProposals,
+                          Icons.pending_actions_outlined,
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -363,6 +366,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                         child: _buildStatCard(
                           l10n.daoHubStatTotalDelegatesLabel,
                           totalMembers,
+                          Icons.people_outline,
                         ),
                       ),
                     ],
@@ -376,52 +380,30 @@ class _GovernanceHubState extends State<GovernanceHub>
     );
   }
 
-  Widget _buildStatCard(String label, String value) {
-    final scheme = Theme.of(context).colorScheme;
-    final radius = BorderRadius.circular(KubusRadius.sm);
+  Widget _buildStatCard(
+    String label,
+    String value,
+    IconData icon, {
+    bool showIcon = true,
+  }) {
     final statColor = _daoAccent;
-    final glassStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.card,
-      tintBase: statColor,
-    );
-
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        border: Border.all(
-          color: statColor.withValues(alpha: 0.22),
-          width: 1,
-        ),
+    return KubusStatCard(
+      title: label,
+      value: value,
+      icon: icon,
+      showIcon: showIcon,
+      layout: KubusStatCardLayout.centered,
+      accent: statColor,
+      minHeight: 104,
+      padding: const EdgeInsets.all(10),
+      titleMaxLines: 2,
+      iconBoxSize: KubusSizes.sidebarActionIconBox - KubusSpacing.md,
+      iconSize: KubusSizes.sidebarActionIcon - KubusSpacing.xs,
+      titleStyle: KubusTextStyles.statLabel.copyWith(
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
       ),
-      child: LiquidGlassPanel(
-        padding: const EdgeInsets.all(10),
-        margin: EdgeInsets.zero,
-        borderRadius: radius,
-        showBorder: false,
-        blurSigma: glassStyle.blurSigma,
-        fallbackMinOpacity: glassStyle.fallbackMinOpacity,
-        backgroundColor: glassStyle.tintColor,
-        child: Column(
-          children: [
-            Text(
-              value,
-              style:
-                  KubusTextStyles.statValue.copyWith(color: scheme.onSurface),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: KubusTextStyles.statLabel.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.8),
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
+      valueStyle: KubusTextStyles.statValue.copyWith(
+        color: Theme.of(context).colorScheme.onSurface,
       ),
     );
   }

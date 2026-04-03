@@ -1380,6 +1380,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               title: displayTitle,
               value: value,
               icon: icon,
+              layout: KubusStatCardLayout.centered,
+              showIcon: showIconOnly,
               accent: statColor,
               tintBase: scheme.surface,
               onTap: () => _showStatsDialog(title, icon),
@@ -1388,6 +1390,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 isVerticalLayout: isVerticalLayout,
               ),
               padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
+              titleMaxLines: 2,
               iconBoxSize: showIconOnly
                   ? KubusSizes.sidebarActionIconBox - KubusSpacing.sm
                   : KubusSizes.sidebarActionIconBox - KubusSpacing.xs,

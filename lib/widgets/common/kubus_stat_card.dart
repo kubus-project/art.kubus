@@ -4,6 +4,11 @@ import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../glass_components.dart';
 
+enum KubusStatCardLayout {
+  standard,
+  centered,
+}
+
 class KubusStatCard extends StatelessWidget {
   const KubusStatCard({
     super.key,
@@ -24,6 +29,8 @@ class KubusStatCard extends StatelessWidget {
     this.borderRadius,
     this.change,
     this.isPositiveChange = true,
+    this.layout = KubusStatCardLayout.standard,
+    this.showIcon = true,
   });
 
   final String title;
@@ -43,11 +50,14 @@ class KubusStatCard extends StatelessWidget {
   final BorderRadius? borderRadius;
   final String? change;
   final bool isPositiveChange;
+  final KubusStatCardLayout layout;
+  final bool showIcon;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final effectiveAccent = accent ?? scheme.primary;
+    final shouldShowIcon = showIcon && icon != null;
     final effectiveRadius =
         borderRadius ?? BorderRadius.circular(KubusRadius.md);
     final glassStyle = KubusGlassStyle.resolve(
@@ -76,56 +86,225 @@ class KubusStatCard extends StatelessWidget {
         onTap: onTap,
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: minHeight),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  if (icon != null) ...[
-                    Container(
-                      width: iconBoxSize,
-                      height: iconBoxSize,
-                      decoration: BoxDecoration(
-                        color: effectiveAccent.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(KubusRadius.sm),
-                      ),
-                      child: Icon(
-                        icon,
-                        color: effectiveAccent,
-                        size: iconSize,
-                      ),
-                    ),
-                    const SizedBox(width: KubusSpacing.sm),
-                  ],
-                  Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        right: change == null ? 0 : KubusSpacing.xs,
-                      ),
-                      child: Text(
-                        title,
-                        maxLines: titleMaxLines,
-                        overflow: TextOverflow.ellipsis,
-                        style: titleStyle ??
-                            KubusTextStyles.actionTileTitle.copyWith(
-                              fontSize: 15,
-                              color: scheme.onSurface,
-                            ),
-                      ),
-                    ),
-                  ),
-                  if (change != null)
-                    _KubusStatChangeChip(
-                      label: change!,
-                      isPositive: isPositiveChange,
-                    ),
-                ],
+          child: layout == KubusStatCardLayout.centered
+              ? _buildCenteredContent(
+                  context: context,
+                  scheme: scheme,
+                  effectiveAccent: effectiveAccent,
+                  shouldShowIcon: shouldShowIcon,
+                )
+              : _buildStandardContent(
+                  context: context,
+                  scheme: scheme,
+                  effectiveAccent: effectiveAccent,
+                  shouldShowIcon: shouldShowIcon,
+                ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStandardContent({
+    required BuildContext context,
+    required ColorScheme scheme,
+    required Color effectiveAccent,
+    required bool shouldShowIcon,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            if (shouldShowIcon) ...[
+              Container(
+                width: iconBoxSize,
+                height: iconBoxSize,
+                decoration: BoxDecoration(
+                  color: effectiveAccent.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(KubusRadius.sm),
+                ),
+                child: Icon(
+                  icon,
+                  color: effectiveAccent,
+                  size: iconSize,
+                ),
               ),
-              const Spacer(),
-              const SizedBox(height: KubusSpacing.xs),
-              Center(
-                child: SizedBox(
+              const SizedBox(width: KubusSpacing.sm),
+            ],
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  right: change == null ? 0 : KubusSpacing.xs,
+                ),
+                child: Text(
+                  title,
+                  maxLines: titleMaxLines,
+                  overflow: TextOverflow.ellipsis,
+                  style: titleStyle ??
+                      KubusTextStyles.actionTileTitle.copyWith(
+                        fontSize: 15,
+                        color: scheme.onSurface,
+                      ),
+                ),
+              ),
+            ),
+            if (change != null)
+              _KubusStatChangeChip(
+                label: change!,
+                isPositive: isPositiveChange,
+              ),
+          ],
+        ),
+        const Spacer(),
+        const SizedBox(height: KubusSpacing.xs),
+        Center(
+          child: SizedBox(
+            width: double.infinity,
+            child: FittedBox(
+              alignment: Alignment.center,
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: valueStyle ??
+                    KubusTextStyles.sectionTitle.copyWith(
+                      fontSize: KubusHeaderMetrics.sectionTitle + 2,
+                      color: scheme.onSurface,
+                    ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCenteredContent({
+    required BuildContext context,
+    required ColorScheme scheme,
+    required Color effectiveAccent,
+    required bool shouldShowIcon,
+  }) {
+    final mediaQuery = MediaQuery.maybeOf(context);
+    final screenWidth = mediaQuery?.size.width ?? 0;
+    final devicePixelRatio = mediaQuery?.devicePixelRatio ?? 1.0;
+    final textScale = mediaQuery?.textScaler.scale(1.0) ?? 1.0;
+    final isDesktopLike = screenWidth >= 900;
+    final isUltraWideDesktop = screenWidth >= 1800;
+
+    final densityScale = devicePixelRatio >= 3.0
+        ? 0.90
+        : devicePixelRatio <= 1.5
+            ? 1.06
+            : 1.0;
+    final textScaleCompensation =
+        textScale > 1.0 ? (1 / textScale.clamp(1.0, 1.25)) : 1.0;
+    final watermarkScale = (densityScale *
+            textScaleCompensation *
+            (isUltraWideDesktop ? 0.94 : 1.0))
+        .clamp(
+      0.86,
+      1.10,
+    );
+
+    final watermarkOpacity = (0.15 +
+            (isDesktopLike ? -0.01 : 0.0) +
+            (isUltraWideDesktop ? -0.02 : 0.0) +
+            (devicePixelRatio >= 3.0
+                ? -0.02
+                : devicePixelRatio <= 1.5
+                    ? 0.01
+                    : 0.0))
+        .clamp(0.11, 0.18);
+    final iconOpacity = (0.55 +
+            (isDesktopLike ? -0.07 : 0.0) +
+            (isUltraWideDesktop ? -0.06 : 0.0) +
+            (devicePixelRatio >= 3.0
+                ? -0.03
+                : devicePixelRatio <= 1.5
+                    ? 0.01
+                    : 0.0))
+        .clamp(0.42, 0.58);
+
+    final valueTypeScale = (isDesktopLike ? 1.0 : 0.97) *
+        (textScale > 1.0 ? (1 / textScale.clamp(1.0, 1.20)) : 1.0);
+    final titleTypeScale = (isDesktopLike ? 0.98 : 0.95) *
+        (textScale > 1.0 ? (1 / textScale.clamp(1.0, 1.20)) : 1.0);
+
+    final titleTextStyle = titleStyle ??
+        KubusTextStyles.statLabel.copyWith(
+          color: scheme.onSurface.withValues(alpha: 0.8),
+        );
+    final valueTextStyle = valueStyle ??
+        KubusTextStyles.statValue.copyWith(
+          color: scheme.onSurface,
+        );
+
+    final effectiveTitleStyle = _scaledTextStyle(
+      titleTextStyle,
+      factor: titleTypeScale,
+    );
+    final effectiveValueStyle = _scaledTextStyle(
+      valueTextStyle,
+      factor: valueTypeScale,
+    );
+
+    final iconBackgroundSize = (iconBoxSize + KubusSpacing.lg) * watermarkScale;
+    final iconForegroundSize = (iconSize + KubusSpacing.sm) * watermarkScale;
+    final valueTitleGap = devicePixelRatio >= 3.0
+        ? KubusSpacing.xxs
+        : (isDesktopLike
+            ? KubusSpacing.xs
+            : KubusSpacing.xs + KubusSpacing.xxs);
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (shouldShowIcon)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Align(
+                alignment: Alignment.center,
+                child: Container(
+                  width: iconBackgroundSize,
+                  height: iconBackgroundSize,
+                  decoration: BoxDecoration(
+                    color: effectiveAccent.withValues(alpha: watermarkOpacity),
+                    borderRadius: BorderRadius.circular(KubusRadius.md),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: effectiveAccent.withValues(alpha: iconOpacity),
+                    size: iconForegroundSize,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        if (change != null)
+          Positioned(
+            top: 0,
+            right: 0,
+            child: _KubusStatChangeChip(
+              label: change!,
+              isPositive: isPositiveChange,
+            ),
+          ),
+        Positioned.fill(
+          child: Padding(
+            padding: EdgeInsets.only(
+              top: change == null
+                  ? 0
+                  : (isDesktopLike ? KubusSpacing.md : KubusSpacing.lg),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(
                   width: double.infinity,
                   child: FittedBox(
                     alignment: Alignment.center,
@@ -135,20 +314,32 @@ class KubusStatCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
-                      style: valueStyle ??
-                          KubusTextStyles.sectionTitle.copyWith(
-                            fontSize: KubusHeaderMetrics.sectionTitle + 2,
-                            color: scheme.onSurface,
-                          ),
+                      style: effectiveValueStyle,
                     ),
                   ),
                 ),
-              ),
-            ],
+                SizedBox(height: valueTitleGap),
+                Text(
+                  title,
+                  style: effectiveTitleStyle,
+                  textAlign: TextAlign.center,
+                  maxLines: titleMaxLines,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ),
-      ),
+      ],
     );
+  }
+
+  TextStyle _scaledTextStyle(TextStyle style, {required double factor}) {
+    final fontSize = style.fontSize;
+    if (fontSize == null) {
+      return style;
+    }
+    return style.copyWith(fontSize: fontSize * factor);
   }
 }
 

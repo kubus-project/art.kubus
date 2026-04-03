@@ -694,10 +694,12 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
       title: stat['title'].toString(),
       value: stat['value'].toString(),
       icon: stat['icon'] as IconData?,
+      layout: KubusStatCardLayout.centered,
       accent: Theme.of(context).colorScheme.primary,
       tintBase: Theme.of(context).colorScheme.surface,
       minHeight: 116,
       padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
+      titleMaxLines: 2,
       change: hasChange ? change : null,
       isPositiveChange: stat['positive'] == true,
       titleStyle: KubusTextStyles.detailCaption.copyWith(

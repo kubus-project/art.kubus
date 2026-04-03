@@ -1961,10 +1961,13 @@ class _MarketplaceState extends State<Marketplace>
       title: label,
       value: value,
       icon: icon,
+      layout: KubusStatCardLayout.centered,
+      showIcon: icon != null,
       accent: scheme.secondary,
       tintBase: scheme.surface,
       minHeight: 88,
       padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
+      titleMaxLines: 2,
       titleStyle: KubusTextStyles.detailCaption.copyWith(
         fontSize: 11,
         color: scheme.onSurface.withValues(alpha: 0.66),
