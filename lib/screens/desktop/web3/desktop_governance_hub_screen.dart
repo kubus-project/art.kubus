@@ -382,68 +382,11 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
 
   Widget _buildStatCard(
       String label, String value, IconData icon, Color color) {
-    final radius = BorderRadius.circular(KubusRadius.md);
-    final glassStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.card,
-      tintBase: color,
-    );
-
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        border: Border.all(
-          color: color.withValues(alpha: 0.22),
-          width: 1,
-        ),
-      ),
-      child: LiquidGlassPanel(
-        padding: const EdgeInsets.all(KubusSpacing.md),
-        margin: EdgeInsets.zero,
-        borderRadius: radius,
-        showBorder: false,
-        backgroundColor: glassStyle.tintColor,
-        blurSigma: glassStyle.blurSigma,
-        fallbackMinOpacity: glassStyle.fallbackMinOpacity,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: KubusSizes.sidebarActionIconBox - KubusSpacing.xs,
-              height: KubusSizes.sidebarActionIconBox - KubusSpacing.xs,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(KubusRadius.sm),
-              ),
-              child: Icon(
-                icon,
-                color: color,
-                size: KubusHeaderMetrics.actionIcon,
-              ),
-            ),
-            const SizedBox(height: KubusSpacing.sm),
-            Text(
-              value,
-              style: KubusTextStyles.sectionTitle.copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: KubusSpacing.xxs),
-            Text(
-              label,
-              style: KubusTextStyles.actionTileSubtitle.copyWith(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.6),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return KubusSidebarStatCard(
+      title: label,
+      value: value,
+      icon: icon,
+      accent: color,
     );
   }
 

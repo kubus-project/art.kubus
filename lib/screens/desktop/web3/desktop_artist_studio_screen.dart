@@ -833,7 +833,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                 themeProvider.accentColor,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: KubusSpacing.sm),
             Expanded(
               child: _buildStatCard(
                 l10n.desktopArtistStudioStatViews,
@@ -844,7 +844,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: KubusSpacing.sm),
         Row(
           children: [
             Expanded(
@@ -855,7 +855,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                 scheme.tertiary,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: KubusSpacing.sm),
             Expanded(
               child: _buildStatCard(
                 l10n.desktopArtistStudioStatSales,
@@ -872,50 +872,11 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
 
   Widget _buildStatCard(
       String label, String value, IconData icon, Color color) {
-    final scheme = Theme.of(context).colorScheme;
-    final glassStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.card,
-      tintBase: color,
-    );
-    final radius = BorderRadius.circular(KubusRadius.md);
-
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        border: Border.all(
-          color: color.withValues(alpha: 0.22),
-          width: 1,
-        ),
-      ),
-      child: LiquidGlassCard(
-        padding: const EdgeInsets.all(KubusSpacing.md),
-        margin: EdgeInsets.zero,
-        borderRadius: radius,
-        showBorder: false,
-        blurSigma: glassStyle.blurSigma,
-        fallbackMinOpacity: glassStyle.fallbackMinOpacity,
-        backgroundColor: glassStyle.tintColor,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color, size: KubusSizes.sidebarActionIcon),
-            const SizedBox(height: KubusSpacing.sm),
-            Text(
-              value,
-              style: KubusTypography.textTheme.titleLarge
-                  ?.copyWith(color: scheme.onSurface),
-            ),
-            Text(
-              label,
-              style: KubusTextStyles.actionTileSubtitle.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.6),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return KubusSidebarStatCard(
+      title: label,
+      value: value,
+      icon: icon,
+      accent: color,
     );
   }
 

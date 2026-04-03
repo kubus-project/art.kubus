@@ -246,9 +246,7 @@ class _DesktopInstitutionHubScreenState
     final hasConflictingArtistReview =
         verification.isPendingFor(DaoRoleType.artist);
     final canSelfServeInstitutionPromotion =
-        isApprovedInstitution &&
-        !hasArtistBadge &&
-        !hasConflictingArtistReview;
+        isApprovedInstitution && !hasArtistBadge && !hasConflictingArtistReview;
     final sidebarStyle = KubusGlassStyle.resolve(
       context,
       surfaceType: KubusGlassSurfaceType.sidebarBackground,
@@ -766,7 +764,7 @@ class _DesktopInstitutionHubScreenState
                 scheme.primary,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: KubusSpacing.sm),
             Expanded(
               child: _buildStatCard(
                 'Visitors',
@@ -777,7 +775,7 @@ class _DesktopInstitutionHubScreenState
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: KubusSpacing.sm),
         Row(
           children: [
             Expanded(
@@ -788,7 +786,7 @@ class _DesktopInstitutionHubScreenState
                 scheme.tertiary,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: KubusSpacing.sm),
             Expanded(
               child: _buildStatCard(
                 'Revenue',
@@ -805,53 +803,11 @@ class _DesktopInstitutionHubScreenState
 
   Widget _buildStatCard(
       String label, String value, IconData icon, Color color) {
-    final glassStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.card,
-      tintBase: color,
-    );
-    final radius = BorderRadius.circular(KubusRadius.md);
-
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        border: Border.all(
-          color: color.withValues(alpha: 0.22),
-          width: 1,
-        ),
-      ),
-      child: LiquidGlassCard(
-        padding: const EdgeInsets.all(KubusSpacing.md),
-        margin: EdgeInsets.zero,
-        borderRadius: radius,
-        showBorder: false,
-        blurSigma: glassStyle.blurSigma,
-        fallbackMinOpacity: glassStyle.fallbackMinOpacity,
-        backgroundColor: glassStyle.tintColor,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color, size: KubusSizes.sidebarActionIcon),
-            const SizedBox(height: KubusSpacing.sm),
-            Text(
-              value,
-              style: KubusTypography.textTheme.titleLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            Text(
-              label,
-              style: KubusTextStyles.actionTileSubtitle.copyWith(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.6),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return KubusSidebarStatCard(
+      title: label,
+      value: value,
+      icon: icon,
+      accent: color,
     );
   }
 

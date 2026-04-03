@@ -76,9 +76,8 @@ class _KubusActionSidebarTileState extends State<KubusActionSidebarTile> {
     final enabled = widget.enabled;
 
     final accent = widget.semantic.accentColor(context);
-    final stateAccent = enabled
-        ? accent
-        : scheme.onSurface.withValues(alpha: 0.45);
+    final stateAccent =
+        enabled ? accent : scheme.onSurface.withValues(alpha: 0.45);
     final tileTint = !enabled
         ? scheme.surface.withValues(alpha: isDark ? 0.10 : 0.08)
         : selected
@@ -164,6 +163,110 @@ class _KubusActionSidebarTileState extends State<KubusActionSidebarTile> {
                 ),
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class KubusSidebarStatCard extends StatelessWidget {
+  const KubusSidebarStatCard({
+    super.key,
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.accent,
+    this.minHeight = 132,
+  });
+
+  final String title;
+  final String value;
+  final IconData icon;
+  final Color accent;
+  final double minHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final radius = BorderRadius.circular(KubusRadius.md);
+    final glassStyle = KubusGlassStyle.resolve(
+      context,
+      surfaceType: KubusGlassSurfaceType.card,
+      tintBase: accent,
+    );
+
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        border: Border.all(
+          color: accent.withValues(alpha: 0.22),
+          width: KubusSizes.hairline,
+        ),
+      ),
+      child: LiquidGlassCard(
+        padding: const EdgeInsets.all(KubusSpacing.md),
+        margin: EdgeInsets.zero,
+        borderRadius: radius,
+        showBorder: false,
+        blurSigma: glassStyle.blurSigma,
+        fallbackMinOpacity: glassStyle.fallbackMinOpacity,
+        backgroundColor: glassStyle.tintColor,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: minHeight),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: KubusSizes.sidebarActionIconBox - KubusSpacing.xs,
+                    height: KubusSizes.sidebarActionIconBox - KubusSpacing.xs,
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(KubusRadius.sm),
+                    ),
+                    child: Icon(
+                      icon,
+                      color: accent,
+                      size: KubusSizes.sidebarActionIcon,
+                    ),
+                  ),
+                  const SizedBox(width: KubusSpacing.sm),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: KubusSpacing.xxs),
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: KubusTextStyles.actionTileTitle.copyWith(
+                          color: scheme.onSurface,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const Spacer(),
+              SizedBox(
+                width: double.infinity,
+                child: FittedBox(
+                  alignment: Alignment.centerLeft,
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: KubusTextStyles.sectionTitle.copyWith(
+                      color: scheme.onSurface,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
