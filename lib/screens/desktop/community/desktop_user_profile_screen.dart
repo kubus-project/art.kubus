@@ -687,10 +687,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     const avatarCornerRadiusFactor = AvatarWidget.defaultCornerRadiusFactor;
     const avatarRingPadding = 4.0;
 
-    final avatarShapeRadius = AvatarWidget.shapeRadiusFor(
-      radius: avatarRadius,
-      cornerRadiusFactor: avatarCornerRadiusFactor,
-    );
     final avatarRingShapeRadius = AvatarWidget.shapeRadiusFor(
       radius: avatarRadius + avatarRingPadding,
       cornerRadiusFactor: avatarCornerRadiusFactor,
@@ -708,7 +704,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                   top: Radius.circular(KubusRadius.lg),
                 ),
                 child: Container(
-                  height: hasCoverImage ? 164 : 108,
+                  height: hasCoverImage ? 228 : 156,
                   width: double.infinity,
                   decoration: hasCoverImage
                       ? null
@@ -805,18 +801,15 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(avatarRingPadding),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(avatarShapeRadius),
-                        child: AvatarWidget(
-                          wallet: user!.id,
-                          avatarUrl: user!.profileImageUrl,
-                          radius: avatarRadius,
-                          borderWidth: 0,
-                          borderColor: Colors.transparent,
-                          cornerRadiusFactor: avatarCornerRadiusFactor,
-                          enableProfileNavigation: false,
-                          heroTag: widget.heroTag,
-                        ),
+                      child: AvatarWidget(
+                        wallet: user!.id,
+                        avatarUrl: user!.profileImageUrl,
+                        radius: avatarRadius,
+                        borderWidth: 0,
+                        borderColor: Colors.transparent,
+                        cornerRadiusFactor: avatarCornerRadiusFactor,
+                        enableProfileNavigation: false,
+                        heroTag: widget.heroTag,
                       ),
                     ),
                   ),

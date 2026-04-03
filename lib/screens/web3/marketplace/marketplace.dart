@@ -2059,7 +2059,6 @@ class _MarketplaceState extends State<Marketplace>
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final profileProvider = context.read<ProfileProvider>();
     final walletProvider = context.read<WalletProvider>();
-    final colorScheme = Theme.of(context).colorScheme;
 
     final canProceed = await WalletActionGuard.ensureSignerAccess(
       context: context,

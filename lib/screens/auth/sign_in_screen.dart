@@ -22,7 +22,6 @@ import '../../services/wallet_session_sync_service.dart';
 import '../../widgets/google_sign_in_button.dart';
 import '../../widgets/google_sign_in_web_button.dart';
 import '../../widgets/secure_account_password_prompt.dart';
-import '../../widgets/auth_wallet_flow_sheet.dart';
 import '../../widgets/kubus_button.dart';
 import '../../widgets/auth_entry_shell.dart';
 import '../../utils/design_tokens.dart';
@@ -76,6 +75,10 @@ class _SignInScreenState extends State<SignInScreen> {
   String? _googleAuthDiagCode;
   bool _showCompactEmailForm = false;
   bool _walletFlowOpening = false;
+  bool _showInlineWalletFlow = false;
+  int _walletInlineInitialStep = 0;
+  String? _walletInlineRequiredWalletAddress;
+  Completer<Object?>? _walletFlowCompleter;
 
   @override
   void initState() {
@@ -108,11 +111,29 @@ class _SignInScreenState extends State<SignInScreen> {
 
   @override
   void dispose() {
+    final completer = _walletFlowCompleter;
+    if (completer != null && !completer.isCompleted) {
+      completer.complete(null);
+    }
     _emailController.dispose();
     _passwordController.dispose();
     _emailFocusNode.dispose();
     _passwordFocusNode.dispose();
     super.dispose();
+  }
+
+  void _completeInlineWalletFlow([Object? result]) {
+    if (mounted && _showInlineWalletFlow) {
+      setState(() {
+        _showInlineWalletFlow = false;
+        _walletInlineInitialStep = 0;
+        _walletInlineRequiredWalletAddress = null;
+      });
+    }
+    final completer = _walletFlowCompleter;
+    if (completer != null && !completer.isCompleted) {
+      completer.complete(result);
+    }
   }
 
   void _setGoogleAuthDiagnostics(String stage, {String? code}) {
@@ -794,7 +815,10 @@ class _SignInScreenState extends State<SignInScreen> {
     int initialStep = 0,
     String? requiredWalletAddress,
   }) async {
-    if (_walletFlowOpening) return;
+    if (_walletFlowOpening) {
+      await _walletFlowCompleter?.future;
+      return;
+    }
     final l10n = AppLocalizations.of(context)!;
     if (!AppConfig.enableWalletConnect || !AppConfig.enableWeb3) {
       ScaffoldMessenger.of(context).showKubusSnackBar(
@@ -804,15 +828,23 @@ class _SignInScreenState extends State<SignInScreen> {
 
     _walletFlowOpening = true;
     try {
+      FocusManager.instance.primaryFocus?.unfocus();
       final api = BackendApiService();
       final hadAuthBeforeOpen = (api.getAuthToken() ?? '').trim().isNotEmpty;
+      final completer = Completer<Object?>();
+      _walletFlowCompleter = completer;
+
+      if (mounted) {
+        setState(() {
+          _showInlineWalletFlow = true;
+          _walletInlineInitialStep = initialStep;
+          _walletInlineRequiredWalletAddress = requiredWalletAddress;
+          _showCompactEmailForm = false;
+        });
+      }
+
       unawaited(TelemetryService().trackSignInAttempt(method: 'wallet'));
-      final routeResult = await showAuthWalletFlowSheet(
-        context: context,
-        telemetryAuthFlow: 'signin',
-        initialStep: initialStep,
-        requiredWalletAddress: requiredWalletAddress,
-      );
+      final routeResult = await completer.future;
       if (!mounted) return;
 
       if (routeResult is Map<String, dynamic>) {
@@ -830,6 +862,7 @@ class _SignInScreenState extends State<SignInScreen> {
       }
     } finally {
       _walletFlowOpening = false;
+      _walletFlowCompleter = null;
     }
   }
 
@@ -926,7 +959,13 @@ class _SignInScreenState extends State<SignInScreen> {
       isDark ? 0.24 : 0.14,
     )!;
 
-    return Column(
+    final reservedHeight = compactLayout ? 180.0 : 250.0;
+    final minHeight = compactLayout ? 320.0 : 420.0;
+    final maxHeight = compactLayout ? 680.0 : 760.0;
+    final inlinePanelHeight =
+        (viewportSize.height - reservedHeight).clamp(minHeight, maxHeight);
+
+    final authMethods = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (showSectionCopy) ...[
@@ -1069,6 +1108,36 @@ class _SignInScreenState extends State<SignInScreen> {
           ),
         ],
       ],
+    );
+
+    final inlineWallet = ConstrainedBox(
+      constraints: BoxConstraints(
+        minHeight: minHeight,
+        maxHeight: maxHeight,
+      ),
+      child: SizedBox(
+        height: inlinePanelHeight,
+        child: ConnectWallet(
+          embedded: true,
+          initialStep: _walletInlineInitialStep,
+          telemetryAuthFlow: 'signin',
+          requiredWalletAddress: _walletInlineRequiredWalletAddress,
+          onRequestClose: () => _completeInlineWalletFlow(),
+          onFlowComplete: (result) => _completeInlineWalletFlow(result),
+        ),
+      ),
+    );
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 220),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      child: KeyedSubtree(
+        key: ValueKey<String>(
+          _showInlineWalletFlow ? 'signin-wallet-inline' : 'signin-auth-forms',
+        ),
+        child: _showInlineWalletFlow ? inlineWallet : authMethods,
+      ),
     );
   }
 

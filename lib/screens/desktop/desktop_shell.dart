@@ -34,7 +34,6 @@ import 'community/desktop_profile_screen.dart';
 import '../auth/sign_in_screen.dart';
 import '../onboarding/web3/web3_onboarding.dart' as web3;
 import '../onboarding/web3/onboarding_data.dart';
-import '../web3/wallet/connectwallet_screen.dart';
 import '../collab/invites_inbox_screen.dart';
 import '../../widgets/user_persona_onboarding_gate.dart';
 import '../../widgets/glass_components.dart';
