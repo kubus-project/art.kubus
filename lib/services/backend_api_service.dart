@@ -741,8 +741,10 @@ class BackendApiService
     if (refreshToken.isEmpty) return false;
 
     try {
-      final response = await _post(
-        Uri.parse('$baseUrl/api/auth/refresh'),
+      const path = '/api/auth/refresh';
+      final response = await _sendAuthRequestWithFailover(
+        'POST',
+        path,
         includeAuth: false,
         headers: _getHeaders(includeAuth: false),
         body: jsonEncode({'refreshToken': refreshToken}),
@@ -1736,6 +1738,71 @@ class BackendApiService
     return lastResponse;
   }
 
+  Future<http.Response> _sendAuthRequestWithFailover(
+    String method,
+    String path, {
+    Map<String, String>? queryParameters,
+    bool includeAuth = false,
+    Map<String, String>? headers,
+    Object? body,
+    Encoding? encoding,
+    bool isIdempotent = false,
+    Duration timeout = AppConfig.requestTimeout,
+  }) async {
+    http.Response? lastResponse;
+    Object? lastError;
+    final normalizedPath = path.startsWith('/') ? path : '/$path';
+    final normalizedMethod = method.toUpperCase();
+    final candidateBaseUrls = normalizedMethod == 'GET'
+        ? _publicFallbackService.preferredReadBaseUrls
+        : _publicFallbackService.preferredWriteBaseUrls;
+
+    for (final candidateBaseUrl in candidateBaseUrls) {
+      final uri = _buildApiUri(
+        candidateBaseUrl,
+        normalizedPath,
+        queryParameters: queryParameters,
+      );
+      try {
+        final response = await _request(
+          normalizedMethod,
+          uri,
+          includeAuth: includeAuth,
+          headers: headers,
+          body: body,
+          encoding: encoding,
+          isIdempotent: isIdempotent || normalizedMethod == 'GET',
+          timeout: timeout,
+        );
+        if (_isSuccessStatus(response.statusCode)) {
+          _publicFallbackService.recordBackendSuccess(
+            baseUrl: candidateBaseUrl,
+          );
+          return response;
+        }
+        if (!_isTransientWriteStatusCode(response.statusCode)) {
+          return response;
+        }
+        lastResponse = response;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    if (lastError != null) {
+      throw lastError;
+    }
+    if (lastResponse != null) {
+      return lastResponse;
+    }
+
+    throw BackendApiRequestException(
+      statusCode: 0,
+      path: normalizedPath,
+      body: '',
+    );
+  }
+
   bool _shouldQueuePublicActionAfterFailure(
     http.Response? response,
     Object? error,
@@ -2036,8 +2103,10 @@ class BackendApiService
         'walletAddress': walletAddress,
         if (username != null) 'username': username,
       };
-      final response = await _post(
-        Uri.parse('$baseUrl/api/auth/register'),
+      const path = '/api/auth/register';
+      final response = await _sendAuthRequestWithFailover(
+        'POST',
+        path,
         includeAuth: false,
         headers: _getHeaders(includeAuth: false),
         body: jsonEncode(body),
@@ -2067,8 +2136,10 @@ class BackendApiService
     required String message,
   }) async {
     try {
-      final response = await _post(
-        Uri.parse('$baseUrl/api/auth/login'),
+      const path = '/api/auth/login';
+      final response = await _sendAuthRequestWithFailover(
+        'POST',
+        path,
         includeAuth: false,
         headers: _getHeaders(includeAuth: false),
         body: jsonEncode({
@@ -2105,7 +2176,8 @@ class BackendApiService
     bool includeAuth = false,
   }) async {
     try {
-      final uri = Uri.parse('$baseUrl/api/auth/register/email');
+      const path = '/api/auth/register/email';
+      final uri = _buildApiUri(baseUrl, path);
       final key = _rateLimitKey('POST', uri);
       if (_isRateLimited(key)) {
         throw Exception(_rateLimitMessage(key));
@@ -2127,8 +2199,9 @@ class BackendApiService
         if (walletAddress != null && walletAddress.isNotEmpty)
           'walletAddress': walletAddress,
       };
-      final response = await _post(
-        uri,
+      final response = await _sendAuthRequestWithFailover(
+        'POST',
+        path,
         includeAuth: includeAuth,
         headers: _getHeaders(includeAuth: includeAuth),
         body: jsonEncode(body),
@@ -2163,13 +2236,15 @@ class BackendApiService
     required String password,
   }) async {
     try {
-      final uri = Uri.parse('$baseUrl/api/auth/login/email');
+      const path = '/api/auth/login/email';
+      final uri = _buildApiUri(baseUrl, path);
       final key = _rateLimitKey('POST', uri);
       if (_isRateLimited(key)) {
         throw Exception(_rateLimitMessage(key));
       }
-      final response = await _post(
-        uri,
+      final response = await _sendAuthRequestWithFailover(
+        'POST',
+        path,
         includeAuth: false,
         headers: _getHeaders(includeAuth: false),
         body: jsonEncode({'email': email, 'password': password}),
@@ -2200,7 +2275,8 @@ class BackendApiService
     required bool includeAuth,
   }) async {
     try {
-      final uri = Uri.parse('$baseUrl/api/auth/resend-verification');
+      const path = '/api/auth/resend-verification';
+      final uri = _buildApiUri(baseUrl, path);
       final key = _rateLimitKey('POST', uri);
       if (_isRateLimited(key)) {
         throw Exception(_rateLimitMessage(key));
@@ -2212,8 +2288,9 @@ class BackendApiService
         }
       }
       final normalizedEmail = email.trim();
-      final response = await _post(
-        uri,
+      final response = await _sendAuthRequestWithFailover(
+        'POST',
+        path,
         includeAuth: includeAuth,
         headers: _getHeaders(includeAuth: includeAuth),
         body: normalizedEmail.isEmpty
@@ -2260,10 +2337,11 @@ class BackendApiService
   Future<Map<String, dynamic>> getEmailVerificationStatus(
       {required String email}) async {
     try {
-      final uri = Uri.parse('$baseUrl/api/auth/email-status')
-          .replace(queryParameters: {'email': email.trim()});
-      final response = await _get(
-        uri,
+      const path = '/api/auth/email-status';
+      final response = await _sendAuthRequestWithFailover(
+        'GET',
+        path,
+        queryParameters: {'email': email.trim()},
         includeAuth: false,
         headers: _getHeaders(includeAuth: false),
       );
@@ -2278,7 +2356,7 @@ class BackendApiService
       }
       throw BackendApiRequestException(
         statusCode: response.statusCode,
-        path: uri.path,
+        path: path,
         body: response.body,
       );
     } catch (e) {
@@ -2292,9 +2370,10 @@ class BackendApiService
   /// GET /api/auth/account-security-status
   Future<Map<String, dynamic>> getAccountSecurityStatus() async {
     try {
-      final uri = Uri.parse('$baseUrl/api/auth/account-security-status');
-      final response = await _get(
-        uri,
+      const path = '/api/auth/account-security-status';
+      final response = await _sendAuthRequestWithFailover(
+        'GET',
+        path,
         includeAuth: true,
         headers: _getHeaders(),
       );
@@ -2307,7 +2386,7 @@ class BackendApiService
       }
       throw BackendApiRequestException(
         statusCode: response.statusCode,
-        path: uri.path,
+        path: path,
         body: response.body,
       );
     } catch (e) {
@@ -2344,9 +2423,10 @@ class BackendApiService
     required String password,
   }) async {
     try {
-      final uri = Uri.parse('$baseUrl/api/auth/account-security/password');
-      final response = await _post(
-        uri,
+      const path = '/api/auth/account-security/password';
+      final response = await _sendAuthRequestWithFailover(
+        'POST',
+        path,
         includeAuth: true,
         headers: _getHeaders(),
         body: jsonEncode(<String, dynamic>{'password': password}),
@@ -2358,7 +2438,7 @@ class BackendApiService
       }
       throw BackendApiRequestException(
         statusCode: response.statusCode,
-        path: uri.path,
+        path: path,
         body: response.body,
       );
     } catch (e) {
@@ -2373,13 +2453,15 @@ class BackendApiService
   /// POST /api/auth/verify-email { token }
   Future<Map<String, dynamic>> verifyEmail({required String token}) async {
     try {
-      final uri = Uri.parse('$baseUrl/api/auth/verify-email');
+      const path = '/api/auth/verify-email';
+      final uri = _buildApiUri(baseUrl, path);
       final key = _rateLimitKey('POST', uri);
       if (_isRateLimited(key)) {
         throw Exception(_rateLimitMessage(key));
       }
-      final response = await _post(
-        uri,
+      final response = await _sendAuthRequestWithFailover(
+        'POST',
+        path,
         includeAuth: false,
         headers: _getHeaders(includeAuth: false),
         body: jsonEncode({'token': token}),
@@ -2405,13 +2487,15 @@ class BackendApiService
   /// POST /api/auth/forgot-password { email }
   Future<Map<String, dynamic>> forgotPassword({required String email}) async {
     try {
-      final uri = Uri.parse('$baseUrl/api/auth/forgot-password');
+      const path = '/api/auth/forgot-password';
+      final uri = _buildApiUri(baseUrl, path);
       final key = _rateLimitKey('POST', uri);
       if (_isRateLimited(key)) {
         throw Exception(_rateLimitMessage(key));
       }
-      final response = await _post(
-        uri,
+      final response = await _sendAuthRequestWithFailover(
+        'POST',
+        path,
         includeAuth: false,
         headers: _getHeaders(includeAuth: false),
         body: jsonEncode({'email': email}),
@@ -2438,13 +2522,15 @@ class BackendApiService
     required String newPassword,
   }) async {
     try {
-      final uri = Uri.parse('$baseUrl/api/auth/reset-password');
+      const path = '/api/auth/reset-password';
+      final uri = _buildApiUri(baseUrl, path);
       final key = _rateLimitKey('POST', uri);
       if (_isRateLimited(key)) {
         throw Exception(_rateLimitMessage(key));
       }
-      final response = await _post(
-        uri,
+      final response = await _sendAuthRequestWithFailover(
+        'POST',
+        path,
         includeAuth: false,
         headers: _getHeaders(includeAuth: false),
         body: jsonEncode({'token': token, 'newPassword': newPassword}),
@@ -2484,7 +2570,7 @@ class BackendApiService
       final isCodeFlow = code != null && code.isNotEmpty;
       final endpoint =
           isCodeFlow ? '/api/auth/login/google/code' : '/api/auth/login/google';
-      final uri = Uri.parse('$baseUrl$endpoint');
+      final uri = _buildApiUri(baseUrl, endpoint);
       final key = _rateLimitKey('POST', uri);
 
       if (_isRateLimited(key)) {
@@ -2502,8 +2588,9 @@ class BackendApiService
           'displayName': displayName,
       };
 
-      final response = await _post(
-        uri,
+      final response = await _sendAuthRequestWithFailover(
+        'POST',
+        endpoint,
         includeAuth: false,
         headers: _getHeaders(includeAuth: false),
         body: jsonEncode(body),
@@ -2549,9 +2636,10 @@ class BackendApiService
   Future<Map<String, dynamic>> bindAuthenticatedWallet(
       String walletAddress) async {
     try {
-      final uri = Uri.parse('$baseUrl/api/auth/bind-wallet');
-      final response = await _post(
-        uri,
+      const path = '/api/auth/bind-wallet';
+      final response = await _sendAuthRequestWithFailover(
+        'POST',
+        path,
         includeAuth: true,
         headers: _getHeaders(includeAuth: true),
         body: jsonEncode(<String, dynamic>{'walletAddress': walletAddress}),
@@ -2564,7 +2652,7 @@ class BackendApiService
       }
       throw BackendApiRequestException(
         statusCode: response.statusCode,
-        path: uri.path,
+        path: path,
         body: response.body,
       );
     } catch (e) {
@@ -4033,8 +4121,7 @@ class BackendApiService
       }
       throw Exception('Invalid home rails response');
     } catch (e) {
-      AppConfig.debugPrint(
-          'BackendApiService.getPublicHomeRails failed: $e');
+      AppConfig.debugPrint('BackendApiService.getPublicHomeRails failed: $e');
       rethrow;
     }
   }
