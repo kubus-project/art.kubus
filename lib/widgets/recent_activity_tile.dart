@@ -75,7 +75,6 @@ class RecentActivityTile extends StatelessWidget {
               backgroundColor: style.tintColor,
               fallbackMinOpacity: style.fallbackMinOpacity,
               child: Stack(
-                fit: StackFit.expand,
                 children: [
                   Positioned.fill(
                     child: IgnorePointer(
