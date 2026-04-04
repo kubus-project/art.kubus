@@ -996,7 +996,17 @@ class BackendApiService
     bool isIdempotent = false,
     Duration timeout = AppConfig.requestTimeout,
     bool retriedAfterReauth = false,
+    bool allowImplicitBackendFailover = true,
+    Set<String>? attemptedBackendOrigins,
   }) async {
+    final attemptedOrigins = Set<String>.from(
+      attemptedBackendOrigins ?? const <String>{},
+    );
+    final currentOrigin = _uriOriginKey(uri);
+    if (currentOrigin != null) {
+      attemptedOrigins.add(currentOrigin);
+    }
+
     if (includeAuth &&
         _authCoordinator != null &&
         _authCoordinator!.isResolving) {
@@ -1051,35 +1061,63 @@ class BackendApiService
     }
 
     final http.Response response;
-    switch (method.toUpperCase()) {
-      case 'GET':
-        response =
-            await _client.get(uri, headers: resolvedHeaders).timeout(timeout);
-        break;
-      case 'POST':
-        response = await _client
-            .post(uri, headers: resolvedHeaders, body: body, encoding: encoding)
-            .timeout(timeout);
-        break;
-      case 'PUT':
-        response = await _client
-            .put(uri, headers: resolvedHeaders, body: body, encoding: encoding)
-            .timeout(timeout);
-        break;
-      case 'PATCH':
-        response = await _client
-            .patch(uri,
-                headers: resolvedHeaders, body: body, encoding: encoding)
-            .timeout(timeout);
-        break;
-      case 'DELETE':
-        response = await _client
-            .delete(uri,
-                headers: resolvedHeaders, body: body, encoding: encoding)
-            .timeout(timeout);
-        break;
-      default:
-        throw ArgumentError('Unsupported method: $method');
+    try {
+      switch (method.toUpperCase()) {
+        case 'GET':
+          response =
+              await _client.get(uri, headers: resolvedHeaders).timeout(timeout);
+          break;
+        case 'POST':
+          response = await _client
+              .post(uri,
+                  headers: resolvedHeaders, body: body, encoding: encoding)
+              .timeout(timeout);
+          break;
+        case 'PUT':
+          response = await _client
+              .put(uri,
+                  headers: resolvedHeaders, body: body, encoding: encoding)
+              .timeout(timeout);
+          break;
+        case 'PATCH':
+          response = await _client
+              .patch(uri,
+                  headers: resolvedHeaders, body: body, encoding: encoding)
+              .timeout(timeout);
+          break;
+        case 'DELETE':
+          response = await _client
+              .delete(uri,
+                  headers: resolvedHeaders, body: body, encoding: encoding)
+              .timeout(timeout);
+          break;
+        default:
+          throw ArgumentError('Unsupported method: $method');
+      }
+    } catch (error) {
+      if (allowImplicitBackendFailover && _isFallbackEligibleReadError(error)) {
+        final failoverUri = _nextImplicitFailoverUri(
+          uri,
+          method: method,
+          attemptedOrigins: attemptedOrigins,
+        );
+        if (failoverUri != null) {
+          return _request(
+            method,
+            failoverUri,
+            includeAuth: includeAuth,
+            headers: headers,
+            body: body,
+            encoding: encoding,
+            isIdempotent: isIdempotent,
+            timeout: timeout,
+            retriedAfterReauth: retriedAfterReauth,
+            allowImplicitBackendFailover: allowImplicitBackendFailover,
+            attemptedBackendOrigins: attemptedOrigins,
+          );
+        }
+      }
+      rethrow;
     }
 
     if (shouldTrace) {
@@ -1099,7 +1137,42 @@ class BackendApiService
         _isAuthFailureStatus(
             statusCode: response.statusCode, responseBody: response.body);
 
-    if (!isAuthFailure) return response;
+    if (!isAuthFailure) {
+      if (_isSuccessStatus(response.statusCode)) {
+        final successfulBaseUrl = _configuredBaseUrlForUri(uri);
+        if (successfulBaseUrl != null) {
+          _publicFallbackService.recordBackendSuccess(
+            baseUrl: successfulBaseUrl,
+          );
+        }
+      }
+
+      if (allowImplicitBackendFailover &&
+          _shouldImplicitFailoverOnStatus(method, response.statusCode)) {
+        final failoverUri = _nextImplicitFailoverUri(
+          uri,
+          method: method,
+          attemptedOrigins: attemptedOrigins,
+        );
+        if (failoverUri != null) {
+          return _request(
+            method,
+            failoverUri,
+            includeAuth: includeAuth,
+            headers: headers,
+            body: body,
+            encoding: encoding,
+            isIdempotent: isIdempotent,
+            timeout: timeout,
+            retriedAfterReauth: retriedAfterReauth,
+            allowImplicitBackendFailover: allowImplicitBackendFailover,
+            attemptedBackendOrigins: attemptedOrigins,
+          );
+        }
+      }
+
+      return response;
+    }
 
     if (retriedAfterReauth) {
       return response;
@@ -1131,6 +1204,8 @@ class BackendApiService
         isIdempotent: isIdempotent,
         timeout: timeout,
         retriedAfterReauth: true,
+        allowImplicitBackendFailover: allowImplicitBackendFailover,
+        attemptedBackendOrigins: attemptedOrigins,
       );
     }
 
@@ -1242,7 +1317,13 @@ class BackendApiService
     bool includeAuth = true,
     Duration timeout = AppConfig.requestTimeout,
     bool retriedAfterReauth = false,
+    bool allowImplicitBackendFailover = true,
+    Set<String>? attemptedBackendOrigins,
   }) async {
+    final attemptedOrigins = Set<String>.from(
+      attemptedBackendOrigins ?? const <String>{},
+    );
+
     if (includeAuth &&
         _authCoordinator != null &&
         _authCoordinator!.isResolving) {
@@ -1258,6 +1339,10 @@ class BackendApiService
     }
 
     final request = requestFactory();
+    final currentOrigin = _uriOriginKey(request.url);
+    if (currentOrigin != null) {
+      attemptedOrigins.add(currentOrigin);
+    }
     final baseHeaders = <String, String>{
       'Accept': 'application/json',
       ...request.headers,
@@ -1266,8 +1351,76 @@ class BackendApiService
       ..clear()
       ..addAll(_applyAuthHeader(baseHeaders, includeAuth: includeAuth));
 
-    final streamed = await _client.send(request).timeout(timeout);
-    final response = await http.Response.fromStream(streamed);
+    final http.Response response;
+    try {
+      final streamed = await _client.send(request).timeout(timeout);
+      response = await http.Response.fromStream(streamed);
+    } catch (error) {
+      if (allowImplicitBackendFailover && _isFallbackEligibleReadError(error)) {
+        final failoverUri = _nextImplicitFailoverUri(
+          request.url,
+          method: request.method,
+          attemptedOrigins: attemptedOrigins,
+        );
+        if (failoverUri != null) {
+          return _sendMultipart(
+            () {
+              final retryRequest = requestFactory();
+              final rewritten = http.MultipartRequest(
+                retryRequest.method,
+                failoverUri,
+              );
+              rewritten.headers.addAll(retryRequest.headers);
+              rewritten.fields.addAll(retryRequest.fields);
+              rewritten.files.addAll(retryRequest.files);
+              return rewritten;
+            },
+            includeAuth: includeAuth,
+            timeout: timeout,
+            retriedAfterReauth: retriedAfterReauth,
+            allowImplicitBackendFailover: allowImplicitBackendFailover,
+            attemptedBackendOrigins: attemptedOrigins,
+          );
+        }
+      }
+      rethrow;
+    }
+
+    if (_isSuccessStatus(response.statusCode)) {
+      final successfulBaseUrl = _configuredBaseUrlForUri(request.url);
+      if (successfulBaseUrl != null) {
+        _publicFallbackService.recordBackendSuccess(baseUrl: successfulBaseUrl);
+      }
+    }
+
+    if (allowImplicitBackendFailover &&
+        _shouldImplicitFailoverOnStatus(request.method, response.statusCode)) {
+      final failoverUri = _nextImplicitFailoverUri(
+        request.url,
+        method: request.method,
+        attemptedOrigins: attemptedOrigins,
+      );
+      if (failoverUri != null) {
+        return _sendMultipart(
+          () {
+            final retryRequest = requestFactory();
+            final rewritten = http.MultipartRequest(
+              retryRequest.method,
+              failoverUri,
+            );
+            rewritten.headers.addAll(retryRequest.headers);
+            rewritten.fields.addAll(retryRequest.fields);
+            rewritten.files.addAll(retryRequest.files);
+            return rewritten;
+          },
+          includeAuth: includeAuth,
+          timeout: timeout,
+          retriedAfterReauth: retriedAfterReauth,
+          allowImplicitBackendFailover: allowImplicitBackendFailover,
+          attemptedBackendOrigins: attemptedOrigins,
+        );
+      }
+    }
 
     final coordinator = _authCoordinator;
     final isAuthFailure = includeAuth &&
@@ -1298,6 +1451,8 @@ class BackendApiService
       includeAuth: includeAuth,
       timeout: timeout,
       retriedAfterReauth: true,
+      allowImplicitBackendFailover: allowImplicitBackendFailover,
+      attemptedBackendOrigins: attemptedOrigins,
     );
   }
 
@@ -1487,6 +1642,7 @@ class BackendApiService
     Uri uri, {
     bool includeAuth = true,
     bool allowOrbitFallback = false,
+    bool allowImplicitBackendFailover = true,
   }) async {
     final key = _rateLimitKey('GET', uri);
     if (_isRateLimited(key)) {
@@ -1508,6 +1664,7 @@ class BackendApiService
         includeAuth: includeAuth,
         headers: headers,
         isIdempotent: true,
+        allowImplicitBackendFailover: allowImplicitBackendFailover,
       );
       if (_isSuccessStatus(primaryResponse.statusCode)) {
         if (_isExhibitionsPath(uri)) {
@@ -1562,6 +1719,7 @@ class BackendApiService
       includeAuth: includeAuth,
       headers: headers,
       isIdempotent: true,
+      allowImplicitBackendFailover: allowImplicitBackendFailover,
     );
     if (_isSuccessStatus(fallbackResponse.statusCode)) {
       final data = jsonDecode(fallbackResponse.body) as Map<String, dynamic>;
@@ -1596,6 +1754,97 @@ class BackendApiService
         .replace(queryParameters: queryParameters);
   }
 
+  int _effectivePort(Uri uri) {
+    if (uri.hasPort) return uri.port;
+    switch (uri.scheme.toLowerCase()) {
+      case 'https':
+        return 443;
+      case 'http':
+        return 80;
+      default:
+        return -1;
+    }
+  }
+
+  String? _uriOriginKey(Uri uri) {
+    final scheme = uri.scheme.toLowerCase().trim();
+    final host = uri.host.toLowerCase().trim();
+    if (scheme.isEmpty || host.isEmpty) return null;
+    return '$scheme://$host:${_effectivePort(uri)}';
+  }
+
+  Uri _baseUrlOriginUri(String rawBaseUrl) {
+    return Uri.parse(_normalizeApiBaseUrl(rawBaseUrl));
+  }
+
+  bool _isConfiguredBackendUri(Uri uri) {
+    final origin = _uriOriginKey(uri);
+    if (origin == null) return false;
+    return origin == _uriOriginKey(_baseUrlOriginUri(AppConfig.baseApiUrl)) ||
+        origin == _uriOriginKey(_baseUrlOriginUri(AppConfig.standbyApiUrl));
+  }
+
+  String? _configuredBaseUrlForUri(Uri uri) {
+    final origin = _uriOriginKey(uri);
+    if (origin == null) return null;
+
+    if (origin == _uriOriginKey(_baseUrlOriginUri(AppConfig.baseApiUrl))) {
+      return AppConfig.baseApiUrl;
+    }
+    if (origin == _uriOriginKey(_baseUrlOriginUri(AppConfig.standbyApiUrl))) {
+      return AppConfig.standbyApiUrl;
+    }
+    return null;
+  }
+
+  Uri _rewriteUriBase(Uri originalUri, String rawBaseUrl) {
+    final baseUri = _baseUrlOriginUri(rawBaseUrl);
+    return Uri(
+      scheme: baseUri.scheme,
+      userInfo: baseUri.userInfo,
+      host: baseUri.host,
+      port: baseUri.hasPort ? baseUri.port : null,
+      path: originalUri.path,
+      query: originalUri.hasQuery ? originalUri.query : null,
+      fragment: originalUri.hasFragment ? originalUri.fragment : null,
+    );
+  }
+
+  Iterable<String> _implicitFailoverCandidates(String method) {
+    return method.toUpperCase() == 'GET'
+        ? _publicFallbackService.preferredReadBaseUrls
+        : _publicFallbackService.preferredWriteBaseUrls;
+  }
+
+  bool _shouldImplicitFailoverOnStatus(String method, int statusCode) {
+    if (method.toUpperCase() == 'GET') {
+      return const <int>{500, 502, 503, 504, 522, 523, 524, 530}
+          .contains(statusCode);
+    }
+    return _isTransientWriteStatusCode(statusCode);
+  }
+
+  Uri? _nextImplicitFailoverUri(
+    Uri originalUri, {
+    required String method,
+    required Set<String> attemptedOrigins,
+  }) {
+    if (!_isConfiguredBackendUri(originalUri)) {
+      return null;
+    }
+
+    for (final candidateBaseUrl in _implicitFailoverCandidates(method)) {
+      final candidateOriginUri = _baseUrlOriginUri(candidateBaseUrl);
+      final candidateOrigin = _uriOriginKey(candidateOriginUri);
+      if (candidateOrigin == null || attemptedOrigins.contains(candidateOrigin)) {
+        continue;
+      }
+      return _rewriteUriBase(originalUri, candidateBaseUrl);
+    }
+
+    return null;
+  }
+
   Future<Map<String, dynamic>> _fetchJsonFromBaseUrl(
     String rawBaseUrl,
     String path, {
@@ -1611,6 +1860,7 @@ class BackendApiService
       ),
       includeAuth: includeAuth,
       allowOrbitFallback: allowOrbitFallback,
+      allowImplicitBackendFailover: false,
     );
   }
 
@@ -1717,6 +1967,7 @@ class BackendApiService
           encoding: encoding,
           isIdempotent: isIdempotent,
           timeout: timeout,
+          allowImplicitBackendFailover: false,
         );
         if (_isSuccessStatus(response.statusCode)) {
           _publicFallbackService.recordBackendSuccess(
@@ -1773,6 +2024,7 @@ class BackendApiService
           encoding: encoding,
           isIdempotent: isIdempotent || normalizedMethod == 'GET',
           timeout: timeout,
+          allowImplicitBackendFailover: false,
         );
         if (_isSuccessStatus(response.statusCode)) {
           _publicFallbackService.recordBackendSuccess(
@@ -5379,18 +5631,21 @@ class BackendApiService
     try {
       await _ensureAuthBeforeRequest(walletAddress: walletAddress);
       final uri = Uri.parse('$baseUrl/api/ar/$id/marker/upload');
-      final request = http.MultipartRequest('POST', uri);
-      request.headers.addAll(_getHeaders());
-      request.files.add(
-        http.MultipartFile.fromBytes(
-          'file',
-          fileBytes,
-          filename: safeName,
-          contentType: MediaType('image', 'png'),
-        ),
-      );
-      final streamed = await request.send();
-      final response = await http.Response.fromStream(streamed);
+      http.MultipartRequest buildRequest() {
+        final request = http.MultipartRequest('POST', uri);
+        request.headers.addAll(_getHeaders());
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'file',
+            fileBytes,
+            filename: safeName,
+            contentType: MediaType('image', 'png'),
+          ),
+        );
+        return request;
+      }
+
+      final response = await _sendMultipart(buildRequest, includeAuth: true);
       if (response.statusCode != 200) return null;
       final decoded =
           response.body.isNotEmpty ? jsonDecode(response.body) : null;

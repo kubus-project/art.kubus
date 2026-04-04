@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'notification_helper.dart';
 import 'notification_show_helper.dart' as webshow;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/art_marker.dart';
 
@@ -18,6 +20,8 @@ class PushNotificationService {
 
   bool _initialized = false;
   bool _permissionGranted = false;
+  bool _permissionRequestInProgress = false;
+  Completer<void>? _permissionRequestCompleter;
   
   // Callbacks for notification actions
   Function(String)? onNotificationTap;
@@ -87,57 +91,107 @@ class PushNotificationService {
       return _permissionGranted;
     }
 
-    _permissionGranted = prefs.getBool('notification_permission_granted') ?? false;
+    if (_permissionRequestInProgress) {
+      await waitForPermissionSettlement(timeout: const Duration(seconds: 3));
+    }
+
+    try {
+      final permissionStatus = await Permission.notification.status;
+      _permissionGranted = permissionStatus.isGranted;
+      await prefs.setBool('notification_permission_granted', _permissionGranted);
+      return _permissionGranted;
+    } catch (e) {
+      debugPrint('PushNotificationService: Runtime permission check failed: $e');
+    }
+
+    _permissionGranted =
+        prefs.getBool('notification_permission_granted') ?? false;
     
     return _permissionGranted;
   }
 
+  /// Returns current runtime permission state and updates internal cache.
+  Future<bool> refreshPermissionStatus() async {
+    return _checkPermission();
+  }
+
+  /// Waits briefly for an in-flight permission request to settle.
+  Future<void> waitForPermissionSettlement({
+    Duration timeout = const Duration(seconds: 2),
+  }) async {
+    final pending = _permissionRequestCompleter;
+    if (pending == null) return;
+    try {
+      await pending.future.timeout(timeout);
+    } catch (_) {
+      // Ignore timeout/errors; caller can continue with current state.
+    }
+  }
+
   /// Request notification permission
   Future<bool> requestPermission() async {
-    // Web: use browser Permission API + fallback
-    if (kIsWeb) {
-      try {
+    _permissionRequestInProgress = true;
+    _permissionRequestCompleter = Completer<void>();
+    try {
+      // Web: use browser Permission API + fallback
+      if (kIsWeb) {
         // Important: keep this as "directly called from a user gesture" with no
         // extra async initialization before Notification.requestPermission(),
         // otherwise the browser may suppress the prompt.
         final granted = await requestWebNotificationPermission();
         _permissionGranted = granted;
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('notification_permission_granted', _permissionGranted);
-        debugPrint('PushNotificationService (web): Permission granted: $_permissionGranted');
+        await prefs.setBool(
+            'notification_permission_granted', _permissionGranted);
+        debugPrint(
+            'PushNotificationService (web): Permission granted: $_permissionGranted');
         return _permissionGranted;
-      } catch (e) {
-        debugPrint('PushNotificationService (web) requestPermission failed: $e');
-        return false;
       }
+
+      if (!_initialized) await initialize();
+
+      // Request permission on iOS
+      final bool? granted = await _flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin>()
+          ?.requestPermissions(
+            alert: true,
+            badge: true,
+            sound: true,
+          );
+
+      // Request permission on Android 13+
+      final bool? grantedAndroid = await _flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.requestNotificationsPermission();
+
+      var resolvedPermission = granted ?? grantedAndroid ?? false;
+      try {
+        final runtimeStatus = await Permission.notification.status;
+        resolvedPermission = runtimeStatus.isGranted;
+      } catch (_) {
+        // Fall back to plugin result when runtime status isn't available.
+      }
+
+      _permissionGranted = resolvedPermission;
+
+      // Store permission status
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(
+          'notification_permission_granted', _permissionGranted);
+
+      debugPrint(
+          'PushNotificationService: Permission granted: $_permissionGranted');
+      return _permissionGranted;
+    } catch (e) {
+      debugPrint('PushNotificationService requestPermission failed: $e');
+      return false;
+    } finally {
+      _permissionRequestInProgress = false;
+      _permissionRequestCompleter?.complete();
+      _permissionRequestCompleter = null;
     }
-
-    if (!_initialized) await initialize();
-
-    // Request permission on iOS
-    final bool? granted = await _flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin>()
-        ?.requestPermissions(
-          alert: true,
-          badge: true,
-          sound: true,
-        );
-
-    // Request permission on Android 13+
-    final bool? grantedAndroid = await _flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestNotificationsPermission();
-
-    _permissionGranted = granted ?? grantedAndroid ?? false;
-
-    // Store permission status
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('notification_permission_granted', _permissionGranted);
-
-    debugPrint('PushNotificationService: Permission granted: $_permissionGranted');
-    return _permissionGranted;
   }
 
   /// Handle notification tap

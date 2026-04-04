@@ -185,4 +185,279 @@ void main() {
           'Expected authenticated auth-read to retry on standby after primary 503.',
     );
   });
+
+  test('fetchConversations retries on standby when primary is unavailable',
+      () async {
+    final api = BackendApiService();
+    api.setAuthTokenForTesting(_validAuthToken);
+
+    final requestHosts = <String>[];
+    final primaryHost = Uri.parse(AppConfig.baseApiUrl).host;
+    final standbyHost = Uri.parse(AppConfig.standbyApiUrl).host;
+
+    api.setHttpClient(
+      MockClient((request) async {
+        if (request.url.path != '/api/messages') {
+          return http.Response('unexpected path', 500);
+        }
+        requestHosts.add(request.url.host);
+
+        if (request.url.host == primaryHost) {
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'success': false,
+              'error': 'primary unavailable',
+            }),
+            503,
+            headers: _jsonHeaders,
+          );
+        }
+
+        if (request.url.host == standbyHost) {
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'success': true,
+              'data': <Object?>[],
+            }),
+            200,
+            headers: _jsonHeaders,
+          );
+        }
+
+        return http.Response('unexpected host', 500);
+      }),
+    );
+
+    final result = await api.fetchConversations();
+
+    expect(result['success'], isTrue);
+    expect(
+      requestHosts,
+      <String>[primaryHost, standbyHost],
+      reason:
+          'Expected messages read path to retry on standby after primary 503.',
+    );
+  });
+
+  test('issueTokenForWallet retries on standby when primary returns 503',
+      () async {
+    final api = BackendApiService();
+    final requestHosts = <String>[];
+    final primaryHost = Uri.parse(AppConfig.baseApiUrl).host;
+    final standbyHost = Uri.parse(AppConfig.standbyApiUrl).host;
+
+    api.setHttpClient(
+      MockClient((request) async {
+        if (request.url.path != '/api/profiles/issue-token') {
+          return http.Response('unexpected path', 500);
+        }
+        requestHosts.add(request.url.host);
+
+        if (request.url.host == primaryHost) {
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'success': false,
+              'error': 'primary unavailable',
+            }),
+            503,
+            headers: _jsonHeaders,
+          );
+        }
+
+        if (request.url.host == standbyHost) {
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'success': true,
+              'token': 'standby-issued-token',
+            }),
+            201,
+            headers: _jsonHeaders,
+          );
+        }
+
+        return http.Response('unexpected host', 500);
+      }),
+    );
+
+    final success = await api.issueTokenForWallet(
+      'WalletTest111111111111111111111111111111111',
+    );
+
+    expect(success, isTrue);
+    expect(
+      requestHosts,
+      <String>[primaryHost, standbyHost],
+      reason:
+          'Expected issue-token write path to retry on standby after primary 503.',
+    );
+  });
+
+  test('getTrendingCommunityTags retries on standby after primary 503',
+      () async {
+    final api = BackendApiService();
+    final requestHosts = <String>[];
+    final primaryHost = Uri.parse(AppConfig.baseApiUrl).host;
+    final standbyHost = Uri.parse(AppConfig.standbyApiUrl).host;
+
+    api.setHttpClient(
+      MockClient((request) async {
+        if (request.url.path != '/api/community/tags/trending') {
+          return http.Response('unexpected path', 500);
+        }
+        requestHosts.add(request.url.host);
+
+        if (request.url.host == primaryHost) {
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'success': false,
+              'error': 'primary unavailable',
+            }),
+            503,
+            headers: _jsonHeaders,
+          );
+        }
+
+        if (request.url.host == standbyHost) {
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'success': true,
+              'data': <Map<String, Object?>>[
+                <String, Object?>{'tag': 'art', 'count': 7},
+              ],
+            }),
+            200,
+            headers: _jsonHeaders,
+          );
+        }
+
+        return http.Response('unexpected host', 500);
+      }),
+    );
+
+    final tags = await api.getTrendingCommunityTags(limit: 8, timeframeDays: 7);
+
+    expect(tags, hasLength(1));
+    expect(tags.first['tag'], 'art');
+    expect(
+      requestHosts,
+      <String>[primaryHost, standbyHost],
+      reason:
+          'Expected _fetchJson read path to retry on standby after primary 503.',
+    );
+  });
+
+  test('uploadMessageAttachment retries on standby when primary returns 503',
+      () async {
+    final api = BackendApiService();
+    api.setAuthTokenForTesting(_validAuthToken);
+
+    final requestHosts = <String>[];
+    final primaryHost = Uri.parse(AppConfig.baseApiUrl).host;
+    final standbyHost = Uri.parse(AppConfig.standbyApiUrl).host;
+
+    api.setHttpClient(
+      MockClient((request) async {
+        if (request.url.path != '/api/messages/conversation-1/messages') {
+          return http.Response('unexpected path', 500);
+        }
+        requestHosts.add(request.url.host);
+
+        if (request.url.host == primaryHost) {
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'success': false,
+              'error': 'primary unavailable',
+            }),
+            503,
+            headers: _jsonHeaders,
+          );
+        }
+
+        if (request.url.host == standbyHost) {
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'success': true,
+              'data': <String, Object?>{'id': 'msg-1'},
+            }),
+            201,
+            headers: _jsonHeaders,
+          );
+        }
+
+        return http.Response('unexpected host', 500);
+      }),
+    );
+
+    final result = await api.uploadMessageAttachment(
+      'conversation-1',
+      <int>[1, 2, 3, 4],
+      'image.png',
+      'image/png',
+    );
+
+    expect(result['success'], isTrue);
+    expect(
+      requestHosts,
+      <String>[primaryHost, standbyHost],
+      reason:
+          'Expected multipart message upload to retry on standby after primary 503.',
+    );
+  });
+
+  test('uploadArMarker retries on standby when primary returns 503', () async {
+    final api = BackendApiService();
+    api.setAuthTokenForTesting(_validAuthToken);
+
+    final requestHosts = <String>[];
+    final primaryHost = Uri.parse(AppConfig.baseApiUrl).host;
+    final standbyHost = Uri.parse(AppConfig.standbyApiUrl).host;
+
+    api.setHttpClient(
+      MockClient((request) async {
+        if (request.url.path != '/api/ar/artwork-1/marker/upload') {
+          return http.Response('unexpected path', 500);
+        }
+        requestHosts.add(request.url.host);
+
+        if (request.url.host == primaryHost) {
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'success': false,
+              'error': 'primary unavailable',
+            }),
+            503,
+            headers: _jsonHeaders,
+          );
+        }
+
+        if (request.url.host == standbyHost) {
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'success': true,
+              'data': <String, Object?>{'markerUrl': '/uploads/marker.png'},
+            }),
+            200,
+            headers: _jsonHeaders,
+          );
+        }
+
+        return http.Response('unexpected host', 500);
+      }),
+    );
+
+    final result = await api.uploadArMarker(
+      artworkId: 'artwork-1',
+      walletAddress: 'WalletTest111111111111111111111111111111111',
+      fileBytes: <int>[1, 2, 3],
+      fileName: 'marker.png',
+    );
+
+    expect(result, isNotNull);
+    expect(
+      requestHosts,
+      <String>[primaryHost, standbyHost],
+      reason:
+          'Expected manual AR marker upload path to retry on standby after primary 503.',
+    );
+  });
 }

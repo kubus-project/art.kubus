@@ -225,12 +225,21 @@ class RecentActivityProvider extends ChangeNotifier {
         _string(raw['title']) ?? _defaultTitle(category, actorName, data);
     final resolvedDescription = _string(raw['message']) ??
         _string(raw['description']) ??
+      _string(raw['body']) ??
         _defaultDescription(category, actorName, data);
     final actionUrl = _string(raw['actionUrl']) ??
         _string(raw['action_url']) ??
         _string(data['actionUrl']) ??
         _string(data['action_url']);
-    final isRead = _bool(raw['isRead']) ?? _bool(raw['is_read']) ?? true;
+    final explicitRead =
+      _bool(raw['isRead']) ?? _bool(raw['is_read']) ?? _bool(raw['read']);
+    final explicitUnread =
+      _bool(raw['isUnread']) ?? _bool(raw['is_unread']);
+    final isLikelyInAppNotification =
+      raw.containsKey('payload') && raw.containsKey('body');
+    final isRead = explicitRead ??
+      (explicitUnread != null ? !explicitUnread : null) ??
+      (isLikelyInAppNotification ? false : true);
 
     final metadata = <String, dynamic>{
       ...customMetadata,

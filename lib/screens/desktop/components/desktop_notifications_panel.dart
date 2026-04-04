@@ -33,6 +33,13 @@ class DesktopNotificationsPanel extends StatelessWidget {
     this.visibleLimit,
   });
 
+  static bool shouldShowUnavailableInFallback({
+    required bool isIpfsFallbackMode,
+    required int activityCount,
+  }) {
+    return isIpfsFallbackMode && activityCount == 0;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -132,17 +139,7 @@ class DesktopNotificationsPanel extends StatelessWidget {
               height: 1,
               color: scheme.outline.withValues(alpha: 0.20),
             ),
-            if (isIpfsFallbackMode)
-              const Expanded(
-                child: AppModeUnavailableState(
-                  featureLabel: 'Notifications',
-                  title: 'Notifications unavailable',
-                  icon: Icons.notifications_off_outlined,
-                  padding: EdgeInsets.all(KubusSpacing.lg),
-                ),
-              )
-            else
-              Expanded(
+            Expanded(
               child: Consumer<RecentActivityProvider>(
                 builder: (context, activityProvider, _) {
                   final activities = unreadOnly
@@ -151,6 +148,18 @@ class DesktopNotificationsPanel extends StatelessWidget {
                           .take(visibleLimit ?? 10)
                           .toList(growable: false)
                       : activityProvider.activities;
+
+                  if (shouldShowUnavailableInFallback(
+                    isIpfsFallbackMode: isIpfsFallbackMode,
+                    activityCount: activities.length,
+                  )) {
+                    return const AppModeUnavailableState(
+                      featureLabel: 'Notifications',
+                      title: 'Notifications unavailable',
+                      icon: Icons.notifications_off_outlined,
+                      padding: EdgeInsets.all(KubusSpacing.lg),
+                    );
+                  }
 
                   if (activityProvider.isLoading && activities.isEmpty) {
                     return Center(

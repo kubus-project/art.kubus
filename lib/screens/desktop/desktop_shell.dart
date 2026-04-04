@@ -566,6 +566,7 @@ class _DesktopShellState extends State<DesktopShell>
     final selectedIndex =
         navItems.indexWhere((item) => item.route == effectiveRoute);
 
+    final isCompact = DesktopBreakpoints.isCompact(context);
     final isLarge = DesktopBreakpoints.isLarge(context);
     final isExpanded = DesktopBreakpoints.isExpanded(context);
     final theme = Theme.of(context);
@@ -623,13 +624,17 @@ class _DesktopShellState extends State<DesktopShell>
                         ),
 
                         // Functions sidebar (contextual panels like Notifications)
-                        if (isExpanded || isLarge)
+                        // Keep available on medium widths too, otherwise notification
+                        // actions can appear to do nothing on narrower desktop windows.
+                        if (!isCompact)
                           AnimatedContainer(
                             duration: const Duration(milliseconds: 220),
                             curve: Curves.easeOutCubic,
                             width: _functionsPanel == DesktopFunctionsPanel.none
                                 ? 0
-                                : (isLarge ? 380 : 320),
+                                : (isLarge
+                                    ? 380
+                                    : (isExpanded ? 320 : 280)),
                             child: ClipRect(
                               child: IgnorePointer(
                                 ignoring: _functionsPanel ==

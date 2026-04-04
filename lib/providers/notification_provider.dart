@@ -683,6 +683,17 @@ class NotificationProvider extends ChangeNotifier {
       // Show local notification for community interactions and other types
       try {
         await _pushService.initialize();
+        await _pushService.waitForPermissionSettlement();
+        final canDisplayLocally = await _pushService.refreshPermissionStatus();
+        if (!canDisplayLocally) {
+          if (kDebugMode) {
+            debugPrint(
+              'NotificationProvider: skipping local notification display '
+              '(permission not granted yet)',
+            );
+          }
+          return;
+        }
         switch (normalizedType) {
           case 'comment':
             await _pushService.showCommunityInteractionNotification(

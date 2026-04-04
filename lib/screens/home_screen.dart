@@ -2230,10 +2230,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     if (!context.mounted) return;
 
-    await notificationProvider.markViewed();
-
-    if (!context.mounted) return;
-
     await showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -2252,6 +2248,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       },
     );
 
+    if (!context.mounted) return;
+
+    await notificationProvider.markViewed();
     activityProvider.markAllReadLocally();
   }
 
