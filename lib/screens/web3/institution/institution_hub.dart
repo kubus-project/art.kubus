@@ -31,8 +31,6 @@ import '../../events/exhibition_list_screen.dart';
 import '../../map_markers/manage_markers_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../../widgets/promotion/promotion_builder_sheet.dart';
-import '../../../widgets/empty_state_card.dart';
-import '../../../widgets/recent_activity_tile.dart';
 import '../../../widgets/notifications/kubus_notifications_sheet.dart';
 import '../../../widgets/topbar_icon.dart';
 

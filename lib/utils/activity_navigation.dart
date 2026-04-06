@@ -17,15 +17,25 @@ class ActivityNavigation {
   ActivityNavigation._();
 
   static Future<bool> open(
-      BuildContext context, RecentActivity activity) async {
+    BuildContext context,
+    RecentActivity activity,
+  ) async {
+    // IMPORTANT:
+    // Use the caller's BuildContext for DesktopShellScope lookups.
+    // `NavigatorState.context` points at the Navigator widget above the shell,
+    // which cannot see DesktopShellScope and would cause fullscreen pushes.
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
     final metadata = Map<String, dynamic>.from(activity.metadata);
     final actionUrl = activity.actionUrl ?? _string(metadata['actionUrl']);
 
-    if (await _handleActionUrl(navigator, actionUrl, metadata)) {
+    if (await _handleActionUrl(context, navigator, actionUrl, metadata)) {
       return true;
+    }
+
+    if (!context.mounted) {
+      return false;
     }
 
     switch (activity.category) {
@@ -35,7 +45,7 @@ class ActivityNavigation {
       case ActivityCategory.mention:
         final postId = _extractPostId(metadata);
         if (postId != null) {
-          await _openPost(navigator, postId);
+          await _openPost(context, navigator, postId);
           return true;
         }
         break;
@@ -44,25 +54,25 @@ class ActivityNavigation {
       case ActivityCategory.ar:
         final artworkId = _extractArtworkId(metadata);
         if (artworkId != null) {
-          await _openArtwork(navigator, artworkId);
+          await _openArtwork(context, navigator, artworkId);
           return true;
         }
         break;
       case ActivityCategory.reward:
-        await _openWallet(navigator);
+        await _openWallet(context, navigator);
         return true;
       case ActivityCategory.follow:
         final userId = _extractUserId(metadata);
         if (userId != null) {
-          await _openUserProfile(navigator, userId);
+          await _openUserProfile(context, navigator, userId);
           return true;
         }
         break;
       case ActivityCategory.save:
-        await _openCollections(navigator);
+        await _openCollections(context, navigator);
         return true;
       case ActivityCategory.achievement:
-        await _openAchievements(navigator);
+        await _openAchievements(context, navigator);
         return true;
       case ActivityCategory.system:
         break;
@@ -72,16 +82,19 @@ class ActivityNavigation {
         _extractPostId(metadata) ??
         _extractArtworkId(metadata);
     if (fallback != null) {
+      if (!context.mounted) {
+        return false;
+      }
       if (fallback == _extractUserId(metadata)) {
-        await _openUserProfile(navigator, fallback);
+        await _openUserProfile(context, navigator, fallback);
         return true;
       }
       if (fallback == _extractPostId(metadata)) {
-        await _openPost(navigator, fallback);
+        await _openPost(context, navigator, fallback);
         return true;
       }
       if (fallback == _extractArtworkId(metadata)) {
-        await _openArtwork(navigator, fallback);
+        await _openArtwork(context, navigator, fallback);
         return true;
       }
     }
@@ -93,6 +106,7 @@ class ActivityNavigation {
   }
 
   static Future<bool> _handleActionUrl(
+    BuildContext context,
     NavigatorState navigator,
     String? actionUrl,
     Map<String, dynamic> metadata,
@@ -108,18 +122,19 @@ class ActivityNavigation {
 
     final lower = trimmed.toLowerCase();
     if (lower.startsWith('app://')) {
-      return _openAppScheme(navigator, trimmed, metadata);
+      return _openAppScheme(context, navigator, trimmed, metadata);
     }
 
     if (trimmed.startsWith('/')) {
-      return _openRelativePath(navigator, trimmed, metadata);
+      return _openRelativePath(context, navigator, trimmed, metadata);
     }
 
     // Support relative paths without a leading slash (e.g. `profile/abc`).
-    return _openRelativePath(navigator, '/$trimmed', metadata);
+    return _openRelativePath(context, navigator, '/$trimmed', metadata);
   }
 
   static Future<bool> _openAppScheme(
+    BuildContext context,
     NavigatorState navigator,
     String url,
     Map<String, dynamic> metadata,
@@ -140,8 +155,12 @@ class ActivityNavigation {
     final host = uri.host;
     final basePath = host.isEmpty ? uri.path : '/$host${uri.path}';
     final normalizedPath = uri.hasQuery ? '$basePath?${uri.query}' : basePath;
-    if (await _openRelativePath(navigator, normalizedPath, metadata)) {
+    if (await _openRelativePath(context, navigator, normalizedPath, metadata)) {
       return true;
+    }
+
+    if (!context.mounted) {
+      return false;
     }
 
     switch (target) {
@@ -150,7 +169,7 @@ class ActivityNavigation {
       case 'community':
         final postId = slug ?? _extractPostId(metadata);
         if (postId != null) {
-          await _openPost(navigator, postId);
+          await _openPost(context, navigator, postId);
           return true;
         }
         break;
@@ -158,7 +177,7 @@ class ActivityNavigation {
       case 'artworks':
         final artworkId = slug ?? _extractArtworkId(metadata);
         if (artworkId != null) {
-          await _openArtwork(navigator, artworkId);
+          await _openArtwork(context, navigator, artworkId);
           return true;
         }
         break;
@@ -166,30 +185,31 @@ class ActivityNavigation {
       case 'profile':
         final userId = slug ?? _extractUserId(metadata);
         if (userId != null) {
-          await _openUserProfile(navigator, userId);
+          await _openUserProfile(context, navigator, userId);
           return true;
         }
         break;
       case 'rewards':
       case 'wallet':
-        await _openWallet(navigator);
+        await _openWallet(context, navigator);
         return true;
       case 'collections':
-        await _openCollections(navigator);
+        await _openCollections(context, navigator);
         return true;
       case 'achievement':
       case 'achievements':
-        await _openAchievements(navigator);
+        await _openAchievements(context, navigator);
         return true;
       case 'trade':
       case 'marketplace':
-        await _openMarketplace(navigator);
+        await _openMarketplace(context, navigator);
         return true;
     }
     return false;
   }
 
   static Future<bool> _openRelativePath(
+    BuildContext context,
     NavigatorState navigator,
     String url,
     Map<String, dynamic> metadata,
@@ -217,14 +237,14 @@ class ActivityNavigation {
           final section = segments[1].toLowerCase();
           if (section == 'posts' && segments.length >= 3) {
             final postId = segments[2];
-            await _openPost(navigator, postId);
+            await _openPost(context, navigator, postId);
             return true;
           }
           if (section == 'comments' && segments.length >= 3) {
             final postId =
                 _extractPostId(metadata) ?? query['postId'] ?? query['post_id'];
             if (postId != null) {
-              await _openPost(navigator, postId);
+              await _openPost(context, navigator, postId);
               return true;
             }
           }
@@ -232,7 +252,7 @@ class ActivityNavigation {
                   section == 'profiles' ||
                   section == 'users') &&
               segments.length >= 3) {
-            await _openUserProfile(navigator, segments[2]);
+            await _openUserProfile(context, navigator, segments[2]);
             return true;
           }
         }
@@ -240,7 +260,7 @@ class ActivityNavigation {
       case 'posts':
       case 'post':
         if (segments.length >= 2) {
-          await _openPost(navigator, segments[1]);
+          await _openPost(context, navigator, segments[1]);
           return true;
         }
         break;
@@ -248,14 +268,14 @@ class ActivityNavigation {
         final postId =
             _extractPostId(metadata) ?? query['postId'] ?? query['post_id'];
         if (postId != null) {
-          await _openPost(navigator, postId);
+          await _openPost(context, navigator, postId);
           return true;
         }
         break;
       case 'artworks':
       case 'artwork':
         if (segments.length >= 2) {
-          await _openArtwork(navigator, segments[1]);
+          await _openArtwork(context, navigator, segments[1]);
           return true;
         }
         break;
@@ -264,32 +284,35 @@ class ActivityNavigation {
       case 'users':
       case 'user':
         if (segments.length >= 2) {
-          await _openUserProfile(navigator, segments[1]);
+          await _openUserProfile(context, navigator, segments[1]);
           return true;
         }
         break;
       case 'wallet':
       case 'rewards':
-        await _openWallet(navigator);
+        await _openWallet(context, navigator);
         return true;
       case 'collections':
       case 'saved':
-        await _openCollections(navigator);
+        await _openCollections(context, navigator);
         return true;
       case 'achievement':
       case 'achievements':
-        await _openAchievements(navigator);
+        await _openAchievements(context, navigator);
         return true;
       case 'marketplace':
       case 'trade':
-        await _openMarketplace(navigator);
+        await _openMarketplace(context, navigator);
         return true;
     }
     return false;
   }
 
-  static Future<void> _openPost(NavigatorState navigator, String postId) async {
-    final context = navigator.context;
+  static Future<void> _openPost(
+    BuildContext context,
+    NavigatorState navigator,
+    String postId,
+  ) async {
     final l10n = AppLocalizations.of(context);
 
     final shellScope = DesktopShellScope.of(context);
@@ -308,17 +331,25 @@ class ActivityNavigation {
   }
 
   static Future<void> _openArtwork(
-      NavigatorState navigator, String artworkId) async {
-    await openArtwork(navigator.context, artworkId, source: 'activity');
+    BuildContext context,
+    NavigatorState navigator,
+    String artworkId,
+  ) async {
+    await openArtwork(context, artworkId, source: 'activity');
   }
 
   static Future<void> _openUserProfile(
-      NavigatorState navigator, String userId) async {
-    await UserProfileNavigation.open(navigator.context, userId: userId);
+    BuildContext context,
+    NavigatorState navigator,
+    String userId,
+  ) async {
+    await UserProfileNavigation.open(context, userId: userId);
   }
 
-  static Future<void> _openWallet(NavigatorState navigator) async {
-    final context = navigator.context;
+  static Future<void> _openWallet(
+    BuildContext context,
+    NavigatorState navigator,
+  ) async {
     final shellScope = DesktopShellScope.of(context);
     if (shellScope != null) {
       shellScope.navigateToRoute('/wallet');
@@ -328,8 +359,10 @@ class ActivityNavigation {
     await navigator.push(MaterialPageRoute(builder: (_) => const WalletHome()));
   }
 
-  static Future<void> _openCollections(NavigatorState navigator) async {
-    final context = navigator.context;
+  static Future<void> _openCollections(
+    BuildContext context,
+    NavigatorState navigator,
+  ) async {
     final l10n = AppLocalizations.of(context);
     final shellScope = DesktopShellScope.of(context);
     if (shellScope != null) {
@@ -346,8 +379,10 @@ class ActivityNavigation {
         .push(MaterialPageRoute(builder: (_) => const SavedItemsScreen()));
   }
 
-  static Future<void> _openAchievements(NavigatorState navigator) async {
-    final context = navigator.context;
+  static Future<void> _openAchievements(
+    BuildContext context,
+    NavigatorState navigator,
+  ) async {
     final l10n = AppLocalizations.of(context);
     final shellScope = DesktopShellScope.of(context);
     if (shellScope != null) {
@@ -364,8 +399,10 @@ class ActivityNavigation {
         .push(MaterialPageRoute(builder: (_) => const AchievementsPage()));
   }
 
-  static Future<void> _openMarketplace(NavigatorState navigator) async {
-    final context = navigator.context;
+  static Future<void> _openMarketplace(
+    BuildContext context,
+    NavigatorState navigator,
+  ) async {
     final shellScope = DesktopShellScope.of(context);
     if (shellScope != null) {
       shellScope.navigateToRoute('/marketplace');

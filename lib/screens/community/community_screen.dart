@@ -45,7 +45,6 @@ import '../../services/share/share_service.dart';
 import '../../services/share/share_deep_link_parser.dart';
 import '../../services/share/share_types.dart';
 import '../../services/block_list_service.dart';
-import '../../services/push_notification_service.dart';
 import '../map_screen.dart';
 import 'post_detail_screen.dart';
 import 'group_feed_screen.dart';
