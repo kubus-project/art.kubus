@@ -33,6 +33,7 @@ import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../../widgets/promotion/promotion_builder_sheet.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/recent_activity_tile.dart';
+import '../../../widgets/notifications/kubus_notifications_sheet.dart';
 import '../../../widgets/topbar_icon.dart';
 
 class InstitutionHub extends StatefulWidget {
@@ -313,7 +314,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
                       Icons.notifications_outlined,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
-                    onPressed: _showNotifications,
+                    onPressed: () => unawaited(_showNotifications()),
                   ),
                 ),
               ],
@@ -1026,108 +1027,39 @@ class _InstitutionHubState extends State<InstitutionHub> {
     );
   }
 
-  void _showNotifications() {
+  Future<void> _showNotifications() async {
     final provider =
         Provider.of<RecentActivityProvider>(context, listen: false);
     final notificationProvider =
         Provider.of<NotificationProvider>(context, listen: false);
-    unawaited(provider.initialize(force: true));
-    unawaited(notificationProvider.markViewed());
+    if (provider.initialized) {
+      await provider.refresh(force: true);
+    } else {
+      await provider.initialize(force: true);
+    }
 
-    showModalBottomSheet(
+    if (!mounted) return;
+
+    await showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        final scheme = Theme.of(context).colorScheme;
-        return BackdropGlassSheet(
-          padding: EdgeInsets.zero,
-          showHandle: false,
-          showBorder: false,
-          backgroundColor: scheme.surface,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              KubusSheetHeader(
-                title: AppLocalizations.of(context)!.commonNotifications,
-                trailing: TopBarIcon(
-                  tooltip: AppLocalizations.of(context)!.commonRefresh,
-                  icon: Icon(
-                    Icons.refresh,
-                    color: scheme.onSurface,
-                  ),
-                  onPressed: () => provider.refresh(force: true),
-                ),
-              ),
-              Flexible(
-                child: Consumer<RecentActivityProvider>(
-                  builder: (context, activityProvider, _) {
-                    final activities = activityProvider.activities;
-                    final isLoading =
-                        activityProvider.isLoading && activities.isEmpty;
-                    final hasError =
-                        activityProvider.error != null && activities.isEmpty;
-
-                    if (isLoading) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    return RefreshIndicator(
-                      onRefresh: () => activityProvider.refresh(force: true),
-                      child: activities.isEmpty
-                          ? ListView(
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: KubusSpacing.xl,
-                                vertical: KubusSpacing.xxl,
-                              ),
-                              children: [
-                                EmptyStateCard(
-                                  icon: hasError
-                                      ? Icons.error_outline
-                                      : Icons.notifications_off_outlined,
-                                  title: hasError
-                                      ? AppLocalizations.of(context)!
-                                          .homeUnableToLoadNotificationsTitle
-                                      : AppLocalizations.of(context)!
-                                          .homeNoNotificationsTitle,
-                                  description: hasError
-                                      ? AppLocalizations.of(context)!
-                                          .commonSomethingWentWrong
-                                      : AppLocalizations.of(context)!
-                                          .homeAllCaughtUpDescription,
-                                ),
-                              ],
-                            )
-                          : ListView.separated(
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: KubusSpacing.lg,
-                                vertical: KubusSpacing.sm,
-                              ),
-                              itemCount: activities.length,
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(height: KubusSpacing.sm),
-                              itemBuilder: (context, index) {
-                                final activity = activities[index];
-                                return RecentActivityTile(
-                                  activity: activity,
-                                  margin: EdgeInsets.zero,
-                                  onTap: () {
-                                    Navigator.of(context).pop();
-                                    ActivityNavigation.open(context, activity);
-                                  },
-                                );
-                              },
-                            ),
-                    );
-                  },
-                ),
-              ),
-            ],
+        return ChangeNotifierProvider.value(
+          value: provider,
+          child: KubusNotificationsSheet(
+            unreadOnly: false,
+            onNotificationSelected: (activity) async {
+              Navigator.of(context).pop();
+              await ActivityNavigation.open(context, activity);
+            },
           ),
         );
       },
     );
+
+    if (!mounted) return;
+    await notificationProvider.markViewed();
+    provider.markAllNotificationsReadLocally();
   }
 
   Future<void> _openInstitutionPromotionFlow() async {

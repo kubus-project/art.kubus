@@ -54,11 +54,13 @@ import '../../services/user_service.dart';
 import '../../providers/app_refresh_provider.dart';
 import '../../services/socket_service.dart';
 import '../../providers/notification_provider.dart';
+import '../../providers/recent_activity_provider.dart';
 import '../../providers/chat_provider.dart';
 import 'messages_screen.dart';
 import '../../providers/saved_items_provider.dart';
 import '../../providers/navigation_provider.dart';
 import '../../utils/app_animations.dart';
+import '../../utils/activity_navigation.dart';
 import '../../utils/artwork_navigation.dart';
 import '../../utils/community_screen_utils.dart';
 import '../../utils/institution_navigation.dart';
@@ -79,6 +81,7 @@ import '../../widgets/search/kubus_general_search.dart';
 import '../../widgets/search/kubus_search_config.dart';
 import '../../widgets/search/kubus_search_controller.dart';
 import '../../widgets/search/kubus_search_result.dart';
+import '../../widgets/notifications/kubus_notifications_sheet.dart';
 
 enum CommunityFeedType {
   following,
@@ -2862,298 +2865,43 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   // Navigation and interaction methods
   Future<void> _showNotifications() async {
-    final notificationService = PushNotificationService();
-    final backend = BackendApiService();
-    List<Map<String, dynamic>> combined = [];
+    final activityProvider = context.read<RecentActivityProvider>();
+    final notificationProvider = context.read<NotificationProvider>();
 
-    // Initial load function
-    Future<List<Map<String, dynamic>>> loadNotifications() async {
-      try {
-        // Ensure auth token is loaded for user-specific notifications
-        try {
-          await backend.loadAuthToken();
-          final token = backend.getAuthToken();
-          debugPrint(
-              '🔐 Auth token loaded for notifications: ${token != null ? (token.length > 16 ? '${token.substring(0, 8)}...' : token) : "<none>"}');
-          // Optionally fetch which wallet this token maps to
-          try {
-            final me = await backend.getMyProfile();
-            debugPrint(
-                '🔍 Token maps to wallet: ${me['wallet'] ?? me['wallet_address']}');
-          } catch (e) {
-            debugPrint('⚠️ Unable to map token to profile: $e');
-          }
-        } catch (e) {
-          debugPrint('⚠️ No auth token available: $e');
-        }
-
-        // Load local in-app notifications
-        final local = await notificationService.getInAppNotifications();
-        // Load server notifications (if authenticated)
-        final remote = await backend.getNotifications(limit: 50);
-        debugPrint(
-            '📥 Loaded ${local.length} local + ${remote.length} remote notifications');
-        // Normalize remote (ensure Map<String,dynamic>)
-        final remapped =
-            remote.map((e) => Map<String, dynamic>.from(e)).toList();
-        final notifications = [...local, ...remapped];
-        // Sort by timestamp desc if available
-        notifications.sort((a, b) {
-          final ta = a['timestamp'] ?? a['createdAt'] ?? '';
-          final tb = b['timestamp'] ?? b['createdAt'] ?? '';
-          try {
-            final da = DateTime.parse(ta.toString());
-            final db = DateTime.parse(tb.toString());
-            return db.compareTo(da);
-          } catch (_) {
-            return 0;
-          }
-        });
-        return notifications;
-      } catch (e) {
-        debugPrint('Failed to load notifications: $e');
-        return [];
-      }
+    if (activityProvider.initialized) {
+      await activityProvider.refresh(force: true);
+    } else {
+      await activityProvider.initialize(force: true);
     }
 
-    combined = await loadNotifications();
     if (!mounted) return;
 
-    // Clear bell unread count when opening notifications
-    try {
-      setState(() {
-        _bellUnreadCount = 0;
-      });
-      Provider.of<NotificationProvider>(context, listen: false).markViewed();
-    } catch (_) {}
+    // Clear bell unread count when opening notifications.
+    setState(() {
+      _bellUnreadCount = 0;
+    });
 
-    showModalBottomSheet(
+    await showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) => SizedBox(
-          height: MediaQuery.of(context).size.height * 0.6,
-          child: BackdropGlassSheet(
-            showHandle: false,
-            showBorder: false,
-            padding: EdgeInsets.zero,
-            backgroundColor: Theme.of(context).colorScheme.surface,
-            child: Column(
-              children: [
-                KubusSheetHeader(
-                  title: 'Community Notifications',
-                  trailing: TopBarIcon(
-                    tooltip: AppLocalizations.of(context)!.commonRefresh,
-                    icon: Icon(
-                      Icons.refresh,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                    onPressed: () async {
-                      final refreshed = await loadNotifications();
-                      setModalState(() {
-                        combined = refreshed;
-                      });
-                    },
-                  ),
-                ),
-                Expanded(
-                  child: combined.isEmpty
-                      ? RefreshIndicator(
-                          onRefresh: () async {
-                            final refreshed = await loadNotifications();
-                            setModalState(() {
-                              combined = refreshed;
-                            });
-                          },
-                          child: SingleChildScrollView(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            child: SizedBox(
-                              height: MediaQuery.of(context).size.height * 0.4,
-                              child: Center(
-                                child: Padding(
-                                  padding:
-                                      const EdgeInsets.all(KubusSpacing.lg),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.notifications_none,
-                                        size: 64,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withValues(alpha: 0.3),
-                                      ),
-                                      const SizedBox(height: 16),
-                                      Text(
-                                        'No Notifications',
-                                        style: KubusTypography.inter(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withValues(alpha: 0.6),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        'You\'re all caught up!',
-                                        style: KubusTypography.inter(
-                                          fontSize: 14,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withValues(alpha: 0.5),
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        )
-                      : RefreshIndicator(
-                          onRefresh: () async {
-                            final refreshed = await loadNotifications();
-                            setModalState(() {
-                              combined = refreshed;
-                            });
-                          },
-                          child: ListView.separated(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 8),
-                            itemBuilder: (ctx, i) {
-                              final n = combined[i];
-                              final type =
-                                  (n['interactionType'] ?? n['type'] ?? '')
-                                      .toString();
-                              // Extract sender info from backend notification structure
-                              final sender =
-                                  n['sender'] as Map<String, dynamic>?;
-                              final user = sender?['displayName'] as String? ??
-                                  sender?['username'] as String? ??
-                                  (n['userName'] ??
-                                          n['authorName'] ??
-                                          'Someone')
-                                      .toString();
-                              final body = (n['comment'] ??
-                                      n['message'] ??
-                                      n['content'] ??
-                                      '')
-                                  .toString();
-                              final ts =
-                                  (n['timestamp'] ?? n['createdAt'] ?? '')
-                                      .toString();
-                              String time = ts.isNotEmpty ? ts : '';
-                              try {
-                                if (time.isNotEmpty) {
-                                  time = _getTimeAgo(DateTime.parse(time));
-                                }
-                              } catch (_) {}
-                              final leadSeed = (sender?['wallet'] ??
-                                      sender?['wallet_address'] ??
-                                      sender?['walletAddress'] ??
-                                      user)
-                                  .toString();
-                              return LiquidGlassCard(
-                                margin: const EdgeInsets.symmetric(
-                                  horizontal: KubusSpacing.md,
-                                  vertical: KubusSpacing.xs,
-                                ),
-                                padding: const EdgeInsets.all(KubusSpacing.md),
-                                backgroundColor:
-                                    Theme.of(context).colorScheme.surface,
-                                child: InkWell(
-                                  onTap: () {
-                                    Navigator.pop(context);
-                                    final postId = n['postId']?.toString();
-                                    if (postId != null && postId.isNotEmpty) {
-                                      final idx = _communityPosts
-                                          .indexWhere((p) => p.id == postId);
-                                      if (idx != -1) {
-                                        WidgetsBinding.instance
-                                            .addPostFrameCallback((_) {
-                                          _showComments(idx);
-                                        });
-                                      }
-                                    }
-                                  },
-                                  borderRadius:
-                                      BorderRadius.circular(KubusRadius.md),
-                                  child: Row(
-                                    children: [
-                                      AvatarWidget(
-                                          wallet: leadSeed,
-                                          radius: 20,
-                                          allowFabricatedFallback: false),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              type == 'like'
-                                                  ? '$user liked your post'
-                                                  : type == 'comment'
-                                                      ? '$user commented'
-                                                      : type == 'reply'
-                                                          ? '$user replied'
-                                                          : type == 'mention'
-                                                              ? '$user mentioned you'
-                                                              : (n['type'] ??
-                                                                      'Notification')
-                                                                  .toString(),
-                                              style: KubusTypography.inter(
-                                                  fontWeight: FontWeight.w600),
-                                            ),
-                                            const SizedBox(height: 6),
-                                            Text(body,
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: KubusTypography.inter(
-                                                    color: Theme.of(context)
-                                                        .colorScheme
-                                                        .onSurface
-                                                        .withValues(
-                                                            alpha: 0.7))),
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(time,
-                                          style: TextStyle(
-                                              fontSize: 12,
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurface
-                                                  .withValues(alpha: 0.5))),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                            separatorBuilder: (ctx, i) => Divider(
-                                height: 1,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.06)),
-                            itemCount: combined.length,
-                          ),
-                        ),
-                ),
-              ],
-            ),
+      builder: (sheetContext) {
+        return ChangeNotifierProvider.value(
+          value: activityProvider,
+          child: KubusNotificationsSheet(
+            unreadOnly: false,
+            onNotificationSelected: (activity) async {
+              Navigator.of(sheetContext).pop();
+              await ActivityNavigation.open(context, activity);
+            },
           ),
-        ),
-      ),
+        );
+      },
     );
+
+    if (!mounted) return;
+    await notificationProvider.markViewed();
+    activityProvider.markAllNotificationsReadLocally();
   }
 
   void _createNewPost({

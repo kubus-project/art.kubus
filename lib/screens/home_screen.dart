@@ -35,6 +35,7 @@ import '../widgets/inline_loading.dart';
 import '../widgets/enhanced_stats_chart.dart';
 import '../widgets/empty_state_card.dart';
 import '../widgets/recent_activity_tile.dart';
+import '../widgets/notifications/kubus_notifications_sheet.dart';
 import 'activity/advanced_analytics_screen.dart';
 import 'events/event_detail_screen.dart';
 import 'events/exhibition_detail_screen.dart';
@@ -2238,7 +2239,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         return ChangeNotifierProvider.value(
           value: activityProvider,
           child: _NotificationsBottomSheet(
-            showUnreadOnly: true,
+            showUnreadOnly: false,
             onActivitySelected: (activity) async {
               Navigator.of(sheetContext).pop();
               await ActivityNavigation.open(context, activity);
@@ -2251,7 +2252,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (!context.mounted) return;
 
     await notificationProvider.markViewed();
-    activityProvider.markAllReadLocally();
+    activityProvider.markAllNotificationsReadLocally();
   }
 
   // Show wallet onboarding for first-time users
@@ -2642,105 +2643,11 @@ class _NotificationsBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-    final provider =
-        Provider.of<RecentActivityProvider>(context, listen: false);
-
-    return SizedBox(
-      height: MediaQuery.of(context).size.height * 0.65,
-      child: BackdropGlassSheet(
-        showHandle: false,
-        showBorder: false,
-        padding: EdgeInsets.zero,
-        backgroundColor: colorScheme.surface,
-        child: Column(
-          children: [
-            KubusSheetHeader(
-              title: l10n.commonNotifications,
-              trailing: TopBarIcon(
-                tooltip: l10n.commonRefresh,
-                icon: Icon(
-                  Icons.refresh,
-                  color: colorScheme.onSurface,
-                ),
-                onPressed: () => provider.refresh(force: true),
-              ),
-            ),
-            Expanded(
-              child: Consumer<RecentActivityProvider>(
-                builder: (context, activityProvider, _) {
-                  final activities = showUnreadOnly
-                      ? activityProvider.unreadActivities
-                      : activityProvider.activities;
-                  final isLoading =
-                      activityProvider.isLoading && activities.isEmpty;
-                  final hasError =
-                      activityProvider.error != null && activities.isEmpty;
-
-                  if (hasError && kDebugMode) {
-                    debugPrint(
-                        'HomeScreen: notifications load failed: ${activityProvider.error}');
-                  }
-
-                  if (isLoading) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  return RefreshIndicator(
-                    onRefresh: () => activityProvider.refresh(force: true),
-                    child: activities.isEmpty
-                        ? ListView(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: KubusSpacing.xl + KubusSpacing.sm,
-                              vertical: KubusSpacing.xxl,
-                            ),
-                            children: [
-                              EmptyStateCard(
-                                icon: hasError
-                                    ? Icons.error_outline
-                                    : Icons.notifications_off_outlined,
-                                title: hasError
-                                    ? l10n.homeUnableToLoadNotificationsTitle
-                                    : l10n.homeNoNotificationsTitle,
-                                description: hasError
-                                    ? l10n.commonSomethingWentWrong
-                                    : l10n.homeAllCaughtUpDescription,
-                                showAction: hasError,
-                                actionLabel: hasError ? l10n.commonRetry : null,
-                                onAction: hasError
-                                    ? () =>
-                                        activityProvider.refresh(force: true)
-                                    : null,
-                              ),
-                            ],
-                          )
-                        : ListView.separated(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: KubusSpacing.lg,
-                              vertical: KubusSpacing.sm + KubusSpacing.xxs,
-                            ),
-                            itemCount: activities.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: KubusSpacing.sm),
-                            itemBuilder: (context, index) {
-                              final activity = activities[index];
-                              return RecentActivityTile(
-                                activity: activity,
-                                onTap: () => onActivitySelected(activity),
-                                margin: EdgeInsets.zero,
-                              );
-                            },
-                          ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
+    return KubusNotificationsSheet(
+      // Mobile notifications should show actual notifications, not the unified
+      // activity timeline (which includes the user's own actions).
+      unreadOnly: showUnreadOnly,
+      onNotificationSelected: onActivitySelected,
     );
   }
 }

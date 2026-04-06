@@ -122,6 +122,26 @@ class RecentActivityProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Mark only notifications as read locally.
+  ///
+  /// The RecentActivityProvider is a unified timeline (notifications + local
+  /// in-app notifications + the user's own actions). Surfaces that are
+  /// specifically "Notifications" should mark only notification entries as
+  /// read so we don't accidentally mutate the semantics of user-action items.
+  void markAllNotificationsReadLocally() {
+    var changed = false;
+    _activities = _activities.map((activity) {
+      if (activity.isRead) return activity;
+      if (activity.isUserAction) return activity;
+      changed = true;
+      return activity.copyWith(isRead: true);
+    }).toList(growable: false);
+
+    if (changed) {
+      notifyListeners();
+    }
+  }
+
   void _handleNotificationProviderChange() {
     if ((_notificationProvider?.hasNew ?? false) == false) return;
     _refreshDebounce?.cancel();
