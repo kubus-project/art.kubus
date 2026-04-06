@@ -92,11 +92,25 @@ class KubusSearchController extends ChangeNotifier {
     } else {
       _focusedFieldLinks.remove(link);
       if (_activeFieldLink == link) {
+        // IMPORTANT: Do not clear the active anchor link while the overlay is
+        // still visible.
+        //
+        // On desktop/web, clicking a suggestion causes the text field to lose
+        // focus *before* the ListTile tap is resolved. If we null out the
+        // anchor link immediately, the overlay disappears (link == null) and
+        // the tap never reaches the result item.
         _activeFieldLink =
-            _focusedFieldLinks.isEmpty ? null : _focusedFieldLinks.last;
+            _focusedFieldLinks.isEmpty ? link : _focusedFieldLinks.last;
       }
     }
     final shouldShow = _shouldShowOverlayFor(_state.query);
+
+    // If there are no focused fields and the overlay should not remain
+    // visible, clear the anchor link to avoid keeping a stale LayerLink.
+    if (_focusedFieldLinks.isEmpty && !shouldShow) {
+      _activeFieldLink = null;
+    }
+
     if (shouldShow != _state.isOverlayVisible) {
       _setState(_state.copyWith(isOverlayVisible: shouldShow));
       return;
@@ -146,6 +160,13 @@ class KubusSearchController extends ChangeNotifier {
     _debounce?.cancel();
     _debounce = null;
     _requestToken += 1;
+
+    // If nothing is focused, drop the anchor link once the overlay is hidden.
+    // This prevents retaining a LayerLink to a disposed field.
+    if (_focusedFieldLinks.isEmpty) {
+      _activeFieldLink = null;
+    }
+
     _setState(
       _state.copyWith(
         isOverlayVisible: false,
