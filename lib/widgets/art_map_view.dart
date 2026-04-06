@@ -505,13 +505,16 @@ class _ArtMapViewState extends State<ArtMapView> {
               ml.MapLibreMap(
                 key: const ValueKey('art_map_view_maplibre'),
                 styleString: resolved,
-                // On iOS, leaving this null causes the platform view to eagerly
-                // claim all gestures, making Flutter overlays (search, buttons,
-                // etc.) appear but not receive taps. Use an explicit empty set
-                // so the map only receives gestures not claimed by overlays.
-                gestureRecognizers: kIsWeb
-                    ? null
-                    : const <Factory<OneSequenceGestureRecognizer>>{},
+                // MapLibre is a platform view on all supported targets (incl.
+                // web via MapLibre GL JS). Leaving this null can cause the
+                // platform view to eagerly claim all gestures, making Flutter
+                // overlays (search, buttons, dropdowns) appear but not receive
+                // taps/clicks.
+                //
+                // Use an explicit empty set so the map only receives gestures
+                // that are not claimed by Flutter overlays.
+                gestureRecognizers:
+                    const <Factory<OneSequenceGestureRecognizer>>{},
                 initialCameraPosition: ml.CameraPosition(
                   target: ml.LatLng(
                     widget.initialCenter.latitude,

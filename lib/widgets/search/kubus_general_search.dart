@@ -331,6 +331,9 @@ class KubusSearchResultsOverlay extends StatelessWidget {
                 Positioned.fill(
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
+                    // Use tap-down so the overlay dismisses even if the click
+                    // turns into a drag or focus changes mid-gesture.
+                    onTapDown: (_) => (onDismiss ?? controller.dismissOverlay)(),
                     onTap: onDismiss ?? controller.dismissOverlay,
                     child: const SizedBox.expand(),
                   ),
