@@ -12,7 +12,7 @@ import '../../../utils/design_tokens.dart';
 import '../../../widgets/app_mode_unavailable_state.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 import '../../../widgets/glass_components.dart';
-import '../../../widgets/recent_activity_tile.dart';
+import '../../../widgets/notification_tile.dart';
 import '../../../widgets/topbar_icon.dart';
 
 class DesktopNotificationsPanel extends StatelessWidget {
@@ -277,8 +277,8 @@ class DesktopNotificationsPanel extends StatelessWidget {
                         const SizedBox(height: KubusSpacing.sm),
                     itemBuilder: (context, index) {
                       final activity = activities[index];
-                      return RecentActivityTile(
-                        activity: activity,
+                      return NotificationTile(
+                        notification: activity,
                         margin: EdgeInsets.zero,
                         onTap: () => unawaited(onActivitySelected(activity)),
                       );
