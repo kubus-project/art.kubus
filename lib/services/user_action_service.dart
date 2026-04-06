@@ -59,6 +59,9 @@ class UserActionEntry {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      // Explicitly tag these entries so UI surfaces can distinguish the user's
+      // own actions from backend/local notifications.
+      'source': 'user_action',
       'type': type,
       'title': title,
       if (description != null) 'description': description,

@@ -40,6 +40,13 @@ class DesktopNotificationsPanel extends StatelessWidget {
     return isIpfsFallbackMode && activityCount == 0;
   }
 
+  static bool _isNotificationItem(RecentActivity activity) {
+    // The RecentActivityProvider is a *unified* timeline (notifications + local
+    // in-app notifications + the user's own actions). This panel is explicitly
+    // "Notifications", so exclude local user actions.
+    return !activity.isUserAction;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -53,8 +60,14 @@ class DesktopNotificationsPanel extends StatelessWidget {
       surfaceType: KubusGlassSurfaceType.panelBackground,
       tintBase: scheme.surface,
     );
-    final unreadCount = context
-        .select<RecentActivityProvider, int>((p) => p.unreadActivities.length);
+    final unreadCount = context.select<RecentActivityProvider, int>((p) {
+      var count = 0;
+      for (final activity in p.activities) {
+        if (!_isNotificationItem(activity)) continue;
+        if (!activity.isRead) count++;
+      }
+      return count;
+    });
     final hasUnread = unreadCount > 0;
     final headerSummary = hasUnread
         ? '$unreadCount ${l10n.desktopHomeUnreadNotificationsLabel}'
@@ -142,12 +155,20 @@ class DesktopNotificationsPanel extends StatelessWidget {
             Expanded(
               child: Consumer<RecentActivityProvider>(
                 builder: (context, activityProvider, _) {
-                  final activities = unreadOnly
-                      ? activityProvider.activities
-                          .where((a) => !a.isRead)
-                          .take(visibleLimit ?? 10)
-                          .toList(growable: false)
-                      : activityProvider.activities;
+                  Iterable<RecentActivity> filtered =
+                      activityProvider.activities.where(_isNotificationItem);
+
+                  if (unreadOnly) {
+                    filtered = filtered.where((a) => !a.isRead);
+                  }
+
+                  if (visibleLimit != null) {
+                    filtered = filtered.take(visibleLimit!);
+                  } else if (unreadOnly) {
+                    filtered = filtered.take(10);
+                  }
+
+                  final activities = filtered.toList(growable: false);
 
                   if (shouldShowUnavailableInFallback(
                     isIpfsFallbackMode: isIpfsFallbackMode,

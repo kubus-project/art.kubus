@@ -92,6 +92,33 @@ class RecentActivity {
     Map<String, dynamic>? metadata,
   }) : metadata = metadata ?? const <String, dynamic>{};
 
+  /// Returns true when this activity item represents the current user's own
+  /// locally-recorded actions ("recent activity"), not a notification.
+  ///
+  /// Desktop surfaces that are specifically "Notifications" should generally
+  /// exclude these.
+  bool get isUserAction {
+    final source = (metadata['source'] ?? '').toString().toLowerCase().trim();
+    if (source == 'user_action' || source == 'useraction') {
+      return true;
+    }
+
+    // Legacy fallback: older local action entries didn't carry an explicit
+    // source tag. They are authored by "You" and typically don't include a
+    // sender payload.
+    final actor = (actorName ?? '').toString().toLowerCase().trim();
+    if (actor == 'you' && !metadata.containsKey('sender')) {
+      return true;
+    }
+
+    // Another legacy hint: older local actions often used a synthetic id.
+    if (id.startsWith('user_action_')) {
+      return true;
+    }
+
+    return false;
+  }
+
   RecentActivity copyWith({
     String? id,
     ActivityCategory? category,

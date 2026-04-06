@@ -244,6 +244,7 @@ class RecentActivityProvider extends ChangeNotifier {
     final metadata = <String, dynamic>{
       ...customMetadata,
       ...data,
+      if (raw.containsKey('source')) 'source': raw['source'],
       if (sender.isNotEmpty) 'sender': sender,
       if (raw.containsKey('extra')) 'extra': raw['extra'],
     };
