@@ -69,11 +69,13 @@ For deeper setup (platform prerequisites, troubleshooting, backend setup), use [
 
 ## Screenshots
 
-Screenshots live under `docs/screenshots/` (file list: [`docs/SCREENSHOTS.md`](docs/SCREENSHOTS.md)).
+Screenshots are stored under `docs/screenshots/` (see `docs/SCREENSHOTS.md` for the expected filenames).
 
 ### Map (marker open)
 
-![Map with open marker](docs/screenshots/map.png)
+<p align="center">
+  <img src="docs/screenshots/map.png" alt="Map with open marker" />
+</p>
 
 Map-first discovery with nearby browsing and filters.
 
@@ -83,7 +85,9 @@ Map-first discovery with nearby browsing and filters.
 
 ### Community
 
-![Community screen](docs/screenshots/community.png)
+<p align="center">
+  <img src="docs/screenshots/community.png" alt="Community screen" />
+</p>
 
 Social feed + discovery for posts, people, and topics.
 
@@ -93,7 +97,9 @@ Social feed + discovery for posts, people, and topics.
 
 ### Artist Studio
 
-![Artist Studio screen](docs/screenshots/artist_studio.png)
+<p align="center">
+  <img src="docs/screenshots/artist_studio.png" alt="Artist Studio screen" />
+</p>
 
 Creator workspace for publishing and managing your presence.
 
@@ -103,7 +109,9 @@ Creator workspace for publishing and managing your presence.
 
 ### Profile
 
-![Profile screen](docs/screenshots/profile.png)
+<p align="center">
+  <img src="docs/screenshots/profile.png" alt="Profile screen" />
+</p>
 
 Public identity: bio, activity, and portfolio surface.
 
@@ -113,7 +121,9 @@ Public identity: bio, activity, and portfolio surface.
 
 ### Home
 
-![Home screen](docs/screenshots/home.png)
+<p align="center">
+  <img src="docs/screenshots/home.png" alt="Home screen" />
+</p>
 
 Dashboard that keeps your next actions close.
 
@@ -123,7 +133,9 @@ Dashboard that keeps your next actions close.
 
 ### Onboarding
 
-![Onboarding screen](docs/screenshots/onboarding.png)
+<p align="center">
+  <img src="docs/screenshots/onboarding.png" alt="Onboarding screen" />
+</p>
 
 Guided setup for new accounts.
 
@@ -133,7 +145,9 @@ Guided setup for new accounts.
 
 ### Institution Hub
 
-![Institution Hub screen](docs/screenshots/institution_hub.png)
+<p align="center">
+  <img src="docs/screenshots/institution_hub.png" alt="Institution Hub screen" />
+</p>
 
 Workspace for institutions hosting exhibitions and events.
 
