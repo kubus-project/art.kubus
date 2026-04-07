@@ -9,14 +9,9 @@
 
 A cross-platform Flutter app for discovering public and street art on a map — community-first, with optional AR and wallet-connected experiences.
 
-- Map-first discovery (MapLibre) with search and nearby browsing
-- Community features: profiles, posts, follows, and reporting
-- Mobile AR viewer for 3D artworks on supported devices
-- Institutions and events surfaces (feature-flagged; backend-dependent)
-- Optional wallet / Web3 features (Solana), gated behind feature flags
+The client emphasizes map-based discovery (MapLibre) alongside community workflows (profiles, posts, following, and reporting). AR experiences are mobile-focused, while institution and wallet-connected surfaces are available when enabled via feature flags and supported by the backend.
 
-Project site: https://art.kubus.site
-App site: https://app.kubus.site
+Project site: https://art.kubus.site · App site: https://app.kubus.site
 
 ## Platforms
 
@@ -53,7 +48,7 @@ flutter build apk --release
 The client reads its API base URL from build-time defines (see `lib/config/config.dart`):
 
 ```bash
-flutter run --dart-define=BACKEND_BASE_URL=http://localhost:3000
+flutter run --dart-define=BACKEND_BASE_URL=https://api.kubus.site
 ```
 
 For deeper setup (platform prerequisites, troubleshooting, backend setup), use [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md).
@@ -67,93 +62,65 @@ For deeper setup (platform prerequisites, troubleshooting, backend setup), use [
 - Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - Open platform scope: [`docs/OPEN_PLATFORM.md`](docs/OPEN_PLATFORM.md)
 
-## Screenshots
+## Interface overview
 
-Screenshots are stored under `docs/screenshots/` (see `docs/SCREENSHOTS.md` for the expected filenames).
+The following figures illustrate key user-facing surfaces in the current client build.
 
-### Map (marker open)
+### Map-based discovery (marker open)
 
 <p align="center">
-  <img src="docs/screenshots/map.png" alt="Map with open marker" />
+  <img src="docs/screenshots/map.png" width="980" alt="Map with open marker" />
 </p>
 
-Map-first discovery with nearby browsing and filters.
-
-- Search across artworks, artists, and institutions.
-- Toggle discovery filters (e.g. nearby, discovered/undiscovered).
-- Open a marker to view the artwork card, then save/share or jump to details.
+The map view provides a spatial entry point for discovery. Users can search across artworks, artists, and institutions; refine results via discovery filters (e.g., nearby, discovered/undiscovered); and open markers to inspect an artwork card before navigating to full details.
 
 ### Community
 
 <p align="center">
-  <img src="docs/screenshots/community.png" alt="Community screen" />
+  <img src="docs/screenshots/community.png" width="980" alt="Community screen" />
 </p>
 
-Social feed + discovery for posts, people, and topics.
-
-- Browse the community feed with sorting modes (e.g. recent/top).
-- Search posts, users, and tags.
-- Follow creators and start conversations (messages).
+The community surface supports social discovery for posts, people, and topics. It provides feed browsing with multiple sorting modes, search across posts/users/tags, and pathways to follow creators and initiate conversations.
 
 ### Artist Studio
 
 <p align="center">
-  <img src="docs/screenshots/artist_studio.png" alt="Artist Studio screen" />
+  <img src="docs/screenshots/artist_studio.png" width="980" alt="Artist Studio screen" />
 </p>
 
-Creator workspace for publishing and managing your presence.
-
-- Create artworks, collections, and exhibitions.
-- Manage markers (create, publish, edit) used for map discovery.
-- Handle invites and (where enabled) promotion requests.
+Artist Studio is the creator-oriented workspace for publishing and managing content. It centralizes creation flows (artworks, collections, exhibitions) and marker management used for map discovery, alongside collaboration and promotion-oriented actions where enabled.
 
 ### Profile
 
 <p align="center">
-  <img src="docs/screenshots/profile.png" alt="Profile screen" />
+  <img src="docs/screenshots/profile.png" width="980" alt="Profile screen" />
 </p>
 
-Public identity: bio, activity, and portfolio surface.
-
-- Showcase artworks and collections.
-- Track posts, followers/following, and earned progress.
-- Follow or message creators directly from their profile.
+Profiles function as public identity surfaces, combining a short biography with activity/portfolio context. They foreground artworks and collections, surface social connectivity (followers/following), and provide direct actions such as following or messaging.
 
 ### Home
 
 <p align="center">
-  <img src="docs/screenshots/home.png" alt="Home screen" />
+  <img src="docs/screenshots/home.png" width="980" alt="Home screen" />
 </p>
 
-Dashboard that keeps your next actions close.
-
-- Quick actions for common flows (e.g. studio, map, AR where enabled).
-- Recent activity and lightweight stats panels.
-- Discovery shortcuts to trending art and creators.
+Home acts as a lightweight dashboard: it aggregates quick actions into common flows (e.g., studio, map, AR where enabled), summarizes recent activity, and provides discovery shortcuts such as trending artworks and creators.
 
 ### Onboarding
 
 <p align="center">
-  <img src="docs/screenshots/onboarding.png" alt="Onboarding screen" />
+  <img src="docs/screenshots/onboarding.png" width="980" alt="Onboarding screen" />
 </p>
 
-Guided setup for new accounts.
-
-- Create an account or sign in.
-- Choose your role and complete profile basics.
-- Optionally connect a wallet and enable extra features (feature-flagged).
+Onboarding provides a guided setup sequence for new accounts. It includes account creation or sign-in, role selection and profile basics, and optional wallet connection and feature enablement when those capabilities are configured.
 
 ### Institution Hub
 
 <p align="center">
-  <img src="docs/screenshots/institution_hub.png" alt="Institution Hub screen" />
+  <img src="docs/screenshots/institution_hub.png" width="980" alt="Institution Hub screen" />
 </p>
 
-Workspace for institutions hosting exhibitions and events.
-
-- Create and manage exhibitions/events (availability depends on backend + flags).
-- Coordinate collaboration invites and visibility requests.
-- Track basic institution-level stats (where enabled).
+Institution Hub is the institution-facing workspace for hosting exhibitions and events. Availability depends on backend endpoints and feature flags; when enabled, it supports creation/management flows, coordination via invites and visibility requests, and basic institution-level summaries.
 
 ## Project status
 
