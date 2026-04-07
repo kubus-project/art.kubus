@@ -69,47 +69,77 @@ For deeper setup (platform prerequisites, troubleshooting, backend setup), use [
 
 ## Screenshots
 
-Images live in [`docs/screenshots/`](docs/screenshots/) (see [`docs/SCREENSHOTS.md`](docs/SCREENSHOTS.md)).
+Screenshots live under `docs/screenshots/` (file list: [`docs/SCREENSHOTS.md`](docs/SCREENSHOTS.md)).
 
-<table>
-  <tr>
-    <td>
-      <strong>Map (marker open)</strong><br />
-      <img src="docs/screenshots/map.png" width="520" alt="Map with open marker" />
-    </td>
-    <td>
-      <strong>Community</strong><br />
-      <img src="docs/screenshots/community.png" width="520" alt="Community screen" />
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <strong>Artist Studio</strong><br />
-      <img src="docs/screenshots/artist_studio.png" width="520" alt="Artist Studio screen" />
-    </td>
-    <td>
-      <strong>Profile</strong><br />
-      <img src="docs/screenshots/profile.png" width="520" alt="Profile screen" />
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <strong>Home</strong><br />
-      <img src="docs/screenshots/home.png" width="520" alt="Home screen" />
-    </td>
-    <td>
-      <strong>Onboarding</strong><br />
-      <img src="docs/screenshots/onboarding.png" width="520" alt="Onboarding screen" />
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <strong>Institution Hub</strong><br />
-      <img src="docs/screenshots/institution_hub.png" width="520" alt="Institution Hub screen" />
-    </td>
-    <td></td>
-  </tr>
-</table>
+### Map (marker open)
+
+![Map with open marker](docs/screenshots/map.png)
+
+Map-first discovery with nearby browsing and filters.
+
+- Search across artworks, artists, and institutions.
+- Toggle discovery filters (e.g. nearby, discovered/undiscovered).
+- Open a marker to view the artwork card, then save/share or jump to details.
+
+### Community
+
+![Community screen](docs/screenshots/community.png)
+
+Social feed + discovery for posts, people, and topics.
+
+- Browse the community feed with sorting modes (e.g. recent/top).
+- Search posts, users, and tags.
+- Follow creators and start conversations (messages).
+
+### Artist Studio
+
+![Artist Studio screen](docs/screenshots/artist_studio.png)
+
+Creator workspace for publishing and managing your presence.
+
+- Create artworks, collections, and exhibitions.
+- Manage markers (create, publish, edit) used for map discovery.
+- Handle invites and (where enabled) promotion requests.
+
+### Profile
+
+![Profile screen](docs/screenshots/profile.png)
+
+Public identity: bio, activity, and portfolio surface.
+
+- Showcase artworks and collections.
+- Track posts, followers/following, and earned progress.
+- Follow or message creators directly from their profile.
+
+### Home
+
+![Home screen](docs/screenshots/home.png)
+
+Dashboard that keeps your next actions close.
+
+- Quick actions for common flows (e.g. studio, map, AR where enabled).
+- Recent activity and lightweight stats panels.
+- Discovery shortcuts to trending art and creators.
+
+### Onboarding
+
+![Onboarding screen](docs/screenshots/onboarding.png)
+
+Guided setup for new accounts.
+
+- Create an account or sign in.
+- Choose your role and complete profile basics.
+- Optionally connect a wallet and enable extra features (feature-flagged).
+
+### Institution Hub
+
+![Institution Hub screen](docs/screenshots/institution_hub.png)
+
+Workspace for institutions hosting exhibitions and events.
+
+- Create and manage exhibitions/events (availability depends on backend + flags).
+- Coordinate collaboration invites and visibility requests.
+- Track basic institution-level stats (where enabled).
 
 ## Project status
 
