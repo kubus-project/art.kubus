@@ -1,0 +1,91 @@
+name: Bug report
+description: Report a reproducible problem in the art.kubus Flutter client
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug.
+
+        Please do **not** include secrets (tokens, cookies, private keys, mnemonics) or personal data.
+        For security vulnerabilities, use `SECURITY.md` instead of opening a public issue.
+
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: One sentence describing the bug.
+      placeholder: "The map stops loading markers after returning from background"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      multiple: true
+      options:
+        - Android
+        - iOS
+        - Web (Chrome)
+        - Web (Firefox)
+        - Web (Safari)
+        - Windows
+        - macOS
+        - Linux
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps so someone else can reproduce the issue.
+      placeholder: |
+        1. …
+        2. …
+        3. …
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Paste the outputs below (or summarize if very long).
+      placeholder: |
+        flutter --version:
+
+        flutter doctor -v:
+
+        app version (if known):
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      description: Attach screenshots or paste logs (redacted). If this involves backend requests, include the endpoint and HTTP status.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and didn’t find a duplicate.
+          required: true
+        - label: I confirm I did not include secrets or private data.
+          required: true

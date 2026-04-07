@@ -1,9 +1,9 @@
-# Developer API Terms (Draft Stub)
+# Developer API Terms (Draft)
 
-> Draft placeholder for legal review.
-> TODO(legal): Replace this stub with finalized API terms before production publication.
+> This is a **draft outline** of intended API terms.
+> It is **not** finalized legal text and should not be treated as binding terms.
 
-## Intended sections
+## Intended sections (outline)
 
 - API access and credential management
 - Acceptable and prohibited API usage

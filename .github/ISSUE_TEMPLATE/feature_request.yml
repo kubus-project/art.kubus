@@ -1,0 +1,64 @@
+name: Feature request
+description: Propose an improvement or new capability for the art.kubus Flutter client
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea.
+
+        Keep requests scoped to the open-source client where possible.
+        If a request depends on backend/platform changes, call that out explicitly.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What problem are you trying to solve? Who is it for?
+      placeholder: |
+        As a … I want … so that …
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you like the app to do?
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope / constraints
+      description: Any constraints (platforms, UX, performance, accessibility, offline/local-first, feature flags)?
+      placeholder: |
+        - Must work on mobile + desktop
+        - Should be feature-flagged behind AppConfig
+        - Must keep map screen parity
+
+  - type: dropdown
+    id: backend_impact
+    attributes:
+      label: Does this require backend changes?
+      options:
+        - Not sure
+        - No (client-only)
+        - Yes (API/backend changes required)
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any alternative approaches you considered?
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I confirm this request is specific and not a duplicate of an existing issue.
+          required: true

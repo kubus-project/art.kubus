@@ -26,7 +26,7 @@ The map is the primary discovery interface for finding art in the physical world
 - **Artwork Markers** — View art installations on the map with category-colored pins
 - **Exhibition Markers** — Discover exhibitions and events at cultural venues
 - **User Presence** — See other online users in real-time
-- **AR Scanning** — Tap the AR button to scan nearby markers
+- **AR Viewer** — Launch the AR viewer for a marker or artwork (mobile only)
 - **Direction Cone** — Visual compass showing your viewing direction
 - **Clustering** — Markers cluster at low zoom levels for clarity
 - **Search** — Find specific artworks, artists, or locations
@@ -52,33 +52,33 @@ The map is the primary discovery interface for finding art in the physical world
 
 Experience art in 3D through your device's camera.
 
+In the current implementation, the app launches the platform's external AR
+viewer rather than embedding a custom AR engine inside the Flutter UI.
+
 ### Features
 
-- **Marker Detection** — Scan physical or GPS-based AR markers
-- **3D Model Display** — View artwork models in real space
-- **Surface Detection** — Place art on detected surfaces
-- **Feature Points** — Toggle AR debugging visualization
-- **Capture** — Take photos of AR experiences
+- **3D Model Viewing** — Open artwork models in AR using the system viewer
+- **IPFS/HTTP resolution** — Models resolve via the same URL rules as other media
+- **Android Scene Viewer** — Uses ARCore Scene Viewer via an intent URL
+- **iOS Quick Look** — Uses AR Quick Look (local file handoff)
 
 ### Requirements
 
-- **Android:** ARCore-supported device
-- **iOS:** ARKit-supported device (iPhone 6s+, iPad 2017+)
+- **Android:** ARCore-supported device (Scene Viewer)
+- **iOS:** AR Quick Look capable device (USDZ support)
 - **Web/Desktop:** AR redirects to mobile app download
 
 ### How It Works
 
-1. Tap the AR button on a marker or artwork
-2. Point your camera at the AR marker or ground
-3. Wait for surface detection
-4. The 3D model appears in your space
-5. Move around to view from different angles
+1. Tap the AR button on a marker or artwork (mobile)
+2. The app resolves the model URL (including IPFS/relative paths)
+3. Android opens ARCore Scene Viewer; iOS hands off to Quick Look
+4. The system AR viewer renders the model in-camera
 
 ### Providers & Services
 
-- `ARService` — AR session management
-- `ARManager` — Model loading and placement
-- `ARIntegrationService` — AR marker resolution
+- `ARService` — Launches the platform AR viewer with a resolved model URL
+- `ARManager` / `ARIntegrationService` — Orchestrates AR entry from app surfaces
 
 ---
 

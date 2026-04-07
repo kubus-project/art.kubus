@@ -64,7 +64,7 @@ The app follows a **provider-first** architecture with clear separation between 
 ```
 lib/
 ├── config/              # App configuration and feature flags
-│   └── app_config.dart  # Central configuration
+│   └── config.dart      # Central configuration (AppConfig)
 │
 ├── core/                # Core initialization
 │   └── app_initializer.dart  # Boot sequence
@@ -306,7 +306,7 @@ if (AppConfig.isFeatureEnabled('presence')) {
 ### Build-time Flags
 
 ```bash
-flutter build web -DANALYTICS_APP_ENABLED=true
+flutter build web --dart-define=ANALYTICS_APP_ENABLED=true
 ```
 
 ### Runtime Flags

@@ -34,6 +34,7 @@ import 'app_navigator.dart';
 import 'deep_link_startup_routing.dart';
 import '../main_app.dart';
 import 'shell_entry_screen.dart';
+import 'shell_routes.dart';
 import '../services/share/share_deep_link_parser.dart';
 
 class AppInitializer extends StatefulWidget {
@@ -58,9 +59,7 @@ class _AppInitializerState extends State<AppInitializer> {
   String? _serverVersion;
 
   String get _resolvedShellRoute {
-    final route = widget.preferredShellRoute?.trim();
-    if (route == '/map') return '/map';
-    return '/main';
+    return ShellRoutes.resolvePreferredShellRoute(widget.preferredShellRoute);
   }
 
   Future<void> _refreshServerVersion(ConfigProvider configProvider) async {
@@ -78,11 +77,7 @@ class _AppInitializerState extends State<AppInitializer> {
   }
 
   Map<String, String>? get _signInRedirectArguments {
-    final route = widget.preferredShellRoute?.trim();
-    if (route == '/map' || route == '/main') {
-      return <String, String>{'redirectRoute': route!};
-    }
-    return null;
+    return ShellRoutes.signInRedirectArguments(widget.preferredShellRoute);
   }
 
   @override

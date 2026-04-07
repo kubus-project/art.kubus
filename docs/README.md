@@ -1,80 +1,53 @@
 # art.kubus Documentation
 
-Welcome to the art.kubus app documentation. This guide covers the app's features, screens, and how to get started.
+This folder contains developer-facing documentation for the **art.kubus Flutter client**, plus notes about the open-platform boundary (what is open vs hosted/proprietary).
 
-## What is art.kubus?
+If you’re new to the repo, start with `GETTING_STARTED.md`.
 
-art.kubus is a cross-platform (mobile + desktop) application for discovering, creating, and experiencing art through augmented reality. It combines:
+## Start here
 
-- **Interactive AR Map** — Discover art installations and exhibitions near you
-- **Community Platform** — Connect with artists, collectors, and art enthusiasts
-- **Artist Studio** — Create and showcase your artwork portfolio
-- **Web3 Integration** — Optional wallet, marketplace, and DAO governance features
+- **Setup / run / build**: `GETTING_STARTED.md`
+- **What the app does**: `FEATURES.md`
+- **Where things live in the UI**: `SCREENS.md`
+- **How the client is structured**: `ARCHITECTURE.md`
+- **Open platform scope/boundary**: `OPEN_PLATFORM.md`
 
-## Documentation Index
+## Documentation index
 
-| Document | Description |
-|----------|-------------|
-| [Getting Started](GETTING_STARTED.md) | Installation, setup, and first steps |
-| [App Screens](SCREENS.md) | Overview of all app screens and navigation |
-| [Features](FEATURES.md) | Detailed feature documentation |
-| [Architecture](ARCHITECTURE.md) | High-level architecture and patterns |
-| [Open Platform](OPEN_PLATFORM.md) | Scope and boundaries of the open platform model |
-| [Terms of Service (stub)](legal/TERMS_OF_SERVICE.md) | Legal terms placeholder pending final legal review |
-| [Developer API Terms (stub)](legal/DEVELOPER_API_TERMS.md) | API usage policy placeholder pending final legal review |
+| Document | What you’ll find |
+|----------|------------------|
+| [Getting Started](GETTING_STARTED.md) | Prereqs, running locally, build basics, backend pointers |
+| [Features](FEATURES.md) | Feature-level detail and how pieces fit together |
+| [Screens](SCREENS.md) | Screen inventory and navigation map |
+| [Screenshots](SCREENSHOTS.md) | Where UI screenshots live and how to capture them |
+| [Architecture](ARCHITECTURE.md) | Provider-first architecture, boot sequence, key modules |
+| [Open Platform](OPEN_PLATFORM.md) | What’s open-source, what’s hosted, and why |
+| [Terms of Service (draft)](legal/TERMS_OF_SERVICE.md) | Draft, non-final legal outline (not production terms) |
+| [Developer API Terms (draft)](legal/DEVELOPER_API_TERMS.md) | Draft, non-final API terms outline |
 
-## Quick Start
+## Backend (optional)
 
-```bash
-# Clone and setup
-git clone <repo-url>
-cd art.kubus
-flutter pub get
+This repo also includes a Node/Express backend under `../backend/` for local development / reference.
 
-# Run in development
-flutter run --debug
+- Backend overview & setup: `../backend/README.md`
 
-# Build for web
-flutter build web
-```
+## Platform support (client)
 
-## Platform Support
+- Android / iOS
+- Web
+- Windows / macOS / Linux
 
-| Platform | Status | Notes |
-|----------|--------|-------|
-| Android | ✅ Supported | ARCore required for AR features |
-| iOS | ✅ Supported | ARKit required for AR features |
-| Web | ✅ Supported | AR features require mobile app |
-| Windows | ✅ Supported | Desktop layout |
-| macOS | ✅ Supported | Desktop layout |
-| Linux | ✅ Supported | Desktop layout |
+AR experiences are mobile-focused; web/desktop builds prioritize discovery and community workflows.
 
-## Feature Highlights
+## Contributing & policies
 
-### 🗺️ Interactive Map
-Explore art installations, exhibitions, and markers on an interactive map with real-time presence indicators.
+- Contribution flow: `../CONTRIBUTING.md`
+- Support: `../SUPPORT.md`
+- Security: `../SECURITY.md`
+- Project guardrails: `../AGENTS.md`
 
-### 🎨 AR Experience
-Scan markers to view 3D art installations in augmented reality (mobile only).
+Licensing overview:
 
-### 👥 Community
-Follow artists, join groups, share posts, and participate in discussions.
-
-### 🏛️ Institutions
-Discover museums, galleries, and cultural venues with their events and exhibitions.
-
-### 💼 Web3 (Optional)
-Connect your Solana wallet to access the marketplace, DAO governance, and collect digital art.
-
-## Contributing
-
-See the project root `AGENTS.md` for development guidelines and coding standards.
-
-## License
-
-This documentation follows the repository's open platform model:
-
-- Client code: Apache-2.0 (`../LICENSE`, `../NOTICE`)
-- Brand/trademark policy: `../TRADEMARK.md`
-- Asset/content policy: `../LICENSE_ASSETS.md`
-- Open platform scope: `OPEN_PLATFORM.md`
+- Client code: `../LICENSE` (Apache-2.0) + `../NOTICE`
+- Trademarks/branding: `../TRADEMARK.md`
+- Assets/content: `../LICENSE_ASSETS.md`

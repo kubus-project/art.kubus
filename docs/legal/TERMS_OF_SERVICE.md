@@ -1,9 +1,9 @@
-# Terms of Service (Draft Stub)
+# Terms of Service (Draft)
 
-> Draft placeholder for legal review.
-> TODO(legal): Replace this stub with finalized, enforceable Terms of Service before production publication.
+> This is a **draft outline** provided for transparency while the project’s legal documents are being prepared.
+> It is **not** finalized legal text and should not be treated as binding terms.
 
-## Intended sections
+## Intended sections (outline)
 
 - Eligibility and account requirements
 - Acceptable use

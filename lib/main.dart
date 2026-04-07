@@ -62,6 +62,7 @@ import 'providers/deferred_onboarding_provider.dart';
 import 'core/app_initializer.dart';
 import 'core/app_navigator.dart';
 import 'core/shell_entry_screen.dart';
+import 'core/shell_routes.dart';
 import 'core/url_strategy.dart';
 import 'core/deep_link_bootstrap_screen.dart';
 import 'core/maplibre_web_registration.dart';
@@ -769,11 +770,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
   final TelemetryRouteObserver _telemetryObserver = TelemetryRouteObserver();
 
   Map<String, WidgetBuilder> get _namedRoutes => {
-        '/main': (context) => const MainApp(),
-        // Alias for telemetry/URL semantics: marker deep links land here so
-        // the browser URL becomes /map (not /main), while still rendering
-        // the full shell.
-        '/map': (context) => const ShellEntryScreen.map(),
+        ...ShellRoutes.builders,
         '/ar': (context) => const ARScreen(),
         '/artwork': (context) {
           final args = ModalRoute.of(context)?.settings.arguments;
@@ -982,8 +979,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
 
     // Direct shell URLs still need AppInitializer so auth/session restoration,
     // provider hydration, and warm-up run before the shell renders.
-    if (uri.queryParameters.isEmpty &&
-        (uri.path == '/main' || uri.path == '/map')) {
+    if (ShellRoutes.shouldWrapInitialUri(uri)) {
       return <Route<dynamic>>[
         MaterialPageRoute(
           builder: (_) => AppInitializer(preferredShellRoute: uri.path),
@@ -1113,7 +1109,6 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
           },
           onGenerateInitialRoutes: _generateInitialRoutes,
           onGenerateRoute: _buildAppRoute,
-          routes: _namedRoutes,
         );
       },
     );

@@ -1,105 +1,129 @@
+<p align="center">
+  <img src="assets/images/logo.png" width="160" alt="art.kubus logo" />
+</p>
+
 # art.kubus
 
-**Extended Reality Art Exploration Platform**
+[![Flutter](https://img.shields.io/badge/Flutter-app-02569B?style=flat&logo=flutter&logoColor=white)](https://flutter.dev)
+[![License: Apache-2.0 (client)](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 
-[![Flutter](https://img.shields.io/badge/Flutter-3.3.4+-02569B?style=flat&logo=flutter)](https://flutter.dev)
-[![Node.js](https://img.shields.io/badge/Node.js-20+-339933?style=flat&logo=node.js)](https://nodejs.org)
-[![Solana](https://img.shields.io/badge/Solana-Blockchain-9945FF?style=flat&logo=solana)](https://solana.com)
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+A cross-platform Flutter app for discovering public and street art on a map — community-first, with optional AR and wallet-connected experiences.
 
----
+- Map-first discovery (MapLibre) with search and nearby browsing
+- Community features: profiles, posts, follows, and reporting
+- Mobile AR viewer for 3D artworks on supported devices
+- Institutions and events surfaces (feature-flagged; backend-dependent)
+- Optional wallet / Web3 features (Solana), gated behind feature flags
 
-## Overview
+Project site: https://art.kubus.site
+App site: https://app.kubus.site
 
-**art.kubus** is a research-driven open platform for artists that combines community, map-based discovery, and optional XR/Web3 layers. This repository publishes the open-source client while platform backend operations are maintained separately.
+## Platforms
 
-The platform emerged from rigorous academic research exploring spatial computing, decentralized technologies, and contemporary art practices. By combining geospatial artwork discovery, immersive AR experiences, and blockchain-verified ownership, art.kubus creates an innovative framework for experiencing, collecting, and supporting digital and physical art in the 21st century.
+- Android / iOS
+- Web
+- Windows / macOS / Linux
 
-### Key Features
+> AR experiences are mobile-focused; web/desktop builds prioritize discovery and community workflows.
 
-- **Geospatial Art Discovery**: Interactive map-based exploration of art installations through location-aware AR markers
-- **Augmented Reality Experiences**: Camera-based artwork scanning that unlocks immersive 3D content and contextual information
-- **Web3 Integration**: Native KUB8 token for transactions, NFT minting and trading on the Solana blockchain
-- **Decentralized Governance**: Community-driven platform development through DAO voting mechanisms
-- **Cross-Platform Access**: Consistent experiences across mobile devices, web browsers, and VR headsets
-- **Artist-Centric Design**: Tools for portfolio management, artwork uploads, and direct collector engagement
-- **Achievement System**: Gamified rewards through POAP (Proof of Attendance Protocol) tokens and collectibles
-- **Institutional Partnerships**: Framework for galleries and museums to digitize exhibitions and extend reach
+## What this repository contains
 
-### Technology Stack
+- `lib/`, `assets/`, `android/`, `ios/`, `web/`, `windows/`, … — the Flutter client (Apache-2.0)
+- `docs/` — client documentation and the open-platform boundary (start at [`docs/README.md`](docs/README.md))
+- `backend/` — platform backend for local development / reference (not Apache-2.0; see [`backend/README.md`](backend/README.md))
 
-**Frontend (Mobile/Web)**
-- Flutter 3.3.4+ for cross-platform development
-- ARCore/ARKit integration for augmented reality
-- Provider pattern for state management
-- Material Design 3 with custom theming
+## Quick start
 
-**Backend Infrastructure**
-- Node.js 20+ with Express.js REST API
-- PostgreSQL for relational data storage
-- IPFS/HTTP hybrid storage for decentralized content
-- Socket.IO for real-time community features
-- JWT authentication with role-based access control
+Prereqs: Flutter (Dart >= 3.6).
 
-**Blockchain Layer**
-- Solana Web3.js for blockchain interactions
-- SPL Token Program for KUB8 cryptocurrency
-- Metaplex for NFT standard implementation
-- WalletConnect protocol for external wallet integration
+```bash
+flutter pub get
+flutter run
+```
 
-**Development Tools**
-- Docker containerization for backend services
-- PM2 process management for production deployment
-- Nginx reverse proxy with SSL/TLS encryption
-- GitHub Actions for CI/CD workflows
+Build (examples):
 
-### Research Foundation
+```bash
+flutter build web
+flutter build apk --release
+```
 
-art.kubus represents the culmination of interdisciplinary research conducted during a Master's thesis, examining the convergence of digital art, spatial computing, and decentralized technologies. The platform's architecture is grounded in rigorous methodology, addressing contemporary challenges in art accessibility, digital ownership, and creator compensation. By implementing practice-based research principles, the project demonstrates how emerging technologies can serve as tools for social innovation and cultural democratization.
+### Point the app at a backend
 
-The platform's development prioritizes artist autonomy, community governance, and sustainable economic models that challenge traditional art market structures while maintaining respect for artistic integrity and intellectual property rights.
+The client reads its API base URL from build-time defines (see `lib/config/config.dart`):
 
-### Project Status
+```bash
+flutter run --dart-define=BACKEND_BASE_URL=http://localhost:3000
+```
 
-art.kubus is currently in active development, with a functional pre-alpha platform available at [https://art.kubus.site](https://art.kubus.site). The client code in this repository is open source under Apache-2.0, while backend implementation remains proprietary unless explicitly published.
+For deeper setup (platform prerequisites, troubleshooting, backend setup), use [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md).
 
-**Current Phase**: Building Key Features
-**Roadmap**: [View detailed roadmap](https://art.kubus.site/#roadmap)  
-**Documentation**: [Project documentation](docs/)
+## Documentation
 
----
+- Docs index: [`docs/README.md`](docs/README.md)
+- Getting started: [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md)
+- Features: [`docs/FEATURES.md`](docs/FEATURES.md)
+- Screens: [`docs/SCREENS.md`](docs/SCREENS.md)
+- Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- Open platform scope: [`docs/OPEN_PLATFORM.md`](docs/OPEN_PLATFORM.md)
 
-## License and IP
+## Screenshots
 
-This repository follows an **open-source client + public platform APIs** model:
+Images live in [`docs/screenshots/`](docs/screenshots/) (see [`docs/SCREENSHOTS.md`](docs/SCREENSHOTS.md)).
 
-- Client code is licensed under **Apache License 2.0**. See `LICENSE` and `NOTICE`.
-- Backend implementation is proprietary and not open source by default.
-- `art.kubus` name, logos, and brand elements are reserved. See `TRADEMARK.md`.
-- Screenshots, demo media, artwork/content assets, and other non-code assets are all rights reserved unless explicitly licensed otherwise. See `LICENSE_ASSETS.md`.
-- API usage and platform operation terms are documented in `docs/legal/TERMS_OF_SERVICE.md` and `docs/legal/DEVELOPER_API_TERMS.md`.
-- The app exposes dependency license texts in **Settings → About → Open source licenses**.
+<table>
+  <tr>
+    <td>
+      <strong>Map (marker open)</strong><br />
+      <img src="docs/screenshots/map.png" width="520" alt="Map with open marker" />
+    </td>
+    <td>
+      <strong>Community</strong><br />
+      <img src="docs/screenshots/community.png" width="520" alt="Community screen" />
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <strong>Artist Studio</strong><br />
+      <img src="docs/screenshots/artist_studio.png" width="520" alt="Artist Studio screen" />
+    </td>
+    <td>
+      <strong>Profile</strong><br />
+      <img src="docs/screenshots/profile.png" width="520" alt="Profile screen" />
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <strong>Home</strong><br />
+      <img src="docs/screenshots/home.png" width="520" alt="Home screen" />
+    </td>
+    <td>
+      <strong>Onboarding</strong><br />
+      <img src="docs/screenshots/onboarding.png" width="520" alt="Onboarding screen" />
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <strong>Institution Hub</strong><br />
+      <img src="docs/screenshots/institution_hub.png" width="520" alt="Institution Hub screen" />
+    </td>
+    <td></td>
+  </tr>
+</table>
 
-For contribution workflow and support, see `CONTRIBUTING.md`, `SECURITY.md`, `SUPPORT.md`, and `GOVERNANCE.md`.
+## Project status
 
----
+Active development. Expect rapid iteration and occasional breaking changes while the client and platform harden.
 
-## Getting Started
+## Contributing, support, and policies
 
-### Google Sign-In configuration
+- Contributing: [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- Support: [`SUPPORT.md`](SUPPORT.md)
+- Security: [`SECURITY.md`](SECURITY.md)
+- Governance: [`GOVERNANCE.md`](GOVERNANCE.md)
 
-Google Sign-In uses separate frontend and backend configuration surfaces:
+Licensing notes:
 
-- Frontend Flutter web build-time defines:
-  - `KUBUS_GOOGLE_WEB_CLIENT_ID`
-  - `KUBUS_GOOGLE_CLIENT_ID`
-  - `KUBUS_GOOGLE_IOS_CLIENT_ID`
-- Backend runtime environment:
-  - `GOOGLE_WEB_CLIENT_ID`
-  - `GOOGLE_CLIENT_ID`
-  - `GOOGLE_IOS_CLIENT_ID`
-  - `GOOGLE_CLIENT_IDS`
-
-The web deploy workflow rewrites the `google-signin-client_id` meta tag in `web/index.html` from `KUBUS_GOOGLE_WEB_CLIENT_ID` and passes the same value to `flutter build web` via `--dart-define`, so the HTML bootstrap and Flutter runtime stay aligned.
-
-When Google auth is enabled on the backend, `GOOGLE_CLIENT_IDS` should include every client ID the frontend can mint tokens for, including the active web client ID. At minimum, authorize `https://app.kubus.site` in Google Cloud for the production web client, and add `http://localhost:8080` if that remains the local web origin.
+- Client code: [`LICENSE`](LICENSE) (Apache-2.0) + [`NOTICE`](NOTICE)
+- Trademarks/branding: [`TRADEMARK.md`](TRADEMARK.md)
+- Assets/content: [`LICENSE_ASSETS.md`](LICENSE_ASSETS.md)

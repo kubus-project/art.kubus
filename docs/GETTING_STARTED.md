@@ -5,8 +5,7 @@ This guide walks you through setting up and running the art.kubus app.
 ## Prerequisites
 
 ### Required
-- **Flutter SDK** 3.24+ ([installation guide](https://docs.flutter.dev/get-started/install))
-- **Dart SDK** 3.5+ (included with Flutter)
+- **Flutter SDK** (stable) with **Dart >= 3.6** ([installation guide](https://docs.flutter.dev/get-started/install))
 - **Git** for version control
 
 ### Platform-Specific
@@ -46,18 +45,17 @@ cd art.kubus
 flutter pub get
 ```
 
-### 3. Environment Configuration
+### 3. Configuration (client)
 
-Copy the example environment file and configure:
+The Flutter client is configured primarily through **compile-time environment defines** (`--dart-define`) and the defaults in the repo.
 
-```bash
-# The app uses AppConfig for runtime configuration
-# No .env file needed for basic development
-```
+Key sources of truth:
 
-Key configuration lives in:
-- `lib/config/app_config.dart` — Feature flags and API endpoints
-- `lib/services/storage_config.dart` — Storage/IPFS configuration
+- `lib/config/config.dart` (`AppConfig`) — feature flags, backend URLs, map style assets
+- `lib/config/api_keys.dart` (`ApiKeys`) — non-secret client IDs / integration keys (injected via `--dart-define`)
+- `lib/services/storage_config.dart` — IPFS/HTTP URL resolution rules (do not hardcode gateways in UI)
+
+Most local development works with defaults; when you need to point the client at a different backend, use `BACKEND_BASE_URL` (see below).
 
 ## Running the App
 
@@ -74,6 +72,20 @@ flutter run -d macos           # macOS desktop
 flutter run -d linux           # Linux desktop
 flutter run -d <device-id>     # Specific device
 ```
+
+### Point the client at a backend
+
+By default, the client uses the backend URLs defined in `AppConfig`.
+To use a local or staging backend, override the base URL at build/run time:
+
+```bash
+flutter run --dart-define=BACKEND_BASE_URL=http://localhost:3000
+```
+
+Optional related defines (see `lib/config/config.dart`):
+
+- `BACKEND_STANDBY_BASE_URL`
+- `PUBLIC_SNAPSHOT_REGISTRY_URL`
 
 ### List Available Devices
 
@@ -100,6 +112,30 @@ flutter build web --base-href=/
 # Using the helper script (recommended)
 ./scripts/build_web_release.ps1 -BaseHref '/'
 ```
+
+## Backend (optional)
+
+This repository includes a Node/Express backend under `backend/`.
+
+- Backend setup & environment template: `backend/README.md` and `backend/.env.example`
+- Docker-based local stack: see the backend README and `backend/docker-compose.yml`
+
+The backend is **not** licensed under Apache-2.0 by default (see `backend/package.json`). Treat it as a separate component with its own terms and operational requirements.
+
+## Google Sign-In (optional)
+
+Google Sign-In has **two configuration surfaces**:
+
+- **Client build-time** (`--dart-define`) IDs (see `lib/config/api_keys.dart`):
+  - `KUBUS_GOOGLE_WEB_CLIENT_ID`
+  - `KUBUS_GOOGLE_CLIENT_ID`
+  - `KUBUS_GOOGLE_IOS_CLIENT_ID`
+- **Backend runtime** env vars (audience validation for ID tokens):
+  - `GOOGLE_CLIENT_IDS` (and/or `GOOGLE_CLIENT_ID`, `GOOGLE_WEB_CLIENT_ID`, `GOOGLE_IOS_CLIENT_ID`)
+
+For the backend’s exact validation contract and failure modes, reference:
+
+- `backend/README.md#google-auth-client-id-contract`
 
 ### Android
 
