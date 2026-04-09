@@ -1,7 +1,10 @@
 import 'package:flutter/foundation.dart';
 import '../models/institution.dart';
+import '../providers/dao_provider.dart';
+import '../providers/profile_provider.dart';
 import '../services/backend_api_service.dart';
 import '../services/institution_storage.dart';
+import '../utils/dao_role_verification.dart';
 
 class InstitutionProvider extends ChangeNotifier {
   final InstitutionStorage _storage = InstitutionStorage();
@@ -9,16 +12,26 @@ class InstitutionProvider extends ChangeNotifier {
   List<Institution> _institutions = [];
   List<Event> _events = [];
   Institution? _selectedInstitution;
+  Institution? _derivedInstitution;
   Event? _selectedEvent;
   bool _isLoading = false;
   bool _initialized = false;
+  ProfileProvider? _profileProvider;
+  DAOProvider? _daoProvider;
+  VoidCallback? _profileListener;
+  VoidCallback? _daoListener;
 
   InstitutionProvider();
 
   // Getters
-  List<Institution> get institutions => List.unmodifiable(_institutions);
-  List<Event> get events => List.unmodifiable(_events);
-  Institution? get selectedInstitution => _selectedInstitution;
+  List<Institution> get institutions => List.unmodifiable(_mergedInstitutions());
+  List<Event> get events =>
+      List.unmodifiable(_events.map(_hydrateEventInstitution).toList(growable: false));
+  Institution? get selectedInstitution {
+    final selected = _selectedInstitution;
+    if (selected == null) return null;
+    return getInstitutionById(selected.id) ?? selected;
+  }
   Event? get selectedEvent => _selectedEvent;
   bool get isLoading => _isLoading;
   bool get initialized => _initialized;
@@ -27,10 +40,44 @@ class InstitutionProvider extends ChangeNotifier {
     final target = id.trim();
     if (target.isEmpty) return null;
     try {
-      return _institutions.firstWhere((i) => i.id == target);
+      return institutions.firstWhere((i) => i.id == target);
     } catch (_) {
       return null;
     }
+  }
+
+  void bindProfileProvider(ProfileProvider profileProvider) {
+    if (identical(_profileProvider, profileProvider) && _profileListener != null) {
+      return;
+    }
+
+    if (_profileProvider != null && _profileListener != null) {
+      try {
+        _profileProvider!.removeListener(_profileListener!);
+      } catch (_) {}
+    }
+
+    _profileProvider = profileProvider;
+    _profileListener = () => _syncDerivedInstitution();
+    profileProvider.addListener(_profileListener!);
+    _syncDerivedInstitution();
+  }
+
+  void bindDaoProvider(DAOProvider daoProvider) {
+    if (identical(_daoProvider, daoProvider) && _daoListener != null) {
+      return;
+    }
+
+    if (_daoProvider != null && _daoListener != null) {
+      try {
+        _daoProvider!.removeListener(_daoListener!);
+      } catch (_) {}
+    }
+
+    _daoProvider = daoProvider;
+    _daoListener = () => _syncDerivedInstitution();
+    daoProvider.addListener(_daoListener!);
+    _syncDerivedInstitution();
   }
 
   // Institution methods
@@ -57,6 +104,7 @@ class InstitutionProvider extends ChangeNotifier {
       if (tryBackend) {
         await _tryLoadFromBackendAndPersist();
       }
+      _syncDerivedInstitution(notify: false);
     } catch (e) {
       if (kDebugMode) {
         debugPrint('InstitutionProvider: Error loading institution data: $e');
@@ -205,23 +253,139 @@ class InstitutionProvider extends ChangeNotifier {
     await _storage.saveEvents(_events);
   }
 
+  List<Institution> _mergedInstitutions() {
+    final institutions = List<Institution>.from(_institutions);
+    final derived = _derivedInstitution;
+    if (derived == null) return institutions;
+
+    final existingIndex = institutions.indexWhere((item) => item.id == derived.id);
+    if (existingIndex >= 0) {
+      institutions[existingIndex] = derived;
+    } else {
+      institutions.insert(0, derived);
+    }
+    return institutions;
+  }
+
+  Event _hydrateEventInstitution(Event event) {
+    final institution = getInstitutionById(event.institutionId);
+    if (institution == null || _institutionsEqual(event.institution, institution)) {
+      return event;
+    }
+    return event.copyWith(institution: institution);
+  }
+
+  void _syncDerivedInstitution({bool notify = true}) {
+    final previous = _derivedInstitution;
+    final next = _buildDerivedInstitution();
+    if (_institutionsEqual(previous, next)) return;
+
+    _derivedInstitution = next;
+    final selectedId = _selectedInstitution?.id;
+    if (selectedId != null && selectedId.isNotEmpty) {
+      _selectedInstitution = getInstitutionById(selectedId);
+    }
+
+    if (notify) {
+      notifyListeners();
+    }
+  }
+
+  Institution? _buildDerivedInstitution() {
+    final profile = _profileProvider?.currentUser;
+    if (profile == null) return null;
+
+    final wallet = profile.walletAddress.trim();
+    if (wallet.isEmpty) return null;
+
+    final review = _daoProvider?.findReviewForWallet(wallet);
+    final verification = DaoRoleVerification(
+      walletAddress: wallet,
+      review: review,
+    );
+    final isApprovedInstitution =
+        verification.isApprovedFor(DaoRoleType.institution);
+    final hasInstitutionProfile = profile.isInstitution;
+    if (!isApprovedInstitution && !hasInstitutionProfile) {
+      return null;
+    }
+
+    final displayName = profile.displayName.trim();
+    final username = profile.username.trim();
+    final coverImage = (profile.coverImage ?? '').trim();
+    final avatarImage = profile.avatar.trim();
+    final images = <String>[
+      if (coverImage.isNotEmpty) coverImage,
+      if (avatarImage.isNotEmpty) avatarImage,
+    ];
+
+    return Institution(
+      id: wallet,
+      name: displayName.isNotEmpty
+          ? displayName
+          : (username.isNotEmpty ? username : 'Institution'),
+      description: profile.bio.trim(),
+      type: 'institution',
+      address: '',
+      latitude: 0,
+      longitude: 0,
+      contactEmail: '',
+      website: (profile.social['website'] ?? '').trim(),
+      imageUrls: images,
+      stats: InstitutionStats(
+        totalVisitors: 0,
+        activeEvents: 0,
+        artworkViews: 0,
+        revenue: 0,
+        visitorGrowth: 0,
+        revenueGrowth: 0,
+      ),
+      isVerified: isApprovedInstitution || hasInstitutionProfile,
+      createdAt: profile.createdAt,
+    );
+  }
+
+  bool _institutionsEqual(Institution? a, Institution? b) {
+    if (identical(a, b)) return true;
+    if (a == null || b == null) return a == b;
+
+    return a.id == b.id &&
+        a.name == b.name &&
+        a.description == b.description &&
+        a.type == b.type &&
+        a.address == b.address &&
+        a.latitude == b.latitude &&
+        a.longitude == b.longitude &&
+        a.contactEmail == b.contactEmail &&
+        a.website == b.website &&
+        listEquals(a.imageUrls, b.imageUrls) &&
+        a.stats.totalVisitors == b.stats.totalVisitors &&
+        a.stats.activeEvents == b.stats.activeEvents &&
+        a.stats.artworkViews == b.stats.artworkViews &&
+        a.stats.revenue == b.stats.revenue &&
+        a.stats.visitorGrowth == b.stats.visitorGrowth &&
+        a.stats.revenueGrowth == b.stats.revenueGrowth &&
+        a.isVerified == b.isVerified &&
+        a.createdAt == b.createdAt;
+  }
+
   // Event management
   List<Event> getEventsByInstitution(String institutionId) {
-    return _events.where((event) => event.institutionId == institutionId).toList();
+    return events.where((event) => event.institutionId == institutionId).toList();
   }
 
   List<Event> getUpcomingEvents() {
     final now = DateTime.now();
-    return _events.where((event) => event.startDate.isAfter(now)).toList()
+    return events.where((event) => event.startDate.isAfter(now)).toList()
       ..sort((a, b) => a.startDate.compareTo(b.startDate));
   }
 
   List<Event> getActiveEvents() {
-    return _events.where((event) => event.isActive).toList();
+    return events.where((event) => event.isActive).toList();
   }
 
   List<Event> getEventsByCategory(EventCategory category) {
-    return _events.where((event) => event.category == category).toList();
+    return events.where((event) => event.category == category).toList();
   }
 
   Future<void> createEvent(Event event) async {
@@ -334,5 +498,20 @@ class InstitutionProvider extends ChangeNotifier {
 
   Future<void> refreshData() async {
     await _loadData(seedMockIfEmpty: false, tryBackend: true);
+  }
+
+  @override
+  void dispose() {
+    if (_profileProvider != null && _profileListener != null) {
+      try {
+        _profileProvider!.removeListener(_profileListener!);
+      } catch (_) {}
+    }
+    if (_daoProvider != null && _daoListener != null) {
+      try {
+        _daoProvider!.removeListener(_daoListener!);
+      } catch (_) {}
+    }
+    super.dispose();
   }
 }
