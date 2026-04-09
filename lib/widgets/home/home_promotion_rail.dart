@@ -429,14 +429,25 @@ String? _resolveProfileCover(HomeRailItem item) {
     'banner',
     'bannerUrl',
     'banner_url',
-    'imageUrl',
-    'image_url',
   ]);
   final resolved = MediaUrlResolver.resolveDisplayUrl(rawCover) ??
       MediaUrlResolver.resolve(rawCover);
   if (resolved != null && resolved.isNotEmpty) {
     return resolved;
   }
-  return MediaUrlResolver.resolveDisplayUrl(item.imageUrl) ??
-      MediaUrlResolver.resolve(item.imageUrl);
+
+  if (item.entityType == PromotionEntityType.institution) {
+    final fallbackInstitutionImage = pickRaw(const <String>[
+      'logoUrl',
+      'logo_url',
+      'imageUrl',
+      'image_url',
+    ]);
+    return MediaUrlResolver.resolveDisplayUrl(fallbackInstitutionImage) ??
+        MediaUrlResolver.resolve(fallbackInstitutionImage) ??
+        MediaUrlResolver.resolveDisplayUrl(item.imageUrl) ??
+        MediaUrlResolver.resolve(item.imageUrl);
+  }
+
+  return null;
 }
