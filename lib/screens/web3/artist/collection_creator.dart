@@ -193,7 +193,7 @@ class _CollectionCreatorState extends State<CollectionCreator> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
-        SnackBar(content: Text(l10n.collectionCreatorCreateFailedWithError())),
+        SnackBar(content: Text(l10n.collectionCreatorCreateFailedWithError)),
       );
     } finally {
       if (mounted) {

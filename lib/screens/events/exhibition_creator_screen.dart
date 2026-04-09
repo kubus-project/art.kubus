@@ -345,7 +345,7 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
     } catch (e) {
       if (!mounted) return;
       messenger.showKubusSnackBar(
-        SnackBar(content: Text(l10n.exhibitionCreatorCreateFailedWithError())),
+        SnackBar(content: Text(l10n.exhibitionCreatorCreateFailedWithError)),
       );
     } finally {
       if (mounted) setState(() => _submitting = false);

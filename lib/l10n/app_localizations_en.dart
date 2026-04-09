@@ -391,9 +391,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionCreatorCreateFailed => 'Failed to create exhibition.';
 
   @override
-  String exhibitionCreatorCreateFailedWithError() {
-    return 'Failed to create exhibition. Please try again.';
-  }
+  String get exhibitionCreatorCreateFailedWithError => 'Failed to create exhibition. Please try again.';
 
   @override
   String get lockAppLockedTitle => 'App locked';
@@ -414,7 +412,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authSignInTitle => 'Sign in to art.kubus';
 
   @override
-  String get authSignInSubtitle => 'and start exploring, creating, and connecting with the community.';
+  String get authSignInSubtitle => 'Start exploring, creating, and connecting with the community.';
 
   @override
   String get authRegisterTitle => 'Create your account';
@@ -423,22 +421,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authRegisterSubtitle => 'Create a profile and join the community.';
 
   @override
-  String get authHighlightSignInMethods => 'Wallet, email, or Google sign-in';
+  String get authHighlightSignInMethods => 'Email, Google, or wallet sign-in';
 
   @override
-  String get authHighlightNoFees => 'No fees required to authenticate';
+  String get authHighlightNoFees => 'No fees to sign in';
 
   @override
-  String get authHighlightControl => 'Your account stays yours';
+  String get authHighlightControl => 'Your access stays yours';
 
   @override
-  String get authHighlightOnboardingOptions => 'Wallet or email onboarding';
+  String get authHighlightOnboardingOptions => 'Choose email, Google, or wallet sign-in';
 
   @override
-  String get authHighlightKeysLocal => 'We can’t access your keys';
+  String get authHighlightKeysLocal => 'Private keys stay with you';
 
   @override
-  String get authHighlightOptionalWeb3 => 'Wallet-based features when you want them';
+  String get authHighlightOptionalWeb3 => 'Built for future ownership and participation';
 
   @override
   String get authSignedInProfileRefreshSoon => 'Signed in. Your profile will refresh shortly.';
@@ -447,7 +445,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authReauthDialogTitle => 'Sign in again';
 
   @override
-  String get authReauthDialogMessage => 'Your session has expired. Please verify your credentials to continue.';
+  String get authReauthDialogMessage => 'Your session has expired. Sign in again to continue.';
 
   @override
   String get authAccountCreatedProfileLoading => 'Account created. Loading your profile in the background.';
@@ -602,10 +600,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authConnectWalletModalTitle => 'Connect a wallet';
 
   @override
-  String get authConnectWalletModalDescriptionSignIn => 'You’ll be asked to approve a signature in your wallet app. No fee is required to sign in.';
+  String get authConnectWalletModalDescriptionSignIn => 'Approve a signature in your wallet app to confirm it is you. No fee is required to sign in.';
 
   @override
-  String get authConnectWalletModalDescriptionRegister => 'You’ll be asked to approve a signature in your wallet app. No fee is required to finish registration.';
+  String get authConnectWalletModalDescriptionRegister => 'Approve a signature in your wallet app to confirm it is you. No fee is required to finish registration.';
 
   @override
   String get authWalletOptionWalletConnect => 'WalletConnect';
@@ -695,7 +693,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowWelcomeTitle => 'Welcome to art.kubus';
 
   @override
-  String get onboardingFlowWelcomeBody => 'Quick setup (~2 min). Skip anything and continue later.';
+  String get onboardingFlowWelcomeBody => 'Start with art, places, and community. You can finish the rest later.';
 
   @override
   String get onboardingFlowWelcomeInfoAccount => 'Create your account and choose how you want to sign in.';
@@ -713,7 +711,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowAccountTitle => 'Create your account';
 
   @override
-  String get onboardingFlowAccountBody => 'Use email, Google, or wallet to create your account.';
+  String get onboardingFlowAccountBody => 'Use email, Google, or wallet sign-in to create your account. art.kubus is built on a non-custodial wallet model so long-term access stays with you.';
 
   @override
   String get onboardingFlowAccountVerifyHint => 'If you registered with email, verify your email before signing in.';
@@ -725,10 +723,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowOpenVerification => 'Open email verification';
 
   @override
-  String get onboardingFlowVerifyLastTitle => 'One more last step — verify your email';
+  String get onboardingFlowVerifyLastTitle => 'One last step: verify your email';
 
   @override
-  String get onboardingFlowVerifyLastBody => 'You probably got the mail by now. Check your inbox and complete account creation.';
+  String get onboardingFlowVerifyLastBody => 'Check your inbox and verify your email to finish creating your account.';
 
   @override
   String get onboardingFlowProfileTitle => 'Create your profile';
@@ -737,34 +735,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowProfileBody => 'Add a name and a photo so people can recognize you.';
 
   @override
-  String get onboardingFlowWalletBackupIntroTitle => 'Protect your account wallet';
+  String get onboardingFlowWalletBackupIntroTitle => 'Secure your account wallet';
 
   @override
-  String get onboardingFlowWalletBackupIntroBody => 'Email and Google sign-up already created an account wallet for art.kubus. Back up your recovery phrase now—it protects long-term access and anything tied to this wallet.';
+  String get onboardingFlowWalletBackupIntroBody => 'Email and Google sign-up also create an art.kubus account wallet. It supports long-term access, future digital participation, and anything tied to your account. Back up the recovery phrase now.';
 
   @override
-  String get onboardingFlowWalletBackupIntroWeb3Warning => 'Your wallet is part of your account foundation, not a bolt-on extra.';
+  String get onboardingFlowWalletBackupIntroWeb3Warning => 'This wallet is part of your account, not an optional extra.';
 
   @override
-  String get onboardingFlowWalletBackupIntroSecretWarning => 'If you use encrypted backup, store both secrets separately: the recovery phrase restores the wallet, and the recovery password unlocks the encrypted server backup.';
+  String get onboardingFlowWalletBackupIntroSecretWarning => 'If you use encrypted backup, store the two secrets separately: the recovery phrase restores the wallet, and the recovery password unlocks the encrypted backup.';
 
   @override
   String get onboardingFlowWalletBackupIntroRecoveryPhraseLabel => 'Recovery phrase';
 
   @override
-  String get onboardingFlowWalletBackupIntroRecoveryPhraseBody => 'Copy the recovery phrase and store it somewhere safe offline. We can\'t restore it for you.';
+  String get onboardingFlowWalletBackupIntroRecoveryPhraseBody => 'Copy the recovery phrase and store it safely offline. It is the only way to restore this wallet if you lose the device.';
 
   @override
   String get onboardingFlowWalletBackupIntroEncryptedBackupLabel => 'Encrypted server backup';
 
   @override
-  String get onboardingFlowWalletBackupIntroEncryptedBackupBody => 'Create an encrypted server backup as a second recovery path, then store the recovery password somewhere safe too.';
+  String get onboardingFlowWalletBackupIntroEncryptedBackupBody => 'Create an encrypted server backup as a second recovery path, then store the recovery password separately and just as carefully.';
 
   @override
   String get onboardingFlowWalletBackupIntroPasskeyLabel => 'Passkey protection';
 
   @override
-  String get onboardingFlowWalletBackupIntroPasskeyBody => 'On supported browsers, add a passkey after creating the encrypted backup for stronger access protection.';
+  String get onboardingFlowWalletBackupIntroPasskeyBody => 'On supported browsers, add a passkey after creating the encrypted backup for stronger protection.';
 
   @override
   String get onboardingFlowWalletBackupIntroRevealAction => 'Reveal & copy phrase';
@@ -785,13 +783,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowWalletBackupTitle => 'Back up your recovery phrase';
 
   @override
-  String get onboardingFlowWalletBackupBody => 'This phrase is the key to restoring your wallet on a new device.';
+  String get onboardingFlowWalletBackupBody => 'This phrase restores your wallet, your account access, and future rights tied to it on a new device.';
 
   @override
   String get onboardingFlowWalletBackupPrivacyWarning => 'Keep it private. Anyone with this phrase can fully control your wallet.';
 
   @override
-  String get onboardingFlowWalletBackupLossWarning => 'If you lose it, we can\'t restore your wallet for you—and you may lose access to funds and collectibles.';
+  String get onboardingFlowWalletBackupLossWarning => 'If you lose it, we cannot restore the wallet for you. You may lose access to your account, funds, collectibles, and future platform rights tied to it.';
 
   @override
   String get onboardingFlowWalletBackupAction => 'Reveal and confirm backup';
@@ -872,7 +870,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingWelcomeSubtitle => 'Art, places, and community—together';
 
   @override
-  String get onboardingWelcomeDescription => 'Discover artworks, explore places, and connect with creators. AR is there when you want it. Your account is built on a non-custodial wallet for long-term access and future participation.';
+  String get onboardingWelcomeDescription => 'Discover artworks, explore places, and connect with creators and institutions. AR is there when you want it. Your account is built on a non-custodial wallet so long-term access, ownership, and future participation stay with you.';
 
   @override
   String get onboardingExploreTitle => 'Explore artworks';
@@ -1008,7 +1006,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get permissionsNotificationsSubtitle => 'Stay connected';
 
   @override
-  String get permissionsNotificationsDescription => 'Get updates about new artworks, events, and community activity—plus optional collectibles (NFT) and proofs of visit (POAP).';
+  String get permissionsNotificationsDescription => 'Get updates about new artworks, exhibitions, events, and community activity, plus wallet-based updates like collectibles (NFT) and proofs of visit (POAP).';
 
   @override
   String get permissionsNotificationsBenefit1 => 'New artwork updates';
@@ -1017,7 +1015,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get permissionsNotificationsBenefit2 => 'Progress and recognition';
 
   @override
-  String get permissionsNotificationsBenefit3 => 'Collectible updates (NFT)';
+  String get permissionsNotificationsBenefit3 => 'Collectibles and visit proofs';
 
   @override
   String get permissionsNotificationsBenefit4 => 'Community event reminders';
@@ -1461,14 +1459,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletSessionAccountSignedOut => 'Signed out';
 
   @override
-  String get walletSessionSignerReady => 'Ready to sign';
+  String get walletSessionSignerReady => 'Signing available';
 
   @override
-  String get walletSessionSignerMissing => 'Read-only (no signer)';
+  String get walletSessionSignerMissing => 'Signing unavailable on this device';
 
   @override
   String walletSessionStatusSummary(Object accountStatus, Object walletStatus, Object signerStatus) {
-    return 'Account: $accountStatus · Wallet: $walletStatus · Signer: $signerStatus';
+    return 'Account: $accountStatus · Wallet: $walletStatus · Signing: $signerStatus';
   }
 
   @override
@@ -1685,16 +1683,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsConnectWalletFirstToast => 'Please connect your wallet first';
 
   @override
-  String get settingsBackupWalletDialogTitle => 'Backup wallet';
+  String get settingsBackupWalletDialogTitle => 'Back up recovery phrase';
 
   @override
-  String get settingsBackupWalletDialogIntro => 'This will show your recovery phrase.';
+  String get settingsBackupWalletDialogIntro => 'This will reveal your recovery phrase. Anyone who sees it can control this wallet.';
 
   @override
   String get settingsSecurityWarningTitle => 'Security warning';
 
   @override
-  String get settingsSecurityWarningBullets => '• Make sure you\'re in a private place\n• Never share your recovery phrase\n• Write it down and store it safely';
+  String get settingsSecurityWarningBullets => '• Make sure you are in a private place\n• Never share your recovery phrase or recovery password\n• Store them separately and safely offline';
 
   @override
   String get settingsConnectOrCreateWalletFirstToast => 'Connect or create a wallet first.';
@@ -1768,10 +1766,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsImportWalletDialogTitle => 'Import existing wallet';
 
   @override
-  String get settingsImportWalletDialogBody => 'Only paste a recovery phrase from a trusted source. Avoid public Wi-Fi and screensharing while importing.';
+  String get settingsImportWalletDialogBody => 'Only paste a recovery phrase from a trusted source. Avoid public Wi-Fi, shared screens, and anyone looking over your shoulder while importing.';
 
   @override
-  String get settingsImportWalletDialogConfirm => 'We never store your recovery phrase. You stay in control of your wallet.';
+  String get settingsImportWalletDialogConfirm => 'We never store your recovery phrase. The wallet and its recovery stay in your hands.';
 
   @override
   String get settingsSetPinDialogTitle => 'Set app PIN';
@@ -1839,7 +1837,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsResetAppDialogTitle => 'Reset app';
 
   @override
-  String get settingsResetAppDialogBody => 'This will clear all app data and settings. Your wallet will be disconnected but not deleted.';
+  String get settingsResetAppDialogBody => 'This will clear app data and settings on this device. It disconnects the wallet session here, but it does not delete the wallet itself.';
 
   @override
   String get settingsAppResetSuccessToast => 'App reset successfully. Please restart the app.';
@@ -1848,7 +1846,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsDeleteAccountDialogTitle => 'Delete account';
 
   @override
-  String get settingsDeleteAccountDialogBody => 'We will remove your profile and community data from our servers. Your wallet stays yours and will remain functional.';
+  String get settingsDeleteAccountDialogBody => 'We will remove your profile and community data from our servers. Your non-custodial wallet remains yours, and you can still restore it with your recovery phrase.';
 
   @override
   String get settingsFinalConfirmationTitle => 'Final confirmation';
@@ -1934,13 +1932,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTermsDialogTitle => 'Terms of service';
 
   @override
-  String get settingsTermsDialogBody => 'By using art.kubus, you agree to these terms:\n\n1. You are responsible for maintaining the security of your wallet.\n2. We do not store your private keys or recovery phrases.\n3. All transactions are final and irreversible.\n4. Use the app at your own risk.\n5. We reserve the right to update these terms.\n\nFor the complete terms, visit our website.';
+  String get settingsTermsDialogBody => 'By using art.kubus, you agree to these terms:\n\n1. You are responsible for protecting your wallet, recovery phrase, and any recovery passwords.\n2. We do not store your private keys or recovery phrase for you.\n3. Wallet-based actions and transactions can be final and irreversible.\n4. Use the app responsibly and keep your recovery details safe.\n5. We may update these terms over time.\n\nFor the complete terms, visit our website.';
 
   @override
   String get settingsPrivacyPolicyDialogTitle => 'Privacy policy';
 
   @override
-  String get settingsPrivacyPolicyDialogBody => 'Your privacy is important to us:\n\n• We do not collect personal data without consent\n• Your wallet data is stored locally on your device\n• We may collect anonymous usage statistics\n• We do not share your data with third parties\n• You can disable analytics in Privacy settings\n\nFor our complete privacy policy, visit our website.';
+  String get settingsPrivacyPolicyDialogBody => 'Your privacy matters to us:\n\n• We only collect personal data when it is needed and you have consented\n• Your wallet keys and recovery phrase stay under your control\n• We may collect anonymous usage statistics to improve the app\n• We do not share your data with third parties\n• You can disable analytics in Privacy settings\n\nFor our complete privacy policy, visit our website.';
 
   @override
   String get settingsSupportDialogTitle => 'Support';
@@ -2212,7 +2210,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsShowCollectionTitle => 'Show collection';
 
   @override
-  String get settingsShowCollectionSubtitle => 'Display your collectibles (NFT) publicly';
+  String get settingsShowCollectionSubtitle => 'Show your digital collectibles publicly on your profile';
 
   @override
   String get settingsAllowMessagesTitle => 'Allow messages';
@@ -2238,10 +2236,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3OnboardingKeyFeaturesTitle => 'Key features:';
 
   @override
-  String get web3FeatureWeb3Title => 'Optional wallet features';
+  String get web3FeatureWeb3Title => 'Wallet-based participation';
 
   @override
-  String get web3FeatureMarketplaceTitle => 'Collectibles (NFT)';
+  String get web3FeatureMarketplaceTitle => 'Digital collectibles';
 
   @override
   String get web3FeatureArtistStudioTitle => 'Artist studio';
@@ -2250,13 +2248,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3FeatureInstitutionHubTitle => 'Institution hub';
 
   @override
-  String get web3FeatureGovernanceTitle => 'Community decision-making (DAO)';
+  String get web3FeatureGovernanceTitle => 'Community governance';
 
   @override
   String get web3DaoP1Title => 'Welcome to community decision-making';
 
   @override
-  String get web3DaoP1Description => 'Take part in community decisions about art.kubus. Your input helps guide the platform.';
+  String get web3DaoP1Description => 'Take part in community decisions that shape art.kubus. This is governance as participation, not speculation.';
 
   @override
   String get web3DaoP1Feature1 => 'Vote on community proposals';
@@ -2274,7 +2272,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3DaoP2Title => 'Your voting weight';
 
   @override
-  String get web3DaoP2Description => 'Your voting weight can reflect your Season 0 progress (KUB8 points). No financial value-just participation and recognition.';
+  String get web3DaoP2Description => 'Voting weight can reflect Season 0 participation (KUB8 points). It is about contribution and recognition, not financial value.';
 
   @override
   String get web3DaoP2Feature1 => 'Voting weight can follow your KUB8 points';
@@ -2292,7 +2290,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3DaoP3Title => 'Create proposals';
 
   @override
-  String get web3DaoP3Description => 'Have an idea to improve the platform? Submit proposals for features, policies, or community initiatives.';
+  String get web3DaoP3Description => 'Have an idea for the platform or community? Submit a proposal with clear context, goals, and impact.';
 
   @override
   String get web3DaoP3Feature1 => 'Write clear proposals with context';
@@ -2310,7 +2308,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3DaoP4Title => 'Ready to participate';
 
   @override
-  String get web3DaoP4Description => 'You’re all set. Explore active proposals or start a new one when you’re ready.';
+  String get web3DaoP4Description => 'Review active proposals, follow the discussion, and vote when you are ready.';
 
   @override
   String get web3DaoP4Feature1 => 'Browse and vote on proposals';
@@ -2412,7 +2410,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3ArtistStudioP5Feature3 => 'Explore community creations';
 
   @override
-  String get web3ArtistStudioP5Feature4 => 'Start earning KUB8 points';
+  String get web3ArtistStudioP5Feature4 => 'Start collecting KUB8 points';
 
   @override
   String get web3InstitutionHubP1Title => 'Welcome to institution hub';
@@ -2508,7 +2506,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3MarketplaceP1Title => 'Welcome to the marketplace';
 
   @override
-  String get web3MarketplaceP1Description => 'Discover, buy, and sell digital collectibles (NFT). Connect with creators and collectors.';
+  String get web3MarketplaceP1Description => 'Discover digital works and collectibles from artists and institutions, then collect or offer them with clear provenance.';
 
   @override
   String get web3MarketplaceP1Feature1 => 'Browse collectibles';
@@ -2526,7 +2524,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3MarketplaceP2Title => 'Discover great art';
 
   @override
-  String get web3MarketplaceP2Description => 'Explore curated collections and filter by category, rarity, and more.';
+  String get web3MarketplaceP2Description => 'Explore curated collections and filter by category, rarity, and provenance.';
 
   @override
   String get web3MarketplaceP2Feature1 => 'Filter by category and rarity';
@@ -2544,7 +2542,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3MarketplaceP3Title => 'List your creations';
 
   @override
-  String get web3MarketplaceP3Description => 'Creators can list digital collectibles (NFT) for others to collect. Add details and choose price and availability.';
+  String get web3MarketplaceP3Description => 'Artists can publish digital collectibles when a work or series is meant to live in that format. Add context, price, and availability.';
 
   @override
   String get web3MarketplaceP3Feature1 => 'Upload your digital artwork';
@@ -2562,7 +2560,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3MarketplaceP4Title => 'Start exploring';
 
   @override
-  String get web3MarketplaceP4Description => 'You’re ready. Explore collections, make your first purchase, or list your first item.';
+  String get web3MarketplaceP4Description => 'Explore collections, make a purchase when you are ready, or publish a work for others to collect.';
 
   @override
   String get web3MarketplaceP4Feature1 => 'Explore featured collections';
@@ -2577,28 +2575,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3MarketplaceP4Feature4 => 'Join the creative community';
 
   @override
-  String get web3FeaturesP1Title => 'Connect a wallet (optional)';
+  String get web3FeaturesP1Title => 'Your account wallet';
 
   @override
-  String get web3FeaturesP1Description => 'Connect your wallet to enable optional layers like collectibles (NFT) and proofs of visit (POAP). The core app works without it.';
+  String get web3FeaturesP1Description => 'art.kubus uses a non-custodial wallet as part of your account foundation. It supports long-term access, ownership, and future participation across artist, institution, and community features.';
 
   @override
-  String get web3FeaturesP1Feature1 => 'Wallet-based sign-in (optional)';
+  String get web3FeaturesP1Feature1 => 'Long-term account continuity';
 
   @override
-  String get web3FeaturesP1Feature2 => 'Collectibles (NFT) and proofs of visit (POAP)';
+  String get web3FeaturesP1Feature2 => 'Collectibles, visit proofs, and future rights';
 
   @override
-  String get web3FeaturesP1Feature3 => 'Keys stay in your wallet';
+  String get web3FeaturesP1Feature3 => 'Keys stay with you';
 
   @override
-  String get web3FeaturesP1Feature4 => 'Disconnect anytime';
+  String get web3FeaturesP1Feature4 => 'Access you can restore and move';
 
   @override
-  String get web3FeaturesP2Title => 'Collectibles marketplace (NFT)';
+  String get web3FeaturesP2Title => 'Collectibles marketplace';
 
   @override
-  String get web3FeaturesP2Description => 'Browse, buy, and sell digital collectibles (NFT) in an optional marketplace.';
+  String get web3FeaturesP2Description => 'Browse, collect, and offer digital works in a marketplace connected to artists, artworks, and provenance.';
 
   @override
   String get web3FeaturesP2Feature1 => 'Browse featured drops';
@@ -2619,7 +2617,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3FeaturesP3Title => 'Artist studio';
 
   @override
-  String get web3FeaturesP3Description => 'Create and manage your digital works. Optionally publish collectibles (NFT) and share them with the community.';
+  String get web3FeaturesP3Description => 'Create and manage digital works, build your portfolio, and publish collectibles when a project calls for them.';
 
   @override
   String get web3FeaturesP3Feature1 => 'Upload and organize artworks';
@@ -2640,7 +2638,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3FeaturesP4Title => 'Community decision-making (DAO)';
 
   @override
-  String get web3FeaturesP4Description => 'Vote on proposals and help guide the platform together.';
+  String get web3FeaturesP4Description => 'Vote on proposals and help shape platform priorities together.';
 
   @override
   String get web3FeaturesP4Feature1 => 'Vote on proposals';
@@ -2661,7 +2659,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3FeaturesP5Title => 'Institution hub';
 
   @override
-  String get web3FeaturesP5Description => 'Partner with galleries and cultural institutions, and host events and exhibitions.';
+  String get web3FeaturesP5Description => 'Work with galleries and cultural institutions on events, exhibitions, and longer-term programs.';
 
   @override
   String get web3FeaturesP5Feature1 => 'Partner with verified institutions';
@@ -2682,7 +2680,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3FeaturesP6Title => 'KUB8 points (Season 0)';
 
   @override
-  String get web3FeaturesP6Description => 'KUB8 points are offchain season points: progress, reputation, and unlocks. Not a currency.';
+  String get web3FeaturesP6Description => 'KUB8 points track season participation, reputation, and unlocks. They are not money or a tradable asset.';
 
   @override
   String get web3FeaturesP6Feature1 => 'Collect points for participation and discoveries';
@@ -3948,9 +3946,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collectionCreatorCreateFailed => 'Failed to create collection.';
 
   @override
-  String collectionCreatorCreateFailedWithError() {
-    return 'Failed to create collection. Please try again.';
-  }
+  String get collectionCreatorCreateFailedWithError => 'Failed to create collection. Please try again.';
 
   @override
   String get collectionDetailLoadFailedMessage => 'Failed to load collection details. Please try again.';
@@ -4323,7 +4319,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletChooseTitle => 'Connect your wallet';
 
   @override
-  String get connectWalletChooseDescription => 'Choose how you want to connect. You can create a new wallet, import an existing one, or use WalletConnect.';
+  String get connectWalletChooseDescription => 'Choose how to set up your account wallet. You can create a new one on this device, import an existing one, or use WalletConnect.';
 
   @override
   String get connectWalletOptionWalletConnectTitle => 'WalletConnect';
@@ -4356,13 +4352,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletImportTitle => 'Import wallet';
 
   @override
-  String get connectWalletImportDescription => 'Enter your 12-word recovery phrase to import a wallet stored on another device.';
+  String get connectWalletImportDescription => 'Enter the 12-word recovery phrase to restore a wallet from another device and reconnect your art.kubus account.';
 
   @override
   String get connectWalletImportHint => 'Enter 12 words separated by spaces';
 
   @override
-  String get connectWalletImportWarning => 'Never share your recovery phrase. Anyone with it can control your wallet.';
+  String get connectWalletImportWarning => 'Never share your recovery phrase. Anyone with it can take control of your wallet and the access tied to it.';
 
   @override
   String get connectWalletImportButton => 'Import wallet';
@@ -4387,16 +4383,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletCreateTitle => 'Create a new wallet';
 
   @override
-  String get connectWalletCreateDescription => 'We’ll generate a new wallet on this device. Make sure to back up your recovery phrase securely.';
+  String get connectWalletCreateDescription => 'We will create a new non-custodial wallet on this device for your art.kubus account. Back up the recovery phrase right away to protect long-term access.';
 
   @override
   String get connectWalletCreateInfoTitle => 'Important';
 
   @override
-  String get connectWalletCreateInfoBody => 'Write down your recovery phrase and store it somewhere safe. We can’t recover it for you.';
+  String get connectWalletCreateInfoBody => 'Write down the recovery phrase and store it safely offline. It is essential for restoring this wallet, and we cannot recover it for you.';
 
   @override
-  String get connectWalletCreateWarning => 'By continuing, you confirm you understand the risks.';
+  String get connectWalletCreateWarning => 'By continuing, you confirm that you understand how important the recovery phrase is.';
 
   @override
   String get connectWalletCreateGenerateButton => 'Generate wallet';
@@ -4437,7 +4433,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletConnectedTitle => 'Wallet connected';
 
   @override
-  String get connectWalletConnectedDescription => 'Your wallet is now connected to art.kubus. You can collect digital collectibles (NFT) and proofs of visit (POAP), and use wallet-based features when you choose.';
+  String get connectWalletConnectedDescription => 'Your account wallet is now connected to art.kubus. It supports long-term access, digital ownership, and upcoming features for artists, institutions, and community participation.';
 
   @override
   String get connectWalletConnectedStartExploringButton => 'Start exploring';
@@ -4449,10 +4445,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletWeb3GuideTitle => 'What’s a wallet?';
 
   @override
-  String get connectWalletWeb3GuideDescription => 'A wallet lets you use features that require proof of ownership—without handing your keys to us:';
+  String get connectWalletWeb3GuideDescription => 'Your account wallet keeps access and ownership in your hands. It also enables features that need proof of ownership, without giving your keys to us:';
 
   @override
-  String get connectWalletWeb3GuideFeatureSecureTitle => 'Non-custodial';
+  String get connectWalletWeb3GuideFeatureSecureTitle => 'You stay in control';
 
   @override
   String get connectWalletWeb3GuideFeatureSecureDescription => 'You control the keys—not us';
@@ -4461,19 +4457,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletWeb3GuideFeatureNftsTitle => 'Collectibles';
 
   @override
-  String get connectWalletWeb3GuideFeatureNftsDescription => 'Collect and view digital art (NFT)';
+  String get connectWalletWeb3GuideFeatureNftsDescription => 'Collect and keep digital works connected to artists and places';
 
   @override
   String get connectWalletWeb3GuideFeatureGovernanceTitle => 'Community';
 
   @override
-  String get connectWalletWeb3GuideFeatureGovernanceDescription => 'Participate in decisions when you want to';
+  String get connectWalletWeb3GuideFeatureGovernanceDescription => 'Take part in community decisions and future platform rights';
 
   @override
-  String get connectWalletWeb3GuideFeatureDefiTitle => 'Portable';
+  String get connectWalletWeb3GuideFeatureDefiTitle => 'Portable access';
 
   @override
-  String get connectWalletWeb3GuideFeatureDefiDescription => 'Use the same wallet across compatible apps';
+  String get connectWalletWeb3GuideFeatureDefiDescription => 'Use the same wallet across future art.kubus and compatible ecosystem features';
 
   @override
   String get connectWalletWeb3GuideGotItButton => 'Got it!';
@@ -4562,7 +4558,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeLoadingLabel => 'Loading your wallet…';
 
   @override
-  String get walletHomeNoWalletDescription => 'Connect a wallet to get started.';
+  String get walletHomeNoWalletDescription => 'Connect or restore your account wallet to get started.';
 
   @override
   String get walletHomeAlreadyConnectedToast => 'Wallet is already connected.';
@@ -5223,7 +5219,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artistStudioDaoCardTitle => 'Artist application (DAO)';
 
   @override
-  String get artistStudioDaoCardSubtitle => 'Submit your practice for DAO review. Future releases will route approvals directly through governance.';
+  String get artistStudioDaoCardSubtitle => 'Submit your practice for community review through the DAO. This is part of how art.kubus opens artist tools and future participation.';
 
   @override
   String get artistStudioDaoStatusApproved => 'APPROVED';
@@ -5241,10 +5237,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artistStudioStatusSyncedFromDao => 'Status synced from DAO';
 
   @override
-  String get artistStudioReviewPendingInfo => 'Your submission is in the DAO review queue. We\'ll notify you after a decision.';
+  String get artistStudioReviewPendingInfo => 'Your submission is in the DAO review queue. We\'ll let you know when the review is complete.';
 
   @override
-  String get artistStudioReviewApprovedInfo => 'Congratulations! You\'ve been cleared by DAO reviewers.';
+  String get artistStudioReviewApprovedInfo => 'Your practice has been approved through DAO review. Studio tools are ready.';
 
   @override
   String get artistStudioReviewRejectedInfo => 'Your last submission was rejected. You can resubmit with updates.';
@@ -5283,13 +5279,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artistStudioUnlocksAfterDaoApprovalToast => 'Artist Studio unlocks after DAO approval.';
 
   @override
-  String get artistStudioSeparateWalletsTip => 'Tip: Use separate wallets for artist and institution roles to avoid DAO review conflicts.';
+  String get artistStudioSeparateWalletsTip => 'Use separate wallets for artist and institution roles if you want to keep access and review paths clearly separated.';
 
   @override
   String get artistStudioLockedTitle => 'Artist Studio is locked';
 
   @override
-  String get artistStudioLockedDescription => 'Apply for DAO review to unlock gallery, creation tools, and analytics.';
+  String get artistStudioLockedDescription => 'Apply for DAO review to unlock the studio tools used for publishing, showcasing, and tracking your work.';
 
   @override
   String get artistStudioSettingsTitle => 'Studio Settings';
@@ -6999,7 +6995,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletBackupProtectionRecoveryPhraseHeadline => 'Recovery phrase backup is still required.';
 
   @override
-  String get walletBackupProtectionRecoveryPhraseBody => 'Store the recovery phrase offline to avoid losing access to Web3 features, collectibles, and points tied to this wallet.';
+  String get walletBackupProtectionRecoveryPhraseBody => 'Store the recovery phrase offline so you do not lose access to this wallet, your account continuity, and the collectibles, points, and future rights tied to it.';
 
   @override
   String get walletBackupProtectionEncryptedHeadline => 'Encrypted server backup is configured.';
@@ -7017,13 +7013,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletBackupProtectionReadOnlyHeadline => 'This device only has read-only wallet access.';
 
   @override
-  String get walletBackupProtectionReadOnlyBody => 'Restore the wallet signer with your encrypted server backup or recovery phrase before managing transfers and other wallet-gated features on this device.';
+  String get walletBackupProtectionReadOnlyBody => 'Restore signing access with your encrypted backup or recovery phrase before using transfers and other wallet-protected actions on this device.';
 
   @override
-  String get walletBackupBannerTitle => 'Back up your wallet recovery phrase';
+  String get walletBackupBannerTitle => 'Back up your recovery phrase';
 
   @override
-  String get walletBackupBannerSubtitle => 'Store it safely offline. It is required to recover this wallet.';
+  String get walletBackupBannerSubtitle => 'Store it safely offline. You need it to restore this wallet and keep long-term access.';
 
   @override
   String get walletBackupBannerAction => 'Back up now';
@@ -7389,13 +7385,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get labsMarketplaceSemanticLabel => 'Marketplace Lab';
 
   @override
-  String get daoHubHeaderSubtitle => 'Decentralized governance for the AR art platform';
+  String get daoHubHeaderSubtitle => 'Community governance for artists, institutions, and cultural participation';
 
   @override
   String get daoHubInfoDialogTitle => 'How DAO governance works';
 
   @override
-  String get daoHubInfoDialogBody => 'The DAO lets the community propose and vote on platform decisions. Voting power is based on your KUB8 balance. You can also delegate your voting power to trusted delegates.';
+  String get daoHubInfoDialogBody => 'The DAO gives the community a way to propose and vote on platform decisions. Voting power follows your KUB8 participation, and you can delegate to someone you trust when needed.';
 
   @override
   String get daoHubTabActiveProposals => 'Proposals';
@@ -7664,9 +7660,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileEditProfileUpdatedToast => 'Profile updated successfully!';
 
   @override
-  String profileEditErrorToast() {
-    return 'Something went wrong. Please try again.';
-  }
+  String get profileEditErrorToast => 'Something went wrong. Please try again.';
 
   @override
   String get profileEditNoWalletUploadAvatarToast => 'No wallet connected. Connect your wallet to upload avatar.';
@@ -7684,9 +7678,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileEditAvatarUploadedLocalToast => 'Avatar uploaded locally (save failed)';
 
   @override
-  String profileEditAvatarUploadFailedToast() {
-    return 'Avatar upload failed. Please try again.';
-  }
+  String get profileEditAvatarUploadFailedToast => 'Avatar upload failed. Please try again.';
 
   @override
   String get profileEditCoverUploadedSavedToast => 'Cover image uploaded!';
@@ -7695,14 +7687,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileEditCoverUploadedLocalToast => 'Cover image uploaded locally';
 
   @override
-  String profileEditCoverUploadFailedToast() {
-    return 'Cover image upload failed. Please try again.';
-  }
+  String get profileEditCoverUploadFailedToast => 'Cover image upload failed. Please try again.';
 
   @override
-  String profileEditPickImageFailedToast() {
-    return 'Could not select the image. Please try again.';
-  }
+  String get profileEditPickImageFailedToast => 'Could not select the image. Please try again.';
 
   @override
   String get profileEditUploadDebugInfoTitle => 'Upload debug info';
@@ -8437,7 +8425,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get profileAboutDescription => 'AR art platform connecting artists and institutions through blockchain technology.';
+  String get profileAboutDescription => 'AR art platform for discovering public art and connecting artists, institutions, and communities.';
 
   @override
   String get profileAboutCopyright => 'Copyright (c) 2024 kubus Project';
@@ -8894,10 +8882,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingWelcomeDiscoverBody => 'Explore artworks, exhibitions, and creative spaces on an interactive map.';
 
   @override
-  String get onboardingWelcomeCreateTitle => 'Create & collect';
+  String get onboardingWelcomeCreateTitle => 'Create and share';
 
   @override
-  String get onboardingWelcomeCreateBody => 'Mint your art, build your portfolio, and collect pieces from artists worldwide.';
+  String get onboardingWelcomeCreateBody => 'Build your portfolio, publish artworks, and take part in a growing cultural community.';
 
   @override
   String get onboardingWelcomeJoinTitle => 'Ready to begin?';

@@ -855,7 +855,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Failed to create exhibition. Please try again.'**
-  String exhibitionCreatorCreateFailedWithError();
+  String get exhibitionCreatorCreateFailedWithError;
 
   /// No description provided for @lockAppLockedTitle.
   ///
@@ -866,7 +866,7 @@ abstract class AppLocalizations {
   /// No description provided for @lockAppLockedDescription.
   ///
   /// In en, this message translates to:
-  /// **'Authenticate to unlock access to the wallet features.'**
+  /// **'Authenticate to unlock wallet access.'**
   String get lockAppLockedDescription;
 
   /// No description provided for @lockEnterPinTitle.
@@ -896,7 +896,7 @@ abstract class AppLocalizations {
   /// No description provided for @authSignInSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'and start exploring, creating, and connecting with other artists.'**
+  /// **'Start exploring, creating, and connecting with the community.'**
   String get authSignInSubtitle;
 
   /// No description provided for @authRegisterTitle.
@@ -914,37 +914,37 @@ abstract class AppLocalizations {
   /// No description provided for @authHighlightSignInMethods.
   ///
   /// In en, this message translates to:
-  /// **'Wallet, email, or Google sign-in'**
+  /// **'Email, Google, or wallet sign-in'**
   String get authHighlightSignInMethods;
 
   /// No description provided for @authHighlightNoFees.
   ///
   /// In en, this message translates to:
-  /// **'No fees required to authenticate'**
+  /// **'No fees to sign in'**
   String get authHighlightNoFees;
 
   /// No description provided for @authHighlightControl.
   ///
   /// In en, this message translates to:
-  /// **'Control stays with you'**
+  /// **'Your access stays yours'**
   String get authHighlightControl;
 
   /// No description provided for @authHighlightOnboardingOptions.
   ///
   /// In en, this message translates to:
-  /// **'Wallet or email onboarding'**
+  /// **'Choose email, Google, or wallet sign-in'**
   String get authHighlightOnboardingOptions;
 
   /// No description provided for @authHighlightKeysLocal.
   ///
   /// In en, this message translates to:
-  /// **'Keys stay on your device'**
+  /// **'Private keys stay with you'**
   String get authHighlightKeysLocal;
 
   /// No description provided for @authHighlightOptionalWeb3.
   ///
   /// In en, this message translates to:
-  /// **'Optional Web3 features available'**
+  /// **'Built for future ownership and participation'**
   String get authHighlightOptionalWeb3;
 
   /// No description provided for @authSignedInProfileRefreshSoon.
@@ -962,7 +962,7 @@ abstract class AppLocalizations {
   /// Message shown in a dialog when the user's session has expired and they need to re-authenticate.
   ///
   /// In en, this message translates to:
-  /// **'Your session has expired. Please verify your credentials to continue.'**
+  /// **'Your session has expired. Sign in again to continue.'**
   String get authReauthDialogMessage;
 
   /// No description provided for @authAccountCreatedProfileLoading.
@@ -1010,7 +1010,7 @@ abstract class AppLocalizations {
   /// No description provided for @authPasswordPolicyError.
   ///
   /// In en, this message translates to:
-  /// **'Password must be atleast 8 characters and include a letter and a number.'**
+  /// **'Password must be at least 8 characters and include a letter and a number.'**
   String get authPasswordPolicyError;
 
   /// No description provided for @authPasswordMismatchInline.
@@ -1268,13 +1268,13 @@ abstract class AppLocalizations {
   /// No description provided for @authConnectWalletModalDescriptionSignIn.
   ///
   /// In en, this message translates to:
-  /// **'You’ll be asked to approve a signature in your wallet app. No fee is required to sign in.'**
+  /// **'Approve a signature in your wallet app to confirm it is you. No fee is required to sign in.'**
   String get authConnectWalletModalDescriptionSignIn;
 
   /// No description provided for @authConnectWalletModalDescriptionRegister.
   ///
   /// In en, this message translates to:
-  /// **'You’ll be asked to approve a signature in your wallet app. No fee is required to finish registration.'**
+  /// **'Approve a signature in your wallet app to confirm it is you. No fee is required to finish registration.'**
   String get authConnectWalletModalDescriptionRegister;
 
   /// No description provided for @authWalletOptionWalletConnect.
@@ -1394,7 +1394,7 @@ abstract class AppLocalizations {
   /// No description provided for @authSecureAccountFormDefaultSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Add email + password for recovery. Verification is last and non-blocking.'**
+  /// **'Add email + password so you can recover this account if you lose your device. You can verify email later.'**
   String get authSecureAccountFormDefaultSubtitle;
 
   /// No description provided for @authSecureAccountPromptAddPasswordBody.
@@ -1454,7 +1454,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowWelcomeBody.
   ///
   /// In en, this message translates to:
-  /// **'Let’s set things up in under a minute. You can skip anything and continue later.'**
+  /// **'Start with art, places, and community. You can finish the rest later.'**
   String get onboardingFlowWelcomeBody;
 
   /// No description provided for @onboardingFlowWelcomeInfoAccount.
@@ -1490,7 +1490,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowAccountBody.
   ///
   /// In en, this message translates to:
-  /// **'Use email, Google, or wallet to create your account.'**
+  /// **'Use email, Google, or wallet sign-in to create your account. art.kubus is built on a non-custodial wallet model so long-term access stays with you.'**
   String get onboardingFlowAccountBody;
 
   /// No description provided for @onboardingFlowAccountVerifyHint.
@@ -1514,13 +1514,13 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowVerifyLastTitle.
   ///
   /// In en, this message translates to:
-  /// **'One more last step — verify your email'**
+  /// **'One last step: verify your email'**
   String get onboardingFlowVerifyLastTitle;
 
   /// No description provided for @onboardingFlowVerifyLastBody.
   ///
   /// In en, this message translates to:
-  /// **'You probably got the mail by now. Check your inbox and complete account creation.'**
+  /// **'Check your inbox and verify your email to finish creating your account.'**
   String get onboardingFlowVerifyLastBody;
 
   /// No description provided for @onboardingFlowProfileTitle.
@@ -1538,25 +1538,25 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowWalletBackupIntroTitle.
   ///
   /// In en, this message translates to:
-  /// **'Protect your wallet access'**
+  /// **'Secure your account wallet'**
   String get onboardingFlowWalletBackupIntroTitle;
 
   /// No description provided for @onboardingFlowWalletBackupIntroBody.
   ///
   /// In en, this message translates to:
-  /// **'Email and Google sign-up already created a real signer-backed wallet for your art.kubus account. Back it up now so you do not lose access to wallet-based features, collectibles, and points.'**
+  /// **'Email and Google sign-up also create an art.kubus account wallet. It supports long-term access, future digital participation, and anything tied to your account. Back up the recovery phrase now.'**
   String get onboardingFlowWalletBackupIntroBody;
 
   /// No description provided for @onboardingFlowWalletBackupIntroWeb3Warning.
   ///
   /// In en, this message translates to:
-  /// **'art.kubus is a Web3 project. Your wallet is part of your account access, not just an optional extra.'**
+  /// **'This wallet is part of your account, not an optional extra.'**
   String get onboardingFlowWalletBackupIntroWeb3Warning;
 
   /// No description provided for @onboardingFlowWalletBackupIntroSecretWarning.
   ///
   /// In en, this message translates to:
-  /// **'Save both secrets separately when you use encrypted backup: the recovery phrase restores the wallet, and the recovery password unlocks the encrypted server backup.'**
+  /// **'If you use encrypted backup, store the two secrets separately: the recovery phrase restores the wallet, and the recovery password unlocks the encrypted backup.'**
   String get onboardingFlowWalletBackupIntroSecretWarning;
 
   /// No description provided for @onboardingFlowWalletBackupIntroRecoveryPhraseLabel.
@@ -1568,7 +1568,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowWalletBackupIntroRecoveryPhraseBody.
   ///
   /// In en, this message translates to:
-  /// **'Copy the recovery phrase and store it somewhere safe offline. It is the most important way to restore this wallet.'**
+  /// **'Copy the recovery phrase and store it safely offline. It is the only way to restore this wallet if you lose the device.'**
   String get onboardingFlowWalletBackupIntroRecoveryPhraseBody;
 
   /// No description provided for @onboardingFlowWalletBackupIntroEncryptedBackupLabel.
@@ -1580,7 +1580,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowWalletBackupIntroEncryptedBackupBody.
   ///
   /// In en, this message translates to:
-  /// **'Create an encrypted server backup for another recovery path, then store the recovery password in a safe location too.'**
+  /// **'Create an encrypted server backup as a second recovery path, then store the recovery password separately and just as carefully.'**
   String get onboardingFlowWalletBackupIntroEncryptedBackupBody;
 
   /// No description provided for @onboardingFlowWalletBackupIntroPasskeyLabel.
@@ -1592,13 +1592,13 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowWalletBackupIntroPasskeyBody.
   ///
   /// In en, this message translates to:
-  /// **'On supported web clients, add a passkey after the encrypted server backup is created for stronger access protection.'**
+  /// **'On supported browsers, add a passkey after creating the encrypted backup for stronger protection.'**
   String get onboardingFlowWalletBackupIntroPasskeyBody;
 
   /// No description provided for @onboardingFlowWalletBackupIntroRevealAction.
   ///
   /// In en, this message translates to:
-  /// **'Reveal and copy phrase'**
+  /// **'Reveal & copy phrase'**
   String get onboardingFlowWalletBackupIntroRevealAction;
 
   /// No description provided for @onboardingFlowWalletBackupIntroEncryptedAction.
@@ -1634,7 +1634,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowWalletBackupBody.
   ///
   /// In en, this message translates to:
-  /// **'This phrase is the only way to recover this wallet on a new device.'**
+  /// **'This phrase restores your wallet, your account access, and future rights tied to it on a new device.'**
   String get onboardingFlowWalletBackupBody;
 
   /// No description provided for @onboardingFlowWalletBackupPrivacyWarning.
@@ -1646,7 +1646,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowWalletBackupLossWarning.
   ///
   /// In en, this message translates to:
-  /// **'If you lose it, you can lose access to funds and collectibles forever.'**
+  /// **'If you lose it, we cannot restore the wallet for you. You may lose access to your account, funds, collectibles, and future platform rights tied to it.'**
   String get onboardingFlowWalletBackupLossWarning;
 
   /// No description provided for @onboardingFlowWalletBackupAction.
@@ -1694,7 +1694,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowPermissionsBody.
   ///
   /// In en, this message translates to:
-  /// **'Enable location to see nearby art, notifications for updates, and camera for AR.'**
+  /// **'Enable location to discover nearby art, camera for AR, and notifications for community updates.'**
   String get onboardingFlowPermissionsBody;
 
   /// No description provided for @onboardingFlowContinueWithoutPermissions.
@@ -1802,13 +1802,13 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingWelcomeSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Exhibition and community in one place'**
+  /// **'Art, places, and community—together'**
   String get onboardingWelcomeSubtitle;
 
   /// No description provided for @onboardingWelcomeDescription.
   ///
   /// In en, this message translates to:
-  /// **'Discover artworks, explore places, and connect with creators. XR and Web3 are optional layers - the core experience works without them.'**
+  /// **'Discover artworks, explore places, and connect with creators and institutions. AR is there when you want it. Your account is built on a non-custodial wallet so long-term access, ownership, and future participation stay with you.'**
   String get onboardingWelcomeDescription;
 
   /// No description provided for @onboardingExploreTitle.
@@ -1880,7 +1880,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingCollectiblesDescription.
   ///
   /// In en, this message translates to:
-  /// **'Optionally connect a wallet to collect digital collectibles (NFT) and proofs of visit (POAP). The app remains useful without Web3.'**
+  /// **'Use your wallet to collect digital collectibles (NFT) and proofs of visit (POAP) when you choose. Discovery and community work regardless.'**
   String get onboardingCollectiblesDescription;
 
   /// No description provided for @onboardingGrantPermissions.
@@ -1916,7 +1916,7 @@ abstract class AppLocalizations {
   /// No description provided for @permissionsPrivacyNote.
   ///
   /// In en, this message translates to:
-  /// **'Your privacy is protected. We never share your data.'**
+  /// **'Your privacy matters. Permissions are used only for the features you enable, and you can change them anytime.'**
   String get permissionsPrivacyNote;
 
   /// No description provided for @permissionsGrantedLabel.
@@ -1976,19 +1976,19 @@ abstract class AppLocalizations {
   /// No description provided for @permissionsLocationTitle.
   ///
   /// In en, this message translates to:
-  /// **'Location access'**
+  /// **'Find art near you'**
   String get permissionsLocationTitle;
 
   /// No description provided for @permissionsLocationSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Discover art near you'**
+  /// **'Nearby artworks and places'**
   String get permissionsLocationSubtitle;
 
   /// No description provided for @permissionsLocationDescription.
   ///
   /// In en, this message translates to:
-  /// **'We use your location to show artworks and markers placed in your area. Discover local artists and exhibitions nearby.'**
+  /// **'We use your location to show nearby artworks, markers, and exhibitions. You can still browse without it.'**
   String get permissionsLocationDescription;
 
   /// No description provided for @permissionsLocationBenefit1.
@@ -2018,19 +2018,19 @@ abstract class AppLocalizations {
   /// No description provided for @permissionsCameraTitle.
   ///
   /// In en, this message translates to:
-  /// **'Camera access'**
+  /// **'Experience art in AR'**
   String get permissionsCameraTitle;
 
   /// No description provided for @permissionsCameraSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Experience AR'**
+  /// **'AR artworks in your space'**
   String get permissionsCameraSubtitle;
 
   /// No description provided for @permissionsCameraDescription.
   ///
   /// In en, this message translates to:
-  /// **'The camera is essential for viewing AR artworks in your space. Place, interact with, and capture your experience.'**
+  /// **'The camera is used to view AR artworks in your space—place them, interact, and capture the moment.'**
   String get permissionsCameraDescription;
 
   /// No description provided for @permissionsCameraBenefit1.
@@ -2072,7 +2072,7 @@ abstract class AppLocalizations {
   /// No description provided for @permissionsNotificationsDescription.
   ///
   /// In en, this message translates to:
-  /// **'Get updates about new artworks, progress, collectibles (NFT), proofs of visit (POAP), and community activity.'**
+  /// **'Get updates about new artworks, exhibitions, events, and community activity, plus wallet-based updates like collectibles (NFT) and proofs of visit (POAP).'**
   String get permissionsNotificationsDescription;
 
   /// No description provided for @permissionsNotificationsBenefit1.
@@ -2084,13 +2084,13 @@ abstract class AppLocalizations {
   /// No description provided for @permissionsNotificationsBenefit2.
   ///
   /// In en, this message translates to:
-  /// **'Progress and rewards'**
+  /// **'Progress and recognition'**
   String get permissionsNotificationsBenefit2;
 
   /// No description provided for @permissionsNotificationsBenefit3.
   ///
   /// In en, this message translates to:
-  /// **'Collectible updates (NFT)'**
+  /// **'Collectibles and visit proofs'**
   String get permissionsNotificationsBenefit3;
 
   /// No description provided for @permissionsNotificationsBenefit4.
@@ -2282,7 +2282,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopSettingsWalletSectionSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Manage your wallet connection and Web3 settings'**
+  /// **'Manage your wallet connection and optional features'**
   String get desktopSettingsWalletSectionSubtitle;
 
   /// No description provided for @desktopSettingsViewWalletButton.
@@ -2306,7 +2306,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopSettingsDisconnectWalletTileSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Sign out of Web3 features'**
+  /// **'Disable wallet features'**
   String get desktopSettingsDisconnectWalletTileSubtitle;
 
   /// No description provided for @desktopSettingsDisconnectWalletDialogTitle.
@@ -2396,13 +2396,13 @@ abstract class AppLocalizations {
   /// No description provided for @desktopSettingsAchievementsTitle.
   ///
   /// In en, this message translates to:
-  /// **'Achievements & rewards'**
+  /// **'Achievements & recognition'**
   String get desktopSettingsAchievementsTitle;
 
   /// No description provided for @desktopSettingsAchievementsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Track your progress and earn KUB8 points'**
+  /// **'Track your progress and collect KUB8 points'**
   String get desktopSettingsAchievementsSubtitle;
 
   /// No description provided for @desktopSettingsAchievementsStatArtworksDiscovered.
@@ -2426,7 +2426,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopSettingsAchievementsStatKub8PointsEarned.
   ///
   /// In en, this message translates to:
-  /// **'KUB8 points earned'**
+  /// **'KUB8 points collected'**
   String get desktopSettingsAchievementsStatKub8PointsEarned;
 
   /// No description provided for @desktopSettingsAchievementFirstDiscoveryTitle.
@@ -2486,7 +2486,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopSettingsAchievementNftCreatorDescription.
   ///
   /// In en, this message translates to:
-  /// **'Mint your first NFT'**
+  /// **'Create your first collectible (NFT)'**
   String get desktopSettingsAchievementNftCreatorDescription;
 
   /// No description provided for @desktopSettingsHelpSupportTitle.
@@ -2564,25 +2564,25 @@ abstract class AppLocalizations {
   /// No description provided for @desktopSettingsFeatureWeb3IntegrationTitle.
   ///
   /// In en, this message translates to:
-  /// **'Web3 integration'**
+  /// **'Wallet integration (Solana)'**
   String get desktopSettingsFeatureWeb3IntegrationTitle;
 
   /// No description provided for @desktopSettingsFeatureWeb3IntegrationDescription.
   ///
   /// In en, this message translates to:
-  /// **'Solana blockchain with KUB8 points'**
+  /// **'Optional Solana wallet connection and KUB8 points'**
   String get desktopSettingsFeatureWeb3IntegrationDescription;
 
   /// No description provided for @desktopSettingsFeatureNftMintingTitle.
   ///
   /// In en, this message translates to:
-  /// **'NFT minting'**
+  /// **'Collectibles (NFT)'**
   String get desktopSettingsFeatureNftMintingTitle;
 
   /// No description provided for @desktopSettingsFeatureNftMintingDescription.
   ///
   /// In en, this message translates to:
-  /// **'Create and trade digital art collectibles'**
+  /// **'Create and manage digital art collectibles'**
   String get desktopSettingsFeatureNftMintingDescription;
 
   /// No description provided for @desktopSettingsFeatureCommunityTitle.
@@ -2918,7 +2918,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsWalletSectionTitle.
   ///
   /// In en, this message translates to:
-  /// **'Wallet & Web3'**
+  /// **'Wallet'**
   String get settingsWalletSectionTitle;
 
   /// No description provided for @settingsWalletConnectionTileTitle.
@@ -2954,19 +2954,19 @@ abstract class AppLocalizations {
   /// No description provided for @walletSessionSignerReady.
   ///
   /// In en, this message translates to:
-  /// **'Ready to sign'**
+  /// **'Signing available'**
   String get walletSessionSignerReady;
 
   /// No description provided for @walletSessionSignerMissing.
   ///
   /// In en, this message translates to:
-  /// **'Read-only (no signer)'**
+  /// **'Signing unavailable on this device'**
   String get walletSessionSignerMissing;
 
   /// No description provided for @walletSessionStatusSummary.
   ///
   /// In en, this message translates to:
-  /// **'Account: {accountStatus} · Wallet: {walletStatus} · Signer: {signerStatus}'**
+  /// **'Account: {accountStatus} · Wallet: {walletStatus} · Signing: {signerStatus}'**
   String walletSessionStatusSummary(Object accountStatus, Object walletStatus, Object signerStatus);
 
   /// No description provided for @walletActionSignInRequiredToast.
@@ -3386,13 +3386,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsBackupWalletDialogTitle.
   ///
   /// In en, this message translates to:
-  /// **'Backup wallet'**
+  /// **'Back up recovery phrase'**
   String get settingsBackupWalletDialogTitle;
 
   /// No description provided for @settingsBackupWalletDialogIntro.
   ///
   /// In en, this message translates to:
-  /// **'This will show your recovery phrase.'**
+  /// **'This will reveal your recovery phrase. Anyone who sees it can control this wallet.'**
   String get settingsBackupWalletDialogIntro;
 
   /// No description provided for @settingsSecurityWarningTitle.
@@ -3404,7 +3404,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsSecurityWarningBullets.
   ///
   /// In en, this message translates to:
-  /// **'• Make sure you\'re in a private place\n• Never share your recovery phrase\n• Write it down and store it safely'**
+  /// **'• Make sure you are in a private place\n• Never share your recovery phrase or recovery password\n• Store them separately and safely offline'**
   String get settingsSecurityWarningBullets;
 
   /// No description provided for @settingsConnectOrCreateWalletFirstToast.
@@ -3548,13 +3548,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsImportWalletDialogBody.
   ///
   /// In en, this message translates to:
-  /// **'Only paste a recovery phrase from a trusted source. Avoid public Wi-Fi and screensharing while importing.'**
+  /// **'Only paste a recovery phrase from a trusted source. Avoid public Wi-Fi, shared screens, and anyone looking over your shoulder while importing.'**
   String get settingsImportWalletDialogBody;
 
   /// No description provided for @settingsImportWalletDialogConfirm.
   ///
   /// In en, this message translates to:
-  /// **'We never store your seed phrase. You keep full ownership of your assets.'**
+  /// **'We never store your recovery phrase. The wallet and its recovery stay in your hands.'**
   String get settingsImportWalletDialogConfirm;
 
   /// No description provided for @settingsSetPinDialogTitle.
@@ -3686,7 +3686,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsResetAppDialogBody.
   ///
   /// In en, this message translates to:
-  /// **'This will clear all app data and settings. Your wallet will be disconnected but not deleted.'**
+  /// **'This will clear app data and settings on this device. It disconnects the wallet session here, but it does not delete the wallet itself.'**
   String get settingsResetAppDialogBody;
 
   /// No description provided for @settingsAppResetSuccessToast.
@@ -3704,7 +3704,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsDeleteAccountDialogBody.
   ///
   /// In en, this message translates to:
-  /// **'We will remove your profile and community data from our servers. Your wallet stays yours and will remain functional.'**
+  /// **'We will remove your profile and community data from our servers. Your non-custodial wallet remains yours, and you can still restore it with your recovery phrase.'**
   String get settingsDeleteAccountDialogBody;
 
   /// No description provided for @settingsFinalConfirmationTitle.
@@ -3860,7 +3860,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsTermsDialogBody.
   ///
   /// In en, this message translates to:
-  /// **'By using art.kubus, you agree to these terms:\n\n1. You are responsible for maintaining the security of your wallet.\n2. We do not store your private keys or seed phrases.\n3. All transactions are final and irreversible.\n4. Use the app at your own risk.\n5. We reserve the right to update these terms.\n\nFor the complete terms, visit our website.'**
+  /// **'By using art.kubus, you agree to these terms:\n\n1. You are responsible for protecting your wallet, recovery phrase, and any recovery passwords.\n2. We do not store your private keys or recovery phrase for you.\n3. Wallet-based actions and transactions can be final and irreversible.\n4. Use the app responsibly and keep your recovery details safe.\n5. We may update these terms over time.\n\nFor the complete terms, visit our website.'**
   String get settingsTermsDialogBody;
 
   /// No description provided for @settingsPrivacyPolicyDialogTitle.
@@ -3872,7 +3872,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsPrivacyPolicyDialogBody.
   ///
   /// In en, this message translates to:
-  /// **'Your privacy is important to us:\n\n• We do not collect personal data without consent\n• Your wallet data is stored locally on your device\n• We may collect anonymous usage statistics\n• We do not share your data with third parties\n• You can disable analytics in Privacy settings\n\nFor our complete privacy policy, visit our website.'**
+  /// **'Your privacy matters to us:\n\n• We only collect personal data when it is needed and you have consented\n• Your wallet keys and recovery phrase stay under your control\n• We may collect anonymous usage statistics to improve the app\n• We do not share your data with third parties\n• You can disable analytics in Privacy settings\n\nFor our complete privacy policy, visit our website.'**
   String get settingsPrivacyPolicyDialogBody;
 
   /// No description provided for @settingsSupportDialogTitle.
@@ -4412,7 +4412,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsShowCollectionSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Display your NFT collection publicly'**
+  /// **'Show your digital collectibles publicly on your profile'**
   String get settingsShowCollectionSubtitle;
 
   /// No description provided for @settingsAllowMessagesTitle.
@@ -4460,13 +4460,13 @@ abstract class AppLocalizations {
   /// No description provided for @web3FeatureWeb3Title.
   ///
   /// In en, this message translates to:
-  /// **'Optional wallet features (Web3)'**
+  /// **'Wallet-based participation'**
   String get web3FeatureWeb3Title;
 
   /// No description provided for @web3FeatureMarketplaceTitle.
   ///
   /// In en, this message translates to:
-  /// **'Collectibles marketplace (NFT)'**
+  /// **'Digital collectibles'**
   String get web3FeatureMarketplaceTitle;
 
   /// No description provided for @web3FeatureArtistStudioTitle.
@@ -4484,7 +4484,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3FeatureGovernanceTitle.
   ///
   /// In en, this message translates to:
-  /// **'Community decision-making (DAO)'**
+  /// **'Community governance'**
   String get web3FeatureGovernanceTitle;
 
   /// No description provided for @web3DaoP1Title.
@@ -4496,7 +4496,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3DaoP1Description.
   ///
   /// In en, this message translates to:
-  /// **'Participate in community decision-making for the art.kubus ecosystem. Your voice helps shape the platform.'**
+  /// **'Take part in community decisions that shape art.kubus. This is governance as participation, not speculation.'**
   String get web3DaoP1Description;
 
   /// No description provided for @web3DaoP1Feature1.
@@ -4514,7 +4514,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3DaoP1Feature3.
   ///
   /// In en, this message translates to:
-  /// **'Earn KUB8 points for participation'**
+  /// **'Collect KUB8 points for participation'**
   String get web3DaoP1Feature3;
 
   /// No description provided for @web3DaoP1Feature4.
@@ -4532,7 +4532,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3DaoP2Description.
   ///
   /// In en, this message translates to:
-  /// **'Your voting weight can reflect your Season 0 progress (KUB8 points). No financial value-just participation and recognition.'**
+  /// **'Voting weight can reflect Season 0 participation (KUB8 points). It is about contribution and recognition, not financial value.'**
   String get web3DaoP2Description;
 
   /// No description provided for @web3DaoP2Feature1.
@@ -4568,7 +4568,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3DaoP3Description.
   ///
   /// In en, this message translates to:
-  /// **'Have an idea to improve the platform? Submit proposals for features, policies, or community initiatives.'**
+  /// **'Have an idea for the platform or community? Submit a proposal with clear context, goals, and impact.'**
   String get web3DaoP3Description;
 
   /// No description provided for @web3DaoP3Feature1.
@@ -4604,7 +4604,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3DaoP4Description.
   ///
   /// In en, this message translates to:
-  /// **'You’re all set. Explore active proposals or start a new one when you’re ready.'**
+  /// **'Review active proposals, follow the discussion, and vote when you are ready.'**
   String get web3DaoP4Description;
 
   /// No description provided for @web3DaoP4Feature1.
@@ -4730,7 +4730,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3ArtistStudioP3Feature3.
   ///
   /// In en, this message translates to:
-  /// **'Add discovery rewards (KUB8 points)'**
+  /// **'Add discovery recognition (KUB8 points)'**
   String get web3ArtistStudioP3Feature3;
 
   /// No description provided for @web3ArtistStudioP3Feature4.
@@ -4808,7 +4808,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3ArtistStudioP5Feature4.
   ///
   /// In en, this message translates to:
-  /// **'Start earning KUB8 points'**
+  /// **'Start collecting KUB8 points'**
   String get web3ArtistStudioP5Feature4;
 
   /// No description provided for @web3InstitutionHubP1Title.
@@ -5000,7 +5000,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3MarketplaceP1Description.
   ///
   /// In en, this message translates to:
-  /// **'Discover, buy, and sell digital collectibles (NFT). Connect with creators and collectors.'**
+  /// **'Discover digital works and collectibles from artists and institutions, then collect or offer them with clear provenance.'**
   String get web3MarketplaceP1Description;
 
   /// No description provided for @web3MarketplaceP1Feature1.
@@ -5036,7 +5036,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3MarketplaceP2Description.
   ///
   /// In en, this message translates to:
-  /// **'Explore curated collections and filter by category, rarity, and more.'**
+  /// **'Explore curated collections and filter by category, rarity, and provenance.'**
   String get web3MarketplaceP2Description;
 
   /// No description provided for @web3MarketplaceP2Feature1.
@@ -5072,7 +5072,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3MarketplaceP3Description.
   ///
   /// In en, this message translates to:
-  /// **'Creators can list digital collectibles (NFT) for others to collect. Add details and choose price and availability.'**
+  /// **'Artists can publish digital collectibles when a work or series is meant to live in that format. Add context, price, and availability.'**
   String get web3MarketplaceP3Description;
 
   /// No description provided for @web3MarketplaceP3Feature1.
@@ -5108,7 +5108,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3MarketplaceP4Description.
   ///
   /// In en, this message translates to:
-  /// **'You’re ready. Explore collections, make your first purchase, or list your first item.'**
+  /// **'Explore collections, make a purchase when you are ready, or publish a work for others to collect.'**
   String get web3MarketplaceP4Description;
 
   /// No description provided for @web3MarketplaceP4Feature1.
@@ -5138,49 +5138,49 @@ abstract class AppLocalizations {
   /// No description provided for @web3FeaturesP1Title.
   ///
   /// In en, this message translates to:
-  /// **'Connect a wallet (optional)'**
+  /// **'Your account wallet'**
   String get web3FeaturesP1Title;
 
   /// No description provided for @web3FeaturesP1Description.
   ///
   /// In en, this message translates to:
-  /// **'Connect your wallet to enable optional layers like collectibles (NFT) and proofs of visit (POAP). The core app works without it.'**
+  /// **'art.kubus uses a non-custodial wallet as part of your account foundation. It supports long-term access, ownership, and future participation across artist, institution, and community features.'**
   String get web3FeaturesP1Description;
 
   /// No description provided for @web3FeaturesP1Feature1.
   ///
   /// In en, this message translates to:
-  /// **'Wallet-based sign-in (optional)'**
+  /// **'Long-term account continuity'**
   String get web3FeaturesP1Feature1;
 
   /// No description provided for @web3FeaturesP1Feature2.
   ///
   /// In en, this message translates to:
-  /// **'Collectibles (NFT) and proofs of visit (POAP)'**
+  /// **'Collectibles, visit proofs, and future rights'**
   String get web3FeaturesP1Feature2;
 
   /// No description provided for @web3FeaturesP1Feature3.
   ///
   /// In en, this message translates to:
-  /// **'Keys stay in your wallet'**
+  /// **'Keys stay with you'**
   String get web3FeaturesP1Feature3;
 
   /// No description provided for @web3FeaturesP1Feature4.
   ///
   /// In en, this message translates to:
-  /// **'Disconnect anytime'**
+  /// **'Access you can restore and move'**
   String get web3FeaturesP1Feature4;
 
   /// No description provided for @web3FeaturesP2Title.
   ///
   /// In en, this message translates to:
-  /// **'Collectibles marketplace (NFT)'**
+  /// **'Collectibles marketplace'**
   String get web3FeaturesP2Title;
 
   /// No description provided for @web3FeaturesP2Description.
   ///
   /// In en, this message translates to:
-  /// **'Browse, buy, and sell digital collectibles (NFT) in an optional marketplace.'**
+  /// **'Browse, collect, and offer digital works in a marketplace connected to artists, artworks, and provenance.'**
   String get web3FeaturesP2Description;
 
   /// No description provided for @web3FeaturesP2Feature1.
@@ -5222,7 +5222,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3FeaturesP3Description.
   ///
   /// In en, this message translates to:
-  /// **'Create and manage your digital works. Optionally publish collectibles (NFT) and share them with the community.'**
+  /// **'Create and manage digital works, build your portfolio, and publish collectibles when a project calls for them.'**
   String get web3FeaturesP3Description;
 
   /// No description provided for @web3FeaturesP3Feature1.
@@ -5264,7 +5264,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3FeaturesP4Description.
   ///
   /// In en, this message translates to:
-  /// **'Vote on proposals and help guide the platform together.'**
+  /// **'Vote on proposals and help shape platform priorities together.'**
   String get web3FeaturesP4Description;
 
   /// No description provided for @web3FeaturesP4Feature1.
@@ -5282,7 +5282,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3FeaturesP4Feature3.
   ///
   /// In en, this message translates to:
-  /// **'Earn KUB8 points for participation'**
+  /// **'Collect KUB8 points for participation'**
   String get web3FeaturesP4Feature3;
 
   /// No description provided for @web3FeaturesP4Feature4.
@@ -5306,7 +5306,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3FeaturesP5Description.
   ///
   /// In en, this message translates to:
-  /// **'Partner with galleries and cultural institutions, and host events and exhibitions.'**
+  /// **'Work with galleries and cultural institutions on events, exhibitions, and longer-term programs.'**
   String get web3FeaturesP5Description;
 
   /// No description provided for @web3FeaturesP5Feature1.
@@ -5348,13 +5348,13 @@ abstract class AppLocalizations {
   /// No description provided for @web3FeaturesP6Description.
   ///
   /// In en, this message translates to:
-  /// **'KUB8 points are offchain season points: progress, reputation, and unlocks. Not a currency.'**
+  /// **'KUB8 points track season participation, reputation, and unlocks. They are not money or a tradable asset.'**
   String get web3FeaturesP6Description;
 
   /// No description provided for @web3FeaturesP6Feature1.
   ///
   /// In en, this message translates to:
-  /// **'Earn points for participation and discoveries'**
+  /// **'Collect points for participation and discoveries'**
   String get web3FeaturesP6Feature1;
 
   /// No description provided for @web3FeaturesP6Feature2.
@@ -5372,7 +5372,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3FeaturesP6Feature4.
   ///
   /// In en, this message translates to:
-  /// **'Rewards are access and recognition'**
+  /// **'Recognition comes through access and visibility'**
   String get web3FeaturesP6Feature4;
 
   /// No description provided for @web3FeaturesP6Feature5.
@@ -7617,7 +7617,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Failed to create collection. Please try again.'**
-  String collectionCreatorCreateFailedWithError();
+  String get collectionCreatorCreateFailedWithError;
 
   /// No description provided for @collectionDetailLoadFailedMessage.
   ///
@@ -8306,7 +8306,7 @@ abstract class AppLocalizations {
   /// No description provided for @connectWalletSecureAccessTitle.
   ///
   /// In en, this message translates to:
-  /// **'Secure access'**
+  /// **'Secure your wallet'**
   String get connectWalletSecureAccessTitle;
 
   /// No description provided for @connectWalletChooseTitle.
@@ -8318,7 +8318,7 @@ abstract class AppLocalizations {
   /// No description provided for @connectWalletChooseDescription.
   ///
   /// In en, this message translates to:
-  /// **'Choose how you want to connect. You can create a new wallet, import an existing one, or use WalletConnect.'**
+  /// **'Choose how to set up your account wallet. You can create a new one on this device, import an existing one, or use WalletConnect.'**
   String get connectWalletChooseDescription;
 
   /// No description provided for @connectWalletOptionWalletConnectTitle.
@@ -8384,7 +8384,7 @@ abstract class AppLocalizations {
   /// No description provided for @connectWalletImportDescription.
   ///
   /// In en, this message translates to:
-  /// **'Enter your 12-word recovery phrase to import a wallet stored on another device.'**
+  /// **'Enter the 12-word recovery phrase to restore a wallet from another device and reconnect your art.kubus account.'**
   String get connectWalletImportDescription;
 
   /// No description provided for @connectWalletImportHint.
@@ -8396,7 +8396,7 @@ abstract class AppLocalizations {
   /// No description provided for @connectWalletImportWarning.
   ///
   /// In en, this message translates to:
-  /// **'Never share your recovery phrase. Anyone with it can control your wallet.'**
+  /// **'Never share your recovery phrase. Anyone with it can take control of your wallet and the access tied to it.'**
   String get connectWalletImportWarning;
 
   /// No description provided for @connectWalletImportButton.
@@ -8438,7 +8438,7 @@ abstract class AppLocalizations {
   /// No description provided for @connectWalletCreateDescription.
   ///
   /// In en, this message translates to:
-  /// **'We’ll generate a new wallet on this device. Make sure to back up your recovery phrase securely.'**
+  /// **'We will create a new non-custodial wallet on this device for your art.kubus account. Back up the recovery phrase right away to protect long-term access.'**
   String get connectWalletCreateDescription;
 
   /// No description provided for @connectWalletCreateInfoTitle.
@@ -8450,13 +8450,13 @@ abstract class AppLocalizations {
   /// No description provided for @connectWalletCreateInfoBody.
   ///
   /// In en, this message translates to:
-  /// **'Write down your recovery phrase and store it somewhere safe. We can’t recover it for you.'**
+  /// **'Write down the recovery phrase and store it safely offline. It is essential for restoring this wallet, and we cannot recover it for you.'**
   String get connectWalletCreateInfoBody;
 
   /// No description provided for @connectWalletCreateWarning.
   ///
   /// In en, this message translates to:
-  /// **'By continuing, you confirm you understand the risks.'**
+  /// **'By continuing, you confirm that you understand how important the recovery phrase is.'**
   String get connectWalletCreateWarning;
 
   /// No description provided for @connectWalletCreateGenerateButton.
@@ -8534,7 +8534,7 @@ abstract class AppLocalizations {
   /// No description provided for @connectWalletConnectedDescription.
   ///
   /// In en, this message translates to:
-  /// **'Your wallet is now connected to art.kubus. You can explore AR art, trade NFTs, and participate in the ecosystem.'**
+  /// **'Your account wallet is now connected to art.kubus. It supports long-term access, digital ownership, and upcoming features for artists, institutions, and community participation.'**
   String get connectWalletConnectedDescription;
 
   /// No description provided for @connectWalletConnectedStartExploringButton.
@@ -8552,61 +8552,61 @@ abstract class AppLocalizations {
   /// No description provided for @connectWalletWeb3GuideTitle.
   ///
   /// In en, this message translates to:
-  /// **'What is a Web3 wallet?'**
+  /// **'What’s a wallet?'**
   String get connectWalletWeb3GuideTitle;
 
   /// No description provided for @connectWalletWeb3GuideDescription.
   ///
   /// In en, this message translates to:
-  /// **'A Web3 wallet is your gateway to the decentralized internet:'**
+  /// **'Your account wallet keeps access and ownership in your hands. It also enables features that need proof of ownership, without giving your keys to us:'**
   String get connectWalletWeb3GuideDescription;
 
   /// No description provided for @connectWalletWeb3GuideFeatureSecureTitle.
   ///
   /// In en, this message translates to:
-  /// **'Secure'**
+  /// **'You stay in control'**
   String get connectWalletWeb3GuideFeatureSecureTitle;
 
   /// No description provided for @connectWalletWeb3GuideFeatureSecureDescription.
   ///
   /// In en, this message translates to:
-  /// **'Your keys, your crypto'**
+  /// **'You control the keys—not us'**
   String get connectWalletWeb3GuideFeatureSecureDescription;
 
   /// No description provided for @connectWalletWeb3GuideFeatureNftsTitle.
   ///
   /// In en, this message translates to:
-  /// **'NFTs'**
+  /// **'Collectibles'**
   String get connectWalletWeb3GuideFeatureNftsTitle;
 
   /// No description provided for @connectWalletWeb3GuideFeatureNftsDescription.
   ///
   /// In en, this message translates to:
-  /// **'Store and trade digital art'**
+  /// **'Collect and keep digital works connected to artists and places'**
   String get connectWalletWeb3GuideFeatureNftsDescription;
 
   /// No description provided for @connectWalletWeb3GuideFeatureGovernanceTitle.
   ///
   /// In en, this message translates to:
-  /// **'Governance'**
+  /// **'Community'**
   String get connectWalletWeb3GuideFeatureGovernanceTitle;
 
   /// No description provided for @connectWalletWeb3GuideFeatureGovernanceDescription.
   ///
   /// In en, this message translates to:
-  /// **'Vote on platform decisions'**
+  /// **'Take part in community decisions and future platform rights'**
   String get connectWalletWeb3GuideFeatureGovernanceDescription;
 
   /// No description provided for @connectWalletWeb3GuideFeatureDefiTitle.
   ///
   /// In en, this message translates to:
-  /// **'DeFi'**
+  /// **'Portable access'**
   String get connectWalletWeb3GuideFeatureDefiTitle;
 
   /// No description provided for @connectWalletWeb3GuideFeatureDefiDescription.
   ///
   /// In en, this message translates to:
-  /// **'Access decentralized finance'**
+  /// **'Use the same wallet across future art.kubus and compatible ecosystem features'**
   String get connectWalletWeb3GuideFeatureDefiDescription;
 
   /// No description provided for @connectWalletWeb3GuideGotItButton.
@@ -8780,7 +8780,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletHomeNoWalletDescription.
   ///
   /// In en, this message translates to:
-  /// **'Connect a wallet to get started.'**
+  /// **'Connect or restore your account wallet to get started.'**
   String get walletHomeNoWalletDescription;
 
   /// No description provided for @walletHomeAlreadyConnectedToast.
@@ -9974,7 +9974,7 @@ abstract class AppLocalizations {
   /// No description provided for @artistStudioDaoCardSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Submit your practice for DAO review. Future releases will route approvals directly through governance.'**
+  /// **'Submit your practice for community review through the DAO. This is part of how art.kubus opens artist tools and future participation.'**
   String get artistStudioDaoCardSubtitle;
 
   /// No description provided for @artistStudioDaoStatusApproved.
@@ -10010,13 +10010,13 @@ abstract class AppLocalizations {
   /// No description provided for @artistStudioReviewPendingInfo.
   ///
   /// In en, this message translates to:
-  /// **'Your submission is in the DAO review queue. We\'ll notify you after a decision.'**
+  /// **'Your submission is in the DAO review queue. We\'ll let you know when the review is complete.'**
   String get artistStudioReviewPendingInfo;
 
   /// No description provided for @artistStudioReviewApprovedInfo.
   ///
   /// In en, this message translates to:
-  /// **'Congratulations! You\'ve been cleared by DAO reviewers.'**
+  /// **'Your practice has been approved through DAO review. Studio tools are ready.'**
   String get artistStudioReviewApprovedInfo;
 
   /// No description provided for @artistStudioReviewRejectedInfo.
@@ -10094,7 +10094,7 @@ abstract class AppLocalizations {
   /// No description provided for @artistStudioSeparateWalletsTip.
   ///
   /// In en, this message translates to:
-  /// **'Tip: Use separate wallets for artist and institution roles to avoid DAO review conflicts.'**
+  /// **'Use separate wallets for artist and institution roles if you want to keep access and review paths clearly separated.'**
   String get artistStudioSeparateWalletsTip;
 
   /// No description provided for @artistStudioLockedTitle.
@@ -10106,7 +10106,7 @@ abstract class AppLocalizations {
   /// No description provided for @artistStudioLockedDescription.
   ///
   /// In en, this message translates to:
-  /// **'Apply for DAO review to unlock gallery, creation tools, and analytics.'**
+  /// **'Apply for DAO review to unlock the studio tools used for publishing, showcasing, and tracking your work.'**
   String get artistStudioLockedDescription;
 
   /// No description provided for @artistStudioSettingsTitle.
@@ -10256,7 +10256,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopArtistStudioQuickActionCreateArtworkSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Upload and mint new art'**
+  /// **'Upload and publish new work'**
   String get desktopArtistStudioQuickActionCreateArtworkSubtitle;
 
   /// No description provided for @desktopArtistStudioQuickActionMyGalleryTitle.
@@ -10424,19 +10424,19 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceConnectWalletDescription.
   ///
   /// In en, this message translates to:
-  /// **'Connect a Solana wallet to view your NFTs.'**
+  /// **'Connect a Solana wallet to view your collectibles (NFT).'**
   String get marketplaceConnectWalletDescription;
 
   /// No description provided for @marketplaceEmptyCollectionTitle.
   ///
   /// In en, this message translates to:
-  /// **'No NFTs in your collection'**
+  /// **'No collectibles yet'**
   String get marketplaceEmptyCollectionTitle;
 
   /// No description provided for @marketplaceEmptyCollectionDescription.
   ///
   /// In en, this message translates to:
-  /// **'Mint NFTs from AR artworks and collect them here.'**
+  /// **'Create collectibles (NFT) from AR artworks and keep them here.'**
   String get marketplaceEmptyCollectionDescription;
 
   /// No description provided for @marketplaceExploreArArtButton.
@@ -10454,7 +10454,7 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceListForSaleSuccessToast.
   ///
   /// In en, this message translates to:
-  /// **'NFT listed for sale successfully!'**
+  /// **'Listed for sale.'**
   String get marketplaceListForSaleSuccessToast;
 
   /// No description provided for @marketplaceListForSaleFailedToast.
@@ -10490,19 +10490,19 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceMintConnectWalletDescription.
   ///
   /// In en, this message translates to:
-  /// **'Connect a wallet to mint NFTs from AR artworks.'**
+  /// **'Connect a wallet to create collectibles (NFT) from AR artworks.'**
   String get marketplaceMintConnectWalletDescription;
 
   /// No description provided for @marketplaceMintSuccessTitle.
   ///
   /// In en, this message translates to:
-  /// **'Mint successful!'**
+  /// **'Collectible created'**
   String get marketplaceMintSuccessTitle;
 
   /// No description provided for @marketplaceMintSuccessDescription.
   ///
   /// In en, this message translates to:
-  /// **'Your NFT has been successfully minted! You can view it in your wallet.'**
+  /// **'Your collectible (NFT) is ready. You can view it in your wallet.'**
   String get marketplaceMintSuccessDescription;
 
   /// No description provided for @marketplaceViewInWalletButton.
@@ -10514,13 +10514,13 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceMintFailedTitle.
   ///
   /// In en, this message translates to:
-  /// **'Mint failed'**
+  /// **'Creation failed'**
   String get marketplaceMintFailedTitle;
 
   /// No description provided for @marketplaceMintFailedDescription.
   ///
   /// In en, this message translates to:
-  /// **'Unable to mint NFT right now. Please try again.'**
+  /// **'Unable to create a collectible (NFT) right now. Please try again.'**
   String get marketplaceMintFailedDescription;
 
   /// No description provided for @daoModerationApproveLabel.
@@ -11792,13 +11792,13 @@ abstract class AppLocalizations {
   /// No description provided for @communityFabArtDrop.
   ///
   /// In en, this message translates to:
-  /// **'Art drop'**
+  /// **'Share artwork'**
   String get communityFabArtDrop;
 
   /// No description provided for @communityFabPostReview.
   ///
   /// In en, this message translates to:
-  /// **'Post review'**
+  /// **'Write a review'**
   String get communityFabPostReview;
 
   /// No description provided for @communityCreateGroupTitle.
@@ -11978,7 +11978,7 @@ abstract class AppLocalizations {
   /// No description provided for @communityComposerTextHint.
   ///
   /// In en, this message translates to:
-  /// **'Share what you’re building, discovering, or activating…'**
+  /// **'Share what you’re making, discovering, or working on…'**
   String get communityComposerTextHint;
 
   /// No description provided for @communityComposerTargetGroupLabel.
@@ -12080,7 +12080,7 @@ abstract class AppLocalizations {
   /// No description provided for @communityComposerCategoryArtDropLabel.
   ///
   /// In en, this message translates to:
-  /// **'Art drop'**
+  /// **'Share artwork'**
   String get communityComposerCategoryArtDropLabel;
 
   /// No description provided for @communityComposerCategoryArtDropDescription.
@@ -12176,13 +12176,13 @@ abstract class AppLocalizations {
   /// No description provided for @communityArtFeedLocationNeededDescription.
   ///
   /// In en, this message translates to:
-  /// **'Enable location to see activations near you.'**
+  /// **'Enable location to see art activations near you.'**
   String get communityArtFeedLocationNeededDescription;
 
   /// No description provided for @communityArtFeedNoNearbyActivationsTitle.
   ///
   /// In en, this message translates to:
-  /// **'No nearby activations'**
+  /// **'No nearby art activations'**
   String get communityArtFeedNoNearbyActivationsTitle;
 
   /// No description provided for @communityArtFeedNoNearbyActivationsDescription.
@@ -12206,7 +12206,7 @@ abstract class AppLocalizations {
   /// No description provided for @communityArtFeedAboutBody.
   ///
   /// In en, this message translates to:
-  /// **'The art feed shows location-based activations shared by the community near you.'**
+  /// **'The art feed shows location-based art activations shared by the community near you.'**
   String get communityArtFeedAboutBody;
 
   /// No description provided for @communityArtFeedAboutButton.
@@ -12218,7 +12218,7 @@ abstract class AppLocalizations {
   /// No description provided for @communityArtFeedShareText.
   ///
   /// In en, this message translates to:
-  /// **'Check out {authorName}\'s activation on art.kubus.'**
+  /// **'Check out {authorName}\'s art activation on art.kubus.'**
   String communityArtFeedShareText(Object authorName);
 
   /// No description provided for @communityNameThisPlaceTitle.
@@ -12362,7 +12362,7 @@ abstract class AppLocalizations {
   /// No description provided for @commonSomethingWentWrong.
   ///
   /// In en, this message translates to:
-  /// **'Something went wrong.'**
+  /// **'Something went wrong. Try again.'**
   String get commonSomethingWentWrong;
 
   /// No description provided for @commonGreetingMorning.
@@ -12524,7 +12524,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeExploreWeb3Button.
   ///
   /// In en, this message translates to:
-  /// **'Explore Web3'**
+  /// **'Optional wallet features'**
   String get homeExploreWeb3Button;
 
   /// No description provided for @homeQuickActionsTitle.
@@ -12818,13 +12818,13 @@ abstract class AppLocalizations {
   /// No description provided for @homeMockNotificationRewardsTitle.
   ///
   /// In en, this message translates to:
-  /// **'Rewards available'**
+  /// **'New recognition'**
   String get homeMockNotificationRewardsTitle;
 
   /// No description provided for @homeMockNotificationRewardsBody.
   ///
   /// In en, this message translates to:
-  /// **'You have new rewards ready to claim.'**
+  /// **'You have new recognition to review.'**
   String get homeMockNotificationRewardsBody;
 
   /// No description provided for @commonExplore.
@@ -12860,7 +12860,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopHomeDiscoverArtDescription.
   ///
   /// In en, this message translates to:
-  /// **'Explore immersive augmented reality artworks, connect with creators, and earn KUB8 tokens for discovering art.'**
+  /// **'Explore immersive augmented reality artworks, connect with creators, and collect KUB8 points as you discover art.'**
   String get desktopHomeDiscoverArtDescription;
 
   /// No description provided for @desktopHomeYourActivityTitle.
@@ -12890,13 +12890,13 @@ abstract class AppLocalizations {
   /// No description provided for @desktopHomeStatNftsCollected.
   ///
   /// In en, this message translates to:
-  /// **'NFTs Collected'**
+  /// **'Collectibles (NFT)'**
   String get desktopHomeStatNftsCollected;
 
   /// No description provided for @desktopHomeStatKub8Earned.
   ///
   /// In en, this message translates to:
-  /// **'KUB8 Earned'**
+  /// **'KUB8 points'**
   String get desktopHomeStatKub8Earned;
 
   /// No description provided for @desktopHomeQuickActionsSubtitle.
@@ -12932,13 +12932,13 @@ abstract class AppLocalizations {
   /// No description provided for @desktopHomeWeb3HubTitle.
   ///
   /// In en, this message translates to:
-  /// **'Web3 Hub'**
+  /// **'Wallet features'**
   String get desktopHomeWeb3HubTitle;
 
   /// No description provided for @desktopHomeWeb3HubSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Access decentralized features'**
+  /// **'Access optional features'**
   String get desktopHomeWeb3HubSubtitle;
 
   /// No description provided for @desktopHomeTrendingArtTitle.
@@ -13034,7 +13034,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeWeb3SectionTitle.
   ///
   /// In en, this message translates to:
-  /// **'Web3'**
+  /// **'Wallet'**
   String get homeWeb3SectionTitle;
 
   /// No description provided for @homeAccountRequiredLabel.
@@ -13064,7 +13064,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeWeb3ArtistSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Mint & manage'**
+  /// **'Create & manage'**
   String get homeWeb3ArtistSubtitle;
 
   /// No description provided for @homeWeb3InstitutionTitle.
@@ -13082,13 +13082,13 @@ abstract class AppLocalizations {
   /// No description provided for @homeWeb3MarketplaceTitle.
   ///
   /// In en, this message translates to:
-  /// **'Marketplace'**
+  /// **'Collectibles'**
   String get homeWeb3MarketplaceTitle;
 
   /// No description provided for @homeWeb3MarketplaceSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Discover & trade'**
+  /// **'Discover & collect'**
   String get homeWeb3MarketplaceSubtitle;
 
   /// No description provided for @homeMockNotificationFriendRequestTitle.
@@ -13196,7 +13196,7 @@ abstract class AppLocalizations {
   /// No description provided for @season0PointsTooltip.
   ///
   /// In en, this message translates to:
-  /// **'Off-chain progress tokens'**
+  /// **'Off-chain progress points'**
   String get season0PointsTooltip;
 
   /// No description provided for @season0OnChainNote.
@@ -13310,7 +13310,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletBackupProtectionRecoveryPhraseBody.
   ///
   /// In en, this message translates to:
-  /// **'Store the recovery phrase offline to avoid losing access to Web3 features, collectibles, and points tied to this wallet.'**
+  /// **'Store the recovery phrase offline so you do not lose access to this wallet, your account continuity, and the collectibles, points, and future rights tied to it.'**
   String get walletBackupProtectionRecoveryPhraseBody;
 
   /// No description provided for @walletBackupProtectionEncryptedHeadline.
@@ -13346,19 +13346,19 @@ abstract class AppLocalizations {
   /// No description provided for @walletBackupProtectionReadOnlyBody.
   ///
   /// In en, this message translates to:
-  /// **'Restore the wallet signer with your encrypted server backup or recovery phrase before managing transfers and other wallet-gated features on this device.'**
+  /// **'Restore signing access with your encrypted backup or recovery phrase before using transfers and other wallet-protected actions on this device.'**
   String get walletBackupProtectionReadOnlyBody;
 
   /// No description provided for @walletBackupBannerTitle.
   ///
   /// In en, this message translates to:
-  /// **'Back up your wallet recovery phrase'**
+  /// **'Back up your recovery phrase'**
   String get walletBackupBannerTitle;
 
   /// No description provided for @walletBackupBannerSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Store it safely offline. It is required to recover this wallet.'**
+  /// **'Store it safely offline. You need it to restore this wallet and keep long-term access.'**
   String get walletBackupBannerSubtitle;
 
   /// No description provided for @walletBackupBannerAction.
@@ -14066,7 +14066,7 @@ abstract class AppLocalizations {
   /// No description provided for @daoHubHeaderSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Decentralized governance for the AR art platform'**
+  /// **'Community governance for artists, institutions, and cultural participation'**
   String get daoHubHeaderSubtitle;
 
   /// No description provided for @daoHubInfoDialogTitle.
@@ -14078,7 +14078,7 @@ abstract class AppLocalizations {
   /// No description provided for @daoHubInfoDialogBody.
   ///
   /// In en, this message translates to:
-  /// **'The DAO lets the community propose and vote on platform decisions. Voting power is based on your KUB8 balance. You can also delegate your voting power to trusted delegates.'**
+  /// **'The DAO gives the community a way to propose and vote on platform decisions. Voting power follows your KUB8 participation, and you can delegate to someone you trust when needed.'**
   String get daoHubInfoDialogBody;
 
   /// No description provided for @daoHubTabActiveProposals.
@@ -14613,7 +14613,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Something went wrong. Please try again.'**
-  String profileEditErrorToast();
+  String get profileEditErrorToast;
 
   /// No description provided for @profileEditNoWalletUploadAvatarToast.
   ///
@@ -14649,7 +14649,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Avatar upload failed. Please try again.'**
-  String profileEditAvatarUploadFailedToast();
+  String get profileEditAvatarUploadFailedToast;
 
   /// No description provided for @profileEditCoverUploadedSavedToast.
   ///
@@ -14667,13 +14667,13 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Cover image upload failed. Please try again.'**
-  String profileEditCoverUploadFailedToast();
+  String get profileEditCoverUploadFailedToast;
 
   /// No description provided for @profileEditPickImageFailedToast.
   ///
   /// In en, this message translates to:
   /// **'Could not select the image. Please try again.'**
-  String profileEditPickImageFailedToast();
+  String get profileEditPickImageFailedToast;
 
   /// No description provided for @profileEditUploadDebugInfoTitle.
   ///
@@ -15998,7 +15998,7 @@ abstract class AppLocalizations {
   /// No description provided for @profileAboutDescription.
   ///
   /// In en, this message translates to:
-  /// **'AR art platform connecting artists and institutions through blockchain technology.'**
+  /// **'AR art platform for discovering public art and connecting artists, institutions, and communities.'**
   String get profileAboutDescription;
 
   /// No description provided for @profileAboutCopyright.
@@ -16844,13 +16844,13 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingWelcomeCreateTitle.
   ///
   /// In en, this message translates to:
-  /// **'Create & collect'**
+  /// **'Create and share'**
   String get onboardingWelcomeCreateTitle;
 
   /// No description provided for @onboardingWelcomeCreateBody.
   ///
   /// In en, this message translates to:
-  /// **'Mint your art, build your portfolio, and collect pieces from artists worldwide.'**
+  /// **'Build your portfolio, publish artworks, and take part in a growing cultural community.'**
   String get onboardingWelcomeCreateBody;
 
   /// No description provided for @onboardingWelcomeJoinTitle.

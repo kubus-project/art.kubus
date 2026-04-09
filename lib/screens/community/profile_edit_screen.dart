@@ -285,7 +285,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
               content:
-                  Text(l10n.profileEditAvatarUploadFailedToast()),
+                  Text(l10n.profileEditAvatarUploadFailedToast),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
@@ -331,7 +331,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
-          content: Text(l10n.profileEditPickImageFailedToast()),
+          content: Text(l10n.profileEditPickImageFailedToast),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -436,7 +436,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
               content:
-                  Text(l10n.profileEditCoverUploadFailedToast()),
+                  Text(l10n.profileEditCoverUploadFailedToast),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
@@ -446,7 +446,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
-          content: Text(l10n.profileEditPickImageFailedToast()),
+          content: Text(l10n.profileEditPickImageFailedToast),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -546,7 +546,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
-          content: Text(l10n.profileEditErrorToast()),
+          content: Text(l10n.profileEditErrorToast),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
