@@ -445,7 +445,12 @@ class KubusSearchResultsOverlay extends StatelessWidget {
                                             .withValues(alpha: 0.6),
                                       ),
                                     ),
-                                    onTap: () => onResultTap(result),
+                                    onTap: () {
+                                      (onDismiss ?? controller.dismissOverlay)();
+                                      FocusManager.instance.primaryFocus
+                                          ?.unfocus();
+                                      Future.microtask(() => onResultTap(result));
+                                    },
                                   ),
                                 );
                               },

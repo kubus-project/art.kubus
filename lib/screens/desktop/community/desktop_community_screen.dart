@@ -1778,8 +1778,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   }
 
   Future<void> _handleSearchResultTap(KubusSearchResult result) async {
-    _communitySearchController.setQuery(context, result.label);
-    _communitySearchController.dismissOverlay();
+    _communitySearchController.commitSelection(result.label);
     FocusScope.of(context).unfocus();
     await CommunitySearchActions.handle(
       context,

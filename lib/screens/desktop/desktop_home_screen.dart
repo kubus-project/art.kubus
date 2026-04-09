@@ -2778,8 +2778,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   }
 
   Future<void> _handleSearchResultTap(KubusSearchResult result) async {
-    _searchController.setQuery(context, result.label);
-    _searchController.dismissOverlay();
+    _searchController.commitSelection(result.label);
     FocusScope.of(context).unfocus();
 
     if (result.position != null) {

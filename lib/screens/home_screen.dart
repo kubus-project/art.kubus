@@ -911,8 +911,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Future<void> _handleHomeSearchResultTap(
     KubusSearchResult result,
   ) async {
-    _homeSearchController.setQuery(context, result.label);
-    _homeSearchController.dismissOverlay();
+    _homeSearchController.commitSelection(result.label);
     FocusScope.of(context).unfocus();
 
     final markerId = result.markerId?.trim() ?? '';

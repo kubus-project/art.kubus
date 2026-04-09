@@ -4496,8 +4496,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Future<void> _handleSearchResultTap(KubusSearchResult result) async {
-    _mapSearchController.setQuery(context, result.label);
-    _mapSearchController.dismissOverlay();
+    _mapSearchController.commitSelection(result.label);
     FocusScope.of(context).unfocus();
 
     if (result.position != null) {

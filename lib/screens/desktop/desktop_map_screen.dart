@@ -3447,9 +3447,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Future<void> _handleSearchResultTap(KubusSearchResult result) async {
-    _mapSearchController.setQuery(context, result.label);
-    // Sync controller state without leaving a pending debounced fetch.
-    _mapSearchController.dismissOverlay();
+    _mapSearchController.commitSelection(result.label);
     FocusScope.of(context).unfocus();
 
     if (result.position != null) {

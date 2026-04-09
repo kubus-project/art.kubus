@@ -189,6 +189,26 @@ class KubusSearchController extends ChangeNotifier {
     onQueryChanged(context, value);
   }
 
+  void commitSelection(String value) {
+    _debounce?.cancel();
+    _debounce = null;
+    _requestToken += 1;
+    textController.text = value;
+    textController.selection = TextSelection.collapsed(offset: value.length);
+
+    if (_focusedFieldLinks.isEmpty) {
+      _activeFieldLink = null;
+    }
+
+    _setState(
+      _state.copyWith(
+        query: value,
+        isFetching: false,
+        isOverlayVisible: false,
+      ),
+    );
+  }
+
   Future<void> _fetchResults(
     SearchContextSnapshot snapshot,
     String trimmedQuery, {
