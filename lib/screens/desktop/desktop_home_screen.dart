@@ -32,8 +32,8 @@ import '../../widgets/inline_loading.dart';
 import '../../widgets/topbar_icon.dart';
 import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/detail/detail_shell_components.dart';
-import '../../widgets/detail/shared_section_widgets.dart';
 import '../../widgets/glass_components.dart';
+import '../../widgets/home/home_promotion_rail.dart';
 import '../../widgets/profile_identity_summary.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/activity_navigation.dart';
@@ -1753,80 +1753,31 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
               : Colors.amber,
         ),
         const SizedBox(height: DetailSpacing.xl),
-        SizedBox(
-          height: 220,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: items.length,
-            itemBuilder: (context, index) =>
-                _buildHomeRailCard(items[index], index, items.length),
+        HomePromotionRailList(
+          items: items,
+          animation: _animationController,
+          animationOffset: 3,
+          height: 236,
+          cardWidth: 240,
+          cardSpacing: DetailSpacing.lg,
+          imageHeight: 140,
+          profileAvatarRadius: 34,
+          enableHover: true,
+          placeholderIconBuilder: _iconForHomeRail,
+          profileFallbackLabel: AppLocalizations.of(context)!
+              .desktopHomeCreatorFallbackName,
+          subtitleBuilder: (context, item) => _buildHomeRailCardSubtitle(item),
+          onItemTap: (item) {
+            if (_hasHomeRailDestination(item)) {
+              unawaited(_openHomeRailItem(item));
+            }
+          },
+          titleStyle: KubusTextStyles.detailCardTitle,
+          subtitleStyle: KubusTextStyles.navMetaLabel.copyWith(
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.88),
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildHomeRailCard(HomeRailItem item, int index, int total) {
-    if (item.entityType == PromotionEntityType.profile) {
-      return _buildProfileHomeRailCard(item, index, total);
-    }
-    final subtitle = _buildHomeRailCardSubtitle(item);
-    final canOpen = _hasHomeRailDestination(item);
-    return SharedShowcaseCard(
-      imageUrl: item.imageUrl,
-      title: item.title,
-      subtitle: '',
-      subtitleWidget: subtitle,
-      onTap: canOpen ? () => _openHomeRailItem(item) : null,
-      width: 240,
-      imageHeight: 140,
-      placeholderIcon: _iconForHomeRail(item.entityType),
-      badge: item.promotion.isPromoted
-          ? const Icon(Icons.star, color: Colors.amber, size: 18)
-          : null,
-      titleStyle: KubusTextStyles.detailCardTitle,
-      subtitleStyle: KubusTextStyles.navMetaLabel.copyWith(
-        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.64),
-      ),
-    );
-  }
-
-  Widget _buildProfileHomeRailCard(HomeRailItem item, int index, int total) {
-    final l10n = AppLocalizations.of(context)!;
-    final identity = ProfileIdentityData.fromHomeRailItem(
-      item,
-      fallbackLabel: l10n.desktopHomeCreatorFallbackName,
-    );
-    final scheme = Theme.of(context).colorScheme;
-    final canOpen = _hasHomeRailDestination(item);
-    return DesktopCard(
-      width: 240,
-      margin: EdgeInsets.only(right: index < total - 1 ? DetailSpacing.lg : 0),
-      padding: const EdgeInsets.all(DetailSpacing.lg),
-      onTap: canOpen ? () => _openHomeRailItem(item) : null,
-      child: Stack(
-        children: [
-          Align(
-            alignment: Alignment.center,
-            child: ProfileIdentitySummary(
-              identity: identity,
-              layout: ProfileIdentityLayout.stacked,
-              avatarRadius: 34,
-              allowFabricatedFallback: true,
-              titleStyle: KubusTextStyles.detailCardTitle,
-              subtitleStyle: KubusTextStyles.navMetaLabel.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.62),
-              ),
-            ),
-          ),
-          if (item.promotion.isPromoted)
-            const Positioned(
-              top: 0,
-              left: 0,
-              child: Icon(Icons.star, color: Colors.amber, size: 18),
-            ),
-        ],
-      ),
     );
   }
 

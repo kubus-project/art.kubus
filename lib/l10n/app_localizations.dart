@@ -14468,13 +14468,13 @@ abstract class AppLocalizations {
   /// No description provided for @profileEditSocialWebsiteHint.
   ///
   /// In en, this message translates to:
-  /// **'https://...'**
+  /// **'example.com or https://example.com'**
   String get profileEditSocialWebsiteHint;
 
   /// No description provided for @profileEditSocialUrlInvalidError.
   ///
   /// In en, this message translates to:
-  /// **'URL must start with http:// or https://'**
+  /// **'Enter a valid website URL'**
   String get profileEditSocialUrlInvalidError;
 
   /// No description provided for @profileEditArtistInformationTitle.

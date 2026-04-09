@@ -15,6 +15,7 @@ import '../../models/user.dart';
 import '../../models/dao.dart';
 import '../../services/event_bus.dart';
 import '../../providers/themeprovider.dart';
+import '../../utils/profile_edit_form_utils.dart';
 import '../../widgets/inline_loading.dart';
 import '../../utils/media_url_resolver.dart';
 import 'package:art_kubus/widgets/app_mode_unavailable_state.dart';
@@ -284,8 +285,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           // Show snackbar
           ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
-              content:
-                  Text(l10n.profileEditAvatarUploadFailedToast),
+              content: Text(l10n.profileEditAvatarUploadFailedToast),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
@@ -435,8 +435,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
-              content:
-                  Text(l10n.profileEditCoverUploadFailedToast),
+              content: Text(l10n.profileEditCoverUploadFailedToast),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
@@ -488,7 +487,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         social: {
           'twitter': _twitterController.text.trim(),
           'instagram': _instagramController.text.trim(),
-          'website': _websiteController.text.trim(),
+          'website': ProfileEditFormUtils.normalizeWebsiteForSave(
+            _websiteController.text,
+          ),
         },
         fieldOfWork: _specialtyController.text
             .split(',')
@@ -928,13 +929,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                     .primaryContainer,
                               ),
                               validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return l10n.profileEditUsernameRequiredError;
-                                }
-                                if (value.trim().length < 3) {
-                                  return l10n.profileEditUsernameMinLengthError;
-                                }
-                                return null;
+                                return ProfileEditFormUtils.validateUsername(
+                                  l10n,
+                                  value,
+                                );
                               },
                             ),
                             const SizedBox(height: 24),
@@ -964,11 +962,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                     .primaryContainer,
                               ),
                               validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return l10n
-                                      .profileEditDisplayNameRequiredError;
-                                }
-                                return null;
+                                return ProfileEditFormUtils.validateDisplayName(
+                                  l10n,
+                                  value,
+                                );
                               },
                             ),
                             const SizedBox(height: 24),
@@ -986,7 +983,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                             TextFormField(
                               controller: _bioController,
                               maxLines: 4,
-                              maxLength: 200,
+                              maxLength: ProfileEditFormUtils.bioMaxLength,
                               decoration: InputDecoration(
                                 hintText: l10n.profileEditBioHint,
                                 border: OutlineInputBorder(
@@ -1068,14 +1065,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                     .primaryContainer,
                               ),
                               validator: (value) {
-                                if (value != null && value.trim().isNotEmpty) {
-                                  if (!value.startsWith('http://') &&
-                                      !value.startsWith('https://')) {
-                                    return l10n
-                                        .profileEditSocialUrlInvalidError;
-                                  }
-                                }
-                                return null;
+                                return ProfileEditFormUtils.validateWebsite(
+                                  l10n,
+                                  value,
+                                );
                               },
                             ),
                             const SizedBox(height: 32),
@@ -1147,14 +1140,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                                       .primaryContainer,
                                 ),
                                 validator: (value) {
-                                  if (value != null && value.isNotEmpty) {
-                                    final years = int.tryParse(value);
-                                    if (years == null || years < 0) {
-                                      return l10n
-                                          .profileEditArtistYearsActiveInvalidError;
-                                    }
-                                  }
-                                  return null;
+                                  return ProfileEditFormUtils
+                                      .validateYearsActive(l10n, value);
                                 },
                               ),
                               const SizedBox(height: 32),

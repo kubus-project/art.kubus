@@ -793,6 +793,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
       final effectiveIsInstitution =
           isInstitution ?? _currentUser?.isInstitution;
       final effectivePreferences = preferences;
+      final fallbackIdSuffix = walletAddress.length > 8
+          ? walletAddress.substring(0, 8)
+          : walletAddress;
 
       final profileData = {
         'walletAddress': walletAddress,
@@ -846,8 +849,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
         debugPrint('ProfileProvider: failed to parse saveProfile response: $e');
         final fallbackCover =
             profileData['coverImage'] ?? _currentUser?.coverImage;
+        final fallbackCreatedAt = _currentUser?.createdAt ?? DateTime.now();
         profileJson = {
-          'id': _currentUser?.id ?? 'profile_${walletAddress.substring(0, 8)}',
+          'id': _currentUser?.id ?? 'profile_$fallbackIdSuffix',
           'walletAddress': walletAddress,
           'username': profileData['username'] ?? _currentUser?.username ?? '',
           'displayName':
@@ -863,8 +867,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
               false,
           if (profileData['preferences'] != null)
             'preferences': profileData['preferences'],
-          'createdAt': _currentUser?.createdAt.toIso8601String() ??
-              DateTime.now().toIso8601String(),
+          'createdAt': fallbackCreatedAt.toIso8601String(),
           'updatedAt': DateTime.now().toIso8601String(),
         };
       }
@@ -907,6 +910,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
       try {
         final u = _currentUser;
         if (u != null) {
+          final joinedDate = u.createdAt.toIso8601String();
           UserService.setUsersInCacheAuthoritative([
             User(
               id: u.walletAddress,
@@ -922,7 +926,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
               postsCount: u.stats?.artworksCreated ?? 0,
               isFollowing: false,
               isVerified: false,
-              joinedDate: u.createdAt.toIso8601String(),
+              joinedDate: joinedDate,
               achievementProgress: [],
               isArtist: u.isArtist,
               isInstitution: u.isInstitution,
@@ -1192,8 +1196,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
           : null;
       final notificationPreferences = NotificationPreferenceSettings(
         enabled: wallet.isNotEmpty
-            ? (prefs.getBool(_notificationPreferenceKeyForWallet(
-                    wallet, 'enabled')) ??
+            ? (prefs.getBool(
+                    _notificationPreferenceKeyForWallet(wallet, 'enabled')) ??
                 true)
             : true,
         art: wallet.isNotEmpty
@@ -1202,8 +1206,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
                 true)
             : true,
         community: wallet.isNotEmpty
-            ? (prefs.getBool(_notificationPreferenceKeyForWallet(
-                    wallet, 'community')) ??
+            ? (prefs.getBool(
+                    _notificationPreferenceKeyForWallet(wallet, 'community')) ??
                 true)
             : true,
         dao: wallet.isNotEmpty
@@ -1212,8 +1216,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
                 true)
             : true,
         artistHub: wallet.isNotEmpty
-            ? (prefs.getBool(_notificationPreferenceKeyForWallet(
-                    wallet, 'artistHub')) ??
+            ? (prefs.getBool(
+                    _notificationPreferenceKeyForWallet(wallet, 'artistHub')) ??
                 true)
             : true,
         institutionHub: wallet.isNotEmpty
@@ -1222,13 +1226,13 @@ class ProfileProvider extends foundation.ChangeNotifier {
                 true)
             : true,
         account: wallet.isNotEmpty
-            ? (prefs.getBool(_notificationPreferenceKeyForWallet(
-                    wallet, 'account')) ??
+            ? (prefs.getBool(
+                    _notificationPreferenceKeyForWallet(wallet, 'account')) ??
                 true)
             : true,
         promotion: wallet.isNotEmpty
-            ? (prefs.getBool(_notificationPreferenceKeyForWallet(
-                    wallet, 'promotion')) ??
+            ? (prefs.getBool(
+                    _notificationPreferenceKeyForWallet(wallet, 'promotion')) ??
                 true)
             : true,
       );
@@ -1294,7 +1298,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
         nextArtist = daoReview.isArtistApplication;
         nextInstitution = daoReview.isInstitutionApplication;
         nextPreferences = existingPreferences.copyWith(
-          persona: daoReview.isInstitutionApplication ? 'institution' : 'creator',
+          persona:
+              daoReview.isInstitutionApplication ? 'institution' : 'creator',
         );
       } else if (daoReview.isRejected) {
         nextArtist = false;
@@ -1405,9 +1410,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
                 ? 'private'
                 : 'public',
         notifications: notificationsEnabled ?? existing.notifications,
-        notificationPreferences: (notificationPreferences ??
-                existing.notificationPreferences)
-            .copyWith(
+        notificationPreferences:
+            (notificationPreferences ?? existing.notificationPreferences)
+                .copyWith(
           enabled: notificationsEnabled ??
               notificationPreferences?.enabled ??
               existing.notificationPreferences.enabled,

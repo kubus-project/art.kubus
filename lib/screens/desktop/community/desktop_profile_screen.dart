@@ -1706,10 +1706,10 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildShowcaseCard(
-    {String? imageUrl,
-    required String title,
-    required String subtitle,
-    String? artworkId}) {
+      {String? imageUrl,
+      required String title,
+      required String subtitle,
+      String? artworkId}) {
     return SharedShowcaseCard(
       imageUrl: imageUrl,
       title: title,
@@ -2311,14 +2311,29 @@ class _ProfileScreenState extends State<ProfileScreen>
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
     final web3Provider = Provider.of<Web3Provider>(context, listen: false);
-    if (web3Provider.isConnected && web3Provider.walletAddress.isNotEmpty) {
-      await profileProvider.loadProfile(web3Provider.walletAddress);
-      if (!mounted) return;
-      setState(() {
-        _artistDataRequested = false;
-        _artistDataLoaded = false;
-      });
+    final wallet = web3Provider.walletAddress.trim();
+    if (!web3Provider.isConnected || wallet.isEmpty) {
+      return;
+    }
+
+    try {
+      await profileProvider.loadProfile(wallet);
+    } catch (e) {
+      debugPrint(
+          'DesktopProfileScreen._refreshProfileAfterEdit loadProfile failed: $e');
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _artistDataRequested = false;
+      _artistDataLoaded = false;
+    });
+
+    try {
       await _maybeLoadArtistData(force: true);
+    } catch (e) {
+      debugPrint(
+          'DesktopProfileScreen._refreshProfileAfterEdit artist reload failed: $e');
     }
   }
 
@@ -2458,15 +2473,17 @@ class _ProfileScreenState extends State<ProfileScreen>
       ));
     }
     if (social['website']?.isNotEmpty == true) {
-      final website = social['website']!;
-      final displayUrl = website
-          .replaceAll(RegExp(r'^https?://'), '')
-          .replaceAll(RegExp(r'/$'), '');
-      links.add(_buildSocialChip(
-        icon: Icons.language,
-        label: displayUrl,
-        color: themeProvider.accentColor,
-      ));
+      final website = social['website'] ?? '';
+      if (website.isNotEmpty) {
+        final displayUrl = website
+            .replaceAll(RegExp(r'^https?://'), '')
+            .replaceAll(RegExp(r'/$'), '');
+        links.add(_buildSocialChip(
+          icon: Icons.language,
+          label: displayUrl,
+          color: themeProvider.accentColor,
+        ));
+      }
     }
 
     if (links.isEmpty) return const SizedBox.shrink();

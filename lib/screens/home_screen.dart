@@ -50,7 +50,6 @@ import '../utils/design_tokens.dart';
 import '../utils/keyboard_inset_resolver.dart';
 import '../utils/kubus_labs_feature.dart';
 import '../utils/map_navigation.dart';
-import '../utils/media_url_resolver.dart';
 import '../utils/share_deep_link_navigation.dart';
 import '../utils/institution_navigation.dart';
 import '../utils/user_profile_navigation.dart';
@@ -60,11 +59,11 @@ import '../utils/artwork_navigation.dart';
 import '../utils/home_rail_creator_identity.dart';
 import '../utils/home_activity_cards.dart';
 import '../widgets/glass_components.dart';
-import '../widgets/profile_identity_summary.dart';
 import '../widgets/common/kubus_labs_adornment.dart';
 import '../widgets/common/kubus_screen_header.dart';
 import '../widgets/common/kubus_stat_card.dart';
 import '../widgets/detail/shared_section_widgets.dart';
+import '../widgets/home/home_promotion_rail.dart';
 import '../widgets/search/kubus_general_search.dart';
 import '../widgets/search/kubus_search_config.dart';
 import '../widgets/search/kubus_search_controller.dart';
@@ -638,9 +637,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildAppBar() {
     final web3Provider = Provider.of<Web3Provider>(context);
+    final profileProvider = Provider.of<ProfileProvider>(context);
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final rawDisplayName =
+        (profileProvider.currentUser?.displayName ?? '').trim();
+    final displayName =
+        rawDisplayName.isNotEmpty ? rawDisplayName : l10n.homeDefaultDisplayName;
     return SliverAppBar(
       floating: true,
       snap: true,
@@ -695,6 +699,40 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   compact: true,
                                   titleColor: scheme.onSurface,
                                   maxTitleLines: 1,
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    top: KubusSpacing.xxs,
+                                  ),
+                                  child: LayoutBuilder(
+                                    builder: (context, nameConstraints) {
+                                      final displayNameStyle =
+                                          KubusTextStyles.responsiveTitleStyle(
+                                        context,
+                                        KubusTextStyles.sectionSubtitle
+                                            .copyWith(
+                                          color: scheme.onSurface.withValues(
+                                            alpha: 0.72,
+                                          ),
+                                        ),
+                                        availableWidth:
+                                            nameConstraints.maxWidth,
+                                        compact: true,
+                                      );
+                                      final displayNameLines =
+                                          KubusTextStyles.responsiveTitleLines(
+                                        nameConstraints.maxWidth,
+                                        maxLines: 2,
+                                        compact: true,
+                                      );
+                                      return Text(
+                                        displayName,
+                                        maxLines: displayNameLines,
+                                        softWrap: true,
+                                        style: displayNameStyle,
+                                      );
+                                    },
+                                  ),
                                 ),
                                 if (web3Provider.isConnected)
                                   Padding(
@@ -2186,182 +2224,40 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           padding: EdgeInsets.zero,
         ),
         const SizedBox(height: 16),
-        SizedBox(
-          height: 176,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: items.length,
-            itemBuilder: (context, index) => _buildHomeRailCard(items[index]),
-          ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final compactScreen = constraints.maxWidth < 360;
+            return HomePromotionRailList(
+              items: items,
+              animation: _animationController,
+              animationOffset: 2,
+              height: compactScreen ? 188 : 196,
+              cardWidth: compactScreen ? 156 : 168,
+              cardSpacing: KubusSpacing.md,
+              imageHeight: compactScreen ? 100 : 108,
+              profileAvatarRadius: compactScreen ? 24 : 28,
+              placeholderIconBuilder: _iconForRailItem,
+              profileFallbackLabel:
+                  AppLocalizations.of(context)?.desktopHomeCreatorFallbackName ??
+                      'Creator',
+              subtitleBuilder: (context, item) =>
+                  _buildHomeRailCardSubtitle(item, scheme),
+              onItemTap: (item) {
+                if (_hasHomeRailDestination(item)) {
+                  unawaited(_openHomeRailItem(item));
+                }
+              },
+              titleStyle: KubusTextStyles.sectionTitle.copyWith(
+                fontSize: KubusHeaderMetrics.screenSubtitle,
+                color: scheme.onSurface,
+              ),
+              subtitleStyle: KubusTextStyles.navMetaLabel.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.82),
+              ),
+            );
+          },
         ),
       ],
-    );
-  }
-
-  Widget _buildHomeRailCard(HomeRailItem item) {
-    if (item.entityType == PromotionEntityType.profile) {
-      return _buildProfileHomeRailCard(item);
-    }
-    final scheme = Theme.of(context).colorScheme;
-    final subtitle = _buildHomeRailCardSubtitle(item, scheme);
-    final style = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.card,
-      tintBase: scheme.surface,
-    );
-    final canOpen = _hasHomeRailDestination(item);
-    return GestureDetector(
-      onTap: canOpen ? () => _openHomeRailItem(item) : null,
-      child: Container(
-        width: 164,
-        margin: const EdgeInsets.only(right: 16),
-        child: LiquidGlassCard(
-          padding: EdgeInsets.zero,
-          margin: EdgeInsets.zero,
-          borderRadius: BorderRadius.circular(18),
-          showBorder: false,
-          blurSigma: style.blurSigma,
-          backgroundColor: style.tintColor,
-          fallbackMinOpacity: style.fallbackMinOpacity,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                height: 108,
-                child: ClipRRect(
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(18)),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              scheme.primary.withValues(alpha: 0.22),
-                              scheme.secondary.withValues(alpha: 0.18),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                        ),
-                        child: (() {
-                          final resolvedImage =
-                              MediaUrlResolver.resolve(item.imageUrl);
-                          if (resolvedImage == null || resolvedImage.isEmpty) {
-                            return Center(
-                              child: Icon(
-                                _iconForRailItem(item.entityType),
-                                color: scheme.onSurface.withValues(alpha: 0.72),
-                                size: 28,
-                              ),
-                            );
-                          }
-                          return Image.network(
-                            resolvedImage,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                const SizedBox.shrink(),
-                          );
-                        })(),
-                      ),
-                      if (item.promotion.isPromoted)
-                        const Positioned(
-                          top: 10,
-                          left: 10,
-                          child:
-                              Icon(Icons.star, color: Colors.amber, size: 18),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(KubusSpacing.md),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        item.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: KubusTextStyles.sectionTitle.copyWith(
-                          fontSize: KubusHeaderMetrics.screenSubtitle,
-                          color: scheme.onSurface,
-                        ),
-                      ),
-                      if (subtitle != null) ...[
-                        const SizedBox(height: KubusSpacing.xxs),
-                        subtitle,
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProfileHomeRailCard(HomeRailItem item) {
-    final scheme = Theme.of(context).colorScheme;
-    final identity = ProfileIdentityData.fromHomeRailItem(
-      item,
-      fallbackLabel:
-          AppLocalizations.of(context)?.desktopHomeCreatorFallbackName ??
-              'Creator',
-    );
-    final style = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.card,
-      tintBase: scheme.surface,
-    );
-    final canOpen = _hasHomeRailDestination(item);
-    return GestureDetector(
-      onTap: canOpen ? () => _openHomeRailItem(item) : null,
-      child: Container(
-        width: 164,
-        margin: const EdgeInsets.only(right: 16),
-        child: LiquidGlassCard(
-          padding: const EdgeInsets.all(KubusSpacing.md),
-          margin: EdgeInsets.zero,
-          borderRadius: BorderRadius.circular(18),
-          showBorder: false,
-          blurSigma: style.blurSigma,
-          backgroundColor: style.tintColor,
-          fallbackMinOpacity: style.fallbackMinOpacity,
-          child: Stack(
-            children: [
-              Align(
-                alignment: Alignment.center,
-                child: ProfileIdentitySummary(
-                  identity: identity,
-                  layout: ProfileIdentityLayout.stacked,
-                  avatarRadius: 26,
-                  allowFabricatedFallback: true,
-                  titleStyle: KubusTextStyles.sectionTitle.copyWith(
-                    fontSize: KubusHeaderMetrics.screenSubtitle,
-                    color: scheme.onSurface,
-                  ),
-                  subtitleStyle: KubusTextStyles.navMetaLabel.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.64),
-                  ),
-                ),
-              ),
-              if (item.promotion.isPromoted)
-                const Positioned(
-                  top: 0,
-                  left: 0,
-                  child: Icon(Icons.star, color: Colors.amber, size: 18),
-                ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 

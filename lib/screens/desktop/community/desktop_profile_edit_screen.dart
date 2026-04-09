@@ -17,6 +17,7 @@ import '../../../providers/themeprovider.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/media_url_resolver.dart';
+import '../../../utils/profile_edit_form_utils.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 import '../../../widgets/avatar_widget.dart';
 import '../components/desktop_widgets.dart';
@@ -314,7 +315,12 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
 
     final onSaved = widget.onSaved;
     if (onSaved != null) {
-      await onSaved();
+      try {
+        await onSaved();
+      } catch (e) {
+        debugPrint(
+            'DesktopProfileEditScreen._handleSaveSuccess onSaved failed: $e');
+      }
       if (!mounted) return;
       popDesktopShellAware(context);
       return;
@@ -556,13 +562,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
             hint: l10n.profileEditUsernameHint,
             icon: Icons.alternate_email,
             validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return l10n.profileEditUsernameRequiredError;
-              }
-              if (value.trim().length < 3) {
-                return l10n.profileEditUsernameMinLengthError;
-              }
-              return null;
+              return ProfileEditFormUtils.validateUsername(l10n, value);
             },
           ),
           const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
@@ -572,10 +572,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
             hint: l10n.profileEditDisplayNameHint,
             icon: Icons.person_outline,
             validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return l10n.profileEditDisplayNameRequiredError;
-              }
-              return null;
+              return ProfileEditFormUtils.validateDisplayName(l10n, value);
             },
           ),
           const SizedBox(height: KubusSpacing.lg - KubusSpacing.xs),
@@ -585,7 +582,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
             hint: l10n.profileEditBioHint,
             icon: Icons.info_outline,
             maxLines: 4,
-            maxLength: 500,
+            maxLength: ProfileEditFormUtils.bioMaxLength,
           ),
         ],
       ),
@@ -623,6 +620,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
             controller: _websiteController,
             hint: l10n.profileEditSocialWebsiteHint,
             icon: Icons.language,
+            validator: (value) =>
+                ProfileEditFormUtils.validateWebsite(l10n, value),
           ),
         ],
       ),
@@ -664,6 +663,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
             hint: '2020',
             icon: Icons.calendar_today_outlined,
             keyboardType: TextInputType.number,
+            validator: (value) =>
+                ProfileEditFormUtils.validateYearsActive(l10n, value),
           ),
         ],
       ),
@@ -1230,7 +1231,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
         social: {
           'twitter': _twitterController.text.trim(),
           'instagram': _instagramController.text.trim(),
-          'website': _websiteController.text.trim(),
+          'website': ProfileEditFormUtils.normalizeWebsiteForSave(
+            _websiteController.text,
+          ),
         },
         fieldOfWork: _specialtyController.text
             .split(',')
