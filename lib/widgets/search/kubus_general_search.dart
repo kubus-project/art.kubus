@@ -324,23 +324,21 @@ class KubusSearchResultsOverlay extends StatelessWidget {
         );
 
         return Positioned.fill(
-          child: MapOverlayBlocker(
-            cursor: SystemMouseCursors.basic,
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    // Only dismiss on completed backdrop taps so result-tile
-                    // taps can finish without the overlay tearing down first.
-                    onTap: onDismiss ?? controller.dismissOverlay,
-                    child: const SizedBox.expand(),
-                  ),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: onDismiss ?? controller.dismissOverlay,
+                  child: const SizedBox.expand(),
                 ),
-                CompositedTransformFollower(
-                  link: link,
-                  showWhenUnlinked: false,
-                  offset: offset,
+              ),
+              CompositedTransformFollower(
+                link: link,
+                showWhenUnlinked: false,
+                offset: offset,
+                child: MapOverlayBlocker(
+                  cursor: SystemMouseCursors.basic,
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
                       maxWidth: maxWidth,
@@ -449,7 +447,7 @@ class KubusSearchResultsOverlay extends StatelessWidget {
                                       (onDismiss ?? controller.dismissOverlay)();
                                       FocusManager.instance.primaryFocus
                                           ?.unfocus();
-                                      Future.microtask(() => onResultTap(result));
+                                      onResultTap(result);
                                     },
                                   ),
                                 );
@@ -461,8 +459,8 @@ class KubusSearchResultsOverlay extends StatelessWidget {
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },
