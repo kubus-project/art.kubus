@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
-
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/user_persona.dart';
@@ -10,7 +8,6 @@ import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell.dart';
 import 'package:art_kubus/screens/onboarding/onboarding_flow_screen.dart';
 import 'package:art_kubus/services/auth_onboarding_service.dart';
-import 'package:art_kubus/screens/web3/wallet/connectwallet_screen.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/google_auth_service.dart';
 import 'package:art_kubus/services/onboarding_state_service.dart';
@@ -23,10 +20,8 @@ import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/utils/auth_google_wallet.dart';
 import 'package:art_kubus/utils/wallet_utils.dart';
 import 'package:art_kubus/widgets/auth_entry_shell.dart';
-import 'package:art_kubus/widgets/email_registration_form.dart';
-import 'package:art_kubus/widgets/google_sign_in_button.dart';
-import 'package:art_kubus/widgets/google_sign_in_web_button.dart';
-import 'package:art_kubus/widgets/kubus_button.dart';
+import 'package:art_kubus/widgets/auth_methods_panel_helpers.dart';
+import 'package:art_kubus/widgets/auth_methods_panel_sections.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/wallet_backup_prompts.dart';
 import 'package:art_kubus/widgets/secure_account_password_prompt.dart';
@@ -67,9 +62,6 @@ class AuthMethodsPanel extends StatefulWidget {
 }
 
 class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
-  static const int _usernameMinLength = 3;
-  static const int _usernameMaxLength = 50;
-
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -86,94 +78,6 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
   int _walletInlineInitialStep = 0;
   String? _walletInlineRequiredWalletAddress;
   Completer<Object?>? _walletFlowCompleter;
-
-  Map<String, dynamic>? _decodeAuthErrorPayload(Object error) {
-    Map<String, dynamic>? tryDecode(String raw) {
-      final trimmed = raw.trim();
-      if (trimmed.isEmpty) return null;
-
-      try {
-        final decoded = jsonDecode(trimmed);
-        return decoded is Map<String, dynamic> ? decoded : null;
-      } catch (_) {
-        final jsonStart = trimmed.indexOf('{');
-        if (jsonStart < 0) return null;
-        try {
-          final decoded = jsonDecode(trimmed.substring(jsonStart));
-          return decoded is Map<String, dynamic> ? decoded : null;
-        } catch (_) {
-          return null;
-        }
-      }
-    }
-
-    if (error is BackendApiRequestException) {
-      final decoded = tryDecode((error.body ?? '').toString());
-      if (decoded != null) return decoded;
-    }
-    return tryDecode(error.toString());
-  }
-
-  bool _isUsernameTakenConflict(Object error) {
-    try {
-      final bodyMap = _decodeAuthErrorPayload(error);
-      final errorCode =
-          (bodyMap?['errorCode'] ?? bodyMap?['code'] ?? '').toString().trim();
-      if (errorCode.toUpperCase() == 'USERNAME_ALREADY_TAKEN') {
-        return true;
-      }
-      final rawError = (bodyMap?['error'] ?? '').toString().toLowerCase();
-      return rawError.contains('username') &&
-          (rawError.contains('taken') || rawError.contains('exists'));
-    } catch (_) {
-      return false;
-    }
-  }
-
-  bool _isDuplicateEmailConflict(Object error) {
-    if (error is BackendApiRequestException && error.statusCode != 409) {
-      return false;
-    }
-
-    final bodyMap = _decodeAuthErrorPayload(error);
-    final rawError = (bodyMap?['error'] ?? bodyMap?['message'] ?? '')
-        .toString()
-        .toLowerCase();
-    if (rawError.contains('username') &&
-        (rawError.contains('taken') || rawError.contains('exists'))) {
-      return false;
-    }
-    if (rawError.contains('user already exists') ||
-        rawError.contains('account already has an email') ||
-        rawError.contains('login instead') ||
-        rawError.contains('sign in instead')) {
-      return true;
-    }
-
-    final fallbackMessage = error.toString().toLowerCase();
-    return fallbackMessage.contains('user already exists') ||
-        fallbackMessage.contains('account already has an email') ||
-        fallbackMessage.contains('login instead') ||
-        fallbackMessage.contains('sign in instead');
-  }
-
-  String? _validateUsername(
-    AppLocalizations l10n,
-    String rawUsername, {
-    required bool required,
-  }) {
-    final username = rawUsername.trim();
-    if (username.isEmpty) {
-      return required ? l10n.profileEditUsernameRequiredError : null;
-    }
-    if (username.length < _usernameMinLength) {
-      return l10n.profileEditUsernameMinLengthError;
-    }
-    if (username.length > _usernameMaxLength) {
-      return l10n.profileEditUsernameMaxLengthError;
-    }
-    return null;
-  }
 
   @override
   void dispose() {
@@ -430,7 +334,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     final emailLooksValid = email.contains('@') && email.contains('.');
     final passwordOk = AuthPasswordPolicy.isValid(password);
     final confirmOk = password == confirm;
-    final usernameError = _validateUsername(
+    final usernameError = validateAuthMethodsPanelUsername(
       l10n,
       username,
       required: widget.requireUsernameForEmailRegistration,
@@ -515,7 +419,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       unawaited(TelemetryService().trackSignUpFailure(
           method: 'email', errorClass: e.runtimeType.toString()));
       if (!mounted) return;
-      final usernameTaken = _isUsernameTakenConflict(e);
+      final usernameTaken = isAuthMethodsPanelUsernameTakenConflict(e);
       if (usernameTaken) {
         setState(() {
           _emailError = null;
@@ -525,7 +429,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         return;
       }
 
-      if (_isDuplicateEmailConflict(e)) {
+      if (isAuthMethodsPanelDuplicateEmailConflict(e)) {
         setState(() {
           _emailError = l10n.authAccountAlreadyExistsToast;
           _showCompactEmailForm = true;
@@ -880,12 +784,87 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     final enableWallet = AppConfig.enableWeb3 && AppConfig.enableWalletConnect;
     final enableEmail = AppConfig.enableEmailAuth;
     final enableGoogle = AppConfig.enableGoogleAuth;
+    final compactLayout =
+        widget.embedded || MediaQuery.sizeOf(context).height < 820;
 
-    final form = _buildRegisterForm(
+    final form = AuthMethodsPanelRegistrationMethods(
+      embedded: widget.embedded,
       colorScheme: colorScheme,
+      roles: roles,
+      showCompactEmailForm: _showCompactEmailForm,
+      showInlineWalletFlow: _showInlineWalletFlow,
+      compactLayout: compactLayout,
       enableWallet: enableWallet,
       enableEmail: enableEmail,
       enableGoogle: enableGoogle,
+      isGoogleSubmitting: _isGoogleSubmitting,
+      emailFormShell: AuthMethodsPanelEmailFormShell(
+        emailController: _emailController,
+        passwordController: _passwordController,
+        confirmPasswordController: _confirmPasswordController,
+        usernameController: _usernameController,
+        requireUsername: widget.requireUsernameForEmailRegistration,
+        emailError: _emailError,
+        passwordError: _passwordError,
+        confirmPasswordError: _confirmPasswordError,
+        usernameError: _usernameError,
+        onSubmit: _registerWithEmail,
+        isSubmitting: _isSubmitting,
+        compact: compactLayout,
+        onBack: () {
+          setState(() => _showCompactEmailForm = false);
+        },
+      ),
+      inlineWalletSurface: AuthMethodsPanelInlineWalletSurface(
+        initialStep: _walletInlineInitialStep,
+        requiredWalletAddress: _walletInlineRequiredWalletAddress,
+        onRequestClose: () => _completeInlineWalletFlow(),
+        onFlowComplete: (result) => _completeInlineWalletFlow(result),
+      ),
+      onShowCompactEmailForm: () {
+        setState(() => _showCompactEmailForm = true);
+      },
+      onShowConnectWalletModal: _showConnectWalletModal,
+      onGooglePressed: _registerWithGoogle,
+      onWebGoogleAuthResult: (GoogleAuthResult googleResult) async {
+        unawaited(
+          TelemetryService().trackSignUpAttempt(method: 'google'),
+        );
+        if (!_isGoogleSubmitting && mounted) {
+          setState(() => _isGoogleSubmitting = true);
+        }
+        try {
+          final api = BackendApiService();
+          final result = await loginWithGoogleWalletRecovery(
+            api: api,
+            googleResult: googleResult,
+            walletAddress: _signerBackedWalletForGoogleAuth(),
+            createSignerBackedWallet: _createSignerBackedWallet,
+          );
+          if (!mounted) return;
+          await _handleAuthSuccess(result);
+          unawaited(
+            TelemetryService().trackSignUpSuccess(method: 'google'),
+          );
+        } finally {
+          if (mounted) {
+            setState(() => _isGoogleSubmitting = false);
+          }
+        }
+      },
+      onWebGoogleAuthError: (Object error) {
+        widget.onError?.call(error);
+        unawaited(
+          TelemetryService().trackSignUpFailure(
+            method: 'google',
+            errorClass: error.runtimeType.toString(),
+          ),
+        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showKubusSnackBar(
+          SnackBar(content: Text(l10n.authGoogleSignInFailed)),
+        );
+      },
     );
 
     if (widget.embedded) {
@@ -923,225 +902,4 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     );
   }
 
-  Widget _buildRegisterForm({
-    required ColorScheme colorScheme,
-    required bool enableWallet,
-    required bool enableEmail,
-    required bool enableGoogle,
-  }) {
-    final l10n = AppLocalizations.of(context)!;
-    final roles = KubusColorRoles.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final showEmailForm = _showCompactEmailForm;
-    final compactLayout =
-        widget.embedded || MediaQuery.sizeOf(context).height < 820;
-    final showSectionCopy = !widget.embedded && !compactLayout;
-    final emailSurface = Color.lerp(
-        colorScheme.surface, colorScheme.primary, isDark ? 0.18 : 0.10)!;
-    final walletSurface = Color.lerp(
-      colorScheme.surface,
-      roles.web3MarketplaceAccent,
-      isDark ? 0.24 : 0.14,
-    )!;
-
-    final registerMethods = Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (showSectionCopy) ...[
-          Text(
-            showEmailForm ? l10n.authOrUseEmail : l10n.authRegisterSubtitle,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: colorScheme.onSurface,
-                  fontWeight: FontWeight.w800,
-                ),
-          ),
-          const SizedBox(height: KubusSpacing.xs),
-          Text(
-            showEmailForm
-                ? l10n.authRegisterSubtitle
-                : l10n.authHighlightOptionalWeb3,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurface.withValues(alpha: 0.66),
-                  height: 1.45,
-                ),
-          ),
-          SizedBox(height: compactLayout ? KubusSpacing.md : KubusSpacing.lg),
-        ],
-        if (!showEmailForm && enableGoogle) ...[
-          if (kIsWeb)
-            GoogleSignInWebButton(
-              colorScheme: colorScheme,
-              isLoading: _isGoogleSubmitting,
-              onAuthResult: (GoogleAuthResult googleResult) async {
-                unawaited(
-                  TelemetryService().trackSignUpAttempt(method: 'google'),
-                );
-                if (!_isGoogleSubmitting && mounted) {
-                  setState(() => _isGoogleSubmitting = true);
-                }
-                try {
-                  final api = BackendApiService();
-                  final result = await loginWithGoogleWalletRecovery(
-                    api: api,
-                    googleResult: googleResult,
-                    walletAddress: _signerBackedWalletForGoogleAuth(),
-                    createSignerBackedWallet: _createSignerBackedWallet,
-                  );
-                  if (!mounted) return;
-                  await _handleAuthSuccess(result);
-                  unawaited(
-                    TelemetryService().trackSignUpSuccess(method: 'google'),
-                  );
-                } finally {
-                  if (mounted) {
-                    setState(() => _isGoogleSubmitting = false);
-                  }
-                }
-              },
-              onAuthError: (Object error) {
-                widget.onError?.call(error);
-                unawaited(
-                  TelemetryService().trackSignUpFailure(
-                    method: 'google',
-                    errorClass: error.runtimeType.toString(),
-                  ),
-                );
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showKubusSnackBar(
-                  SnackBar(content: Text(l10n.authGoogleSignInFailed)),
-                );
-              },
-            )
-          else
-            GoogleSignInButton(
-              onPressed: _registerWithGoogle,
-              isLoading: _isGoogleSubmitting,
-              colorScheme: colorScheme,
-            ),
-          SizedBox(height: compactLayout ? KubusSpacing.xs : KubusSpacing.sm),
-        ],
-        if (!showEmailForm && enableEmail) ...[
-          KubusButton(
-            onPressed: () {
-              setState(() => _showCompactEmailForm = true);
-            },
-            icon: Icons.email_outlined,
-            label: l10n.authContinueWithEmail,
-            variant: KubusButtonVariant.secondary,
-            backgroundColor: emailSurface,
-            foregroundColor: colorScheme.onSurface,
-            isFullWidth: true,
-          ),
-          SizedBox(height: compactLayout ? KubusSpacing.xs : KubusSpacing.sm),
-        ],
-        if (!showEmailForm && enableWallet) ...[
-          if (showSectionCopy)
-            _buildMethodDivider(l10n.authHighlightOptionalWeb3),
-          SizedBox(height: compactLayout ? KubusSpacing.xs : KubusSpacing.sm),
-          KubusButton(
-            onPressed: _showConnectWalletModal,
-            icon: Icons.account_balance_wallet_outlined,
-            label: l10n.authConnectWalletButton,
-            variant: KubusButtonVariant.secondary,
-            backgroundColor: walletSurface,
-            foregroundColor: colorScheme.onSurface,
-            isFullWidth: true,
-          ),
-        ],
-        if (showEmailForm) ...[
-          _buildEmailForm(compact: compactLayout),
-          const SizedBox(height: KubusSpacing.sm),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: () {
-                setState(() => _showCompactEmailForm = false);
-              },
-              style: TextButton.styleFrom(
-                foregroundColor: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.82),
-              ),
-              child: Text(l10n.commonBack),
-            ),
-          ),
-        ],
-      ],
-    );
-
-    final inlineWallet = ConnectWallet(
-      embedded: true,
-      authInline: true,
-      initialStep: _walletInlineInitialStep,
-      telemetryAuthFlow: 'signup',
-      requiredWalletAddress: _walletInlineRequiredWalletAddress,
-      onRequestClose: () => _completeInlineWalletFlow(),
-      onFlowComplete: (result) => _completeInlineWalletFlow(result),
-    );
-
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 220),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
-      child: KeyedSubtree(
-        key: ValueKey<String>(
-          _showInlineWalletFlow ? 'register-wallet-inline' : 'register-auth-forms',
-        ),
-        child: _showInlineWalletFlow ? inlineWallet : registerMethods,
-      ),
-    );
-  }
-
-  Widget _buildEmailForm({bool compact = false}) {
-    final l10n = AppLocalizations.of(context)!;
-    return EmailRegistrationForm(
-      emailController: _emailController,
-      passwordController: _passwordController,
-      confirmPasswordController: _confirmPasswordController,
-      usernameController: _usernameController,
-      requireUsername: widget.requireUsernameForEmailRegistration,
-      showUsernameInCompact: widget.requireUsernameForEmailRegistration,
-      emailError: _emailError,
-      passwordError: _passwordError,
-      confirmPasswordError: _confirmPasswordError,
-      usernameError: _usernameError,
-      onSubmit: _registerWithEmail,
-      isSubmitting: _isSubmitting,
-      compact: compact,
-      autofocusEmail: true,
-      submitLabel: l10n.authContinueWithEmail,
-      submittingLabel: l10n.commonWorking,
-    );
-  }
-
-  Widget _buildMethodDivider(String label) {
-    final scheme = Theme.of(context).colorScheme;
-    return Row(
-      children: [
-        Expanded(
-          child: Divider(
-            color: scheme.outlineVariant.withValues(alpha: 0.4),
-            height: 1,
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.sm),
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: scheme.onSurface.withValues(alpha: 0.56),
-                  fontWeight: FontWeight.w600,
-                ),
-          ),
-        ),
-        Expanded(
-          child: Divider(
-            color: scheme.outlineVariant.withValues(alpha: 0.4),
-            height: 1,
-          ),
-        ),
-      ],
-    );
-  }
 }

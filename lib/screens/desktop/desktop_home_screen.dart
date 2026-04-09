@@ -32,6 +32,7 @@ import '../../widgets/inline_loading.dart';
 import '../../widgets/topbar_icon.dart';
 import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/detail/detail_shell_components.dart';
+import '../../widgets/detail/shared_section_widgets.dart';
 import '../../widgets/glass_components.dart';
 import '../../widgets/profile_identity_summary.dart';
 import '../../utils/app_animations.dart';
@@ -44,7 +45,6 @@ import '../../utils/home_rail_creator_identity.dart';
 import '../../utils/home_activity_cards.dart';
 import '../../utils/institution_navigation.dart';
 import '../../utils/map_navigation.dart';
-import '../../utils/media_url_resolver.dart';
 import '../../utils/user_profile_navigation.dart';
 import 'components/desktop_widgets.dart';
 import 'components/desktop_notifications_panel.dart';
@@ -1772,84 +1772,21 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     }
     final subtitle = _buildHomeRailCardSubtitle(item);
     final canOpen = _hasHomeRailDestination(item);
-    return DesktopCard(
-      width: 240,
-      margin: EdgeInsets.only(right: index < total - 1 ? DetailSpacing.lg : 0),
-      padding: EdgeInsets.zero,
+    return SharedShowcaseCard(
+      imageUrl: item.imageUrl,
+      title: item.title,
+      subtitle: '',
+      subtitleWidget: subtitle,
       onTap: canOpen ? () => _openHomeRailItem(item) : null,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            height: 140,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withValues(alpha: 0.22),
-                        Theme.of(context)
-                            .colorScheme
-                            .secondary
-                            .withValues(alpha: 0.18),
-                      ],
-                    ),
-                  ),
-                  child: (() {
-                    final resolvedImage =
-                        MediaUrlResolver.resolve(item.imageUrl);
-                    if (resolvedImage == null || resolvedImage.isEmpty) {
-                      return Center(
-                        child: Icon(
-                          _iconForHomeRail(item.entityType),
-                          size: 30,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.68),
-                        ),
-                      );
-                    }
-                    return Image.network(
-                      resolvedImage,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                    );
-                  })(),
-                ),
-                if (item.promotion.isPromoted)
-                  const Positioned(
-                    top: 10,
-                    left: 10,
-                    child: Icon(Icons.star, color: Colors.amber, size: 18),
-                  ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(DetailSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: KubusTextStyles.detailCardTitle,
-                ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: DetailSpacing.xs),
-                  subtitle,
-                ],
-              ],
-            ),
-          ),
-        ],
+      width: 240,
+      imageHeight: 140,
+      placeholderIcon: _iconForHomeRail(item.entityType),
+      badge: item.promotion.isPromoted
+          ? const Icon(Icons.star, color: Colors.amber, size: 18)
+          : null,
+      titleStyle: KubusTextStyles.detailCardTitle,
+      subtitleStyle: KubusTextStyles.navMetaLabel.copyWith(
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.64),
       ),
     );
   }

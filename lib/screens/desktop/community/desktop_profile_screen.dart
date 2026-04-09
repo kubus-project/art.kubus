@@ -27,6 +27,7 @@ import '../../../widgets/user_activity_status_line.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/profile_artist_info_fields.dart';
 import '../../../widgets/detail/detail_shell_components.dart';
+import '../../../widgets/detail/shared_section_widgets.dart';
 import '../../community/profile_screen_methods.dart';
 import '../../../widgets/artist_badge.dart';
 import '../../../widgets/institution_badge.dart';
@@ -1705,77 +1706,27 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildShowcaseCard(
-      {String? imageUrl,
-      required String title,
-      required String subtitle,
-      String? artworkId}) {
-    return GestureDetector(
+    {String? imageUrl,
+    required String title,
+    required String subtitle,
+    String? artworkId}) {
+    return SharedShowcaseCard(
+      imageUrl: imageUrl,
+      title: title,
+      subtitle: subtitle,
       onTap: artworkId != null
           ? () {
               openArtwork(context, artworkId,
                   source: 'desktop_profile_showcase');
             }
           : null,
-      child: SizedBox(
-        width: 220,
-        child: DesktopCard(
-          padding: EdgeInsets.zero,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (imageUrl != null)
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(DetailRadius.lg)),
-                  child: Image.network(
-                    _normalizeMediaUrl(imageUrl) ?? '',
-                    height: 160,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      height: 160,
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      child: const Icon(Icons.image_outlined, size: 48),
-                    ),
-                  ),
-                )
-              else
-                Container(
-                  height: 160,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer,
-                    borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(DetailRadius.lg)),
-                  ),
-                  child:
-                      const Center(child: Icon(Icons.image_outlined, size: 48)),
-                ),
-              Padding(
-                padding: const EdgeInsets.all(DetailSpacing.lg),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: DetailTypography.cardTitle(context).copyWith(
-                        fontSize: 14,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: DetailSpacing.xs),
-                    Text(
-                      subtitle,
-                      style: DetailTypography.caption(context).copyWith(
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+      width: 220,
+      imageHeight: 160,
+      titleStyle: DetailTypography.cardTitle(context).copyWith(
+        fontSize: 14,
+      ),
+      subtitleStyle: DetailTypography.caption(context).copyWith(
+        fontSize: 12,
       ),
     );
   }

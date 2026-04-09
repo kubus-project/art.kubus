@@ -39,6 +39,7 @@ import '../../widgets/common/kubus_stat_card.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/profile_artist_info_fields.dart';
 import '../../widgets/detail/detail_shell_components.dart';
+import '../../widgets/detail/shared_section_widgets.dart';
 import 'post_detail_screen.dart';
 import '../../utils/artwork_navigation.dart';
 import '../art/collection_detail_screen.dart';
@@ -1636,45 +1637,16 @@ class _ProfileScreenState extends State<ProfileScreen>
     required IconData emptyIcon,
   }) {
     final l10n = AppLocalizations.of(context)!;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: KubusTextStyles.sectionTitle.copyWith(
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: 12),
-        if (_artistDataLoading && !_artistDataLoaded)
-          SizedBox(
-            height: 160,
-            child: LiquidGlassCard(
-              padding: EdgeInsets.zero,
-              margin: EdgeInsets.zero,
-              borderRadius: BorderRadius.circular(KubusRadius.lg),
-              child: const Center(
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ),
-          )
-        else if (items.isEmpty)
-          _buildEmptyStateCard(
-            title: l10n.profileShowcaseEmptyTitle(title),
-            description: emptyLabel,
-            icon: emptyIcon,
-          )
-        else
-          SizedBox(
-            height: 210,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: items.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (context, index) => builder(items[index]),
-            ),
-          ),
-      ],
+    return SharedShowcaseSection<Map<String, dynamic>>(
+      title: title,
+      items: items,
+      itemBuilder: (context, item) => builder(item),
+      isLoading: _artistDataLoading && !_artistDataLoaded,
+      emptyTitle: l10n.profileShowcaseEmptyTitle(title),
+      emptyDescription: emptyLabel,
+      emptyIcon: emptyIcon,
+      loadingHeight: 160,
+      listHeight: 210,
     );
   }
 
@@ -1793,110 +1765,13 @@ class _ProfileScreenState extends State<ProfileScreen>
     required String subtitle,
     required String footer,
   }) {
-    final normalizedImage = _normalizeMediaUrl(imageUrl);
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final radius = BorderRadius.circular(KubusRadius.lg);
-    final style = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.card,
-      tintBase: scheme.surface,
-    );
-
-    return Container(
+    return SharedShowcaseCard(
+      imageUrl: imageUrl,
+      title: title,
+      subtitle: subtitle,
+      footer: footer,
       width: 200,
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        border: Border.all(
-          color: scheme.outline.withValues(alpha: 0.14),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: scheme.shadow.withValues(
-              alpha: theme.brightness == Brightness.dark ? 0.10 : 0.08,
-            ),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: LiquidGlassCard(
-        padding: EdgeInsets.zero,
-        margin: EdgeInsets.zero,
-        borderRadius: radius,
-        blurSigma: style.blurSigma,
-        showBorder: false,
-        backgroundColor: style.tintColor,
-        fallbackMinOpacity: style.fallbackMinOpacity,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (normalizedImage != null)
-              Image.network(
-                normalizedImage,
-                height: 110,
-                width: double.infinity,
-                fit: BoxFit.cover,
-              )
-            else
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      scheme.primaryContainer.withValues(alpha: 0.34),
-                      scheme.surfaceContainerHigh.withValues(alpha: 0.18),
-                    ],
-                  ),
-                ),
-                child: const SizedBox(
-                  height: 110,
-                  width: double.infinity,
-                  child: Center(child: Icon(Icons.image_not_supported)),
-                ),
-              ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(KubusSpacing.md),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: KubusTextStyles.sectionTitle.copyWith(
-                        color: scheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: KubusSpacing.xxs),
-                    Text(
-                      subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: KubusTextStyles.navMetaLabel.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ),
-                    const SizedBox(height: KubusSpacing.sm),
-                    Text(
-                      footer,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: KubusTextStyles.detailCaption.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.72),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+      imageHeight: 110,
     );
   }
 

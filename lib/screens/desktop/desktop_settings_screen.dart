@@ -20,6 +20,8 @@ import '../../services/push_notification_service.dart';
 import '../../services/settings_service.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/detail/detail_shell_components.dart';
+import '../../widgets/detail/shared_section_widgets.dart';
+import '../../widgets/detail/shared_settings_widgets.dart';
 import '../../widgets/email_verification_status_badge.dart';
 import '../../widgets/support/support_ticket_dialog.dart';
 import '../../utils/app_animations.dart';
@@ -3112,9 +3114,12 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          KubusHeaderText(
+          SharedSectionHeader(
             title: l10n.desktopSettingsAchievementsTitle,
             subtitle: l10n.desktopSettingsAchievementsSubtitle,
+            icon: Icons.emoji_events_outlined,
+            iconColor: Provider.of<ThemeProvider>(context).accentColor,
+            padding: EdgeInsets.zero,
           ),
           const SizedBox(height: KubusSpacing.xl),
           // Stats Overview
@@ -3586,47 +3591,24 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   }
 
   Widget _buildFeatureItem(IconData icon, String title, String description) {
-    return Row(
-      children: [
-        Container(
-          width: KubusHeaderMetrics.searchBarHeight,
-          height: KubusHeaderMetrics.searchBarHeight,
-          decoration: BoxDecoration(
-            color: Provider.of<ThemeProvider>(context)
-                .accentColor
-                .withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(KubusRadius.md),
-          ),
-          child: Icon(
-            icon,
-            size: KubusHeaderMetrics.actionIcon,
-            color: Provider.of<ThemeProvider>(context).accentColor,
-          ),
-        ),
-        const SizedBox(width: KubusSpacing.md),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: KubusTextStyles.sectionTitle.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-              Text(
-                description,
-                style: KubusTextStyles.sectionSubtitle.copyWith(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.6),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+    final accentColor = Provider.of<ThemeProvider>(context).accentColor;
+    final scheme = Theme.of(context).colorScheme;
+    return SharedSettingsRowTile(
+      title: title,
+      subtitle: description,
+      icon: icon,
+      showChevron: false,
+      padding: EdgeInsets.zero,
+      leadingBoxSize: KubusHeaderMetrics.searchBarHeight,
+      leadingIconSize: KubusHeaderMetrics.actionIcon,
+      leadingBackgroundColor: accentColor.withValues(alpha: 0.1),
+      leadingIconColor: accentColor,
+      titleStyle: KubusTextStyles.sectionTitle.copyWith(
+        color: scheme.onSurface,
+      ),
+      subtitleStyle: KubusTextStyles.sectionSubtitle.copyWith(
+        color: scheme.onSurface.withValues(alpha: 0.6),
+      ),
     );
   }
 
@@ -3639,78 +3621,33 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     Widget? trailing,
     Key? tileKey,
   }) {
-    final errorColor = Theme.of(context).colorScheme.error;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        key: tileKey,
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(KubusRadius.sm),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: KubusSpacing.xs),
-          child: Row(
-            children: [
-              Container(
-                width: KubusHeaderMetrics.actionHitArea,
-                height: KubusHeaderMetrics.actionHitArea,
-                decoration: BoxDecoration(
-                  color: isDestructive
-                      ? errorColor.withValues(alpha: 0.1)
-                      : Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                ),
-                child: Icon(
-                  icon,
-                  size: KubusHeaderMetrics.actionIcon,
-                  color: isDestructive
-                      ? errorColor
-                      : Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.7),
-                ),
-              ),
-              const SizedBox(width: KubusSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: KubusTextStyles.sectionTitle.copyWith(
-                        color: isDestructive
-                            ? errorColor
-                            : Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    Text(
-                      subtitle,
-                      style: KubusTextStyles.sectionSubtitle.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.5),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (trailing != null) ...[
-                trailing,
-                const SizedBox(width: KubusSpacing.sm + KubusSpacing.xxs),
-              ],
-              Icon(
-                Icons.arrow_forward_ios,
-                size: KubusSizes.trailingChevron,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.3),
-              ),
-            ],
-          ),
-        ),
+    final scheme = Theme.of(context).colorScheme;
+    final errorColor = scheme.error;
+    return SharedSettingsRowTile(
+      tileKey: tileKey,
+      title: title,
+      subtitle: subtitle,
+      icon: icon,
+      onTap: onTap,
+      trailing: trailing,
+      isDestructive: isDestructive,
+      showChevron: trailing == null,
+      padding: const EdgeInsets.symmetric(vertical: KubusSpacing.xs),
+      borderRadius: BorderRadius.circular(KubusRadius.sm),
+      leadingBoxSize: KubusHeaderMetrics.actionHitArea,
+      leadingIconSize: KubusHeaderMetrics.actionIcon,
+      leadingBackgroundColor:
+          isDestructive ? errorColor.withValues(alpha: 0.1) : scheme.primaryContainer,
+      leadingIconColor: isDestructive
+          ? errorColor
+          : scheme.onSurface.withValues(alpha: 0.7),
+      titleStyle: KubusTextStyles.sectionTitle.copyWith(
+        color: isDestructive ? errorColor : scheme.onSurface,
       ),
+      subtitleStyle: KubusTextStyles.sectionSubtitle.copyWith(
+        color: scheme.onSurface.withValues(alpha: 0.5),
+      ),
+      chevronColor: scheme.onSurface.withValues(alpha: 0.3),
     );
   }
 
@@ -3723,59 +3660,34 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     bool enabled = true,
     Key? switchKey,
   }) {
-    final displayedValue = enabled ? initialValue : false;
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: KubusTextStyles.sectionTitle.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-              Text(
-                subtitle,
-                style: KubusTextStyles.sectionSubtitle.copyWith(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.5),
-                ),
-              ),
-            ],
-          ),
-        ),
-        Switch(
-          key: switchKey,
-          value: displayedValue,
-          onChanged: enabled
-              ? (value) {
-                  onChanged?.call(value);
-                  if (saveAfterToggle) {
-                    _saveSettings();
-                  }
-                }
-              : null,
-          activeTrackColor: Provider.of<ThemeProvider>(context)
-              .accentColor
-              .withValues(alpha: 0.5),
-          thumbColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.selected)) {
-              return Provider.of<ThemeProvider>(context, listen: false)
-                  .accentColor;
+    final accentColor = Provider.of<ThemeProvider>(context).accentColor;
+    return SharedSettingsToggleRow(
+      switchKey: switchKey,
+      title: title,
+      subtitle: subtitle,
+      value: initialValue,
+      enabled: enabled,
+      activeColor: accentColor,
+      onChanged: enabled
+          ? (value) {
+              onChanged?.call(value);
+              if (saveAfterToggle) {
+                _saveSettings();
+              }
             }
-            return null;
-          }),
-        ),
-      ],
+          : null,
+      titleStyle: KubusTextStyles.sectionTitle.copyWith(
+        color: Theme.of(context).colorScheme.onSurface,
+      ),
+      subtitleStyle: KubusTextStyles.sectionSubtitle.copyWith(
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+      ),
     );
   }
 
   Widget _buildAutoLockDropdown() {
     final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     final options = <Map<String, dynamic>>[
       {
         'storedLabel': 'Immediately',
@@ -3852,29 +3764,27 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       return (match?['displayLabel'] as String?) ?? storedLabel;
     }
 
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-      leading: Icon(
-        Icons.lock_clock,
-        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+    return SharedSettingsRowTile(
+      icon: Icons.lock_clock,
+      title: l10n.settingsAutoLockTimeTitle,
+      subtitle: displayLabelForStored(_autoLockTime),
+      showChevron: false,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      leadingBoxSize: KubusHeaderMetrics.actionHitArea,
+      leadingIconSize: KubusHeaderMetrics.actionIcon,
+      leadingBackgroundColor: Colors.transparent,
+      leadingIconColor: scheme.onSurface.withValues(alpha: 0.7),
+      titleStyle: KubusTextStyles.sectionTitle.copyWith(
+        fontSize: KubusChromeMetrics.profileName + 1,
+        color: scheme.onSurface,
       ),
-      title: Text(
-        l10n.settingsAutoLockTimeTitle,
-        style: KubusTextStyles.sectionTitle.copyWith(
-          fontSize: KubusChromeMetrics.profileName + 1,
-          color: Theme.of(context).colorScheme.onSurface,
-        ),
-      ),
-      subtitle: Text(
-        displayLabelForStored(_autoLockTime),
-        style: KubusTextStyles.detailCaption.copyWith(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-        ),
+      subtitleStyle: KubusTextStyles.detailCaption.copyWith(
+        color: scheme.onSurface.withValues(alpha: 0.5),
       ),
       trailing: DropdownButton<String>(
         value: _autoLockTime,
         underline: const SizedBox.shrink(),
-        dropdownColor: Theme.of(context).colorScheme.surface,
+        dropdownColor: scheme.surface,
         items: options
             .map(
               (opt) => DropdownMenuItem<String>(
@@ -3894,6 +3804,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           await gate.reloadSettings();
         },
       ),
+      backgroundColor: Colors.transparent,
+      borderColor: Colors.transparent,
     );
   }
 }

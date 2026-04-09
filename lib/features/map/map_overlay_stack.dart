@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../widgets/map_overlay_blocker.dart';
+import '../../widgets/map/overlays/kubus_marker_overlay_card_wrapper.dart';
 
 /// Shared overlay layer shell for marker selection overlays.
 ///
@@ -124,5 +126,72 @@ class KubusMapMarkerOverlayLayer extends StatelessWidget {
     }
 
     return Positioned.fill(child: layer);
+  }
+}
+
+/// Shared marker overlay shell that combines the backdrop layer and the
+/// anchored/centered card wrapper.
+///
+/// Screens supply only the marker-card builder and per-screen sizing config.
+class KubusMapMarkerOverlayShell {
+  const KubusMapMarkerOverlayShell._();
+
+  static Widget build({
+    required bool isVisible,
+    required ValueListenable<Offset?> anchorListenable,
+    required Key contentKey,
+    required VoidCallback onDismiss,
+    required Widget Function(
+      BuildContext context,
+      KubusMarkerOverlayLayoutState layout,
+    ) cardBuilder,
+    required KubusMarkerOverlayPlacementStrategy placementStrategy,
+    required KubusMarkerOverlayWidthResolver widthResolver,
+    required KubusMarkerOverlayMaxHeightResolver maxHeightResolver,
+    required KubusMarkerOverlayHeightResolver heightResolver,
+    KubusMarkerOverlayFallbackAnchorResolver? fallbackAnchorResolver,
+    double horizontalPadding = 16,
+    double topPadding = 12,
+    double bottomPadding = 12,
+    double markerOffset = 32,
+    KubusMarkerOverlayAnimationConfig animation =
+        const KubusMarkerOverlayAnimationConfig(),
+    MouseCursor? cursor,
+    Widget? underlay,
+    bool blockMapGestures = false,
+    bool dismissOnBackdropTap = false,
+    bool interceptPlatformViews = true,
+    bool enabled = true,
+    bool centerWhenAnchorMissing = true,
+  }) {
+    return KubusMapMarkerOverlayLayer(
+      content: isVisible
+          ? KubusMarkerOverlayCardWrapper(
+              anchorListenable: anchorListenable,
+              placementStrategy: placementStrategy,
+              widthResolver: widthResolver,
+              maxHeightResolver: maxHeightResolver,
+              heightResolver: heightResolver,
+              fallbackAnchorResolver: fallbackAnchorResolver,
+              horizontalPadding: horizontalPadding,
+              topPadding: topPadding,
+              bottomPadding: bottomPadding,
+              markerOffset: markerOffset,
+              animation: animation,
+              cursor: cursor ?? SystemMouseCursors.basic,
+              interceptPlatformViews: interceptPlatformViews,
+              enabled: enabled,
+              centerWhenAnchorMissing: centerWhenAnchorMissing,
+              cardBuilder: cardBuilder,
+            )
+          : null,
+      contentKey: contentKey,
+      onDismiss: onDismiss,
+      underlay: underlay,
+      cursor: cursor,
+      blockMapGestures: blockMapGestures,
+      dismissOnBackdropTap: dismissOnBackdropTap,
+      interceptPlatformViews: interceptPlatformViews,
+    );
   }
 }

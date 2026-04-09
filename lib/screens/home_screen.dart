@@ -64,6 +64,7 @@ import '../widgets/profile_identity_summary.dart';
 import '../widgets/common/kubus_labs_adornment.dart';
 import '../widgets/common/kubus_screen_header.dart';
 import '../widgets/common/kubus_stat_card.dart';
+import '../widgets/detail/shared_section_widgets.dart';
 import '../widgets/search/kubus_general_search.dart';
 import '../widgets/search/kubus_search_config.dart';
 import '../widgets/search/kubus_search_controller.dart';
@@ -2044,9 +2045,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: KubusTextStyles.screenTitle.copyWith(color: scheme.onSurface),
+        SharedSectionHeader(
+          title: title,
+          icon: _iconForRailItem(rail.entityType),
+          iconColor: rail.entityType == PromotionEntityType.artwork
+              ? AppColorUtils.tealAccent
+              : scheme.primary,
+          padding: EdgeInsets.zero,
         ),
         const SizedBox(height: 16),
         SizedBox(

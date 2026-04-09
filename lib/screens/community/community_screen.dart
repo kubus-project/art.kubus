@@ -42,8 +42,7 @@ import '../../providers/community_subject_provider.dart';
 import '../../models/community_group.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/share/share_service.dart';
-import '../../services/share/share_deep_link_parser.dart';
-import '../../services/share/share_types.dart';
+import '../../services/share/share_types.dart' as share_types;
 import '../../services/block_list_service.dart';
 import '../map_screen.dart';
 import 'post_detail_screen.dart';
@@ -63,23 +62,25 @@ import '../../utils/activity_navigation.dart';
 import '../../utils/artwork_navigation.dart';
 import '../../utils/community_screen_utils.dart';
 import '../../utils/institution_navigation.dart';
-import '../../utils/map_navigation.dart';
 import '../../widgets/community/community_composer_controls.dart';
+import '../../widgets/community/community_composer_layout.dart';
 import '../../widgets/community/community_expandable_fab.dart';
+import '../../widgets/community/community_group_card.dart';
 import '../../widgets/community/community_group_picker_content.dart';
 import '../../widgets/community/community_likes_sheet.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/community_subject_navigation.dart';
 import '../../utils/media_url_resolver.dart';
-import '../../utils/share_deep_link_navigation.dart';
 import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/community/community_season0_banner.dart';
+import '../../widgets/community/community_search_actions.dart';
+import '../../widgets/community/community_search_bar.dart';
 import '../season0/season0_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
-import '../../widgets/search/kubus_general_search.dart';
 import '../../widgets/search/kubus_search_config.dart';
 import '../../widgets/search/kubus_search_controller.dart';
 import '../../widgets/search/kubus_search_result.dart';
+import '../../widgets/search/kubus_general_search.dart' as kubus_search;
 import '../../widgets/notifications/kubus_notifications_sheet.dart';
 
 enum CommunityFeedType {
@@ -1145,7 +1146,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                 );
               },
             ),
-            KubusSearchResultsOverlay(
+            kubus_search.KubusSearchResultsOverlay(
               controller: _communitySearchController,
               accentColor: context.read<ThemeProvider>().accentColor,
               minCharsHint: AppLocalizations.of(context)!
@@ -1336,24 +1337,21 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 
   Widget _buildCommunitySearchBar() {
-    return SizedBox(
-      height: KubusHeaderMetrics.searchBarHeight,
-      child: KubusGeneralSearch(
-        controller: _communitySearchController,
-        semanticsLabel: 'community_search_input',
-        hintText: AppLocalizations.of(context)!.commonSearchHint,
-        onSubmitted: (_) => _communitySearchController.onSubmitted(),
-        trailingBuilder: (context, query) {
-          if (query.trim().isEmpty) return const SizedBox.shrink();
-          final scheme = Theme.of(context).colorScheme;
-          return IconButton(
-            tooltip: MaterialLocalizations.of(context).deleteButtonTooltip,
-            icon: Icon(Icons.close, color: scheme.onSurfaceVariant),
-            onPressed: () =>
-                _communitySearchController.clearQueryWithContext(context),
-          );
-        },
-      ),
+    return CommunitySearchBar(
+      controller: _communitySearchController,
+      semanticsLabel: 'community_search_input',
+      hintText: AppLocalizations.of(context)!.commonSearchHint,
+      onSubmitted: (_) => _communitySearchController.onSubmitted(),
+      trailingBuilder: (context, query) {
+        if (query.trim().isEmpty) return const SizedBox.shrink();
+        final scheme = Theme.of(context).colorScheme;
+        return IconButton(
+          tooltip: MaterialLocalizations.of(context).deleteButtonTooltip,
+          icon: Icon(Icons.close, color: scheme.onSurfaceVariant),
+          onPressed: () =>
+              _communitySearchController.clearQueryWithContext(context),
+        );
+      },
     );
   }
 
@@ -1361,110 +1359,35 @@ class _CommunityScreenState extends State<CommunityScreen>
     _communitySearchController.setQuery(context, result.label);
     _communitySearchController.dismissOverlay();
     FocusScope.of(context).unfocus();
-
-    switch (result.kind) {
-      case KubusSearchResultKind.profile:
-        final userId = result.id?.trim() ?? '';
-        if (userId.isNotEmpty) {
-          await UserProfileNavigation.open(context, userId: userId);
-        }
-        return;
-      case KubusSearchResultKind.artwork:
-        final artworkId = result.id?.trim() ?? '';
-        if (artworkId.isNotEmpty) {
-          openArtwork(context, artworkId, source: 'community_search');
-        }
-        return;
-      case KubusSearchResultKind.institution:
-      case KubusSearchResultKind.event:
-        final markerId = result.markerId?.trim() ?? '';
-        if (markerId.isNotEmpty && result.position == null) {
-          await ShareDeepLinkNavigation.open(
-            context,
-            ShareDeepLinkTarget(
-              type: ShareEntityType.marker,
-              id: markerId,
-            ),
-          );
-          return;
-        }
-
-        final mapPosition = result.position;
-        if (mapPosition != null) {
-          MapNavigation.open(
-            context,
-            center: mapPosition,
-            zoom: 15,
-            autoFollow: false,
-            initialMarkerId: result.markerId,
-            initialArtworkId: result.artworkId,
-            initialSubjectId: result.subjectId,
-            initialSubjectType: result.subjectType,
-            initialTargetLabel: result.label,
-          );
-          return;
-        }
-
-        if (result.kind == KubusSearchResultKind.institution) {
-          final institutionId = result.id?.trim() ?? '';
-          final profileTargetId = InstitutionNavigation.resolveProfileTargetId(
-            institutionId: institutionId,
-            data: result.data,
-          );
-          if (institutionId.isNotEmpty || profileTargetId != null) {
-            await InstitutionNavigation.open(
-              context,
-              institutionId: institutionId,
-              profileTargetId: profileTargetId,
-              data: result.data,
-              title: result.label,
-            );
-          }
-        }
-        return;
-      case KubusSearchResultKind.marker:
-        final markerSelectionId = result.markerId?.trim() ?? '';
-        if (markerSelectionId.isNotEmpty) {
-          await ShareDeepLinkNavigation.open(
-            context,
-            ShareDeepLinkTarget(
-              type: ShareEntityType.marker,
-              id: markerSelectionId,
-            ),
-          );
-          return;
-        }
-        final position = result.position;
-        if (position != null) {
-          MapNavigation.open(
-            context,
-            center: position,
-            zoom: 15,
-            autoFollow: false,
-            initialMarkerId: result.markerId,
-            initialArtworkId: result.artworkId,
-            initialSubjectId: result.subjectId,
-            initialSubjectType: result.subjectType,
-            initialTargetLabel: result.label,
-          );
-        }
-        return;
-      case KubusSearchResultKind.screen:
-        final screenKey = result.id?.trim() ??
-            result.data['screenKey']?.toString().trim() ??
-            '';
-        if (screenKey.isNotEmpty) {
-          Provider.of<NavigationProvider>(context, listen: false)
-              .navigateToScreen(context, screenKey);
-        }
-        return;
-      case KubusSearchResultKind.post:
-        final postId = result.id?.trim() ?? '';
-        if (postId.isNotEmpty) {
-          PostDetailScreen.openById(context, postId);
-        }
-        return;
-    }
+    await CommunitySearchActions.handle(
+      context,
+      result,
+      onProfile: (userId) => UserProfileNavigation.open(
+        context,
+        userId: userId,
+      ),
+      onArtwork: (artworkId) =>
+          openArtwork(context, artworkId, source: 'community_search'),
+      onPost: (postId) => PostDetailScreen.openById(context, postId),
+      onScreen: (screenKey) => Provider.of<NavigationProvider>(
+        context,
+        listen: false,
+      ).navigateToScreen(context, screenKey),
+      onInstitution: ({
+        required String institutionId,
+        required String? profileTargetId,
+        required Map<String, dynamic> data,
+        required String title,
+      }) {
+        return InstitutionNavigation.open(
+          context,
+          institutionId: institutionId,
+          profileTargetId: profileTargetId,
+          data: data,
+          title: title,
+        );
+      },
+    );
   }
 
   Future<void> _onSocketNotificationForCommunity(
@@ -1906,148 +1829,17 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 
   Widget _buildGroupCard(CommunityGroupSummary group) {
-    final scheme = Theme.of(context).colorScheme;
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-    final l10n = AppLocalizations.of(context)!;
-    final isProcessing = _groupActionsInFlight.contains(group.id);
-    final membershipLabel = group.isOwner
-        ? l10n.commonOwner
-        : group.isMember
-            ? l10n.commonJoined
-            : l10n.commonJoin;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 18),
-      padding: const EdgeInsets.all(KubusSpacing.lg),
-      decoration: BoxDecoration(
-        color: scheme.primaryContainer,
-        borderRadius: KubusRadius.circular(18),
-        border: Border.all(color: scheme.outline.withValues(alpha: 0.5)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      group.name,
-                      style: KubusTypography.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: scheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      group.description?.isNotEmpty == true
-                          ? group.description!
-                          : l10n.communityGroupNoDescription,
-                      style: KubusTypography.textTheme.bodySmall?.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.7),
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              ElevatedButton.icon(
-                onPressed: group.isOwner
-                    ? null
-                    : (isProcessing
-                        ? null
-                        : () => _handleGroupMembershipToggle(group)),
-                icon: Icon(
-                  group.isMember ? Icons.check : Icons.group_add,
-                  size: 16,
-                ),
-                label: Text(membershipLabel),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: group.isMember
-                      ? scheme.surface
-                      : themeProvider.accentColor,
-                  foregroundColor:
-                      group.isMember ? scheme.onSurface : scheme.onPrimary,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  textStyle: KubusTypography.textTheme.labelMedium,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              Chip(
-                avatar: Icon(
-                  group.isPublic ? Icons.public : Icons.lock,
-                  size: 16,
-                ),
-                label: Text(
-                    group.isPublic ? l10n.commonPublic : l10n.commonPrivate),
-              ),
-              Chip(
-                avatar: const Icon(Icons.people_alt, size: 16),
-                label: Text(l10n.commonMembersCount(group.memberCount)),
-              ),
-            ],
-          ),
-          if (group.latestPost != null) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(KubusSpacing.md),
-              decoration: BoxDecoration(
-                color: scheme.surface,
-                borderRadius: KubusRadius.circular(KubusRadius.md + 2),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.communityGroupLatestPostLabel,
-                    style: KubusTypography.textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: scheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    group.latestPost?.content ?? '—',
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: KubusTypography.textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurface,
-                    ),
-                  ),
-                  if (group.latestPost?.createdAt != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      _getTimeAgo(group.latestPost!.createdAt!),
-                      style: KubusTypography.textTheme.labelSmall?.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.5),
-                        fontSize: 10,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: () => _openGroupFeed(group),
-            icon: const Icon(Icons.forum_outlined, size: 18),
-            label: Text(l10n.communityOpenGroupFeedButton),
-          ),
-        ],
-      ),
+    return CommunityGroupCard(
+      group: group,
+      accentColor:
+          Provider.of<ThemeProvider>(context, listen: false).accentColor,
+      variant: CommunityGroupCardVariant.mobile,
+      onOpenGroupFeed: () => _openGroupFeed(group),
+      onToggleMembership: group.isOwner
+          ? null
+          : () => _handleGroupMembershipToggle(group),
+      isMembershipActionInFlight: _groupActionsInFlight.contains(group.id),
+      timeAgoBuilder: _getTimeAgo,
     );
   }
 
@@ -2338,7 +2130,10 @@ class _CommunityScreenState extends State<CommunityScreen>
                 ShareService().showShareSheet(
                   context,
                   target:
-                      ShareTarget.post(postId: post.id, title: post.content),
+                      share_types.ShareTarget.post(
+                        postId: post.id,
+                        title: post.content,
+                      ),
                   sourceScreen: 'community_art_feed',
                 );
               },
@@ -2944,121 +2739,102 @@ class _CommunityScreenState extends State<CommunityScreen>
             child: Consumer<CommunityHubProvider>(
               builder: (context, provider, _) {
                 final draft = provider.draft;
-                return Container(
-                  height: MediaQuery.of(context).size.height * 0.9,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(KubusRadius.xl),
-                    ),
+                return CommunityComposerSurface(
+                  showHandle: true,
+                  maxHeight: MediaQuery.of(context).size.height * 0.9,
+                  backgroundColor: Theme.of(context).colorScheme.surface,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(KubusRadius.xl),
                   ),
-                  child: Column(
+                  bodyPadding: const EdgeInsets.symmetric(horizontal: 24),
+                  header: _buildComposerHeader(sheetContext),
+                  body: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildComposerHandle(),
-                      _buildComposerHeader(sheetContext),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildComposerCategorySelector(draft, provider),
-                              const SizedBox(height: 16),
-                              _buildComposerTextField(),
-                              _animatedComposerSection(
-                                show: _hasSelectedMedia,
-                                sectionKey: 'composer_media',
-                                child: Column(
-                                  children: [
-                                    const SizedBox(height: 16),
-                                    _buildComposerMediaPreview(setModalState),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              _buildComposerAttachmentRow(setModalState),
-                              const SizedBox(height: 20),
-                              _buildComposerGroupSelector(draft, provider),
-                              const SizedBox(height: 16),
-                              _buildComposerSubjectSelector(draft),
-                              const SizedBox(height: 16),
-                              _buildComposerLocationSection(
-                                  draft, setModalState),
-                              const SizedBox(height: 16),
-                              _buildChipEditor(
-                                label: 'Tags',
-                                hint: 'Add topic (e.g. kub8, spatial)',
-                                values: draft.tags,
-                                controller: tagController,
-                                prefix: '#',
-                                onAdd: (value) {
-                                  final sanitized = value.replaceFirst('#', '');
-                                  provider.addTag(sanitized);
-                                },
-                                onRemove: provider.removeTag,
-                              ),
-                              const SizedBox(height: 16),
-                              _buildChipEditor(
-                                label: 'Mentions',
-                                hint: 'Add @handle',
-                                values: draft.mentions,
-                                controller: mentionController,
-                                prefix: '@',
-                                onAdd: (value) {
-                                  final normalized = value.startsWith('@')
-                                      ? value.substring(1)
-                                      : value;
-                                  provider.addMention(normalized);
-                                },
-                                onRemove: provider.removeMention,
-                              ),
-                              const SizedBox(height: 32),
-                            ],
-                          ),
-                        ),
+                      _buildComposerCategorySelector(draft, provider),
+                      const SizedBox(height: 16),
+                      _buildComposerTextField(),
+                      const SizedBox(height: 16),
+                      CommunityComposerMediaSection(
+                        showPreview: _hasSelectedMedia,
+                        preview: _buildComposerMediaPreview(setModalState),
+                        actions: _buildComposerAttachmentRow(setModalState),
+                        sectionKey: 'composer_media',
                       ),
-                      SafeArea(
-                        top: false,
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-                          child: SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: _isPostingNew
-                                  ? null
-                                  : () => _submitComposer(
-                                        sheetContext: sheetContext,
-                                        setModalState: setModalState,
-                                        hub: provider,
-                                      ),
-                              child: AnimatedSwitcher(
-                                duration: context.animationTheme.short,
-                                switchInCurve:
-                                    context.animationTheme.defaultCurve,
-                                switchOutCurve:
-                                    context.animationTheme.fadeCurve,
-                                child: _isPostingNew
-                                    ? SizedBox(
-                                        key: const ValueKey(
-                                            'composer_posting_spinner'),
-                                        width: 20,
-                                        height: 20,
-                                        child: InlineLoading(
-                                          expand: true,
-                                          shape: BoxShape.circle,
-                                          tileSize: 3.5,
-                                        ),
-                                      )
-                                    : const Text(
-                                        'Post',
-                                        key: ValueKey('composer_post_label'),
-                                      ),
-                              ),
-                            ),
-                          ),
-                        ),
+                      const SizedBox(height: 20),
+                      _buildComposerGroupSelector(draft, provider),
+                      const SizedBox(height: 16),
+                      _buildComposerSubjectSelector(draft),
+                      const SizedBox(height: 16),
+                      _buildComposerLocationSection(draft, setModalState),
+                      const SizedBox(height: 16),
+                      _buildChipEditor(
+                        label: 'Tags',
+                        hint: 'Add topic (e.g. kub8, spatial)',
+                        values: draft.tags,
+                        controller: tagController,
+                        prefix: '#',
+                        onAdd: (value) {
+                          final sanitized = value.replaceFirst('#', '');
+                          provider.addTag(sanitized);
+                        },
+                        onRemove: provider.removeTag,
                       ),
+                      const SizedBox(height: 16),
+                      _buildChipEditor(
+                        label: 'Mentions',
+                        hint: 'Add @handle',
+                        values: draft.mentions,
+                        controller: mentionController,
+                        prefix: '@',
+                        onAdd: (value) {
+                          final normalized = value.startsWith('@')
+                              ? value.substring(1)
+                              : value;
+                          provider.addMention(normalized);
+                        },
+                        onRemove: provider.removeMention,
+                      ),
+                      const SizedBox(height: 32),
                     ],
+                  ),
+                  footer: SafeArea(
+                    top: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _isPostingNew
+                              ? null
+                              : () => _submitComposer(
+                                    sheetContext: sheetContext,
+                                    setModalState: setModalState,
+                                    hub: provider,
+                                  ),
+                          child: AnimatedSwitcher(
+                            duration: context.animationTheme.short,
+                            switchInCurve: context.animationTheme.defaultCurve,
+                            switchOutCurve: context.animationTheme.fadeCurve,
+                            child: _isPostingNew
+                                ? SizedBox(
+                                    key: const ValueKey('composer_posting_spinner'),
+                                    width: 20,
+                                    height: 20,
+                                    child: InlineLoading(
+                                      expand: true,
+                                      shape: BoxShape.circle,
+                                      tileSize: 3.5,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Post',
+                                    key: ValueKey('composer_post_label'),
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 );
               },
@@ -3114,83 +2890,22 @@ class _CommunityScreenState extends State<CommunityScreen>
     );
   }
 
-  Widget _buildComposerHandle() {
-    return Container(
-      width: 48,
-      height: 5,
-      margin: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(3),
-      ),
-    );
-  }
-
-  Widget _animatedComposerSection({
-    required bool show,
-    required Widget child,
-    required String sectionKey,
-    Duration? duration,
-  }) {
-    final animationTheme = context.animationTheme;
-    final effectiveDuration = duration ?? animationTheme.medium;
-    return AnimatedSwitcher(
-      duration: effectiveDuration,
-      reverseDuration: animationTheme.short,
-      switchInCurve: animationTheme.defaultCurve,
-      switchOutCurve: animationTheme.fadeCurve,
-      child: show
-          ? KeyedSubtree(
-              key: ValueKey(sectionKey),
-              child: child,
-            )
-          : const SizedBox.shrink(),
-      transitionBuilder: (child, animation) {
-        final slideTween = Tween<Offset>(
-          begin: const Offset(0, 0.04),
-          end: Offset.zero,
-        );
-        return FadeTransition(
-          opacity: CurvedAnimation(
-            parent: animation,
-            curve: animationTheme.fadeCurve,
-          ),
-          child: SlideTransition(
-            position: animation.drive(
-              slideTween.chain(
-                CurveTween(curve: animationTheme.defaultCurve),
-              ),
-            ),
-            child: child,
-          ),
-        );
-      },
-    );
-  }
-
   Widget _buildComposerHeader(BuildContext sheetContext) {
-    final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(sheetContext)!;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
-      child: Row(
-        children: [
-          Text(
-            l10n.communityComposerTitle,
-            style: KubusTypography.inter(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: scheme.onSurface,
-            ),
-          ),
-          const Spacer(),
-          IconButton(
-            tooltip: l10n.commonClose,
-            onPressed: () => Navigator.of(sheetContext).maybePop(),
-            icon: const Icon(Icons.close),
-            color: scheme.onSurface,
-          ),
-        ],
+    return CommunityComposerHeaderBar(
+      title: Text(
+        l10n.communityComposerTitle,
+        style: KubusTypography.inter(
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+          color: Theme.of(context).colorScheme.onSurface,
+        ),
+      ),
+      trailing: IconButton(
+        tooltip: l10n.commonClose,
+        onPressed: () => Navigator.of(sheetContext).maybePop(),
+        icon: const Icon(Icons.close),
+        color: Theme.of(context).colorScheme.onSurface,
       ),
     );
   }
@@ -3619,36 +3334,14 @@ class _CommunityScreenState extends State<CommunityScreen>
       );
     }
 
-    return AnimatedSwitcher(
-      duration: animationTheme.medium,
-      switchInCurve: animationTheme.defaultCurve,
-      switchOutCurve: animationTheme.fadeCurve,
-      transitionBuilder: (child, animation) {
-        final slideTween = Tween<Offset>(
-          begin: const Offset(0, 0.05),
-          end: Offset.zero,
-        );
-        return FadeTransition(
-          opacity: CurvedAnimation(
-            parent: animation,
-            curve: animationTheme.fadeCurve,
-          ),
-          child: SlideTransition(
-            position: animation.drive(
-              slideTween.chain(
-                CurveTween(curve: animationTheme.defaultCurve),
-              ),
-            ),
-            child: child,
-          ),
-        );
-      },
-      child: KeyedSubtree(
-        key: location == null
-            ? const ValueKey('composer_location_add')
-            : const ValueKey('composer_location_attached'),
-        child: currentChild,
-      ),
+    return CommunityComposerLocationSection(
+      isAttached: location != null,
+      sectionKey: location == null
+          ? 'composer_location_add'
+          : 'composer_location_attached',
+      animationDuration: animationTheme.medium,
+      emptyChild: addButton,
+      attachedChild: currentChild,
     );
   }
 
@@ -5745,7 +5438,10 @@ class _CommunityScreenState extends State<CommunityScreen>
     if (!mounted) return;
     ShareService().showShareSheet(
       context,
-      target: ShareTarget.post(postId: post.id, title: post.content),
+      target: share_types.ShareTarget.post(
+        postId: post.id,
+        title: post.content,
+      ),
       sourceScreen: 'community_feed',
       onCreatePostRequested: () async {
         if (!mounted) return;

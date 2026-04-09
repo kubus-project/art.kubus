@@ -32,6 +32,10 @@ import 'auth_session_coordinator.dart';
 import 'http_client_factory.dart';
 import 'telemetry/kubus_client_context.dart';
 
+part 'backend_api_service_auth_helpers.dart';
+part 'backend_api_service_parsers.dart';
+part 'backend_api_service_upload_helpers.dart';
+
 /// Backend API Service
 ///
 /// Provides a centralized interface for all backend API calls.
@@ -1457,39 +1461,15 @@ class BackendApiService
   }
 
   Future<void> _persistTokenFromResponse(Map<String, dynamic> body) async {
-    final payload = body['data'] is Map<String, dynamic>
-        ? body['data'] as Map<String, dynamic>
-        : body;
-
-    final token = payload['token'] as String? ?? body['token'] as String?;
-    if (token != null && token.isNotEmpty) {
-      await setAuthToken(token);
-      try {
-        await _secureStorage.write(key: 'jwt_token', value: token);
-      } catch (_) {}
-    }
-
-    final refreshToken = payload['refreshToken'] as String? ??
-        payload['refresh_token'] as String? ??
-        body['refreshToken'] as String? ??
-        body['refresh_token'] as String?;
-    if (refreshToken != null && refreshToken.isNotEmpty) {
-      await setRefreshToken(refreshToken);
-    }
+    await _backendApiPersistTokenFromResponse(this, body);
   }
 
   Map<String, dynamic> _responsePayload(Map<String, dynamic> body) {
-    return body['data'] is Map<String, dynamic>
-        ? body['data'] as Map<String, dynamic>
-        : body;
+    return _backendApiResponsePayload(body);
   }
 
   Map<String, dynamic>? _mapOrNull(Object? value) {
-    if (value is Map<String, dynamic>) return value;
-    if (value is Map) {
-      return Map<String, dynamic>.from(value);
-    }
-    return null;
+    return _backendApiMapOrNull(value);
   }
 
   Future<void> _persistSecureAccountStatus({
@@ -1499,134 +1479,34 @@ class BackendApiService
     required bool emailVerified,
     required bool emailAuthEnabled,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final normalizedEmail = (email ?? '').trim();
-    if (!hasEmail || normalizedEmail.isEmpty) {
-      await prefs.remove(PreferenceKeys.secureAccountEmail);
-      await prefs.setBool(
-        PreferenceKeys.secureAccountEmailVerifiedV1,
-        false,
-      );
-    } else {
-      await prefs.setString(PreferenceKeys.secureAccountEmail, normalizedEmail);
-      await prefs.setBool(
-        PreferenceKeys.secureAccountEmailVerifiedV1,
-        emailVerified,
-      );
-    }
-
-    await prefs.setString(
-      PreferenceKeys.secureAccountStatusCacheV1,
-      jsonEncode(<String, dynamic>{
-        'hasEmail': hasEmail,
-        'hasPassword': hasPassword,
-        'email': hasEmail ? normalizedEmail : null,
-        'emailVerified': emailVerified,
-        'emailAuthEnabled': emailAuthEnabled,
-      }),
-    );
-    await prefs.setInt(
-      PreferenceKeys.secureAccountStatusCacheTsV1,
-      DateTime.now().millisecondsSinceEpoch,
+    await _backendApiPersistSecureAccountStatus(
+      hasEmail: hasEmail,
+      hasPassword: hasPassword,
+      email: email,
+      emailVerified: emailVerified,
+      emailAuthEnabled: emailAuthEnabled,
     );
   }
 
   Map<String, dynamic> _normalizeSecurityStatusMap(
     Map<String, dynamic> data,
   ) {
-    final email = (data['email'] ?? '').toString().trim();
-    final hasEmail = data['hasEmail'] == true || email.isNotEmpty;
-    return <String, dynamic>{
-      'hasEmail': hasEmail,
-      'hasPassword': data['hasPassword'] == true,
-      'email': hasEmail ? email : null,
-      'emailVerified': data['emailVerified'] == true,
-      'emailAuthEnabled': data['emailAuthEnabled'] != false,
-    };
+    return _backendApiNormalizeSecurityStatusMap(data);
   }
 
   Future<Map<String, dynamic>> getCachedSecureAccountStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    final cachedRaw =
-        (prefs.getString(PreferenceKeys.secureAccountStatusCacheV1) ?? '')
-            .trim();
-    if (cachedRaw.isNotEmpty) {
-      try {
-        final decoded = jsonDecode(cachedRaw);
-        if (decoded is Map<String, dynamic>) {
-          return _normalizeSecurityStatusMap(decoded);
-        }
-        if (decoded is Map) {
-          return _normalizeSecurityStatusMap(
-              Map<String, dynamic>.from(decoded));
-        }
-      } catch (_) {
-        // Fall through to legacy prefs.
-      }
-    }
-
-    final email =
-        (prefs.getString(PreferenceKeys.secureAccountEmail) ?? '').trim();
-    final emailVerified =
-        prefs.getBool(PreferenceKeys.secureAccountEmailVerifiedV1) ?? false;
-    return <String, dynamic>{
-      'hasEmail': email.isNotEmpty,
-      'hasPassword': false,
-      'email': email.isNotEmpty ? email : null,
-      'emailVerified': emailVerified,
-      'emailAuthEnabled': true,
-    };
+    return _backendApiGetCachedSecureAccountStatus(this);
   }
 
   Future<void> syncSecureAccountStatusFromResponse(
     Map<String, dynamic> body, {
     bool fetchIfMissing = true,
   }) async {
-    try {
-      if (!AppConfig.isFeatureEnabled('emailAuth')) return;
-
-      final payload = _responsePayload(body);
-      final securityStatus = _mapOrNull(payload['securityStatus']) ??
-          _mapOrNull(body['securityStatus']);
-      if (securityStatus != null) {
-        final normalized = _normalizeSecurityStatusMap(securityStatus);
-        await _persistSecureAccountStatus(
-          hasEmail: normalized['hasEmail'] == true,
-          hasPassword: normalized['hasPassword'] == true,
-          email: normalized['email']?.toString(),
-          emailVerified: normalized['emailVerified'] == true,
-          emailAuthEnabled: normalized['emailAuthEnabled'] != false,
-        );
-        return;
-      }
-
-      final user = _mapOrNull(payload['user']) ?? _mapOrNull(body['user']);
-      if (user != null) {
-        final email = (user['email'] ?? '').toString().trim();
-        final hasEmail = email.isNotEmpty;
-        final hasVerificationFlag = user.containsKey('emailVerified') ||
-            user.containsKey('email_verified');
-        if (hasEmail || hasVerificationFlag) {
-          await _persistSecureAccountStatus(
-            hasEmail: hasEmail,
-            hasPassword: false,
-            email: hasEmail ? email : null,
-            emailVerified:
-                user['emailVerified'] == true || user['email_verified'] == true,
-            emailAuthEnabled: true,
-          );
-          return;
-        }
-      }
-
-      if (fetchIfMissing && (_authToken ?? '').trim().isNotEmpty) {
-        await syncSecureAccountStatusToPrefs();
-      }
-    } catch (e) {
-      AppConfig.debugPrint(
-        'BackendApiService.syncSecureAccountStatusFromResponse failed: $e',
-      );
-    }
+    await _backendApiSyncSecureAccountStatusFromResponse(
+      this,
+      body,
+      fetchIfMissing: fetchIfMissing,
+    );
   }
 
   bool _isSuccessStatus(int statusCode) =>
@@ -9450,182 +9330,14 @@ class BackendApiService
     Map<String, String>? metadata,
     String? walletAddress,
   }) async {
-    // Ensure uploads include auth so the backend accepts and attributes them.
-    await _ensureAuthBeforeRequest(walletAddress: walletAddress);
-    const int maxRetries = 3;
-    int attempt = 0;
-    while (true) {
-      attempt++;
-      try {
-        http.MultipartRequest buildRequest() {
-          final request = http.MultipartRequest(
-            'POST',
-            Uri.parse('$baseUrl/api/upload'),
-          );
-
-          request.headers.addAll(_getHeaders());
-          request.files.add(
-            http.MultipartFile.fromBytes(
-              'file',
-              fileBytes,
-              filename: fileName,
-            ),
-          );
-
-          request.fields['fileType'] = fileType;
-          request.fields['targetStorage'] =
-              'http'; // Use HTTP storage instead of hybrid/IPFS
-          if (metadata != null) {
-            request.fields['metadata'] = jsonEncode(metadata);
-          }
-
-          if (kDebugMode && AppConfig.enableNetworkLogging) {
-            AppConfig.networkLog(
-              'UPLOAD',
-              request.url.toString(),
-              data: <String, dynamic>{
-                'attempt': attempt,
-                'contentType': 'multipart/form-data',
-                'fileField': 'file',
-                'fileName': fileName,
-                'bytes': fileBytes.length,
-                'fileType': fileType,
-                'targetStorage': 'http',
-                if (metadata != null) 'metadata': metadata,
-              },
-            );
-          }
-          return request;
-        }
-
-        final response = await _sendMultipart(buildRequest, includeAuth: true);
-
-        if (response.statusCode == 200) {
-          final body = jsonDecode(response.body) as Map<String, dynamic>;
-
-          // Backend returns { success:true, message:'', data: { filename, size, mimetype, ...result } }
-          final Map<String, dynamic> data = body['data'] is Map<String, dynamic>
-              ? Map<String, dynamic>.from(body['data'] as Map<String, dynamic>)
-              : (body['data'] != null
-                  ? Map<String, dynamic>.from(body['data'])
-                  : {});
-
-          // Try to determine the best URL for the uploaded file
-          String? uploadedUrl;
-          try {
-            // Prefer backend-stable relative URLs so entities can persist a canonical
-            // storage ref (backend cover fields expect `/uploads/...`-style paths).
-            if (data.containsKey('relativeUrl') &&
-                (data['relativeUrl'] as String).isNotEmpty) {
-              uploadedUrl = data['relativeUrl'] as String;
-            } else if (data.containsKey('relative_url') &&
-                (data['relative_url'] as String).isNotEmpty) {
-              uploadedUrl = data['relative_url'] as String;
-            } else if (data.containsKey('publicPath') &&
-                (data['publicPath'] as String).isNotEmpty) {
-              final publicPath = (data['publicPath'] as String).trim();
-              if (publicPath.startsWith('/uploads/') ||
-                  publicPath.startsWith('uploads/')) {
-                uploadedUrl =
-                    publicPath.startsWith('/') ? publicPath : '/$publicPath';
-              } else if (publicPath.isNotEmpty) {
-                uploadedUrl = '/uploads/$publicPath';
-              }
-            } else if (data.containsKey('public_path') &&
-                (data['public_path'] as String).isNotEmpty) {
-              final publicPath = (data['public_path'] as String).trim();
-              if (publicPath.startsWith('/uploads/') ||
-                  publicPath.startsWith('uploads/')) {
-                uploadedUrl =
-                    publicPath.startsWith('/') ? publicPath : '/$publicPath';
-              } else if (publicPath.isNotEmpty) {
-                uploadedUrl = '/uploads/$publicPath';
-              }
-            } else if (data.containsKey('url') &&
-                (data['url'] as String).isNotEmpty) {
-              uploadedUrl = data['url'] as String;
-            } else if (data.containsKey('ipfsUrl') &&
-                (data['ipfsUrl'] as String).isNotEmpty) {
-              uploadedUrl = data['ipfsUrl'] as String;
-            } else if (data.containsKey('httpUrl') &&
-                (data['httpUrl'] as String).isNotEmpty) {
-              uploadedUrl = data['httpUrl'] as String;
-            } else if (data.containsKey('fileUrl') &&
-                (data['fileUrl'] as String).isNotEmpty) {
-              uploadedUrl = data['fileUrl'] as String;
-            } else if (data.containsKey('path') &&
-                (data['path'] as String).isNotEmpty) {
-              uploadedUrl = data['path'] as String;
-            }
-          } catch (_) {
-            uploadedUrl = null;
-          }
-
-          // Return structured result including computed uploadedUrl for easy consumption
-          if (kDebugMode && AppConfig.enableNetworkLogging) {
-            AppConfig.networkLog(
-              'UPLOAD_RES',
-              Uri.parse('$baseUrl/api/upload').toString(),
-              data: <String, dynamic>{
-                'status': response.statusCode,
-                'success': body['success'],
-                'data.url': data['url'],
-                'data.relativeUrl': data['relativeUrl'] ?? data['relative_url'],
-                'data.publicPath': data['publicPath'] ?? data['public_path'],
-                'uploadedUrl': uploadedUrl,
-              },
-            );
-          }
-          return {
-            'raw': body,
-            'data': data,
-            'uploadedUrl': uploadedUrl,
-          };
-        }
-
-        if (kDebugMode && AppConfig.enableNetworkLogging) {
-          AppConfig.networkLog(
-            'UPLOAD_RES',
-            Uri.parse('$baseUrl/api/upload').toString(),
-            data: <String, dynamic>{
-              'status': response.statusCode,
-              'bodyLen': response.body.length,
-            },
-          );
-        }
-        if (response.statusCode == 429) {
-          final retryAfter = response.headers['retry-after'];
-          final waitSeconds =
-              int.tryParse(retryAfter ?? '') ?? (2 << (attempt - 1));
-          if (attempt < maxRetries) {
-            _debugLogThrottled(
-              'uploadFile:429',
-              'BackendApiService.uploadFile: received 429, retrying in ${waitSeconds}s (attempt $attempt/$maxRetries)',
-            );
-            await Future.delayed(Duration(seconds: waitSeconds));
-            continue;
-          } else {
-            throw Exception('Too many requests (429) while uploading file.');
-          }
-        }
-
-        throw Exception('Failed to upload file: ${response.statusCode}');
-      } catch (e) {
-        if (attempt >= maxRetries) {
-          _debugLogThrottled(
-            'uploadFile:error:final',
-            'BackendApiService.uploadFile: error (final): $e',
-          );
-          rethrow;
-        }
-        final backoff = 1 << (attempt - 1);
-        _debugLogThrottled(
-          'uploadFile:error:retry',
-          'BackendApiService.uploadFile: transient error, retrying in ${backoff}s (attempt $attempt/$maxRetries): $e',
-        );
-        await Future.delayed(Duration(seconds: backoff));
-      }
-    }
+    return _backendApiUploadFileImpl(
+      this,
+      fileBytes: fileBytes,
+      fileName: fileName,
+      fileType: fileType,
+      metadata: metadata,
+      walletAddress: walletAddress,
+    );
   }
 
   /// Upload a marker cover image and return the best available storage URL.
@@ -9636,61 +9348,14 @@ class BackendApiService
     String? walletAddress,
     String source = 'map_marker',
   }) async {
-    if (fileBytes.isEmpty) return null;
-    final safeName = fileName.trim().isEmpty ? 'marker-cover.png' : fileName;
-    // Upload routing expects semantic values (`image`, `video`, ...),
-    // while picker flows may pass MIME strings such as `image/jpeg`.
-    final rawType = fileType.trim().toLowerCase();
-    final normalizedType =
-        rawType.isEmpty || rawType.startsWith('image/') ? 'image' : rawType;
-
-    final upload = await uploadFile(
+    return _backendApiUploadMarkerCoverImageImpl(
+      this,
       fileBytes: fileBytes,
-      fileName: safeName,
-      fileType: normalizedType,
-      metadata: <String, String>{
-        'entity': 'art_marker',
-        'kind': 'cover',
-        'source': source,
-      },
+      fileName: fileName,
+      fileType: fileType,
       walletAddress: walletAddress,
+      source: source,
     );
-
-    String? valueAsString(dynamic value) {
-      if (value == null) return null;
-      final next = value.toString().trim();
-      return next.isEmpty ? null : next;
-    }
-
-    final primary = valueAsString(upload['uploadedUrl']);
-    if (primary != null) return primary;
-
-    final data = upload['data'];
-    if (data is Map<String, dynamic>) {
-      return valueAsString(
-            data['relativeUrl'] ??
-                data['relative_url'] ??
-                data['url'] ??
-                data['publicPath'] ??
-                data['public_path'] ??
-                data['path'],
-          ) ??
-          primary;
-    }
-    if (data is Map) {
-      final map = Map<String, dynamic>.from(data);
-      return valueAsString(
-            map['relativeUrl'] ??
-                map['relative_url'] ??
-                map['url'] ??
-                map['publicPath'] ??
-                map['public_path'] ??
-                map['path'],
-          ) ??
-          primary;
-    }
-
-    return null;
   }
 
   /// Upload avatar specifically to profile avatars endpoint
@@ -9702,132 +9367,13 @@ class BackendApiService
     required String fileType,
     Map<String, String>? metadata,
   }) async {
-    _debugLogThrottled(
-      'uploadAvatarToProfile:start',
-      'BackendApiService.uploadAvatarToProfile: starting upload (fileName=$fileName, fileType=$fileType, bytes=${fileBytes.length})',
+    return _backendApiUploadAvatarToProfileImpl(
+      this,
+      fileBytes: fileBytes,
+      fileName: fileName,
+      fileType: fileType,
+      metadata: metadata,
     );
-
-    const int maxRetries = 3;
-    int attempt = 0;
-    while (true) {
-      attempt++;
-      _debugLogThrottled(
-        'uploadAvatarToProfile:attempt',
-        'BackendApiService.uploadAvatarToProfile: attempt $attempt/$maxRetries',
-      );
-      try {
-        final uri = Uri.parse('$baseUrl/api/profiles/avatars');
-        _debugLogThrottled('uploadAvatarToProfile:url',
-            'BackendApiService.uploadAvatarToProfile: POST $uri');
-
-        http.MultipartRequest buildRequest() {
-          final request = http.MultipartRequest('POST', uri);
-
-          // include auth header if set
-          request.headers.addAll(_getHeaders());
-          request.files.add(
-            http.MultipartFile.fromBytes(
-              'file',
-              fileBytes,
-              filename: fileName,
-              contentType: MediaType.parse(fileType),
-            ),
-          );
-
-          request.fields['fileType'] = fileType;
-          if (metadata != null) {
-            request.fields['metadata'] = jsonEncode(metadata);
-          }
-          return request;
-        }
-
-        final response = await _sendMultipart(buildRequest, includeAuth: true);
-        _debugLogThrottled(
-          'uploadAvatarToProfile:status',
-          'BackendApiService.uploadAvatarToProfile: status=${response.statusCode} bodyLen=${response.body.length}',
-        );
-
-        if (response.statusCode == 200) {
-          final body = jsonDecode(response.body) as Map<String, dynamic>;
-          final Map<String, dynamic> data = body['data'] is Map<String, dynamic>
-              ? Map<String, dynamic>.from(body['data'] as Map<String, dynamic>)
-              : (body['data'] != null
-                  ? Map<String, dynamic>.from(body['data'])
-                  : {});
-
-          String? uploadedUrl;
-          try {
-            // Backend returns avatar URL in data.avatar field
-            if (data.containsKey('avatar') &&
-                data['avatar'] != null &&
-                (data['avatar'] as String).isNotEmpty) {
-              uploadedUrl = data['avatar'] as String;
-            } else if (data.containsKey('url') &&
-                (data['url'] as String).isNotEmpty) {
-              uploadedUrl = data['url'] as String;
-            } else if (data.containsKey('ipfsUrl') &&
-                (data['ipfsUrl'] as String).isNotEmpty) {
-              uploadedUrl = data['ipfsUrl'] as String;
-            } else if (data.containsKey('httpUrl') &&
-                (data['httpUrl'] as String).isNotEmpty) {
-              uploadedUrl = data['httpUrl'] as String;
-            } else if (data.containsKey('fileUrl') &&
-                (data['fileUrl'] as String).isNotEmpty) {
-              uploadedUrl = data['fileUrl'] as String;
-            } else if (data.containsKey('path') &&
-                (data['path'] as String).isNotEmpty) {
-              uploadedUrl = data['path'] as String;
-            }
-          } catch (_) {
-            uploadedUrl = null;
-          }
-
-          _debugLogThrottled(
-            'uploadAvatarToProfile:done',
-            'BackendApiService.uploadAvatarToProfile: upload complete (uploadedUrl=${uploadedUrl ?? 'null'})',
-          );
-          return {
-            'raw': body,
-            'data': data,
-            'uploadedUrl': uploadedUrl,
-          };
-        }
-
-        if (response.statusCode == 429) {
-          final retryAfter = response.headers['retry-after'];
-          final waitSeconds =
-              int.tryParse(retryAfter ?? '') ?? (2 << (attempt - 1));
-          if (attempt < maxRetries) {
-            _debugLogThrottled(
-              'uploadAvatarToProfile:429',
-              'BackendApiService.uploadAvatarToProfile: received 429, retrying in ${waitSeconds}s (attempt $attempt/$maxRetries)',
-            );
-            await Future.delayed(Duration(seconds: waitSeconds));
-            continue;
-          } else {
-            throw Exception('Too many requests (429) while uploading avatar.');
-          }
-        }
-
-        throw Exception(
-            'Failed to upload avatar: ${response.statusCode} ${response.body}');
-      } catch (e, stackTrace) {
-        if (attempt >= maxRetries) {
-          _debugLogThrottled(
-            'uploadAvatarToProfile:error:final',
-            'BackendApiService.uploadAvatarToProfile: error (final): $e\n$stackTrace',
-            throttle: const Duration(seconds: 1),
-          );
-          rethrow;
-        }
-        final backoff = 1 << (attempt - 1);
-        _debugLogThrottled(
-          'uploadAvatarToProfile:error:retry',
-          'BackendApiService.uploadAvatarToProfile: transient error, retrying in ${backoff}s (attempt $attempt/$maxRetries): $e',
-        );
-        await Future.delayed(Duration(seconds: backoff));
-      }
-    }
   }
 
   // ==================== Health Check ====================
@@ -11243,33 +10789,7 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
 }
 
 CommunityLikeUser _communityLikeUserFromBackendJson(Map<String, dynamic> json) {
-  final wallet =
-      json['walletAddress'] as String? ?? json['wallet_address'] as String?;
-
-  final username = json['username'] as String?;
-  final displayName = json['displayName'] as String? ??
-      json['display_name'] as String? ??
-      username ??
-      (wallet != null && wallet.length >= 8 ? wallet.substring(0, 8) : 'User');
-  final avatarCandidate = json['avatar'] as String? ??
-      json['avatarUrl'] as String? ??
-      json['avatar_url'] as String?;
-
-  DateTime? likedAt;
-  final likedAtRaw = json['likedAt'] ?? json['liked_at'];
-  if (likedAtRaw is String) {
-    likedAt = DateTime.tryParse(likedAtRaw);
-  }
-
-  return CommunityLikeUser(
-    userId: (json['userId'] ?? json['user_id'] ?? json['id'] ?? 'unknown')
-        .toString(),
-    walletAddress: wallet,
-    displayName: displayName,
-    username: username,
-    avatarUrl: MediaUrlResolver.resolve(avatarCandidate),
-    likedAt: likedAt,
-  );
+  return _backendApiCommunityLikeUserFromBackendJson(json);
 }
 
 Map<String, dynamic> _buildCommunityPostPayload({
@@ -11288,557 +10808,41 @@ Map<String, dynamic> _buildCommunityPostPayload({
   double? locationLat,
   double? locationLng,
 }) {
-  final payload = <String, dynamic>{
-    'content': content,
-    'category': category,
-    if (mediaUrls != null && mediaUrls.isNotEmpty) 'mediaUrls': mediaUrls,
-    if (mediaCids != null && mediaCids.isNotEmpty) 'mediaCids': mediaCids,
-    if (artworkId != null) 'artworkId': artworkId,
-    if (subjectType != null && subjectType.trim().isNotEmpty)
-      'subjectType': subjectType.trim(),
-    if (subjectId != null && subjectId.trim().isNotEmpty)
-      'subjectId': subjectId.trim(),
-    if (postType != null) 'postType': postType,
-    if (tags != null && tags.isNotEmpty) 'tags': tags,
-    if (mentions != null && mentions.isNotEmpty) 'mentions': mentions,
-  };
-
-  final hasLocationData = location != null ||
-      locationLat != null ||
-      locationLng != null ||
-      (locationName != null && locationName.isNotEmpty);
-
-  if (hasLocationData) {
-    final effectiveLocation = location ??
-        CommunityLocation(
-          name: locationName,
-          lat: locationLat,
-          lng: locationLng,
-        );
-
-    final locPayload = <String, dynamic>{
-      if (effectiveLocation.name != null && effectiveLocation.name!.isNotEmpty)
-        'name': effectiveLocation.name,
-      if (effectiveLocation.lat != null) 'lat': effectiveLocation.lat,
-      if (effectiveLocation.lng != null) 'lng': effectiveLocation.lng,
-    };
-    if (locPayload.isNotEmpty) {
-      payload['location'] = locPayload;
-    }
-
-    final resolvedName = (locationName != null && locationName.isNotEmpty)
-        ? locationName
-        : effectiveLocation.name;
-    if (resolvedName != null && resolvedName.isNotEmpty) {
-      payload['locationName'] = resolvedName;
-    }
-    final resolvedLat = locationLat ?? effectiveLocation.lat;
-    if (resolvedLat != null) {
-      payload['locationLat'] = resolvedLat;
-    }
-    final resolvedLng = locationLng ?? effectiveLocation.lng;
-    if (resolvedLng != null) {
-      payload['locationLng'] = resolvedLng;
-    }
-  }
-
-  return payload;
+  return _backendApiBuildCommunityPostPayload(
+    content: content,
+    category: category,
+    mediaUrls: mediaUrls,
+    mediaCids: mediaCids,
+    artworkId: artworkId,
+    subjectType: subjectType,
+    subjectId: subjectId,
+    postType: postType,
+    tags: tags,
+    mentions: mentions,
+    location: location,
+    locationName: locationName,
+    locationLat: locationLat,
+    locationLng: locationLng,
+  );
 }
 
 CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
-  // Extract nested author object if present - can be a map or a string (wallet address)
-  final authorRaw = json['author'];
-  final author = authorRaw is Map<String, dynamic> ? authorRaw : null;
-  final normalizedAuthor = author ?? <String, dynamic>{};
-  // Extract nested stats object if present
-  final stats = json['stats'] as Map<String, dynamic>?;
-  final authorDisplayName = author?['displayName'] as String? ??
-      author?['display_name'] as String? ??
-      json['displayName'] as String?;
-  final rawUsername = author?['username'] as String? ??
-      json['authorUsername'] as String? ??
-      json['username'] as String?;
-  final resolvedAuthorName =
-      (authorDisplayName != null && authorDisplayName.trim().isNotEmpty)
-          ? authorDisplayName.trim()
-          : ((rawUsername != null && rawUsername.trim().isNotEmpty)
-              ? rawUsername.trim()
-              : (json['authorName'] as String?) ?? 'Anonymous');
-  final avatarCandidate = author?['avatar'] as String? ??
-      author?['profileImage'] as String? ??
-      json['authorAvatar'] as String?;
-
-  // Determine author wallet (if available separately from authorId)
-  final authorWalletCandidate = normalizedAuthor['walletAddress'] as String? ??
-      normalizedAuthor['wallet_address'] as String? ??
-      normalizedAuthor['wallet'] as String? ??
-      json['walletAddress'] as String? ??
-      json['wallet'] as String? ??
-      (authorRaw is String ? authorRaw : null);
-
-  bool authorIsArtistFlag = communityBool(
-    normalizedAuthor['isArtist'] ??
-        normalizedAuthor['is_artist'] ??
-        json['authorIsArtist'] ??
-        json['author_is_artist'],
-  );
-  bool authorIsInstitutionFlag = communityBool(
-    normalizedAuthor['isInstitution'] ??
-        normalizedAuthor['is_institution'] ??
-        json['authorIsInstitution'] ??
-        json['author_is_institution'],
-  );
-  final roleHint = (normalizedAuthor['role'] ??
-          normalizedAuthor['type'] ??
-          json['authorRole'] ??
-          '')
-      .toString()
-      .toLowerCase();
-  if (roleHint.contains('institution') ||
-      roleHint.contains('museum') ||
-      roleHint.contains('gallery')) {
-    authorIsInstitutionFlag = true;
-  }
-  if (roleHint.contains('artist') || roleHint.contains('creator')) {
-    authorIsArtistFlag = true;
-  }
-
-  final dynamic mediaPayload = json['mediaUrls'] ?? json['media_urls'];
-  final List<String> mediaUrls = mediaPayload is List
-      ? mediaPayload
-          .map((entry) => entry?.toString())
-          .whereType<String>()
-          .where((value) => value.isNotEmpty)
-          .toList()
-      : <String>[];
-
-  final mentionsPayload = json['mentions'] ?? json['mentionHandles'];
-  final List<String> mentions = mentionsPayload is List
-      ? mentionsPayload
-          .map((entry) => entry?.toString())
-          .whereType<String>()
-          .toList()
-      : <String>[];
-
-  final String resolvedCategory =
-      (json['category'] as String?)?.toLowerCase() ?? 'post';
-
-  CommunityLocation? locationMeta;
-  final locationJson = json['location'];
-  if (locationJson is Map<String, dynamic>) {
-    final latCandidate = locationJson['lat'] ?? locationJson['latitude'];
-    final lngCandidate = locationJson['lng'] ?? locationJson['longitude'];
-    if (locationJson['name'] != null ||
-        latCandidate != null ||
-        lngCandidate != null) {
-      locationMeta = CommunityLocation(
-        name: locationJson['name']?.toString(),
-        lat: (latCandidate is num)
-            ? latCandidate.toDouble()
-            : double.tryParse(latCandidate?.toString() ?? ''),
-        lng: (lngCandidate is num)
-            ? lngCandidate.toDouble()
-            : double.tryParse(lngCandidate?.toString() ?? ''),
-      );
-    }
-  } else if (json['locationName'] != null ||
-      json['location_name'] != null ||
-      json['location_lat'] != null ||
-      json['locationLng'] != null) {
-    final latCandidate = json['locationLat'] ?? json['location_lat'];
-    final lngCandidate = json['locationLng'] ?? json['location_lng'];
-    locationMeta = CommunityLocation(
-      name: (json['locationName'] ?? json['location_name'])?.toString(),
-      lat: (latCandidate is num)
-          ? latCandidate.toDouble()
-          : double.tryParse(latCandidate?.toString() ?? ''),
-      lng: (lngCandidate is num)
-          ? lngCandidate.toDouble()
-          : double.tryParse(lngCandidate?.toString() ?? ''),
-    );
-  }
-
-  CommunityGroupReference? groupRef;
-  final groupJson = json['group'];
-  if (groupJson is Map<String, dynamic>) {
-    final groupId =
-        (groupJson['id'] ?? groupJson['groupId'] ?? groupJson['group_id'])
-            ?.toString();
-    if (groupId != null && groupId.isNotEmpty) {
-      final groupName =
-          (groupJson['name'] ?? groupJson['groupName'])?.toString() ??
-              'Community Group';
-      groupRef = CommunityGroupReference(
-        id: groupId,
-        name: groupName,
-        slug: groupJson['slug']?.toString(),
-        coverImage: groupJson['coverImage']?.toString() ??
-            groupJson['cover_image']?.toString(),
-        description: groupJson['description']?.toString(),
-      );
-    }
-  } else {
-    final fallbackGroupId = (json['groupId'] ?? json['group_id'])?.toString();
-    if (fallbackGroupId != null && fallbackGroupId.isNotEmpty) {
-      groupRef = CommunityGroupReference(
-        id: fallbackGroupId,
-        name: (json['groupName'] ?? json['group_name'] ?? 'Community Group')
-            .toString(),
-        slug: json['groupSlug']?.toString() ?? json['group_slug']?.toString(),
-        coverImage:
-            json['groupCover']?.toString() ?? json['group_cover']?.toString(),
-        description: json['groupDescription']?.toString() ??
-            json['group_description']?.toString(),
-      );
-    }
-  }
-
-  CommunityArtworkReference? artworkRef;
-  final artworkJson = json['artwork'];
-  if (artworkJson is Map<String, dynamic>) {
-    final artworkId = (artworkJson['id'] ??
-            artworkJson['artworkId'] ??
-            artworkJson['artwork_id'])
-        ?.toString();
-    if (artworkId != null && artworkId.isNotEmpty) {
-      final artworkImage = artworkJson['imageUrl']?.toString() ??
-          artworkJson['image_url']?.toString() ??
-          artworkJson['artworkImage']?.toString() ??
-          artworkJson['artwork_image']?.toString() ??
-          artworkJson['artworkImageUrl']?.toString() ??
-          artworkJson['artwork_image_url']?.toString();
-      final artworkTitle = (artworkJson['title'] ??
-              artworkJson['artworkTitle'] ??
-              artworkJson['artwork_title'] ??
-              'Artwork')
-          .toString();
-      artworkRef = CommunityArtworkReference(
-        id: artworkId,
-        title: artworkTitle,
-        imageUrl: artworkImage,
-      );
-    }
-  } else {
-    final fallbackArtworkId =
-        (json['artworkId'] ?? json['artwork_id'])?.toString();
-    if (fallbackArtworkId != null && fallbackArtworkId.isNotEmpty) {
-      artworkRef = CommunityArtworkReference(
-        id: fallbackArtworkId,
-        title: (json['artworkTitle'] ?? json['artwork_title'] ?? 'Artwork')
-            .toString(),
-        imageUrl: json['artworkImage']?.toString() ??
-            json['artwork_image']?.toString() ??
-            json['artworkImageUrl']?.toString() ??
-            json['artwork_image_url']?.toString(),
-      );
-    }
-  }
-
-  final rawSubjectType =
-      (json['subjectType'] ?? json['subject_type'])?.toString();
-  final rawSubjectId = (json['subjectId'] ?? json['subject_id'])?.toString();
-  String? resolvedSubjectType = rawSubjectType?.trim();
-  String? resolvedSubjectId = rawSubjectId?.trim();
-  if ((resolvedSubjectType == null || resolvedSubjectType.isEmpty) &&
-      artworkRef != null) {
-    resolvedSubjectType = 'artwork';
-    resolvedSubjectId = artworkRef.id;
-  } else if ((resolvedSubjectType ?? '').toLowerCase().contains('artwork') &&
-      (resolvedSubjectId == null || resolvedSubjectId.isEmpty)) {
-    final fallbackArtworkId =
-        (json['artworkId'] ?? json['artwork_id'])?.toString();
-    resolvedSubjectId = fallbackArtworkId?.trim().isNotEmpty == true
-        ? fallbackArtworkId?.trim()
-        : artworkRef?.id;
-  }
-
-  // Parse original post for reposts
-  CommunityPost? originalPost;
-  final originalPostPayload = json['originalPost'] ?? json['original_post'];
-  if (originalPostPayload is Map) {
-    final nested = Map<String, dynamic>.from(originalPostPayload);
-    nested.remove('originalPost');
-    nested.remove('original_post');
-    try {
-      originalPost = _communityPostFromBackendJson(nested);
-    } catch (e) {
-      AppConfig.debugPrint(
-          'BackendApiService: Failed to parse nested original post: $e');
-    }
-  }
-
-  final postTypeValue =
-      (json['postType'] ?? json['post_type'] ?? json['type'])?.toString();
-  final originalPostId =
-      (json['originalPostId'] ?? json['original_post_id'])?.toString();
-
-  return CommunityPost(
-    id: json['id'] as String,
-    authorId: json['authorId'] as String? ??
-        json['walletAddress'] as String? ??
-        json['userId'] as String? ??
-        'unknown',
-    authorWallet: authorWalletCandidate,
-    authorName: resolvedAuthorName,
-    authorAvatar: MediaUrlResolver.resolve(avatarCandidate),
-    authorUsername: rawUsername,
-    content: json['content'] as String,
-    imageUrl: json['imageUrl'] as String? ??
-        (mediaUrls.isNotEmpty ? mediaUrls.first : null),
-    mediaUrls: mediaUrls,
-    timestamp: json['createdAt'] != null
-        ? DateTime.parse(json['createdAt'] as String)
-        : (json['timestamp'] != null
-            ? DateTime.parse(json['timestamp'] as String)
-            : DateTime.now()),
-    tags: json['tags'] != null
-        ? (json['tags'] as List<dynamic>).map((e) => e.toString()).toList()
-        : [],
-    mentions: mentions,
-    category: resolvedCategory,
-    location: locationMeta,
-    group: groupRef,
-    groupId: (json['groupId'] as String?) ??
-        (json['group_id'] as String?) ??
-        groupRef?.id,
-    artwork: artworkRef,
-    subjectType: resolvedSubjectType,
-    subjectId: resolvedSubjectId,
-    distanceKm: (json['distanceKm'] as num?)?.toDouble() ??
-        (json['distance_km'] as num?)?.toDouble(),
-    postType: postTypeValue,
-    originalPostId: originalPostId,
-    originalPost: originalPost,
-    likeCount: stats?['likes'] as int? ??
-        json['likes'] as int? ??
-        json['likeCount'] as int? ??
-        0,
-    shareCount: stats?['shares'] as int? ??
-        json['shares'] as int? ??
-        json['shareCount'] as int? ??
-        0,
-    commentCount: stats?['comments'] as int? ??
-        json['comments'] as int? ??
-        json['commentCount'] as int? ??
-        0,
-    viewCount: stats?['views'] as int? ??
-        json['views'] as int? ??
-        json['viewCount'] as int? ??
-        0,
-    isLiked: json['isLiked'] as bool? ?? false,
-    isBookmarked: json['isBookmarked'] as bool? ?? false,
-    isFollowing: json['isFollowing'] as bool? ?? false,
-    authorIsArtist: authorIsArtistFlag,
-    authorIsInstitution: authorIsInstitutionFlag,
-    promotion: PromotionMetadata.readFrom(json),
-    feedPin: CommunityFeedPinMetadata.fromJson(
-      json['feedPin'] is Map<String, dynamic>
-          ? json['feedPin'] as Map<String, dynamic>
-          : json['feedPin'] is Map
-              ? Map<String, dynamic>.from(json['feedPin'] as Map)
-              : json['feed_pin'] is Map
-                  ? Map<String, dynamic>.from(json['feed_pin'] as Map)
-                  : null,
-    ),
-    hybridScore: (json['hybridScore'] as num?)?.toDouble() ??
-        (json['hybrid_score'] as num?)?.toDouble(),
-  );
+  return _backendApiCommunityPostFromBackendJson(json);
 }
 
 GroupPostPreview? _groupPostPreviewFromJson(dynamic raw) {
-  if (raw is! Map<String, dynamic>) {
-    return null;
-  }
-  final id = (raw['id'] ?? raw['postId'] ?? raw['post_id'])?.toString();
-  if (id == null || id.isEmpty) {
-    return null;
-  }
-  DateTime? createdAt;
-  final createdAtRaw = raw['createdAt'] ?? raw['created_at'];
-  if (createdAtRaw is String) {
-    createdAt = DateTime.tryParse(createdAtRaw);
-  }
-  return GroupPostPreview(
-    id: id,
-    content: raw['content']?.toString(),
-    createdAt: createdAt,
-  );
+  return _backendApiGroupPostPreviewFromJson(raw);
 }
 
 CommunityGroupSummary _communityGroupSummaryFromJson(
     Map<String, dynamic> json) {
-  final id = (json['id'] ?? json['groupId'] ?? json['group_id'])?.toString();
-  if (id == null || id.isEmpty) {
-    throw Exception('Invalid group payload: missing id');
-  }
-  GroupPostPreview? latestPost;
-  if (json['latestPost'] is Map<String, dynamic>) {
-    latestPost = _groupPostPreviewFromJson(json['latestPost']);
-  } else if (json['latest_post_id'] != null) {
-    latestPost = _groupPostPreviewFromJson({
-      'id': json['latest_post_id'],
-      'content': json['latest_post_content'],
-      'createdAt': json['latest_post_created_at'],
-    });
-  }
-
-  return CommunityGroupSummary(
-    id: id,
-    name: (json['name'] ?? 'Community Group').toString(),
-    slug: json['slug']?.toString(),
-    description: json['description']?.toString(),
-    coverImage: MediaUrlResolver.resolve(
-      json['coverImage']?.toString() ?? json['cover_image']?.toString(),
-    ),
-    isPublic: json['isPublic'] as bool? ?? json['is_public'] as bool? ?? true,
-    ownerWallet: (json['ownerWallet'] ?? json['owner_wallet'] ?? '').toString(),
-    memberCount: (json['memberCount'] as num?)?.toInt() ??
-        (json['member_count'] as num?)?.toInt() ??
-        (json['member_count_cached'] as num?)?.toInt() ??
-        0,
-    isMember: json['isMember'] as bool? ?? json['is_member'] as bool? ?? false,
-    isOwner: json['isOwner'] as bool? ?? json['is_owner'] as bool? ?? false,
-    latestPost: latestPost,
-  );
+  return _backendApiCommunityGroupSummaryFromJson(json);
 }
 
 Comment _commentFromBackendJson(Map<String, dynamic> json) {
-  // Normalize any nested author object - can be a map or a string (wallet address)
-  final authorRaw = json['author'];
-  final author = authorRaw is Map<String, dynamic> ? authorRaw : null;
-  final normalizedAuthor = author ?? <String, dynamic>{};
-
-  // Try common wallet field names in the author object
-  final authorWallet = normalizedAuthor['walletAddress'] as String? ??
-      normalizedAuthor['wallet_address'] as String? ??
-      normalizedAuthor['wallet'] as String?;
-  // Fallback when the author is a raw string (like a wallet address)
-  String? authorRawWalletFallback;
-  if (authorRaw is String && authorRaw.isNotEmpty) {
-    authorRawWalletFallback = authorRaw;
-  }
-  final rootAuthorWallet = json['authorWallet'] as String? ??
-      json['author_wallet'] as String? ??
-      json['createdByWallet'] as String? ??
-      json['created_by_wallet'] as String?;
-  final resolvedAuthorWallet =
-      authorWallet ?? rootAuthorWallet ?? authorRawWalletFallback;
-
-  // Expand the fallback set for author id similar to community posts
-  final authorId = json['authorId'] as String? ??
-      json['author_id']?.toString() ??
-      normalizedAuthor['id'] as String? ??
-      normalizedAuthor['walletAddress'] as String? ??
-      json['walletAddress'] as String? ??
-      json['wallet_address'] as String? ??
-      json['wallet'] as String? ??
-      json['userId'] as String? ??
-      json['user_id']?.toString() ??
-      resolvedAuthorWallet ??
-      'unknown';
-
-  // Display name and username fallbacks
-  final authorDisplayName = normalizedAuthor['displayName'] as String? ??
-      normalizedAuthor['display_name'] as String? ??
-      json['displayName'] as String? ??
-      json['authorDisplayName'] as String?;
-  final rootAuthorDisplayName = json['userDisplayName'] as String? ??
-      json['display_name'] as String? ??
-      json['author_name'] as String?;
-
-  final rawUsername = normalizedAuthor['username'] as String? ??
-      json['authorUsername'] as String? ??
-      json['authorName'] as String? ??
-      json['username'] as String?;
-
-  final authorName =
-      (authorDisplayName != null && authorDisplayName.trim().isNotEmpty)
-          ? authorDisplayName.trim()
-          : ((rawUsername != null && rawUsername.trim().isNotEmpty)
-              ? rawUsername.trim()
-              : (json['authorName'] as String?) ?? 'Anonymous');
-  final resolvedAuthorName =
-      (authorName != 'Anonymous' && authorName.trim().isNotEmpty)
-          ? authorName
-          : (rootAuthorDisplayName?.trim() ?? authorName);
-
-  // Avatar candidate: check common fields used by the backend
-  final avatarCandidate = normalizedAuthor['avatar'] as String? ??
-      normalizedAuthor['avatarUrl'] as String? ??
-      normalizedAuthor['avatar_url'] as String? ??
-      normalizedAuthor['profile_image'] as String? ??
-      normalizedAuthor['profileImage'] as String? ??
-      json['authorAvatar'] as String? ??
-      json['avatar'] as String?;
-
-  final authorUsername = json['authorUsername'] as String? ??
-      normalizedAuthor['username'] as String? ??
-      rawUsername;
-
-  final originalContent = (json['originalText'] ??
-          json['original_content'] ??
-          json['originalContent'])
-      ?.toString();
-  DateTime? editedAt;
-  final editedRaw =
-      json['editedAt'] ?? json['edited_at'] ?? json['editedAtUtc'];
-  if (editedRaw != null) {
-    try {
-      editedAt = DateTime.parse(editedRaw.toString());
-    } catch (_) {
-      editedAt = null;
-    }
-  }
-
-  return Comment(
-    id: (json['id'] ?? '').toString(),
-    authorId: authorId,
-    authorName: resolvedAuthorName,
-    authorAvatar: MediaUrlResolver.resolve(avatarCandidate),
-    authorUsername: authorUsername,
-    authorWallet: resolvedAuthorWallet ?? authorId,
-    parentCommentId: json['parentCommentId'] as String? ??
-        json['parent_comment_id']?.toString(),
-    originalContent:
-        (originalContent != null && originalContent.trim().isNotEmpty)
-            ? originalContent
-            : null,
-    editedAt: editedAt,
-    content: json['content'] as String,
-    timestamp: json['createdAt'] != null
-        ? DateTime.parse(json['createdAt'] as String)
-        : (json['timestamp'] != null
-            ? DateTime.parse(json['timestamp'] as String)
-            : DateTime.now()),
-    likeCount: json['likes'] as int? ??
-        json['likeCount'] as int? ??
-        json['likesCount'] as int? ??
-        0,
-    isLiked: json['isLiked'] as bool? ?? false,
-    replies: <Comment>[],
-  );
+  return _backendApiCommentFromBackendJson(json);
 }
 
 List<Comment> _nestComments(List<Comment> comments) {
-  if (comments.isEmpty) return <Comment>[];
-  final Map<String, Comment> byId = {
-    for (final comment in comments) comment.id: comment,
-  };
-  final List<Comment> roots = [];
-
-  for (final comment in comments) {
-    final parentId = comment.parentCommentId;
-    if (parentId == null || parentId.isEmpty) {
-      roots.add(comment);
-      continue;
-    }
-    final parent = byId[parentId];
-    if (parent == null) {
-      roots.add(comment);
-      continue;
-    }
-    parent.replies = [...parent.replies, comment];
-  }
-
-  return roots;
+  return _backendApiNestComments(comments);
 }

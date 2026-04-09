@@ -22,10 +22,9 @@ import '../../../models/conversation.dart';
 import '../../../models/promotion.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../services/block_list_service.dart';
-import '../../../services/share/share_deep_link_parser.dart';
 import '../../../services/user_service.dart';
 import '../../../services/share/share_service.dart';
-import '../../../services/share/share_types.dart';
+import '../../../services/share/share_types.dart' as share_types;
 import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/user_activity_status_line.dart';
@@ -39,24 +38,26 @@ import '../../../utils/artwork_navigation.dart';
 import '../../../utils/community_screen_utils.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/institution_navigation.dart';
-import '../../../utils/map_navigation.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/creator_display_format.dart';
 import '../../../utils/search_suggestions.dart';
-import '../../../utils/share_deep_link_navigation.dart';
 import '../../../utils/user_profile_navigation.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../utils/community_subject_navigation.dart';
 import '../../../widgets/glass_components.dart';
 import '../../../widgets/community/community_composer_controls.dart';
-import '../../../widgets/search/kubus_general_search.dart';
+import '../../../widgets/community/community_composer_layout.dart';
+import '../../../widgets/search/kubus_general_search.dart' as kubus_search;
 import '../../../widgets/search/kubus_search_config.dart';
 import '../../../widgets/search/kubus_search_controller.dart';
 import '../../../widgets/search/kubus_search_result.dart';
+import '../../../widgets/community/community_search_actions.dart';
+import '../../../widgets/community/community_search_bar.dart';
 import '../components/desktop_widgets.dart';
 import '../desktop_shell.dart';
 import '../../../widgets/community/community_expandable_fab.dart';
+import '../../../widgets/community/community_group_card.dart';
 import '../../../widgets/community/community_group_picker_content.dart';
 import '../../../widgets/community/community_likes_sheet.dart';
 import '../../../widgets/profile_identity_summary.dart';
@@ -746,7 +747,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 ],
               ),
 
-              KubusSearchResultsOverlay(
+              kubus_search.KubusSearchResultsOverlay(
                 controller: _communitySearchController,
                 accentColor: themeProvider.accentColor,
                 minCharsHint: AppLocalizations.of(context)!
@@ -1407,14 +1408,12 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       ),
                     ),
                     const SizedBox(width: KubusSpacing.lg),
-                    SizedBox(
+                    CommunitySearchBar(
+                      controller: _communitySearchController,
+                      hintText: l10n.desktopCommunitySearchHint,
+                      semanticsLabel: 'desktop_community_search_input',
+                      onSubmitted: _handleSearchSubmit,
                       width: 300,
-                      child: KubusGeneralSearch(
-                        controller: _communitySearchController,
-                        hintText: l10n.desktopCommunitySearchHint,
-                        semanticsLabel: 'desktop_community_search_input',
-                        onSubmitted: _handleSearchSubmit,
-                      ),
                     ),
                   ],
                 ),
@@ -1782,120 +1781,42 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     _communitySearchController.setQuery(context, result.label);
     _communitySearchController.dismissOverlay();
     FocusScope.of(context).unfocus();
-
-    switch (result.kind) {
-      case KubusSearchResultKind.profile:
-        final userId = result.id?.trim() ?? '';
-        if (userId.isNotEmpty) {
-          await _openUserProfileModal(userId: userId);
-        }
-        return;
-      case KubusSearchResultKind.artwork:
-        final artworkId = result.id?.trim() ?? '';
-        if (artworkId.isNotEmpty) {
-          await openArtwork(context, artworkId,
-              source: 'desktop_community_search');
-        }
-        return;
-      case KubusSearchResultKind.institution:
-      case KubusSearchResultKind.event:
-        final markerId = result.markerId?.trim() ?? '';
-        if (markerId.isNotEmpty && result.position == null) {
-          await ShareDeepLinkNavigation.open(
-            context,
-            ShareDeepLinkTarget(
-              type: ShareEntityType.marker,
-              id: markerId,
-            ),
-          );
-          return;
-        }
-
-        final mapPosition = result.position;
-        if (mapPosition != null) {
-          MapNavigation.open(
-            context,
-            center: mapPosition,
-            zoom: 15,
-            autoFollow: false,
-            initialMarkerId: result.markerId,
-            initialArtworkId: result.artworkId,
-            initialSubjectId: result.subjectId,
-            initialSubjectType: result.subjectType,
-            initialTargetLabel: result.label,
-          );
-          return;
-        }
-
-        if (result.kind == KubusSearchResultKind.institution) {
-          final institutionId = result.id?.trim() ?? '';
-          final profileTargetId = InstitutionNavigation.resolveProfileTargetId(
-            institutionId: institutionId,
-            data: result.data,
-          );
-          if (institutionId.isNotEmpty || profileTargetId != null) {
-            await InstitutionNavigation.open(
-              context,
-              institutionId: institutionId,
-              profileTargetId: profileTargetId,
-              data: result.data,
-              title: result.label,
-              openProfileTarget: (resolvedProfileTargetId) =>
-                  _openUserProfileModal(
-                userId: resolvedProfileTargetId,
-              ),
-            );
-          }
-        }
-        return;
-      case KubusSearchResultKind.marker:
-        final markerSelectionId = result.markerId?.trim() ?? '';
-        if (markerSelectionId.isNotEmpty) {
-          await ShareDeepLinkNavigation.open(
-            context,
-            ShareDeepLinkTarget(
-              type: ShareEntityType.marker,
-              id: markerSelectionId,
-            ),
-          );
-          return;
-        }
-        final position = result.position;
-        if (position != null) {
-          MapNavigation.open(
-            context,
-            center: position,
-            zoom: 15,
-            autoFollow: false,
-            initialMarkerId: result.markerId,
-            initialArtworkId: result.artworkId,
-            initialSubjectId: result.subjectId,
-            initialSubjectType: result.subjectType,
-            initialTargetLabel: result.label,
-          );
-        }
-        return;
-      case KubusSearchResultKind.screen:
-        final screenKey = result.id?.trim() ??
-            result.data['screenKey']?.toString().trim() ??
-            '';
-        if (screenKey.isNotEmpty) {
-          context
-              .read<NavigationProvider>()
-              .navigateToScreen(context, screenKey);
-        }
-        return;
-      case KubusSearchResultKind.post:
-        final postId = result.id?.trim() ?? '';
-        if (postId.isEmpty) return;
+    await CommunitySearchActions.handle(
+      context,
+      result,
+      onProfile: (userId) => _openUserProfileModal(userId: userId),
+      onArtwork: (artworkId) => openArtwork(
+        context,
+        artworkId,
+        source: 'desktop_community_search',
+      ),
+      onPost: (postId) async {
         final post = _findPostById(postId);
         if (post != null) {
           _openPostDetail(post);
         } else {
           await PostDetailScreen.openById(context, postId);
         }
-        return;
-    }
+      },
+      onScreen: (screenKey) =>
+          context.read<NavigationProvider>().navigateToScreen(context, screenKey),
+      onInstitution: ({
+        required String institutionId,
+        required String? profileTargetId,
+        required Map<String, dynamic> data,
+        required String title,
+      }) {
+        return InstitutionNavigation.open(
+          context,
+          institutionId: institutionId,
+          profileTargetId: profileTargetId,
+          data: data,
+          title: title,
+          openProfileTarget: (resolvedProfileTargetId) =>
+              _openUserProfileModal(userId: resolvedProfileTargetId),
+        );
+      },
+    );
   }
 
   Map<String, dynamic>? _promotionRailItemToSuggestion(
@@ -2530,171 +2451,29 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
   Widget _buildGroupCard(
       CommunityGroupSummary group, ThemeProvider themeProvider) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: themeProvider.isDarkMode
-            ? Theme.of(context).colorScheme.surface
-            : Colors.white,
-        borderRadius: BorderRadius.circular(KubusRadius.md),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            final shellScope = DesktopShellScope.of(context);
-            if (shellScope != null) {
-              shellScope.pushScreen(
-                DesktopSubScreen(
-                  title: group.name,
-                  child: GroupFeedScreen(group: group, embedded: true),
-                ),
-              );
-            } else {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => GroupFeedScreen(group: group),
-                ),
-              );
-            }
-          },
-          borderRadius: BorderRadius.circular(KubusRadius.md),
-          child: Padding(
-            padding: const EdgeInsets.all(KubusSpacing.md),
-            child: Row(
-              children: [
-                // Group avatar
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: themeProvider.accentColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(KubusRadius.md),
-                  ),
-                  child: group.coverImage != null &&
-                          group.coverImage!.isNotEmpty
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(KubusRadius.md),
-                          child: Image.network(
-                            MediaUrlResolver.resolveDisplayUrl(
-                                    group.coverImage) ??
-                                group.coverImage!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Icon(
-                              Icons.groups,
-                              color: themeProvider.accentColor,
-                              size: 28,
-                            ),
-                          ),
-                        )
-                      : Icon(
-                          Icons.groups,
-                          color: themeProvider.accentColor,
-                          size: 28,
-                        ),
-                ),
-                const SizedBox(width: 16),
-                // Group info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        group.name,
-                        style: KubusTextStyles.sectionTitle.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (group.description != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          group.description!,
-                          style: KubusTextStyles.sectionSubtitle.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.6),
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.people_outline,
-                            size: 14,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.5),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            AppLocalizations.of(context)!
-                                .desktopCommunityGroupMembersLabel(
-                                    group.memberCount),
-                            style: KubusTextStyles.navMetaLabel.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.5),
-                            ),
-                          ),
-                          if (group.latestPost?.createdAt != null) ...[
-                            const SizedBox(width: 16),
-                            Icon(
-                              Icons.chat_bubble_outline,
-                              size: 14,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.5),
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                AppLocalizations.of(context)!
-                                    .desktopCommunityLatestLabel(
-                                  _formatTimeAgo(group.latestPost!.createdAt!),
-                                ),
-                                style: KubusTextStyles.navMetaLabel.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.5),
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Icon(
-                  Icons.chevron_right,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.3),
-                ),
-              ],
+    return CommunityGroupCard(
+      group: group,
+      accentColor: themeProvider.accentColor,
+      variant: CommunityGroupCardVariant.desktop,
+      onOpenGroupFeed: () {
+        final shellScope = DesktopShellScope.of(context);
+        if (shellScope != null) {
+          shellScope.pushScreen(
+            DesktopSubScreen(
+              title: group.name,
+              child: GroupFeedScreen(group: group, embedded: true),
             ),
-          ),
-        ),
-      ),
+          );
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => GroupFeedScreen(group: group),
+            ),
+          );
+        }
+      },
+      timeAgoBuilder: (dateTime) => _formatTimeAgo(dateTime),
     );
   }
 
@@ -2961,7 +2740,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   Future<void> _showShareDialog(CommunityPost post) async {
     await ShareService().showShareSheet(
       context,
-      target: ShareTarget.post(postId: post.id, title: post.content),
+      target: share_types.ShareTarget.post(
+        postId: post.id,
+        title: post.content,
+      ),
       sourceScreen: 'desktop_community_feed',
       onCreatePostRequested: () async {
         if (!mounted) return;
@@ -6180,214 +5962,185 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         child: Center(
           child: GestureDetector(
             onTap: () {},
-            child: Container(
+            child: CommunityComposerSurface(
               width: 560,
-              constraints: const BoxConstraints(maxHeight: 600),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(KubusRadius.xl),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 20,
+              maxHeight: 600,
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 20,
+                ),
+              ],
+              header: CommunityComposerHeaderBar(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                borderColor: Theme.of(context)
+                    .colorScheme
+                    .outline
+                    .withValues(alpha: 0.1),
+                title: Text(
+                  AppLocalizations.of(context)!
+                      .desktopCommunityCreatePostTitle,
+                  style: KubusTextStyles.sectionTitle.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Header
-                  Container(
+                ),
+                leading: IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _showComposeDialog = false;
+                      _selectedImages.clear();
+                      _selectedLocation = null;
+                    });
+                  },
+                  icon: const Icon(Icons.close),
+                  tooltip: AppLocalizations.of(context)!.commonClose,
+                ),
+                trailing: ElevatedButton(
+                  onPressed:
+                      _composeController.text.trim().isEmpty || _isPosting
+                          ? null
+                          : _submitPost,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: themeProvider.accentColor,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: themeProvider.accentColor
+                        .withValues(alpha: 0.4),
+                    disabledForegroundColor:
+                        Colors.white.withValues(alpha: 0.7),
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .outline
-                              .withValues(alpha: 0.1),
-                        ),
-                      ),
+                      horizontal: 20,
+                      vertical: 10,
                     ),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          onPressed: () {
-                            setState(() {
-                              _showComposeDialog = false;
-                              _selectedImages.clear();
-                              _selectedLocation = null;
-                            });
-                          },
-                          icon: const Icon(Icons.close),
-                          tooltip: AppLocalizations.of(context)!.commonClose,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(KubusRadius.xl),
+                    ),
+                  ),
+                  child: _isPosting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          AppLocalizations.of(context)!.commonPost,
+                          style: KubusTextStyles.navLabel.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          AppLocalizations.of(context)!
-                              .desktopCommunityCreatePostTitle,
+                ),
+              ),
+              bodyPadding: const EdgeInsets.all(KubusSpacing.lg),
+              body: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildCategorySelector(themeProvider),
+                  const SizedBox(height: 12),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AvatarWidget(
+                        avatarUrl: user?.avatar,
+                        wallet: user?.walletAddress ?? '',
+                        radius: 24,
+                        allowFabricatedFallback: true,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: TextField(
+                          controller: _composeController,
+                          maxLines: null,
+                          minLines: 3,
+                          onChanged: (_) => setState(() {}),
+                          decoration: InputDecoration(
+                            hintText: AppLocalizations.of(context)!
+                                .desktopCommunityComposerWhatsHappeningHint,
+                            hintStyle:
+                                KubusTextStyles.sectionTitle.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.4),
+                            ),
+                            border: InputBorder.none,
+                          ),
                           style: KubusTextStyles.sectionTitle.copyWith(
                             color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
-                        const Spacer(),
-                        ElevatedButton(
-                          onPressed: _composeController.text.trim().isEmpty ||
-                                  _isPosting
-                              ? null
-                              : _submitPost,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: themeProvider.accentColor,
-                            foregroundColor: Colors.white,
-                            disabledBackgroundColor: themeProvider.accentColor
-                                .withValues(alpha: 0.4),
-                            disabledForegroundColor:
-                                Colors.white.withValues(alpha: 0.7),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 20, vertical: 10),
-                            shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(KubusRadius.xl),
-                            ),
-                          ),
-                          child: _isPosting
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : Text(
-                                  AppLocalizations.of(context)!.commonPost,
-                                  style: KubusTextStyles.navLabel.copyWith(
-                                    fontWeight: FontWeight.w600,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _buildTagMentionRow(themeProvider, inset: false),
+                  const SizedBox(height: 16),
+                  _buildGroupAttachmentCard(themeProvider, hub),
+                  const SizedBox(height: 12),
+                  _buildSubjectAttachmentCard(themeProvider, hub),
+                  const SizedBox(height: 12),
+                  _buildLocationAttachmentCard(themeProvider, hub),
+                  const SizedBox(height: 16),
+                  CommunityComposerMediaSection(
+                    showPreview: _selectedImages.isNotEmpty,
+                    sectionKey: 'desktop_composer_media',
+                    preview: SizedBox(
+                      height: 100,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _selectedImages.length,
+                        itemBuilder: (context, index) {
+                          return Stack(
+                            children: [
+                              Container(
+                                width: 100,
+                                height: 100,
+                                margin: const EdgeInsets.only(right: 8),
+                                decoration: BoxDecoration(
+                                  borderRadius:
+                                      BorderRadius.circular(KubusRadius.md),
+                                  image: DecorationImage(
+                                    image:
+                                        MemoryImage(_selectedImages[index].bytes),
+                                    fit: BoxFit.cover,
                                   ),
                                 ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Content
-                  Flexible(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(KubusSpacing.lg),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildCategorySelector(themeProvider),
-                          const SizedBox(height: 12),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              AvatarWidget(
-                                avatarUrl: user?.avatar,
-                                wallet: user?.walletAddress ?? '',
-                                radius: 24,
-                                allowFabricatedFallback: true,
                               ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: TextField(
-                                  controller: _composeController,
-                                  maxLines: null,
-                                  minLines: 3,
-                                  onChanged: (_) => setState(() {}),
-                                  decoration: InputDecoration(
-                                    hintText: AppLocalizations.of(context)!
-                                        .desktopCommunityComposerWhatsHappeningHint,
-                                    hintStyle:
-                                        KubusTextStyles.sectionTitle.copyWith(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withValues(alpha: 0.4),
+                              Positioned(
+                                top: 4,
+                                right: 12,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedImages.removeAt(index);
+                                    });
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black
+                                          .withValues(alpha: 0.6),
+                                      shape: BoxShape.circle,
                                     ),
-                                    border: InputBorder.none,
-                                  ),
-                                  style: KubusTextStyles.sectionTitle.copyWith(
-                                    color:
-                                        Theme.of(context).colorScheme.onSurface,
+                                    child: const Icon(
+                                      Icons.close,
+                                      size: 14,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
                               ),
                             ],
-                          ),
-                          const SizedBox(height: 12),
-                          _buildTagMentionRow(themeProvider, inset: false),
-                          const SizedBox(height: 16),
-                          _buildGroupAttachmentCard(themeProvider, hub),
-                          const SizedBox(height: 12),
-                          _buildSubjectAttachmentCard(themeProvider, hub),
-                          const SizedBox(height: 12),
-                          _buildLocationAttachmentCard(themeProvider, hub),
-                          // Selected images preview
-                          if (_selectedImages.isNotEmpty) ...[
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              height: 100,
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: _selectedImages.length,
-                                itemBuilder: (context, index) {
-                                  return Stack(
-                                    children: [
-                                      Container(
-                                        width: 100,
-                                        height: 100,
-                                        margin: const EdgeInsets.only(right: 8),
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(
-                                              KubusRadius.md),
-                                          image: DecorationImage(
-                                            image: MemoryImage(
-                                                _selectedImages[index].bytes),
-                                            fit: BoxFit.cover,
-                                          ),
-                                        ),
-                                      ),
-                                      Positioned(
-                                        top: 4,
-                                        right: 12,
-                                        child: GestureDetector(
-                                          onTap: () {
-                                            setState(() {
-                                              _selectedImages.removeAt(index);
-                                            });
-                                          },
-                                          child: Container(
-                                            padding: const EdgeInsets.all(4),
-                                            decoration: BoxDecoration(
-                                              color: Colors.black
-                                                  .withValues(alpha: 0.6),
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: const Icon(
-                                              Icons.close,
-                                              size: 14,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ],
+                          );
+                        },
                       ),
                     ),
-                  ),
-
-                  // Actions
-                  Container(
-                    padding: const EdgeInsets.all(KubusSpacing.md),
-                    decoration: BoxDecoration(
+                    actions: CommunityComposerActionRow(
                       border: Border(
                         top: BorderSide(
                           color: Theme.of(context)
@@ -6396,9 +6149,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                               .withValues(alpha: 0.1),
                         ),
                       ),
-                    ),
-                    child: Row(
-                      children: [
+                      actions: [
                         IconButton(
                           onPressed: _pickImage,
                           icon: Icon(Icons.image_outlined,
@@ -6422,8 +6173,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         ),
                         IconButton(
                           onPressed: () => _showMentionPicker(
-                              Provider.of<CommunityHubProvider>(context,
-                                  listen: false)),
+                            Provider.of<CommunityHubProvider>(context,
+                                listen: false),
+                          ),
                           icon: Icon(Icons.alternate_email_outlined,
                               color: themeProvider.accentColor),
                           tooltip: AppLocalizations.of(context)!
@@ -6436,21 +6188,20 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           tooltip: AppLocalizations.of(context)!
                               .desktopCommunityComposerAddEmojiTooltip,
                         ),
-                        const Spacer(),
-                        Text(
-                          '$remainingChars',
-                          style: KubusTextStyles.navLabel.copyWith(
-                            color: remainingChars < 0
-                                ? Theme.of(context).colorScheme.error
-                                : remainingChars < 20
-                                    ? KubusColorRoles.of(context).warningAction
-                                    : Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.5),
-                          ),
-                        ),
                       ],
+                      trailing: Text(
+                        '$remainingChars',
+                        style: KubusTextStyles.navLabel.copyWith(
+                          color: remainingChars < 0
+                              ? Theme.of(context).colorScheme.error
+                              : remainingChars < 20
+                                  ? KubusColorRoles.of(context).warningAction
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.5),
+                        ),
+                      ),
                     ),
                   ),
                 ],

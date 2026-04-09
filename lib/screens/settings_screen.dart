@@ -28,6 +28,8 @@ import '../widgets/common/keyboard_inset_padding.dart';
 import '../widgets/glass_components.dart';
 import '../widgets/email_verification_status_badge.dart';
 import '../widgets/common/kubus_screen_header.dart';
+import '../widgets/detail/shared_section_widgets.dart';
+import '../widgets/detail/shared_settings_widgets.dart';
 import 'onboarding/onboarding_flow_screen.dart';
 import 'web3/wallet/wallet_home.dart' as web3_wallet;
 import 'web3/wallet/connectwallet_screen.dart';
@@ -1601,28 +1603,14 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   Widget _buildSection(String title, IconData icon, List<Widget> children,
       {Color? sectionColor}) {
-    final scheme = Theme.of(context).colorScheme;
-    final color = sectionColor ?? scheme.secondary;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Icon(
-              icon,
-              color: color,
-              size: 24,
-            ),
-            const SizedBox(width: 12),
-            Text(
-              title,
-              style: KubusTypography.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-          ],
+        SharedSectionHeader(
+          title: title,
+          icon: icon,
+          iconColor: sectionColor,
+          padding: EdgeInsets.zero,
         ),
         const SizedBox(height: 16),
         ...children,
@@ -1666,54 +1654,37 @@ class _SettingsScreenState extends State<SettingsScreen>
     final tintBase = isDestructive
         ? Color.lerp(scheme.surface, scheme.errorContainer, 0.32)
         : scheme.surface;
+    final accentColor = Provider.of<ThemeProvider>(context).accentColor;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: _buildSettingsPanel(
         tintBase: tintBase,
         padding: EdgeInsets.zero,
-        child: ListTile(
-          key: tileKey,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(KubusRadius.md),
-            side: BorderSide(
-              color: isDestructive
-                  ? Colors.red.withValues(alpha: 0.3)
-                  : scheme.outline,
-            ),
-          ),
-          leading: Icon(
-            icon,
-            color: isDestructive
-                ? Colors.red
-                : Provider.of<ThemeProvider>(context).accentColor,
-            size: 24,
-          ),
-          title: Text(
-            title,
-            style: KubusTypography.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: isDestructive ? Colors.red : scheme.onSurface,
-            ),
-          ),
-          subtitle: Text(
-            subtitle,
-            style: KubusTypography.inter(
-              fontSize: 14,
-              color: scheme.onSurface.withValues(alpha: 0.6),
-            ),
-          ),
-          trailing: trailing ??
-              (onTap != null
-                  ? Icon(
-                      Icons.arrow_forward_ios,
-                      size: 16,
-                      color: scheme.onSurface.withValues(alpha: 0.4),
-                    )
-                  : null),
+        child: SharedSettingsRowTile(
+          tileKey: tileKey,
+          title: title,
+          subtitle: subtitle,
+          icon: icon,
           onTap: onTap,
+          trailing: trailing,
+          isDestructive: isDestructive,
+          showChevron: trailing == null,
+          backgroundColor: tintBase,
+          borderColor:
+              isDestructive ? Colors.red.withValues(alpha: 0.3) : scheme.outline,
+          leadingBackgroundColor: Colors.transparent,
+          leadingBorderColor: Colors.transparent,
+          leadingIconColor:
+              isDestructive ? Colors.red : accentColor,
+          titleStyle: KubusTypography.inter(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: isDestructive ? Colors.red : scheme.onSurface,
+          ),
+          subtitleStyle: KubusTypography.inter(
+            fontSize: 14,
+            color: scheme.onSurface.withValues(alpha: 0.6),
+          ),
         ),
       ),
     );
@@ -3517,31 +3488,32 @@ class _SettingsScreenState extends State<SettingsScreen>
     bool enabled = true,
     Key? tileKey,
   }) {
+    final accentColor = Provider.of<ThemeProvider>(context).accentColor;
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       color: Theme.of(context).colorScheme.primaryContainer,
-      child: SwitchListTile(
-        key: tileKey,
-        title: Text(
-          title,
-          style: KubusTypography.inter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        child: SharedSettingsToggleRow(
+          switchKey: tileKey,
+          title: title,
+          subtitle: subtitle,
+          value: value,
+          onChanged: enabled ? onChanged : null,
+          enabled: enabled,
+          activeColor: accentColor,
+          titleStyle: KubusTypography.inter(
             fontWeight: FontWeight.w500,
             color: Theme.of(context).colorScheme.onSurface,
           ),
-        ),
-        subtitle: Text(
-          subtitle,
-          style: KubusTypography.inter(
+          subtitleStyle: KubusTypography.inter(
             fontSize: 12,
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+            color: Theme.of(context)
+                .colorScheme
+                .onSurface
+                .withValues(alpha: 0.7),
           ),
         ),
-        value: value,
-        onChanged: enabled ? onChanged : null,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        activeThumbColor:
-            Provider.of<ThemeProvider>(context, listen: false).accentColor,
       ),
     );
   }
@@ -3554,77 +3526,79 @@ class _SettingsScreenState extends State<SettingsScreen>
     Function(String?) onChanged, {
     String Function(String option)? optionLabelBuilder,
   }) {
+    final scheme = Theme.of(context).colorScheme;
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
-      color: Theme.of(context).colorScheme.primaryContainer,
-      child: ListTile(
-        title: Text(
-          title,
-          style: KubusTypography.inter(
+      color: scheme.primaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        child: SharedSettingsRowTile(
+          title: title,
+          subtitle: subtitle,
+          icon: Icons.tune,
+          showChevron: false,
+          trailing: DropdownButton<String>(
+            value: value,
+            underline: Container(),
+            dropdownColor: scheme.surface,
+            style: KubusTypography.inter(
+              color: scheme.onSurface,
+            ),
+            items: options.map((String option) {
+              return DropdownMenuItem<String>(
+                value: option,
+                child: Text(optionLabelBuilder?.call(option) ?? option),
+              );
+            }).toList(),
+            onChanged: onChanged,
+          ),
+          leadingBackgroundColor: Colors.transparent,
+          leadingBorderColor: Colors.transparent,
+          leadingIconColor: scheme.onSurface.withValues(alpha: 0.7),
+          titleStyle: KubusTypography.inter(
             fontWeight: FontWeight.w500,
-            color: Theme.of(context).colorScheme.onSurface,
+            color: scheme.onSurface,
           ),
-        ),
-        subtitle: Text(
-          subtitle,
-          style: KubusTypography.inter(
+          subtitleStyle: KubusTypography.inter(
             fontSize: 12,
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+            color: scheme.onSurface.withValues(alpha: 0.7),
           ),
+          backgroundColor: scheme.primaryContainer,
+          borderColor: scheme.outline,
         ),
-        trailing: DropdownButton<String>(
-          value: value,
-          underline: Container(),
-          dropdownColor: Theme.of(context).colorScheme.surface,
-          style: KubusTypography.inter(
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-          items: options.map((String option) {
-            return DropdownMenuItem<String>(
-              value: option,
-              child: Text(optionLabelBuilder?.call(option) ?? option),
-            );
-          }).toList(),
-          onChanged: onChanged,
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       ),
     );
   }
 
   Widget _buildActionTile(
       String title, String subtitle, IconData icon, VoidCallback onTap) {
+    final scheme = Theme.of(context).colorScheme;
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
-      color: Theme.of(context).colorScheme.primaryContainer,
-      child: ListTile(
-        title: Text(
-          title,
-          style: KubusTypography.inter(
+      color: scheme.primaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        child: SharedSettingsRowTile(
+          title: title,
+          subtitle: subtitle,
+          icon: icon,
+          onTap: onTap,
+          showChevron: true,
+          leadingBackgroundColor: Colors.transparent,
+          leadingBorderColor: Colors.transparent,
+          leadingIconColor:
+              Provider.of<ThemeProvider>(context, listen: false).accentColor,
+          titleStyle: KubusTypography.inter(
             fontWeight: FontWeight.w500,
-            color: Theme.of(context).colorScheme.onSurface,
+            color: scheme.onSurface,
           ),
-        ),
-        subtitle: Text(
-          subtitle,
-          style: KubusTypography.inter(
+          subtitleStyle: KubusTypography.inter(
             fontSize: 12,
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+            color: scheme.onSurface.withValues(alpha: 0.7),
           ),
+          backgroundColor: scheme.primaryContainer,
+          borderColor: scheme.outline,
         ),
-        leading: Icon(
-          icon,
-          color: Provider.of<ThemeProvider>(context, listen: false).accentColor,
-        ),
-        trailing: Icon(
-          Icons.arrow_forward_ios,
-          size: 16,
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-        ),
-        onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       ),
     );
   }

@@ -33,6 +33,7 @@ import '../../../screens/community/post_detail_screen.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../services/socket_service.dart';
 import '../../../screens/community/profile_screen_methods.dart';
+import '../../../widgets/detail/shared_section_widgets.dart';
 import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/user_profile_navigation.dart';
@@ -1264,96 +1265,30 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         (data['id'] ?? data['artwork_id'] ?? data['artworkId'])?.toString();
     final likesCount = data['likesCount'] ?? data['likes'] ?? 0;
 
-    return GestureDetector(
+    return SharedShowcaseCard(
+      imageUrl: imageUrl,
+      title: title,
+      subtitle: category,
+      footer: '$likesCount',
       onTap: artworkId != null
           ? () {
               openArtwork(context, artworkId, source: 'desktop_user_profile');
             }
           : null,
-      child: MouseRegion(
-        cursor: artworkId != null
-            ? SystemMouseCursors.click
-            : SystemMouseCursors.basic,
-        child: SizedBox(
-          width: 220,
-          child: DesktopCard(
-            padding: EdgeInsets.zero,
-            enableHover: true,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(KubusRadius.lg),
-                  ),
-                  child: imageUrl != null
-                      ? Image.network(
-                          _normalizeMediaUrl(imageUrl) ?? '',
-                          height: 160,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) =>
-                              _buildPlaceholderImage(160, Icons.image_outlined),
-                        )
-                      : _buildPlaceholderImage(160, Icons.image_outlined),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(KubusSpacing.md),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: KubusTypography.inter(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        category,
-                        style: KubusTypography.inter(
-                          fontSize: 13,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.6),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.favorite_border,
-                            size: 14,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.5),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '$likesCount',
-                            style: KubusTypography.inter(
-                              fontSize: 12,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.5),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+      width: 220,
+      imageHeight: 160,
+      titleStyle: KubusTypography.inter(
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
+        color: Theme.of(context).colorScheme.onSurface,
+      ),
+      subtitleStyle: KubusTypography.inter(
+        fontSize: 13,
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+      ),
+      footerStyle: KubusTypography.inter(
+        fontSize: 12,
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
       ),
     );
   }
@@ -1377,103 +1312,34 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         (data['id'] ?? data['collection_id'] ?? data['collectionId'])
             ?.toString();
 
-    return SizedBox(
+    return SharedShowcaseCard(
+      imageUrl: imageUrl,
+      title: title,
+      subtitle: l10n.userProfileArtworksCountLabel(count as int),
+      footer: description.isNotEmpty ? description : null,
+      onTap: (collectionId != null && collectionId.isNotEmpty)
+          ? () {
+              _openDesktopShellAwareScreen(
+                CollectionDetailScreen(collectionId: collectionId),
+              );
+            }
+          : null,
       width: 200,
-      child: DesktopCard(
-        padding: EdgeInsets.zero,
-        enableHover: true,
-        onTap: (collectionId != null && collectionId.isNotEmpty)
-            ? () {
-                _openDesktopShellAwareScreen(
-                  CollectionDetailScreen(collectionId: collectionId),
-                );
-              }
-            : null,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(KubusRadius.lg),
-              ),
-              child: imageUrl != null
-                  ? Image.network(
-                      _normalizeMediaUrl(imageUrl) ?? '',
-                      height: 120,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _buildPlaceholderImage(
-                          120, Icons.collections_outlined),
-                    )
-                  : _buildPlaceholderImage(120, Icons.collections_outlined),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(KubusSpacing.md),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: KubusTypography.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    l10n.userProfileArtworksCountLabel(count as int),
-                    style: KubusTypography.inter(
-                      fontSize: 12,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
-                    ),
-                  ),
-                  if (description.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      description,
-                      style: KubusTypography.inter(
-                        fontSize: 11,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.5),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
+      imageHeight: 120,
+      placeholderIcon: Icons.collections_outlined,
+      titleStyle: KubusTypography.inter(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: Theme.of(context).colorScheme.onSurface,
       ),
-    );
-  }
-
-  Widget _buildPlaceholderImage(double height, IconData icon) {
-    return Container(
-      height: height,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(KubusRadius.lg),
-        ),
+      subtitleStyle: KubusTypography.inter(
+        fontSize: 12,
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
       ),
-      child: Center(
-          child: Icon(icon,
-              size: 48,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onPrimaryContainer
-                  .withValues(alpha: 0.4))),
+      footerStyle: KubusTypography.inter(
+        fontSize: 11,
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+      ),
     );
   }
 
