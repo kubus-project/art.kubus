@@ -10,7 +10,7 @@ enum KubusStatCardLayout {
   centered,
 }
 
-class KubusStatCard extends StatelessWidget {
+class KubusStatCard extends StatefulWidget {
   const KubusStatCard({
     super.key,
     required this.title,
@@ -35,6 +35,7 @@ class KubusStatCard extends StatelessWidget {
     this.centeredWatermarkAlignment,
     this.centeredWatermarkScale = 1.0,
     this.centeredWatermarkVerticalBias = 0.18,
+    this.centeredWatermarkHovered,
   });
 
   final String title;
@@ -59,57 +60,113 @@ class KubusStatCard extends StatelessWidget {
   final Alignment? centeredWatermarkAlignment;
   final double centeredWatermarkScale;
   final double centeredWatermarkVerticalBias;
+  final bool? centeredWatermarkHovered;
+
+  @override
+  State<KubusStatCard> createState() => _KubusStatCardState();
+}
+
+class _KubusStatCardState extends State<KubusStatCard>
+    with SingleTickerProviderStateMixin {
+  static const Duration _hoverTransitionDuration = Duration(milliseconds: 280);
+  static const Duration _floatDuration = Duration(milliseconds: 2200);
+
+  late final AnimationController _floatController = AnimationController(
+    vsync: this,
+    duration: _floatDuration,
+  );
+
+  bool _isHovered = false;
+
+  @override
+  void dispose() {
+    _floatController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant KubusStatCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.centeredWatermarkHovered == oldWidget.centeredWatermarkHovered) {
+      return;
+    }
+    final forcedHovered = widget.centeredWatermarkHovered;
+    if (forcedHovered == true) {
+      _floatController.repeat(reverse: true);
+    } else if (forcedHovered == false) {
+      _floatController.stop();
+      _floatController.value = 0;
+    }
+  }
+
+  void _setHovered(bool hovered) {
+    if (_isHovered == hovered) return;
+    setState(() => _isHovered = hovered);
+    if (hovered) {
+      _floatController.repeat(reverse: true);
+    } else {
+      _floatController.stop();
+      _floatController.value = 0;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final screenWidth = MediaQuery.maybeOf(context)?.size.width ?? 0;
     final isUltraWide = screenWidth >= 1800;
-    final effectiveAccent = accent ?? scheme.primary;
-    final shouldShowIcon = showIcon && icon != null;
+    final effectiveAccent = widget.accent ?? scheme.primary;
+    final shouldShowIcon = widget.showIcon && widget.icon != null;
+    final watermarkHovered = widget.centeredWatermarkHovered ?? _isHovered;
     final effectiveRadius =
-        borderRadius ?? BorderRadius.circular(KubusRadius.md);
+        widget.borderRadius ?? BorderRadius.circular(KubusRadius.md);
     final effectiveMinHeight =
-        (layout == KubusStatCardLayout.centered && isUltraWide && minHeight > 0)
-            ? (minHeight - 6).clamp(0.0, double.infinity)
-            : minHeight;
+        (widget.layout == KubusStatCardLayout.centered &&
+                isUltraWide &&
+                widget.minHeight > 0)
+            ? (widget.minHeight - 6).clamp(0.0, double.infinity)
+            : widget.minHeight;
     final glassStyle = KubusGlassStyle.resolve(
       context,
       surfaceType: KubusGlassSurfaceType.card,
-      tintBase: tintBase ?? effectiveAccent,
+      tintBase: widget.tintBase ?? effectiveAccent,
     );
-
-    return Container(
+    final content = Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         borderRadius: effectiveRadius,
         border: Border.all(
-          color: borderColor ?? effectiveAccent.withValues(alpha: 0.22),
+          color:
+              widget.borderColor ?? effectiveAccent.withValues(alpha: 0.22),
           width: KubusSizes.hairline,
         ),
       ),
       child: LiquidGlassCard(
         padding:
-            layout == KubusStatCardLayout.centered ? EdgeInsets.zero : padding,
+            widget.layout == KubusStatCardLayout.centered
+                ? EdgeInsets.zero
+                : widget.padding,
         margin: EdgeInsets.zero,
         borderRadius: effectiveRadius,
         showBorder: false,
         blurSigma: glassStyle.blurSigma,
         fallbackMinOpacity: glassStyle.fallbackMinOpacity,
         backgroundColor: glassStyle.tintColor,
-        onTap: onTap,
+        onTap: widget.onTap,
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: effectiveMinHeight),
-          child: layout == KubusStatCardLayout.centered
+          child: widget.layout == KubusStatCardLayout.centered
               ? _buildCenteredContent(
                   context: context,
                   scheme: scheme,
                   effectiveAccent: effectiveAccent,
                   shouldShowIcon: shouldShowIcon,
-                  contentPadding: padding,
-                  centeredWatermarkAlignment: centeredWatermarkAlignment,
-                  centeredWatermarkScale: centeredWatermarkScale,
-                  centeredWatermarkVerticalBias: centeredWatermarkVerticalBias,
+                  contentPadding: widget.padding,
+                  centeredWatermarkAlignment: widget.centeredWatermarkAlignment,
+                  centeredWatermarkScale: widget.centeredWatermarkScale,
+                  centeredWatermarkVerticalBias:
+                      widget.centeredWatermarkVerticalBias,
+                  watermarkHovered: watermarkHovered,
                 )
               : _buildStandardContent(
                   context: context,
@@ -119,6 +176,20 @@ class KubusStatCard extends StatelessWidget {
                 ),
         ),
       ),
+    );
+
+    if (widget.layout != KubusStatCardLayout.centered || !shouldShowIcon) {
+      return content;
+    }
+
+    if (widget.centeredWatermarkHovered != null) {
+      return content;
+    }
+
+    return MouseRegion(
+      onEnter: (_) => _setHovered(true),
+      onExit: (_) => _setHovered(false),
+      child: content,
     );
   }
 
@@ -138,16 +209,16 @@ class KubusStatCard extends StatelessWidget {
           children: [
             if (shouldShowIcon) ...[
               Container(
-                width: iconBoxSize,
-                height: iconBoxSize,
+                width: widget.iconBoxSize,
+                height: widget.iconBoxSize,
                 decoration: BoxDecoration(
                   color: effectiveAccent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(KubusRadius.sm),
                 ),
                 child: Icon(
-                  icon,
+                  widget.icon,
                   color: effectiveAccent,
-                  size: iconSize,
+                  size: widget.iconSize,
                 ),
               ),
               const SizedBox(width: KubusSpacing.sm),
@@ -155,14 +226,14 @@ class KubusStatCard extends StatelessWidget {
             Expanded(
               child: Padding(
                 padding: EdgeInsets.only(
-                  right: change == null ? 0 : KubusSpacing.xs,
+                  right: widget.change == null ? 0 : KubusSpacing.xs,
                 ),
                 child: Text(
-                  title,
-                  maxLines: titleMaxLines,
+                  widget.title,
+                  maxLines: widget.titleMaxLines,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
-                  style: titleStyle ??
+                  style: widget.titleStyle ??
                       KubusTextStyles.actionTileTitle.copyWith(
                         fontSize: 15,
                         color: scheme.onSurface,
@@ -170,10 +241,10 @@ class KubusStatCard extends StatelessWidget {
                 ),
               ),
             ),
-            if (change != null)
+            if (widget.change != null)
               _KubusStatChangeChip(
-                label: change!,
-                isPositive: isPositiveChange,
+                label: widget.change!,
+                isPositive: widget.isPositiveChange,
               ),
           ],
         ),
@@ -185,11 +256,11 @@ class KubusStatCard extends StatelessWidget {
               alignment: Alignment.center,
               fit: BoxFit.scaleDown,
               child: Text(
-                value,
+                widget.value,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: valueStyle ??
+                style: widget.valueStyle ??
                     KubusTextStyles.sectionTitle.copyWith(
                       fontSize: KubusHeaderMetrics.sectionTitle + 2,
                       color: scheme.onSurface,
@@ -211,6 +282,7 @@ class KubusStatCard extends StatelessWidget {
     required Alignment? centeredWatermarkAlignment,
     required double centeredWatermarkScale,
     required double centeredWatermarkVerticalBias,
+    required bool watermarkHovered,
   }) {
     final mediaQuery = MediaQuery.maybeOf(context);
     final screenWidth = mediaQuery?.size.width ?? 0;
@@ -239,11 +311,11 @@ class KubusStatCard extends StatelessWidget {
         ultraWideTypeScale *
         (textScale > 1.0 ? (1 / textScale.clamp(1.0, 1.20)) : 1.0);
 
-    final titleTextStyle = titleStyle ??
+    final titleTextStyle = widget.titleStyle ??
         KubusTextStyles.statLabel.copyWith(
           color: scheme.onSurface.withValues(alpha: 0.8),
         );
-    final valueTextStyle = valueStyle ??
+    final valueTextStyle = widget.valueStyle ??
         KubusTextStyles.statValue.copyWith(
           color: scheme.onSurface,
         );
@@ -270,28 +342,34 @@ class KubusStatCard extends StatelessWidget {
                 builder: (context, constraints) {
                   final maxWidth = constraints.maxWidth.isFinite
                       ? constraints.maxWidth
-                      : minHeight;
+                      : widget.minHeight;
                   final maxHeight = constraints.maxHeight.isFinite
                       ? constraints.maxHeight
-                      : minHeight;
+                      : widget.minHeight;
 
-                  final fallbackBase = iconSize + iconBoxSize;
+                  final fallbackBase = widget.iconSize + widget.iconBoxSize;
                   final safeWidth = maxWidth > 0 ? maxWidth : fallbackBase;
                   final safeHeight = maxHeight > 0 ? maxHeight : fallbackBase;
                   final aspectRatio =
                       safeHeight <= 0 ? 1.0 : (safeWidth / safeHeight);
                   final shortestSide = math.min(safeWidth, safeHeight);
                   final longestSide = math.max(safeWidth, safeHeight);
-                  final glyphCompensation = _watermarkGlyphCompensation(icon);
+                  final glyphCompensation =
+                      _watermarkGlyphCompensation(widget.icon);
                   final isWideCard = aspectRatio >= 1.45;
                   final baseWatermarkSize = shortestSide *
                       (isWideCard
-                          ? 1.22
-                          : (aspectRatio <= 0.9 ? 1.34 : 1.28));
-                  final minAllowedSize = shortestSide * 1.02;
+                          ? 1.36
+                          : (aspectRatio <= 0.9 ? 1.56 : 1.48));
+                  final minAllowedSize = shortestSide * 1.10;
                   final maxAllowedSize =
-                      math.max(shortestSide * 1.18, longestSide * 1.08);
-                  final iconWatermarkSize = (baseWatermarkSize *
+                      math.max(shortestSide * 1.34, longestSide * 1.18);
+
+                  final hoverProgress = watermarkHovered ? 1.0 : 0.0;
+                  final hoverBias =
+                      centeredWatermarkVerticalBias.clamp(0.0, 0.35) *
+                          (1.0 - hoverProgress);
+                  final baseSizedWatermark = (baseWatermarkSize *
                           glyphCompensation *
                           watermarkScale *
                           centeredWatermarkScale.clamp(0.75, 1.2))
@@ -300,34 +378,60 @@ class KubusStatCard extends StatelessWidget {
                   final watermarkAlignment =
                       centeredWatermarkAlignment ?? Alignment.center;
 
-                  return Align(
-                    alignment: watermarkAlignment,
-                    child: Transform.translate(
-                      offset: Offset(
-                        0,
-                        iconWatermarkSize *
-                            centeredWatermarkVerticalBias.clamp(0.0, 0.35),
-                      ),
-                      child: Icon(
-                        icon,
-                        color: effectiveAccent.withValues(
-                          alpha: isWideCard ? 0.11 : 0.13,
+                  return AnimatedBuilder(
+                    animation: _floatController,
+                    builder: (context, _) {
+                      final animatedHoverScale = 1.0 +
+                          (0.06 * hoverProgress) +
+                          (_floatController.value * 0.015);
+                      final animatedIconWatermarkSize = (baseSizedWatermark *
+                              animatedHoverScale)
+                          .clamp(minAllowedSize, maxAllowedSize);
+                      final animatedFloatLift = watermarkHovered
+                          ? math.sin(_floatController.value * math.pi * 2) *
+                              (baseSizedWatermark * 0.022)
+                          : 0.0;
+
+                      return TweenAnimationBuilder<double>(
+                        tween: Tween<double>(
+                          end: hoverBias,
                         ),
-                        size: iconWatermarkSize,
-                      ),
-                    ),
+                        duration: _hoverTransitionDuration,
+                        curve: Curves.easeInOutCubic,
+                        builder: (context, animatedBias, child) {
+                          return Align(
+                            alignment: watermarkAlignment,
+                            child: Transform.translate(
+                              offset: Offset(
+                                0,
+                                (animatedIconWatermarkSize * animatedBias) -
+                                    animatedFloatLift,
+                              ),
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: Icon(
+                          widget.icon,
+                          color: effectiveAccent.withValues(
+                            alpha: isWideCard ? 0.12 : 0.14,
+                          ),
+                          size: animatedIconWatermarkSize,
+                        ),
+                      );
+                    },
                   );
                 },
               ),
             ),
           ),
-        if (change != null)
+        if (widget.change != null)
           Positioned(
             top: 0,
             right: 0,
             child: _KubusStatChangeChip(
-              label: change!,
-              isPositive: isPositiveChange,
+              label: widget.change!,
+              isPositive: widget.isPositiveChange,
             ),
           ),
         Center(
@@ -344,7 +448,7 @@ class KubusStatCard extends StatelessWidget {
                     alignment: Alignment.center,
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      value,
+                      widget.value,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
@@ -354,10 +458,10 @@ class KubusStatCard extends StatelessWidget {
                 ),
                 SizedBox(height: valueTitleGap),
                 Text(
-                  title,
+                  widget.title,
                   style: effectiveTitleStyle,
                   textAlign: TextAlign.center,
-                  maxLines: titleMaxLines,
+                  maxLines: widget.titleMaxLines,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],

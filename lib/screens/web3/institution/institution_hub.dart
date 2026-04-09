@@ -324,7 +324,6 @@ class _InstitutionHubState extends State<InstitutionHub> {
               child: Column(
                 children: [
                   _buildInstitutionHeader(
-                    isApprovedInstitution: isApprovedInstitution,
                     canSelfServeInstitutionPromotion:
                         canSelfServeInstitutionPromotion,
                   ),
@@ -361,7 +360,6 @@ class _InstitutionHubState extends State<InstitutionHub> {
   }
 
   Widget _buildInstitutionHeader({
-    required bool isApprovedInstitution,
     required bool canSelfServeInstitutionPromotion,
   }) {
     final l10n = AppLocalizations.of(context)!;
@@ -469,82 +467,12 @@ class _InstitutionHubState extends State<InstitutionHub> {
                         ),
                       ),
                     ],
-                    if (isApprovedInstitution) ...[
-                      const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
-                      Wrap(
-                        spacing: KubusSpacing.sm,
-                        runSpacing: KubusSpacing.sm,
-                        children: [
-                          if (AppConfig.isFeatureEnabled('events'))
-                            _buildHubHeaderButton(
-                              label: 'Create event',
-                              icon: Icons.add,
-                              accent: roles.positiveAction,
-                              onTap: () => setState(
-                                () => _selectedIndex =
-                                    AppConfig.isFeatureEnabled('exhibitions')
-                                        ? 2
-                                        : 1,
-                              ),
-                            ),
-                          if (AppConfig.isFeatureEnabled('exhibitions'))
-                            _buildHubHeaderButton(
-                              label: 'Exhibitions',
-                              icon: Icons.collections_bookmark_outlined,
-                              accent: roles.web3InstitutionAccent,
-                              onTap: () => setState(() => _selectedIndex = 1),
-                            ),
-                        ],
-                      ),
-                    ],
                   ],
                 ),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildHubHeaderButton({
-    required String label,
-    required IconData icon,
-    required Color accent,
-    required VoidCallback onTap,
-  }) {
-    final buttonStyle = KubusGlassStyle.resolve(
-      context,
-      surfaceType: KubusGlassSurfaceType.button,
-      tintBase: accent,
-    );
-    return LiquidGlassCard(
-      onTap: onTap,
-      padding: const EdgeInsets.symmetric(
-        horizontal: KubusSpacing.md - KubusSpacing.xs,
-        vertical: KubusSpacing.sm + KubusSpacing.xs,
-      ),
-      borderRadius: BorderRadius.circular(KubusRadius.md),
-      blurSigma: buttonStyle.blurSigma,
-      fallbackMinOpacity: buttonStyle.fallbackMinOpacity,
-      showBorder: false,
-      backgroundColor: accent.withValues(
-        alpha: Theme.of(context).brightness == Brightness.dark ? 0.20 : 0.14,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: KubusSizes.trailingChevron,
-            color: accent,
-          ),
-          const SizedBox(width: KubusSpacing.xs),
-          Text(
-            label,
-            style: KubusTextStyles.actionTileTitle.copyWith(color: accent),
-          ),
-        ],
       ),
     );
   }

@@ -1023,7 +1023,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
           ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
               content: Text(
-                l10n.profileEditAvatarUploadFailedToast(e.toString()),
+                l10n.profileEditAvatarUploadFailedToast(),
               ),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
@@ -1071,7 +1071,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
-          content: Text(l10n.profileEditPickImageFailedToast(e.toString())),
+          content: Text(l10n.profileEditPickImageFailedToast()),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -1174,7 +1174,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
           ScaffoldMessenger.of(context).showKubusSnackBar(
             SnackBar(
               content: Text(
-                l10n.profileEditCoverUploadFailedToast(e.toString()),
+                l10n.profileEditCoverUploadFailedToast(),
               ),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
@@ -1185,7 +1185,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
-          content: Text(l10n.profileEditPickImageFailedToast(e.toString())),
+          content: Text(l10n.profileEditPickImageFailedToast()),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -1282,7 +1282,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
-          content: Text(l10n.profileEditErrorToast(e.toString())),
+          content: Text(l10n.profileEditErrorToast()),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );

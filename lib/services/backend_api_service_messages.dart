@@ -120,6 +120,49 @@ Future<Map<String, dynamic>> _backendApiFetchConversationMembersImpl(
   }
 }
 
+Future<Map<String, dynamic>> _backendApiUploadMessageAttachmentImpl(
+  BackendApiService service,
+  String conversationId,
+  List<int> bytes,
+  String filename,
+  String contentType,
+) async {
+  try {
+    final uri = Uri.parse('${service.baseUrl}/api/messages/$conversationId/messages');
+    final placeholder =
+        filename.isNotEmpty ? 'Attachment - $filename' : 'Shared an attachment';
+
+    http.MultipartRequest buildRequest() {
+      final request = http.MultipartRequest('POST', uri);
+      request.headers.addAll({'Accept': 'application/json'});
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'file',
+          bytes,
+          filename: filename,
+          contentType: MediaType.parse(contentType),
+        ),
+      );
+      request.fields['message'] = placeholder;
+      request.fields['content'] = placeholder;
+      return request;
+    }
+
+    final response = await service._sendMultipart(buildRequest, includeAuth: true);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    return {
+      'success': false,
+      'status': response.statusCode,
+      'body': response.body,
+    };
+  } catch (e) {
+    AppConfig.debugPrint('BackendApiService.uploadMessageAttachment failed: $e');
+    return {'success': false, 'error': e.toString()};
+  }
+}
+
 Future<Map<String, dynamic>> _backendApiCreateConversationImpl(
   BackendApiService service, {
   String? title,

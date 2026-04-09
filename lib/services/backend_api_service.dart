@@ -33,7 +33,9 @@ import 'http_client_factory.dart';
 import 'telemetry/kubus_client_context.dart';
 
 part 'backend_api_service_auth_helpers.dart';
+part 'backend_api_service_auth_account_helpers.dart';
 part 'backend_api_service_messages.dart';
+part 'backend_api_service_profile_helpers.dart';
 part 'backend_api_service_parsers.dart';
 part 'backend_api_service_upload_helpers.dart';
 
@@ -2228,38 +2230,13 @@ class BackendApiService
     required String walletAddress,
     String? username,
     bool recordSignInMethod = false,
-  }) async {
-    try {
-      // Keep preferred wallet in sync with successful auth issuance.
-      setPreferredWalletAddress(walletAddress);
-      final body = {
-        'walletAddress': walletAddress,
-        if (username != null) 'username': username,
-      };
-      const path = '/api/auth/register';
-      final response = await _sendAuthRequestWithFailover(
-        'POST',
-        path,
-        includeAuth: false,
-        headers: _getHeaders(includeAuth: false),
-        body: jsonEncode(body),
+  }) =>
+      _backendApiRegisterWallet(
+        this,
+        walletAddress: walletAddress,
+        username: username,
+        recordSignInMethod: recordSignInMethod,
       );
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        await _persistTokenFromResponse(data);
-        if (recordSignInMethod) {
-          await setLastSignInMethod(AuthSignInMethod.wallet);
-        }
-        return data;
-      } else {
-        throw Exception(
-            'Register failed: ${response.statusCode} ${response.body}');
-      }
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.registerWallet failed: $e');
-      rethrow;
-    }
-  }
 
   /// Login with wallet signature
   /// POST /api/auth/login
@@ -2267,36 +2244,13 @@ class BackendApiService
     required String walletAddress,
     required String signature,
     required String message,
-  }) async {
-    try {
-      const path = '/api/auth/login';
-      final response = await _sendAuthRequestWithFailover(
-        'POST',
-        path,
-        includeAuth: false,
-        headers: _getHeaders(includeAuth: false),
-        body: jsonEncode({
-          'walletAddress': walletAddress,
-          'signature': signature,
-          'message': message,
-        }),
+  }) =>
+      _backendApiLoginWithWallet(
+        this,
+        walletAddress: walletAddress,
+        signature: signature,
+        message: message,
       );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        await _persistTokenFromResponse(data);
-        await syncSecureAccountStatusFromResponse(data);
-        await setLastSignInMethod(AuthSignInMethod.wallet);
-        return data;
-      } else {
-        throw Exception(
-            'Login failed: ${response.statusCode} ${response.body}');
-      }
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.loginWithWallet failed: $e');
-      rethrow;
-    }
-  }
 
   /// Register with email + password
   /// POST /api/auth/register/email
@@ -2307,381 +2261,104 @@ class BackendApiService
     String? displayName,
     String? walletAddress,
     bool includeAuth = false,
-  }) async {
-    try {
-      const path = '/api/auth/register/email';
-      final uri = _buildApiUri(baseUrl, path);
-      final key = _rateLimitKey('POST', uri);
-      if (_isRateLimited(key)) {
-        throw Exception(_rateLimitMessage(key));
-      }
-      const profileDisplayNameMaxLength = 100;
-      final normalizedDisplayName =
-          displayName?.replaceAll(RegExp(r'\s+'), ' ').trim();
-      final sanitizedDisplayName = (normalizedDisplayName == null ||
-              normalizedDisplayName.isEmpty)
-          ? null
-          : (normalizedDisplayName.length > profileDisplayNameMaxLength
-              ? normalizedDisplayName.substring(0, profileDisplayNameMaxLength)
-              : normalizedDisplayName);
-      final body = {
-        'email': email,
-        'password': password,
-        if (username != null && username.isNotEmpty) 'username': username,
-        if (sanitizedDisplayName != null) 'displayName': sanitizedDisplayName,
-        if (walletAddress != null && walletAddress.isNotEmpty)
-          'walletAddress': walletAddress,
-      };
-      final response = await _sendAuthRequestWithFailover(
-        'POST',
-        path,
+  }) =>
+      _backendApiRegisterWithEmail(
+        this,
+        email: email,
+        password: password,
+        username: username,
+        displayName: displayName,
+        walletAddress: walletAddress,
         includeAuth: includeAuth,
-        headers: _getHeaders(includeAuth: includeAuth),
-        body: jsonEncode(body),
       );
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        await _persistTokenFromResponse(data);
-        await syncSecureAccountStatusFromResponse(data);
-        await setLastSignInMethod(AuthSignInMethod.email);
-        return data;
-      }
-      if (response.statusCode == 429) {
-        _markRateLimited(key, response, defaultWindowMs: 900000);
-        throw Exception(_rateLimitMessage(key));
-      }
-      if (response.statusCode == 404) {
-        throw Exception(
-            'Email registration endpoint not available on the backend (received 404). Ensure the server is updated and ENABLE_EMAIL_AUTH=true.');
-      }
-      throw BackendApiRequestException(
-          statusCode: response.statusCode, path: uri.path, body: response.body);
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.registerWithEmail failed: $e');
-      rethrow;
-    }
-  }
 
   /// Login with email + password
   /// POST /api/auth/login/email
   Future<Map<String, dynamic>> loginWithEmail({
     required String email,
     required String password,
-  }) async {
-    try {
-      const path = '/api/auth/login/email';
-      final uri = _buildApiUri(baseUrl, path);
-      final key = _rateLimitKey('POST', uri);
-      if (_isRateLimited(key)) {
-        throw Exception(_rateLimitMessage(key));
-      }
-      final response = await _sendAuthRequestWithFailover(
-        'POST',
-        path,
-        includeAuth: false,
-        headers: _getHeaders(includeAuth: false),
-        body: jsonEncode({'email': email, 'password': password}),
+  }) =>
+      _backendApiLoginWithEmail(
+        this,
+        email: email,
+        password: password,
       );
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      if (response.statusCode == 200) {
-        await _persistTokenFromResponse(data);
-        await syncSecureAccountStatusFromResponse(data);
-        await setLastSignInMethod(AuthSignInMethod.email);
-        return data;
-      }
-      if (response.statusCode == 429) {
-        _markRateLimited(key, response, defaultWindowMs: 900000);
-        throw Exception(_rateLimitMessage(key));
-      }
-      throw BackendApiRequestException(
-          statusCode: response.statusCode, path: uri.path, body: response.body);
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.loginWithEmail failed: $e');
-      rethrow;
-    }
-  }
 
   /// Resend email verification link
   /// POST /api/auth/resend-verification { email }
   Future<Map<String, dynamic>> _resendEmailVerificationRequest({
     required String email,
     required bool includeAuth,
-  }) async {
-    try {
-      const path = '/api/auth/resend-verification';
-      final uri = _buildApiUri(baseUrl, path);
-      final key = _rateLimitKey('POST', uri);
-      if (_isRateLimited(key)) {
-        throw Exception(_rateLimitMessage(key));
-      }
-      if (includeAuth) {
-        await loadAuthToken();
-        if ((_authToken ?? '').trim().isEmpty) {
-          throw Exception('Authentication required');
-        }
-      }
-      final normalizedEmail = email.trim();
-      final response = await _sendAuthRequestWithFailover(
-        'POST',
-        path,
+  }) =>
+      _backendApiResendEmailVerificationRequest(
+        this,
+        email: email,
         includeAuth: includeAuth,
-        headers: _getHeaders(includeAuth: includeAuth),
-        body: normalizedEmail.isEmpty
-            ? jsonEncode(<String, dynamic>{})
-            : jsonEncode(<String, dynamic>{'email': normalizedEmail}),
       );
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        await syncSecureAccountStatusFromResponse(data, fetchIfMissing: false);
-        return data;
-      }
-      if (response.statusCode == 429) {
-        _markRateLimited(key, response, defaultWindowMs: 900000);
-        throw Exception(_rateLimitMessage(key));
-      }
-      throw BackendApiRequestException(
-          statusCode: response.statusCode, path: uri.path, body: response.body);
-    } catch (e) {
-      AppConfig.debugPrint(
-          'BackendApiService.resendEmailVerification failed: $e');
-      rethrow;
-    }
-  }
 
   Future<Map<String, dynamic>> resendEmailVerification(
-      {required String email}) {
-    return _resendEmailVerificationRequest(
-      email: email,
-      includeAuth: false,
-    );
-  }
+      {required String email}) =>
+      _resendEmailVerificationRequest(
+        email: email,
+        includeAuth: false,
+      );
 
   Future<Map<String, dynamic>> resendEmailVerificationForCurrentAccount({
     String? email,
-  }) {
-    return _resendEmailVerificationRequest(
-      email: email ?? '',
-      includeAuth: true,
-    );
-  }
+  }) =>
+      _resendEmailVerificationRequest(
+        email: email ?? '',
+        includeAuth: true,
+      );
 
   /// Check whether an email has been verified.
   /// GET /api/auth/email-status?email=...
   Future<Map<String, dynamic>> getEmailVerificationStatus(
-      {required String email}) async {
-    try {
-      const path = '/api/auth/email-status';
-      final response = await _sendAuthRequestWithFailover(
-        'GET',
-        path,
-        queryParameters: {'email': email.trim()},
-        includeAuth: false,
-        headers: _getHeaders(includeAuth: false),
+      {required String email}) =>
+      _backendApiGetEmailVerificationStatus(
+        this,
+        email: email,
       );
-      if (response.statusCode == 200) {
-        final raw = jsonDecode(response.body) as Map<String, dynamic>;
-        final data = raw['data'] is Map<String, dynamic>
-            ? raw['data'] as Map<String, dynamic>
-            : raw;
-        return {
-          'verified': data['verified'] == true,
-        };
-      }
-      throw BackendApiRequestException(
-        statusCode: response.statusCode,
-        path: path,
-        body: response.body,
-      );
-    } catch (e) {
-      AppConfig.debugPrint(
-          'BackendApiService.getEmailVerificationStatus failed: $e');
-      rethrow;
-    }
-  }
 
   /// Return email/password credential status for the authenticated account.
   /// GET /api/auth/account-security-status
-  Future<Map<String, dynamic>> getAccountSecurityStatus() async {
-    try {
-      const path = '/api/auth/account-security-status';
-      final response = await _sendAuthRequestWithFailover(
-        'GET',
-        path,
-        includeAuth: true,
-        headers: _getHeaders(),
-      );
-      if (response.statusCode == 200) {
-        final raw = jsonDecode(response.body) as Map<String, dynamic>;
-        final data = raw['data'] is Map<String, dynamic>
-            ? raw['data'] as Map<String, dynamic>
-            : raw;
-        return _normalizeSecurityStatusMap(data);
-      }
-      throw BackendApiRequestException(
-        statusCode: response.statusCode,
-        path: path,
-        body: response.body,
-      );
-    } catch (e) {
-      AppConfig.debugPrint(
-          'BackendApiService.getAccountSecurityStatus failed: $e');
-      rethrow;
-    }
-  }
+  Future<Map<String, dynamic>> getAccountSecurityStatus() =>
+      _backendApiGetAccountSecurityStatus(this);
 
-  Future<void> syncSecureAccountStatusToPrefs() async {
-    try {
-      if (!AppConfig.isFeatureEnabled('emailAuth')) return;
-      final status = _normalizeSecurityStatusMap(
-        await getAccountSecurityStatus(),
-      );
-
-      await _persistSecureAccountStatus(
-        hasEmail: status['hasEmail'] == true,
-        hasPassword: status['hasPassword'] == true,
-        email: status['email']?.toString(),
-        emailVerified: status['emailVerified'] == true,
-        emailAuthEnabled: status['emailAuthEnabled'] != false,
-      );
-    } catch (e) {
-      AppConfig.debugPrint(
-        'BackendApiService.syncSecureAccountStatusToPrefs failed: $e',
-      );
-    }
-  }
+  Future<void> syncSecureAccountStatusToPrefs() =>
+      _backendApiSyncSecureAccountStatusToPrefs(this);
 
   /// Add a password to the currently authenticated account.
   /// POST /api/auth/account-security/password { password }
   Future<Map<String, dynamic>> addPasswordToCurrentAccount({
     required String password,
-  }) async {
-    try {
-      const path = '/api/auth/account-security/password';
-      final response = await _sendAuthRequestWithFailover(
-        'POST',
-        path,
-        includeAuth: true,
-        headers: _getHeaders(),
-        body: jsonEncode(<String, dynamic>{'password': password}),
+  }) =>
+      _backendApiAddPasswordToCurrentAccount(
+        this,
+        password: password,
       );
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      if (response.statusCode == 200) {
-        await syncSecureAccountStatusFromResponse(data);
-        return data;
-      }
-      throw BackendApiRequestException(
-        statusCode: response.statusCode,
-        path: path,
-        body: response.body,
-      );
-    } catch (e) {
-      AppConfig.debugPrint(
-        'BackendApiService.addPasswordToCurrentAccount failed: $e',
-      );
-      rethrow;
-    }
-  }
 
   /// Verify email
   /// POST /api/auth/verify-email { token }
-  Future<Map<String, dynamic>> verifyEmail({required String token}) async {
-    try {
-      const path = '/api/auth/verify-email';
-      final uri = _buildApiUri(baseUrl, path);
-      final key = _rateLimitKey('POST', uri);
-      if (_isRateLimited(key)) {
-        throw Exception(_rateLimitMessage(key));
-      }
-      final response = await _sendAuthRequestWithFailover(
-        'POST',
-        path,
-        includeAuth: false,
-        headers: _getHeaders(includeAuth: false),
-        body: jsonEncode({'token': token}),
-      );
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        await syncSecureAccountStatusFromResponse(data);
-        return data;
-      }
-      if (response.statusCode == 429) {
-        _markRateLimited(key, response, defaultWindowMs: 900000);
-        throw Exception(_rateLimitMessage(key));
-      }
-      throw BackendApiRequestException(
-          statusCode: response.statusCode, path: uri.path, body: response.body);
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.verifyEmail failed: $e');
-      rethrow;
-    }
-  }
+  Future<Map<String, dynamic>> verifyEmail({required String token}) =>
+      _backendApiVerifyEmail(this, token: token);
 
   /// Request password reset (always returns 200 when enabled)
   /// POST /api/auth/forgot-password { email }
-  Future<Map<String, dynamic>> forgotPassword({required String email}) async {
-    try {
-      const path = '/api/auth/forgot-password';
-      final uri = _buildApiUri(baseUrl, path);
-      final key = _rateLimitKey('POST', uri);
-      if (_isRateLimited(key)) {
-        throw Exception(_rateLimitMessage(key));
-      }
-      final response = await _sendAuthRequestWithFailover(
-        'POST',
-        path,
-        includeAuth: false,
-        headers: _getHeaders(includeAuth: false),
-        body: jsonEncode({'email': email}),
-      );
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
-      }
-      if (response.statusCode == 429) {
-        _markRateLimited(key, response, defaultWindowMs: 900000);
-        throw Exception(_rateLimitMessage(key));
-      }
-      throw BackendApiRequestException(
-          statusCode: response.statusCode, path: uri.path, body: response.body);
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.forgotPassword failed: $e');
-      rethrow;
-    }
-  }
+  Future<Map<String, dynamic>> forgotPassword({required String email}) =>
+      _backendApiForgotPassword(this, email: email);
 
   /// Reset password with token (single-use)
   /// POST /api/auth/reset-password { token, newPassword }
   Future<Map<String, dynamic>> resetPassword({
     required String token,
     required String newPassword,
-  }) async {
-    try {
-      const path = '/api/auth/reset-password';
-      final uri = _buildApiUri(baseUrl, path);
-      final key = _rateLimitKey('POST', uri);
-      if (_isRateLimited(key)) {
-        throw Exception(_rateLimitMessage(key));
-      }
-      final response = await _sendAuthRequestWithFailover(
-        'POST',
-        path,
-        includeAuth: false,
-        headers: _getHeaders(includeAuth: false),
-        body: jsonEncode({'token': token, 'newPassword': newPassword}),
+  }) =>
+      _backendApiResetPassword(
+        this,
+        token: token,
+        newPassword: newPassword,
       );
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
-      }
-      if (response.statusCode == 429) {
-        _markRateLimited(key, response, defaultWindowMs: 900000);
-        throw Exception(_rateLimitMessage(key));
-      }
-      throw BackendApiRequestException(
-          statusCode: response.statusCode, path: uri.path, body: response.body);
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.resetPassword failed: $e');
-      rethrow;
-    }
-  }
 
   /// Login with Google idToken (verified server-side)
   /// POST /api/auth/login/google
@@ -2692,375 +2369,92 @@ class BackendApiService
     String? username,
     String? walletAddress,
     String? displayName,
-  }) async {
-    try {
-      if ((code == null || code.isEmpty) &&
-          (idToken == null || idToken.isEmpty)) {
-        throw Exception(
-            'Either auth code or idToken is required for Google login');
-      }
-
-      final isCodeFlow = code != null && code.isNotEmpty;
-      final endpoint =
-          isCodeFlow ? '/api/auth/login/google/code' : '/api/auth/login/google';
-      final uri = _buildApiUri(baseUrl, endpoint);
-      final key = _rateLimitKey('POST', uri);
-
-      if (_isRateLimited(key)) {
-        throw Exception(_rateLimitMessage(key));
-      }
-
-      final body = {
-        if (isCodeFlow) 'code': code,
-        if (!isCodeFlow && idToken != null) 'idToken': idToken,
-        if (email != null && email.isNotEmpty) 'email': email,
-        if (username != null && username.isNotEmpty) 'username': username,
-        if (walletAddress != null && walletAddress.isNotEmpty)
-          'walletAddress': walletAddress,
-        if (displayName != null && displayName.isNotEmpty)
-          'displayName': displayName,
-      };
-
-      final response = await _sendAuthRequestWithFailover(
-        'POST',
-        endpoint,
-        includeAuth: false,
-        headers: _getHeaders(includeAuth: false),
-        body: jsonEncode(body),
+  }) =>
+      _backendApiLoginWithGoogle(
+        this,
+        idToken: idToken,
+        code: code,
+        email: email,
+        username: username,
+        walletAddress: walletAddress,
+        displayName: displayName,
       );
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        await _persistTokenFromResponse(data);
-        await syncSecureAccountStatusFromResponse(data);
-        await setLastSignInMethod(AuthSignInMethod.google);
-        return data;
-      }
-      if (response.statusCode == 429) {
-        _markRateLimited(key, response, defaultWindowMs: 900000);
-        // Persist retry window so the app can skip hitting the endpoint until cooldown ends.
-        try {
-          final prefs = await SharedPreferences.getInstance();
-          final resetAt = _rateLimitResets[key];
-          if (resetAt != null) {
-            await prefs.setInt(
-                'rate_limit_auth_google_until', resetAt.millisecondsSinceEpoch);
-          }
-        } catch (_) {}
-        throw Exception(_rateLimitMessage(key));
-      }
-      if (response.statusCode == 404) {
-        throw BackendApiRequestException(
-          statusCode: response.statusCode,
-          path: uri.path,
-          body: response.body,
-        );
-      }
-      throw BackendApiRequestException(
-        statusCode: response.statusCode,
-        path: uri.path,
-        body: response.body,
-      );
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.loginWithGoogle failed: $e');
-      rethrow;
-    }
-  }
 
   Future<Map<String, dynamic>> bindAuthenticatedWallet(
-      String walletAddress) async {
-    try {
-      const path = '/api/auth/bind-wallet';
-      final response = await _sendAuthRequestWithFailover(
-        'POST',
-        path,
-        includeAuth: true,
-        headers: _getHeaders(includeAuth: true),
-        body: jsonEncode(<String, dynamic>{'walletAddress': walletAddress}),
-      );
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        await _persistTokenFromResponse(data);
-        await syncSecureAccountStatusFromResponse(data);
-        return data;
-      }
-      throw BackendApiRequestException(
-        statusCode: response.statusCode,
-        path: path,
-        body: response.body,
-      );
-    } catch (e) {
-      AppConfig.debugPrint(
-          'BackendApiService.bindAuthenticatedWallet failed: $e');
-      rethrow;
-    }
-  }
+      String walletAddress) =>
+      _backendApiBindAuthenticatedWallet(this, walletAddress);
 
   Future<EncryptedWalletBackupDefinition?> getEncryptedWalletBackup({
     String? walletAddress,
-  }) async {
-    try {
-      final normalizedWallet = (walletAddress ?? '').trim();
-      final uri = Uri.parse('$baseUrl/api/wallet-backup').replace(
-        queryParameters: normalizedWallet.isEmpty
-            ? null
-            : <String, String>{'walletAddress': normalizedWallet},
+  }) =>
+      _backendApiGetEncryptedWalletBackup(
+        this,
+        walletAddress: walletAddress,
       );
-      final response = await _get(
-        uri,
-        includeAuth: true,
-        headers: _getHeaders(includeAuth: true),
-      );
-      if (response.statusCode == 200) {
-        final raw = jsonDecode(response.body) as Map<String, dynamic>;
-        final data = raw['data'] is Map<String, dynamic>
-            ? raw['data'] as Map<String, dynamic>
-            : raw;
-        return EncryptedWalletBackupDefinition.fromJson(data);
-      }
-      if (response.statusCode == 404) {
-        return null;
-      }
-      throw BackendApiRequestException(
-        statusCode: response.statusCode,
-        path: uri.path,
-        body: response.body,
-      );
-    } catch (e) {
-      AppConfig.debugPrint(
-        'BackendApiService.getEncryptedWalletBackup failed: $e',
-      );
-      rethrow;
-    }
-  }
 
   Future<EncryptedWalletBackupDefinition> putEncryptedWalletBackup(
     EncryptedWalletBackupDefinition definition,
-  ) async {
-    try {
-      final uri = Uri.parse('$baseUrl/api/wallet-backup');
-      final response = await _put(
-        uri,
-        includeAuth: true,
-        headers: _getHeaders(includeAuth: true),
-        body: jsonEncode(definition.toApiPayload()),
+  ) =>
+      _backendApiPutEncryptedWalletBackup(
+        this,
+        definition,
       );
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final raw = jsonDecode(response.body) as Map<String, dynamic>;
-        final data = raw['data'] is Map<String, dynamic>
-            ? raw['data'] as Map<String, dynamic>
-            : raw;
-        return EncryptedWalletBackupDefinition.fromJson(data);
-      }
-      throw BackendApiRequestException(
-        statusCode: response.statusCode,
-        path: uri.path,
-        body: response.body,
-      );
-    } catch (e) {
-      AppConfig.debugPrint(
-        'BackendApiService.putEncryptedWalletBackup failed: $e',
-      );
-      rethrow;
-    }
-  }
 
-  Future<void> deleteEncryptedWalletBackup({String? walletAddress}) async {
-    try {
-      final normalizedWallet = (walletAddress ?? '').trim();
-      final uri = Uri.parse('$baseUrl/api/wallet-backup').replace(
-        queryParameters: normalizedWallet.isEmpty
-            ? null
-            : <String, String>{'walletAddress': normalizedWallet},
+  Future<void> deleteEncryptedWalletBackup({String? walletAddress}) =>
+      _backendApiDeleteEncryptedWalletBackup(
+        this,
+        walletAddress: walletAddress,
       );
-      final response = await _delete(
-        uri,
-        includeAuth: true,
-        headers: _getHeaders(includeAuth: true),
-      );
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        return;
-      }
-      throw BackendApiRequestException(
-        statusCode: response.statusCode,
-        path: uri.path,
-        body: response.body,
-      );
-    } catch (e) {
-      AppConfig.debugPrint(
-        'BackendApiService.deleteEncryptedWalletBackup failed: $e',
-      );
-      rethrow;
-    }
-  }
 
   Future<Map<String, dynamic>> getWalletBackupPasskeyRegistrationOptions({
     required String walletAddress,
     String? nickname,
-  }) async {
-    try {
-      final uri =
-          Uri.parse('$baseUrl/api/wallet-backup/passkey/register/options');
-      final response = await _post(
-        uri,
-        includeAuth: true,
-        headers: _getHeaders(includeAuth: true),
-        body: jsonEncode(<String, dynamic>{
-          'walletAddress': walletAddress.trim(),
-          if ((nickname ?? '').trim().isNotEmpty) 'nickname': nickname!.trim(),
-        }),
+  }) =>
+      _backendApiGetWalletBackupPasskeyRegistrationOptions(
+        this,
+        walletAddress: walletAddress,
+        nickname: nickname,
       );
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final raw = jsonDecode(response.body) as Map<String, dynamic>;
-        return raw['data'] is Map<String, dynamic>
-            ? raw['data'] as Map<String, dynamic>
-            : raw;
-      }
-      throw BackendApiRequestException(
-        statusCode: response.statusCode,
-        path: uri.path,
-        body: response.body,
-      );
-    } catch (e) {
-      AppConfig.debugPrint(
-        'BackendApiService.getWalletBackupPasskeyRegistrationOptions failed: $e',
-      );
-      rethrow;
-    }
-  }
 
   Future<Map<String, dynamic>> verifyWalletBackupPasskeyRegistration({
     required String walletAddress,
     required Map<String, dynamic> responsePayload,
     String? nickname,
-  }) async {
-    try {
-      final uri =
-          Uri.parse('$baseUrl/api/wallet-backup/passkey/register/verify');
-      final response = await _post(
-        uri,
-        includeAuth: true,
-        headers: _getHeaders(includeAuth: true),
-        body: jsonEncode(<String, dynamic>{
-          'walletAddress': walletAddress.trim(),
-          if ((nickname ?? '').trim().isNotEmpty) 'nickname': nickname!.trim(),
-          'response': responsePayload,
-        }),
+  }) =>
+      _backendApiVerifyWalletBackupPasskeyRegistration(
+        this,
+        walletAddress: walletAddress,
+        responsePayload: responsePayload,
+        nickname: nickname,
       );
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final raw = jsonDecode(response.body) as Map<String, dynamic>;
-        return raw['data'] is Map<String, dynamic>
-            ? raw['data'] as Map<String, dynamic>
-            : raw;
-      }
-      throw BackendApiRequestException(
-        statusCode: response.statusCode,
-        path: uri.path,
-        body: response.body,
-      );
-    } catch (e) {
-      AppConfig.debugPrint(
-        'BackendApiService.verifyWalletBackupPasskeyRegistration failed: $e',
-      );
-      rethrow;
-    }
-  }
 
   Future<Map<String, dynamic>> getWalletBackupPasskeyAuthOptions({
     required String walletAddress,
-  }) async {
-    try {
-      final uri = Uri.parse('$baseUrl/api/wallet-backup/passkey/auth/options');
-      final response = await _post(
-        uri,
-        includeAuth: true,
-        headers: _getHeaders(includeAuth: true),
-        body: jsonEncode(<String, dynamic>{
-          'walletAddress': walletAddress.trim(),
-        }),
+  }) =>
+      _backendApiGetWalletBackupPasskeyAuthOptions(
+        this,
+        walletAddress: walletAddress,
       );
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final raw = jsonDecode(response.body) as Map<String, dynamic>;
-        return raw['data'] is Map<String, dynamic>
-            ? raw['data'] as Map<String, dynamic>
-            : raw;
-      }
-      throw BackendApiRequestException(
-        statusCode: response.statusCode,
-        path: uri.path,
-        body: response.body,
-      );
-    } catch (e) {
-      AppConfig.debugPrint(
-        'BackendApiService.getWalletBackupPasskeyAuthOptions failed: $e',
-      );
-      rethrow;
-    }
-  }
 
   Future<Map<String, dynamic>> verifyWalletBackupPasskeyAuth({
     required String walletAddress,
     required Map<String, dynamic> responsePayload,
-  }) async {
-    try {
-      final uri = Uri.parse('$baseUrl/api/wallet-backup/passkey/auth/verify');
-      final response = await _post(
-        uri,
-        includeAuth: true,
-        headers: _getHeaders(includeAuth: true),
-        body: jsonEncode(<String, dynamic>{
-          'walletAddress': walletAddress.trim(),
-          'response': responsePayload,
-        }),
+  }) =>
+      _backendApiVerifyWalletBackupPasskeyAuth(
+        this,
+        walletAddress: walletAddress,
+        responsePayload: responsePayload,
       );
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final raw = jsonDecode(response.body) as Map<String, dynamic>;
-        return raw['data'] is Map<String, dynamic>
-            ? raw['data'] as Map<String, dynamic>
-            : raw;
-      }
-      throw BackendApiRequestException(
-        statusCode: response.statusCode,
-        path: uri.path,
-        body: response.body,
-      );
-    } catch (e) {
-      AppConfig.debugPrint(
-        'BackendApiService.verifyWalletBackupPasskeyAuth failed: $e',
-      );
-      rethrow;
-    }
-  }
 
   Future<void> emitWalletBackupEvent({
     required String walletAddress,
     required String eventType,
-  }) async {
-    try {
-      final uri = Uri.parse('$baseUrl/api/wallet-backup/events');
-      final response = await _post(
-        uri,
-        includeAuth: true,
-        headers: _getHeaders(includeAuth: true),
-        body: jsonEncode(<String, dynamic>{
-          'walletAddress': walletAddress.trim(),
-          'eventType': eventType.trim(),
-        }),
+  }) =>
+      _backendApiEmitWalletBackupEvent(
+        this,
+        walletAddress: walletAddress,
+        eventType: eventType,
       );
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return;
-      }
-      throw BackendApiRequestException(
-        statusCode: response.statusCode,
-        path: uri.path,
-        body: response.body,
-      );
-    } catch (e) {
-      AppConfig.debugPrint(
-        'BackendApiService.emitWalletBackupEvent failed: $e',
-      );
-      rethrow;
-    }
-  }
 
   /// Get user profile by ID
   /// GET /api/users/:userId
@@ -3261,39 +2655,14 @@ class BackendApiService
 
   /// Upload a message attachment by posting multipart to the messages endpoint
   Future<Map<String, dynamic>> uploadMessageAttachment(String conversationId,
-      List<int> bytes, String filename, String contentType) async {
-    try {
-      final uri = Uri.parse('$baseUrl/api/messages/$conversationId/messages');
-      final placeholder = filename.isNotEmpty
-          ? 'Attachment • $filename'
-          : 'Shared an attachment';
-      http.MultipartRequest buildRequest() {
-        final request = http.MultipartRequest('POST', uri);
-        request.headers.addAll({'Accept': 'application/json'});
-        request.files.add(
-          http.MultipartFile.fromBytes(
-            'file',
-            bytes,
-            filename: filename,
-            contentType: MediaType.parse(contentType),
-          ),
-        );
-        request.fields['message'] = placeholder;
-        request.fields['content'] = placeholder;
-        return request;
-      }
-
-      final resp = await _sendMultipart(buildRequest, includeAuth: true);
-      if (resp.statusCode == 200 || resp.statusCode == 201) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
-      }
-      return {'success': false, 'status': resp.statusCode, 'body': resp.body};
-    } catch (e) {
-      AppConfig.debugPrint(
-          'BackendApiService.uploadMessageAttachment failed: $e');
-      return {'success': false, 'error': e.toString()};
-    }
-  }
+      List<int> bytes, String filename, String contentType) =>
+      _backendApiUploadMessageAttachmentImpl(
+        this,
+        conversationId,
+        bytes,
+        filename,
+        contentType,
+      );
 
   /// Create a conversation
   /// POST /api/messages { title, members }
@@ -3363,141 +2732,26 @@ class BackendApiService
   Future<Map<String, dynamic>> updateProfile(
     String walletAddress,
     Map<String, dynamic> updates,
-  ) async {
-    _throwIfIpfsFallbackUnavailable('Profile editing');
-    try {
-      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
-      final payload = {
-        'walletAddress': walletAddress,
-        ...updates,
-      };
-      final response = await _post(
-        Uri.parse('$baseUrl/api/profiles'),
-        headers: _getHeaders(),
-        body: jsonEncode(payload),
-      );
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
-      } else {
-        throw Exception('Failed to update profile: ${response.statusCode}');
-      }
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.updateProfile failed: $e');
-      rethrow;
-    }
-  }
+  ) =>
+      _backendApiUpdateProfileImpl(this, walletAddress, updates);
 
   // ==================== Profile/Artists API (New) ====================
 
   /// Get profile by wallet address
   /// GET /api/profiles/:walletAddress
   @override
-  Future<Map<String, dynamic>> getProfileByWallet(String walletAddress) async {
-    try {
-      // Public read: do NOT attempt to auto-issue/auth-switch for the wallet
-      // being viewed.
-      // Avoid making pointless network calls when wallet is a known placeholder
-      final normalized = WalletUtils.normalize(walletAddress);
-      if (normalized.isEmpty ||
-          ['unknown', 'anonymous', 'n/a', 'none']
-              .contains(normalized.toLowerCase())) {
-        throw Exception('Profile not found');
-      }
-      // URL-encode the wallet address for safe path segments
-      final encodedWallet = Uri.encodeComponent(normalized);
-      return await _performPublicRead<Map<String, dynamic>>(
-        liveRead: (candidateBaseUrl) async {
-          final data = await _fetchJsonFromBaseUrl(
-            candidateBaseUrl,
-            '/api/profiles/$encodedWallet',
-            includeAuth: false,
-            allowOrbitFallback: true,
-          );
-          final raw = data['data'] ?? data;
-          if (raw is Map<String, dynamic>) {
-            AppConfig.debugPrint(
-                'BackendApiService.getProfileByWallet: parsed profile keys: ${raw.keys.toList()}');
-            return raw;
-          }
-          throw Exception('Invalid profile payload');
-        },
-        snapshotRead: () async {
-          final profiles = await _loadSnapshotDatasetMaps('profiles');
-          for (final profile in profiles) {
-            final candidate = WalletUtils.normalize(
-              profile['walletAddress'] ??
-                  profile['wallet_address'] ??
-                  profile['wallet'] ??
-                  profile['id'],
-            );
-            if (candidate == normalized) {
-              return profile;
-            }
-          }
-          throw Exception('Profile not found');
-        },
-      );
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.getProfileByWallet failed: $e');
-      rethrow;
-    }
-  }
+  Future<Map<String, dynamic>> getProfileByWallet(String walletAddress) =>
+      _backendApiGetProfileByWalletImpl(this, walletAddress);
 
   /// Fetch multiple profiles in a single batch call
   /// POST /api/profiles/batch { wallets: [wallet1,wallet2] }
-  Future<Map<String, dynamic>> getProfilesBatch(List<String> wallets) async {
-    try {
-      if (wallets.isEmpty) return {'success': true, 'data': <dynamic>[]};
-      await _ensureAuthBeforeRequest();
-      final response = await _post(
-        Uri.parse('$baseUrl/api/profiles/batch'),
-        headers: _getHeaders(),
-        body: jsonEncode({'wallets': wallets}),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return {'success': true, 'data': data['data'] ?? data};
-      }
-      return {
-        'success': false,
-        'status': response.statusCode,
-        'body': response.body
-      };
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.getProfilesBatch failed: $e');
-      return {'success': false, 'error': e.toString()};
-    }
-  }
+  Future<Map<String, dynamic>> getProfilesBatch(List<String> wallets) =>
+      _backendApiGetProfilesBatchImpl(this, wallets);
 
   /// Fetch multiple presence records in a single batch call
   /// POST /api/presence/batch { wallets: [wallet1,wallet2] }
-  Future<Map<String, dynamic>> getPresenceBatch(List<String> wallets) async {
-    try {
-      if (wallets.isEmpty) return {'success': true, 'data': <dynamic>[]};
-      final response = await _post(
-        Uri.parse('$baseUrl/api/presence/batch'),
-        includeAuth: false,
-        headers: _getHeaders(includeAuth: false),
-        body: jsonEncode({'wallets': wallets}),
-        timeout: const Duration(seconds: 8),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return {'success': true, 'data': data['data'] ?? data};
-      }
-      return {
-        'success': false,
-        'status': response.statusCode,
-        'body': response.body
-      };
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.getPresenceBatch failed: $e');
-      return {'success': false, 'error': e.toString()};
-    }
-  }
+  Future<Map<String, dynamic>> getPresenceBatch(List<String> wallets) =>
+      _backendApiGetPresenceBatchImpl(this, wallets);
 
   /// Record a last-visited subject (best-effort; server enforces privacy and may return 204).
   /// POST /api/presence/visit { type, id }
@@ -3505,201 +2759,29 @@ class BackendApiService
     required String type,
     required String id,
     String? walletAddress,
-  }) async {
-    try {
-      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
-      final response = await _post(
-        Uri.parse('$baseUrl/api/presence/visit'),
-        headers: _getHeaders(includeAuth: true),
-        body: jsonEncode({'type': type, 'id': id}),
-        timeout: const Duration(seconds: 8),
+  }) =>
+      _backendApiRecordPresenceVisitImpl(
+        this,
+        type: type,
+        id: id,
+        walletAddress: walletAddress,
       );
-
-      if (response.statusCode == 204) {
-        return {'success': true, 'stored': false};
-      }
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return {
-          'success': true,
-          'stored': true,
-          'data': data['data'] ?? data,
-        };
-      }
-      return {
-        'success': false,
-        'status': response.statusCode,
-        'body': response.body
-      };
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.recordPresenceVisit failed: $e');
-      return {'success': false, 'error': e.toString()};
-    }
-  }
 
   /// Keep the authenticated user's presence lastSeen timestamp fresh.
   /// POST /api/presence/ping
-  Future<Map<String, dynamic>> pingPresence({String? walletAddress}) async {
-    try {
-      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
-      final response = await _post(
-        Uri.parse('$baseUrl/api/presence/ping'),
-        headers: _getHeaders(includeAuth: true),
-        timeout: const Duration(seconds: 8),
-      );
-
-      if (response.statusCode == 204) {
-        return {'success': true};
-      }
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return {'success': true, 'data': data['data'] ?? data};
-      }
-      return {
-        'success': false,
-        'status': response.statusCode,
-        'body': response.body
-      };
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.pingPresence failed: $e');
-      return {'success': false, 'error': e.toString()};
-    }
-  }
+  Future<Map<String, dynamic>> pingPresence({String? walletAddress}) =>
+      _backendApiPingPresenceImpl(this, walletAddress: walletAddress);
 
   /// Find a profile by username (helper built on top of the search endpoint)
-  Future<Map<String, dynamic>?> findProfileByUsername(String username) async {
-    final sanitized = username.trim().replaceFirst(RegExp(r'^@+'), '');
-    if (sanitized.isEmpty) return null;
-    try {
-      final response =
-          await search(query: sanitized, type: 'profiles', limit: 10, page: 1);
-      if (response['success'] != true) return null;
-      final normalizedTarget = sanitized.toLowerCase();
-      final resultsPayload = response['results'];
-      List<dynamic> profiles = const [];
-      if (resultsPayload is Map<String, dynamic>) {
-        profiles = (resultsPayload['profiles'] as List<dynamic>? ?? const []);
-      } else if (response['profiles'] is List) {
-        profiles = response['profiles'] as List<dynamic>;
-      }
-      if (profiles.isEmpty && response['data'] is List) {
-        profiles = response['data'] as List<dynamic>;
-      }
-      for (final entry in profiles) {
-        if (entry is! Map<String, dynamic>) continue;
-        final rawUsername = (entry['username'] ??
-                    entry['walletAddress'] ??
-                    entry['wallet_address'] ??
-                    entry['wallet'])
-                ?.toString() ??
-            '';
-        if (rawUsername.isEmpty) continue;
-        final normalized =
-            rawUsername.replaceFirst(RegExp(r'^@+'), '').toLowerCase();
-        if (normalized == normalizedTarget) {
-          return entry;
-        }
-      }
-      // No exact match found; fallback to first profile result if available
-      if (profiles.isNotEmpty && profiles.first is Map<String, dynamic>) {
-        return profiles.first as Map<String, dynamic>;
-      }
-    } catch (e) {
-      AppConfig.debugPrint(
-          'BackendApiService.findProfileByUsername failed: $e');
-    }
-    return null;
-  }
+  Future<Map<String, dynamic>?> findProfileByUsername(String username) =>
+      _backendApiFindProfileByUsernameImpl(this, username);
 
   /// Create or update profile
   /// POST /api/profiles
   @override
   Future<Map<String, dynamic>> saveProfile(
-      Map<String, dynamic> profileData) async {
-    _throwIfIpfsFallbackUnavailable('Profile editing');
-    // Backend requires authentication (verifyToken). Make sure we have a token
-    // available before attempting to save.
-    final walletAddress =
-        (profileData['walletAddress'] ?? profileData['wallet_address'])
-            ?.toString();
-    await _ensureAuthBeforeRequest(walletAddress: walletAddress);
-
-    const int maxRetries = 3;
-    int attempt = 0;
-    while (true) {
-      attempt++;
-      try {
-        if (kDebugMode) {
-          debugPrint(
-              'BackendApiService.saveProfile: POST /api/profiles payload: ${jsonEncode(profileData)}');
-        }
-        final uri = Uri.parse('$baseUrl/api/profiles');
-        final response = await _post(
-          uri,
-          headers: _getHeaders(includeAuth: true),
-          body: jsonEncode(profileData),
-        );
-
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body) as Map<String, dynamic>;
-          // Some legacy backends used to return a token. Keep support.
-          if (data['token'] is String && (data['token'] as String).isNotEmpty) {
-            await setAuthToken(data['token'] as String);
-            if (kDebugMode) {
-              debugPrint(
-                  'BackendApiService.saveProfile: token received and stored from profile creation');
-            }
-          }
-
-          final payload = data['data'] ?? data;
-          if (payload is Map<String, dynamic>) {
-            return payload;
-          }
-          // Defensive: sometimes data can be wrapped differently.
-          return Map<String, dynamic>.from(payload as dynamic);
-        }
-
-        if (response.statusCode == 429) {
-          // Too many requests - check Retry-After header
-          final retryAfter = response.headers['retry-after'];
-          final waitSeconds =
-              int.tryParse(retryAfter ?? '') ?? (2 << (attempt - 1));
-          if (attempt < maxRetries) {
-            AppConfig.debugPrint(
-                'BackendApiService.saveProfile: 429 retry in $waitSeconds seconds (attempt $attempt)');
-            await Future.delayed(Duration(seconds: waitSeconds));
-            continue;
-          } else {
-            throw Exception(
-                'Too many requests (429). Please wait and try again later.');
-          }
-        }
-
-        throw BackendApiRequestException(
-          statusCode: response.statusCode,
-          path: uri.path,
-          body: response.body,
-        );
-      } catch (e) {
-        if (e is BackendApiRequestException &&
-            (e.statusCode == 401 || e.statusCode == 403)) {
-          rethrow;
-        }
-        // If we've exhausted retries, rethrow
-        if (attempt >= maxRetries) {
-          AppConfig.debugPrint(
-              'BackendApiService.saveProfile failed (final): $e');
-          rethrow;
-        }
-
-        // If this was a transient error, wait briefly and retry
-        final backoff = 1 << (attempt - 1);
-        AppConfig.debugPrint(
-            'BackendApiService.saveProfile transient error, retrying in $backoff seconds: $e');
-        await Future.delayed(Duration(seconds: backoff));
-      }
-    }
-  }
+      Map<String, dynamic> profileData) =>
+      _backendApiSaveProfileImpl(this, profileData);
 
   /// List artists
   /// GET /api/profiles/artists/list
@@ -3707,30 +2789,13 @@ class BackendApiService
     bool? verified,
     int limit = 50,
     int offset = 0,
-  }) async {
-    try {
-      final queryParams = <String, String>{
-        'limit': limit.toString(),
-        'offset': offset.toString(),
-      };
-      if (verified != null) queryParams['verified'] = verified.toString();
-
-      final uri = Uri.parse('$baseUrl/api/profiles/artists/list')
-          .replace(queryParameters: queryParams);
-      final response = await _get(uri,
-          includeAuth: false, headers: _getHeaders(includeAuth: false));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return List<Map<String, dynamic>>.from(data['data'] as List);
-      } else {
-        throw Exception('Failed to list artists: ${response.statusCode}');
-      }
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.listArtists failed: $e');
-      rethrow;
-    }
-  }
+  }) =>
+      _backendApiListArtistsImpl(
+        this,
+        verified: verified,
+        limit: limit,
+        offset: offset,
+      );
 
   // ===========================================================================
   // PROMOTION RATE CARDS (New Dynamic Pricing System)

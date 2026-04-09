@@ -391,8 +391,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionCreatorCreateFailed => 'Failed to create exhibition.';
 
   @override
-  String exhibitionCreatorCreateFailedWithError(Object error) {
-    return 'Failed to create exhibition: $error';
+  String exhibitionCreatorCreateFailedWithError() {
+    return 'Failed to create exhibition. Please try again.';
   }
 
   @override
@@ -3948,8 +3948,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collectionCreatorCreateFailed => 'Failed to create collection.';
 
   @override
-  String collectionCreatorCreateFailedWithError(Object error) {
-    return 'Failed to create collection: $error';
+  String collectionCreatorCreateFailedWithError() {
+    return 'Failed to create collection. Please try again.';
   }
 
   @override
@@ -7664,8 +7664,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileEditProfileUpdatedToast => 'Profile updated successfully!';
 
   @override
-  String profileEditErrorToast(String error) {
-    return 'Error: $error';
+  String profileEditErrorToast() {
+    return 'Something went wrong. Please try again.';
   }
 
   @override
@@ -7684,8 +7684,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileEditAvatarUploadedLocalToast => 'Avatar uploaded locally (save failed)';
 
   @override
-  String profileEditAvatarUploadFailedToast(String error) {
-    return 'Upload failed: $error';
+  String profileEditAvatarUploadFailedToast() {
+    return 'Avatar upload failed. Please try again.';
   }
 
   @override
@@ -7695,13 +7695,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileEditCoverUploadedLocalToast => 'Cover image uploaded locally';
 
   @override
-  String profileEditCoverUploadFailedToast(String error) {
-    return 'Cover upload failed: $error';
+  String profileEditCoverUploadFailedToast() {
+    return 'Cover image upload failed. Please try again.';
   }
 
   @override
-  String profileEditPickImageFailedToast(String error) {
-    return 'Error picking image: $error';
+  String profileEditPickImageFailedToast() {
+    return 'Could not select the image. Please try again.';
   }
 
   @override

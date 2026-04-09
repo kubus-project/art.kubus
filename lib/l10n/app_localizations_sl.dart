@@ -391,8 +391,8 @@ class AppLocalizationsSl extends AppLocalizations {
   String get exhibitionCreatorCreateFailed => 'Ustvarjanje razstave ni uspelo.';
 
   @override
-  String exhibitionCreatorCreateFailedWithError(Object error) {
-    return 'Ustvarjanje razstave ni uspelo: $error';
+  String exhibitionCreatorCreateFailedWithError() {
+    return 'Ustvarjanje razstave ni uspelo. Poskusi znova.';
   }
 
   @override
@@ -3962,8 +3962,8 @@ class AppLocalizationsSl extends AppLocalizations {
   String get collectionCreatorCreateFailed => 'Ustvarjanje zbirke ni uspelo.';
 
   @override
-  String collectionCreatorCreateFailedWithError(Object error) {
-    return 'Ustvarjanje zbirke ni uspelo: $error';
+  String collectionCreatorCreateFailedWithError() {
+    return 'Ustvarjanje zbirke ni uspelo. Poskusi znova.';
   }
 
   @override
@@ -7688,8 +7688,8 @@ class AppLocalizationsSl extends AppLocalizations {
   String get profileEditProfileUpdatedToast => 'Profil uspešno posodobljen!';
 
   @override
-  String profileEditErrorToast(String error) {
-    return 'Napaka: $error';
+  String profileEditErrorToast() {
+    return 'Nekaj je šlo narobe. Poskusi znova.';
   }
 
   @override
@@ -7708,8 +7708,8 @@ class AppLocalizationsSl extends AppLocalizations {
   String get profileEditAvatarUploadedLocalToast => 'Avatar naložen lokalno (shranjevanje ni uspelo)';
 
   @override
-  String profileEditAvatarUploadFailedToast(String error) {
-    return 'Nalaganje ni uspelo: $error';
+  String profileEditAvatarUploadFailedToast() {
+    return 'Nalaganje avatarja ni uspelo. Poskusi znova.';
   }
 
   @override
@@ -7719,13 +7719,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get profileEditCoverUploadedLocalToast => 'Naslovna slika naložena lokalno';
 
   @override
-  String profileEditCoverUploadFailedToast(String error) {
-    return 'Nalaganje naslovne slike ni uspelo: $error';
+  String profileEditCoverUploadFailedToast() {
+    return 'Nalaganje naslovne slike ni uspelo. Poskusi znova.';
   }
 
   @override
-  String profileEditPickImageFailedToast(String error) {
-    return 'Napaka pri izbiri slike: $error';
+  String profileEditPickImageFailedToast() {
+    return 'Slike ni bilo mogoče izbrati. Poskusi znova.';
   }
 
   @override

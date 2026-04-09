@@ -1,7 +1,6 @@
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/screens/desktop/components/desktop_widgets.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -53,7 +52,7 @@ void main() {
     );
   });
 
-  testWidgets('DesktopStatCard recenters watermark icon on hover',
+  testWidgets('DesktopStatCard composes through shared watermark icon',
       (tester) async {
     await pumpDesktopStatCard(
       tester,
@@ -69,28 +68,10 @@ void main() {
       ),
     );
 
-    final cardFinder = find.byType(DesktopStatCard);
     final iconFinder = find.byWidgetPredicate(
       (widget) => widget is Icon && widget.icon == Icons.group_outlined,
     );
 
     expect(iconFinder, findsOneWidget);
-
-    final cardCenter = tester.getCenter(cardFinder);
-    final restingIconCenter = tester.getCenter(iconFinder);
-
-    expect((restingIconCenter.dx - cardCenter.dx).abs(), lessThan(2.0));
-    expect(restingIconCenter.dy, greaterThan(cardCenter.dy + 8.0));
-
-    final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
-    addTearDown(gesture.removePointer);
-    await gesture.addPointer(location: const Offset(0, 0));
-    await gesture.moveTo(cardCenter);
-    await tester.pumpAndSettle();
-
-    final hoveredIconCenter = tester.getCenter(iconFinder);
-
-    expect((hoveredIconCenter.dx - cardCenter.dx).abs(), lessThan(2.0));
-    expect((hoveredIconCenter.dy - cardCenter.dy).abs(), lessThan(2.0));
   });
 }

@@ -854,8 +854,8 @@ abstract class AppLocalizations {
   /// No description provided for @exhibitionCreatorCreateFailedWithError.
   ///
   /// In en, this message translates to:
-  /// **'Failed to create exhibition: {error}'**
-  String exhibitionCreatorCreateFailedWithError(Object error);
+  /// **'Failed to create exhibition. Please try again.'**
+  String exhibitionCreatorCreateFailedWithError();
 
   /// No description provided for @lockAppLockedTitle.
   ///
@@ -7616,8 +7616,8 @@ abstract class AppLocalizations {
   /// No description provided for @collectionCreatorCreateFailedWithError.
   ///
   /// In en, this message translates to:
-  /// **'Failed to create collection: {error}'**
-  String collectionCreatorCreateFailedWithError(Object error);
+  /// **'Failed to create collection. Please try again.'**
+  String collectionCreatorCreateFailedWithError();
 
   /// No description provided for @collectionDetailLoadFailedMessage.
   ///
@@ -14612,8 +14612,8 @@ abstract class AppLocalizations {
   /// No description provided for @profileEditErrorToast.
   ///
   /// In en, this message translates to:
-  /// **'Error: {error}'**
-  String profileEditErrorToast(String error);
+  /// **'Something went wrong. Please try again.'**
+  String profileEditErrorToast();
 
   /// No description provided for @profileEditNoWalletUploadAvatarToast.
   ///
@@ -14648,8 +14648,8 @@ abstract class AppLocalizations {
   /// No description provided for @profileEditAvatarUploadFailedToast.
   ///
   /// In en, this message translates to:
-  /// **'Upload failed: {error}'**
-  String profileEditAvatarUploadFailedToast(String error);
+  /// **'Avatar upload failed. Please try again.'**
+  String profileEditAvatarUploadFailedToast();
 
   /// No description provided for @profileEditCoverUploadedSavedToast.
   ///
@@ -14666,14 +14666,14 @@ abstract class AppLocalizations {
   /// No description provided for @profileEditCoverUploadFailedToast.
   ///
   /// In en, this message translates to:
-  /// **'Cover upload failed: {error}'**
-  String profileEditCoverUploadFailedToast(String error);
+  /// **'Cover image upload failed. Please try again.'**
+  String profileEditCoverUploadFailedToast();
 
   /// No description provided for @profileEditPickImageFailedToast.
   ///
   /// In en, this message translates to:
-  /// **'Error picking image: {error}'**
-  String profileEditPickImageFailedToast(String error);
+  /// **'Could not select the image. Please try again.'**
+  String profileEditPickImageFailedToast();
 
   /// No description provided for @profileEditUploadDebugInfoTitle.
   ///

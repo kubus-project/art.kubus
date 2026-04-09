@@ -29,6 +29,31 @@ import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../../widgets/promotion/promotion_builder_sheet.dart';
 import '../../../widgets/topbar_icon.dart';
 
+@visibleForTesting
+String? resolveArtistPromotionUnavailableReason({
+  required String walletAddress,
+  required DAOReview? review,
+}) {
+  final normalizedWallet = walletAddress.trim();
+  if (normalizedWallet.isEmpty) {
+    return 'Connect an approved artist wallet to request profile promotion.';
+  }
+
+  final verification = DaoRoleVerification(
+    walletAddress: normalizedWallet,
+    review: review,
+  );
+
+  if (verification.isApprovedFor(DaoRoleType.institution) ||
+      verification.isPendingFor(DaoRoleType.institution)) {
+    return 'Institution wallets cannot self-serve artist promotion. Use a dedicated artist wallet.';
+  }
+  if (!verification.isApprovedFor(DaoRoleType.artist)) {
+    return 'Profile promotion is available only for approved artist wallets.';
+  }
+  return null;
+}
+
 class ArtistStudio extends StatefulWidget {
   final VoidCallback? onOpenArtworkCreator;
   final VoidCallback? onOpenCollectionCreator;
@@ -134,6 +159,16 @@ class _ArtistStudioState extends State<ArtistStudio> {
     );
   }
 
+  String? _artistPromotionUnavailableReason() {
+    final daoProvider = context.read<DAOProvider>();
+    final wallet = _resolveWalletAddress();
+    final review = _artistReview ?? daoProvider.findReviewForWallet(wallet);
+    return resolveArtistPromotionUnavailableReason(
+      walletAddress: wallet,
+      review: review,
+    );
+  }
+
   Future<void> _loadArtistReviewStatus({bool forceRefresh = false}) async {
     final wallet = _resolveWalletAddress();
     if (wallet.isEmpty || _reviewLoading) return;
@@ -192,6 +227,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
         verification.isPendingFor(DaoRoleType.institution);
     final isCrossRoleBlocked =
         hasInstitutionBadge || hasConflictingInstitutionReview;
+    final canSelfServeArtistPromotion = isApprovedArtist && !isCrossRoleBlocked;
 
     // Build pages list - Exhibitions tab is optional based on feature flag
     final exhibitionsEnabled = AppConfig.isFeatureEnabled('exhibitions');
@@ -264,14 +300,15 @@ class _ArtistStudioState extends State<ArtistStudio> {
                       );
                     },
                   ),
-                TopBarIcon(
-                  icon: Icon(
-                    Icons.campaign_outlined,
-                    color: Theme.of(context).colorScheme.onSurface,
+                if (canSelfServeArtistPromotion)
+                  TopBarIcon(
+                    icon: Icon(
+                      Icons.campaign_outlined,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    tooltip: 'Promote my profile',
+                    onPressed: _openProfilePromotionFlow,
                   ),
-                  tooltip: 'Promote my profile',
-                  onPressed: _openProfilePromotionFlow,
-                ),
                 TopBarIcon(
                   icon: Icon(
                     Icons.settings,
@@ -289,7 +326,9 @@ class _ArtistStudioState extends State<ArtistStudio> {
             SliverToBoxAdapter(
               child: Column(
                 children: [
-                  _buildStudioHeader(),
+                  _buildStudioHeader(
+                    canSelfServeArtistPromotion: canSelfServeArtistPromotion,
+                  ),
                   if (widget.showVerificationCard)
                     _buildArtistApplicationCard(
                       review,
@@ -323,7 +362,9 @@ class _ArtistStudioState extends State<ArtistStudio> {
     );
   }
 
-  Widget _buildStudioHeader() {
+  Widget _buildStudioHeader({
+    required bool canSelfServeArtistPromotion,
+  }) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final studioAccent = KubusColorRoles.of(context).web3ArtistStudioAccent;
@@ -394,27 +435,29 @@ class _ArtistStudioState extends State<ArtistStudio> {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: KubusSpacing.sm),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
+                    if (canSelfServeArtistPromotion) ...[
+                      const SizedBox(height: KubusSpacing.sm),
+                      Align(
                         alignment: Alignment.centerLeft,
-                        child: OutlinedButton.icon(
-                          onPressed: _openProfilePromotionFlow,
-                          icon: const Icon(Icons.campaign_outlined),
-                          label: const Text(
-                            'Promote my profile',
-                            maxLines: 1,
-                            softWrap: false,
-                            overflow: TextOverflow.fade,
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            alignment: Alignment.centerLeft,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: OutlinedButton.icon(
+                            onPressed: _openProfilePromotionFlow,
+                            icon: const Icon(Icons.campaign_outlined),
+                            label: const Text(
+                              'Promote my profile',
+                              maxLines: 1,
+                              softWrap: false,
+                              overflow: TextOverflow.fade,
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              alignment: Alignment.centerLeft,
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
@@ -1040,7 +1083,18 @@ class _ArtistStudioState extends State<ArtistStudio> {
     );
   }
 
+  @visibleForTesting
+  Future<void> debugOpenProfilePromotionFlow() => _openProfilePromotionFlow();
+
   Future<void> _openProfilePromotionFlow() async {
+    final unavailableReason = _artistPromotionUnavailableReason();
+    if (unavailableReason != null) {
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(unavailableReason)),
+        tone: KubusSnackBarTone.warning,
+      );
+      return;
+    }
     final profile = context.read<ProfileProvider>().currentUser;
     final wallet = _resolveWalletAddress();
     final entityId = WalletUtils.coalesce(

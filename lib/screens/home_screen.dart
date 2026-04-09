@@ -82,6 +82,354 @@ bool shouldShowHomeStatCardIcon({
   return showIconOnly || isVerticalLayout;
 }
 
+@visibleForTesting
+List<String> resolveHomeWeb3CardOrder({
+  required UserPersona? persona,
+  required bool isArtist,
+  required bool isInstitution,
+}) {
+  final ordered = <String>[];
+  final preferInstitutionFirst =
+      isArtist && isInstitution && persona == UserPersona.institution;
+
+  if (isArtist && isInstitution) {
+    ordered.add(preferInstitutionFirst ? 'institution' : 'artist');
+  } else if (isArtist) {
+    ordered.add('artist');
+  } else if (isInstitution) {
+    ordered.add('institution');
+  }
+
+  ordered.add('dao');
+
+  if (isArtist && isInstitution) {
+    ordered.add(preferInstitutionFirst ? 'artist' : 'institution');
+  }
+
+  ordered.add('marketplace');
+  return ordered;
+}
+
+@visibleForTesting
+class HomeWeb3CardStrip extends StatelessWidget {
+  const HomeWeb3CardStrip({
+    super.key,
+    required this.isEffectivelyConnected,
+    required this.persona,
+    required this.isArtist,
+    required this.isInstitution,
+    required this.onOpenDao,
+    required this.onOpenArtistStudio,
+    required this.onOpenInstitutionHub,
+    required this.onOpenMarketplace,
+    required this.onShowWalletOnboarding,
+  });
+
+  final bool isEffectivelyConnected;
+  final UserPersona? persona;
+  final bool isArtist;
+  final bool isInstitution;
+  final VoidCallback onOpenDao;
+  final VoidCallback onOpenArtistStudio;
+  final VoidCallback onOpenInstitutionHub;
+  final VoidCallback onOpenMarketplace;
+  final VoidCallback onShowWalletOnboarding;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final orderedCards = resolveHomeWeb3CardOrder(
+      persona: persona,
+      isArtist: isArtist,
+      isInstitution: isInstitution,
+    );
+    final cardWidth = MediaQuery.of(context).size.width < 375 ? 196.0 : 208.0;
+    final roles = KubusColorRoles.of(context);
+
+    Widget buildWeb3CardEntry(String cardKey) {
+      switch (cardKey) {
+        case 'artist':
+          return SizedBox(
+            width: cardWidth,
+            child: _HomeWeb3Card(
+              title: l10n.homeWeb3ArtistTitle,
+              subtitle: l10n.homeWeb3ArtistSubtitle,
+              icon: Icons.palette,
+              color: roles.web3ArtistStudioAccent,
+              onTap: isEffectivelyConnected
+                  ? onOpenArtistStudio
+                  : onShowWalletOnboarding,
+              isLocked: !isEffectivelyConnected,
+              cardKey: const ValueKey<String>('home_web3_artist'),
+            ),
+          );
+        case 'institution':
+          return SizedBox(
+            width: cardWidth,
+            child: _HomeWeb3Card(
+              title: l10n.homeWeb3InstitutionTitle,
+              subtitle: l10n.homeWeb3InstitutionSubtitle,
+              icon: Icons.museum,
+              color: roles.web3InstitutionAccent,
+              onTap: isEffectivelyConnected
+                  ? onOpenInstitutionHub
+                  : onShowWalletOnboarding,
+              isLocked: !isEffectivelyConnected,
+              cardKey: const ValueKey<String>('home_web3_institution'),
+            ),
+          );
+        case 'marketplace':
+          return SizedBox(
+            width: cardWidth,
+            child: _HomeWeb3Card(
+              title: l10n.homeWeb3MarketplaceTitle,
+              subtitle: l10n.homeWeb3MarketplaceSubtitle,
+              icon: KubusLabsFeature.marketplace.screenIcon,
+              color: roles.web3MarketplaceAccent,
+              onTap: isEffectivelyConnected
+                  ? onOpenMarketplace
+                  : onShowWalletOnboarding,
+              isLocked: !isEffectivelyConnected,
+              labsFeature: KubusLabsFeature.marketplace,
+              cardKey: const ValueKey<String>('home_web3_marketplace'),
+            ),
+          );
+        case 'dao':
+        default:
+          return SizedBox(
+            width: cardWidth,
+            child: _HomeWeb3Card(
+              title: l10n.homeWeb3DaoTitle,
+              subtitle: l10n.homeWeb3DaoSubtitle,
+              icon: KubusLabsFeature.dao.screenIcon,
+              color: roles.web3DaoAccent,
+              onTap:
+                  isEffectivelyConnected ? onOpenDao : onShowWalletOnboarding,
+              isLocked: !isEffectivelyConnected,
+              labsFeature: KubusLabsFeature.dao,
+              cardKey: const ValueKey<String>('home_web3_dao'),
+            ),
+          );
+      }
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: orderedCards.asMap().entries.map((entry) {
+          return Padding(
+            padding: EdgeInsets.only(
+              right: entry.key < orderedCards.length - 1 ? 12 : 0,
+            ),
+            child: buildWeb3CardEntry(entry.value),
+          );
+        }).toList(growable: false),
+      ),
+    );
+  }
+}
+
+class _HomeWeb3Card extends StatelessWidget {
+  const _HomeWeb3Card({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+    this.isLocked = false,
+    this.labsFeature,
+    this.cardKey,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  final bool isLocked;
+  final KubusLabsFeature? labsFeature;
+  final Key? cardKey;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      key: cardKey,
+      onTap: onTap,
+      child: Container(
+        height: 120,
+        padding: const EdgeInsets.all(KubusSpacing.md - KubusSpacing.xxs),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              color.withValues(alpha: isLocked ? 0.05 : 0.1),
+              color.withValues(alpha: isLocked ? 0.02 : 0.05),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(KubusRadius.lg),
+          border: Border.all(
+            color: color.withValues(alpha: isLocked ? 0.1 : 0.3),
+          ),
+        ),
+        child: Stack(
+          children: [
+            if (labsFeature?.showLabsMarker ?? false)
+              Positioned(
+                top: 0,
+                left: 0,
+                child: KubusLabsAdornment.inlinePill(
+                  feature: labsFeature!,
+                  emphasized: !isLocked,
+                ),
+              ),
+            if (!isLocked)
+              Center(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final titleStyle = KubusTextStyles.responsiveTitleStyle(
+                      context,
+                      KubusTextStyles.navLabel.copyWith(
+                        fontSize: KubusChromeMetrics.navMetaLabel,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      availableWidth: constraints.maxWidth,
+                      compact: true,
+                    );
+                    final subtitleStyle = KubusTextStyles.responsiveTitleStyle(
+                      context,
+                      KubusTextStyles.compactBadge.copyWith(
+                        fontSize: KubusChromeMetrics.navBadgeLabel + 1,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
+                      ),
+                      availableWidth: constraints.maxWidth,
+                      compact: true,
+                    );
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(
+                              KubusRadius.sm + KubusRadius.xs,
+                            ),
+                          ),
+                          child: Icon(
+                            icon,
+                            color: color,
+                            size: 18,
+                          ),
+                        ),
+                        const SizedBox(height: KubusSpacing.sm),
+                        Text(
+                          title,
+                          style: titleStyle,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: KubusSpacing.xxs),
+                        Text(
+                          subtitle,
+                          style: subtitleStyle,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            if (isLocked)
+              Positioned.fill(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: KubusSpacing.sm),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(
+                            KubusRadius.sm + KubusRadius.xs,
+                          ),
+                        ),
+                        child: Icon(
+                          icon,
+                          color: color.withValues(alpha: 0.5),
+                          size: 18,
+                        ),
+                      ),
+                      const SizedBox(height: KubusSpacing.sm),
+                      Flexible(
+                        child: Text(
+                          title,
+                          style: KubusTextStyles.navLabel.copyWith(
+                            fontSize: KubusChromeMetrics.navMetaLabel,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.4),
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(height: KubusSpacing.xxs),
+                      Flexible(
+                        child: Text(
+                          subtitle,
+                          style: KubusTextStyles.compactBadge.copyWith(
+                            fontSize: KubusChromeMetrics.navBadgeLabel + 1,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.3),
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            if (isLocked)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.9),
+                    borderRadius: BorderRadius.circular(KubusRadius.sm),
+                  ),
+                  child: const Icon(
+                    Icons.lock,
+                    size: 10,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -1559,6 +1907,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return Consumer<Web3Provider>(
       builder: (context, web3Provider, child) {
         final l10n = AppLocalizations.of(context)!;
+        final profileProvider = context.watch<ProfileProvider>();
         // Show as connected if wallet is connected (mock or real)
         final bool isEffectivelyConnected = web3Provider.isConnected;
 
@@ -1610,258 +1959,41 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ],
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildWeb3Card(
-                    l10n.homeWeb3DaoTitle,
-                    l10n.homeWeb3DaoSubtitle,
-                    KubusLabsFeature.dao.screenIcon,
-                    KubusColorRoles.of(context).web3DaoAccent,
-                    isEffectivelyConnected
-                        ? () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => const GovernanceHub()),
-                            )
-                        : () => _showWalletOnboarding(context),
-                    isLocked: !isEffectivelyConnected,
-                    labsFeature: KubusLabsFeature.dao,
-                  ),
+            HomeWeb3CardStrip(
+              isEffectivelyConnected: isEffectivelyConnected,
+              persona: profileProvider.userPersona,
+              isArtist: profileProvider.currentUser?.isArtist ?? false,
+              isInstitution:
+                  profileProvider.currentUser?.isInstitution ?? false,
+              onOpenDao: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const GovernanceHub(),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildWeb3Card(
-                    l10n.homeWeb3ArtistTitle,
-                    l10n.homeWeb3ArtistSubtitle,
-                    Icons.palette,
-                    KubusColorRoles.of(context).web3ArtistStudioAccent,
-                    isEffectivelyConnected
-                        ? () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => const ArtistStudio()),
-                            )
-                        : () => _showWalletOnboarding(context),
-                    isLocked: !isEffectivelyConnected,
-                  ),
+              ),
+              onOpenArtistStudio: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ArtistStudio(),
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildWeb3Card(
-                    l10n.homeWeb3InstitutionTitle,
-                    l10n.homeWeb3InstitutionSubtitle,
-                    Icons.museum,
-                    KubusColorRoles.of(context).web3InstitutionAccent,
-                    isEffectivelyConnected
-                        ? () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => const InstitutionHub()),
-                            )
-                        : () => _showWalletOnboarding(context),
-                    isLocked: !isEffectivelyConnected,
-                  ),
+              ),
+              onOpenInstitutionHub: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const InstitutionHub(),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildWeb3Card(
-                    l10n.homeWeb3MarketplaceTitle,
-                    l10n.homeWeb3MarketplaceSubtitle,
-                    KubusLabsFeature.marketplace.screenIcon,
-                    KubusColorRoles.of(context).web3MarketplaceAccent,
-                    isEffectivelyConnected
-                        ? () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => const Marketplace()),
-                            )
-                        : () => _showWalletOnboarding(context),
-                    isLocked: !isEffectivelyConnected,
-                    labsFeature: KubusLabsFeature.marketplace,
-                  ),
+              ),
+              onOpenMarketplace: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const Marketplace(),
                 ),
-              ],
+              ),
+              onShowWalletOnboarding: () => _showWalletOnboarding(context),
             ),
           ],
         );
       },
-    );
-  }
-
-  Widget _buildWeb3Card(String title, String subtitle, IconData icon,
-      Color color, VoidCallback onTap,
-      {bool isLocked = false, KubusLabsFeature? labsFeature}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 120, // Fixed height for consistent layout
-        padding: const EdgeInsets.all(KubusSpacing.md - KubusSpacing.xxs),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              color.withValues(alpha: isLocked ? 0.05 : 0.1),
-              color.withValues(alpha: isLocked ? 0.02 : 0.05),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(KubusRadius.lg),
-          border: Border.all(
-            color: color.withValues(alpha: isLocked ? 0.1 : 0.3),
-          ),
-        ),
-        child: Stack(
-          children: [
-            if (labsFeature?.showLabsMarker ?? false)
-              Positioned(
-                top: 0,
-                left: 0,
-                child: KubusLabsAdornment.inlinePill(
-                  feature: labsFeature!,
-                  emphasized: !isLocked,
-                ),
-              ),
-            // Use Center widget for perfect centering when unlocked
-            if (!isLocked)
-              Center(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final titleStyle = KubusTextStyles.responsiveTitleStyle(
-                      context,
-                      KubusTextStyles.navLabel.copyWith(
-                        fontSize: KubusChromeMetrics.navMetaLabel,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                      availableWidth: constraints.maxWidth,
-                      compact: true,
-                    );
-                    final subtitleStyle = KubusTextStyles.responsiveTitleStyle(
-                      context,
-                      KubusTextStyles.compactBadge.copyWith(
-                        fontSize: KubusChromeMetrics.navBadgeLabel + 1,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.6),
-                      ),
-                      availableWidth: constraints.maxWidth,
-                      compact: true,
-                    );
-                    return Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(
-                                KubusRadius.sm + KubusRadius.xs),
-                          ),
-                          child: Icon(
-                            icon,
-                            color: color,
-                            size: 18,
-                          ),
-                        ),
-                        const SizedBox(height: KubusSpacing.sm),
-                        Text(
-                          title,
-                          style: titleStyle,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: KubusSpacing.xxs),
-                        Text(
-                          subtitle,
-                          style: subtitleStyle,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            // Locked state - positioned at top
-            if (isLocked)
-              Positioned.fill(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: KubusSpacing.sm),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(
-                              KubusRadius.sm + KubusRadius.xs),
-                        ),
-                        child: Icon(
-                          icon,
-                          color: color.withValues(alpha: 0.5),
-                          size: 18,
-                        ),
-                      ),
-                      const SizedBox(height: KubusSpacing.sm),
-                      Text(
-                        title,
-                        style: KubusTextStyles.navLabel.copyWith(
-                          fontSize: KubusChromeMetrics.navMetaLabel,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.4),
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: KubusSpacing.xxs),
-                      Text(
-                        subtitle,
-                        style: KubusTextStyles.compactBadge.copyWith(
-                          fontSize: KubusChromeMetrics.navBadgeLabel + 1,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.3),
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            // Lock indicator - positioned absolutely
-            if (isLocked)
-              Positioned(
-                top: 0,
-                right: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(KubusRadius.sm),
-                  ),
-                  child: const Icon(
-                    Icons.lock,
-                    size: 10,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
     );
   }
 

@@ -16,6 +16,8 @@ import '../utils/wallet_utils.dart';
 import 'app_refresh_provider.dart';
 import 'profile_provider.dart';
 
+part 'chat_provider_cache_helpers.dart';
+
 class ChatProvider extends ChangeNotifier {
   static const int _maxCachedMessageConversations = 24;
   static const int _maxMessagesPerConversation = 200;
@@ -609,24 +611,11 @@ class ChatProvider extends ChangeNotifier {
   }
 
   void _cacheMessages(String conversationId, List<ChatMessage> messages) {
-    final trimmed = messages.length <= _maxMessagesPerConversation
-        ? List<ChatMessage>.from(messages)
-        : List<ChatMessage>.from(messages.take(_maxMessagesPerConversation));
-    _messages[conversationId] = trimmed;
-    _messageCacheTouchMs[conversationId] = DateTime.now().millisecondsSinceEpoch;
-    _pruneCacheMap<List<ChatMessage>>(
-      _messages,
-      _messageCacheTouchMs,
-      _maxCachedMessageConversations,
-      preserveKey: _openConversationId,
-    );
+    _chatProviderCacheMessages(this, conversationId, messages);
   }
 
   void _touchMessageCache(String conversationId) {
-    if (_messages.containsKey(conversationId)) {
-      _messageCacheTouchMs[conversationId] =
-          DateTime.now().millisecondsSinceEpoch;
-    }
+    _chatProviderTouchMessageCache(this, conversationId);
   }
 
   void _cacheMembers(
@@ -634,27 +623,16 @@ class ChatProvider extends ChangeNotifier {
     List<dynamic> list, {
     required int timestampMs,
   }) {
-    _membersCache[conversationId] = {
-      'result': list,
-      'ts': timestampMs,
-    };
-    _membersCacheTouchMs[conversationId] = timestampMs;
-    _pruneCacheMap<Map<String, dynamic>>(
-      _membersCache,
-      _membersCacheTouchMs,
-      _maxCachedMemberLists,
+    _chatProviderCacheMembers(
+      this,
+      conversationId,
+      list,
+      timestampMs: timestampMs,
     );
   }
 
   void _cacheUser(User user) {
-    if (user.id.isEmpty) return;
-    _userCache[user.id] = user;
-    _userCacheTouchMs[user.id] = DateTime.now().millisecondsSinceEpoch;
-    _pruneCacheMap<User>(
-      _userCache,
-      _userCacheTouchMs,
-      _maxCachedUsers,
-    );
+    _chatProviderCacheUser(this, user);
   }
 
   void _pruneCacheMap<T>(
@@ -663,55 +641,19 @@ class ChatProvider extends ChangeNotifier {
     int maxEntries, {
     String? preserveKey,
   }) {
-    if (cache.length <= maxEntries) return;
-    final entries = touchMs.entries.toList(growable: false)
-      ..sort((a, b) => a.value.compareTo(b.value));
-    for (final entry in entries) {
-      if (cache.length <= maxEntries) break;
-      if (preserveKey != null && entry.key == preserveKey) continue;
-      cache.remove(entry.key);
-      touchMs.remove(entry.key);
-    }
+    _chatProviderPruneCacheMap(
+      cache,
+      touchMs,
+      maxEntries,
+      preserveKey: preserveKey,
+    );
   }
 
   void _resetSessionState({
     required String reason,
     bool notify = true,
   }) {
-    try {
-      _pollTimer?.cancel();
-      _pollTimer = null;
-    } catch (_) {}
-    try {
-      _subscriptionMonitorTimer?.cancel();
-      _subscriptionMonitorTimer = null;
-    } catch (_) {}
-
-    _openConversationId = null;
-    try {
-      _socket.leaveAllConversations();
-    } catch (_) {}
-
-    _currentWallet = null;
-    _conversations = [];
-    _messages.clear();
-    _messageCacheTouchMs.clear();
-    _unreadCounts.clear();
-    _membersRequests.clear();
-    _membersCache.clear();
-    _membersCacheTouchMs.clear();
-    _userCache.clear();
-    _userCacheTouchMs.clear();
-    _lastUnauthorizedAt = null;
-    _lastStateSignature = '';
-    _lastTotalUnread = 0;
-
-    if (kDebugMode) {
-      debugPrint('ChatProvider: reset session state ($reason)');
-    }
-    if (notify) {
-      _safeNotifyListeners(force: true);
-    }
+    _chatProviderResetSessionState(this, reason: reason, notify: notify);
   }
 
   Future<void> initialize({String? initialWallet}) async {
