@@ -244,6 +244,7 @@ class DesktopStatCard extends StatefulWidget {
   final VoidCallback? onTap;
   final Alignment? centeredWatermarkAlignment;
   final double centeredWatermarkScale;
+  final double centeredWatermarkVerticalBias;
 
   const DesktopStatCard({
     super.key,
@@ -256,6 +257,7 @@ class DesktopStatCard extends StatefulWidget {
     this.onTap,
     this.centeredWatermarkAlignment,
     this.centeredWatermarkScale = 1.0,
+    this.centeredWatermarkVerticalBias = 0.18,
   });
 
   @override
@@ -299,6 +301,8 @@ class _DesktopStatCardState extends State<DesktopStatCard> {
           accent: color,
           centeredWatermarkAlignment: widget.centeredWatermarkAlignment,
           centeredWatermarkScale: widget.centeredWatermarkScale,
+          centeredWatermarkVerticalBias:
+              _isHovered ? 0.0 : widget.centeredWatermarkVerticalBias,
           change: widget.change,
           isPositiveChange: widget.isPositive,
           minHeight: 136,

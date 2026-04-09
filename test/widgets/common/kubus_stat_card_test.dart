@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('centered stat cards render icon watermark in card center',
+  testWidgets('centered stat cards show cropped lower watermark by default',
       (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
@@ -35,8 +35,10 @@ void main() {
 
     final cardCenter = tester.getCenter(cardFinder);
     final iconCenter = tester.getCenter(iconFinder);
+    final iconWidget = tester.widget<Icon>(iconFinder);
 
     expect((iconCenter.dx - cardCenter.dx).abs(), lessThan(2.0));
-    expect((iconCenter.dy - cardCenter.dy).abs(), lessThan(2.0));
+    expect(iconCenter.dy, greaterThan(cardCenter.dy + 8.0));
+    expect(iconWidget.size, greaterThan(120));
   });
 }

@@ -33,6 +33,7 @@ import 'http_client_factory.dart';
 import 'telemetry/kubus_client_context.dart';
 
 part 'backend_api_service_auth_helpers.dart';
+part 'backend_api_service_messages.dart';
 part 'backend_api_service_parsers.dart';
 part 'backend_api_service_upload_helpers.dart';
 
@@ -3226,115 +3227,37 @@ class BackendApiService
 
   /// Fetch list of conversations (lightweight)
   /// GET /api/messages
-  Future<Map<String, dynamic>> fetchConversations() async {
-    try {
-      // Ensure we attempt to load persisted token before every protected call
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
-      AppConfig.debugPrint(
-          'BackendApiService.fetchConversations: authToken present=${_authToken != null && _authToken!.isNotEmpty}');
-      final response = await _get(Uri.parse('$baseUrl/api/messages'),
-          headers: _getHeaders());
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
-      }
-      return {'success': false, 'status': response.statusCode};
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.fetchConversations failed: $e');
-      return {'success': false, 'error': e.toString()};
-    }
-  }
+  Future<Map<String, dynamic>> fetchConversations() =>
+      _backendApiFetchConversationsImpl(this);
 
   /// Fetch messages for a conversation
   /// GET /api/messages/:conversationId/messages
   Future<Map<String, dynamic>> fetchMessages(String conversationId,
-      {int page = 1, int limit = 50}) async {
-    try {
-      // Ensure we attempt to load persisted token before every protected call (and attempt issuance for stored wallet if missing)
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
-      AppConfig.debugPrint(
-          'BackendApiService.fetchMessages: conversationId=$conversationId authToken present=${_authToken != null && _authToken!.isNotEmpty}');
-      final uri = Uri.parse('$baseUrl/api/messages/$conversationId/messages')
-          .replace(queryParameters: {
-        'page': page.toString(),
-        'limit': limit.toString(),
-      });
-      final response = await _get(uri, headers: _getHeaders());
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
-      }
-      return {'success': false, 'status': response.statusCode};
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.fetchMessages failed: $e');
-      return {'success': false, 'error': e.toString()};
-    }
-  }
+      {int page = 1, int limit = 50}) =>
+      _backendApiFetchMessagesImpl(
+        this,
+        conversationId,
+        page: page,
+        limit: limit,
+      );
 
   /// Send a message to a conversation (JSON)
   /// POST /api/messages/:conversationId/messages { message, data, replyToId }
   Future<Map<String, dynamic>> sendMessage(
       String conversationId, String message,
-      {Map<String, dynamic>? data, String? replyToId}) async {
-    _throwIfIpfsFallbackUnavailable('Messages');
-    try {
-      final body = <String, dynamic>{'message': message};
-      if (data != null) body['data'] = data;
-      if (replyToId != null && replyToId.isNotEmpty) {
-        body['replyToId'] = replyToId;
-      }
-      final response = await _post(
-        Uri.parse('$baseUrl/api/messages/$conversationId/messages'),
-        headers: _getHeaders(),
-        body: jsonEncode(body),
+      {Map<String, dynamic>? data, String? replyToId}) =>
+      _backendApiSendMessageImpl(
+        this,
+        conversationId,
+        message,
+        data: data,
+        replyToId: replyToId,
       );
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
-      }
-      return {
-        'success': false,
-        'status': response.statusCode,
-        'body': response.body
-      };
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.sendMessage failed: $e');
-      return {'success': false, 'error': e.toString()};
-    }
-  }
 
   /// Fetch conversation members
   /// GET /api/messages/:conversationId/members
-  Future<Map<String, dynamic>> fetchConversationMembers(
-      String conversationId) async {
-    try {
-      // Ensure persisted token is loaded and token issuance attempted once (use stored wallet fallback)
-      try {
-        await _ensureAuthWithStoredWallet();
-      } catch (_) {}
-      final response = await _get(
-          Uri.parse('$baseUrl/api/messages/$conversationId/members'),
-          headers: _getHeaders());
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
-      }
-      if (response.statusCode == 429) {
-        AppConfig.debugPrint(
-            'BackendApiService.fetchConversationMembers: 429 Too Many Requests for $conversationId');
-        return {
-          'success': false,
-          'status': 429,
-          'retryAfter': response.headers['retry-after']
-        };
-      }
-      return {'success': false, 'status': response.statusCode};
-    } catch (e) {
-      AppConfig.debugPrint(
-          'BackendApiService.fetchConversationMembers failed: $e');
-      return {'success': false, 'error': e.toString()};
-    }
-  }
+  Future<Map<String, dynamic>> fetchConversationMembers(String conversationId) =>
+      _backendApiFetchConversationMembersImpl(this, conversationId);
 
   /// Upload a message attachment by posting multipart to the messages endpoint
   Future<Map<String, dynamic>> uploadMessageAttachment(String conversationId,
@@ -3375,204 +3298,64 @@ class BackendApiService
   /// Create a conversation
   /// POST /api/messages { title, members }
   Future<Map<String, dynamic>> createConversation(
-      {String? title, bool isGroup = false, List<String>? members}) async {
-    _throwIfIpfsFallbackUnavailable('Messages');
-    try {
-      final response = await _post(
-        Uri.parse('$baseUrl/api/messages'),
-        headers: _getHeaders(),
-        body: jsonEncode(
-            {'title': title, 'members': members ?? [], 'isGroup': isGroup}),
+      {String? title, bool isGroup = false, List<String>? members}) =>
+      _backendApiCreateConversationImpl(
+        this,
+        title: title,
+        isGroup: isGroup,
+        members: members,
       );
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
-      }
-      return {'success': false, 'status': response.statusCode};
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.createConversation failed: $e');
-      return {'success': false, 'error': e.toString()};
-    }
-  }
 
   /// Upload conversation avatar (attempt common endpoints)
   Future<Map<String, dynamic>> uploadConversationAvatar(String conversationId,
-      List<int> bytes, String filename, String contentType) async {
-    try {
-      // Try conversation-specific avatar endpoint first
-      var uri = Uri.parse('$baseUrl/api/conversations/$conversationId/avatar');
-      http.MultipartRequest buildPrimary() {
-        final request = http.MultipartRequest('POST', uri);
-        request.headers.addAll({'Accept': 'application/json'});
-        request.files.add(
-          http.MultipartFile.fromBytes(
-            'file',
-            bytes,
-            filename: filename,
-            contentType: MediaType.parse(contentType),
-          ),
-        );
-        return request;
-      }
-
-      var resp = await _sendMultipart(buildPrimary, includeAuth: true);
-      if (resp.statusCode == 200 || resp.statusCode == 201) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
-      }
-
-      // Fallback to messages-based endpoint
-      uri = Uri.parse('$baseUrl/api/messages/$conversationId/avatar');
-      http.MultipartRequest buildFallback() {
-        final request = http.MultipartRequest('POST', uri);
-        request.headers.addAll({'Accept': 'application/json'});
-        request.files.add(
-          http.MultipartFile.fromBytes(
-            'file',
-            bytes,
-            filename: filename,
-            contentType: MediaType.parse(contentType),
-          ),
-        );
-        return request;
-      }
-
-      resp = await _sendMultipart(buildFallback, includeAuth: true);
-      if (resp.statusCode == 200 || resp.statusCode == 201) {
-        return jsonDecode(resp.body) as Map<String, dynamic>;
-      }
-
-      return {'success': false, 'status': resp.statusCode, 'body': resp.body};
-    } catch (e) {
-      AppConfig.debugPrint(
-          'BackendApiService.uploadConversationAvatar failed: $e');
-      return {'success': false, 'error': e.toString()};
-    }
-  }
+      List<int> bytes, String filename, String contentType) =>
+      _backendApiUploadConversationAvatarImpl(
+        this,
+        conversationId,
+        bytes,
+        filename,
+        contentType,
+      );
 
   /// Add a member to conversation
   Future<Map<String, dynamic>> addConversationMember(
-      String conversationId, String walletAddress) async {
-    try {
-      final response = await _post(
-        Uri.parse('$baseUrl/api/messages/$conversationId/members'),
-        headers: _getHeaders(),
-        body: jsonEncode({'walletAddress': walletAddress}),
+      String conversationId, String walletAddress) =>
+      _backendApiAddConversationMemberImpl(
+        this,
+        conversationId,
+        walletAddress,
       );
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
-      }
-      return {'success': false, 'status': response.statusCode};
-    } catch (e) {
-      AppConfig.debugPrint(
-          'BackendApiService.addConversationMember failed: $e');
-      return {'success': false, 'error': e.toString()};
-    }
-  }
 
   /// Remove a member from conversation (best-effort)
   Future<Map<String, dynamic>> removeConversationMember(
-      String conversationId, String walletOrUsername) async {
-    try {
-      // Try a DELETE endpoint first (may not exist on server)
-      final uri = Uri.parse('$baseUrl/api/messages/$conversationId/members');
-      final response = await _delete(
-        uri,
-        headers: _getHeaders(),
-        body: jsonEncode(
-            {'walletAddress': walletOrUsername, 'username': walletOrUsername}),
+      String conversationId, String walletOrUsername) =>
+      _backendApiRemoveConversationMemberImpl(
+        this,
+        conversationId,
+        walletOrUsername,
       );
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        return {'success': true};
-      }
-
-      // Fallback: call a removal helper endpoint (non-standard)
-      final fallback = await _post(
-        Uri.parse('$baseUrl/api/messages/$conversationId/members/remove'),
-        headers: _getHeaders(),
-        body: jsonEncode({'walletAddress': walletOrUsername}),
-      );
-      if (fallback.statusCode == 200 || fallback.statusCode == 201) {
-        return jsonDecode(fallback.body) as Map<String, dynamic>;
-      }
-
-      return {'success': false, 'status': response.statusCode};
-    } catch (e) {
-      AppConfig.debugPrint(
-          'BackendApiService.removeConversationMember failed: $e');
-      return {'success': false, 'error': e.toString()};
-    }
-  }
 
   /// Transfer conversation ownership (best-effort)
   Future<Map<String, dynamic>> transferConversationOwner(
-      String conversationId, String newOwnerWallet) async {
-    try {
-      final response = await _post(
-        Uri.parse('$baseUrl/api/messages/$conversationId/transfer-owner'),
-        headers: _getHeaders(),
-        body: jsonEncode({'newOwnerWallet': newOwnerWallet}),
+      String conversationId, String newOwnerWallet) =>
+      _backendApiTransferConversationOwnerImpl(
+        this,
+        conversationId,
+        newOwnerWallet,
       );
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
-      }
-      return {'success': false, 'status': response.statusCode};
-    } catch (e) {
-      AppConfig.debugPrint(
-          'BackendApiService.transferConversationOwner failed: $e');
-      return {'success': false, 'error': e.toString()};
-    }
-  }
 
   /// Mark conversation as read
-  Future<Map<String, dynamic>> markConversationRead(
-      String conversationId) async {
-    try {
-      final response = await _put(
-          Uri.parse('$baseUrl/api/messages/$conversationId/read'),
-          headers: _getHeaders());
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
-      }
-      return {'success': false, 'status': response.statusCode};
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.markConversationRead failed: $e');
-      return {'success': false, 'error': e.toString()};
-    }
-  }
+  Future<Map<String, dynamic>> markConversationRead(String conversationId) =>
+      _backendApiMarkConversationReadImpl(this, conversationId);
 
   /// Mark a specific message as read
   Future<Map<String, dynamic>> markMessageRead(
-      String conversationId, String messageId) async {
-    try {
-      final response = await _put(
-          Uri.parse(
-              '$baseUrl/api/messages/$conversationId/messages/$messageId/read'),
-          headers: _getHeaders());
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
-      }
-      return {'success': false, 'status': response.statusCode};
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.markMessageRead failed: $e');
-      return {'success': false, 'error': e.toString()};
-    }
-  }
+      String conversationId, String messageId) =>
+      _backendApiMarkMessageReadImpl(this, conversationId, messageId);
 
   Future<Map<String, dynamic>> renameConversation(
-      String conversationId, String newTitle) async {
-    try {
-      final response = await _patch(
-        Uri.parse('$baseUrl/api/messages/$conversationId/rename'),
-        headers: _getHeaders(),
-        body: jsonEncode({'title': newTitle}),
-      );
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
-      }
-      throw Exception('Failed to rename conversation: ${response.statusCode}');
-    } catch (e) {
-      throw Exception('Failed to rename conversation: $e');
-    }
-  }
+      String conversationId, String newTitle) =>
+      _backendApiRenameConversationImpl(this, conversationId, newTitle);
 
   /// Update user profile (preferences / metadata)
   /// POST /api/profiles

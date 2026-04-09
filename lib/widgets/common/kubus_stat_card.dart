@@ -34,6 +34,7 @@ class KubusStatCard extends StatelessWidget {
     this.showIcon = true,
     this.centeredWatermarkAlignment,
     this.centeredWatermarkScale = 1.0,
+    this.centeredWatermarkVerticalBias = 0.18,
   });
 
   final String title;
@@ -57,6 +58,7 @@ class KubusStatCard extends StatelessWidget {
   final bool showIcon;
   final Alignment? centeredWatermarkAlignment;
   final double centeredWatermarkScale;
+  final double centeredWatermarkVerticalBias;
 
   @override
   Widget build(BuildContext context) {
@@ -107,6 +109,7 @@ class KubusStatCard extends StatelessWidget {
                   contentPadding: padding,
                   centeredWatermarkAlignment: centeredWatermarkAlignment,
                   centeredWatermarkScale: centeredWatermarkScale,
+                  centeredWatermarkVerticalBias: centeredWatermarkVerticalBias,
                 )
               : _buildStandardContent(
                   context: context,
@@ -207,6 +210,7 @@ class KubusStatCard extends StatelessWidget {
     required EdgeInsetsGeometry contentPadding,
     required Alignment? centeredWatermarkAlignment,
     required double centeredWatermarkScale,
+    required double centeredWatermarkVerticalBias,
   }) {
     final mediaQuery = MediaQuery.maybeOf(context);
     final screenWidth = mediaQuery?.size.width ?? 0;
@@ -282,11 +286,11 @@ class KubusStatCard extends StatelessWidget {
                   final isWideCard = aspectRatio >= 1.45;
                   final baseWatermarkSize = shortestSide *
                       (isWideCard
-                          ? 0.90
-                          : (aspectRatio <= 0.9 ? 0.96 : 0.93));
-                  final minAllowedSize = shortestSide * 0.76;
+                          ? 1.22
+                          : (aspectRatio <= 0.9 ? 1.34 : 1.28));
+                  final minAllowedSize = shortestSide * 1.02;
                   final maxAllowedSize =
-                      math.max(shortestSide * 1.02, longestSide * 0.92);
+                      math.max(shortestSide * 1.18, longestSide * 1.08);
                   final iconWatermarkSize = (baseWatermarkSize *
                           glyphCompensation *
                           watermarkScale *
@@ -298,12 +302,19 @@ class KubusStatCard extends StatelessWidget {
 
                   return Align(
                     alignment: watermarkAlignment,
-                    child: Icon(
-                      icon,
-                      color: effectiveAccent.withValues(
-                        alpha: isWideCard ? 0.10 : 0.12,
+                    child: Transform.translate(
+                      offset: Offset(
+                        0,
+                        iconWatermarkSize *
+                            centeredWatermarkVerticalBias.clamp(0.0, 0.35),
                       ),
-                      size: iconWatermarkSize,
+                      child: Icon(
+                        icon,
+                        color: effectiveAccent.withValues(
+                          alpha: isWideCard ? 0.11 : 0.13,
+                        ),
+                        size: iconWatermarkSize,
+                      ),
                     ),
                   );
                 },
