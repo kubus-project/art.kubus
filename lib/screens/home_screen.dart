@@ -70,6 +70,14 @@ import '../services/share/share_deep_link_parser.dart';
 import '../services/share/share_types.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
+@visibleForTesting
+bool shouldShowHomeStatCardIcon({
+  required bool showIconOnly,
+  required bool isVerticalLayout,
+}) {
+  return showIconOnly || isVerticalLayout;
+}
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -1358,6 +1366,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isSmallScreen = constraints.maxWidth < 375;
+        final shouldShowIcon = shouldShowHomeStatCardIcon(
+          showIconOnly: showIconOnly,
+          isVerticalLayout: isVerticalLayout,
+        );
 
         return SizedBox(
           width: isVerticalLayout ? double.infinity : null,
@@ -1382,9 +1394,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               value: value,
               icon: icon,
               layout: KubusStatCardLayout.centered,
-              showIcon: showIconOnly,
+              showIcon: shouldShowIcon,
               centeredWatermarkAlignment: Alignment.center,
-              centeredWatermarkScale: showIconOnly ? 0.86 : 1.0,
+              centeredWatermarkScale: shouldShowIcon ? 0.86 : 1.0,
               accent: statColor,
               tintBase: scheme.surface,
               onTap: () => _showStatsDialog(title, icon),

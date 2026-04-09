@@ -276,43 +276,33 @@ class KubusStatCard extends StatelessWidget {
                   final safeHeight = maxHeight > 0 ? maxHeight : fallbackBase;
                   final aspectRatio =
                       safeHeight <= 0 ? 1.0 : (safeWidth / safeHeight);
+                  final shortestSide = math.min(safeWidth, safeHeight);
                   final longestSide = math.max(safeWidth, safeHeight);
                   final glyphCompensation = _watermarkGlyphCompensation(icon);
-
-                  final baseScale = aspectRatio >= 1.6
-                      ? 1.02
-                      : (aspectRatio <= 0.85 ? 1.22 : 1.14);
-                  final minWidthCoverage =
-                      safeWidth * (aspectRatio >= 1.6 ? 1.02 : 1.08);
-                  final minHeightCoverage =
-                      safeHeight * (aspectRatio >= 1.6 ? 1.16 : 1.24);
+                  final isWideCard = aspectRatio >= 1.45;
+                  final baseWatermarkSize = shortestSide *
+                      (isWideCard
+                          ? 0.90
+                          : (aspectRatio <= 0.9 ? 0.96 : 0.93));
+                  final minAllowedSize = shortestSide * 0.76;
                   final maxAllowedSize =
-                      longestSide * (aspectRatio >= 1.6 ? 1.18 : 1.40);
-
-                  final baseWatermarkSize = (longestSide * baseScale).clamp(
-                    math.max(minWidthCoverage, minHeightCoverage),
-                    maxAllowedSize,
-                  );
-
+                      math.max(shortestSide * 1.02, longestSide * 0.92);
                   final iconWatermarkSize = (baseWatermarkSize *
-                              glyphCompensation *
-                              watermarkScale)
-                          .clamp(
-                        math.max(minWidthCoverage, minHeightCoverage) * 0.92,
-                        maxAllowedSize * 1.04,
-                      ) *
-                      centeredWatermarkScale.clamp(0.75, 1.2);
+                          glyphCompensation *
+                          watermarkScale *
+                          centeredWatermarkScale.clamp(0.75, 1.2))
+                      .clamp(minAllowedSize, maxAllowedSize);
 
-                  final watermarkAlignment = centeredWatermarkAlignment ??
-                      (aspectRatio >= 1.6
-                          ? Alignment.bottomCenter
-                          : Alignment.center);
+                  final watermarkAlignment =
+                      centeredWatermarkAlignment ?? Alignment.center;
 
                   return Align(
                     alignment: watermarkAlignment,
                     child: Icon(
                       icon,
-                      color: effectiveAccent.withValues(alpha: 0.05),
+                      color: effectiveAccent.withValues(
+                        alpha: isWideCard ? 0.10 : 0.12,
+                      ),
                       size: iconWatermarkSize,
                     ),
                   );

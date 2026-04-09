@@ -6,22 +6,35 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 void main() {
-  testWidgets('DesktopStatCard uses standardized stat sizing', (tester) async {
+  Future<void> pumpDesktopStatCard(
+    WidgetTester tester, {
+    required Widget child,
+  }) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(
       ChangeNotifierProvider(
         create: (_) => ThemeProvider(),
-        child: const MaterialApp(
-          home: Scaffold(
-            body: SizedBox(
-              width: 240,
-              height: 180,
-              child: DesktopStatCard(
-                label: 'Followers',
-                value: '128',
-                icon: Icons.group_outlined,
-              ),
-            ),
-          ),
+        child: MaterialApp(
+          home: Scaffold(body: child),
+        ),
+      ),
+    );
+  }
+
+  testWidgets('DesktopStatCard uses standardized stat sizing', (tester) async {
+    await pumpDesktopStatCard(
+      tester,
+      child: const SizedBox(
+        width: 240,
+        height: 180,
+        child: DesktopStatCard(
+          label: 'Followers',
+          value: '128',
+          icon: Icons.group_outlined,
         ),
       ),
     );
@@ -29,7 +42,43 @@ void main() {
     final value = tester.widget<Text>(find.text('128'));
     final label = tester.widget<Text>(find.text('Followers'));
 
-    expect(value.style?.fontSize, KubusChromeMetrics.statValue);
-    expect(label.style?.fontSize, KubusChromeMetrics.statLabel);
+    expect(
+      value.style?.fontSize,
+      closeTo(KubusChromeMetrics.statValue * 0.95, 0.001),
+    );
+    expect(
+      label.style?.fontSize,
+      closeTo(KubusTextStyles.actionTileTitle.fontSize! * 0.93, 0.001),
+    );
+  });
+
+  testWidgets('DesktopStatCard keeps centered shared watermark icon',
+      (tester) async {
+    await pumpDesktopStatCard(
+      tester,
+      child: const SizedBox(
+        width: 240,
+        height: 180,
+        child: DesktopStatCard(
+          label: 'Followers',
+          value: '128',
+          icon: Icons.group_outlined,
+          centeredWatermarkAlignment: Alignment.center,
+        ),
+      ),
+    );
+
+    final cardFinder = find.byType(DesktopStatCard);
+    final iconFinder = find.byWidgetPredicate(
+      (widget) => widget is Icon && widget.icon == Icons.group_outlined,
+    );
+
+    expect(iconFinder, findsOneWidget);
+
+    final cardCenter = tester.getCenter(cardFinder);
+    final iconCenter = tester.getCenter(iconFinder);
+
+    expect((iconCenter.dx - cardCenter.dx).abs(), lessThan(2.0));
+    expect((iconCenter.dy - cardCenter.dy).abs(), lessThan(2.0));
   });
 }
