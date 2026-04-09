@@ -13,6 +13,7 @@ import '../providers/chat_provider.dart';
 import '../providers/collectibles_provider.dart';
 import '../providers/community_hub_provider.dart';
 import '../providers/collab_provider.dart';
+import '../providers/exhibitions_provider.dart';
 import '../providers/institution_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/marker_management_provider.dart';
@@ -25,6 +26,7 @@ import '../providers/stats_provider.dart';
 import '../providers/task_provider.dart';
 import '../providers/wallet_provider.dart';
 import '../providers/web3provider.dart';
+import '../utils/home_activity_cards.dart';
 import 'backend_api_service.dart';
 
 /// Centralized bootstrapper that preloads the core providers before the user
@@ -57,6 +59,7 @@ class AppBootstrapService {
     final cacheProvider = context.read<CacheProvider>();
     final savedItemsProvider = context.read<SavedItemsProvider>();
     final collectiblesProvider = context.read<CollectiblesProvider>();
+    final exhibitionsProvider = context.read<ExhibitionsProvider>();
     final institutionProvider = context.read<InstitutionProvider>();
     final taskProvider = context.read<TaskProvider>();
     final appRefreshProvider = context.read<AppRefreshProvider>();
@@ -152,19 +155,42 @@ class AppBootstrapService {
           await profileProvider.refreshStats();
         }));
         p1.add(_runTask(
-            'stats_snapshot',
+            'home_activity_stats_snapshot',
             () => statsProvider.ensureSnapshot(
                   entityType: 'user',
                   entityId: resolvedWallet,
-                  metrics: const [
-                    'followers',
-                    'following',
-                    'posts',
-                    'artworks',
-                    'viewsReceived'
-                  ],
+                  metrics: homeActivityPublicSnapshotMetrics,
                   scope: 'public',
                 )));
+        p1.add(_runTask(
+            'home_activity_discovered_snapshot',
+            () => statsProvider.ensureSnapshot(
+                  entityType: 'user',
+                  entityId: resolvedWallet,
+                  metrics: homeActivityPrivateDiscoveredMetrics,
+                  scope: 'private',
+                )));
+        p1.add(_runTask('my_exhibitions', () async {
+          await exhibitionsProvider.loadExhibitions(
+            refresh: true,
+            mine: true,
+            limit: 50,
+          );
+        }));
+        p1.add(_runTask('home_program_views', () async {
+          final nowUtc = DateTime.now().toUtc();
+          await statsProvider.ensureSeries(
+            entityType: 'user',
+            entityId: resolvedWallet,
+            metric: 'viewsReceived',
+            bucket: 'month',
+            timeframe: 'all',
+            from: homeActivityProgramViewsFromUtc().toIso8601String(),
+            to: homeActivityProgramViewsToUtc(nowUtc).toIso8601String(),
+            groupBy: 'targetType',
+            scope: 'private',
+          );
+        }));
       }
     }
 

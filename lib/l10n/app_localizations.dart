@@ -12581,6 +12581,60 @@ abstract class AppLocalizations {
   /// **'Views'**
   String get homeStatViews;
 
+  /// No description provided for @homeStatLikes.
+  ///
+  /// In en, this message translates to:
+  /// **'Likes'**
+  String get homeStatLikes;
+
+  /// No description provided for @homeStatVisitors.
+  ///
+  /// In en, this message translates to:
+  /// **'Visitors'**
+  String get homeStatVisitors;
+
+  /// No description provided for @homeStatEventsHosted.
+  ///
+  /// In en, this message translates to:
+  /// **'Events Hosted'**
+  String get homeStatEventsHosted;
+
+  /// No description provided for @homeStatExhibitions.
+  ///
+  /// In en, this message translates to:
+  /// **'Exhibitions'**
+  String get homeStatExhibitions;
+
+  /// No description provided for @homeStatProgramViews.
+  ///
+  /// In en, this message translates to:
+  /// **'Program Views'**
+  String get homeStatProgramViews;
+
+  /// No description provided for @homeStatDiscovered.
+  ///
+  /// In en, this message translates to:
+  /// **'Discovered'**
+  String get homeStatDiscovered;
+
+  /// No description provided for @homeStatArSessions.
+  ///
+  /// In en, this message translates to:
+  /// **'AR Sessions'**
+  String get homeStatArSessions;
+
+  /// No description provided for @homeStatFollowing.
+  ///
+  /// In en, this message translates to:
+  /// **'Following'**
+  String get homeStatFollowing;
+
+  /// No description provided for @homeStatLikesGiven.
+  ///
+  /// In en, this message translates to:
+  /// **'Likes Given'**
+  String get homeStatLikesGiven;
+
   /// No description provided for @homeStatsDialogTitle.
   ///
   /// In en, this message translates to:

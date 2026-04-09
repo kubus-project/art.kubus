@@ -2973,6 +2973,15 @@
   "homeStatArtworks": "Artworks",
   "homeStatFollowers": "Followers",
   "homeStatViews": "Views",
+  "homeStatLikes": "Likes",
+  "homeStatVisitors": "Visitors",
+  "homeStatEventsHosted": "Events Hosted",
+  "homeStatExhibitions": "Exhibitions",
+  "homeStatProgramViews": "Program Views",
+  "homeStatDiscovered": "Discovered",
+  "homeStatArSessions": "AR Sessions",
+  "homeStatFollowing": "Following",
+  "homeStatLikesGiven": "Likes Given",
   "homeStatsDialogTitle": "{statName} Details",
   "@homeStatsDialogTitle": {
     "placeholders": {

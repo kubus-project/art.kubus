@@ -16,12 +16,12 @@ import '../../providers/recent_activity_provider.dart';
 import '../../providers/community_hub_provider.dart';
 import '../../providers/navigation_provider.dart';
 import '../../providers/stats_provider.dart';
+import '../../providers/exhibitions_provider.dart';
 import '../../config/config.dart';
 import '../../models/artwork.dart';
 import '../../models/recent_activity.dart';
 import '../../models/user_persona.dart';
 import '../../models/user_profile.dart';
-import '../../models/wallet.dart';
 import '../../models/promotion.dart';
 import '../../community/community_interactions.dart';
 import '../../widgets/app_logo.dart';
@@ -41,6 +41,7 @@ import '../../utils/kubus_color_roles.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/home_search_destination.dart';
 import '../../utils/home_rail_creator_identity.dart';
+import '../../utils/home_activity_cards.dart';
 import '../../utils/institution_navigation.dart';
 import '../../utils/map_navigation.dart';
 import '../../utils/media_url_resolver.dart';
@@ -173,7 +174,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     }
     if (walletAddress == _lastDiscoveredStatsWallet) return;
     _lastDiscoveredStatsWallet = walletAddress;
-    _scheduleDiscoveredStatsPrefetch(walletAddress);
+    _scheduleHomeActivityPrefetch(walletAddress);
   }
 
   void _refreshHomeRails({bool force = false}) {
@@ -240,7 +241,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     });
   }
 
-  void _scheduleDiscoveredStatsPrefetch(String walletAddress) {
+  void _scheduleHomeActivityPrefetch(String walletAddress) {
     final normalizedWallet = walletAddress.trim();
     if (normalizedWallet.isEmpty) return;
     if (_queuedDiscoveredStatsWallet == normalizedWallet) return;
@@ -251,10 +252,34 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       }
       if (!mounted) return;
       final statsProvider = context.read<StatsProvider>();
+      final exhibitionsProvider = context.read<ExhibitionsProvider>();
       unawaited(statsProvider.ensureSnapshot(
         entityType: 'user',
         entityId: normalizedWallet,
-        metrics: const <String>['artworksDiscovered'],
+        metrics: homeActivityPublicSnapshotMetrics,
+        scope: 'public',
+      ));
+      unawaited(statsProvider.ensureSnapshot(
+        entityType: 'user',
+        entityId: normalizedWallet,
+        metrics: homeActivityPrivateDiscoveredMetrics,
+        scope: 'private',
+      ));
+      unawaited(exhibitionsProvider.loadExhibitions(
+        refresh: true,
+        mine: true,
+        limit: 50,
+      ));
+      final nowUtc = DateTime.now().toUtc();
+      unawaited(statsProvider.ensureSeries(
+        entityType: 'user',
+        entityId: normalizedWallet,
+        metric: 'viewsReceived',
+        bucket: 'month',
+        timeframe: 'all',
+        from: homeActivityProgramViewsFromUtc().toIso8601String(),
+        to: homeActivityProgramViewsToUtc(nowUtc).toIso8601String(),
+        groupBy: 'targetType',
         scope: 'private',
       ));
     });
@@ -997,49 +1022,53 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
 
   Widget _buildStatsGrid() {
     final artworkProvider = Provider.of<ArtworkProvider>(context);
-    final web3Provider = Provider.of<Web3Provider>(context);
-    final walletProvider = Provider.of<WalletProvider>(context);
     final profileProvider = Provider.of<ProfileProvider>(context);
     final activityProvider = Provider.of<RecentActivityProvider>(context);
+    final exhibitionsProvider = Provider.of<ExhibitionsProvider>(context);
     final statsProvider = context.watch<StatsProvider>();
     final l10n = AppLocalizations.of(context)!;
-    final isLoadingArtworks = artworkProvider.isLoading('load_artworks');
-    final isLoadingActivity =
-        activityProvider.isLoading && activityProvider.activities.isEmpty;
-
-    final walletAddress = (walletProvider.currentWalletAddress ?? '').trim();
-    const discoveredMetrics = <String>['artworksDiscovered'];
+    final walletAddress =
+        (Provider.of<WalletProvider>(context).currentWalletAddress ?? '')
+            .trim();
+    final publicSnapshot = walletAddress.isEmpty
+        ? null
+        : statsProvider.getSnapshot(
+            entityType: 'user',
+            entityId: walletAddress,
+            metrics: homeActivityPublicSnapshotMetrics,
+            scope: 'public',
+          );
+    final publicLoading = walletAddress.isNotEmpty &&
+        statsProvider.isSnapshotLoading(
+          entityType: 'user',
+          entityId: walletAddress,
+          metrics: homeActivityPublicSnapshotMetrics,
+          scope: 'public',
+        ) &&
+        publicSnapshot == null;
     final discoveredSnapshot = walletAddress.isEmpty
         ? null
         : statsProvider.getSnapshot(
             entityType: 'user',
             entityId: walletAddress,
-            metrics: discoveredMetrics,
-            scope: 'private',
-          );
-    final discoveredError = walletAddress.isEmpty
-        ? null
-        : statsProvider.snapshotError(
-            entityType: 'user',
-            entityId: walletAddress,
-            metrics: discoveredMetrics,
+            metrics: homeActivityPrivateDiscoveredMetrics,
             scope: 'private',
           );
     final discoveredLoading = walletAddress.isNotEmpty &&
         statsProvider.isSnapshotLoading(
           entityType: 'user',
           entityId: walletAddress,
-          metrics: discoveredMetrics,
+          metrics: homeActivityPrivateDiscoveredMetrics,
           scope: 'private',
         ) &&
-        discoveredSnapshot == null &&
-        discoveredError == null;
+        discoveredSnapshot == null;
     if (walletAddress.isNotEmpty &&
+        publicSnapshot == null &&
         discoveredSnapshot == null &&
+        !publicLoading &&
         !discoveredLoading) {
-      _scheduleDiscoveredStatsPrefetch(walletAddress);
+      _scheduleHomeActivityPrefetch(walletAddress);
     }
-
     final discoveredFromStats =
         discoveredSnapshot?.counters['artworksDiscovered'] ?? 0;
     final discoveredFromProfile = profileProvider.artworksCount;
@@ -1057,21 +1086,58 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     final discoveredDisplayLoading = discoveredLoading &&
         discoveredFromProfile == 0 &&
         discoveredFromLocal == 0;
+    final nowUtc = DateTime.now().toUtc();
+    final programViewsSeries = walletAddress.isEmpty
+        ? null
+        : statsProvider.getSeries(
+            entityType: 'user',
+            entityId: walletAddress,
+            metric: 'viewsReceived',
+            bucket: 'month',
+            timeframe: 'all',
+            from: homeActivityProgramViewsFromUtc().toIso8601String(),
+            to: homeActivityProgramViewsToUtc(nowUtc).toIso8601String(),
+            groupBy: 'targetType',
+            scope: 'private',
+          );
+    final programViewsLoading = walletAddress.isNotEmpty &&
+        statsProvider.analyticsEnabled &&
+        programViewsSeries == null &&
+        statsProvider.isSeriesLoading(
+          entityType: 'user',
+          entityId: walletAddress,
+          metric: 'viewsReceived',
+          bucket: 'month',
+          timeframe: 'all',
+          from: homeActivityProgramViewsFromUtc().toIso8601String(),
+          to: homeActivityProgramViewsToUtc(nowUtc).toIso8601String(),
+          groupBy: 'targetType',
+          scope: 'private',
+        );
 
-    final arSessions = activityProvider.activities
-        .where((a) => a.category == ActivityCategory.ar)
-        .length;
-    final nftCount =
-        walletProvider.tokens.where((t) => t.type == TokenType.nft).length;
-    final kub8Token = walletProvider.tokens
-        .where((t) => t.symbol.toUpperCase() == 'KUB8')
-        .cast<Token?>()
-        .firstWhere((_) => true, orElse: () => null);
-    final kub8Earned = kub8Token != null
-        ? kub8Token.formattedBalance
-        : walletProvider.achievementTokenTotal.toStringAsFixed(2);
-
-    final roles = KubusColorRoles.of(context);
+    final cards = buildHomeActivityCards(
+      l10n: l10n,
+      roles: KubusColorRoles.of(context),
+      persona: profileProvider.userPersona,
+      isArtist: profileProvider.currentUser?.isArtist ?? false,
+      isInstitution: profileProvider.currentUser?.isInstitution ?? false,
+      source: HomeActivitySourceData(
+        publicCounters: publicSnapshot?.counters ?? const <String, int>{},
+        publicLoading: publicLoading,
+        discoveredCount: discoveredCount,
+        discoveredLoading: discoveredDisplayLoading,
+        arSessions: activityProvider.activities
+            .where((activity) => activity.category == ActivityCategory.ar)
+            .length,
+        arSessionsLoading:
+            activityProvider.isLoading && activityProvider.activities.isEmpty,
+        exhibitionsCount: exhibitionsProvider.myExhibitions.length,
+        exhibitionsLoading: exhibitionsProvider.isMyExhibitionsLoading &&
+            exhibitionsProvider.myExhibitions.isEmpty,
+        programViews: sumHomeProgramViews(programViewsSeries),
+        programViewsLoading: programViewsLoading,
+      ),
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1083,7 +1149,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           iconColor: AppColorUtils.coralAccent,
         ),
         const SizedBox(height: DetailSpacing.xl),
-        if (isLoadingArtworks || isLoadingActivity)
+        if (artworkProvider.isLoading('load_artworks') ||
+            (activityProvider.isLoading && activityProvider.activities.isEmpty))
           const Center(
             child: Padding(
               padding: EdgeInsets.symmetric(vertical: DetailSpacing.xl),
@@ -1097,58 +1164,21 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             return Wrap(
               spacing: DetailSpacing.lg,
               runSpacing: DetailSpacing.lg,
-              children: [
-                SizedBox(
-                  width: cardWidth,
-                  height: 160,
-                  child: DesktopStatCard(
-                    label: l10n.desktopHomeStatArtworksDiscovered,
-                    value: discoveredDisplayLoading
-                        ? '\u2026'
-                        : discoveredCount.toString(),
-                    icon: Icons.explore,
-                    color: AppColorUtils.tealAccent,
-                    centeredWatermarkAlignment: Alignment.center,
-                    centeredWatermarkScale: 0.84,
-                  ),
-                ),
-                SizedBox(
-                  width: cardWidth,
-                  height: 160,
-                  child: DesktopStatCard(
-                    label: l10n.desktopHomeStatArSessions,
-                    value: arSessions.toString(),
-                    icon: Icons.view_in_ar,
-                    color: AppColorUtils.purpleAccent,
-                    centeredWatermarkAlignment: Alignment.center,
-                    centeredWatermarkScale: 0.84,
-                  ),
-                ),
-                SizedBox(
-                  width: cardWidth,
-                  height: 160,
-                  child: DesktopStatCard(
-                    label: l10n.desktopHomeStatNftsCollected,
-                    value: web3Provider.isConnected ? nftCount.toString() : '0',
-                    icon: Icons.collections,
-                    color: AppColorUtils.coralAccent,
-                    centeredWatermarkAlignment: Alignment.center,
-                    centeredWatermarkScale: 0.84,
-                  ),
-                ),
-                SizedBox(
-                  width: cardWidth,
-                  height: 160,
-                  child: DesktopStatCard(
-                    label: l10n.desktopHomeStatKub8Earned,
-                    value: kub8Earned,
-                    icon: Icons.monetization_on,
-                    color: roles.achievementGold,
-                    centeredWatermarkAlignment: Alignment.center,
-                    centeredWatermarkScale: 0.84,
-                  ),
-                ),
-              ],
+              children: cards
+                  .map((card) => SizedBox(
+                        width: cardWidth,
+                        height: 160,
+                        child: DesktopStatCard(
+                          label: card.label,
+                          value:
+                              card.isLoading ? '\u2026' : card.value.toString(),
+                          icon: card.icon,
+                          color: card.color,
+                          centeredWatermarkAlignment: Alignment.center,
+                          centeredWatermarkScale: 0.84,
+                        ),
+                      ))
+                  .toList(growable: false),
             );
           },
         ),

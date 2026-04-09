@@ -2942,6 +2942,15 @@
   "homeStatArtworks": "Umetnine",
   "homeStatFollowers": "Sledilci",
   "homeStatViews": "Ogledi",
+  "homeStatLikes": "Všečki",
+  "homeStatVisitors": "Obiskovalci",
+  "homeStatEventsHosted": "Dogodki v gostovanju",
+  "homeStatExhibitions": "Razstave",
+  "homeStatProgramViews": "Ogledi programa",
+  "homeStatDiscovered": "Odkrito",
+  "homeStatArSessions": "AR seje",
+  "homeStatFollowing": "Slediš",
+  "homeStatLikesGiven": "Podani všečki",
   "homeStatsDialogTitle": "Podrobnosti za {statName}",
   "@homeStatsDialogTitle": {
     "placeholders": {

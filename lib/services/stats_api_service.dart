@@ -16,11 +16,15 @@ class StatsApiService {
   static const int _maxSnapshotCacheEntries = 400;
   static const int _maxSeriesCacheEntries = 250;
 
-  static final Map<String, _CacheEntry<StatsSnapshot>> _snapshotCache = <String, _CacheEntry<StatsSnapshot>>{};
-  static final Map<String, _CacheEntry<StatsSeries>> _seriesCache = <String, _CacheEntry<StatsSeries>>{};
+  static final Map<String, _CacheEntry<StatsSnapshot>> _snapshotCache =
+      <String, _CacheEntry<StatsSnapshot>>{};
+  static final Map<String, _CacheEntry<StatsSeries>> _seriesCache =
+      <String, _CacheEntry<StatsSeries>>{};
 
-  static final Map<String, Future<StatsSnapshot>> _inFlightSnapshots = <String, Future<StatsSnapshot>>{};
-  static final Map<String, Future<StatsSeries>> _inFlightSeries = <String, Future<StatsSeries>>{};
+  static final Map<String, Future<StatsSnapshot>> _inFlightSnapshots =
+      <String, Future<StatsSnapshot>>{};
+  static final Map<String, Future<StatsSeries>> _inFlightSeries =
+      <String, Future<StatsSeries>>{};
 
   StatsApiService({BackendApiService? api}) : _api = api ?? BackendApiService();
 
@@ -34,7 +38,11 @@ class StatsApiService {
     final normalizedEntityType = entityType.trim().toLowerCase();
     final normalizedEntityId = entityId.trim();
     final normalizedScope = scope.trim().toLowerCase();
-    final sortedMetrics = metrics.map((m) => m.trim()).where((m) => m.isNotEmpty).toList()..sort();
+    final sortedMetrics = metrics
+        .map((m) => m.trim())
+        .where((m) => m.isNotEmpty)
+        .toList()
+      ..sort();
     final group = (groupBy ?? '').trim().toLowerCase();
     return 'snapshot|$normalizedEntityType|$normalizedEntityId|$normalizedScope|${sortedMetrics.join(",")}|$group';
   }
@@ -67,7 +75,8 @@ class StatsApiService {
     return DateTime.now().difference(fetchedAt) <= ttl;
   }
 
-  static void _pruneCacheIfNeeded<T>(Map<String, _CacheEntry<T>> cache, int maxEntries) {
+  static void _pruneCacheIfNeeded<T>(
+      Map<String, _CacheEntry<T>> cache, int maxEntries) {
     if (cache.length <= maxEntries) return;
     // Remove the oldest ~25% to keep overhead low.
     final target = (maxEntries * 0.75).floor();
@@ -96,7 +105,9 @@ class StatsApiService {
     );
 
     final cached = _snapshotCache[key];
-    if (!forceRefresh && cached != null && _isFresh(cached.fetchedAt, _snapshotTtl)) {
+    if (!forceRefresh &&
+        cached != null &&
+        _isFresh(cached.fetchedAt, _snapshotTtl)) {
       return cached.value;
     }
 
@@ -152,7 +163,9 @@ class StatsApiService {
     );
 
     final cached = _seriesCache[key];
-    if (!forceRefresh && cached != null && _isFresh(cached.fetchedAt, _seriesTtl)) {
+    if (!forceRefresh &&
+        cached != null &&
+        _isFresh(cached.fetchedAt, _seriesTtl)) {
       return cached.value;
     }
 
@@ -191,9 +204,10 @@ class StatsApiService {
     if (series == null) return const [];
     final points = series.series;
     if (points.isEmpty) return const [];
-    final trimmed = (maxPoints != null && maxPoints > 0 && points.length > maxPoints)
-        ? points.sublist(points.length - maxPoints)
-        : points;
+    final trimmed =
+        (maxPoints != null && maxPoints > 0 && points.length > maxPoints)
+            ? points.sublist(points.length - maxPoints)
+            : points;
     return trimmed.map((p) => p.v.toDouble()).toList(growable: false);
   }
 
@@ -239,6 +253,8 @@ class StatsApiService {
     switch (raw) {
       case 'followers':
         return 'followers';
+      case 'likes':
+        return 'likesReceived';
       case 'views':
       case 'visitors':
         return 'viewsReceived';
@@ -276,4 +292,3 @@ class _CacheEntry<T> {
 
   const _CacheEntry(this.value, this.fetchedAt);
 }
-

@@ -6640,6 +6640,33 @@ class AppLocalizationsSl extends AppLocalizations {
   String get homeStatViews => 'Ogledi';
 
   @override
+  String get homeStatLikes => 'Všečki';
+
+  @override
+  String get homeStatVisitors => 'Obiskovalci';
+
+  @override
+  String get homeStatEventsHosted => 'Dogodki v gostovanju';
+
+  @override
+  String get homeStatExhibitions => 'Razstave';
+
+  @override
+  String get homeStatProgramViews => 'Ogledi programa';
+
+  @override
+  String get homeStatDiscovered => 'Odkrito';
+
+  @override
+  String get homeStatArSessions => 'AR seje';
+
+  @override
+  String get homeStatFollowing => 'Slediš';
+
+  @override
+  String get homeStatLikesGiven => 'Podani všečki';
+
+  @override
   String homeStatsDialogTitle(Object statName) {
     return 'Podrobnosti za $statName';
   }

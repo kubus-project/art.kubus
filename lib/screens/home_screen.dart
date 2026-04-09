@@ -7,12 +7,14 @@ import 'package:provider/provider.dart';
 import '../providers/themeprovider.dart';
 import '../providers/web3provider.dart';
 import '../providers/wallet_provider.dart';
+import '../providers/artwork_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/promotion_provider.dart';
 import '../providers/notification_provider.dart';
 import '../providers/recent_activity_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/stats_provider.dart';
+import '../providers/exhibitions_provider.dart';
 import '../models/recent_activity.dart';
 import '../models/user_persona.dart';
 import '../models/user_profile.dart';
@@ -56,6 +58,7 @@ import '../utils/home_search_destination.dart';
 import '../widgets/staggered_fade_slide.dart';
 import '../utils/artwork_navigation.dart';
 import '../utils/home_rail_creator_identity.dart';
+import '../utils/home_activity_cards.dart';
 import '../widgets/glass_components.dart';
 import '../widgets/profile_identity_summary.dart';
 import '../widgets/common/kubus_labs_adornment.dart';
@@ -88,6 +91,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _animationController;
   late final KubusSearchController _homeSearchController;
+  String _lastHomeActivityWallet = '';
 
   @override
   void initState() {
@@ -109,6 +113,53 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       unawaited(
         context.read<PromotionProvider>().loadHomeRails(locale: locale),
       );
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final walletAddress =
+        (context.watch<WalletProvider>().currentWalletAddress ?? '').trim();
+    if (walletAddress.isEmpty) {
+      _lastHomeActivityWallet = '';
+      return;
+    }
+    if (walletAddress == _lastHomeActivityWallet) return;
+    _lastHomeActivityWallet = walletAddress;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final statsProvider = context.read<StatsProvider>();
+      final exhibitionsProvider = context.read<ExhibitionsProvider>();
+      unawaited(statsProvider.ensureSnapshot(
+        entityType: 'user',
+        entityId: walletAddress,
+        metrics: homeActivityPublicSnapshotMetrics,
+        scope: 'public',
+      ));
+      unawaited(statsProvider.ensureSnapshot(
+        entityType: 'user',
+        entityId: walletAddress,
+        metrics: homeActivityPrivateDiscoveredMetrics,
+        scope: 'private',
+      ));
+      unawaited(exhibitionsProvider.loadExhibitions(
+        refresh: true,
+        mine: true,
+        limit: 50,
+      ));
+      final nowUtc = DateTime.now().toUtc();
+      unawaited(statsProvider.ensureSeries(
+        entityType: 'user',
+        entityId: walletAddress,
+        metric: 'viewsReceived',
+        bucket: 'month',
+        timeframe: 'all',
+        from: homeActivityProgramViewsFromUtc().toIso8601String(),
+        to: homeActivityProgramViewsToUtc(nowUtc).toIso8601String(),
+        groupBy: 'targetType',
+        scope: 'private',
+      ));
     });
   }
 
@@ -1194,9 +1245,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildStatsCards() {
-    return Consumer2<ProfileProvider, StatsProvider>(
-      builder: (context, profileProvider, statsProvider, child) {
+    return Builder(
+      builder: (context) {
         final l10n = AppLocalizations.of(context)!;
+        final profileProvider = context.watch<ProfileProvider>();
+        final statsProvider = context.watch<StatsProvider>();
+        final activityProvider = context.watch<RecentActivityProvider>();
+        final exhibitionsProvider = context.watch<ExhibitionsProvider>();
+        final artworkProvider = context.watch<ArtworkProvider>();
         final wallet =
             (profileProvider.currentUser?.walletAddress ?? '').trim();
 
@@ -1219,50 +1275,96 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           );
         }
 
-        // Best-effort: trigger snapshot fetch and render cached values immediately.
-        statsProvider.ensureSnapshot(
+        final publicSnapshot = statsProvider.getSnapshot(
           entityType: 'user',
           entityId: wallet,
-          metrics: const ['artworks', 'followers', 'viewsReceived'],
+          metrics: homeActivityPublicSnapshotMetrics,
           scope: 'public',
         );
+        final publicLoading = statsProvider.isSnapshotLoading(
+              entityType: 'user',
+              entityId: wallet,
+              metrics: homeActivityPublicSnapshotMetrics,
+              scope: 'public',
+            ) &&
+            publicSnapshot == null;
 
-        final snapshot = statsProvider.getSnapshot(
+        final discoveredSnapshot = statsProvider.getSnapshot(
           entityType: 'user',
           entityId: wallet,
-          metrics: const ['artworks', 'followers', 'viewsReceived'],
-          scope: 'public',
+          metrics: homeActivityPrivateDiscoveredMetrics,
+          scope: 'private',
         );
+        final discoveredLoading = statsProvider.isSnapshotLoading(
+              entityType: 'user',
+              entityId: wallet,
+              metrics: homeActivityPrivateDiscoveredMetrics,
+              scope: 'private',
+            ) &&
+            discoveredSnapshot == null;
 
-        final isLoading = statsProvider.isSnapshotLoading(
+        final discoveredFromStats =
+            discoveredSnapshot?.counters['artworksDiscovered'] ?? 0;
+        final discoveredFromProfile = profileProvider.artworksCount;
+        final discoveredFromLocal =
+            (discoveredFromStats == 0 && discoveredFromProfile == 0)
+                ? artworkProvider.artworks.where((a) => a.isDiscovered).length
+                : 0;
+        final discoveredCount = [
+          discoveredFromStats,
+          discoveredFromProfile,
+          discoveredFromLocal,
+        ].reduce((best, value) => value > best ? value : best);
+
+        final nowUtc = DateTime.now().toUtc();
+        final programViewsSeries = statsProvider.getSeries(
           entityType: 'user',
           entityId: wallet,
-          metrics: const ['artworks', 'followers', 'viewsReceived'],
-          scope: 'public',
+          metric: 'viewsReceived',
+          bucket: 'month',
+          timeframe: 'all',
+          from: homeActivityProgramViewsFromUtc().toIso8601String(),
+          to: homeActivityProgramViewsToUtc(nowUtc).toIso8601String(),
+          groupBy: 'targetType',
+          scope: 'private',
         );
+        final programViewsLoading = statsProvider.analyticsEnabled &&
+            programViewsSeries == null &&
+            statsProvider.isSeriesLoading(
+              entityType: 'user',
+              entityId: wallet,
+              metric: 'viewsReceived',
+              bucket: 'month',
+              timeframe: 'all',
+              from: homeActivityProgramViewsFromUtc().toIso8601String(),
+              to: homeActivityProgramViewsToUtc(nowUtc).toIso8601String(),
+              groupBy: 'targetType',
+              scope: 'private',
+            );
 
-        final error = statsProvider.snapshotError(
-          entityType: 'user',
-          entityId: wallet,
-          metrics: const ['artworks', 'followers', 'viewsReceived'],
-          scope: 'public',
+        final cards = buildHomeActivityCards(
+          l10n: l10n,
+          roles: KubusColorRoles.of(context),
+          persona: profileProvider.userPersona,
+          isArtist: profileProvider.currentUser?.isArtist ?? false,
+          isInstitution: profileProvider.currentUser?.isInstitution ?? false,
+          source: HomeActivitySourceData(
+            publicCounters: publicSnapshot?.counters ?? const <String, int>{},
+            publicLoading: publicLoading,
+            discoveredCount: discoveredCount,
+            discoveredLoading: discoveredLoading && discoveredCount == 0,
+            arSessions: activityProvider.activities
+                .where((activity) => activity.category == ActivityCategory.ar)
+                .length,
+            arSessionsLoading: activityProvider.isLoading &&
+                activityProvider.activities.isEmpty,
+            exhibitionsCount: exhibitionsProvider.myExhibitions.length,
+            exhibitionsLoading: exhibitionsProvider.isMyExhibitionsLoading &&
+                exhibitionsProvider.myExhibitions.isEmpty,
+            programViews: sumHomeProgramViews(programViewsSeries),
+            programViewsLoading: programViewsLoading,
+          ),
         );
-
-        String displayCounter(String key) {
-          if (snapshot != null) {
-            final v = (snapshot.counters[key] ?? 0);
-            return _formatCompactCount(v);
-          }
-          if (isLoading) return '...';
-          if (error != null) return '-';
-          return '0';
-        }
-
-        final stats = [
-          ('artworks', displayCounter('artworks'), Icons.image),
-          ('followers', displayCounter('followers'), Icons.people),
-          ('views', displayCounter('viewsReceived'), Icons.visibility),
-        ];
 
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -1287,39 +1389,49 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       : KubusSpacing.md,
                 ),
                 if (isVerySmallScreen)
-                  // Stack vertically on very small screens - show full details
                   Column(
-                    children: stats.asMap().entries.map((entry) {
+                    children: cards.asMap().entries.map((entry) {
                       final index = entry.key;
-                      final stat = entry.value;
+                      final card = entry.value;
                       return Padding(
                         padding: EdgeInsets.only(
-                            bottom: index < stats.length - 1 ? 8 : 0),
-                        child: _buildStatCard(stat.$1, stat.$2, stat.$3,
-                            color: AppColorUtils.statColor(
-                                index, Theme.of(context).colorScheme),
-                            showIconOnly: false,
-                            isVerticalLayout: true),
+                            bottom: index < cards.length - 1 ? 8 : 0),
+                        child: _buildStatCard(
+                          card.label,
+                          card.isLoading
+                              ? '...'
+                              : _formatCompactCount(card.value),
+                          card.icon,
+                          color: card.color,
+                          showIconOnly: false,
+                          isVerticalLayout: true,
+                          statType: card.statType,
+                        ),
                       );
                     }).toList(),
                   )
                 else
-                  // Horizontal layout for other screen sizes - show icons only
                   Row(
-                    children: stats.asMap().entries.map((entry) {
-                      final stat = entry.value;
+                    children: cards.asMap().entries.map((entry) {
+                      final card = entry.value;
                       return Expanded(
                         child: Padding(
                           padding: EdgeInsets.only(
-                            right: entry.key < stats.length - 1
+                            right: entry.key < cards.length - 1
                                 ? KubusSpacing.sm
                                 : KubusSpacing.none,
                           ),
-                          child: _buildStatCard(stat.$1, stat.$2, stat.$3,
-                              color: AppColorUtils.statColor(
-                                  entry.key, Theme.of(context).colorScheme),
-                              showIconOnly: true,
-                              isVerticalLayout: false),
+                          child: _buildStatCard(
+                            card.label,
+                            card.isLoading
+                                ? '...'
+                                : _formatCompactCount(card.value),
+                            card.icon,
+                            color: card.color,
+                            showIconOnly: true,
+                            isVerticalLayout: false,
+                            statType: card.statType,
+                          ),
                         ),
                       );
                     }).toList(),
@@ -1356,13 +1468,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildStatCard(String title, String value, IconData icon,
       {Color? color,
       bool showIconOnly = false,
-      bool isVerticalLayout = false}) {
+      bool isVerticalLayout = false,
+      String? statType}) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final statColor = color ?? AppColorUtils.featureColor(title, scheme);
-    final l10n = AppLocalizations.of(context)!;
-    final displayTitle = _getStatDisplayTitle(title, l10n);
-
     return LayoutBuilder(
       builder: (context, constraints) {
         final isSmallScreen = constraints.maxWidth < 375;
@@ -1390,7 +1500,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ],
             ),
             child: KubusStatCard(
-              title: displayTitle,
+              title: title,
               value: value,
               icon: icon,
               layout: KubusStatCardLayout.centered,
@@ -1399,7 +1509,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               centeredWatermarkScale: shouldShowIcon ? 0.86 : 1.0,
               accent: statColor,
               tintBase: scheme.surface,
-              onTap: () => _showStatsDialog(title, icon),
+              onTap: statType == null
+                  ? null
+                  : () => _showStatsDialog(statType, icon),
               minHeight: _statCardHeight(
                 showIconOnly: showIconOnly,
                 isVerticalLayout: isVerticalLayout,
@@ -2316,7 +2428,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   void _showStatsDialog(String statType, IconData icon) {
     final l10n = AppLocalizations.of(context)!;
-    final displayTitle = _getStatDisplayTitle(statType, l10n);
+    final displayTitle = labelForHomeActivityStatType(statType, l10n);
     final wallet =
         (context.read<ProfileProvider>().currentUser?.walletAddress ?? '')
             .trim();
@@ -2614,19 +2726,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ];
       default:
         return [l10n.homeStatsNoMilestonesYet];
-    }
-  }
-
-  String _getStatDisplayTitle(String statType, AppLocalizations l10n) {
-    switch (statType) {
-      case 'artworks':
-        return l10n.homeStatArtworks;
-      case 'followers':
-        return l10n.homeStatFollowers;
-      case 'views':
-        return l10n.homeStatViews;
-      default:
-        return statType;
     }
   }
 }

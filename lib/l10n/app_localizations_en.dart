@@ -6620,6 +6620,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeStatViews => 'Views';
 
   @override
+  String get homeStatLikes => 'Likes';
+
+  @override
+  String get homeStatVisitors => 'Visitors';
+
+  @override
+  String get homeStatEventsHosted => 'Events Hosted';
+
+  @override
+  String get homeStatExhibitions => 'Exhibitions';
+
+  @override
+  String get homeStatProgramViews => 'Program Views';
+
+  @override
+  String get homeStatDiscovered => 'Discovered';
+
+  @override
+  String get homeStatArSessions => 'AR Sessions';
+
+  @override
+  String get homeStatFollowing => 'Following';
+
+  @override
+  String get homeStatLikesGiven => 'Likes Given';
+
+  @override
   String homeStatsDialogTitle(Object statName) {
     return '$statName Details';
   }

@@ -6,24 +6,31 @@ import '../services/backend_api_service.dart';
 class ExhibitionsProvider extends ChangeNotifier {
   final BackendApiService _api;
 
-  ExhibitionsProvider({BackendApiService? api}) : _api = api ?? BackendApiService();
+  ExhibitionsProvider({BackendApiService? api})
+      : _api = api ?? BackendApiService();
 
   final List<Exhibition> _exhibitions = <Exhibition>[];
+  final List<Exhibition> _myExhibitions = <Exhibition>[];
   final Map<String, Exhibition> _byId = <String, Exhibition>{};
-  final Map<String, ExhibitionPoapStatus> _poapByExhibitionId = <String, ExhibitionPoapStatus>{};
+  final Map<String, ExhibitionPoapStatus> _poapByExhibitionId =
+      <String, ExhibitionPoapStatus>{};
 
   bool _isLoading = false;
+  bool _isMyExhibitionsLoading = false;
   String? _error;
   bool _initialized = false;
   Exhibition? _selected;
 
   List<Exhibition> get exhibitions => List.unmodifiable(_exhibitions);
+  List<Exhibition> get myExhibitions => List.unmodifiable(_myExhibitions);
   Exhibition? get selectedExhibition => _selected;
   bool get isLoading => _isLoading;
+  bool get isMyExhibitionsLoading => _isMyExhibitionsLoading;
   String? get error => _error;
   bool get initialized => _initialized;
 
-  ExhibitionPoapStatus? poapStatusFor(String exhibitionId) => _poapByExhibitionId[exhibitionId];
+  ExhibitionPoapStatus? poapStatusFor(String exhibitionId) =>
+      _poapByExhibitionId[exhibitionId];
 
   Future<void> initialize({bool refresh = false}) async {
     if (_initialized && !refresh) return;
@@ -33,6 +40,7 @@ class ExhibitionsProvider extends ChangeNotifier {
 
   Future<void> loadExhibitions({
     bool refresh = false,
+    bool mine = false,
     String? eventId,
     String? from,
     String? to,
@@ -42,11 +50,12 @@ class ExhibitionsProvider extends ChangeNotifier {
     int limit = 20,
     int offset = 0,
   }) async {
-    _setLoading(true);
+    _setLoading(true, mine: mine);
     _error = null;
     try {
       final next = await _api.listExhibitions(
         eventId: eventId,
+        mine: mine,
         from: from,
         to: to,
         lat: lat,
@@ -55,7 +64,23 @@ class ExhibitionsProvider extends ChangeNotifier {
         limit: limit,
         offset: offset,
       );
-      if (refresh) {
+      if (mine) {
+        if (refresh) {
+          _myExhibitions
+            ..clear()
+            ..addAll(next);
+        } else {
+          final mergedById = <String, Exhibition>{
+            for (final exhibition in _myExhibitions) exhibition.id: exhibition,
+          };
+          for (final exhibition in next) {
+            mergedById[exhibition.id] = exhibition;
+          }
+          _myExhibitions
+            ..clear()
+            ..addAll(mergedById.values);
+        }
+      } else if (refresh) {
         _exhibitions
           ..clear()
           ..addAll(next);
@@ -72,7 +97,7 @@ class ExhibitionsProvider extends ChangeNotifier {
       _error = e.toString();
       notifyListeners();
     } finally {
-      _setLoading(false);
+      _setLoading(false, mine: mine);
     }
   }
 
@@ -133,7 +158,8 @@ class ExhibitionsProvider extends ChangeNotifier {
     }
   }
 
-  Future<Exhibition?> updateExhibition(String id, Map<String, dynamic> updates) async {
+  Future<Exhibition?> updateExhibition(
+      String id, Map<String, dynamic> updates) async {
     _setLoading(true);
     _error = null;
     try {
@@ -198,11 +224,13 @@ class ExhibitionsProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> linkExhibitionArtworks(String exhibitionId, List<String> artworkIds) async {
+  Future<void> linkExhibitionArtworks(
+      String exhibitionId, List<String> artworkIds) async {
     _setLoading(true);
     _error = null;
     try {
-      final result = await _api.linkExhibitionArtworks(exhibitionId, artworkIds);
+      final result =
+          await _api.linkExhibitionArtworks(exhibitionId, artworkIds);
 
       // Update local exhibition immediately so the UI reflects linked artworks
       // even if the backend detail endpoint doesn't yet return artworkIds.
@@ -210,8 +238,11 @@ class ExhibitionsProvider extends ChangeNotifier {
           ? (result['data'] as Map<String, dynamic>)
           : result;
 
-      final addedRaw = payload['addedArtworkIds'] ?? payload['added_artwork_ids'];
-      final requestedRaw = payload['requestedArtworkIds'] ?? payload['requested_artwork_ids'] ?? artworkIds;
+      final addedRaw =
+          payload['addedArtworkIds'] ?? payload['added_artwork_ids'];
+      final requestedRaw = payload['requestedArtworkIds'] ??
+          payload['requested_artwork_ids'] ??
+          artworkIds;
 
       final added = <String>[];
       if (addedRaw is List) {
@@ -234,7 +265,8 @@ class ExhibitionsProvider extends ChangeNotifier {
 
       final current = _byId[exhibitionId];
       if (current != null) {
-        final merged = <String>{...current.artworkIds, ...requested, ...added}.toList();
+        final merged =
+            <String>{...current.artworkIds, ...requested, ...added}.toList();
         final updated = current.copyWith(artworkIds: merged);
         _upsert(updated, notify: false);
         if (_selected?.id == exhibitionId) _selected = updated;
@@ -249,7 +281,8 @@ class ExhibitionsProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> unlinkExhibitionArtwork(String exhibitionId, String artworkId) async {
+  Future<void> unlinkExhibitionArtwork(
+      String exhibitionId, String artworkId) async {
     _setLoading(true);
     _error = null;
     try {
@@ -258,7 +291,8 @@ class ExhibitionsProvider extends ChangeNotifier {
       // Keep UI responsive by updating local cache immediately.
       final current = _byId[exhibitionId];
       if (current != null) {
-        final nextIds = current.artworkIds.where((id) => id != artworkId).toList();
+        final nextIds =
+            current.artworkIds.where((id) => id != artworkId).toList();
         final updated = current.copyWith(artworkIds: nextIds);
         _upsert(updated, notify: false);
         if (_selected?.id == exhibitionId) _selected = updated;
@@ -273,7 +307,8 @@ class ExhibitionsProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> linkExhibitionMarkers(String exhibitionId, List<String> markerIds) async {
+  Future<void> linkExhibitionMarkers(
+      String exhibitionId, List<String> markerIds) async {
     _setLoading(true);
     _error = null;
     try {
@@ -287,7 +322,8 @@ class ExhibitionsProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> unlinkExhibitionMarker(String exhibitionId, String markerId) async {
+  Future<void> unlinkExhibitionMarker(
+      String exhibitionId, String markerId) async {
     _setLoading(true);
     _error = null;
     try {
@@ -301,7 +337,8 @@ class ExhibitionsProvider extends ChangeNotifier {
     }
   }
 
-  Future<ExhibitionPoapStatus?> fetchExhibitionPoap(String exhibitionId, {bool force = false}) async {
+  Future<ExhibitionPoapStatus?> fetchExhibitionPoap(String exhibitionId,
+      {bool force = false}) async {
     if (!force && _poapByExhibitionId.containsKey(exhibitionId)) {
       return _poapByExhibitionId[exhibitionId];
     }
@@ -354,7 +391,13 @@ class ExhibitionsProvider extends ChangeNotifier {
     if (notify) notifyListeners();
   }
 
-  void _setLoading(bool next) {
+  void _setLoading(bool next, {bool mine = false}) {
+    if (mine) {
+      if (_isMyExhibitionsLoading == next) return;
+      _isMyExhibitionsLoading = next;
+      notifyListeners();
+      return;
+    }
     if (_isLoading == next) return;
     _isLoading = next;
     notifyListeners();
