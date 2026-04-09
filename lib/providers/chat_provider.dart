@@ -17,6 +17,8 @@ import 'app_refresh_provider.dart';
 import 'profile_provider.dart';
 
 part 'chat_provider_cache_helpers.dart';
+part 'chat_provider_conversation_helpers.dart';
+part 'chat_provider_lifecycle_helpers.dart';
 
 class ChatProvider extends ChangeNotifier {
   static const int _maxCachedMessageConversations = 24;
@@ -967,67 +969,12 @@ class ChatProvider extends ChangeNotifier {
   }
 
   void _startSubscriptionMonitor() {
-    try {
-      _subscriptionMonitorTimer?.cancel();
-      _subscriptionMonitorTimer =
-          Timer.periodic(const Duration(seconds: 45), (_) async {
-        try {
-          final expectedWallet = WalletUtils.canonical(_currentWallet);
-          if (expectedWallet.isEmpty) return;
-          final subscribed =
-              WalletUtils.canonical(_socket.currentSubscribedWallet);
-          if (subscribed.isEmpty || subscribed != expectedWallet) {
-            debugPrint(
-                'ChatProvider: subscription monitor detected mismatch (subscribed=$subscribed expected=$_currentWallet), attempting resubscribe');
-            var ok = await _socket.connectAndSubscribe(
-                _api.baseUrl, _currentWallet!);
-            debugPrint(
-                'ChatProvider subscription monitor: connectAndSubscribe -> $ok');
-            if (!ok) _socket.subscribeUser(_currentWallet!);
-          }
-        } catch (e) {
-          debugPrint('ChatProvider._startSubscriptionMonitor check failed: $e');
-        }
-      });
-    } catch (e) {
-      debugPrint('ChatProvider._startSubscriptionMonitor failed to start: $e');
-    }
+    _chatProviderStartSubscriptionMonitor(this);
   }
 
   /// Bind to AppRefreshProvider for global or targeted chat refresh triggers
   void bindToRefresh(AppRefreshProvider appRefresh) {
-    try {
-      if (identical(_boundRefreshProvider, appRefresh)) return;
-      _unbindRefreshProvider();
-      _boundRefreshProvider = appRefresh;
-      _lastChatVersion = appRefresh.chatVersion;
-      _lastGlobalVersion = appRefresh.globalVersion;
-      _refreshListener = () {
-        try {
-          if (!_hasAuthContext) {
-            return;
-          }
-          if (appRefresh.chatVersion != _lastChatVersion) {
-            _lastChatVersion = appRefresh.chatVersion;
-            if (appRefresh.isViewActive(AppRefreshProvider.viewChat) ||
-                appRefresh.isAppForeground) {
-              refreshConversations();
-            }
-          } else if (appRefresh.globalVersion != _lastGlobalVersion) {
-            _lastGlobalVersion = appRefresh.globalVersion;
-            if (appRefresh.isViewActive(AppRefreshProvider.viewChat) ||
-                appRefresh.isAppForeground) {
-              refreshConversations();
-            }
-          }
-        } catch (e) {
-          debugPrint('ChatProvider.bindToRefresh handler error: $e');
-        }
-      };
-      appRefresh.addListener(_refreshListener!);
-    } catch (e) {
-      debugPrint('ChatProvider.bindToRefresh failed: $e');
-    }
+    _chatProviderBindToRefresh(this, appRefresh);
   }
   // Force a notify when UI-driven fetches merge into the provider cache.
   // This bypasses the signature dedupe check so profile/avatar updates
@@ -1037,44 +984,12 @@ class ChatProvider extends ChangeNotifier {
       {ProfileProvider? profileProvider,
       String? walletAddress,
       bool? isSignedIn}) {
-    try {
-      final profileWallet =
-          WalletUtils.normalize(profileProvider?.currentUser?.walletAddress);
-      final wallet = WalletUtils.normalize(walletAddress);
-      final resolvedWallet = profileWallet.isNotEmpty ? profileWallet : wallet;
-      final signedIn = isSignedIn ?? (profileProvider?.isSignedIn ?? false);
-      final token = (_api.getAuthToken() ?? '').trim();
-      final signature =
-          '${token.isNotEmpty}:${resolvedWallet.toLowerCase()}:${signedIn.toString()}';
-
-      if (signature == _lastAuthSignature) return;
-      _lastAuthSignature = signature;
-
-      final hasSession =
-          token.isNotEmpty || resolvedWallet.isNotEmpty || signedIn;
-      if (!hasSession) {
-        _resetSessionState(reason: 'authCleared');
-        return;
-      }
-
-      if (resolvedWallet.isNotEmpty &&
-          !WalletUtils.equals(resolvedWallet, _currentWallet)) {
-        unawaited(setCurrentWallet(resolvedWallet));
-        return;
-      }
-
-      if (!_initialized) {
-        unawaited(initialize(
-            initialWallet: resolvedWallet.isNotEmpty ? resolvedWallet : null));
-        return;
-      }
-
-      if (_conversations.isEmpty || !_hasAuthToken) {
-        unawaited(refreshConversations());
-      }
-    } catch (e) {
-      debugPrint('ChatProvider.bindAuthContext failed: $e');
-    }
+    _chatProviderBindAuthContext(
+      this,
+      profileProvider: profileProvider,
+      walletAddress: walletAddress,
+      isSignedIn: isSignedIn,
+    );
   }
 
   Future<void> refreshConversations() async {
@@ -1589,140 +1504,18 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Future<List<Map<String, dynamic>>> fetchMembers(String conversationId) async {
-    // Return cached result if recent (TTL 30 seconds)
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final cache = _membersCache[conversationId];
-    if (cache != null) {
-      final ts = cache['ts'] as int? ?? 0;
-      if (now - ts < 30000) {
-        try {
-          return (cache['result'] as List<dynamic>)
-              .cast<Map<String, dynamic>>();
-        } catch (_) {
-          // fallthrough to fetch
-        }
-      }
-    }
-
-    // Deduplicate concurrent requests
-    if (_membersRequests.containsKey(conversationId)) {
-      try {
-        final existing = await _membersRequests[conversationId];
-        if (existing != null) return existing;
-      } catch (e) {
-        // If previous failed, continue to fetch anew
-      } finally {
-        _membersRequests.remove(conversationId);
-      }
-    }
-
-    final completer =
-        _api.fetchConversationMembers(conversationId).then((resp) {
-      if (resp['success'] == true) {
-        final list = (resp['data'] as List<dynamic>?) ?? [];
-        // cache it
-        _cacheMembers(
-          conversationId,
-          list,
-          timestampMs: DateTime.now().millisecondsSinceEpoch,
-        );
-        debugPrint(
-            'ChatProvider: cached ${list.length} members for conversation $conversationId');
-        // Notify listeners so UI can react to newly-cached member lists
-        try {
-          _safeNotifyListeners();
-        } catch (_) {}
-        // Prefetch user profiles for these members to populate local cache
-        try {
-          final wallets = <String>[];
-          for (final m in list) {
-            final wallet = ((m['wallet_address'] ??
-                        m['wallet'] ??
-                        m['walletAddress'] ??
-                        m['id'])
-                    ?.toString() ??
-                '');
-            if (wallet.isNotEmpty) wallets.add(wallet);
-          }
-          if (wallets.isNotEmpty) _prefetchUsersForWallets(wallets);
-        } catch (e) {
-          debugPrint(
-              'ChatProvider: prefetch profiles after fetchMembers failed: $e');
-        }
-        return list.map((e) => e as Map<String, dynamic>).toList();
-      }
-      // For 429 or other non-200, cache an empty list with a short cooldown to avoid spamming the server
-      _cacheMembers(
-        conversationId,
-        const <dynamic>[],
-        timestampMs: DateTime.now().millisecondsSinceEpoch,
-      );
-      debugPrint(
-          'ChatProvider: cached 0 members (empty) for conversation $conversationId');
-      try {
-        _safeNotifyListeners();
-      } catch (_) {}
-      return <Map<String, dynamic>>[];
-    }).whenComplete(() => _membersRequests.remove(conversationId));
-
-    _membersRequests[conversationId] = completer;
-    final result = await completer;
-    return result;
+    return _chatProviderFetchMembers(this, conversationId);
   }
 
   Future<void> _prefetchUsersForWallets(List<String> wallets) async {
-    try {
-      debugPrint(
-          'ChatProvider._prefetchUsersForWallets: wallets=${wallets.length}');
-      final uniq = wallets.where((w) => w.isNotEmpty).toSet().toList();
-      if (uniq.isEmpty) return;
-      final users = await UserService.getUsersByWallets(uniq);
-      final updated = <String>[];
-      for (final u in users) {
-        if (u.id.isNotEmpty) {
-          _cacheUser(u);
-          updated.add(u.id);
-        }
-      }
-      if (updated.isNotEmpty) {
-        debugPrint(
-            'ChatProvider._prefetchUsersForWallets: updated users=${updated.length}, sample=${updated.take(6).toList()}');
-      }
-      // Also populate UserService internal cache so other callers benefit
-      try {
-        UserService.setUsersInCache(users);
-      } catch (_) {}
-      // Notify listeners forcefully so UI updates (avatars/names/badges) are applied immediately
-      try {
-        _safeNotifyListeners(force: true);
-      } catch (_) {}
-    } catch (e) {
-      debugPrint('ChatProvider._prefetchUsersForWallets failed: $e');
-    }
+    await _chatProviderPrefetchUsersForWallets(this, wallets);
   }
 
   /// Merge provided users into the ChatProvider user cache and notify listeners.
   /// This is intended for UI code that performs local fetches via UserService
   /// so that the provider cache remains in sync and UI updates are propagated.
   void mergeUserCache(List<User> users) {
-    final updated = <String>[];
-    for (final u in users) {
-      if (u.id.isNotEmpty) {
-        _cacheUser(u);
-        updated.add(u.id);
-      }
-    }
-    if (updated.isNotEmpty) {
-      debugPrint(
-          'ChatProvider.mergeUserCache: updated ${updated.length} users, sample=${updated.take(5).toList()}');
-      try {
-        _safeNotifyListeners();
-      } catch (_) {}
-      // Persist to shared cache for app restarts so preloaded caches remain across launches
-      try {
-        UserService.setUsersInCache(users);
-      } catch (_) {}
-    }
+    _chatProviderMergeUserCache(this, users);
   }
 
   Future<Map<String, dynamic>> uploadAttachment(String conversationId,
@@ -2193,153 +1986,17 @@ class ChatProvider extends ChangeNotifier {
   /// Ensures provider state (auth, socket subscription, conversations) is refreshed
   /// so UI (unread badges, conversations) updates immediately after wallet connect.
   Future<void> setCurrentWallet(String wallet) async {
-    try {
-      if (wallet.isEmpty) return;
-      if (WalletUtils.equals(_currentWallet, wallet)) return;
-      if ((_currentWallet ?? '').isNotEmpty) {
-        _resetSessionState(reason: 'walletChanged', notify: false);
-      }
-      // Set initial wallet (may be casing provided by caller). Then try to
-      // resolve canonical casing from backend so we subscribe to the exact
-      // room name the server will use.
-      _currentWallet = wallet;
-      try {
-        final meResp = await _api.getMyProfile();
-        if (meResp['success'] == true && meResp['data'] != null) {
-          final me = meResp['data'] as Map<String, dynamic>;
-          final canonical =
-              (me['wallet_address'] ?? me['wallet'] ?? me['id'])?.toString();
-          if (canonical != null && canonical.isNotEmpty) {
-            _currentWallet = canonical;
-            debugPrint(
-                'ChatProvider.setCurrentWallet: resolved canonical wallet=$_currentWallet from server');
-          }
-        }
-      } catch (e) {
-        debugPrint(
-            'ChatProvider.setCurrentWallet: failed to resolve canonical wallet from server: $e');
-      }
-      debugPrint('ChatProvider.setCurrentWallet: wallet=$_currentWallet');
-      // Ensure auth token is loaded/issued for this wallet
-      try {
-        await _api.ensureAuthLoaded(walletAddress: _currentWallet);
-      } catch (e) {
-        debugPrint('setCurrentWallet: ensureAuthLoaded failed: $e');
-      }
-      // Subscribe socket to this user
-      try {
-        var ok =
-            await _socket.connectAndSubscribe(_api.baseUrl, _currentWallet!);
-        if (!ok) {
-          try {
-            final issued = await _api.issueTokenForWallet(_currentWallet!);
-            if (issued) {
-              await _api.loadAuthToken();
-              ok = await _socket.connectAndSubscribe(
-                  _api.baseUrl, _currentWallet!);
-            }
-          } catch (_) {}
-        }
-        if (!ok) _socket.subscribeUser(_currentWallet!);
-      } catch (e) {
-        debugPrint(
-            'ChatProvider.setCurrentWallet: socket subscribe failed: $e');
-        try {
-          _socket.subscribeUser(_currentWallet!);
-        } catch (_) {}
-      }
-      // Refresh conversations and messages for this wallet
-      try {
-        await refreshConversations();
-      } catch (e) {
-        debugPrint(
-            'ChatProvider.setCurrentWallet: refreshConversations failed: $e');
-      }
-      _startSubscriptionMonitor();
-      // Notify UI immediately so badges reflect current state
-      _safeNotifyListeners(force: true);
-    } catch (e) {
-      debugPrint('ChatProvider.setCurrentWallet error: $e');
-    }
+    await _chatProviderSetCurrentWallet(this, wallet);
   }
 
   /// Open a conversation: subscribe to conversation room, load messages and mark read
   Future<void> openConversation(String conversationId) async {
-    final nid = conversationId;
-    _openConversationId = nid;
-    try {
-      try {
-        final ok = await _socket.subscribeConversation(nid);
-        debugPrint(
-            'ChatProvider.openConversation: subscribeConversation result for $nid -> $ok');
-      } catch (e) {
-        debugPrint(
-            'ChatProvider.openConversation: subscribeConversation failed: $e');
-      }
-    } catch (e) {
-      debugPrint(
-          'ChatProvider.openConversation: subscribeConversation failed: $e');
-    }
-    try {
-      await loadMessages(nid);
-    } catch (e) {
-      debugPrint('ChatProvider.openConversation: loadMessages failed: $e');
-    }
-    try {
-      await markRead(nid);
-    } catch (e) {
-      debugPrint('ChatProvider.openConversation: markRead failed: $e');
-    }
-
-    // Start periodic polling only when socket sync is unavailable.
-    try {
-      _pollTimer?.cancel();
-      _pollTimer = null;
-      final shouldPoll =
-          !_socket.isConnected || !_socket.isSubscribedToConversation(nid);
-      if (shouldPoll) {
-        _pollTimer = Timer.periodic(const Duration(seconds: 12), (timer) async {
-          try {
-            final resp = await _api.fetchMessages(nid);
-            if (resp['success'] == true) {
-              final items = (resp['data'] as List<dynamic>?) ?? [];
-              final list = items
-                  .map((i) => ChatMessage.fromJson(i as Map<String, dynamic>))
-                  .toList();
-              _cacheMessages(nid, list);
-              _safeNotifyListeners();
-            }
-          } catch (e) {
-            debugPrint(
-                'ChatProvider: periodic fetchMessages failed for $nid: $e');
-          }
-        });
-      }
-    } catch (e) {
-      debugPrint(
-          'ChatProvider: Failed to start poll timer for conversation $nid: $e');
-    }
+    await _chatProviderOpenConversation(this, conversationId);
   }
 
   /// Close an open conversation: unsubscribe from room and clear open state
   Future<void> closeConversation([String? conversationId]) async {
-    final nid = (conversationId ?? _openConversationId);
-    if (nid == null) {
-      return;
-    }
-    try {
-      _socket.leaveConversation(nid);
-    } catch (e) {
-      debugPrint(
-          'ChatProvider.closeConversation: leaveConversation failed: $e');
-    }
-    if (_openConversationId != null && (_openConversationId! == nid)) {
-      _openConversationId = null;
-    }
-    try {
-      _pollTimer?.cancel();
-      _pollTimer = null;
-    } catch (_) {}
+    await _chatProviderCloseConversation(this, conversationId);
   }
 
   /// Mark an individual message as read by the current user
