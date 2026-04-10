@@ -47,6 +47,7 @@ import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import '../../../widgets/common/kubus_glass_icon_button.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
+import '../../../widgets/community/community_author_role_badges.dart';
 
 /// Desktop user profile screen - viewing another user's profile
 /// Clean card-based layout with follow/message actions
@@ -1689,7 +1690,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                     children: [
                       Row(
                         children: [
-                          Expanded(
+                          Flexible(
+                            fit: FlexFit.loose,
                             child: Text(
                               post.authorName,
                               style: KubusTypography.inter(
@@ -1699,20 +1701,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          if (post.authorIsArtist) ...[
-                            const SizedBox(width: 8),
-                            const ArtistBadge(
-                                fontSize: 9,
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2)),
-                          ],
-                          if (post.authorIsInstitution) ...[
-                            const SizedBox(width: 8),
-                            const InstitutionBadge(
-                                fontSize: 9,
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2)),
-                          ],
+                          CommunityAuthorRoleBadges(
+                            post: post,
+                            fontSize: 9,
+                            iconOnly: true,
+                            spacing: 8,
+                          ),
                         ],
                       ),
                       const SizedBox(height: 4),

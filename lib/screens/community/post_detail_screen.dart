@@ -1554,7 +1554,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                           CommunityAuthorRoleBadges(
                                             post: _post!,
                                             fontSize: 9.5,
-                                            iconOnly: false,
+                                            iconOnly: true,
                                           ),
                                         ],
                                       ),

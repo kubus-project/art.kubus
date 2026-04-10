@@ -138,7 +138,10 @@ class CommunityPostCard extends StatelessWidget {
                               titleSuffix: CommunityAuthorRoleBadges(
                                 post: post,
                                 fontSize: isSmallScreen ? 8.5 : 9.5,
-                                iconOnly: false,
+                                iconOnly: true,
+                                // ProfileIdentitySummary already inserts a
+                                // small gap between the title and suffix.
+                                spacing: 0,
                               ),
                             ),
                           ),

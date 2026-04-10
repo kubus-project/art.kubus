@@ -46,6 +46,7 @@ import '../art/collection_detail_screen.dart';
 import '../events/event_detail_screen.dart';
 import '../../widgets/artist_badge.dart';
 import '../../widgets/institution_badge.dart';
+import '../../widgets/community/community_author_role_badges.dart';
 import '../../widgets/email_verification_status_badge.dart';
 import '../../widgets/secure_account_banner_card.dart';
 import '../../widgets/wallet_backup_banner_card.dart';
@@ -938,7 +939,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                         profileProvider.formattedArtworksCount,
                         Icons.palette,
                         isSmallScreen: isSmallScreen,
-                        onTap: () => ProfileScreenMethods.showArtworks(context),
+                        onTap: () => ProfileScreenMethods.showArtworks(
+                          context,
+                          walletAddress: walletAddress,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -1283,7 +1287,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                     children: [
                       Row(
                         children: [
-                          Expanded(
+                          Flexible(
+                            fit: FlexFit.loose,
                             child: Text(
                               post.authorName,
                               style: KubusTypography.inter(
@@ -1293,20 +1298,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          if (post.authorIsArtist) ...[
-                            const SizedBox(width: 6),
-                            ArtistBadge(
-                                fontSize: 8,
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2)),
-                          ],
-                          if (post.authorIsInstitution) ...[
-                            const SizedBox(width: 6),
-                            InstitutionBadge(
-                                fontSize: 8,
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2)),
-                          ],
+                          CommunityAuthorRoleBadges(
+                            post: post,
+                            fontSize: 8,
+                            iconOnly: true,
+                            spacing: 6,
+                          ),
                         ],
                       ),
                       const SizedBox(height: 2),

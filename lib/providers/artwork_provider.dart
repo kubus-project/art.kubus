@@ -10,6 +10,7 @@ import '../services/ar_content_service.dart';
 import '../services/art_content_service.dart';
 import '../services/backend_api_service.dart';
 import '../services/user_action_logger.dart';
+import '../utils/wallet_utils.dart';
 import 'saved_items_provider.dart';
 
 class ArtworkProvider extends ChangeNotifier {
@@ -117,11 +118,27 @@ class ArtworkProvider extends ChangeNotifier {
 
   /// Get user's own artworks (created by current user)
   List<Artwork> get userArtworks {
-    // For now, return discovered and favorite artworks as user's collection
-    // In a real app, this would filter by creator/owner ID
-    return _artworks
-        .where((artwork) => artwork.isDiscovered || artwork.isFavorite)
-        .toList();
+    if (_walletsWithPrivateArtworks.isEmpty) {
+      return const <Artwork>[];
+    }
+
+    final wallet = _walletsWithPrivateArtworks.last;
+    return artworksForWallet(wallet);
+  }
+
+  List<Artwork> artworksForWallet(String walletAddress) {
+    final normalizedWallet = WalletUtils.normalize(walletAddress);
+    if (normalizedWallet.isEmpty) {
+      return const <Artwork>[];
+    }
+
+    final matches = _artworks.where((artwork) {
+      final artworkWallet = WalletUtils.normalize(artwork.walletAddress);
+      return artworkWallet == normalizedWallet;
+    }).toList(growable: false);
+
+    matches.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return matches;
   }
 
   /// Get artworks by category

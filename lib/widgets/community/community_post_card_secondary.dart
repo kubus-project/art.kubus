@@ -80,7 +80,9 @@ class _RepostInnerCard extends StatelessWidget {
                       titleSuffix: CommunityAuthorRoleBadges(
                         post: post,
                         fontSize: 8,
-                        iconOnly: false,
+                        iconOnly: true,
+                        // ProfileIdentitySummary already adds spacing.
+                        spacing: 0,
                       ),
                     ),
                   ),

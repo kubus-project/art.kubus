@@ -2973,7 +2973,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               CommunityAuthorRoleBadges(
                 post: displayPost,
                 fontSize: 8,
-                iconOnly: false,
+                iconOnly: true,
               ),
             ],
           ),

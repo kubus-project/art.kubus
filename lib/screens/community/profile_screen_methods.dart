@@ -61,13 +61,31 @@ class ProfileScreenMethods {
     })();
   }
 
-  static void showArtworks(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const _ArtworksBottomSheet(),
-    );
+  static void showArtworks(BuildContext context, {String? walletAddress}) {
+    final targetWallet = walletAddress?.trim();
+    (() async {
+      final artworkProvider = Provider.of<ArtworkProvider>(context, listen: false);
+      final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+      final resolvedWallet = (targetWallet != null && targetWallet.isNotEmpty)
+          ? targetWallet
+          : walletProvider.currentWalletAddress;
+
+      if (resolvedWallet == null || resolvedWallet.isEmpty) {
+        return;
+      }
+
+      try {
+        await artworkProvider.loadArtworksForWallet(resolvedWallet, force: true);
+      } catch (_) {}
+
+      if (!context.mounted) return;
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => _ArtworksBottomSheet(walletAddress: resolvedWallet),
+      );
+    })();
   }
 
   static void showCollections(BuildContext context) {
@@ -584,7 +602,9 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
 
 // ==================== Artworks Bottom Sheet ====================
 class _ArtworksBottomSheet extends StatelessWidget {
-  const _ArtworksBottomSheet();
+  final String walletAddress;
+
+  const _ArtworksBottomSheet({required this.walletAddress});
 
   @override
   Widget build(BuildContext context) {
@@ -592,8 +612,8 @@ class _ArtworksBottomSheet extends StatelessWidget {
 
     return Consumer<ArtworkProvider>(
       builder: (context, artworkProvider, child) {
-        final userArtworks = artworkProvider.userArtworks;
-          
+        final userArtworks = artworkProvider.artworksForWallet(walletAddress);
+
         return SizedBox(
           height: MediaQuery.of(context).size.height * 0.8,
           child: BackdropGlassSheet(

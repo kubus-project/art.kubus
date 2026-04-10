@@ -26,6 +26,7 @@ import '../../widgets/avatar_widget.dart';
 import '../../widgets/user_activity_status_line.dart';
 import '../../widgets/artist_badge.dart';
 import '../../widgets/institution_badge.dart';
+import '../../widgets/community/community_author_role_badges.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/profile_artist_info_fields.dart';
 import '../../widgets/common/kubus_screen_header.dart';
@@ -1558,27 +1559,20 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                                 children: [
                                   Row(
                                     children: [
-                                      Expanded(
+                                      Flexible(
+                                        fit: FlexFit.loose,
                                         child: Text(
                                           post.authorName,
                                           style: KubusTextStyles.sectionTitle,
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
-                                      if (post.authorIsArtist) ...[
-                                        const SizedBox(width: 6),
-                                        ArtistBadge(
-                                            fontSize: 8,
-                                            padding: EdgeInsets.symmetric(
-                                                horizontal: 6, vertical: 2)),
-                                      ],
-                                      if (post.authorIsInstitution) ...[
-                                        const SizedBox(width: 6),
-                                        InstitutionBadge(
-                                            fontSize: 8,
-                                            padding: EdgeInsets.symmetric(
-                                                horizontal: 6, vertical: 2)),
-                                      ],
+                                      CommunityAuthorRoleBadges(
+                                        post: post,
+                                        fontSize: 8,
+                                        iconOnly: true,
+                                        spacing: 6,
+                                      ),
                                     ],
                                   ),
                                   const SizedBox(height: 2),

@@ -1,8 +1,108 @@
 import 'package:flutter/material.dart';
 
 import '../../utils/design_tokens.dart';
+import '../artist_badge.dart';
+import '../institution_badge.dart';
 
 enum KubusHeaderKind { screen, section }
+
+/// Shared greeting + identity block used by Home/Profile-style headers.
+///
+/// This is intentionally small and composable so both mobile and desktop
+/// screens can reuse the same hierarchy (greeting -> bold name + badges ->
+/// optional footer like a copyable wallet row).
+class KubusGreetingIdentityBlock extends StatelessWidget {
+  const KubusGreetingIdentityBlock({
+    super.key,
+    required this.greeting,
+    required this.displayName,
+    this.isArtist = false,
+    this.isInstitution = false,
+    this.compact = false,
+    this.greetingStyle,
+    this.displayNameStyle,
+    this.maxNameLines = 1,
+    this.footer,
+    this.footerTopPadding,
+  });
+
+  final String greeting;
+  final String displayName;
+  final bool isArtist;
+  final bool isInstitution;
+  final bool compact;
+  final TextStyle? greetingStyle;
+  final TextStyle? displayNameStyle;
+  final int maxNameLines;
+  final Widget? footer;
+  final double? footerTopPadding;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    final effectiveGreetingStyle = (greetingStyle ?? KubusTextStyles.navMetaLabel)
+        .copyWith(color: scheme.onSurface.withValues(alpha: 0.62));
+    final baseNameStyle = (displayNameStyle ?? KubusTextStyles.heroTitle)
+        .copyWith(color: scheme.onSurface);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          greeting,
+          style: effectiveGreetingStyle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: KubusSpacing.xxs),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              fit: FlexFit.loose,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final availableWidth = constraints.maxWidth;
+                  final resolvedNameStyle = KubusTextStyles.responsiveTitleStyle(
+                    context,
+                    baseNameStyle,
+                    availableWidth: availableWidth,
+                    compact: true,
+                  );
+                  final effectiveLines = KubusTextStyles.responsiveTitleLines(
+                    availableWidth,
+                    maxLines: maxNameLines,
+                    compact: compact,
+                  );
+                  return Text(
+                    displayName,
+                    style: resolvedNameStyle,
+                    maxLines: effectiveLines,
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: false,
+                  );
+                },
+              ),
+            ),
+            if (isArtist) ...[
+              const SizedBox(width: KubusSpacing.sm),
+              const ArtistBadge(iconOnly: true),
+            ],
+            if (isInstitution) ...[
+              const SizedBox(width: KubusSpacing.sm),
+              const InstitutionBadge(iconOnly: true),
+            ],
+          ],
+        ),
+        if (footer != null) ...[
+          SizedBox(height: footerTopPadding ?? KubusSpacing.xs),
+          footer!,
+        ],
+      ],
+    );
+  }
+}
 
 class KubusHeaderTitleBlock extends StatelessWidget {
   const KubusHeaderTitleBlock({

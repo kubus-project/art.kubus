@@ -48,6 +48,7 @@ import '../../../utils/kubus_color_roles.dart';
 import '../../activity/advanced_analytics_screen.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import '../../../widgets/common/kubus_stat_card.dart';
+import '../../../widgets/community/community_author_role_badges.dart';
 
 /// Desktop profile screen with clean card-based layout
 /// Features: Profile header, stats cards, achievements, posts feed
@@ -859,7 +860,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           color: _profileStatAccentForIcon(Icons.palette_outlined),
           centeredWatermarkAlignment: Alignment.center,
           centeredWatermarkScale: 0.84,
-          onTap: () => ProfileScreenMethods.showArtworks(context),
+          onTap: () =>
+              ProfileScreenMethods.showArtworks(context, walletAddress: wallet),
         ),
       ],
     );
@@ -867,6 +869,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildArtistPortfolioSection(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
+    final wallet = context.read<ProfileProvider>().currentUser?.walletAddress;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -876,7 +879,10 @@ class _ProfileScreenState extends State<ProfileScreen>
           icon: Icons.palette,
           action: _artistArtworks.isNotEmpty
               ? TextButton.icon(
-                  onPressed: () => ProfileScreenMethods.showArtworks(context),
+                  onPressed: () => ProfileScreenMethods.showArtworks(
+                    context,
+                    walletAddress: wallet,
+                  ),
                   icon: const Icon(Icons.arrow_forward, size: 18),
                   label: Text(l10n.commonViewAll),
                 )
@@ -2058,7 +2064,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                     children: [
                       Row(
                         children: [
-                          Expanded(
+                          Flexible(
+                            fit: FlexFit.loose,
                             child: Text(
                               post.authorName,
                               style: KubusTypography.inter(
@@ -2068,20 +2075,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          if (post.authorIsArtist) ...[
-                            const SizedBox(width: 8),
-                            const ArtistBadge(
-                                fontSize: 9,
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2)),
-                          ],
-                          if (post.authorIsInstitution) ...[
-                            const SizedBox(width: 8),
-                            const InstitutionBadge(
-                                fontSize: 9,
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2)),
-                          ],
+                          CommunityAuthorRoleBadges(
+                            post: post,
+                            fontSize: 9,
+                            iconOnly: true,
+                            spacing: 8,
+                          ),
                         ],
                       ),
                       const SizedBox(height: 4),

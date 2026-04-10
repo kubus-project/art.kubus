@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../providers/glass_capabilities_provider.dart';
 import '../utils/design_tokens.dart';
 import 'glass_components.dart';
 
@@ -34,11 +35,12 @@ class KubusButton extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
+    final allowBlur = GlassCapabilitiesProvider.watchAllowBlurEnabled(context);
     final isEnabled = !isLoading && onPressed != null;
 
     final defaultBackground = switch (variant) {
       KubusButtonVariant.primary => isDark
-          ? Colors.white.withValues(alpha: 0.95)
+          ? Colors.white
           : const Color(0xFF1A1A1A),
       KubusButtonVariant.secondary =>
         scheme.surface.withValues(alpha: isDark ? 0.9 : 0.96),
@@ -52,7 +54,7 @@ class KubusButton extends StatelessWidget {
     final effectiveForeground = foregroundColor ?? defaultForeground;
     final glassTint = switch (variant) {
       KubusButtonVariant.primary => effectiveBackground.withValues(
-          alpha: isEnabled ? (isDark ? 0.82 : 0.88) : (isDark ? 0.62 : 0.70),
+          alpha: isEnabled ? (isDark ? 0.96 : 0.92) : (isDark ? 0.76 : 0.74),
         ),
       KubusButtonVariant.secondary => effectiveBackground.withValues(
           alpha: isEnabled ? (isDark ? 0.92 : 0.98) : (isDark ? 0.74 : 0.82),
@@ -61,7 +63,9 @@ class KubusButton extends StatelessWidget {
     final radius = KubusRadius.circular(KubusRadius.sm);
     final borderColor = switch (variant) {
       KubusButtonVariant.primary =>
-        effectiveBackground.withValues(alpha: isEnabled ? 0.30 : 0.18),
+        effectiveBackground.withValues(
+          alpha: isEnabled ? (isDark ? 0.72 : 0.30) : (isDark ? 0.34 : 0.18),
+        ),
       KubusButtonVariant.secondary => scheme.outlineVariant.withValues(
           alpha: isDark
               ? (isEnabled ? 0.24 : 0.14)
@@ -99,38 +103,53 @@ class KubusButton extends StatelessWidget {
             ),
           );
 
+    final buttonChild = ElevatedButton(
+      onPressed: isLoading ? null : onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.transparent,
+        foregroundColor: effectiveForeground,
+        shadowColor: Colors.transparent,
+        disabledBackgroundColor: Colors.transparent,
+        disabledForegroundColor: effectiveForeground.withValues(alpha: 0.55),
+        padding: const EdgeInsets.symmetric(
+          horizontal: KubusSpacing.lg,
+          vertical: KubusSpacing.md,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: radius,
+        ),
+        elevation: 0,
+      ),
+      child: content,
+    );
+
+    final buttonSurface = allowBlur
+        ? LiquidGlassPanel(
+            padding: EdgeInsets.zero,
+            margin: EdgeInsets.zero,
+            borderRadius: radius,
+            showBorder: false,
+            backgroundColor: glassTint,
+            child: buttonChild,
+          )
+        : DecoratedBox(
+            decoration: BoxDecoration(
+              color: variant == KubusButtonVariant.primary
+                  ? effectiveBackground.withValues(
+                      alpha: isEnabled ? 1.0 : 0.82,
+                    )
+                  : glassTint,
+              borderRadius: radius,
+            ),
+            child: buttonChild,
+          );
+
     final button = Container(
       decoration: BoxDecoration(
         borderRadius: radius,
         border: Border.all(color: borderColor),
       ),
-      child: LiquidGlassPanel(
-        padding: EdgeInsets.zero,
-        margin: EdgeInsets.zero,
-        borderRadius: radius,
-        showBorder: false,
-        backgroundColor: glassTint,
-        child: ElevatedButton(
-          onPressed: isLoading ? null : onPressed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            foregroundColor: effectiveForeground,
-            shadowColor: Colors.transparent,
-            disabledBackgroundColor: Colors.transparent,
-            disabledForegroundColor:
-                effectiveForeground.withValues(alpha: 0.55),
-            padding: const EdgeInsets.symmetric(
-              horizontal: KubusSpacing.lg,
-              vertical: KubusSpacing.md,
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: radius,
-            ),
-            elevation: 0,
-          ),
-          child: content,
-        ),
-      ),
+      child: buttonSurface,
     );
 
     if (isFullWidth) {

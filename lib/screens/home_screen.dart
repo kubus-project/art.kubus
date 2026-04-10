@@ -650,10 +650,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildAppBar(String headerDisplayName) {
+    final profileProvider = Provider.of<ProfileProvider>(context);
     final web3Provider = Provider.of<Web3Provider>(context);
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final greeting = _getGreeting(l10n);
+    final user = profileProvider.currentUser;
+    final isArtist = user?.isArtist ?? false;
+    final isInstitution = user?.isInstitution ?? false;
     return SliverAppBar(
       floating: true,
       snap: true,
@@ -684,6 +689,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   child: Column(
                     children: [
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           AppLogo(
                             width: isSmallScreen
@@ -694,144 +700,114 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 : KubusHeaderMetrics.logo,
                           ),
                           SizedBox(
-                              width: isSmallScreen
-                                  ? KubusSpacing.sm
-                                  : KubusSpacing.md),
+                            width: isSmallScreen
+                                ? KubusSpacing.md
+                                : KubusSpacing.lg,
+                          ),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                KubusHeaderText(
-                                  title: 'art.kubus',
-                                  kind: KubusHeaderKind.section,
+                                KubusGreetingIdentityBlock(
+                                  greeting: greeting,
+                                  displayName: headerDisplayName,
+                                  isArtist: isArtist,
+                                  isInstitution: isInstitution,
                                   compact: true,
-                                  titleColor: scheme.onSurface,
-                                  maxTitleLines: 1,
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.only(
-                                    top: KubusSpacing.xxs,
-                                  ),
-                                  child: LayoutBuilder(
-                                    builder: (context, nameConstraints) {
-                                      final displayNameStyle =
-                                          KubusTextStyles.responsiveTitleStyle(
-                                        context,
-                                        KubusTextStyles.sectionSubtitle
-                                            .copyWith(
-                                          color: scheme.onSurface.withValues(
-                                            alpha: 0.72,
-                                          ),
-                                        ),
-                                        availableWidth:
-                                            nameConstraints.maxWidth,
-                                        compact: true,
-                                      );
-                                      final displayNameLines =
-                                          KubusTextStyles.responsiveTitleLines(
-                                        nameConstraints.maxWidth,
-                                        maxLines: 2,
-                                        compact: true,
-                                      );
-                                      return Text(
-                                        headerDisplayName,
-                                        maxLines: displayNameLines,
-                                        softWrap: true,
-                                        style: displayNameStyle,
-                                      );
-                                    },
-                                  ),
-                                ),
-                                if (web3Provider.isConnected)
-                                  Padding(
-                                    padding: const EdgeInsets.only(
-                                      top: KubusSpacing.xxs,
-                                    ),
-                                    child: Wrap(
-                                      spacing: KubusSpacing.sm,
-                                      runSpacing: KubusSpacing.xxs,
-                                      crossAxisAlignment:
-                                          WrapCrossAlignment.center,
-                                      children: [
-                                        Material(
-                                          color: Colors.transparent,
-                                          child: InkWell(
-                                            borderRadius: BorderRadius.circular(
-                                              KubusRadius.sm,
+                                  footer: web3Provider.isConnected
+                                      ? Wrap(
+                                          spacing: KubusSpacing.sm,
+                                          runSpacing: KubusSpacing.xxs,
+                                          crossAxisAlignment:
+                                              WrapCrossAlignment.center,
+                                          children: [
+                                            Material(
+                                              color: Colors.transparent,
+                                              child: InkWell(
+                                                borderRadius:
+                                                    BorderRadius.circular(
+                                                  KubusRadius.sm,
+                                                ),
+                                                onTap: () => _copyWalletAddress(
+                                                  web3Provider.walletAddress,
+                                                ),
+                                                child: Padding(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                    horizontal: KubusSpacing.xxs,
+                                                    vertical: KubusSpacing.xxs,
+                                                  ),
+                                                  child: Row(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      Text(
+                                                        web3Provider
+                                                            .formatAddress(
+                                                          web3Provider
+                                                              .walletAddress,
+                                                        ),
+                                                        style: KubusTextStyles
+                                                            .navMetaLabel
+                                                            .copyWith(
+                                                          fontFamily:
+                                                              'RobotoMono',
+                                                          color: scheme.onSurface
+                                                              .withValues(
+                                                            alpha: 0.6,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      const SizedBox(
+                                                        width: KubusSpacing.xxs,
+                                                      ),
+                                                      Icon(
+                                                        Icons.copy_rounded,
+                                                        size: KubusSpacing.md,
+                                                        color: scheme.onSurface
+                                                            .withValues(
+                                                          alpha: 0.45,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
                                             ),
-                                            onTap: () => _copyWalletAddress(
-                                              web3Provider.walletAddress,
-                                            ),
-                                            child: Padding(
+                                            Container(
                                               padding:
                                                   const EdgeInsets.symmetric(
-                                                horizontal: KubusSpacing.xxs,
+                                                horizontal: KubusSpacing.sm,
                                                 vertical: KubusSpacing.xxs,
                                               ),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Text(
-                                                    web3Provider.formatAddress(
-                                                      web3Provider
-                                                          .walletAddress,
-                                                    ),
-                                                    style: KubusTextStyles
-                                                        .navMetaLabel
-                                                        .copyWith(
-                                                      color: scheme.onSurface
-                                                          .withValues(
-                                                        alpha: 0.6,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  const SizedBox(
-                                                    width: KubusSpacing.xxs,
-                                                  ),
-                                                  Icon(
-                                                    Icons.copy_rounded,
-                                                    size: KubusSpacing.md,
-                                                    color: scheme.onSurface
-                                                        .withValues(
-                                                      alpha: 0.45,
-                                                    ),
-                                                  ),
-                                                ],
+                                              decoration: BoxDecoration(
+                                                color: Colors.orange
+                                                    .withValues(alpha: 0.1),
+                                                borderRadius:
+                                                    BorderRadius.circular(
+                                                  KubusRadius.sm,
+                                                ),
+                                                border: Border.all(
+                                                  color: Colors.orange
+                                                      .withValues(alpha: 0.3),
+                                                  width: KubusSizes.hairline,
+                                                ),
+                                              ),
+                                              child: Text(
+                                                'DEVNET',
+                                                style: KubusTypography
+                                                    .textTheme.labelSmall
+                                                    ?.copyWith(
+                                                  fontWeight: FontWeight.w700,
+                                                  color: Colors.orange,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                        ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: KubusSpacing.sm,
-                                            vertical: KubusSpacing.xxs,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.orange
-                                                .withValues(alpha: 0.1),
-                                            borderRadius: BorderRadius.circular(
-                                              KubusRadius.sm,
-                                            ),
-                                            border: Border.all(
-                                              color: Colors.orange
-                                                  .withValues(alpha: 0.3),
-                                              width: KubusSizes.hairline,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            'DEVNET',
-                                            style: KubusTypography
-                                                .textTheme.labelSmall
-                                                ?.copyWith(
-                                              fontWeight: FontWeight.w700,
-                                              color: Colors.orange,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
+                                          ],
+                                        )
+                                      : null,
+                                  footerTopPadding: KubusSpacing.xs,
+                                ),
                               ],
                             ),
                           ),
@@ -1087,6 +1063,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               ArtistBadge(
                                 fontSize: isSmallScreen ? 9 : 10,
                                 useOnPrimary: true,
+                                iconOnly: true,
                               ),
                             ],
                             if (isInstitution) ...[
@@ -1094,6 +1071,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               InstitutionBadge(
                                 fontSize: isSmallScreen ? 9 : 10,
                                 useOnPrimary: true,
+                                iconOnly: true,
                               ),
                             ],
                           ],
@@ -1700,7 +1678,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
         final discoveredFromStats =
             privateSnapshot?.counters['artworksDiscovered'] ?? 0;
-        final discoveredFromProfile = profileProvider.artworksCount;
+        final discoveredFromProfile =
+            profileProvider.currentUser?.stats?.artworksDiscovered ?? 0;
         final discoveredFromLocal =
             (discoveredFromStats == 0 && discoveredFromProfile == 0)
                 ? artworkProvider.artworks.where((a) => a.isDiscovered).length

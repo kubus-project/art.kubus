@@ -382,7 +382,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
   }
 
   // Dynamic getters for profile stats (from backend)
-  int get artworksCount => _currentUser?.stats?.artworksDiscovered ?? 0;
+  int get artworksCount => _currentUser?.stats?.artworksCreated ?? 0;
 
   int get collectionsCount => _collectionsCount;
 

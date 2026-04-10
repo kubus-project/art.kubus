@@ -25,8 +25,6 @@ import '../../models/user_profile.dart';
 import '../../models/promotion.dart';
 import '../../community/community_interactions.dart';
 import '../../widgets/app_logo.dart';
-import '../../widgets/artist_badge.dart';
-import '../../widgets/institution_badge.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/topbar_icon.dart';
@@ -711,122 +709,103 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     children: [
                       const AppLogo(width: 44, height: 44),
                       const SizedBox(width: DetailSpacing.lg),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _getGreeting(l10n),
-                            style: DetailTypography.caption(context),
+                      Expanded(
+                        child: KubusGreetingIdentityBlock(
+                          greeting: _getGreeting(l10n),
+                          displayName: headerDisplayName,
+                          isArtist: isArtist,
+                          isInstitution: isInstitution,
+                          greetingStyle: DetailTypography.caption(context),
+                          displayNameStyle: KubusTextStyles.heroTitle.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
-                          const SizedBox(height: DetailSpacing.xs),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(
-                                fit: FlexFit.loose,
-                                child: Text(
-                                  headerDisplayName,
-                                  style: KubusTextStyles.heroTitle.copyWith(
-                                    color:
-                                        Theme.of(context).colorScheme.onSurface,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                  softWrap: false,
-                                ),
-                              ),
-                              if (isArtist) ...[
-                                const SizedBox(width: DetailSpacing.sm),
-                                const ArtistBadge(),
-                              ],
-                              if (isInstitution) ...[
-                                const SizedBox(width: DetailSpacing.sm),
-                                const InstitutionBadge(),
-                              ],
-                            ],
-                          ),
-                          if (web3Provider.isConnected) ...[
-                            const SizedBox(height: KubusSpacing.xs),
-                            Wrap(
-                              spacing: KubusSpacing.sm,
-                              runSpacing: KubusSpacing.xxs,
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              children: [
-                                Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(
-                                      KubusRadius.sm,
+                          compact: false,
+                          footer: web3Provider.isConnected
+                              ? Wrap(
+                                  spacing: KubusSpacing.sm,
+                                  runSpacing: KubusSpacing.xxs,
+                                  crossAxisAlignment:
+                                      WrapCrossAlignment.center,
+                                  children: [
+                                    Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(
+                                          KubusRadius.sm,
+                                        ),
+                                        onTap: () => _copyWalletAddress(
+                                          web3Provider.walletAddress,
+                                        ),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: KubusSpacing.xxs,
+                                            vertical: KubusSpacing.xxs,
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                web3Provider.formatAddress(
+                                                  web3Provider.walletAddress,
+                                                ),
+                                                style: KubusTextStyles
+                                                    .screenSubtitle
+                                                    .copyWith(
+                                                  fontFamily: 'RobotoMono',
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurface
+                                                      .withValues(alpha: 0.62),
+                                                ),
+                                              ),
+                                              const SizedBox(
+                                                width: KubusSpacing.xxs,
+                                              ),
+                                              Icon(
+                                                Icons.copy_rounded,
+                                                size: KubusSpacing.md,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurface
+                                                    .withValues(alpha: 0.45),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
                                     ),
-                                    onTap: () => _copyWalletAddress(
-                                      web3Provider.walletAddress,
-                                    ),
-                                    child: Padding(
+                                    Container(
                                       padding: const EdgeInsets.symmetric(
-                                        horizontal: KubusSpacing.xxs,
+                                        horizontal: KubusSpacing.sm,
                                         vertical: KubusSpacing.xxs,
                                       ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            web3Provider.formatAddress(
-                                              web3Provider.walletAddress,
-                                            ),
-                                            style: KubusTextStyles
-                                                .screenSubtitle
-                                                .copyWith(
-                                              fontFamily: 'RobotoMono',
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurface
-                                                  .withValues(alpha: 0.62),
-                                            ),
-                                          ),
-                                          const SizedBox(
-                                            width: KubusSpacing.xxs,
-                                          ),
-                                          Icon(
-                                            Icons.copy_rounded,
-                                            size: KubusSpacing.md,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurface
-                                                .withValues(alpha: 0.45),
-                                          ),
-                                        ],
+                                      decoration: BoxDecoration(
+                                        color: Colors.orange
+                                            .withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(
+                                          KubusRadius.sm,
+                                        ),
+                                        border: Border.all(
+                                          color: Colors.orange
+                                              .withValues(alpha: 0.3),
+                                          width: KubusSizes.hairline,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'DEVNET',
+                                        style: KubusTypography
+                                            .textTheme.labelSmall
+                                            ?.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.orange,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: KubusSpacing.sm,
-                                    vertical: KubusSpacing.xxs,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(
-                                      KubusRadius.sm,
-                                    ),
-                                    border: Border.all(
-                                      color:
-                                          Colors.orange.withValues(alpha: 0.3),
-                                      width: KubusSizes.hairline,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    'DEVNET',
-                                    style: KubusTypography.textTheme.labelSmall
-                                        ?.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.orange,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ],
+                                  ],
+                                )
+                              : null,
+                          footerTopPadding: KubusSpacing.xs,
+                        ),
                       ),
                     ],
                   ),
@@ -1076,7 +1055,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     }
     final discoveredFromStats =
         discoveredSnapshot?.counters['artworksDiscovered'] ?? 0;
-    final discoveredFromProfile = profileProvider.artworksCount;
+    final discoveredFromProfile =
+        profileProvider.currentUser?.stats?.artworksDiscovered ?? 0;
     final discoveredFromLocal =
         (discoveredFromStats == 0 && discoveredFromProfile == 0)
             ? artworkProvider.artworks.where((a) => a.isDiscovered).length
