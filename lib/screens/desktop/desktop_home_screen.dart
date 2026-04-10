@@ -41,6 +41,7 @@ import '../../utils/artwork_navigation.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/home_search_destination.dart';
+import '../../utils/home_header_display_name.dart';
 import '../../utils/home_rail_creator_identity.dart';
 import '../../utils/home_activity_cards.dart';
 import '../../utils/institution_navigation.dart';
@@ -687,6 +688,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     final user = profileProvider.currentUser;
     final themeProvider = Provider.of<ThemeProvider>(context);
     final l10n = AppLocalizations.of(context)!;
+    final headerDisplayName = resolveHomeHeaderDisplayName(
+      user: user,
+      fallbackLabel: l10n.homeDefaultDisplayName,
+    );
     final isArtist = user?.isArtist ?? false;
     final isInstitution = user?.isInstitution ?? false;
 
@@ -719,8 +724,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                               Flexible(
                                 fit: FlexFit.loose,
                                 child: Text(
-                                  user?.displayName ??
-                                      l10n.desktopHomeWelcomeFallbackName,
+                                  headerDisplayName,
                                   style: KubusTextStyles.heroTitle.copyWith(
                                     color:
                                         Theme.of(context).colorScheme.onSurface,

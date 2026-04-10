@@ -54,6 +54,7 @@ import '../utils/share_deep_link_navigation.dart';
 import '../utils/institution_navigation.dart';
 import '../utils/user_profile_navigation.dart';
 import '../utils/home_search_destination.dart';
+import '../utils/home_header_display_name.dart';
 import '../widgets/staggered_fade_slide.dart';
 import '../utils/artwork_navigation.dart';
 import '../utils/home_rail_creator_identity.dart';
@@ -523,6 +524,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final animationTheme = context.animationTheme;
     final keyboardVisible = KeyboardInsetResolver.isKeyboardVisible(context);
     final bottomSafeInset = MediaQuery.of(context).padding.bottom;
+    final profileProvider = Provider.of<ProfileProvider>(context);
+    final l10n = AppLocalizations.of(context)!;
+    final headerDisplayName = resolveHomeHeaderDisplayName(
+      user: profileProvider.currentUser,
+      fallbackLabel: l10n.homeDefaultDisplayName,
+    );
     final fadeAnimation = CurvedAnimation(
       parent: _animationController,
       curve: animationTheme.fadeCurve,
@@ -552,7 +559,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       keyboardDismissBehavior:
                           ScrollViewKeyboardDismissBehavior.onDrag,
                       slivers: [
-                        _buildAppBar(),
+                        _buildAppBar(headerDisplayName),
                         SliverLayoutBuilder(
                           builder: (context, constraints) {
                             final screenWidth = constraints.crossAxisExtent;
@@ -577,7 +584,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               ),
                               sliver: SliverList(
                                 delegate: SliverChildListDelegate(
-                                  _buildAnimatedSections(spacing),
+                                  _buildAnimatedSections(
+                                    spacing,
+                                    headerDisplayName,
+                                  ),
                                 ),
                               ),
                             );
@@ -605,7 +615,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  List<Widget> _buildAnimatedSections(double spacing) {
+  List<Widget> _buildAnimatedSections(
+    double spacing,
+    String headerDisplayName,
+  ) {
     final sections = <Widget>[];
     var animationIndex = 0;
 
@@ -618,7 +631,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       );
     }
 
-    sections.add(animated(_buildWelcomeSection()));
+    sections.add(animated(_buildWelcomeSection(headerDisplayName)));
     sections.add(SizedBox(height: spacing));
     sections.add(animated(_buildQuickActions()));
     sections.add(SizedBox(height: spacing));
@@ -635,16 +648,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return sections;
   }
 
-  Widget _buildAppBar() {
+  Widget _buildAppBar(String headerDisplayName) {
     final web3Provider = Provider.of<Web3Provider>(context);
-    final profileProvider = Provider.of<ProfileProvider>(context);
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final rawDisplayName =
-        (profileProvider.currentUser?.displayName ?? '').trim();
-    final displayName =
-        rawDisplayName.isNotEmpty ? rawDisplayName : l10n.homeDefaultDisplayName;
     return SliverAppBar(
       floating: true,
       snap: true,
@@ -726,7 +734,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                         compact: true,
                                       );
                                       return Text(
-                                        displayName,
+                                        headerDisplayName,
                                         maxLines: displayNameLines,
                                         softWrap: true,
                                         style: displayNameStyle,
@@ -1006,7 +1014,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  Widget _buildWelcomeSection() {
+  Widget _buildWelcomeSection(String headerDisplayName) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final web3Provider = Provider.of<Web3Provider>(context);
     final profileProvider = Provider.of<ProfileProvider>(context);
@@ -1064,7 +1072,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           children: [
                             Flexible(
                               child: Text(
-                                '$greeting ${profileProvider.currentUser?.displayName ?? l10n.homeDefaultDisplayName}',
+                                '$greeting $headerDisplayName',
                                 style: KubusTextStyles.responsiveHeroTitle(
                                   context,
                                   availableWidth: isSmallScreen ? 220 : 320,
