@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/themeprovider.dart';
 import '../utils/design_tokens.dart';
+import '../utils/kubus_color_roles.dart';
 
 class InstitutionBadge extends StatelessWidget {
   final double fontSize;
@@ -22,9 +21,8 @@ class InstitutionBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final colorScheme = Theme.of(context).colorScheme;
-    final accent = themeProvider.accentColor;
+    final accent = KubusColorRoles.of(context).institutionBadgeAccent;
     final textColor =
         useOnPrimary ? colorScheme.onPrimary : colorScheme.onSurface;
 

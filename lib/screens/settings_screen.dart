@@ -20,6 +20,7 @@ import '../models/email_preferences.dart';
 import '../models/user_profile.dart';
 import '../models/wallet.dart';
 import '../utils/design_tokens.dart';
+import '../utils/kubus_color_roles.dart';
 import '../services/backend_api_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/settings_service.dart';
@@ -254,12 +255,20 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   Widget _buildAppBar(AppLocalizations l10n) {
+    final accent = KubusColorRoles.of(context).screenAccentForKey(
+      'settings',
+      Theme.of(context).colorScheme,
+      appAccent: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+    );
     return SliverAppBar(
       floating: true,
       snap: true,
       backgroundColor: Colors.transparent,
       elevation: 0,
-      flexibleSpace: const KubusGlassAppBarBackdrop(showBottomDivider: true),
+      flexibleSpace: KubusGlassAppBarBackdrop(
+        tintBase: accent,
+        showBottomDivider: true,
+      ),
       title: KubusHeaderText(
         title: l10n.settingsTitle,
         kind: KubusHeaderKind.screen,

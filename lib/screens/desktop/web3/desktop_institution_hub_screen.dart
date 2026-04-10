@@ -769,7 +769,7 @@ class _DesktopInstitutionHubScreenState
                 'Visitors',
                 displayCount(visitors),
                 Icons.people_outline,
-                roles.statTeal,
+                roles.web3InstitutionAccent,
               ),
             ),
           ],

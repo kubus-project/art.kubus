@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../providers/themeprovider.dart';
 import '../../../providers/notification_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/wallet_provider.dart';
@@ -78,6 +77,7 @@ class DesktopNavigation extends StatefulWidget {
   static const double expandedWidthMedium = 180.0;
 
   final List<DesktopNavItem> items;
+  final Color activeAccent;
   final int selectedIndex;
   final ValueChanged<int> onItemSelected;
   final bool isExpanded;
@@ -92,6 +92,7 @@ class DesktopNavigation extends StatefulWidget {
   const DesktopNavigation({
     super.key,
     required this.items,
+    required this.activeAccent,
     required this.selectedIndex,
     required this.onItemSelected,
     required this.isExpanded,
@@ -115,7 +116,6 @@ class _DesktopNavigationState extends State<DesktopNavigation>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final themeProvider = Provider.of<ThemeProvider>(context);
     final animationTheme = context.animationTheme;
 
     // When collapsed and thinner, fixed paddings used for the wider rail can
@@ -126,7 +126,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
     return Column(
       children: [
         // App logo and branding header
-        _buildHeader(themeProvider, l10n),
+        _buildHeader(l10n),
 
         const SizedBox(height: 8),
 
@@ -139,7 +139,6 @@ class _DesktopNavigationState extends State<DesktopNavigation>
             itemBuilder: (context, index) => _buildNavItem(
               widget.items[index],
               index,
-              themeProvider,
               animationTheme,
               l10n,
             ),
@@ -147,16 +146,12 @@ class _DesktopNavigationState extends State<DesktopNavigation>
         ),
 
         // Bottom actions (notifications, settings, profile)
-        _buildBottomActions(
-          themeProvider,
-          animationTheme,
-          horizontalPadding: bottomHorizontalPadding,
-        ),
+        _buildBottomActions(horizontalPadding: bottomHorizontalPadding),
       ],
     );
   }
 
-  Widget _buildHeader(ThemeProvider themeProvider, AppLocalizations l10n) {
+  Widget _buildHeader(AppLocalizations l10n) {
     // When collapsed, use a column layout to prevent overflow
     if (!widget.isExpanded) {
       return Container(
@@ -176,10 +171,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
               onPressed: widget.onToggleExpand,
               icon: Icon(
                 Icons.chevron_left,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.6),
+                color: widget.activeAccent.withValues(alpha: 0.72),
                 size: KubusChromeMetrics.navCompactIcon,
               ),
               tooltip: l10n.desktopNavigationExpandTooltip,
@@ -237,10 +229,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
             onPressed: widget.onToggleExpand,
             icon: Icon(
               Icons.chevron_right,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.6),
+              color: widget.activeAccent.withValues(alpha: 0.72),
               size: KubusChromeMetrics.navCompactIcon,
             ),
             tooltip: l10n.desktopNavigationCollapseTooltip,
@@ -258,7 +247,6 @@ class _DesktopNavigationState extends State<DesktopNavigation>
   Widget _buildNavItem(
     DesktopNavItem item,
     int index,
-    ThemeProvider themeProvider,
     AppAnimationTheme animationTheme,
     AppLocalizations l10n,
   ) {
@@ -281,14 +269,18 @@ class _DesktopNavigationState extends State<DesktopNavigation>
           curve: animationTheme.defaultCurve,
           decoration: BoxDecoration(
             color: isSelected
-                ? themeProvider.accentColor.withValues(alpha: 0.12)
+                ? widget.activeAccent.withValues(alpha: 0.16)
                 : isHovered
-                    ? Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.05)
+                    ? widget.activeAccent.withValues(alpha: 0.08)
                     : Colors.transparent,
             borderRadius: KubusRadius.circular(KubusRadius.md),
+            border: Border.all(
+              color: isSelected
+                  ? widget.activeAccent.withValues(alpha: 0.30)
+                  : isHovered
+                      ? widget.activeAccent.withValues(alpha: 0.12)
+                      : Colors.transparent,
+            ),
           ),
           child: Material(
             color: Colors.transparent,
@@ -320,7 +312,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                               child: Icon(
                                 isSelected ? item.activeIcon : item.icon,
                                 color: isSelected
-                                    ? themeProvider.accentColor
+                                    ? widget.activeAccent
                                     : Theme.of(context)
                                         .colorScheme
                                         .onSurface
@@ -354,7 +346,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                                   ? FontWeight.w600
                                   : FontWeight.w500,
                               color: isSelected
-                                  ? themeProvider.accentColor
+                                  ? widget.activeAccent
                                   : Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
@@ -369,7 +361,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                       ],
                     ],
                     if (item.badgeCount > 0)
-                      _buildBadge(item.badgeCount, themeProvider),
+                      _buildBadge(item.badgeCount),
                   ],
                 ),
               ),
@@ -380,12 +372,12 @@ class _DesktopNavigationState extends State<DesktopNavigation>
     );
   }
 
-  Widget _buildBadge(int count, ThemeProvider themeProvider) {
+  Widget _buildBadge(int count) {
     return Container(
       margin: const EdgeInsets.only(left: 8),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: themeProvider.accentColor,
+        color: widget.activeAccent,
         borderRadius: BorderRadius.circular(KubusRadius.md),
       ),
       child: Text(
@@ -398,9 +390,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
     );
   }
 
-  Widget _buildBottomActions(
-      ThemeProvider themeProvider, AppAnimationTheme animationTheme,
-      {required double horizontalPadding}) {
+  Widget _buildBottomActions({required double horizontalPadding}) {
     return Container(
       padding:
           EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 10),
@@ -414,29 +404,26 @@ class _DesktopNavigationState extends State<DesktopNavigation>
       child: Column(
         children: [
           // Wallet section
-          _buildWalletBalanceSection(themeProvider, animationTheme),
+          _buildWalletBalanceSection(),
 
           const SizedBox(height: 6),
 
           // Action buttons row
           if (widget.isExpanded)
-            _buildActionButtonsRow(themeProvider, animationTheme)
+            _buildActionButtonsRow()
           else
-            _buildActionButtonsColumn(themeProvider, animationTheme),
+            _buildActionButtonsColumn(),
 
           const SizedBox(height: 6),
 
           // Profile section
-          _buildProfileSection(themeProvider),
+          _buildProfileSection(),
         ],
       ),
     );
   }
 
-  Widget _buildActionButtonsRow(
-    ThemeProvider themeProvider,
-    AppAnimationTheme animationTheme,
-  ) {
+  Widget _buildActionButtonsRow() {
     return AnimatedOpacity(
       opacity: widget.expandAnimation.value,
       duration: const Duration(milliseconds: 150),
@@ -452,7 +439,6 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                   return _buildIconOnlyActionButton(
                     icon: Icons.group_add_outlined,
                     onTap: widget.onCollabInvitesTap!,
-                    themeProvider: themeProvider,
                     showBadge: pendingCount > 0,
                     badgeCount: pendingCount,
                   );
@@ -465,7 +451,6 @@ class _DesktopNavigationState extends State<DesktopNavigation>
             child: _buildIconOnlyActionButton(
               icon: Icons.notifications_outlined,
               onTap: widget.onNotificationsTap,
-              themeProvider: themeProvider,
               showBadge: true,
             ),
           ),
@@ -475,7 +460,6 @@ class _DesktopNavigationState extends State<DesktopNavigation>
             child: _buildIconOnlyActionButton(
               icon: Icons.settings_outlined,
               onTap: widget.onSettingsTap,
-              themeProvider: themeProvider,
             ),
           ),
         ],
@@ -483,10 +467,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
     );
   }
 
-  Widget _buildActionButtonsColumn(
-    ThemeProvider themeProvider,
-    AppAnimationTheme animationTheme,
-  ) {
+  Widget _buildActionButtonsColumn() {
     return Column(
       children: [
         // Collab invites (if enabled)
@@ -498,7 +479,6 @@ class _DesktopNavigationState extends State<DesktopNavigation>
               return _buildCollapsedActionButton(
                 icon: Icons.group_add_outlined,
                 onTap: widget.onCollabInvitesTap!,
-                themeProvider: themeProvider,
                 showBadge: pendingCount > 0,
                 badgeCount: pendingCount,
               );
@@ -513,7 +493,6 @@ class _DesktopNavigationState extends State<DesktopNavigation>
         _buildCollapsedActionButton(
           icon: Icons.notifications_outlined,
           onTap: widget.onNotificationsTap,
-          themeProvider: themeProvider,
           showBadge: true,
         ),
 
@@ -523,7 +502,6 @@ class _DesktopNavigationState extends State<DesktopNavigation>
         _buildCollapsedActionButton(
           icon: Icons.settings_outlined,
           onTap: widget.onSettingsTap,
-          themeProvider: themeProvider,
         ),
       ],
     );
@@ -532,7 +510,6 @@ class _DesktopNavigationState extends State<DesktopNavigation>
   Widget _buildIconOnlyActionButton({
     required IconData icon,
     required VoidCallback onTap,
-    required ThemeProvider themeProvider,
     bool showBadge = false,
     int badgeCount = 0,
   }) {
@@ -603,7 +580,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                         width: KubusChromeMetrics.navBadgeDot,
                         height: KubusChromeMetrics.navBadgeDot,
                         decoration: BoxDecoration(
-                          color: themeProvider.accentColor,
+                          color: widget.activeAccent,
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: Theme.of(context).colorScheme.surface,
@@ -624,7 +601,6 @@ class _DesktopNavigationState extends State<DesktopNavigation>
   Widget _buildCollapsedActionButton({
     required IconData icon,
     required VoidCallback onTap,
-    required ThemeProvider themeProvider,
     bool showBadge = false,
     int badgeCount = 0,
   }) {
@@ -696,7 +672,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                         width: KubusChromeMetrics.navBadgeDot,
                         height: KubusChromeMetrics.navBadgeDot,
                         decoration: BoxDecoration(
-                          color: themeProvider.accentColor,
+                          color: widget.activeAccent,
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: Theme.of(context).colorScheme.surface,
@@ -714,10 +690,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
     );
   }
 
-  Widget _buildWalletBalanceSection(
-    ThemeProvider themeProvider,
-    AppAnimationTheme animationTheme,
-  ) {
+  Widget _buildWalletBalanceSection() {
     return Consumer2<WalletProvider, ProfileProvider>(
       builder: (context, walletProvider, profileProvider, _) {
         final tokens = walletProvider.tokens;
@@ -741,8 +714,8 @@ class _DesktopNavigationState extends State<DesktopNavigation>
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    themeProvider.accentColor,
-                    themeProvider.accentColor.withValues(alpha: 0.8),
+                    widget.activeAccent,
+                    widget.activeAccent.withValues(alpha: 0.82),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -750,7 +723,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                 borderRadius: BorderRadius.circular(KubusRadius.sm),
                 boxShadow: [
                   BoxShadow(
-                    color: themeProvider.accentColor.withValues(alpha: 0.3),
+                    color: widget.activeAccent.withValues(alpha: 0.30),
                     blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
@@ -868,7 +841,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
     );
   }
 
-  Widget _buildProfileSection(ThemeProvider themeProvider) {
+  Widget _buildProfileSection() {
     return Consumer<ProfileProvider>(
       builder: (context, profileProvider, _) {
         final user = profileProvider.currentUser;

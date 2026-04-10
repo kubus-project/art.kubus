@@ -60,8 +60,7 @@ class AppColorUtils {
       case 'organize':
       case 'museum':
       case 'event':
-        // Requested: Institutions should be deep purple.
-        return roles?.web3InstitutionAccent ?? const Color(0xFF7E57C2);
+        return roles?.web3InstitutionAccent ?? blueAccent;
 
       // Governance / DAO
       case 'dao':
@@ -203,10 +202,7 @@ class AppColorUtils {
         return [greenAccent, greenAccent.withValues(alpha: 0.7)];
       case 'institution':
       case 'institution_hub':
-        return [
-          const Color(0xFF7E57C2),
-          const Color(0xFF7E57C2).withValues(alpha: 0.7)
-        ];
+        return [blueAccent, blueAccent.withValues(alpha: 0.7)];
       default:
         return [fallback, fallback.withValues(alpha: 0.8)];
     }

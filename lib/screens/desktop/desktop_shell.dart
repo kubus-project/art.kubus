@@ -368,39 +368,7 @@ class _DesktopShellState extends State<DesktopShell>
   List<Color>? _backgroundColorsForRoute(BuildContext context, String route) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final scheme = theme.colorScheme;
-    final roles = KubusColorRoles.of(context);
-    final themeProvider = context.read<ThemeProvider>();
-
-    Color? accent;
-    switch (route) {
-      case '/artist-studio':
-        accent = roles.web3ArtistStudioAccent;
-        break;
-      case '/governance':
-        accent = roles.web3DaoAccent;
-        break;
-      case '/institution':
-        accent = roles.web3InstitutionAccent;
-        break;
-      case '/marketplace':
-        accent = roles.web3MarketplaceAccent;
-        break;
-      case '/community':
-        accent = themeProvider.accentColor;
-        break;
-      case _walletRoute:
-        accent = scheme.primary;
-        break;
-      case _web3EntryRoute:
-        accent = scheme.secondary;
-        break;
-      default:
-        accent = null;
-        break;
-    }
-
-    if (accent == null) return null;
+    final accent = _activeScreenAccent(context, route: route);
     return _blendAccentIntoAnimatedBase(
       base: isDark
           ? KubusGradients.animatedDarkColors
@@ -565,6 +533,7 @@ class _DesktopShellState extends State<DesktopShell>
     }
     final selectedIndex =
         navItems.indexWhere((item) => item.route == effectiveRoute);
+    final activeAccent = _activeScreenAccent(context, route: effectiveRoute);
 
     final isCompact = DesktopBreakpoints.isCompact(context);
     final isLarge = DesktopBreakpoints.isLarge(context);
@@ -725,9 +694,21 @@ class _DesktopShellState extends State<DesktopShell>
 
                             final scheme = theme.colorScheme;
                             final glassTint =
-                                theme.brightness == Brightness.dark
-                                    ? Colors.black.withValues(alpha: 0.22)
-                                    : Colors.white.withValues(alpha: 0.26);
+                                (Color.lerp(
+                                          theme.brightness == Brightness.dark
+                                              ? Colors.black
+                                              : Colors.white,
+                                          activeAccent,
+                                          theme.brightness == Brightness.dark
+                                              ? 0.18
+                                              : 0.10,
+                                        ) ??
+                                        scheme.surface)
+                                    .withValues(
+                                  alpha: theme.brightness == Brightness.dark
+                                      ? 0.24
+                                      : 0.28,
+                                );
 
                             return ClipRRect(
                               child: Container(
@@ -752,6 +733,7 @@ class _DesktopShellState extends State<DesktopShell>
                                   backgroundColor: glassTint,
                                   child: DesktopNavigation(
                                     items: navItems,
+                                    activeAccent: activeAccent,
                                     selectedIndex:
                                         selectedIndex < 0 ? 0 : selectedIndex,
                                     onItemSelected: (index) =>
@@ -872,6 +854,35 @@ class _DesktopShellState extends State<DesktopShell>
 
     Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => const DesktopSettingsScreen()),
+    );
+  }
+
+  Color _activeScreenAccent(BuildContext context, {String? route}) {
+    final themeProvider = context.read<ThemeProvider>();
+    final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
+
+    if (_screenStack.isNotEmpty && _screenStack.last is DesktopSettingsScreen) {
+      return roles.screenAccentForKey(
+        'settings',
+        scheme,
+        appAccent: themeProvider.accentColor,
+      );
+    }
+
+    final resolvedRoute = route ?? _activeRoute;
+    if (resolvedRoute == _web3EntryRoute) {
+      return roles.screenAccentForKey(
+        'home',
+        scheme,
+        appAccent: themeProvider.accentColor,
+      );
+    }
+
+    return roles.screenAccentForRoute(
+      resolvedRoute,
+      scheme,
+      appAccent: themeProvider.accentColor,
     );
   }
 

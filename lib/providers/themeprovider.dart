@@ -58,16 +58,17 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
 
   bool get isSystemMode => _themeMode == ThemeMode.system;
 
-  // Available accent colors with deep blue-cyan theme
+  // Available accent colors: colorful, but still sober enough for the core UI.
   static const List<Color> availableAccentColors = [
-    KubusColors.primary, // Main brand
-    KubusColors.primaryVariantLight,
-    KubusColors.primaryVariantDark,
-    Color(0xFF26C6DA), // Cyan 400
-    Color(0xFF006064), // Cyan 900 (Darker)
-    Color(0xFF00BCD4), // Cyan 500
-    Color(0xFF4DD0E1), // Cyan 300
-    Color(0xFF0288D1), // Light Blue 700
+    KubusColors.primary,
+    Color(0xFF0F4C81), // Deep blue
+    Color(0xFF3B6EA5), // Steel blue
+    Color(0xFF2F6B4F), // Forest green
+    Color(0xFF7A2E2E), // Oxblood
+    Color(0xFFB8860B), // Amber gold
+    Color(0xFFB85C38), // Terracotta
+    Color(0xFF4B5D67), // Slate
+    Color(0xFF485A96), // Indigo
   ];
 
   // Load theme preferences from storage

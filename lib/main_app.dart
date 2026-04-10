@@ -23,6 +23,7 @@ import 'screens/desktop/desktop_shell.dart';
 import 'utils/app_animations.dart';
 import 'utils/design_tokens.dart';
 import 'utils/keyboard_inset_resolver.dart';
+import 'utils/kubus_color_roles.dart';
 import 'widgets/glass_components.dart';
 import 'widgets/mobile_shell_exit_scope.dart';
 import 'widgets/user_persona_onboarding_gate.dart';
@@ -206,8 +207,13 @@ class _MainAppState extends State<MainApp> {
         final theme = Theme.of(context);
         final scheme = theme.colorScheme;
         final isDark = theme.brightness == Brightness.dark;
+        final currentIndex = context.watch<MainTabProvider>().currentIndex;
+        final activeAccent = _screenAccentForTab(context, currentIndex);
+        final tintedSurface =
+            Color.lerp(scheme.surface, activeAccent, isDark ? 0.18 : 0.10) ??
+                scheme.surface;
         final glassTint =
-            scheme.surface.withValues(alpha: isDark ? 0.18 : 0.12);
+            tintedSurface.withValues(alpha: isDark ? 0.22 : 0.14);
 
         // Explicit height prevents the nav bar from accidentally expanding to
         // fill the entire Scaffold when it receives overly-permissive (or tight)
@@ -244,12 +250,41 @@ class _MainAppState extends State<MainApp> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildNavItem(context, 0, Icons.explore, isSmallScreen),
                       _buildNavItem(
-                          context, 1, Icons.view_in_ar, isSmallScreen),
-                      _buildNavItem(context, 2, Icons.people, isSmallScreen),
-                      _buildNavItem(context, 3, Icons.home, isSmallScreen),
-                      _buildNavItem(context, 4, Icons.person, isSmallScreen),
+                        context,
+                        0,
+                        Icons.explore,
+                        isSmallScreen,
+                        activeAccent: activeAccent,
+                      ),
+                      _buildNavItem(
+                        context,
+                        1,
+                        Icons.view_in_ar,
+                        isSmallScreen,
+                        activeAccent: activeAccent,
+                      ),
+                      _buildNavItem(
+                        context,
+                        2,
+                        Icons.people,
+                        isSmallScreen,
+                        activeAccent: activeAccent,
+                      ),
+                      _buildNavItem(
+                        context,
+                        3,
+                        Icons.home,
+                        isSmallScreen,
+                        activeAccent: activeAccent,
+                      ),
+                      _buildNavItem(
+                        context,
+                        4,
+                        Icons.person,
+                        isSmallScreen,
+                        activeAccent: activeAccent,
+                      ),
                     ],
                   ),
                 ),
@@ -266,10 +301,10 @@ class _MainAppState extends State<MainApp> {
     int index,
     IconData icon,
     bool isSmallScreen,
+    {required Color activeAccent}
   ) {
     final isSelected =
         context.select<MainTabProvider, bool>((p) => p.currentIndex == index);
-    final themeProvider = Provider.of<ThemeProvider>(context);
     final animationTheme = context.animationTheme;
     final scheme = Theme.of(context).colorScheme;
 
@@ -295,12 +330,12 @@ class _MainAppState extends State<MainApp> {
           ),
           decoration: BoxDecoration(
             color: isSelected
-                ? themeProvider.accentColor.withValues(alpha: 0.12)
+                ? activeAccent.withValues(alpha: 0.14)
                 : Colors.transparent,
             borderRadius: KubusRadius.circular(KubusRadius.md),
             border: Border.all(
               color: isSelected
-                  ? themeProvider.accentColor.withValues(alpha: 0.28)
+                  ? activeAccent.withValues(alpha: 0.30)
                   : scheme.outlineVariant.withValues(alpha: 0.18),
             ),
           ),
@@ -316,7 +351,7 @@ class _MainAppState extends State<MainApp> {
                 child: Icon(
                   icon,
                   color: isSelected
-                      ? themeProvider.accentColor
+                      ? activeAccent
                       : scheme.onSurface.withValues(alpha: 0.82),
                   size: isSmallScreen ? 24 : 28,
                 ),
@@ -368,6 +403,51 @@ class _MainAppState extends State<MainApp> {
     }
 
     TelemetryService().setActiveScreen(screenName: name, screenRoute: route);
+  }
+
+  Color _screenAccentForTab(BuildContext context, int index) {
+    final themeProvider = context.read<ThemeProvider>();
+    final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
+
+    switch (index) {
+      case 0:
+        return roles.screenAccentForKey(
+          'map',
+          scheme,
+          appAccent: themeProvider.accentColor,
+        );
+      case 1:
+        return roles.screenAccentForKey(
+          'ar',
+          scheme,
+          appAccent: themeProvider.accentColor,
+        );
+      case 2:
+        return roles.screenAccentForKey(
+          'community',
+          scheme,
+          appAccent: themeProvider.accentColor,
+        );
+      case 3:
+        return roles.screenAccentForKey(
+          'home',
+          scheme,
+          appAccent: themeProvider.accentColor,
+        );
+      case 4:
+        return roles.screenAccentForKey(
+          'profile',
+          scheme,
+          appAccent: themeProvider.accentColor,
+        );
+      default:
+        return roles.screenAccentForKey(
+          'home',
+          scheme,
+          appAccent: themeProvider.accentColor,
+        );
+    }
   }
 
   void _syncRefreshVisibility(int index) {

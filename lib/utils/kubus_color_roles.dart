@@ -82,8 +82,14 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
   /// DAO accent (green)
   Color get web3DaoAccent => positiveAction;
 
-  /// Institution accent (deep accent; kept non-purple)
-  Color get web3InstitutionAccent => tagChipBackground;
+  /// Artist identity accent (amber)
+  Color get artistBadgeAccent => statAmber;
+
+  /// Institution identity accent (blue)
+  Color get institutionBadgeAccent => statBlue;
+
+  /// Institution accent (blue, shared across institution surfaces)
+  Color get web3InstitutionAccent => institutionBadgeAccent;
 
   /// Marketplace accent (orange)
   Color get web3MarketplaceAccent => lockedFeature;
@@ -122,6 +128,90 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
         return web3MarketplaceAccent;
       default:
         return web3MarketplaceAccent;
+    }
+  }
+
+  /// Resolve a semantic screen accent from a shared key.
+  Color screenAccentForKey(
+    String key,
+    ColorScheme scheme, {
+    Color? appAccent,
+  }) {
+    switch (key.toLowerCase()) {
+      case 'studio':
+      case 'artist':
+      case 'artist_studio':
+      case 'artist-studio':
+        return web3ArtistStudioAccent;
+      case 'dao':
+      case 'dao_hub':
+      case 'govern':
+      case 'governance':
+      case 'governance_hub':
+      case 'governance-hub':
+        return web3DaoAccent;
+      case 'institution':
+      case 'institution_hub':
+      case 'institution-hub':
+      case 'organize':
+        return web3InstitutionAccent;
+      case 'marketplace':
+      case 'trade':
+      case 'nft':
+        return web3MarketplaceAccent;
+      case 'map':
+      case 'explore':
+      case 'discovery':
+      case 'ar':
+        return statTeal;
+      case 'community':
+      case 'connect':
+        return scheme.secondary;
+      case 'wallet':
+      case 'profile':
+        return statAmber;
+      case 'settings':
+      case 'home':
+      default:
+        return appAccent ?? scheme.primary;
+    }
+  }
+
+  /// Resolve a screen accent from a route string used by desktop shell chrome.
+  Color screenAccentForRoute(
+    String route,
+    ColorScheme scheme, {
+    Color? appAccent,
+  }) {
+    switch (route.toLowerCase()) {
+      case '/artist-studio':
+        return screenAccentForKey('studio', scheme, appAccent: appAccent);
+      case '/governance':
+        return screenAccentForKey('dao_hub', scheme, appAccent: appAccent);
+      case '/institution':
+        return screenAccentForKey(
+          'institution_hub',
+          scheme,
+          appAccent: appAccent,
+        );
+      case '/marketplace':
+        return screenAccentForKey(
+          'marketplace',
+          scheme,
+          appAccent: appAccent,
+        );
+      case '/community':
+        return screenAccentForKey('community', scheme, appAccent: appAccent);
+      case '/wallet':
+        return screenAccentForKey('wallet', scheme, appAccent: appAccent);
+      case '/explore':
+        return screenAccentForKey('map', scheme, appAccent: appAccent);
+      case '/home':
+        return screenAccentForKey('home', scheme, appAccent: appAccent);
+      case '/settings':
+        return screenAccentForKey('settings', scheme, appAccent: appAccent);
+      default:
+        return screenAccentForKey('home', scheme, appAccent: appAccent);
     }
   }
 

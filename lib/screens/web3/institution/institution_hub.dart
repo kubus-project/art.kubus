@@ -239,7 +239,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
               elevation: 0,
               scrolledUnderElevation: 0,
               flexibleSpace: KubusGlassAppBarBackdrop(
-                tintBase: Theme.of(context).colorScheme.surface,
+                tintBase: KubusColorRoles.of(context).web3InstitutionAccent,
               ),
               title: Text(
                 'Institution Hub',
@@ -742,7 +742,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
               Icons.analytics,
               exhibitionsEnabled ? 3 : 2,
               enabled,
-              roles.statTeal,
+              roles.web3InstitutionAccent,
             ),
           ),
         ],
