@@ -26,6 +26,30 @@ enum HomeActivityMetric {
   likesGiven,
 }
 
+enum HomeActivityCardActionType {
+  analytics,
+  institutionAnalytics,
+}
+
+class HomeActivityCardAction {
+  const HomeActivityCardAction._({
+    required this.type,
+    this.statType,
+  });
+
+  const HomeActivityCardAction.analytics(String statType)
+      : this._(
+          type: HomeActivityCardActionType.analytics,
+          statType: statType,
+        );
+
+  const HomeActivityCardAction.institutionAnalytics()
+      : this._(type: HomeActivityCardActionType.institutionAnalytics);
+
+  final HomeActivityCardActionType type;
+  final String? statType;
+}
+
 class HomeActivityCardData {
   const HomeActivityCardData({
     required this.metric,
@@ -34,7 +58,7 @@ class HomeActivityCardData {
     required this.isLoading,
     required this.icon,
     required this.color,
-    required this.statType,
+    required this.action,
   });
 
   final HomeActivityMetric metric;
@@ -43,7 +67,7 @@ class HomeActivityCardData {
   final bool isLoading;
   final IconData icon;
   final Color color;
-  final String? statType;
+  final HomeActivityCardAction? action;
 }
 
 class HomeActivitySourceData {
@@ -83,8 +107,9 @@ const List<String> homeActivityPublicSnapshotMetrics = <String>[
   'eventsHosted',
 ];
 
-const List<String> homeActivityPrivateDiscoveredMetrics = <String>[
+const List<String> homeActivityPrivateSnapshotMetrics = <String>[
   'artworksDiscovered',
+  'arSessions',
 ];
 
 HomeActivityRole resolveHomeActivityRole({
@@ -161,7 +186,7 @@ List<HomeActivityCardData> buildHomeActivityCards({
             isLoading: _loadingForMetric(metric, source),
             icon: _iconForMetric(metric),
             color: _colorForMetric(metric, roles),
-            statType: _statTypeForMetric(metric),
+            action: _actionForMetric(metric),
           ))
       .toList(growable: false);
 }
@@ -181,6 +206,20 @@ String labelForHomeActivityStatType(
       return l10n.homeStatLikes;
     case 'visitors':
       return l10n.homeStatVisitors;
+    case 'eventshosted':
+      return l10n.homeStatEventsHosted;
+    case 'exhibitions':
+      return l10n.homeStatExhibitions;
+    case 'programviews':
+      return l10n.homeStatProgramViews;
+    case 'discovered':
+      return l10n.homeStatDiscovered;
+    case 'arsessions':
+      return l10n.homeStatArSessions;
+    case 'following':
+      return l10n.homeStatFollowing;
+    case 'likesgiven':
+      return l10n.homeStatLikesGiven;
     default:
       return statType;
   }
@@ -336,24 +375,31 @@ Color _colorForMetric(
   }
 }
 
-String? _statTypeForMetric(HomeActivityMetric metric) {
+HomeActivityCardAction? _actionForMetric(HomeActivityMetric metric) {
   switch (metric) {
     case HomeActivityMetric.artworks:
-      return 'artworks';
+      return const HomeActivityCardAction.analytics('artworks');
     case HomeActivityMetric.views:
-      return 'views';
+      return const HomeActivityCardAction.analytics('views');
     case HomeActivityMetric.likes:
-      return 'likes';
+      return const HomeActivityCardAction.analytics('likes');
     case HomeActivityMetric.followers:
-      return 'followers';
+      return const HomeActivityCardAction.analytics('followers');
     case HomeActivityMetric.visitors:
+      return const HomeActivityCardAction.analytics('visitors');
     case HomeActivityMetric.eventsHosted:
+      return const HomeActivityCardAction.analytics('eventsHosted');
     case HomeActivityMetric.exhibitions:
+      return const HomeActivityCardAction.analytics('exhibitions');
     case HomeActivityMetric.programViews:
+      return const HomeActivityCardAction.institutionAnalytics();
     case HomeActivityMetric.discovered:
+      return const HomeActivityCardAction.analytics('discovered');
     case HomeActivityMetric.arSessions:
+      return const HomeActivityCardAction.analytics('arSessions');
     case HomeActivityMetric.following:
+      return const HomeActivityCardAction.analytics('following');
     case HomeActivityMetric.likesGiven:
-      return null;
+      return const HomeActivityCardAction.analytics('likesGiven');
   }
 }

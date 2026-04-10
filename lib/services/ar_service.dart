@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -5,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'storage_config.dart';
+import 'telemetry/telemetry_service.dart';
 
 /// Professional AR Service using Google ARCore Scene Viewer and ARKit Quick Look
 /// Supports IPFS models via HTTP gateways
@@ -17,7 +19,7 @@ class ARService {
   bool _hasARSupport = false;
 
   /// Launch ARCore Scene Viewer (Android) or AR Quick Look (iOS) with a 3D model
-  /// 
+  ///
   /// [modelUrl] - URL to the .glb or .gltf model (can be IPFS URL)
   /// [title] - Title of the artwork
   /// [link] - Optional link for more info
@@ -43,7 +45,7 @@ class ARService {
           resizable: resizable,
         );
       }
-      
+
       // For iOS: Use AR Quick Look
       else if (Platform.isIOS) {
         return await _launchIOSARViewer(
@@ -51,7 +53,7 @@ class ARService {
           title: title,
         );
       }
-      
+
       return false;
     } catch (e) {
       debugPrint('Error launching AR viewer: $e');
@@ -67,27 +69,29 @@ class ARService {
     String? sound,
     required bool resizable,
   }) async {
-    final Uri arUri = Uri.parse(
-      'intent://arvr.google.com/scene-viewer/1.0'
-      '?file=$resolvedUrl'
-      '${title != null ? '&title=${Uri.encodeComponent(title)}' : ''}'
-      '${link != null ? '&link=${Uri.encodeComponent(link)}' : ''}'
-      '${sound != null ? '&sound=${Uri.encodeComponent(sound)}' : ''}'
-      '&mode=ar_preferred'
-      '&resizable=${resizable ? "true" : "false"}'
-      '#Intent;'
-      'scheme=https;'
-      'package=com.google.android.googlequicksearchbox;'
-      'action=android.intent.action.VIEW;'
-      'S.browser_fallback_url=https://developers.google.com/ar;'
-      'end;'
-    );
+    final Uri arUri = Uri.parse('intent://arvr.google.com/scene-viewer/1.0'
+        '?file=$resolvedUrl'
+        '${title != null ? '&title=${Uri.encodeComponent(title)}' : ''}'
+        '${link != null ? '&link=${Uri.encodeComponent(link)}' : ''}'
+        '${sound != null ? '&sound=${Uri.encodeComponent(sound)}' : ''}'
+        '&mode=ar_preferred'
+        '&resizable=${resizable ? "true" : "false"}'
+        '#Intent;'
+        'scheme=https;'
+        'package=com.google.android.googlequicksearchbox;'
+        'action=android.intent.action.VIEW;'
+        'S.browser_fallback_url=https://developers.google.com/ar;'
+        'end;');
 
     if (await canLaunchUrl(arUri)) {
-      return await launchUrl(
+      final launched = await launchUrl(
         arUri,
         mode: LaunchMode.externalApplication,
       );
+      if (launched) {
+        unawaited(TelemetryService().trackArSessionStart());
+      }
+      return launched;
     }
     return false;
   }
@@ -101,19 +105,23 @@ class ARService {
       // Download model to temp directory for iOS (requires USDZ format)
       final tempDir = await getTemporaryDirectory();
       final modelPath = '${tempDir.path}/model.usdz';
-      
+
       // Download the model
       final response = await http.get(Uri.parse(resolvedUrl));
       if (response.statusCode == 200) {
         final file = File(modelPath);
         await file.writeAsBytes(response.bodyBytes);
-        
+
         final Uri arUri = Uri.parse('file://$modelPath');
         if (await canLaunchUrl(arUri)) {
-          return await launchUrl(
+          final launched = await launchUrl(
             arUri,
             mode: LaunchMode.externalApplication,
           );
+          if (launched) {
+            unawaited(TelemetryService().trackArSessionStart());
+          }
+          return launched;
         }
       }
       return false;
@@ -151,7 +159,7 @@ class ARService {
     try {
       // Request camera permission
       final cameraStatus = await Permission.camera.request();
-      
+
       if (cameraStatus.isGranted) {
         return true;
       } else if (cameraStatus.isPermanentlyDenied) {
@@ -159,7 +167,7 @@ class ARService {
         await openAppSettings();
         return false;
       }
-      
+
       return false;
     } catch (e) {
       debugPrint('Error requesting AR permissions: $e');
@@ -173,7 +181,7 @@ class ARService {
 
     try {
       _hasARSupport = await checkARSupport();
-      
+
       if (!_hasARSupport) {
         debugPrint('AR not supported on this device');
         return false;

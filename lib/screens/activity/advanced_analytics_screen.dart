@@ -546,6 +546,12 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
         icon: Icons.people_outline,
         color: scheme.primary,
       ),
+      'following': _AnalyticsMetricDefinition(
+        id: 'following',
+        label: l10n.homeStatFollowing,
+        icon: Icons.person_add_alt_1_outlined,
+        color: scheme.secondary,
+      ),
       'posts': _AnalyticsMetricDefinition(
         id: 'posts',
         label: l10n.userProfilePostsStatLabel,
@@ -569,6 +575,42 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
         label: l10n.analyticsMetricLikesReceivedLabel,
         icon: Icons.favorite_border,
         color: roles.negativeAction,
+      ),
+      'likesGiven': _AnalyticsMetricDefinition(
+        id: 'likesGiven',
+        label: l10n.homeStatLikesGiven,
+        icon: Icons.thumb_up_alt_outlined,
+        color: roles.negativeAction,
+      ),
+      'visitorsReceived': _AnalyticsMetricDefinition(
+        id: 'visitorsReceived',
+        label: l10n.homeStatVisitors,
+        icon: Icons.groups_outlined,
+        color: scheme.tertiary,
+      ),
+      'eventsHosted': _AnalyticsMetricDefinition(
+        id: 'eventsHosted',
+        label: l10n.homeStatEventsHosted,
+        icon: Icons.event_available_outlined,
+        color: roles.statAmber,
+      ),
+      'exhibitions': _AnalyticsMetricDefinition(
+        id: 'exhibitions',
+        label: l10n.homeStatExhibitions,
+        icon: Icons.museum_outlined,
+        color: roles.web3InstitutionAccent,
+      ),
+      'artworksDiscovered': _AnalyticsMetricDefinition(
+        id: 'artworksDiscovered',
+        label: l10n.homeStatDiscovered,
+        icon: Icons.explore_outlined,
+        color: scheme.secondary,
+      ),
+      'arSessions': _AnalyticsMetricDefinition(
+        id: 'arSessions',
+        label: l10n.homeStatArSessions,
+        icon: Icons.view_in_ar_outlined,
+        color: scheme.primary,
       ),
       'engagement': _AnalyticsMetricDefinition(
         id: 'engagement',
@@ -599,8 +641,16 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           metrics: <_AnalyticsMetricDefinition>[
             metrics['engagement']!,
             metrics['viewsReceived']!,
+            metrics['visitorsReceived']!,
             metrics['followers']!,
+            metrics['following']!,
             metrics['artworks']!,
+            metrics['likesReceived']!,
+            metrics['likesGiven']!,
+            metrics['artworksDiscovered']!,
+            metrics['arSessions']!,
+            metrics['eventsHosted']!,
+            metrics['exhibitions']!,
           ],
         );
       case AnalyticsExperienceContext.profile:

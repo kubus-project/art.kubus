@@ -9,6 +9,7 @@ import './ar_manager.dart';
 import './ar_content_service.dart';
 import './art_content_service.dart';
 import './map_marker_service.dart';
+import './telemetry/telemetry_service.dart';
 
 /// Integration service orchestrating AR experiences and physical marker flows
 class ARIntegrationService {
@@ -125,6 +126,7 @@ class ARIntegrationService {
 
       // Launch AR with the model
       await _displayARContent(marker, contentUrl);
+      await TelemetryService().trackArSessionStart();
 
       // Track interaction
       await _trackARInteraction(artwork, marker);

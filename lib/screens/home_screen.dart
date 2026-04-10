@@ -22,6 +22,7 @@ import '../models/promotion.dart';
 import 'web3/dao/governance_hub.dart';
 import 'web3/artist/artist_studio.dart';
 import 'web3/institution/institution_hub.dart';
+import 'web3/institution/institution_analytics.dart';
 import 'web3/marketplace/marketplace.dart';
 import 'web3/wallet/wallet_home.dart';
 import 'web3/wallet/connectwallet_screen.dart';
@@ -489,7 +490,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       unawaited(statsProvider.ensureSnapshot(
         entityType: 'user',
         entityId: walletAddress,
-        metrics: homeActivityPrivateDiscoveredMetrics,
+        metrics: homeActivityPrivateSnapshotMetrics,
         scope: 'private',
       ));
       unawaited(exhibitionsProvider.loadExhibitions(
@@ -1683,22 +1684,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ) &&
             publicSnapshot == null;
 
-        final discoveredSnapshot = statsProvider.getSnapshot(
+        final privateSnapshot = statsProvider.getSnapshot(
           entityType: 'user',
           entityId: wallet,
-          metrics: homeActivityPrivateDiscoveredMetrics,
+          metrics: homeActivityPrivateSnapshotMetrics,
           scope: 'private',
         );
-        final discoveredLoading = statsProvider.isSnapshotLoading(
+        final privateSnapshotLoading = statsProvider.isSnapshotLoading(
               entityType: 'user',
               entityId: wallet,
-              metrics: homeActivityPrivateDiscoveredMetrics,
+              metrics: homeActivityPrivateSnapshotMetrics,
               scope: 'private',
             ) &&
-            discoveredSnapshot == null;
+            privateSnapshot == null;
 
         final discoveredFromStats =
-            discoveredSnapshot?.counters['artworksDiscovered'] ?? 0;
+            privateSnapshot?.counters['artworksDiscovered'] ?? 0;
         final discoveredFromProfile = profileProvider.artworksCount;
         final discoveredFromLocal =
             (discoveredFromStats == 0 && discoveredFromProfile == 0)
@@ -1709,6 +1710,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           discoveredFromProfile,
           discoveredFromLocal,
         ].reduce((best, value) => value > best ? value : best);
+        final localArSessions = activityProvider.activities
+            .where((activity) => activity.category == ActivityCategory.ar)
+            .length;
+        final arSessionsFromStats =
+            privateSnapshot?.counters['arSessions'] ?? 0;
+        final arSessionsCount =
+            arSessionsFromStats > 0 ? arSessionsFromStats : localArSessions;
+        final arSessionsLoading =
+            (privateSnapshotLoading && arSessionsFromStats == 0) ||
+                (arSessionsFromStats == 0 &&
+                    localArSessions == 0 &&
+                    activityProvider.isLoading &&
+                    activityProvider.activities.isEmpty);
 
         final nowUtc = DateTime.now().toUtc();
         final programViewsSeries = statsProvider.getSeries(
@@ -1746,12 +1760,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             publicCounters: publicSnapshot?.counters ?? const <String, int>{},
             publicLoading: publicLoading,
             discoveredCount: discoveredCount,
-            discoveredLoading: discoveredLoading && discoveredCount == 0,
-            arSessions: activityProvider.activities
-                .where((activity) => activity.category == ActivityCategory.ar)
-                .length,
-            arSessionsLoading: activityProvider.isLoading &&
-                activityProvider.activities.isEmpty,
+            discoveredLoading: privateSnapshotLoading && discoveredCount == 0,
+            arSessions: arSessionsCount,
+            arSessionsLoading: arSessionsLoading,
             exhibitionsCount: exhibitionsProvider.myExhibitions.length,
             exhibitionsLoading: exhibitionsProvider.isMyExhibitionsLoading &&
                 exhibitionsProvider.myExhibitions.isEmpty,
@@ -1799,7 +1810,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           color: card.color,
                           showIconOnly: false,
                           isVerticalLayout: true,
-                          statType: card.statType,
+                          action: card.action,
                         ),
                       );
                     }).toList(),
@@ -1824,7 +1835,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             color: card.color,
                             showIconOnly: true,
                             isVerticalLayout: false,
-                            statType: card.statType,
+                            action: card.action,
                           ),
                         ),
                       );
@@ -1863,7 +1874,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       {Color? color,
       bool showIconOnly = false,
       bool isVerticalLayout = false,
-      String? statType}) {
+      HomeActivityCardAction? action}) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final statColor = color ?? AppColorUtils.featureColor(title, scheme);
@@ -1901,11 +1912,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               showIcon: shouldShowIcon,
               centeredWatermarkAlignment: Alignment.center,
               centeredWatermarkScale: shouldShowIcon ? 0.86 : 1.0,
+              centeredWatermarkVerticalBias: 0,
+              centeredWatermarkHovered: false,
               accent: statColor,
               tintBase: scheme.surface,
-              onTap: statType == null
+              onTap: action == null
                   ? null
-                  : () => _showStatsDialog(statType, icon),
+                  : () => _handleHomeActivityCardTap(action, icon),
               minHeight: _statCardHeight(
                 showIconOnly: showIconOnly,
                 isVerticalLayout: isVerticalLayout,
@@ -1939,6 +1952,32 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         );
       },
     );
+  }
+
+  void _handleHomeActivityCardTap(
+    HomeActivityCardAction action,
+    IconData icon,
+  ) {
+    switch (action.type) {
+      case HomeActivityCardActionType.analytics:
+        final statType = action.statType;
+        if (statType == null || statType.isEmpty) return;
+        _showStatsDialog(statType, icon);
+        return;
+      case HomeActivityCardActionType.institutionAnalytics:
+        final l10n = AppLocalizations.of(context)!;
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => Scaffold(
+              appBar: AppBar(
+                title: Text(l10n.homeStatProgramViews),
+              ),
+              body: const InstitutionAnalytics(),
+            ),
+          ),
+        );
+        return;
+    }
   }
 
   String _getGreeting(AppLocalizations l10n) {
@@ -2244,9 +2283,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               imageHeight: compactScreen ? 100 : 108,
               profileAvatarRadius: compactScreen ? 24 : 28,
               placeholderIconBuilder: _iconForRailItem,
-              profileFallbackLabel:
-                  AppLocalizations.of(context)?.desktopHomeCreatorFallbackName ??
-                      'Creator',
+              profileFallbackLabel: AppLocalizations.of(context)
+                      ?.desktopHomeCreatorFallbackName ??
+                  'Creator',
               subtitleBuilder: (context, item) =>
                   _buildHomeRailCardSubtitle(item, scheme),
               onItemTap: (item) {

@@ -273,6 +273,10 @@ class TelemetryService {
     );
   }
 
+  Future<void> trackArSessionStart() async {
+    await trackEvent(AppTelemetryEventTypes.arSessionStart);
+  }
+
   Future<void> trackEvent(String eventType,
       {Map<String, Object?> extra = const {}}) async {
     await ensureInitialized();

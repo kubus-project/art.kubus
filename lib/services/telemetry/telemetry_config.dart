@@ -44,6 +44,7 @@ class AppTelemetryEventTypes {
   static const String signUpAttempt = 'signup_attempt';
   static const String signUpSuccess = 'signup_success';
   static const String signUpFailure = 'signup_failure';
+  static const String arSessionStart = 'ar_session_start';
 
   static const Set<String> allowed = {
     screenView,
@@ -58,6 +59,6 @@ class AppTelemetryEventTypes {
     signUpAttempt,
     signUpSuccess,
     signUpFailure,
+    arSessionStart,
   };
 }
-

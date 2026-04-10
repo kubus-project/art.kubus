@@ -253,13 +253,26 @@ class StatsApiService {
     switch (raw) {
       case 'followers':
         return 'followers';
+      case 'following':
+        return 'following';
       case 'likes':
         return 'likesReceived';
+      case 'likesgiven':
+        return 'likesGiven';
       case 'views':
-      case 'visitors':
         return 'viewsReceived';
+      case 'visitors':
+        return 'visitorsReceived';
       case 'artworks':
         return 'artworks';
+      case 'eventshosted':
+        return 'eventsHosted';
+      case 'exhibitions':
+        return 'exhibitions';
+      case 'discovered':
+        return 'artworksDiscovered';
+      case 'arsessions':
+        return 'arSessions';
       case 'engagement':
         return 'engagement';
       default:

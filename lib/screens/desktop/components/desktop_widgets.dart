@@ -276,21 +276,36 @@ class _DesktopStatCardState extends State<DesktopStatCard> {
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
-      child: AnimatedContainer(
-        duration: animationTheme.short,
-        curve: animationTheme.defaultCurve,
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          boxShadow: _isHovered
-              ? [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.15),
-                    blurRadius: 12,
-                    offset: const Offset(0, 3),
-                  ),
-                ]
-              : null,
-        ),
+      child: TweenAnimationBuilder<double>(
+        tween: Tween<double>(end: _isHovered ? 1.0 : 0.0),
+        duration: animationTheme.medium,
+        curve: animationTheme.emphasisCurve,
+        builder: (context, hoverValue, child) {
+          return Transform.translate(
+            offset: Offset(0, -4 * hoverValue),
+            child: Transform.scale(
+              scale: 1 + (0.012 * hoverValue),
+              alignment: Alignment.center,
+              child: AnimatedContainer(
+                duration: animationTheme.medium,
+                curve: animationTheme.emphasisCurve,
+                decoration: BoxDecoration(
+                  borderRadius: radius,
+                  boxShadow: [
+                    BoxShadow(
+                      color:
+                          color.withValues(alpha: 0.05 + (0.14 * hoverValue)),
+                      blurRadius: 10 + (10 * hoverValue),
+                      spreadRadius: 0.5 * hoverValue,
+                      offset: Offset(0, 3 + (3 * hoverValue)),
+                    ),
+                  ],
+                ),
+                child: child,
+              ),
+            ),
+          );
+        },
         child: KubusStatCard(
           title: widget.label,
           value: widget.value,

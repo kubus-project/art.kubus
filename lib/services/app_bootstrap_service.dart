@@ -167,7 +167,7 @@ class AppBootstrapService {
             () => statsProvider.ensureSnapshot(
                   entityType: 'user',
                   entityId: resolvedWallet,
-                  metrics: homeActivityPrivateDiscoveredMetrics,
+                  metrics: homeActivityPrivateSnapshotMetrics,
                   scope: 'private',
                 )));
         p1.add(_runTask('my_exhibitions', () async {

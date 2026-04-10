@@ -60,6 +60,7 @@ import '../activity/advanced_analytics_screen.dart';
 import '../home_screen.dart' show ActivityScreen;
 import '../events/event_detail_screen.dart';
 import '../events/exhibition_detail_screen.dart';
+import '../web3/institution/institution_analytics.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/share/share_deep_link_parser.dart';
 import '../../services/share/share_types.dart';
@@ -263,7 +264,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       unawaited(statsProvider.ensureSnapshot(
         entityType: 'user',
         entityId: normalizedWallet,
-        metrics: homeActivityPrivateDiscoveredMetrics,
+        metrics: homeActivityPrivateSnapshotMetrics,
         scope: 'private',
       ));
       unawaited(exhibitionsProvider.loadExhibitions(
@@ -1055,14 +1056,14 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         : statsProvider.getSnapshot(
             entityType: 'user',
             entityId: walletAddress,
-            metrics: homeActivityPrivateDiscoveredMetrics,
+            metrics: homeActivityPrivateSnapshotMetrics,
             scope: 'private',
           );
     final discoveredLoading = walletAddress.isNotEmpty &&
         statsProvider.isSnapshotLoading(
           entityType: 'user',
           entityId: walletAddress,
-          metrics: homeActivityPrivateDiscoveredMetrics,
+          metrics: homeActivityPrivateSnapshotMetrics,
           scope: 'private',
         ) &&
         discoveredSnapshot == null;
@@ -1086,10 +1087,22 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       profileCounterValue: discoveredFromProfile,
       localFallbackValue: discoveredFromLocal,
     );
+    final localArSessions = activityProvider.activities
+        .where((activity) => activity.category == ActivityCategory.ar)
+        .length;
+    final arSessionsFromStats = discoveredSnapshot?.counters['arSessions'] ?? 0;
+    final arSessionsCount =
+        arSessionsFromStats > 0 ? arSessionsFromStats : localArSessions;
 
     final discoveredDisplayLoading = discoveredLoading &&
         discoveredFromProfile == 0 &&
         discoveredFromLocal == 0;
+    final arSessionsDisplayLoading =
+        (discoveredLoading && arSessionsFromStats == 0) ||
+            (arSessionsFromStats == 0 &&
+                localArSessions == 0 &&
+                activityProvider.isLoading &&
+                activityProvider.activities.isEmpty);
     final nowUtc = DateTime.now().toUtc();
     final programViewsSeries = walletAddress.isEmpty
         ? null
@@ -1130,11 +1143,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         publicLoading: publicLoading,
         discoveredCount: discoveredCount,
         discoveredLoading: discoveredDisplayLoading,
-        arSessions: activityProvider.activities
-            .where((activity) => activity.category == ActivityCategory.ar)
-            .length,
-        arSessionsLoading:
-            activityProvider.isLoading && activityProvider.activities.isEmpty,
+        arSessions: arSessionsCount,
+        arSessionsLoading: arSessionsDisplayLoading,
         exhibitionsCount: exhibitionsProvider.myExhibitions.length,
         exhibitionsLoading: exhibitionsProvider.isMyExhibitionsLoading &&
             exhibitionsProvider.myExhibitions.isEmpty,
@@ -1142,6 +1152,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         programViewsLoading: programViewsLoading,
       ),
     );
+    final sectionLoading = cards.every((card) => card.isLoading) &&
+        artworkProvider.isLoading('load_artworks');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1153,8 +1165,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           iconColor: AppColorUtils.coralAccent,
         ),
         const SizedBox(height: DetailSpacing.xl),
-        if (artworkProvider.isLoading('load_artworks') ||
-            (activityProvider.isLoading && activityProvider.activities.isEmpty))
+        if (sectionLoading)
           const Center(
             child: Padding(
               padding: EdgeInsets.symmetric(vertical: DetailSpacing.xl),
@@ -1180,6 +1191,9 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                           color: card.color,
                           centeredWatermarkAlignment: Alignment.center,
                           centeredWatermarkScale: 0.84,
+                          onTap: card.action == null
+                              ? null
+                              : () => _handleHomeActivityCardTap(card.action!),
                         ),
                       ))
                   .toList(growable: false),
@@ -1768,8 +1782,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           profileAvatarRadius: 34,
           enableHover: true,
           placeholderIconBuilder: _iconForHomeRail,
-          profileFallbackLabel: AppLocalizations.of(context)!
-              .desktopHomeCreatorFallbackName,
+          profileFallbackLabel:
+              AppLocalizations.of(context)!.desktopHomeCreatorFallbackName,
           subtitleBuilder: (context, item) => _buildHomeRailCardSubtitle(item),
           onItemTap: (item) {
             if (_hasHomeRailDestination(item)) {
@@ -1778,7 +1792,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           },
           titleStyle: KubusTextStyles.detailCardTitle,
           subtitleStyle: KubusTextStyles.navMetaLabel.copyWith(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.88),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.88),
           ),
         ),
       ],
@@ -2009,6 +2024,46 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => const ActivityScreen()),
       );
+    }
+  }
+
+  void _handleHomeActivityCardTap(HomeActivityCardAction action) {
+    final shellScope = DesktopShellScope.of(context);
+    switch (action.type) {
+      case HomeActivityCardActionType.analytics:
+        final statType = action.statType;
+        if (statType == null || statType.isEmpty) return;
+        if (shellScope != null) {
+          shellScope.pushSubScreen(
+            title: labelForHomeActivityStatType(
+              statType,
+              AppLocalizations.of(context)!,
+            ),
+            child: AdvancedAnalyticsScreen(
+              statType: statType,
+              embedded: true,
+            ),
+          );
+        } else {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => AdvancedAnalyticsScreen(statType: statType),
+            ),
+          );
+        }
+        return;
+      case HomeActivityCardActionType.institutionAnalytics:
+        if (shellScope != null) {
+          shellScope.pushSubScreen(
+            title: AppLocalizations.of(context)!.homeStatProgramViews,
+            child: const InstitutionAnalytics(),
+          );
+        } else {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const InstitutionAnalytics()),
+          );
+        }
+        return;
     }
   }
 
