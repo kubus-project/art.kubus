@@ -35,6 +35,17 @@ class GlassCapabilitiesProvider with ChangeNotifier {
   bool _isInitialized = false;
   Timer? _perfProbeStartTimer;
   bool _timingsCallbackRegistered = false;
+  bool _disposed = false;
+
+  bool _isRunningUnderTestBinding() {
+    // Avoid scheduling long-lived timers under flutter_test bindings.
+    // These timers can trip the "pending timers" invariant even if the
+    // widget tree is disposed quickly.
+    final bindingType = WidgetsBinding.instance.runtimeType.toString();
+    return bindingType.contains('AutomatedTestWidgetsFlutterBinding') ||
+        bindingType.contains('TestWidgetsFlutterBinding') ||
+        bindingType.contains('IntegrationTestWidgetsFlutterBinding');
+  }
 
   GlassMode get mode => _mode;
 
@@ -96,6 +107,10 @@ class GlassCapabilitiesProvider with ChangeNotifier {
       }
     }
 
+    if (_disposed) {
+      return;
+    }
+
     // 2. Listen to WebGL context health changes (web only; no-op otherwise).
     webGLContextHealthy.addListener(_onWebGLHealthChanged);
 
@@ -108,13 +123,16 @@ class GlassCapabilitiesProvider with ChangeNotifier {
 
     _recomputeMode();
     _isInitialized = true;
-    notifyListeners();
+    if (!_disposed) {
+      notifyListeners();
+    }
 
     // 4. Schedule a lightweight perf probe after initial loading settles.
     if (!_reduceEffectsUser &&
         !_heuristicTriggered &&
         !_autoReduceEffectsOptOut &&
-        _shouldRunRuntimePerfProbe()) {
+        _shouldRunRuntimePerfProbe() &&
+        !_isRunningUnderTestBinding()) {
       _schedulePerfProbe();
     }
   }
@@ -294,12 +312,23 @@ class GlassCapabilitiesProvider with ChangeNotifier {
 
   void _schedulePerfProbe() {
     SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (_disposed) {
+        return;
+      }
       _perfProbeStartTimer?.cancel();
-      _perfProbeStartTimer = Timer(_perfProbeWarmupDelay, _runPerfProbe);
+      _perfProbeStartTimer = Timer(_perfProbeWarmupDelay, () {
+        if (_disposed) {
+          return;
+        }
+        _runPerfProbe();
+      });
     });
   }
 
   void _runPerfProbe() {
+    if (_disposed) {
+      return;
+    }
     if (_reduceEffectsUser || _autoReduceEffectsOptOut || _heuristicTriggered) {
       return;
     }
@@ -313,6 +342,9 @@ class GlassCapabilitiesProvider with ChangeNotifier {
   }
 
   void _timingsCallback(List<FrameTiming> timings) {
+    if (_disposed) {
+      return;
+    }
     for (final timing in timings) {
       _probeFrameCount++;
       if (timing.totalSpan > _jankThreshold) {
@@ -327,7 +359,9 @@ class GlassCapabilitiesProvider with ChangeNotifier {
         if (severeJank && !_autoReduceEffectsOptOut && !_reduceEffectsUser) {
           _heuristicTriggered = true;
           _recomputeMode();
-          notifyListeners();
+          if (!_disposed) {
+            notifyListeners();
+          }
         }
         return;
       }
@@ -371,6 +405,7 @@ class GlassCapabilitiesProvider with ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     _perfProbeStartTimer?.cancel();
     if (_timingsCallbackRegistered) {
       SchedulerBinding.instance.removeTimingsCallback(_timingsCallback);

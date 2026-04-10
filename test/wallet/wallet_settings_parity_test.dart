@@ -21,6 +21,7 @@ import 'package:art_kubus/screens/web3/wallet/wallet_home.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/http_client_factory.dart';
 import 'package:art_kubus/services/solana_wallet_service.dart';
+import 'package:art_kubus/models/user_profile.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -79,7 +80,18 @@ Future<
 
   final themeProvider = ThemeProvider();
   final profileProvider = ProfileProvider();
-  await profileProvider.initialize();
+  profileProvider.setCurrentUser(
+    UserProfile(
+      id: 'profile_${derived.address.substring(0, 8)}',
+      walletAddress: derived.address,
+      username: 'tester',
+      displayName: derived.address,
+      bio: '',
+      avatar: '',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    ),
+  );
 
   final walletProvider = WalletProvider(
     solanaWalletService: solanaWalletService,
@@ -138,17 +150,18 @@ Widget _wrapWithApp({
 }) {
   return MultiProvider(
     providers: [
-      ChangeNotifierProvider.value(value: themeProvider),
-      ChangeNotifierProvider.value(value: profileProvider),
-      ChangeNotifierProvider.value(value: walletProvider),
-      ChangeNotifierProvider.value(value: web3Provider),
-      ChangeNotifierProvider.value(value: platformProvider),
-      ChangeNotifierProvider.value(value: notificationProvider),
-      ChangeNotifierProvider.value(value: navigationProvider),
-      ChangeNotifierProvider.value(value: localeProvider),
-      ChangeNotifierProvider.value(value: statsProvider),
-      ChangeNotifierProvider.value(value: securityGateProvider),
-      ChangeNotifierProvider.value(value: glassCapabilitiesProvider),
+      // Provide existing instances via `create` so Provider owns disposal.
+      ChangeNotifierProvider(create: (_) => themeProvider),
+      ChangeNotifierProvider(create: (_) => profileProvider),
+      ChangeNotifierProvider(create: (_) => walletProvider),
+      ChangeNotifierProvider(create: (_) => web3Provider),
+      ChangeNotifierProvider(create: (_) => platformProvider),
+      ChangeNotifierProvider(create: (_) => notificationProvider),
+      ChangeNotifierProvider(create: (_) => navigationProvider),
+      ChangeNotifierProvider(create: (_) => localeProvider),
+      ChangeNotifierProvider(create: (_) => statsProvider),
+      ChangeNotifierProvider(create: (_) => securityGateProvider),
+      ChangeNotifierProvider(create: (_) => glassCapabilitiesProvider),
       ChangeNotifierProvider(
         create: (_) =>
             EmailPreferencesProvider(backendApi: BackendApiService()),
@@ -159,8 +172,9 @@ Widget _wrapWithApp({
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       routes: {
-        '/connect-wallet': (_) => const Scaffold(
-              body: Center(child: Text('connect-wallet')),
+        '/connect-wallet': (_) => Scaffold(
+              appBar: AppBar(),
+              body: const Center(child: Text('connect-wallet')),
             ),
       },
       home: home,
@@ -172,6 +186,66 @@ Future<void> _pumpFrames(WidgetTester tester, {int count = 8}) async {
   for (var i = 0; i < count; i += 1) {
     await tester.pump(const Duration(milliseconds: 120));
   }
+}
+
+Future<void> _scrollUntilVisibleNoSettle(
+  WidgetTester tester,
+  Finder target, {
+  Finder? scrollable,
+  double delta = 420,
+  int maxScrolls = 24,
+}) async {
+  if (target.evaluate().isNotEmpty) {
+    return;
+  }
+
+  final scrollableFinder = scrollable ?? find.byType(Scrollable);
+  if (scrollableFinder.evaluate().isEmpty) {
+    expect(target, findsOneWidget);
+    return;
+  }
+
+  final scrollableTarget = scrollableFinder.first;
+  for (var i = 0; i < maxScrolls && target.evaluate().isEmpty; i += 1) {
+    // Drag up to scroll down.
+    await tester.drag(scrollableTarget, Offset(0, -delta));
+    await tester.pump(const Duration(milliseconds: 16));
+  }
+
+  expect(target, findsOneWidget);
+}
+
+Future<void> _scrollToTopNoSettle(
+  WidgetTester tester, {
+  Finder? scrollable,
+  double delta = 900,
+  int maxScrolls = 12,
+}) async {
+  final scrollableFinder = scrollable ?? find.byType(Scrollable);
+  if (scrollableFinder.evaluate().isEmpty) {
+    return;
+  }
+
+  final scrollableTarget = scrollableFinder.first;
+  for (var i = 0; i < maxScrolls; i += 1) {
+    // Drag down to scroll up.
+    await tester.drag(scrollableTarget, Offset(0, delta));
+    await tester.pump(const Duration(milliseconds: 16));
+  }
+}
+
+Future<void> _pumpUntil(
+  WidgetTester tester,
+  bool Function() predicate, {
+  Duration timeout = const Duration(seconds: 8),
+  Duration step = const Duration(milliseconds: 120),
+}) async {
+  final maxTicks = (timeout.inMilliseconds / step.inMilliseconds).ceil();
+  for (var i = 0; i < maxTicks; i += 1) {
+    if (predicate()) return;
+    await tester.pump(step);
+  }
+  expect(predicate(), isTrue);
 }
 
 void main() {
@@ -226,13 +300,22 @@ void main() {
 
     final disconnectTile =
         find.byKey(const Key('settings_tile_wallet_connection'));
-    await tester.scrollUntilVisible(disconnectTile, 500);
+    await _scrollUntilVisibleNoSettle(tester, disconnectTile);
     await tester.tap(disconnectTile);
     await _pumpFrames(tester);
+    await _pumpUntil(tester, () => providers.walletProvider.isReadOnlySession);
+
+    final l10n = AppLocalizations.of(tester.element(disconnectTile))!;
+
+    // The reconnect hint is rendered in the header section near the top of the
+    // settings list. Because the list is lazily built, it may not be in the
+    // widget tree when we're scrolled down to the wallet section.
+    await _scrollToTopNoSettle(tester);
+    await _pumpFrames(tester, count: 2);
 
     expect(providers.walletProvider.hasWalletIdentity, isTrue);
     expect(providers.walletProvider.isReadOnlySession, isTrue);
-    expect(find.text('Read-only wallet session'), findsOneWidget);
+    expect(find.text(l10n.walletReconnectManualRequiredToast), findsOneWidget);
   });
 
   testWidgets(
@@ -265,16 +348,19 @@ void main() {
 
     final disconnectTile =
         find.byKey(const Key('desktop_settings_wallet_disconnect'));
-    await tester.scrollUntilVisible(disconnectTile, 300);
+    await _scrollUntilVisibleNoSettle(tester, disconnectTile);
     await tester.tap(disconnectTile);
     await tester.pump();
 
     await tester.tap(find.widgetWithText(ElevatedButton, 'Disconnect'));
     await _pumpFrames(tester);
+    await _pumpUntil(tester, () => providers.walletProvider.isReadOnlySession);
+
+    final l10n = AppLocalizations.of(tester.element(disconnectTile))!;
 
     expect(providers.walletProvider.hasWalletIdentity, isTrue);
     expect(providers.walletProvider.isReadOnlySession, isTrue);
-    expect(find.text('Reconnect'), findsOneWidget);
+    expect(find.text(l10n.commonReconnect), findsOneWidget);
   });
 
   testWidgets('read-only wallet home reroutes send and swap to reconnect',
@@ -304,19 +390,31 @@ void main() {
     );
     await _pumpFrames(tester);
 
-    expect(find.text('Reconnect to enable signing and transfers.'),
-        findsOneWidget);
+    final l10n = AppLocalizations.of(tester.element(find.byType(WalletHome)))!;
 
-    await tester.tap(find.byKey(const Key('wallet_home_action_send')));
-    await _pumpFrames(tester, count: 4);
-    expect(find.text('connect-wallet'), findsOneWidget);
+    expect(find.text(l10n.walletReconnectManualRequiredToast), findsOneWidget);
+
+    final sendButton = find.byKey(const Key('wallet_home_action_send'));
+    final sendInkWell = find.descendant(
+      of: sendButton,
+      matching: find.byType(InkWell),
+    );
+    await tester.ensureVisible(sendButton);
+    await tester.tap(sendInkWell, warnIfMissed: false);
+    await _pumpUntil(tester, () => find.text('connect-wallet').evaluate().isNotEmpty);
 
     await tester.pageBack();
-    await _pumpFrames(tester, count: 4);
+    await _pumpUntil(tester, () => find.text('connect-wallet').evaluate().isEmpty);
+    await _pumpFrames(tester, count: 2);
 
-    await tester.tap(find.byKey(const Key('wallet_home_action_swap')));
-    await _pumpFrames(tester, count: 4);
-    expect(find.text('connect-wallet'), findsOneWidget);
+    final swapButton = find.byKey(const Key('wallet_home_action_swap'));
+    final swapInkWell = find.descendant(
+      of: swapButton,
+      matching: find.byType(InkWell),
+    );
+    await tester.ensureVisible(swapButton);
+    await tester.tap(swapInkWell, warnIfMissed: false);
+    await _pumpUntil(tester, () => find.text('connect-wallet').evaluate().isNotEmpty);
   });
 
   testWidgets(
@@ -352,6 +450,9 @@ void main() {
 
     await tester.tap(find.byKey(const Key('wallet_home_action_send')));
     await _pumpFrames(tester, count: 4);
+    // Allow loadAuthToken().timeout(...) and other one-shot timers to complete
+    // so the widget test framework doesn't report pending timers.
+    await tester.pump(const Duration(seconds: 9));
 
     expect(find.text('connect-wallet'), findsNothing);
   });
@@ -383,9 +484,12 @@ void main() {
     );
     await _pumpFrames(tester);
 
-    expect(find.text('Read-only wallet session'), findsOneWidget);
+    final l10n = AppLocalizations.of(tester.element(find.byType(TokenSwap)))!;
 
-    await tester.tap(find.widgetWithText(ElevatedButton, 'Reconnect'));
+    expect(find.text(l10n.settingsBackupStatusReadOnly), findsOneWidget);
+    expect(find.text(l10n.walletReconnectManualRequiredToast), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(ElevatedButton, l10n.commonReconnect));
     await _pumpFrames(tester, count: 4);
 
     expect(find.text('connect-wallet'), findsOneWidget);

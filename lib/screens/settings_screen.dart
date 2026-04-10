@@ -1037,11 +1037,6 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget _buildProfileSection(AppLocalizations l10n) {
     final profileProvider = Provider.of<ProfileProvider>(context);
     final emailPreferencesProvider = context.watch<EmailPreferencesProvider>();
-    if (emailPreferencesProvider.canManage &&
-        !emailPreferencesProvider.initialized &&
-        !emailPreferencesProvider.isLoading) {
-      unawaited(emailPreferencesProvider.initialize());
-    }
     final artistRole = profileProvider.currentUser?.isArtist ?? false;
     final institutionRole = profileProvider.currentUser?.isInstitution ?? false;
     final roleSummary = l10n.settingsRoleSummary(

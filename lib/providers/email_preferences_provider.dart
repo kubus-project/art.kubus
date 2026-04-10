@@ -48,6 +48,19 @@ class EmailPreferencesProvider extends ChangeNotifier {
       // Schedule notifyListeners in microtask to avoid synchronous notification
       // during ProxyProvider update callback, which would cause infinite recursion.
       Future.microtask(notifyListeners);
+      return;
+    }
+
+    // When a session becomes active, initialize lazily outside the ProxyProvider
+    // update/build phase. This avoids triggering notifyListeners while widgets
+    // are building (and keeps init in provider-land, not screen-land).
+    if (canManage && !_initialized && !_isLoading && _initializeCompleter == null) {
+      Future.microtask(() {
+        if (!canManage || _initialized || _isLoading || _initializeCompleter != null) {
+          return;
+        }
+        initialize();
+      });
     }
   }
 

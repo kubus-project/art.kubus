@@ -53,6 +53,8 @@ void _walletLog(String message) {
 }
 
 class WalletProvider extends ChangeNotifier {
+  static const Duration _secureStorageOpTimeout = Duration(milliseconds: 800);
+
   final SolanaWalletService _solanaWalletService;
   final BackendApiService _apiService = BackendApiService();
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
@@ -311,7 +313,9 @@ class WalletProvider extends ChangeNotifier {
   /// Callers must enforce their own security gate before calling this.
   Future<String?> readCachedMnemonic() async {
     try {
-      return await _secureStorage.read(key: 'cached_mnemonic');
+      return await _secureStorage
+          .read(key: 'cached_mnemonic')
+          .timeout(_secureStorageOpTimeout);
     } catch (e) {
       _walletLog('failed to read cached mnemonic: $e');
       return null;
@@ -321,10 +325,15 @@ class WalletProvider extends ChangeNotifier {
   // Cache mnemonic for 7 days so user doesn't need to re-enter it
   Future<void> _cacheMnemonic(String mnemonic) async {
     try {
-      await _secureStorage.write(key: 'cached_mnemonic', value: mnemonic);
-      await _secureStorage.write(
-          key: 'cached_mnemonic_ts',
-          value: DateTime.now().millisecondsSinceEpoch.toString());
+      await _secureStorage
+          .write(key: 'cached_mnemonic', value: mnemonic)
+          .timeout(_secureStorageOpTimeout);
+      await _secureStorage
+          .write(
+            key: 'cached_mnemonic_ts',
+            value: DateTime.now().millisecondsSinceEpoch.toString(),
+          )
+          .timeout(_secureStorageOpTimeout);
     } catch (e) {
       _walletLog('failed to cache mnemonic: $e');
     }
@@ -332,8 +341,12 @@ class WalletProvider extends ChangeNotifier {
 
   Future<void> clearCachedMnemonic() async {
     try {
-      await _secureStorage.delete(key: 'cached_mnemonic');
-      await _secureStorage.delete(key: 'cached_mnemonic_ts');
+      await _secureStorage
+          .delete(key: 'cached_mnemonic')
+          .timeout(_secureStorageOpTimeout);
+      await _secureStorage
+          .delete(key: 'cached_mnemonic_ts')
+          .timeout(_secureStorageOpTimeout);
     } catch (e) {
       _walletLog('failed to clear cached mnemonic: $e');
     }
@@ -342,8 +355,12 @@ class WalletProvider extends ChangeNotifier {
   Future<void> _loadCachedWallet() async {
     try {
       _walletLog('_loadCachedWallet: starting cached wallet check');
-      final mnemonic = await _secureStorage.read(key: 'cached_mnemonic');
-      final tsStr = await _secureStorage.read(key: 'cached_mnemonic_ts');
+      final mnemonic = await _secureStorage
+          .read(key: 'cached_mnemonic')
+          .timeout(_secureStorageOpTimeout);
+      final tsStr = await _secureStorage
+          .read(key: 'cached_mnemonic_ts')
+          .timeout(_secureStorageOpTimeout);
 
       if (mnemonic != null) {
         if (tsStr != null) {
@@ -2004,7 +2021,9 @@ class WalletProvider extends ChangeNotifier {
       _walletLog('disconnectWallet: failed to clear wallet identity: $e');
     }
     try {
-      await SolanaWalletConnectService.instance.disconnect();
+      await SolanaWalletConnectService.instance
+          .disconnect()
+          .timeout(const Duration(seconds: 2));
     } catch (e) {
       _walletLog('disconnectWallet: walletconnect cleanup failed: $e');
     }

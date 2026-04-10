@@ -2464,11 +2464,6 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     final profileProvider = context.watch<ProfileProvider>();
     final notificationPreferences =
         profileProvider.preferences.notificationPreferences;
-    if (emailPreferencesProvider.canManage &&
-        !emailPreferencesProvider.initialized &&
-        !emailPreferencesProvider.isLoading) {
-      unawaited(emailPreferencesProvider.initialize());
-    }
     Future<void> persistEmailPreferences(EmailPreferences next) async {
       final ok = await emailPreferencesProvider.updatePreferences(next);
       if (!ok && mounted) {
