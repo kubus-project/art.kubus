@@ -1634,7 +1634,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowWalletBackupBody.
   ///
   /// In en, this message translates to:
-  /// **'This phrase restores your wallet, your account access, and future rights tied to it on a new device.'**
+  /// **'This phrase restores your wallet, your account access, and future features tied to it on a new device.'**
   String get onboardingFlowWalletBackupBody;
 
   /// No description provided for @onboardingFlowWalletBackupPrivacyWarning.
@@ -1646,7 +1646,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowWalletBackupLossWarning.
   ///
   /// In en, this message translates to:
-  /// **'If you lose it, we cannot restore the wallet for you. You may lose access to your account, funds, collectibles, and future platform rights tied to it.'**
+  /// **'If you lose it, we cannot restore the wallet for you. You may lose access to your account, digital activity, collectibles, and future account-linked features.'**
   String get onboardingFlowWalletBackupLossWarning;
 
   /// No description provided for @onboardingFlowWalletBackupAction.
@@ -2282,7 +2282,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopSettingsWalletSectionSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Manage your wallet connection and optional features'**
+  /// **'Manage your account wallet, recovery access, and connected features'**
   String get desktopSettingsWalletSectionSubtitle;
 
   /// No description provided for @desktopSettingsViewWalletButton.
@@ -2306,7 +2306,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopSettingsDisconnectWalletTileSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Disable wallet features'**
+  /// **'Disconnect this device from your account wallet'**
   String get desktopSettingsDisconnectWalletTileSubtitle;
 
   /// No description provided for @desktopSettingsDisconnectWalletDialogTitle.
@@ -2402,7 +2402,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopSettingsAchievementsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Track your progress and collect KUB8 points'**
+  /// **'Track your progress, milestones, and community recognition'**
   String get desktopSettingsAchievementsSubtitle;
 
   /// No description provided for @desktopSettingsAchievementsStatArtworksDiscovered.
@@ -2480,13 +2480,13 @@ abstract class AppLocalizations {
   /// No description provided for @desktopSettingsAchievementNftCreatorTitle.
   ///
   /// In en, this message translates to:
-  /// **'NFT creator'**
+  /// **'Digital collectible creator'**
   String get desktopSettingsAchievementNftCreatorTitle;
 
   /// No description provided for @desktopSettingsAchievementNftCreatorDescription.
   ///
   /// In en, this message translates to:
-  /// **'Create your first collectible (NFT)'**
+  /// **'Create your first digital collectible'**
   String get desktopSettingsAchievementNftCreatorDescription;
 
   /// No description provided for @desktopSettingsHelpSupportTitle.
@@ -2570,7 +2570,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopSettingsFeatureWeb3IntegrationDescription.
   ///
   /// In en, this message translates to:
-  /// **'Optional Solana wallet connection and KUB8 points'**
+  /// **'Account wallet on Solana, with KUB8 points and future participation features'**
   String get desktopSettingsFeatureWeb3IntegrationDescription;
 
   /// No description provided for @desktopSettingsFeatureNftMintingTitle.
@@ -12524,7 +12524,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeExploreWeb3Button.
   ///
   /// In en, this message translates to:
-  /// **'Optional wallet features'**
+  /// **'Wallet & future features'**
   String get homeExploreWeb3Button;
 
   /// No description provided for @homeQuickActionsTitle.
@@ -12860,7 +12860,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopHomeDiscoverArtDescription.
   ///
   /// In en, this message translates to:
-  /// **'Explore immersive augmented reality artworks, connect with creators, and collect KUB8 points as you discover art.'**
+  /// **'Explore artworks in augmented reality, connect with creators, and take part in a growing cultural layer around public art.'**
   String get desktopHomeDiscoverArtDescription;
 
   /// No description provided for @desktopHomeYourActivityTitle.
@@ -12890,7 +12890,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopHomeStatNftsCollected.
   ///
   /// In en, this message translates to:
-  /// **'Collectibles (NFT)'**
+  /// **'Digital collectibles'**
   String get desktopHomeStatNftsCollected;
 
   /// No description provided for @desktopHomeStatKub8Earned.
@@ -12938,7 +12938,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopHomeWeb3HubSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Access optional features'**
+  /// **'Wallet access, continuity, and future participation'**
   String get desktopHomeWeb3HubSubtitle;
 
   /// No description provided for @desktopHomeTrendingArtTitle.
@@ -14300,7 +14300,7 @@ abstract class AppLocalizations {
   /// No description provided for @desktopGovernanceAcquireKub8Hint.
   ///
   /// In en, this message translates to:
-  /// **'Acquire KUB8 tokens to participate in governance'**
+  /// **'Build participation and recognition to take part in governance'**
   String get desktopGovernanceAcquireKub8Hint;
 
   /// No description provided for @profileEditTitle.
