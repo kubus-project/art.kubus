@@ -467,6 +467,42 @@ abstract class AppLocalizations {
   /// **'Upload'**
   String get commonUpload;
 
+  /// No description provided for @uploadCompressionProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing media…'**
+  String get uploadCompressionProcessing;
+
+  /// No description provided for @uploadCompressionImageProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Optimizing image…'**
+  String get uploadCompressionImageProcessing;
+
+  /// No description provided for @uploadCompressionVideoProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Optimizing video…'**
+  String get uploadCompressionVideoProcessing;
+
+  /// No description provided for @uploadCompressionModelProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Optimizing 3D asset…'**
+  String get uploadCompressionModelProcessing;
+
+  /// No description provided for @uploadCompressionDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Media ready'**
+  String get uploadCompressionDone;
+
+  /// No description provided for @uploadCompressionSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'Using original file'**
+  String get uploadCompressionSkipped;
+
   /// No description provided for @commonViewInAr.
   ///
   /// In en, this message translates to:

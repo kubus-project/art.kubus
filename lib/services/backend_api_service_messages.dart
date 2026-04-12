@@ -37,8 +37,9 @@ Future<Map<String, dynamic>> _backendApiFetchMessagesImpl(
     AppConfig.debugPrint(
       'BackendApiService.fetchMessages: conversationId=$conversationId authToken present=${service._authToken != null && service._authToken!.isNotEmpty}',
     );
-    final uri = Uri.parse('${service.baseUrl}/api/messages/$conversationId/messages')
-        .replace(
+    final uri =
+        Uri.parse('${service.baseUrl}/api/messages/$conversationId/messages')
+            .replace(
       queryParameters: {
         'page': page.toString(),
         'limit': limit.toString(),
@@ -115,7 +116,8 @@ Future<Map<String, dynamic>> _backendApiFetchConversationMembersImpl(
     }
     return {'success': false, 'status': response.statusCode};
   } catch (e) {
-    AppConfig.debugPrint('BackendApiService.fetchConversationMembers failed: $e');
+    AppConfig.debugPrint(
+        'BackendApiService.fetchConversationMembers failed: $e');
     return {'success': false, 'error': e.toString()};
   }
 }
@@ -125,12 +127,41 @@ Future<Map<String, dynamic>> _backendApiUploadMessageAttachmentImpl(
   String conversationId,
   List<int> bytes,
   String filename,
-  String contentType,
-) async {
+  String contentType, {
+  bool compress = true,
+  UploadCompressionPolicy? compressionPolicy,
+  void Function(UploadCompressionProgress progress)? onCompressionProgress,
+}) async {
   try {
-    final uri = Uri.parse('${service.baseUrl}/api/messages/$conversationId/messages');
+    final uri =
+        Uri.parse('${service.baseUrl}/api/messages/$conversationId/messages');
     final placeholder =
         filename.isNotEmpty ? 'Attachment - $filename' : 'Shared an attachment';
+    var uploadBytes = Uint8List.fromList(bytes);
+    var uploadFileName = filename;
+    var uploadContentType = contentType;
+    Map<String, String> compressionMetadata = const <String, String>{};
+
+    if (compress) {
+      final compression = await service._mediaUploadOptimizer.optimize(
+        UploadCompressionRequestDto(
+          bytes: uploadBytes,
+          fileName: filename,
+          fileType: contentType,
+          contentType: contentType,
+          metadata: const <String, String>{
+            'entity': 'message',
+            'kind': 'attachment',
+          },
+          policy: compressionPolicy ?? UploadCompressionPolicyDto.standard,
+        ),
+        onProgress: onCompressionProgress,
+      );
+      uploadBytes = compression.bytes;
+      uploadFileName = compression.fileName;
+      uploadContentType = compression.contentType ?? uploadContentType;
+      compressionMetadata = compression.toMetadataFields();
+    }
 
     http.MultipartRequest buildRequest() {
       final request = http.MultipartRequest('POST', uri);
@@ -138,17 +169,21 @@ Future<Map<String, dynamic>> _backendApiUploadMessageAttachmentImpl(
       request.files.add(
         http.MultipartFile.fromBytes(
           'file',
-          bytes,
-          filename: filename,
-          contentType: MediaType.parse(contentType),
+          uploadBytes,
+          filename: uploadFileName,
+          contentType: MediaType.parse(uploadContentType),
         ),
       );
       request.fields['message'] = placeholder;
       request.fields['content'] = placeholder;
+      if (compressionMetadata.isNotEmpty) {
+        request.fields['metadata'] = jsonEncode(compressionMetadata);
+      }
       return request;
     }
 
-    final response = await service._sendMultipart(buildRequest, includeAuth: true);
+    final response =
+        await service._sendMultipart(buildRequest, includeAuth: true);
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
@@ -158,7 +193,8 @@ Future<Map<String, dynamic>> _backendApiUploadMessageAttachmentImpl(
       'body': response.body,
     };
   } catch (e) {
-    AppConfig.debugPrint('BackendApiService.uploadMessageAttachment failed: $e');
+    AppConfig.debugPrint(
+        'BackendApiService.uploadMessageAttachment failed: $e');
     return {'success': false, 'error': e.toString()};
   }
 }
@@ -195,10 +231,37 @@ Future<Map<String, dynamic>> _backendApiUploadConversationAvatarImpl(
   String conversationId,
   List<int> bytes,
   String filename,
-  String contentType,
-) async {
+  String contentType, {
+  bool compress = true,
+  UploadCompressionPolicy? compressionPolicy,
+  void Function(UploadCompressionProgress progress)? onCompressionProgress,
+}) async {
   try {
-    var uri = Uri.parse('${service.baseUrl}/api/conversations/$conversationId/avatar');
+    var uri = Uri.parse(
+        '${service.baseUrl}/api/conversations/$conversationId/avatar');
+    var uploadBytes = Uint8List.fromList(bytes);
+    var uploadFileName = filename;
+    var uploadContentType = contentType;
+
+    if (compress) {
+      final compression = await service._mediaUploadOptimizer.optimize(
+        UploadCompressionRequestDto(
+          bytes: uploadBytes,
+          fileName: filename,
+          fileType: contentType,
+          contentType: contentType,
+          metadata: const <String, String>{
+            'entity': 'conversation',
+            'kind': 'avatar',
+          },
+          policy: compressionPolicy ?? UploadCompressionPolicyDto.standard,
+        ),
+        onProgress: onCompressionProgress,
+      );
+      uploadBytes = compression.bytes;
+      uploadFileName = compression.fileName;
+      uploadContentType = compression.contentType ?? uploadContentType;
+    }
 
     http.MultipartRequest buildPrimary() {
       final request = http.MultipartRequest('POST', uri);
@@ -206,15 +269,16 @@ Future<Map<String, dynamic>> _backendApiUploadConversationAvatarImpl(
       request.files.add(
         http.MultipartFile.fromBytes(
           'file',
-          bytes,
-          filename: filename,
-          contentType: MediaType.parse(contentType),
+          uploadBytes,
+          filename: uploadFileName,
+          contentType: MediaType.parse(uploadContentType),
         ),
       );
       return request;
     }
 
-    var response = await service._sendMultipart(buildPrimary, includeAuth: true);
+    var response =
+        await service._sendMultipart(buildPrimary, includeAuth: true);
     if (response.statusCode == 200 || response.statusCode == 201) {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
@@ -227,9 +291,9 @@ Future<Map<String, dynamic>> _backendApiUploadConversationAvatarImpl(
       request.files.add(
         http.MultipartFile.fromBytes(
           'file',
-          bytes,
-          filename: filename,
-          contentType: MediaType.parse(contentType),
+          uploadBytes,
+          filename: uploadFileName,
+          contentType: MediaType.parse(uploadContentType),
         ),
       );
       return request;
@@ -246,7 +310,8 @@ Future<Map<String, dynamic>> _backendApiUploadConversationAvatarImpl(
       'body': response.body,
     };
   } catch (e) {
-    AppConfig.debugPrint('BackendApiService.uploadConversationAvatar failed: $e');
+    AppConfig.debugPrint(
+        'BackendApiService.uploadConversationAvatar failed: $e');
     return {'success': false, 'error': e.toString()};
   }
 }
@@ -278,7 +343,8 @@ Future<Map<String, dynamic>> _backendApiRemoveConversationMemberImpl(
   String walletOrUsername,
 ) async {
   try {
-    final uri = Uri.parse('${service.baseUrl}/api/messages/$conversationId/members');
+    final uri =
+        Uri.parse('${service.baseUrl}/api/messages/$conversationId/members');
     final response = await service._delete(
       uri,
       headers: service._getHeaders(),
@@ -292,7 +358,8 @@ Future<Map<String, dynamic>> _backendApiRemoveConversationMemberImpl(
     }
 
     final fallback = await service._post(
-      Uri.parse('${service.baseUrl}/api/messages/$conversationId/members/remove'),
+      Uri.parse(
+          '${service.baseUrl}/api/messages/$conversationId/members/remove'),
       headers: service._getHeaders(),
       body: jsonEncode({'walletAddress': walletOrUsername}),
     );
@@ -302,7 +369,8 @@ Future<Map<String, dynamic>> _backendApiRemoveConversationMemberImpl(
 
     return {'success': false, 'status': response.statusCode};
   } catch (e) {
-    AppConfig.debugPrint('BackendApiService.removeConversationMember failed: $e');
+    AppConfig.debugPrint(
+        'BackendApiService.removeConversationMember failed: $e');
     return {'success': false, 'error': e.toString()};
   }
 }
@@ -314,7 +382,8 @@ Future<Map<String, dynamic>> _backendApiTransferConversationOwnerImpl(
 ) async {
   try {
     final response = await service._post(
-      Uri.parse('${service.baseUrl}/api/messages/$conversationId/transfer-owner'),
+      Uri.parse(
+          '${service.baseUrl}/api/messages/$conversationId/transfer-owner'),
       headers: service._getHeaders(),
       body: jsonEncode({'newOwnerWallet': newOwnerWallet}),
     );
@@ -323,7 +392,8 @@ Future<Map<String, dynamic>> _backendApiTransferConversationOwnerImpl(
     }
     return {'success': false, 'status': response.statusCode};
   } catch (e) {
-    AppConfig.debugPrint('BackendApiService.transferConversationOwner failed: $e');
+    AppConfig.debugPrint(
+        'BackendApiService.transferConversationOwner failed: $e');
     return {'success': false, 'error': e.toString()};
   }
 }
@@ -354,7 +424,8 @@ Future<Map<String, dynamic>> _backendApiMarkMessageReadImpl(
 ) async {
   try {
     final response = await service._put(
-      Uri.parse('${service.baseUrl}/api/messages/$conversationId/messages/$messageId/read'),
+      Uri.parse(
+          '${service.baseUrl}/api/messages/$conversationId/messages/$messageId/read'),
       headers: service._getHeaders(),
     );
     if (response.statusCode == 200) {

@@ -30,6 +30,7 @@ import 'user_action_logger.dart';
 import 'auth_gating_service.dart';
 import 'auth_session_coordinator.dart';
 import 'http_client_factory.dart';
+import 'media_upload_optimizer.dart';
 import 'telemetry/kubus_client_context.dart';
 
 part 'backend_api_service_auth_helpers.dart';
@@ -220,6 +221,7 @@ class BackendApiService
 
   http.Client _client = http.Client();
   AuthSessionCoordinator? _authCoordinator;
+  MediaUploadOptimizer _mediaUploadOptimizer = const MediaUploadOptimizer();
 
   // Used only for diagnostic logging; the actual behavior is determined by the
   // platform client returned by [createPlatformHttpClient()].
@@ -392,6 +394,11 @@ class BackendApiService
   @visibleForTesting
   void setHttpClient(http.Client client) {
     _client = client;
+  }
+
+  @visibleForTesting
+  void setMediaUploadOptimizerForTesting(MediaUploadOptimizer optimizer) {
+    _mediaUploadOptimizer = optimizer;
   }
 
   @visibleForTesting
@@ -1719,7 +1726,8 @@ class BackendApiService
     for (final candidateBaseUrl in _implicitFailoverCandidates(method)) {
       final candidateOriginUri = _baseUrlOriginUri(candidateBaseUrl);
       final candidateOrigin = _uriOriginKey(candidateOriginUri);
-      if (candidateOrigin == null || attemptedOrigins.contains(candidateOrigin)) {
+      if (candidateOrigin == null ||
+          attemptedOrigins.contains(candidateOrigin)) {
         continue;
       }
       return _rewriteUriBase(originalUri, candidateBaseUrl);
@@ -2297,7 +2305,7 @@ class BackendApiService
       );
 
   Future<Map<String, dynamic>> resendEmailVerification(
-      {required String email}) =>
+          {required String email}) =>
       _resendEmailVerificationRequest(
         email: email,
         includeAuth: false,
@@ -2314,7 +2322,7 @@ class BackendApiService
   /// Check whether an email has been verified.
   /// GET /api/auth/email-status?email=...
   Future<Map<String, dynamic>> getEmailVerificationStatus(
-      {required String email}) =>
+          {required String email}) =>
       _backendApiGetEmailVerificationStatus(
         this,
         email: email,
@@ -2380,8 +2388,7 @@ class BackendApiService
         displayName: displayName,
       );
 
-  Future<Map<String, dynamic>> bindAuthenticatedWallet(
-      String walletAddress) =>
+  Future<Map<String, dynamic>> bindAuthenticatedWallet(String walletAddress) =>
       _backendApiBindAuthenticatedWallet(this, walletAddress);
 
   Future<EncryptedWalletBackupDefinition?> getEncryptedWalletBackup({
@@ -2627,7 +2634,7 @@ class BackendApiService
   /// Fetch messages for a conversation
   /// GET /api/messages/:conversationId/messages
   Future<Map<String, dynamic>> fetchMessages(String conversationId,
-      {int page = 1, int limit = 50}) =>
+          {int page = 1, int limit = 50}) =>
       _backendApiFetchMessagesImpl(
         this,
         conversationId,
@@ -2638,8 +2645,8 @@ class BackendApiService
   /// Send a message to a conversation (JSON)
   /// POST /api/messages/:conversationId/messages { message, data, replyToId }
   Future<Map<String, dynamic>> sendMessage(
-      String conversationId, String message,
-      {Map<String, dynamic>? data, String? replyToId}) =>
+          String conversationId, String message,
+          {Map<String, dynamic>? data, String? replyToId}) =>
       _backendApiSendMessageImpl(
         this,
         conversationId,
@@ -2650,24 +2657,32 @@ class BackendApiService
 
   /// Fetch conversation members
   /// GET /api/messages/:conversationId/members
-  Future<Map<String, dynamic>> fetchConversationMembers(String conversationId) =>
+  Future<Map<String, dynamic>> fetchConversationMembers(
+          String conversationId) =>
       _backendApiFetchConversationMembersImpl(this, conversationId);
 
   /// Upload a message attachment by posting multipart to the messages endpoint
   Future<Map<String, dynamic>> uploadMessageAttachment(String conversationId,
-      List<int> bytes, String filename, String contentType) =>
+          List<int> bytes, String filename, String contentType,
+          {bool compress = true,
+          UploadCompressionPolicy? compressionPolicy,
+          void Function(UploadCompressionProgress progress)?
+              onCompressionProgress}) =>
       _backendApiUploadMessageAttachmentImpl(
         this,
         conversationId,
         bytes,
         filename,
         contentType,
+        compress: compress,
+        compressionPolicy: compressionPolicy,
+        onCompressionProgress: onCompressionProgress,
       );
 
   /// Create a conversation
   /// POST /api/messages { title, members }
   Future<Map<String, dynamic>> createConversation(
-      {String? title, bool isGroup = false, List<String>? members}) =>
+          {String? title, bool isGroup = false, List<String>? members}) =>
       _backendApiCreateConversationImpl(
         this,
         title: title,
@@ -2677,18 +2692,25 @@ class BackendApiService
 
   /// Upload conversation avatar (attempt common endpoints)
   Future<Map<String, dynamic>> uploadConversationAvatar(String conversationId,
-      List<int> bytes, String filename, String contentType) =>
+          List<int> bytes, String filename, String contentType,
+          {bool compress = true,
+          UploadCompressionPolicy? compressionPolicy,
+          void Function(UploadCompressionProgress progress)?
+              onCompressionProgress}) =>
       _backendApiUploadConversationAvatarImpl(
         this,
         conversationId,
         bytes,
         filename,
         contentType,
+        compress: compress,
+        compressionPolicy: compressionPolicy,
+        onCompressionProgress: onCompressionProgress,
       );
 
   /// Add a member to conversation
   Future<Map<String, dynamic>> addConversationMember(
-      String conversationId, String walletAddress) =>
+          String conversationId, String walletAddress) =>
       _backendApiAddConversationMemberImpl(
         this,
         conversationId,
@@ -2697,7 +2719,7 @@ class BackendApiService
 
   /// Remove a member from conversation (best-effort)
   Future<Map<String, dynamic>> removeConversationMember(
-      String conversationId, String walletOrUsername) =>
+          String conversationId, String walletOrUsername) =>
       _backendApiRemoveConversationMemberImpl(
         this,
         conversationId,
@@ -2706,7 +2728,7 @@ class BackendApiService
 
   /// Transfer conversation ownership (best-effort)
   Future<Map<String, dynamic>> transferConversationOwner(
-      String conversationId, String newOwnerWallet) =>
+          String conversationId, String newOwnerWallet) =>
       _backendApiTransferConversationOwnerImpl(
         this,
         conversationId,
@@ -2719,11 +2741,11 @@ class BackendApiService
 
   /// Mark a specific message as read
   Future<Map<String, dynamic>> markMessageRead(
-      String conversationId, String messageId) =>
+          String conversationId, String messageId) =>
       _backendApiMarkMessageReadImpl(this, conversationId, messageId);
 
   Future<Map<String, dynamic>> renameConversation(
-      String conversationId, String newTitle) =>
+          String conversationId, String newTitle) =>
       _backendApiRenameConversationImpl(this, conversationId, newTitle);
 
   /// Update user profile (preferences / metadata)
@@ -2779,8 +2801,7 @@ class BackendApiService
   /// Create or update profile
   /// POST /api/profiles
   @override
-  Future<Map<String, dynamic>> saveProfile(
-      Map<String, dynamic> profileData) =>
+  Future<Map<String, dynamic>> saveProfile(Map<String, dynamic> profileData) =>
       _backendApiSaveProfileImpl(this, profileData);
 
   /// List artists
@@ -8177,6 +8198,9 @@ class BackendApiService
     required String fileType,
     Map<String, String>? metadata,
     String? walletAddress,
+    bool compress = true,
+    UploadCompressionPolicy? compressionPolicy,
+    void Function(UploadCompressionProgress progress)? onCompressionProgress,
   }) async {
     return _backendApiUploadFileImpl(
       this,
@@ -8185,6 +8209,9 @@ class BackendApiService
       fileType: fileType,
       metadata: metadata,
       walletAddress: walletAddress,
+      compress: compress,
+      compressionPolicy: compressionPolicy,
+      onCompressionProgress: onCompressionProgress,
     );
   }
 
@@ -8195,6 +8222,9 @@ class BackendApiService
     String fileType = 'image',
     String? walletAddress,
     String source = 'map_marker',
+    bool compress = true,
+    UploadCompressionPolicy? compressionPolicy,
+    void Function(UploadCompressionProgress progress)? onCompressionProgress,
   }) async {
     return _backendApiUploadMarkerCoverImageImpl(
       this,
@@ -8203,6 +8233,9 @@ class BackendApiService
       fileType: fileType,
       walletAddress: walletAddress,
       source: source,
+      compress: compress,
+      compressionPolicy: compressionPolicy,
+      onCompressionProgress: onCompressionProgress,
     );
   }
 
@@ -8214,6 +8247,9 @@ class BackendApiService
     required String fileName,
     required String fileType,
     Map<String, String>? metadata,
+    bool compress = true,
+    UploadCompressionPolicy? compressionPolicy,
+    void Function(UploadCompressionProgress progress)? onCompressionProgress,
   }) async {
     return _backendApiUploadAvatarToProfileImpl(
       this,
@@ -8221,6 +8257,9 @@ class BackendApiService
       fileName: fileName,
       fileType: fileType,
       metadata: metadata,
+      compress: compress,
+      compressionPolicy: compressionPolicy,
+      onCompressionProgress: onCompressionProgress,
     );
   }
 

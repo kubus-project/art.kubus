@@ -197,6 +197,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonUpload => 'Upload';
 
   @override
+  String get uploadCompressionProcessing => 'Preparing media…';
+
+  @override
+  String get uploadCompressionImageProcessing => 'Optimizing image…';
+
+  @override
+  String get uploadCompressionVideoProcessing => 'Optimizing video…';
+
+  @override
+  String get uploadCompressionModelProcessing => 'Optimizing 3D asset…';
+
+  @override
+  String get uploadCompressionDone => 'Media ready';
+
+  @override
+  String get uploadCompressionSkipped => 'Using original file';
+
+  @override
   String get commonViewInAr => 'View in AR';
 
   @override

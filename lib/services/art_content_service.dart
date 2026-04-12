@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import 'backend_api_service.dart';
 import 'storage_config.dart';
 
 /// Service for handling generic (non-AR) art media uploads and storage stats.
@@ -17,36 +18,24 @@ class ArtContentService {
     Map<String, dynamic>? metadata,
   }) async {
     try {
-      final url = Uri.parse('${StorageConfig.httpBackend}/api/upload');
-      final request = http.MultipartRequest('POST', url);
-
-      request.files.add(http.MultipartFile.fromBytes(
-        'file',
-        data,
-        filename: filename,
-      ));
-
-      if (metadata != null && metadata.isNotEmpty) {
-        request.fields['metadata'] = jsonEncode(metadata);
-      }
-
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final jsonResponse = jsonDecode(response.body) as Map<String, dynamic>;
-        final fileUrl = jsonResponse['url'] as String?;
-        if (fileUrl != null) {
-          if (kDebugMode) {
-            debugPrint('ArtContentService: Uploaded media to $fileUrl');
-          }
-          return fileUrl;
-        }
-      } else {
+      final fields = <String, String>{};
+      metadata?.forEach((key, value) {
+        if (value != null) fields[key] = value.toString();
+      });
+      final result = await BackendApiService().uploadFile(
+        fileBytes: data,
+        fileName: filename,
+        fileType: fields['fileType'] ?? fields['type'] ?? 'image',
+        metadata: fields,
+      );
+      final fileUrl = result['uploadedUrl'] as String? ??
+          result['data']?['url'] as String? ??
+          result['data']?['relativeUrl'] as String?;
+      if (fileUrl != null && fileUrl.isNotEmpty) {
         if (kDebugMode) {
-          debugPrint(
-              'ArtContentService: Upload failed - ${response.statusCode}: ${response.body}');
+          debugPrint('ArtContentService: Uploaded media to $fileUrl');
         }
+        return fileUrl;
       }
     } catch (e) {
       if (kDebugMode) {

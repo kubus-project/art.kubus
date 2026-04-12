@@ -304,6 +304,46 @@ class AppConfig {
   static const int imageCompressionQuality = 85;
   static const bool enableImageOptimization = true;
 
+  /// Client-side upload compression. This runs before multipart upload bytes
+  /// leave the user's device; the backend stores only the resulting file.
+  static const bool enableClientUploadCompression = bool.fromEnvironment(
+    'CLIENT_UPLOAD_COMPRESSION',
+    defaultValue: true,
+  );
+  static const int clientUploadImageCompressionMinBytes = int.fromEnvironment(
+    'CLIENT_UPLOAD_IMAGE_COMPRESSION_MIN_BYTES',
+    defaultValue: 256 * 1024,
+  );
+  static const int clientUploadVideoCompressionMinBytes = int.fromEnvironment(
+    'CLIENT_UPLOAD_VIDEO_COMPRESSION_MIN_BYTES',
+    defaultValue: 2 * 1024 * 1024,
+  );
+  static const int clientUploadModelCompressionMinBytes = int.fromEnvironment(
+    'CLIENT_UPLOAD_MODEL_COMPRESSION_MIN_BYTES',
+    defaultValue: 512 * 1024,
+  );
+  static const int clientUploadImageMaxDimension = int.fromEnvironment(
+    'CLIENT_UPLOAD_IMAGE_MAX_DIMENSION',
+    defaultValue: 1920,
+  );
+  static const int clientUploadModelTextureMaxDimension = int.fromEnvironment(
+    'CLIENT_UPLOAD_MODEL_TEXTURE_MAX_DIMENSION',
+    defaultValue: 2048,
+  );
+  static const int clientUploadImageCompressionQuality = int.fromEnvironment(
+    'CLIENT_UPLOAD_IMAGE_COMPRESSION_QUALITY',
+    defaultValue: 85,
+  );
+  static const int clientUploadModelTextureCompressionQuality =
+      int.fromEnvironment(
+    'CLIENT_UPLOAD_MODEL_TEXTURE_COMPRESSION_QUALITY',
+    defaultValue: 82,
+  );
+  static const int clientUploadVideoFrameRate = int.fromEnvironment(
+    'CLIENT_UPLOAD_VIDEO_FRAME_RATE',
+    defaultValue: 30,
+  );
+
   /// Memory management
   static const int maxCachedImages = 50;
   static const int maxCachedModels = 10;
@@ -433,6 +473,8 @@ class AppConfig {
         return enableStreetArtClaims;
       case 'mapWebPreserveDrawingBuffer':
         return enableMapWebPreserveDrawingBuffer;
+      case 'clientUploadCompression':
+        return enableClientUploadCompression;
       default:
         return false;
     }
@@ -475,7 +517,7 @@ class AppConfig {
 /// App version and build information
 class AppInfo {
   static const String appName = 'art.kubus';
-  static const String version = '0.5.6';
+  static const String version = '0.5.7';
   static const int buildNumber = 26041201;
   static const String buildDate = '2026-04-12';
 

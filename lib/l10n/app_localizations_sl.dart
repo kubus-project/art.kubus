@@ -197,6 +197,24 @@ class AppLocalizationsSl extends AppLocalizations {
   String get commonUpload => 'Naloži';
 
   @override
+  String get uploadCompressionProcessing => 'Priprava medija…';
+
+  @override
+  String get uploadCompressionImageProcessing => 'Optimizacija slike…';
+
+  @override
+  String get uploadCompressionVideoProcessing => 'Optimizacija videa…';
+
+  @override
+  String get uploadCompressionModelProcessing => 'Optimizacija 3D sredstva…';
+
+  @override
+  String get uploadCompressionDone => 'Medij pripravljen';
+
+  @override
+  String get uploadCompressionSkipped => 'Uporaba izvirne datoteke';
+
+  @override
   String get commonViewInAr => 'Ogled v AR';
 
   @override

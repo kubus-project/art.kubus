@@ -20,7 +20,8 @@ String? _backendApiResolveUploadedUrl(Map<String, dynamic> data) {
     String? normalizePublicPath(dynamic raw) {
       final publicPath = _backendApiTrimmedString(raw);
       if (publicPath == null) return null;
-      if (publicPath.startsWith('/uploads/') || publicPath.startsWith('uploads/')) {
+      if (publicPath.startsWith('/uploads/') ||
+          publicPath.startsWith('uploads/')) {
         return publicPath.startsWith('/') ? publicPath : '/$publicPath';
       }
       return '/uploads/$publicPath';
@@ -30,13 +31,39 @@ String? _backendApiResolveUploadedUrl(Map<String, dynamic> data) {
         normalizePublicPath(data['public_path']);
     if (publicPath != null) return publicPath;
 
-    for (final key in const <String>['url', 'ipfsUrl', 'httpUrl', 'fileUrl', 'path']) {
+    for (final key in const <String>[
+      'url',
+      'ipfsUrl',
+      'httpUrl',
+      'fileUrl',
+      'path'
+    ]) {
       final value = _backendApiTrimmedString(data[key]);
       if (value != null) return value;
     }
   } catch (_) {
     return null;
   }
+  return null;
+}
+
+String? _backendApiGuessContentType(String fileName, String fileType) {
+  final normalizedType = fileType.trim().toLowerCase();
+  if (normalizedType.contains('/')) return normalizedType;
+  final lowerName = fileName.trim().toLowerCase();
+  if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) {
+    return 'image/jpeg';
+  }
+  if (lowerName.endsWith('.png')) return 'image/png';
+  if (lowerName.endsWith('.webp')) return 'image/webp';
+  if (lowerName.endsWith('.gif')) return 'image/gif';
+  if (lowerName.endsWith('.svg')) return 'image/svg+xml';
+  if (lowerName.endsWith('.mp4')) return 'video/mp4';
+  if (lowerName.endsWith('.mov')) return 'video/quicktime';
+  if (lowerName.endsWith('.webm')) return 'video/webm';
+  if (lowerName.endsWith('.glb')) return 'model/gltf-binary';
+  if (lowerName.endsWith('.gltf')) return 'model/gltf+json';
+  if (lowerName.endsWith('.usdz')) return 'model/vnd.usdz+zip';
   return null;
 }
 
@@ -47,8 +74,44 @@ Future<Map<String, dynamic>> _backendApiUploadFileImpl(
   required String fileType,
   Map<String, String>? metadata,
   String? walletAddress,
+  bool compress = true,
+  UploadCompressionPolicy? compressionPolicy,
+  void Function(UploadCompressionProgress progress)? onCompressionProgress,
 }) async {
   await service._ensureAuthBeforeRequest(walletAddress: walletAddress);
+  final initialMetadata = Map<String, String>.from(metadata ?? const {});
+  var uploadBytes = Uint8List.fromList(fileBytes);
+  var uploadFileName = fileName;
+  String? uploadContentType = _backendApiGuessContentType(fileName, fileType);
+  if (compress) {
+    final compression = await service._mediaUploadOptimizer.optimize(
+      UploadCompressionRequestDto(
+        bytes: uploadBytes,
+        fileName: fileName,
+        fileType: fileType,
+        metadata: initialMetadata,
+        policy: compressionPolicy ?? UploadCompressionPolicyDto.standard,
+      ),
+      onProgress: onCompressionProgress,
+    );
+    uploadBytes = compression.bytes;
+    uploadFileName = compression.fileName;
+    uploadContentType = compression.contentType;
+    initialMetadata.addAll(compression.toMetadataFields());
+  } else {
+    initialMetadata.addAll(
+      UploadCompressionResultDto.skipped(
+        UploadCompressionRequestDto(
+          bytes: uploadBytes,
+          fileName: fileName,
+          fileType: fileType,
+          metadata: initialMetadata,
+          policy: UploadCompressionPolicyDto.noCompression,
+        ),
+        'disabled_by_caller',
+      ).toMetadataFields(),
+    );
+  }
   const int maxRetries = 3;
   int attempt = 0;
   while (true) {
@@ -64,15 +127,18 @@ Future<Map<String, dynamic>> _backendApiUploadFileImpl(
         request.files.add(
           http.MultipartFile.fromBytes(
             'file',
-            fileBytes,
-            filename: fileName,
+            uploadBytes,
+            filename: uploadFileName,
+            contentType: uploadContentType == null
+                ? null
+                : MediaType.parse(uploadContentType),
           ),
         );
 
         request.fields['fileType'] = fileType;
         request.fields['targetStorage'] = 'http';
-        if (metadata != null) {
-          request.fields['metadata'] = jsonEncode(metadata);
+        if (initialMetadata.isNotEmpty) {
+          request.fields['metadata'] = jsonEncode(initialMetadata);
         }
 
         if (kDebugMode && AppConfig.enableNetworkLogging) {
@@ -83,23 +149,26 @@ Future<Map<String, dynamic>> _backendApiUploadFileImpl(
               'attempt': attempt,
               'contentType': 'multipart/form-data',
               'fileField': 'file',
-              'fileName': fileName,
-              'bytes': fileBytes.length,
+              'fileName': uploadFileName,
+              'bytes': uploadBytes.length,
               'fileType': fileType,
               'targetStorage': 'http',
-              if (metadata != null) 'metadata': metadata,
+              if (initialMetadata.isNotEmpty) 'metadata': initialMetadata,
             },
           );
         }
         return request;
       }
 
-      final response = await service._sendMultipart(buildRequest, includeAuth: true);
+      final response =
+          await service._sendMultipart(buildRequest, includeAuth: true);
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body) as Map<String, dynamic>;
         final Map<String, dynamic> data = body['data'] is Map<String, dynamic>
             ? Map<String, dynamic>.from(body['data'] as Map<String, dynamic>)
-            : (body['data'] != null ? Map<String, dynamic>.from(body['data']) : {});
+            : (body['data'] != null
+                ? Map<String, dynamic>.from(body['data'])
+                : {});
         final uploadedUrl = _backendApiResolveUploadedUrl(data);
 
         if (kDebugMode && AppConfig.enableNetworkLogging) {
@@ -135,7 +204,8 @@ Future<Map<String, dynamic>> _backendApiUploadFileImpl(
       }
       if (response.statusCode == 429) {
         final retryAfter = response.headers['retry-after'];
-        final waitSeconds = int.tryParse(retryAfter ?? '') ?? (2 << (attempt - 1));
+        final waitSeconds =
+            int.tryParse(retryAfter ?? '') ?? (2 << (attempt - 1));
         if (attempt < maxRetries) {
           service._debugLogThrottled(
             'uploadFile:429',
@@ -173,6 +243,9 @@ Future<String?> _backendApiUploadMarkerCoverImageImpl(
   required String fileType,
   required String source,
   String? walletAddress,
+  bool compress = true,
+  UploadCompressionPolicy? compressionPolicy,
+  void Function(UploadCompressionProgress progress)? onCompressionProgress,
 }) async {
   if (fileBytes.isEmpty) return null;
   final safeName = fileName.trim().isEmpty ? 'marker-cover.png' : fileName;
@@ -190,6 +263,9 @@ Future<String?> _backendApiUploadMarkerCoverImageImpl(
       'source': source,
     },
     walletAddress: walletAddress,
+    compress: compress,
+    compressionPolicy: compressionPolicy,
+    onCompressionProgress: onCompressionProgress,
   );
 
   final primary = _backendApiTrimmedString(upload['uploadedUrl']);
@@ -200,7 +276,8 @@ Future<String?> _backendApiUploadMarkerCoverImageImpl(
     return _backendApiResolveUploadedUrl(data) ?? primary;
   }
   if (data is Map) {
-    return _backendApiResolveUploadedUrl(Map<String, dynamic>.from(data)) ?? primary;
+    return _backendApiResolveUploadedUrl(Map<String, dynamic>.from(data)) ??
+        primary;
   }
   return null;
 }
@@ -211,6 +288,9 @@ Future<Map<String, dynamic>> _backendApiUploadAvatarToProfileImpl(
   required String fileName,
   required String fileType,
   Map<String, String>? metadata,
+  bool compress = true,
+  UploadCompressionPolicy? compressionPolicy,
+  void Function(UploadCompressionProgress progress)? onCompressionProgress,
 }) async {
   service._debugLogThrottled(
     'uploadAvatarToProfile:start',
@@ -218,6 +298,46 @@ Future<Map<String, dynamic>> _backendApiUploadAvatarToProfileImpl(
   );
 
   const int maxRetries = 3;
+  final initialMetadata = Map<String, String>.from(metadata ?? const {});
+  var uploadBytes = Uint8List.fromList(fileBytes);
+  var uploadFileName = fileName;
+  var uploadFileType =
+      _backendApiGuessContentType(fileName, fileType) ?? fileType;
+  if (compress) {
+    final compression = await service._mediaUploadOptimizer.optimize(
+      UploadCompressionRequestDto(
+        bytes: uploadBytes,
+        fileName: fileName,
+        fileType: fileType,
+        contentType: fileType,
+        metadata: {
+          ...initialMetadata,
+          'entity': 'profile',
+          'kind': 'avatar',
+        },
+        policy: compressionPolicy ?? UploadCompressionPolicyDto.standard,
+      ),
+      onProgress: onCompressionProgress,
+    );
+    uploadBytes = compression.bytes;
+    uploadFileName = compression.fileName;
+    uploadFileType = compression.contentType ?? uploadFileType;
+    initialMetadata.addAll(compression.toMetadataFields());
+  } else {
+    initialMetadata.addAll(
+      UploadCompressionResultDto.skipped(
+        UploadCompressionRequestDto(
+          bytes: uploadBytes,
+          fileName: fileName,
+          fileType: fileType,
+          contentType: fileType,
+          metadata: initialMetadata,
+          policy: UploadCompressionPolicyDto.noCompression,
+        ),
+        'disabled_by_caller',
+      ).toMetadataFields(),
+    );
+  }
   int attempt = 0;
   while (true) {
     attempt++;
@@ -238,20 +358,21 @@ Future<Map<String, dynamic>> _backendApiUploadAvatarToProfileImpl(
         request.files.add(
           http.MultipartFile.fromBytes(
             'file',
-            fileBytes,
-            filename: fileName,
-            contentType: MediaType.parse(fileType),
+            uploadBytes,
+            filename: uploadFileName,
+            contentType: MediaType.parse(uploadFileType),
           ),
         );
 
-        request.fields['fileType'] = fileType;
-        if (metadata != null) {
-          request.fields['metadata'] = jsonEncode(metadata);
+        request.fields['fileType'] = uploadFileType;
+        if (initialMetadata.isNotEmpty) {
+          request.fields['metadata'] = jsonEncode(initialMetadata);
         }
         return request;
       }
 
-      final response = await service._sendMultipart(buildRequest, includeAuth: true);
+      final response =
+          await service._sendMultipart(buildRequest, includeAuth: true);
       service._debugLogThrottled(
         'uploadAvatarToProfile:status',
         'BackendApiService.uploadAvatarToProfile: status=${response.statusCode} bodyLen=${response.body.length}',
@@ -261,7 +382,9 @@ Future<Map<String, dynamic>> _backendApiUploadAvatarToProfileImpl(
         final body = jsonDecode(response.body) as Map<String, dynamic>;
         final Map<String, dynamic> data = body['data'] is Map<String, dynamic>
             ? Map<String, dynamic>.from(body['data'] as Map<String, dynamic>)
-            : (body['data'] != null ? Map<String, dynamic>.from(body['data']) : {});
+            : (body['data'] != null
+                ? Map<String, dynamic>.from(body['data'])
+                : {});
 
         final uploadedUrl = _backendApiTrimmedString(data['avatar']) ??
             _backendApiResolveUploadedUrl(data);
@@ -278,7 +401,8 @@ Future<Map<String, dynamic>> _backendApiUploadAvatarToProfileImpl(
 
       if (response.statusCode == 429) {
         final retryAfter = response.headers['retry-after'];
-        final waitSeconds = int.tryParse(retryAfter ?? '') ?? (2 << (attempt - 1));
+        final waitSeconds =
+            int.tryParse(retryAfter ?? '') ?? (2 << (attempt - 1));
         if (attempt < maxRetries) {
           service._debugLogThrottled(
             'uploadAvatarToProfile:429',
