@@ -1595,6 +1595,12 @@
   "userProfilePostsStatLabel": "Posts",
   "userProfileFollowersStatLabel": "Followers",
   "userProfileFollowingStatLabel": "Following",
+  "userProfileNoFollowersTitle": "No followers yet",
+  "userProfileNoFollowersDescription": "Share your profile to gain followers",
+  "userProfileFollowersLoadFailedMessage": "Failed to load followers.",
+  "userProfileNoFollowingTitle": "Not following anyone",
+  "userProfileNoFollowingDescription": "Discover artists in the Community tab",
+  "userProfileFollowingLoadFailedMessage": "Failed to load following.",
   "userProfileMessageLoginRequiredToast": "Please log in to message this user.",
   "userProfileConversationOpenFailedToast": "Could not open conversation.",
   "userProfileConversationOpenGenericErrorToast": "Failed to open conversation. Please try again.",
@@ -3875,6 +3881,7 @@
 
   "userProfileCollectionsDesktopSubtitle": "Curated sets of work",
   "userProfileNoCollectionsTitle": "No collections yet",
+  "userProfileNoCollectionsDescription": "Your collections will appear here",
 
   "desktopProfileHeaderSubtitle": "Manage your identity and content",
   "desktopProfileShareProfileLabel": "Share profile",

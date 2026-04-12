@@ -3780,6 +3780,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userProfileFollowingStatLabel => 'Following';
 
   @override
+  String get userProfileNoFollowersTitle => 'No followers yet';
+
+  @override
+  String get userProfileNoFollowersDescription => 'Share your profile to gain followers';
+
+  @override
+  String get userProfileFollowersLoadFailedMessage => 'Failed to load followers.';
+
+  @override
+  String get userProfileNoFollowingTitle => 'Not following anyone';
+
+  @override
+  String get userProfileNoFollowingDescription => 'Discover artists in the Community tab';
+
+  @override
+  String get userProfileFollowingLoadFailedMessage => 'Failed to load following.';
+
+  @override
   String get userProfileMessageLoginRequiredToast => 'Please log in to message this user.';
 
   @override
@@ -8745,6 +8763,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get userProfileNoCollectionsTitle => 'No collections yet';
+
+  @override
+  String get userProfileNoCollectionsDescription => 'Your collections will appear here';
 
   @override
   String get desktopProfileHeaderSubtitle => 'Manage your identity and content';

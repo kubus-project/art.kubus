@@ -1584,6 +1584,12 @@
   "userProfilePostsStatLabel": "Objave",
   "userProfileFollowersStatLabel": "Sledilci",
   "userProfileFollowingStatLabel": "Sledim",
+  "userProfileNoFollowersTitle": "Še ni sledilcev",
+  "userProfileNoFollowersDescription": "Deli svoj profil, da pridobiš sledilce",
+  "userProfileFollowersLoadFailedMessage": "Seznama sledilcev ni bilo mogoče naložiti.",
+  "userProfileNoFollowingTitle": "Ne slediš nikomur",
+  "userProfileNoFollowingDescription": "Odkrij umetnike v Skupnosti.",
+  "userProfileFollowingLoadFailedMessage": "Seznama sledenih ni bilo mogoče naložiti.",
   "userProfileMessageLoginRequiredToast": "Za sporočanje se prijavi.",
   "userProfileConversationOpenFailedToast": "Pogovora ni bilo mogoče odpreti.",
   "userProfileConversationOpenGenericErrorToast": "Pogovora ni bilo mogoče odpreti. Poskusi znova.",
@@ -3766,6 +3772,7 @@
 
   "userProfileCollectionsDesktopSubtitle": "Kurirani izbori del",
   "userProfileNoCollectionsTitle": "Še ni zbirk",
+  "userProfileNoCollectionsDescription": "Tvoje zbirke se bodo prikazale tukaj",
 
   "desktopProfileHeaderSubtitle": "Upravljaj svojo identiteto in vsebino",
   "desktopProfileShareProfileLabel": "Deli profil",

@@ -222,7 +222,15 @@ class UserService {
           (profile['isArtist'] == true) || (profile['is_artist'] == true);
       final isInstitution = (profile['isInstitution'] == true) ||
           (profile['is_institution'] == true);
-      final resolvedWallet = (profile['walletAddress'] ?? userId).toString();
+      final resolvedWallet = WalletUtils.canonical(
+        (profile['walletAddress'] ??
+                profile['wallet'] ??
+                profile['wallet_address'] ??
+                profile['publicKey'] ??
+                profile['public_key'] ??
+                userId)
+            .toString(),
+      );
       // Try to parse embedded stats if the profile payload contains them
       int followersFromProfile = 0;
       int followingFromProfile = 0;
@@ -1134,8 +1142,16 @@ class UserService {
           for (final p in list) {
             try {
               final profile = p as Map<String, dynamic>;
-              final wallet =
-                  (profile['walletAddress'] ?? profile['id'] ?? '').toString();
+              final wallet = WalletUtils.canonical(
+                (profile['walletAddress'] ??
+                        profile['wallet'] ??
+                        profile['wallet_address'] ??
+                        profile['publicKey'] ??
+                        profile['public_key'] ??
+                        profile['id'] ??
+                        '')
+                    .toString(),
+              );
               if (wallet.isEmpty) continue;
               final user = User(
                 id: wallet,
@@ -1292,8 +1308,16 @@ class UserService {
         for (final p in list) {
           try {
             final profile = p as Map<String, dynamic>;
-            final wallet =
-                (profile['walletAddress'] ?? profile['id'] ?? '').toString();
+            final wallet = WalletUtils.canonical(
+              (profile['walletAddress'] ??
+                      profile['wallet'] ??
+                      profile['wallet_address'] ??
+                      profile['publicKey'] ??
+                      profile['public_key'] ??
+                      profile['id'] ??
+                      '')
+                  .toString(),
+            );
             if (wallet.isEmpty) continue;
             final user = User(
               id: wallet,

@@ -7361,6 +7361,42 @@ abstract class AppLocalizations {
   /// **'Following'**
   String get userProfileFollowingStatLabel;
 
+  /// No description provided for @userProfileNoFollowersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No followers yet'**
+  String get userProfileNoFollowersTitle;
+
+  /// No description provided for @userProfileNoFollowersDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Share your profile to gain followers'**
+  String get userProfileNoFollowersDescription;
+
+  /// No description provided for @userProfileFollowersLoadFailedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load followers.'**
+  String get userProfileFollowersLoadFailedMessage;
+
+  /// No description provided for @userProfileNoFollowingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not following anyone'**
+  String get userProfileNoFollowingTitle;
+
+  /// No description provided for @userProfileNoFollowingDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover artists in the Community tab'**
+  String get userProfileNoFollowingDescription;
+
+  /// No description provided for @userProfileFollowingLoadFailedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load following.'**
+  String get userProfileFollowingLoadFailedMessage;
+
   /// No description provided for @userProfileMessageLoginRequiredToast.
   ///
   /// In en, this message translates to:
@@ -16594,6 +16630,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No collections yet'**
   String get userProfileNoCollectionsTitle;
+
+  /// No description provided for @userProfileNoCollectionsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Your collections will appear here'**
+  String get userProfileNoCollectionsDescription;
 
   /// No description provided for @desktopProfileHeaderSubtitle.
   ///

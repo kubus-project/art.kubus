@@ -430,7 +430,7 @@ class _MarketplaceState extends State<Marketplace>
                 children: [
                   Expanded(
                     child: Text(
-                      'Featured NFT Collections',
+                      'Featured Collections',
                       style: KubusTypography.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

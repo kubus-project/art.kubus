@@ -3,10 +3,12 @@ import '../../widgets/app_loading.dart';
 import '../../utils/design_tokens.dart';
 import '../../widgets/avatar_widget.dart';
 import 'package:provider/provider.dart';
+import '../../l10n/app_localizations.dart';
 import '../../providers/artwork_provider.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/platform_provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/user_service.dart';
 import '../../utils/artwork_navigation.dart';
@@ -21,6 +23,7 @@ import '../../widgets/glass_components.dart';
 class ProfileScreenMethods {
   static void showFollowers(BuildContext context, {String? walletAddress}) {
     final targetWallet = walletAddress?.trim();
+    final isDesktop = Provider.of<PlatformProvider>(context, listen: false).isDesktop;
     // Prefetch stats so parent UI can update counts before showing list
     (() async {
       try {
@@ -34,6 +37,8 @@ class ProfileScreenMethods {
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
+        enableDrag: !isDesktop,
+        showDragHandle: false,
         backgroundColor: Colors.transparent,
         builder: (context) => _FollowersBottomSheet(walletAddress: targetWallet),
       );
@@ -42,6 +47,7 @@ class ProfileScreenMethods {
 
   static void showFollowing(BuildContext context, {String? walletAddress}) {
     final targetWallet = walletAddress?.trim();
+    final isDesktop = Provider.of<PlatformProvider>(context, listen: false).isDesktop;
     // Prefetch stats so parent UI can update counts before showing list
     (() async {
       try {
@@ -55,6 +61,8 @@ class ProfileScreenMethods {
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
+        enableDrag: !isDesktop,
+        showDragHandle: false,
         backgroundColor: Colors.transparent,
         builder: (context) => _FollowingBottomSheet(walletAddress: targetWallet),
       );
@@ -63,6 +71,7 @@ class ProfileScreenMethods {
 
   static void showArtworks(BuildContext context, {String? walletAddress}) {
     final targetWallet = walletAddress?.trim();
+    final isDesktop = Provider.of<PlatformProvider>(context, listen: false).isDesktop;
     (() async {
       final artworkProvider = Provider.of<ArtworkProvider>(context, listen: false);
       final walletProvider = Provider.of<WalletProvider>(context, listen: false);
@@ -82,6 +91,8 @@ class ProfileScreenMethods {
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
+        enableDrag: !isDesktop,
+        showDragHandle: false,
         backgroundColor: Colors.transparent,
         builder: (context) => _ArtworksBottomSheet(walletAddress: resolvedWallet),
       );
@@ -89,9 +100,12 @@ class ProfileScreenMethods {
   }
 
   static void showCollections(BuildContext context) {
+    final isDesktop = Provider.of<PlatformProvider>(context, listen: false).isDesktop;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      enableDrag: !isDesktop,
+      showDragHandle: false,
       backgroundColor: Colors.transparent,
       builder: (context) => const _CollectionsBottomSheet(),
     );
@@ -152,8 +166,9 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
     } catch (e) {
       debugPrint('Error loading followers: $e');
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       setState(() {
-        _error = 'Failed to load followers';
+        _error = l10n.userProfileFollowersLoadFailedMessage;
         _isLoading = false;
         _followers = [];
       });
@@ -164,18 +179,23 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final l10n = AppLocalizations.of(context)!;
+    final isDesktop = Provider.of<PlatformProvider>(context, listen: false).isDesktop;
+
+    final titleCount = _followers != null ? ' (${_followers!.length})' : '';
 
     return SizedBox(
       height: MediaQuery.of(context).size.height * 0.7,
       child: BackdropGlassSheet(
         showBorder: false,
+        showHandle: false,
         padding: EdgeInsets.zero,
         backgroundColor: theme.colorScheme.surface,
         child: Column(
           children: [
             KubusSheetHeader(
-              title:
-                  'Followers${_followers != null ? ' (${_followers!.length})' : ''}',
+              title: '${l10n.userProfileFollowersStatLabel}$titleCount',
+              showHandle: !isDesktop,
               trailing: KubusGlassIconButton(
                 icon: Icons.close,
                 tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
@@ -188,8 +208,11 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
                   : _error != null
                       ? _buildErrorState(theme, _error!)
                       : _followers!.isEmpty
-                          ? _buildEmptyState(theme, 'No Followers Yet',
-                              'Share your profile to gain followers')
+                          ? _buildEmptyState(
+                              theme,
+                              l10n.userProfileNoFollowersTitle,
+                              l10n.userProfileNoFollowersDescription,
+                            )
                           : _buildFollowersList(theme, themeProvider),
             ),
           ],
@@ -199,6 +222,7 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
   }
 
   Widget _buildFollowersList(ThemeData theme, ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       itemCount: _followers!.length,
@@ -212,7 +236,9 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
         final avatarUrl = (follower['profileImageUrl'] ?? follower['avatar'] ?? follower['avatarUrl'] ?? follower['avatar_url']) as String?;
 
         final formatted = CreatorDisplayFormat.format(
-          fallbackLabel: walletAddress.isNotEmpty ? maskWallet(walletAddress) : 'Unknown artist',
+          fallbackLabel: walletAddress.isNotEmpty
+              ? maskWallet(walletAddress)
+              : l10n.commonUnknownArtist,
           displayName: displayName,
           username: username,
           wallet: walletAddress,
@@ -316,6 +342,7 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
   }
 
   Widget _buildErrorState(ThemeData theme, String error) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(KubusSpacing.lg),
@@ -336,7 +363,7 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
             TextButton(
               onPressed: _loadFollowers,
               child: Text(
-                'Retry',
+                l10n.commonRetry,
                 style: KubusTypography.inter(
                   color: Provider.of<ThemeProvider>(context, listen: false).accentColor,
                 ),
@@ -403,8 +430,9 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
     } catch (e) {
       debugPrint('Error loading following: $e');
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       setState(() {
-        _error = 'Failed to load following';
+        _error = l10n.userProfileFollowingLoadFailedMessage;
         _isLoading = false;
         _following = [];
       });
@@ -415,18 +443,23 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final l10n = AppLocalizations.of(context)!;
+    final isDesktop = Provider.of<PlatformProvider>(context, listen: false).isDesktop;
+
+    final titleCount = _following != null ? ' (${_following!.length})' : '';
 
     return SizedBox(
       height: MediaQuery.of(context).size.height * 0.7,
       child: BackdropGlassSheet(
         showBorder: false,
+        showHandle: false,
         padding: EdgeInsets.zero,
         backgroundColor: theme.colorScheme.surface,
         child: Column(
           children: [
             KubusSheetHeader(
-              title:
-                  'Following${_following != null ? ' (${_following!.length})' : ''}',
+              title: '${l10n.userProfileFollowingStatLabel}$titleCount',
+              showHandle: !isDesktop,
               trailing: KubusGlassIconButton(
                 icon: Icons.close,
                 tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
@@ -439,8 +472,11 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
                   : _error != null
                       ? _buildErrorState(theme, _error!)
                       : _following!.isEmpty
-                          ? _buildEmptyState(theme, 'Not Following Anyone',
-                              'Discover artists in the Community tab')
+                          ? _buildEmptyState(
+                              theme,
+                              l10n.userProfileNoFollowingTitle,
+                              l10n.userProfileNoFollowingDescription,
+                            )
                           : _buildFollowingList(theme, themeProvider),
             ),
           ],
@@ -450,6 +486,7 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
   }
 
   Widget _buildFollowingList(ThemeData theme, ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       itemCount: _following!.length,
@@ -463,7 +500,9 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
         final avatarUrl = (user['profileImageUrl'] ?? user['avatar'] ?? user['avatarUrl'] ?? user['avatar_url']) as String?;
 
         final formatted = CreatorDisplayFormat.format(
-          fallbackLabel: walletAddress.isNotEmpty ? maskWallet(walletAddress) : 'Unknown artist',
+          fallbackLabel: walletAddress.isNotEmpty
+              ? maskWallet(walletAddress)
+              : l10n.commonUnknownArtist,
           displayName: displayName,
           username: username,
           wallet: walletAddress,
@@ -567,6 +606,7 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
   }
 
   Widget _buildErrorState(ThemeData theme, String error) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(KubusSpacing.lg),
@@ -587,7 +627,7 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
             TextButton(
               onPressed: _loadFollowing,
               child: Text(
-                'Retry',
+                l10n.commonRetry,
                 style: KubusTypography.inter(
                   color: Provider.of<ThemeProvider>(context, listen: false).accentColor,
                 ),
@@ -609,6 +649,8 @@ class _ArtworksBottomSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final isDesktop = Provider.of<PlatformProvider>(context, listen: false).isDesktop;
 
     return Consumer<ArtworkProvider>(
       builder: (context, artworkProvider, child) {
@@ -618,12 +660,14 @@ class _ArtworksBottomSheet extends StatelessWidget {
           height: MediaQuery.of(context).size.height * 0.8,
           child: BackdropGlassSheet(
             showBorder: false,
+            showHandle: false,
             padding: EdgeInsets.zero,
             backgroundColor: theme.colorScheme.surface,
             child: Column(
               children: [
                 KubusSheetHeader(
-                  title: 'My Artworks (${userArtworks.length})',
+                  title: '${l10n.userProfileArtworksTitle} (${userArtworks.length})',
+                  showHandle: !isDesktop,
                   trailing: KubusGlassIconButton(
                     icon: Icons.close,
                     tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
@@ -643,7 +687,7 @@ class _ArtworksBottomSheet extends StatelessWidget {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'No artworks yet',
+                            l10n.artistGalleryEmptyTitle,
                             style: KubusTypography.inter(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
@@ -725,7 +769,7 @@ class _ArtworksBottomSheet extends StatelessWidget {
                                       ),
                                       const SizedBox(height: KubusSpacing.xxs),
                                       Text(
-                                        '${artwork.likesCount} likes',
+                                        l10n.userProfileLikesLabel(artwork.likesCount),
                                         style: KubusTypography.inter(
                                           fontSize: 12,
                                           color: theme.colorScheme.onSurface
@@ -758,18 +802,22 @@ class _CollectionsBottomSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final isDesktop = Provider.of<PlatformProvider>(context, listen: false).isDesktop;
 
     return SizedBox(
       height: MediaQuery.of(context).size.height * 0.6,
       child: BackdropGlassSheet(
         showBorder: false,
+        showHandle: false,
         padding: EdgeInsets.zero,
         backgroundColor: theme.colorScheme.surface,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             KubusSheetHeader(
-              title: 'Collections',
+              title: l10n.userProfileCollectionsTitle,
+              showHandle: !isDesktop,
               trailing: KubusGlassIconButton(
                 icon: Icons.close,
                 tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
@@ -791,7 +839,7 @@ class _CollectionsBottomSheet extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'No Collections Yet',
+                      l10n.userProfileNoCollectionsTitle,
                       style: KubusTypography.inter(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -801,7 +849,7 @@ class _CollectionsBottomSheet extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Your NFT collections will appear here',
+                      l10n.userProfileNoCollectionsDescription,
                       style: KubusTypography.inter(
                         fontSize: 14,
                         color:

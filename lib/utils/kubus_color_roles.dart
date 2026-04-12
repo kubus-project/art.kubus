@@ -83,7 +83,7 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
   Color get web3DaoAccent => positiveAction;
 
   /// Artist identity accent (amber)
-  Color get artistBadgeAccent => statAmber;
+  Color get artistBadgeAccent => artistStudioRed;
 
   /// Institution identity accent (blue)
   Color get institutionBadgeAccent => statBlue;

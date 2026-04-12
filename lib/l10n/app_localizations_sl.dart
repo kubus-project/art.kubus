@@ -3790,6 +3790,24 @@ class AppLocalizationsSl extends AppLocalizations {
   String get userProfileFollowingStatLabel => 'Sledim';
 
   @override
+  String get userProfileNoFollowersTitle => 'Še ni sledilcev';
+
+  @override
+  String get userProfileNoFollowersDescription => 'Deli svoj profil, da pridobiš sledilce';
+
+  @override
+  String get userProfileFollowersLoadFailedMessage => 'Seznama sledilcev ni bilo mogoče naložiti.';
+
+  @override
+  String get userProfileNoFollowingTitle => 'Ne slediš nikomur';
+
+  @override
+  String get userProfileNoFollowingDescription => 'Odkrij umetnike v Skupnosti.';
+
+  @override
+  String get userProfileFollowingLoadFailedMessage => 'Seznama sledenih ni bilo mogoče naložiti.';
+
+  @override
   String get userProfileMessageLoginRequiredToast => 'Za sporočanje se prijavi.';
 
   @override
@@ -8773,6 +8791,9 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get userProfileNoCollectionsTitle => 'Še ni zbirk';
+
+  @override
+  String get userProfileNoCollectionsDescription => 'Tvoje zbirke se bodo prikazale tukaj';
 
   @override
   String get desktopProfileHeaderSubtitle => 'Upravljaj svojo identiteto in vsebino';
