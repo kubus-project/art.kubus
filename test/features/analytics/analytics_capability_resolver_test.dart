@@ -44,9 +44,7 @@ void main() {
     );
   }
 
-  test(
-      'profile analytics allow public access for non-owners only to public metrics',
-      () {
+  test('profile analytics are owner-bound', () {
     final capabilities = AnalyticsCapabilityResolver.resolve(
       preset: AnalyticsPresets.profile,
       viewer: viewer(
@@ -55,15 +53,34 @@ void main() {
       ),
     );
 
+    expect(capabilities.canView, isFalse);
+    expect(capabilities.canViewPrivate, isFalse);
+    expect(capabilities.blockedTitle, 'Private analytics');
+  });
+
+  test('dao analytics are public and use governance metrics', () {
+    final capabilities = AnalyticsCapabilityResolver.resolve(
+      preset: AnalyticsPresets.dao,
+      viewer: viewer(
+        viewerWallet: 'wallet_viewer',
+        subjectId: 'governance',
+      ),
+    );
+
     expect(capabilities.canView, isTrue);
     expect(capabilities.canViewPrivate, isFalse);
+    expect(capabilities.canExport, isFalse);
     expect(capabilities.scope, AnalyticsScope.public);
-    expect(capabilities.allowedMetrics.map((metric) => metric.id),
-        contains('viewsReceived'));
+    final metricIds = capabilities.allowedMetrics.map((metric) => metric.id);
     expect(
-      capabilities.allowedMetrics.map((metric) => metric.id),
-      isNot(contains('engagement')),
-    );
+        metricIds,
+        containsAll(<String>[
+          'daoTotalProposals',
+          'daoVotesCast',
+          'daoTreasuryAmount',
+        ]));
+    expect(metricIds, isNot(contains('users')));
+    expect(metricIds, isNot(contains('profiles')));
   });
 
   test('profile owner receives private analytics and export capability', () {

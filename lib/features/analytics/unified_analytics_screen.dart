@@ -151,6 +151,7 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
       ...overviewMetricIds,
       if (!overviewMetricIds.contains(selectedMetric.id)) selectedMetric.id,
     ];
+
     if (subjectId.isNotEmpty) {
       unawaited(statsProvider.ensureSnapshot(
         entityType: entityType,
@@ -177,8 +178,11 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
         ) &&
         snapshot == null;
 
-    final canLoadSeries = selectedMetric.seriesSupported &&
-        selectedMetric.supportsScope(scope) &&
+    final canLoadSeries = AnalyticsMetricRegistry.supportsSeriesFor(
+          metric: selectedMetric,
+          entityType: preset.entityType,
+          scope: scope,
+        ) &&
         subjectId.isNotEmpty;
     if (canLoadSeries) {
       unawaited(statsProvider.ensureSeries(
@@ -450,6 +454,7 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
 
   String _resolveSubjectId(AnalyticsPreset preset, String viewerWallet) {
     if (preset.entityType == AnalyticsEntityType.platform) return 'global';
+    if (preset.entityType == AnalyticsEntityType.dao) return 'governance';
     final explicit = widget.entityId?.trim() ?? '';
     if (explicit.isNotEmpty) return explicit;
     return viewerWallet.trim();

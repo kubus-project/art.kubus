@@ -15,12 +15,20 @@ void main() {
       '30d',
     );
     expect(
+      provider.timeframeFor(AnalyticsFiltersProvider.daoContextKey),
+      '30d',
+    );
+    expect(
       provider.metricFor(AnalyticsFiltersProvider.homeContextKey),
       'engagement',
     );
     expect(
       provider.metricFor(AnalyticsFiltersProvider.platformContextKey),
       'views',
+    );
+    expect(
+      provider.metricFor(AnalyticsFiltersProvider.daoContextKey),
+      'daoTotalProposals',
     );
     expect(
       provider.hasExplicitMetricFor(AnalyticsFiltersProvider.homeContextKey),

@@ -86,6 +86,9 @@ class AnalyticsMetricRegistry {
   static const platformEntity = <AnalyticsEntityType>{
     AnalyticsEntityType.platform,
   };
+  static const daoEntity = <AnalyticsEntityType>{
+    AnalyticsEntityType.dao,
+  };
 
   static const publicAndPrivate = <AnalyticsScope>{
     AnalyticsScope.public,
@@ -420,6 +423,101 @@ class AnalyticsMetricRegistry {
       supportedEntities: platformEntity,
       relevance: 60,
     ),
+    AnalyticsMetricDefinition(
+      id: 'daoTotalProposals',
+      label: 'Total proposals',
+      description: 'Governance proposals created in the DAO.',
+      icon: Icons.how_to_vote_outlined,
+      format: AnalyticsMetricFormat.compact,
+      supportedEntities: daoEntity,
+      supportedGroupBys: {AnalyticsGroupBy.targetType},
+      defaultGroupBy: AnalyticsGroupBy.targetType,
+      relevance: 100,
+    ),
+    AnalyticsMetricDefinition(
+      id: 'daoActiveProposals',
+      label: 'Active proposals',
+      description: 'Proposals currently open for governance action.',
+      icon: Icons.schedule_outlined,
+      format: AnalyticsMetricFormat.compact,
+      supportedEntities: daoEntity,
+      supportedGroupBys: {AnalyticsGroupBy.targetType},
+      defaultGroupBy: AnalyticsGroupBy.targetType,
+      relevance: 95,
+    ),
+    AnalyticsMetricDefinition(
+      id: 'daoVotesCast',
+      label: 'Votes cast',
+      description: 'Votes submitted across DAO proposals.',
+      icon: Icons.ballot_outlined,
+      format: AnalyticsMetricFormat.compact,
+      supportedEntities: daoEntity,
+      supportedGroupBys: {AnalyticsGroupBy.targetType},
+      defaultGroupBy: AnalyticsGroupBy.targetType,
+      relevance: 90,
+    ),
+    AnalyticsMetricDefinition(
+      id: 'daoDelegates',
+      label: 'Delegates',
+      description: 'Delegates available for voting power delegation.',
+      icon: Icons.groups_2_outlined,
+      format: AnalyticsMetricFormat.compact,
+      supportedEntities: daoEntity,
+      relevance: 82,
+    ),
+    AnalyticsMetricDefinition(
+      id: 'daoAverageVotingPower',
+      label: 'Avg voting power',
+      description: 'Average voting power across delegates.',
+      icon: Icons.account_balance_wallet_outlined,
+      format: AnalyticsMetricFormat.kub8,
+      supportedEntities: daoEntity,
+      seriesSupported: false,
+      relevance: 74,
+    ),
+    AnalyticsMetricDefinition(
+      id: 'daoTreasuryAmount',
+      label: 'Treasury',
+      description: 'Current DAO treasury value.',
+      icon: Icons.account_balance_outlined,
+      format: AnalyticsMetricFormat.kub8,
+      supportedEntities: daoEntity,
+      seriesSupported: false,
+      relevance: 88,
+    ),
+    AnalyticsMetricDefinition(
+      id: 'daoTreasuryInflow',
+      label: 'Treasury inflow',
+      description: 'Positive treasury transactions.',
+      icon: Icons.trending_up_outlined,
+      format: AnalyticsMetricFormat.kub8,
+      supportedEntities: daoEntity,
+      supportedGroupBys: {AnalyticsGroupBy.targetType},
+      defaultGroupBy: AnalyticsGroupBy.targetType,
+      relevance: 68,
+    ),
+    AnalyticsMetricDefinition(
+      id: 'daoTreasuryOutflow',
+      label: 'Treasury outflow',
+      description: 'Outgoing treasury transactions.',
+      icon: Icons.trending_down_outlined,
+      format: AnalyticsMetricFormat.kub8,
+      supportedEntities: daoEntity,
+      supportedGroupBys: {AnalyticsGroupBy.targetType},
+      defaultGroupBy: AnalyticsGroupBy.targetType,
+      relevance: 66,
+    ),
+    AnalyticsMetricDefinition(
+      id: 'daoRecentTransactions',
+      label: 'Recent transactions',
+      description: 'Recent DAO treasury and execution activity.',
+      icon: Icons.receipt_long_outlined,
+      format: AnalyticsMetricFormat.compact,
+      supportedEntities: daoEntity,
+      supportedGroupBys: {AnalyticsGroupBy.targetType},
+      defaultGroupBy: AnalyticsGroupBy.targetType,
+      relevance: 60,
+    ),
   ];
 
   static final Map<String, AnalyticsMetricDefinition> _byId =
@@ -451,6 +549,85 @@ class AnalyticsMetricRegistry {
         .toList(growable: false)
       ..sort((a, b) => b.relevance.compareTo(a.relevance));
     return out;
+  }
+
+  static bool supportsSeriesFor({
+    required AnalyticsMetricDefinition metric,
+    required AnalyticsEntityType entityType,
+    required AnalyticsScope scope,
+  }) {
+    if (!metric.seriesSupported || !metric.supportsEntity(entityType)) {
+      return false;
+    }
+    if (!metric.supportsScope(scope)) return false;
+
+    switch (entityType) {
+      case AnalyticsEntityType.user:
+        if (scope == AnalyticsScope.public) {
+          return const <String>{
+            'followers',
+            'following',
+            'posts',
+            'artworks',
+            'achievementsUnlocked',
+            'achievementTokensTotal',
+            'likesReceived',
+            'viewsReceived',
+            'eventsHosted',
+            'visitorsReceived',
+            'exhibitions',
+          }.contains(metric.id);
+        }
+        return const <String>{
+          'followers',
+          'following',
+          'posts',
+          'artworks',
+          'likesGiven',
+          'achievementsUnlocked',
+          'achievementTokensTotal',
+          'likesReceived',
+          'viewsReceived',
+          'eventsHosted',
+          'visitorsReceived',
+          'exhibitions',
+          'artworksDiscovered',
+          'arSessions',
+          'engagement',
+        }.contains(metric.id);
+      case AnalyticsEntityType.artwork:
+      case AnalyticsEntityType.post:
+        return const <String>{
+          'views',
+          'likes',
+          'comments',
+          'shares',
+          'saves',
+          'engagement',
+        }.contains(metric.id);
+      case AnalyticsEntityType.event:
+      case AnalyticsEntityType.exhibition:
+        return const <String>{
+          'views',
+          'shares',
+          'engagement',
+        }.contains(metric.id);
+      case AnalyticsEntityType.dao:
+        return const <String>{
+          'daoTotalProposals',
+          'daoActiveProposals',
+          'daoVotesCast',
+          'daoDelegates',
+          'daoTreasuryInflow',
+          'daoTreasuryOutflow',
+          'daoRecentTransactions',
+        }.contains(metric.id);
+      case AnalyticsEntityType.platform:
+        return scope == AnalyticsScope.private &&
+            const <String>{'views', 'likes', 'follows'}.contains(metric.id);
+      case AnalyticsEntityType.collection:
+        return false;
+    }
   }
 
   static String formatCompact(num value) {

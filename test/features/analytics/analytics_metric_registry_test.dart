@@ -32,6 +32,49 @@ void main() {
     );
   });
 
+  test('series support follows backend entity and scope contract', () {
+    expect(
+      AnalyticsMetricRegistry.supportsSeriesFor(
+        metric: AnalyticsMetricRegistry.requireById('views'),
+        entityType: AnalyticsEntityType.platform,
+        scope: AnalyticsScope.public,
+      ),
+      isFalse,
+    );
+    expect(
+      AnalyticsMetricRegistry.supportsSeriesFor(
+        metric: AnalyticsMetricRegistry.requireById('views'),
+        entityType: AnalyticsEntityType.platform,
+        scope: AnalyticsScope.private,
+      ),
+      isTrue,
+    );
+    expect(
+      AnalyticsMetricRegistry.supportsSeriesFor(
+        metric: AnalyticsMetricRegistry.requireById('viewsReceived'),
+        entityType: AnalyticsEntityType.user,
+        scope: AnalyticsScope.public,
+      ),
+      isTrue,
+    );
+    expect(
+      AnalyticsMetricRegistry.supportsSeriesFor(
+        metric: AnalyticsMetricRegistry.requireById('daoTotalProposals'),
+        entityType: AnalyticsEntityType.dao,
+        scope: AnalyticsScope.public,
+      ),
+      isTrue,
+    );
+    expect(
+      AnalyticsMetricRegistry.requireById('daoTotalProposals').defaultGroupBy,
+      AnalyticsGroupBy.targetType,
+    );
+    expect(
+      AnalyticsMetricRegistry.requireById('daoTreasuryAmount').seriesSupported,
+      isFalse,
+    );
+  });
+
   test('private-only metrics are filtered from public profile capabilities',
       () {
     final publicMetrics = AnalyticsMetricRegistry.forEntity(

@@ -5,6 +5,7 @@ enum AnalyticsEntityType {
   post,
   event,
   exhibition,
+  dao,
   platform,
 }
 
@@ -33,6 +34,8 @@ extension AnalyticsEntityTypeX on AnalyticsEntityType {
         return 'event';
       case AnalyticsEntityType.exhibition:
         return 'exhibition';
+      case AnalyticsEntityType.dao:
+        return 'dao';
       case AnalyticsEntityType.platform:
         return 'platform';
     }
@@ -52,6 +55,8 @@ extension AnalyticsEntityTypeX on AnalyticsEntityType {
         return 'Event';
       case AnalyticsEntityType.exhibition:
         return 'Exhibition';
+      case AnalyticsEntityType.dao:
+        return 'DAO';
       case AnalyticsEntityType.platform:
         return 'Platform';
     }
@@ -112,6 +117,7 @@ class AnalyticsEntityRegistry {
     if (normalized == 'community_post' || normalized == 'communitypost') {
       return AnalyticsEntityType.post;
     }
+    if (normalized == 'governance') return AnalyticsEntityType.dao;
     return null;
   }
 }

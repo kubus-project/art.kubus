@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../utils/design_tokens.dart';
+import '../../../utils/kubus_color_roles.dart';
 import '../analytics_view_models.dart';
 import 'analytics_state_widgets.dart';
 
@@ -15,6 +16,13 @@ class AnalyticsInsightsPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
+    final accents = <Color>[
+      roles.statTeal,
+      roles.statAmber,
+      roles.statBlue,
+      roles.statGreen,
+    ];
     return Container(
       padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
@@ -42,7 +50,9 @@ class AnalyticsInsightsPanel extends StatelessWidget {
               icon: Icons.lightbulb_outline,
             )
           else
-            ...insights.map((insight) {
+            ...insights.toList(growable: false).asMap().entries.map((entry) {
+              final insight = entry.value;
+              final accent = accents[entry.key % accents.length];
               return Padding(
                 padding: const EdgeInsets.only(bottom: KubusSpacing.md),
                 child: Row(
@@ -52,13 +62,16 @@ class AnalyticsInsightsPanel extends StatelessWidget {
                       width: 34,
                       height: 34,
                       decoration: BoxDecoration(
-                        color: scheme.primaryContainer.withValues(alpha: 0.6),
+                        color: accent.withValues(alpha: 0.16),
                         borderRadius: BorderRadius.circular(KubusRadius.sm),
+                        border: Border.all(
+                          color: accent.withValues(alpha: 0.26),
+                        ),
                       ),
                       child: Icon(
                         insight.icon,
                         size: 18,
-                        color: scheme.onPrimaryContainer,
+                        color: accent,
                       ),
                     ),
                     const SizedBox(width: KubusSpacing.md),

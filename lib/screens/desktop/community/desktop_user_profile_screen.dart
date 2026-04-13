@@ -98,6 +98,13 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     }
   }
 
+  bool _canOpenAnalyticsForViewedUser() {
+    final viewedWallet = user?.id.trim() ?? '';
+    final viewerWallet = _currentWalletAddress()?.trim() ?? '';
+    return viewedWallet.isNotEmpty &&
+        WalletUtils.equals(viewerWallet, viewedWallet);
+  }
+
   void _openDesktopShellAwareScreen(Widget screen) {
     final shellScope = DesktopShellScope.of(context);
     if (shellScope != null) {
@@ -478,7 +485,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           isPrimary: false,
         ),
         const SizedBox(width: 12),
-        if (AppConfig.isFeatureEnabled('analytics')) ...[
+        if (AppConfig.isFeatureEnabled('analytics') &&
+            _canOpenAnalyticsForViewedUser()) ...[
           DesktopActionButton(
             label: l10n.navigationScreenAnalytics,
             icon: Icons.analytics_outlined,
@@ -529,7 +537,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           );
         },
       ),
-      if (AppConfig.isFeatureEnabled('analytics'))
+      if (AppConfig.isFeatureEnabled('analytics') &&
+          _canOpenAnalyticsForViewedUser())
         KubusGlassIconButton(
           icon: Icons.analytics_outlined,
           tooltip: l10n.navigationScreenAnalytics,

@@ -9,6 +9,7 @@ enum AnalyticsPresetKind {
   artist,
   institution,
   community,
+  dao,
   platform,
 }
 
@@ -110,6 +111,8 @@ class AnalyticsPresets {
       'artworksDiscovered',
       'arSessions',
     ],
+    requiresOwner: true,
+    allowsPublicView: false,
   );
 
   static const community = AnalyticsPreset(
@@ -135,6 +138,8 @@ class AnalyticsPresets {
       'followers',
       'engagement',
     ],
+    requiresOwner: true,
+    allowsPublicView: false,
   );
 
   static const artist = AnalyticsPreset(
@@ -222,11 +227,41 @@ class AnalyticsPresets {
     allowsPublicView: false,
   );
 
+  static const dao = AnalyticsPreset(
+    kind: AnalyticsPresetKind.dao,
+    contextKey: AnalyticsFiltersProvider.daoContextKey,
+    title: 'DAO analytics',
+    subtitle: 'Governance proposals, voting, delegates, and treasury flow.',
+    scopeLabel: 'DAO',
+    entityType: AnalyticsEntityType.dao,
+    icon: Icons.how_to_vote_outlined,
+    defaultMetricId: 'daoTotalProposals',
+    overviewMetricIds: <String>[
+      'daoTotalProposals',
+      'daoActiveProposals',
+      'daoVotesCast',
+      'daoTreasuryAmount',
+    ],
+    metricIds: <String>[
+      'daoTotalProposals',
+      'daoActiveProposals',
+      'daoVotesCast',
+      'daoDelegates',
+      'daoAverageVotingPower',
+      'daoTreasuryAmount',
+      'daoTreasuryInflow',
+      'daoTreasuryOutflow',
+      'daoRecentTransactions',
+    ],
+    supportsExport: false,
+  );
+
   static const values = <AnalyticsPreset>[
     profile,
     artist,
     institution,
     community,
+    dao,
     platform,
   ];
 
@@ -243,6 +278,7 @@ class AnalyticsPresets {
       if (value.name == normalized) return value;
     }
     if (normalized == 'home') return AnalyticsPresetKind.profile;
+    if (normalized == 'governance') return AnalyticsPresetKind.dao;
     return null;
   }
 }

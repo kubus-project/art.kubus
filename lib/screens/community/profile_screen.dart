@@ -471,9 +471,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                                           Icons.analytics_outlined,
                                           color: hasCoverImage
                                               ? Colors.white
-                                              : Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurface,
+                                              : KubusColorRoles.of(context)
+                                                  .statAmber,
                                           size: isSmallScreen ? 22 : 24,
                                         ),
                                         onPressed: () {

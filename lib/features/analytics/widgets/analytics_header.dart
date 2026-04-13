@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../utils/design_tokens.dart';
+import '../analytics_metric_colors.dart';
 import '../analytics_presets.dart';
 
 class AnalyticsHeader extends StatelessWidget {
@@ -35,6 +36,10 @@ class AnalyticsHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final compact = MediaQuery.sizeOf(context).width < 720;
+    final accent = AnalyticsMetricColors.resolvePreset(
+      context,
+      activePreset.kind,
+    );
 
     final titleBlock = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -43,13 +48,13 @@ class AnalyticsHeader extends StatelessWidget {
           width: compact ? 44 : 52,
           height: compact ? 44 : 52,
           decoration: BoxDecoration(
-            color: scheme.primaryContainer.withValues(alpha: 0.72),
-            borderRadius: BorderRadius.circular(KubusRadius.md),
+            color: accent.withValues(alpha: 0.16),
+            borderRadius: BorderRadius.circular(KubusRadius.sm),
             border: Border.all(
-              color: scheme.outline.withValues(alpha: 0.14),
+              color: accent.withValues(alpha: 0.32),
             ),
           ),
-          child: Icon(icon, color: scheme.onPrimaryContainer),
+          child: Icon(icon, color: accent),
         ),
         const SizedBox(width: KubusSpacing.md),
         Expanded(
@@ -86,7 +91,7 @@ class AnalyticsHeader extends StatelessWidget {
                 style: KubusTypography.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: scheme.primary,
+                  color: accent,
                 ),
               ),
             ],
@@ -101,12 +106,20 @@ class AnalyticsHeader extends StatelessWidget {
       children: [
         OutlinedButton.icon(
           onPressed: onShare,
-          icon: const Icon(Icons.ios_share_outlined, size: 18),
+          icon: Icon(
+            Icons.ios_share_outlined,
+            size: 18,
+            color: accent,
+          ),
           label: const Text('Share'),
         ),
         FilledButton.tonalIcon(
           onPressed: canExport ? onExport : null,
-          icon: const Icon(Icons.download_outlined, size: 18),
+          icon: Icon(
+            Icons.download_outlined,
+            size: 18,
+            color: canExport ? accent : null,
+          ),
           label: const Text('Export'),
         ),
       ],
@@ -142,9 +155,17 @@ class AnalyticsHeader extends StatelessWidget {
               runSpacing: KubusSpacing.sm,
               children: availablePresets.map((preset) {
                 final selected = preset.kind == activePreset.kind;
+                final chipAccent =
+                    AnalyticsMetricColors.resolvePreset(context, preset.kind);
                 return ChoiceChip(
                   selected: selected,
-                  avatar: Icon(preset.icon, size: 16),
+                  avatar: Icon(
+                    preset.icon,
+                    size: 16,
+                    color: selected
+                        ? chipAccent
+                        : chipAccent.withValues(alpha: 0.72),
+                  ),
                   label: Text(preset.scopeLabel),
                   onSelected: (_) {
                     if (!selected) onPresetSelected(preset.kind);

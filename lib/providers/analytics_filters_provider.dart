@@ -14,6 +14,7 @@ class AnalyticsFiltersProvider extends ChangeNotifier {
   static const String communityContextKey = 'community';
   static const String artistContextKey = 'artist';
   static const String institutionContextKey = 'institution';
+  static const String daoContextKey = 'dao';
   static const String platformContextKey = 'platform';
 
   final Map<String, String> _timeframes = <String, String>{
@@ -22,6 +23,7 @@ class AnalyticsFiltersProvider extends ChangeNotifier {
     communityContextKey: '30d',
     artistContextKey: '30d',
     institutionContextKey: '30d',
+    daoContextKey: '30d',
     platformContextKey: '30d',
   };
 
@@ -31,6 +33,7 @@ class AnalyticsFiltersProvider extends ChangeNotifier {
     communityContextKey: 'posts',
     artistContextKey: 'viewsReceived',
     institutionContextKey: 'viewsReceived',
+    daoContextKey: 'daoTotalProposals',
     platformContextKey: 'views',
   };
   final Set<String> _explicitMetricContexts = <String>{};
