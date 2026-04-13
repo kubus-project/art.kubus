@@ -14,6 +14,7 @@ class AnalyticsFiltersProvider extends ChangeNotifier {
   static const String communityContextKey = 'community';
   static const String artistContextKey = 'artist';
   static const String institutionContextKey = 'institution';
+  static const String platformContextKey = 'platform';
 
   final Map<String, String> _timeframes = <String, String>{
     homeContextKey: '30d',
@@ -21,12 +22,16 @@ class AnalyticsFiltersProvider extends ChangeNotifier {
     communityContextKey: '30d',
     artistContextKey: '30d',
     institutionContextKey: '30d',
+    platformContextKey: '30d',
   };
 
   final Map<String, String> _selectedMetrics = <String, String>{
     homeContextKey: 'engagement',
     profileContextKey: 'viewsReceived',
     communityContextKey: 'posts',
+    artistContextKey: 'viewsReceived',
+    institutionContextKey: 'viewsReceived',
+    platformContextKey: 'views',
   };
   final Set<String> _explicitMetricContexts = <String>{};
 
@@ -52,7 +57,9 @@ class AnalyticsFiltersProvider extends ChangeNotifier {
     final normalizedContext = contextKey.trim().toLowerCase();
     final normalizedTimeframe = timeframe.trim().toLowerCase();
     if (!allowedTimeframes.contains(normalizedTimeframe)) return;
-    if ((_timeframes[normalizedContext] ?? '30d') == normalizedTimeframe) return;
+    if ((_timeframes[normalizedContext] ?? '30d') == normalizedTimeframe) {
+      return;
+    }
     _timeframes[normalizedContext] = normalizedTimeframe;
     notifyListeners();
   }
@@ -74,7 +81,8 @@ class AnalyticsFiltersProvider extends ChangeNotifier {
       if (!allowed.contains(normalizedMetric)) return;
     }
 
-    final metricChanged = _selectedMetrics[normalizedContext] != normalizedMetric;
+    final metricChanged =
+        _selectedMetrics[normalizedContext] != normalizedMetric;
     final selectionChanged = !hasExplicitMetricFor(normalizedContext);
     if (!metricChanged && !selectionChanged) return;
 

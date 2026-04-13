@@ -24,14 +24,16 @@ class InstitutionProvider extends ChangeNotifier {
   InstitutionProvider();
 
   // Getters
-  List<Institution> get institutions => List.unmodifiable(_mergedInstitutions());
-  List<Event> get events =>
-      List.unmodifiable(_events.map(_hydrateEventInstitution).toList(growable: false));
+  List<Institution> get institutions =>
+      List.unmodifiable(_mergedInstitutions());
+  List<Event> get events => List.unmodifiable(
+      _events.map(_hydrateEventInstitution).toList(growable: false));
   Institution? get selectedInstitution {
     final selected = _selectedInstitution;
     if (selected == null) return null;
     return getInstitutionById(selected.id) ?? selected;
   }
+
   Event? get selectedEvent => _selectedEvent;
   bool get isLoading => _isLoading;
   bool get initialized => _initialized;
@@ -47,7 +49,8 @@ class InstitutionProvider extends ChangeNotifier {
   }
 
   void bindProfileProvider(ProfileProvider profileProvider) {
-    if (identical(_profileProvider, profileProvider) && _profileListener != null) {
+    if (identical(_profileProvider, profileProvider) &&
+        _profileListener != null) {
       return;
     }
 
@@ -87,7 +90,8 @@ class InstitutionProvider extends ChangeNotifier {
     await _loadData(seedMockIfEmpty: seedMockIfEmpty, tryBackend: true);
   }
 
-  Future<void> _loadData({required bool seedMockIfEmpty, required bool tryBackend}) async {
+  Future<void> _loadData(
+      {required bool seedMockIfEmpty, required bool tryBackend}) async {
     _isLoading = true;
     notifyListeners();
 
@@ -119,8 +123,10 @@ class InstitutionProvider extends ChangeNotifier {
     try {
       final api = BackendApiService();
 
-      final institutionsJson = await api.listInstitutions(limit: 100, offset: 0);
-      final nextInstitutions = institutionsJson.map((e) => Institution.fromJson(e)).toList();
+      final institutionsJson =
+          await api.listInstitutions(limit: 100, offset: 0);
+      final nextInstitutions =
+          institutionsJson.map((e) => Institution.fromJson(e)).toList();
 
       // Fetch events globally; backend validates limit max=100, so request max allowed.
       final eventsJson = await api.listEvents(limit: 100, offset: 0);
@@ -151,7 +157,8 @@ class InstitutionProvider extends ChangeNotifier {
       Institution(
         id: 'inst_demo_1',
         name: 'kubus Contemporary',
-        description: 'A digital-first gallery exploring AR-native installations and generative work.',
+        description:
+            'A digital-first gallery exploring AR-native installations and generative work.',
         type: 'gallery',
         address: 'Central District',
         latitude: 52.2297,
@@ -176,7 +183,8 @@ class InstitutionProvider extends ChangeNotifier {
       Event(
         id: 'evt_demo_1',
         title: 'Digital Dreams Exhibition',
-        description: 'A curated showcase of contemporary digital art from emerging artists.',
+        description:
+            'A curated showcase of contemporary digital art from emerging artists.',
         type: EventType.exhibition,
         category: EventCategory.digital,
         institutionId: 'inst_demo_1',
@@ -200,7 +208,8 @@ class InstitutionProvider extends ChangeNotifier {
       Event(
         id: 'evt_demo_2',
         title: 'Modern Art Workshop',
-        description: 'Hands-on workshop on modern art techniques and AR presentation.',
+        description:
+            'Hands-on workshop on modern art techniques and AR presentation.',
         type: EventType.workshop,
         category: EventCategory.mixedMedia,
         institutionId: 'inst_demo_1',
@@ -258,7 +267,8 @@ class InstitutionProvider extends ChangeNotifier {
     final derived = _derivedInstitution;
     if (derived == null) return institutions;
 
-    final existingIndex = institutions.indexWhere((item) => item.id == derived.id);
+    final existingIndex =
+        institutions.indexWhere((item) => item.id == derived.id);
     if (existingIndex >= 0) {
       institutions[existingIndex] = derived;
     } else {
@@ -269,7 +279,8 @@ class InstitutionProvider extends ChangeNotifier {
 
   Event _hydrateEventInstitution(Event event) {
     final institution = getInstitutionById(event.institutionId);
-    if (institution == null || _institutionsEqual(event.institution, institution)) {
+    if (institution == null ||
+        _institutionsEqual(event.institution, institution)) {
       return event;
     }
     return event.copyWith(institution: institution);
@@ -371,7 +382,9 @@ class InstitutionProvider extends ChangeNotifier {
 
   // Event management
   List<Event> getEventsByInstitution(String institutionId) {
-    return events.where((event) => event.institutionId == institutionId).toList();
+    return events
+        .where((event) => event.institutionId == institutionId)
+        .toList();
   }
 
   List<Event> getUpcomingEvents() {
@@ -424,13 +437,15 @@ class InstitutionProvider extends ChangeNotifier {
     }
     final event = _events[index];
     if (event.hasCapacity && event.allowRegistration) {
-      final registrations = await _storage.loadRegistrationsForUser(normalizedUserId);
+      final registrations =
+          await _storage.loadRegistrationsForUser(normalizedUserId);
       if (registrations.contains(eventId)) return;
 
       registrations.add(eventId);
       await _storage.saveRegistrationsForUser(normalizedUserId, registrations);
 
-      _events[index] = event.copyWith(currentAttendees: event.currentAttendees + 1);
+      _events[index] =
+          event.copyWith(currentAttendees: event.currentAttendees + 1);
       await _storage.saveEvents(_events);
       notifyListeners();
     }
@@ -473,27 +488,6 @@ class InstitutionProvider extends ChangeNotifier {
     }
     await _persist();
     notifyListeners();
-  }
-
-  // Analytics methods
-  Map<String, dynamic> getInstitutionAnalytics(String institutionId) {
-    final institution = getInstitutionById(institutionId);
-    if (institution == null) return {};
-
-    final institutionEvents = getEventsByInstitution(institutionId);
-    final activeCount = institutionEvents.where((e) => e.isActive).length;
-    
-    return {
-      'totalVisitors': institution.stats.totalVisitors,
-      'activeEvents': activeCount,
-      'artworkViews': institution.stats.artworkViews,
-      'revenue': institution.stats.revenue,
-      'visitorGrowth': institution.stats.visitorGrowth,
-      'revenueGrowth': institution.stats.revenueGrowth,
-      'totalEvents': institutionEvents.length,
-      'upcomingEvents': institutionEvents.where((e) => e.isUpcoming).length,
-      'activeEventsCount': activeCount,
-    };
   }
 
   Future<void> refreshData() async {

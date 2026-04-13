@@ -11,8 +11,16 @@ void main() {
       '30d',
     );
     expect(
+      provider.timeframeFor(AnalyticsFiltersProvider.platformContextKey),
+      '30d',
+    );
+    expect(
       provider.metricFor(AnalyticsFiltersProvider.homeContextKey),
       'engagement',
+    );
+    expect(
+      provider.metricFor(AnalyticsFiltersProvider.platformContextKey),
+      'views',
     );
     expect(
       provider.hasExplicitMetricFor(AnalyticsFiltersProvider.homeContextKey),
@@ -73,7 +81,8 @@ void main() {
     );
   });
 
-  test('AnalyticsFiltersProvider marks explicit selection for default metric', () {
+  test('AnalyticsFiltersProvider marks explicit selection for default metric',
+      () {
     final provider = AnalyticsFiltersProvider();
 
     provider.setMetricFor(
