@@ -283,6 +283,13 @@ class ProfileProvider extends foundation.ChangeNotifier {
       _cachedPreferences ??
       _cachedPreferencesFromPrefs();
 
+  /// Best-effort wallet address for the currently active profile.
+  ///
+  /// Prefer this over reading `currentUser?.walletAddress` directly in UI,
+  /// because it can fall back to persisted wallet state before profile
+  /// hydration completes.
+  String? get currentWalletAddress => _currentWalletAddress;
+
   String? get _currentWalletAddress {
     final wallet = _currentUser?.walletAddress;
     if (wallet != null && wallet.isNotEmpty) return wallet;
@@ -483,7 +490,10 @@ class ProfileProvider extends foundation.ChangeNotifier {
   }
 
   /// Load additional stats from backend (collections, followers, following)
-  Future<void> _loadBackendStats(String walletAddress) async {
+  Future<void> _loadBackendStats(
+    String walletAddress, {
+    bool forceRefresh = false,
+  }) async {
     try {
       final snapshot = await StatsApiService().fetchSnapshot(
         entityType: 'user',
@@ -498,6 +508,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
           'achievementsUnlocked',
         ],
         scope: 'public',
+        forceRefresh: forceRefresh,
       );
 
       _collectionsCount = snapshot.counters['collections'] ?? 0;
@@ -734,8 +745,11 @@ class ProfileProvider extends foundation.ChangeNotifier {
       }
 
       // Save wallet address
-      final prefs = await _ensurePrefs();
-      await prefs.setString('wallet_address', walletAddress);
+      await _loadBackendStats(walletAddress);
+      try {
+        final prefs = await _ensurePrefs();
+        await prefs.setString('wallet_address', walletAddress);
+      } catch (_) {}
       debugPrint('ProfileProvider: Wallet address saved and profile loaded');
 
       _isLoading = false;
@@ -1384,11 +1398,10 @@ class ProfileProvider extends foundation.ChangeNotifier {
   }
 
   // Refresh stats from backend
-  Future<void> refreshStats() async {
-    if (_currentUser?.walletAddress != null) {
-      await _loadBackendStats(_currentUser!.walletAddress);
-      notifyListeners();
-    }
+  Future<void> refreshStats({bool forceRefresh = false}) async {
+    final wallet = _currentWalletAddress;
+    if (wallet == null || wallet.isEmpty) return;
+    await _loadBackendStats(wallet, forceRefresh: forceRefresh);
   }
 
   /// Update privacy/display preferences locally and attempt to persist to backend.

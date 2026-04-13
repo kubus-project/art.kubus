@@ -105,7 +105,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       try {
         Future(() async {
           try {
-            await profileProvider.refreshStats();
+            await profileProvider.refreshStats(forceRefresh: true);
           } catch (e) {
             debugPrint('ProfileScreen: refreshStats failed: $e');
           }
@@ -814,7 +814,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget _buildStatsCards(ThemeProvider themeProvider,
       ProfileProvider profileProvider, bool isLarge) {
     final l10n = AppLocalizations.of(context)!;
-    final wallet = profileProvider.currentUser?.walletAddress;
+    final wallet = profileProvider.currentWalletAddress;
     final screenWidth = MediaQuery.of(context).size.width;
     // More columns on wider screens for compact horizontal layout
     final maxCols = screenWidth >= 1400 ? 4 : (isLarge ? 4 : 2);
@@ -869,7 +869,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildArtistPortfolioSection(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
-    final wallet = context.read<ProfileProvider>().currentUser?.walletAddress;
+    final wallet = context.read<ProfileProvider>().currentWalletAddress;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

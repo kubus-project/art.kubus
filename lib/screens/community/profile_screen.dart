@@ -134,7 +134,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       try {
         Future(() async {
           try {
-            await profileProvider.refreshStats();
+            await profileProvider.refreshStats(forceRefresh: true);
           } catch (e) {
             debugPrint('ProfileScreen: refreshStats failed: $e');
           }
@@ -886,7 +886,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         builder: (context, constraints) {
           final profileProvider = Provider.of<ProfileProvider>(context);
           final isSmallScreen = constraints.maxWidth < 360;
-          final walletAddress = profileProvider.currentUser?.walletAddress;
+          final walletAddress = profileProvider.currentWalletAddress;
 
           return LiquidGlassCard(
             margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24),

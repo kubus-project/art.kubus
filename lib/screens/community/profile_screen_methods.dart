@@ -23,61 +23,90 @@ import '../../widgets/glass_components.dart';
 class ProfileScreenMethods {
   static void showFollowers(BuildContext context, {String? walletAddress}) {
     final targetWallet = walletAddress?.trim();
-    final isDesktop = Provider.of<PlatformProvider>(context, listen: false).isDesktop;
+    final platform = Provider.of<PlatformProvider>(context, listen: false);
+    final isDesktopLike = platform.isDesktop ||
+        (platform.isWeb && MediaQuery.of(context).size.width >= 900);
     // Prefetch stats so parent UI can update counts before showing list
     (() async {
+      final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+      final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+      final resolvedWallet = (targetWallet != null && targetWallet.isNotEmpty)
+          ? targetWallet
+          : (profileProvider.currentWalletAddress ?? walletProvider.currentWalletAddress);
+
+      if (resolvedWallet == null || resolvedWallet.isEmpty) {
+        return;
+      }
+
       try {
-        if (targetWallet == null) {
-          try { await Provider.of<ProfileProvider>(context, listen: false).refreshStats(); } catch (_) {}
-        } else {
-          try { await UserService.fetchAndUpdateUserStats(targetWallet); } catch (_) {}
-        }
+        try {
+          await profileProvider.refreshStats(forceRefresh: true);
+        } catch (_) {}
+        try {
+          await UserService.fetchAndUpdateUserStats(resolvedWallet);
+        } catch (_) {}
       } catch (_) {}
       if (!context.mounted) return;
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
-        enableDrag: !isDesktop,
+        enableDrag: !isDesktopLike,
         showDragHandle: false,
         backgroundColor: Colors.transparent,
-        builder: (context) => _FollowersBottomSheet(walletAddress: targetWallet),
+        builder: (context) => _FollowersBottomSheet(walletAddress: resolvedWallet),
       );
     })();
   }
 
   static void showFollowing(BuildContext context, {String? walletAddress}) {
     final targetWallet = walletAddress?.trim();
-    final isDesktop = Provider.of<PlatformProvider>(context, listen: false).isDesktop;
+    final platform = Provider.of<PlatformProvider>(context, listen: false);
+    final isDesktopLike = platform.isDesktop ||
+        (platform.isWeb && MediaQuery.of(context).size.width >= 900);
     // Prefetch stats so parent UI can update counts before showing list
     (() async {
+      final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+      final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+      final resolvedWallet = (targetWallet != null && targetWallet.isNotEmpty)
+          ? targetWallet
+          : (profileProvider.currentWalletAddress ?? walletProvider.currentWalletAddress);
+
+      if (resolvedWallet == null || resolvedWallet.isEmpty) {
+        return;
+      }
+
       try {
-        if (targetWallet == null) {
-          try { await Provider.of<ProfileProvider>(context, listen: false).refreshStats(); } catch (_) {}
-        } else {
-          try { await UserService.fetchAndUpdateUserStats(targetWallet); } catch (_) {}
-        }
+        try {
+          await profileProvider.refreshStats(forceRefresh: true);
+        } catch (_) {}
+        try {
+          await UserService.fetchAndUpdateUserStats(resolvedWallet);
+        } catch (_) {}
       } catch (_) {}
       if (!context.mounted) return;
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
-        enableDrag: !isDesktop,
+        enableDrag: !isDesktopLike,
         showDragHandle: false,
         backgroundColor: Colors.transparent,
-        builder: (context) => _FollowingBottomSheet(walletAddress: targetWallet),
+        builder: (context) => _FollowingBottomSheet(walletAddress: resolvedWallet),
       );
     })();
   }
 
   static void showArtworks(BuildContext context, {String? walletAddress}) {
     final targetWallet = walletAddress?.trim();
-    final isDesktop = Provider.of<PlatformProvider>(context, listen: false).isDesktop;
+    final platform = Provider.of<PlatformProvider>(context, listen: false);
+    final isDesktopLike = platform.isDesktop ||
+        (platform.isWeb && MediaQuery.of(context).size.width >= 900);
     (() async {
       final artworkProvider = Provider.of<ArtworkProvider>(context, listen: false);
       final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+      final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
       final resolvedWallet = (targetWallet != null && targetWallet.isNotEmpty)
           ? targetWallet
-          : walletProvider.currentWalletAddress;
+          : (profileProvider.currentWalletAddress ?? walletProvider.currentWalletAddress);
 
       if (resolvedWallet == null || resolvedWallet.isEmpty) {
         return;
@@ -91,7 +120,7 @@ class ProfileScreenMethods {
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
-        enableDrag: !isDesktop,
+        enableDrag: !isDesktopLike,
         showDragHandle: false,
         backgroundColor: Colors.transparent,
         builder: (context) => _ArtworksBottomSheet(walletAddress: resolvedWallet),
@@ -100,11 +129,13 @@ class ProfileScreenMethods {
   }
 
   static void showCollections(BuildContext context) {
-    final isDesktop = Provider.of<PlatformProvider>(context, listen: false).isDesktop;
+    final platform = Provider.of<PlatformProvider>(context, listen: false);
+    final isDesktopLike = platform.isDesktop ||
+        (platform.isWeb && MediaQuery.of(context).size.width >= 900);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      enableDrag: !isDesktop,
+      enableDrag: !isDesktopLike,
       showDragHandle: false,
       backgroundColor: Colors.transparent,
       builder: (context) => const _CollectionsBottomSheet(),
@@ -143,10 +174,11 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
 
     try {
       final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+      final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
       final explicitWallet = widget.walletAddress?.trim();
       final resolvedWallet = (explicitWallet != null && explicitWallet.isNotEmpty)
           ? explicitWallet
-          : walletProvider.currentWalletAddress;
+          : (profileProvider.currentWalletAddress ?? walletProvider.currentWalletAddress);
 
       if (resolvedWallet == null || resolvedWallet.isEmpty) {
         setState(() {
@@ -180,7 +212,9 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
     final theme = Theme.of(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
     final l10n = AppLocalizations.of(context)!;
-    final isDesktop = Provider.of<PlatformProvider>(context, listen: false).isDesktop;
+    final platform = Provider.of<PlatformProvider>(context, listen: false);
+    final isDesktopLike = platform.isDesktop ||
+      (platform.isWeb && MediaQuery.of(context).size.width >= 900);
 
     final titleCount = _followers != null ? ' (${_followers!.length})' : '';
 
@@ -195,7 +229,7 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
           children: [
             KubusSheetHeader(
               title: '${l10n.userProfileFollowersStatLabel}$titleCount',
-              showHandle: !isDesktop,
+              showHandle: !isDesktopLike,
               trailing: KubusGlassIconButton(
                 icon: Icons.close,
                 tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
@@ -407,10 +441,11 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
 
     try {
       final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+      final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
       final explicitWallet = widget.walletAddress?.trim();
       final resolvedWallet = (explicitWallet != null && explicitWallet.isNotEmpty)
           ? explicitWallet
-          : walletProvider.currentWalletAddress;
+          : (profileProvider.currentWalletAddress ?? walletProvider.currentWalletAddress);
 
       if (resolvedWallet == null || resolvedWallet.isEmpty) {
         setState(() {
@@ -444,7 +479,9 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
     final theme = Theme.of(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
     final l10n = AppLocalizations.of(context)!;
-    final isDesktop = Provider.of<PlatformProvider>(context, listen: false).isDesktop;
+    final platform = Provider.of<PlatformProvider>(context, listen: false);
+    final isDesktopLike = platform.isDesktop ||
+      (platform.isWeb && MediaQuery.of(context).size.width >= 900);
 
     final titleCount = _following != null ? ' (${_following!.length})' : '';
 
@@ -459,7 +496,7 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
           children: [
             KubusSheetHeader(
               title: '${l10n.userProfileFollowingStatLabel}$titleCount',
-              showHandle: !isDesktop,
+              showHandle: !isDesktopLike,
               trailing: KubusGlassIconButton(
                 icon: Icons.close,
                 tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
@@ -650,7 +687,9 @@ class _ArtworksBottomSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final isDesktop = Provider.of<PlatformProvider>(context, listen: false).isDesktop;
+    final platform = Provider.of<PlatformProvider>(context, listen: false);
+    final isDesktopLike = platform.isDesktop ||
+      (platform.isWeb && MediaQuery.of(context).size.width >= 900);
 
     return Consumer<ArtworkProvider>(
       builder: (context, artworkProvider, child) {
@@ -667,7 +706,7 @@ class _ArtworksBottomSheet extends StatelessWidget {
               children: [
                 KubusSheetHeader(
                   title: '${l10n.userProfileArtworksTitle} (${userArtworks.length})',
-                  showHandle: !isDesktop,
+                  showHandle: !isDesktopLike,
                   trailing: KubusGlassIconButton(
                     icon: Icons.close,
                     tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
@@ -803,7 +842,9 @@ class _CollectionsBottomSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final isDesktop = Provider.of<PlatformProvider>(context, listen: false).isDesktop;
+    final platform = Provider.of<PlatformProvider>(context, listen: false);
+    final isDesktopLike = platform.isDesktop ||
+      (platform.isWeb && MediaQuery.of(context).size.width >= 900);
 
     return SizedBox(
       height: MediaQuery.of(context).size.height * 0.6,
@@ -817,7 +858,7 @@ class _CollectionsBottomSheet extends StatelessWidget {
           children: [
             KubusSheetHeader(
               title: l10n.userProfileCollectionsTitle,
-              showHandle: !isDesktop,
+              showHandle: !isDesktopLike,
               trailing: KubusGlassIconButton(
                 icon: Icons.close,
                 tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
