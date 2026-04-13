@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 class AnalyticsOverviewCardData {
   const AnalyticsOverviewCardData({
+    required this.metricId,
     required this.title,
     required this.value,
     required this.icon,
@@ -10,6 +11,7 @@ class AnalyticsOverviewCardData {
     this.isPositive,
   });
 
+  final String metricId;
   final String title;
   final String value;
   final IconData icon;

@@ -26,6 +26,7 @@ class StatsInteractiveLineChart extends StatelessWidget {
   final double height;
   final Color gridColor;
   final EdgeInsetsGeometry padding;
+  final String Function(num value)? valueFormatter;
 
   const StatsInteractiveLineChart({
     super.key,
@@ -34,6 +35,7 @@ class StatsInteractiveLineChart extends StatelessWidget {
     this.height = 200,
     required this.gridColor,
     this.padding = const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+    this.valueFormatter,
   });
 
   @override
@@ -45,6 +47,7 @@ class StatsInteractiveLineChart extends StatelessWidget {
     }
 
     final pointCount = xLabels.length;
+    final formatValue = valueFormatter ?? ((value) => value.round().toString());
     final normalizedSeries = series
         .map(
           (s) => StatsLineSeries(
@@ -152,6 +155,33 @@ class StatsInteractiveLineChart extends StatelessWidget {
                     lineTouchData: LineTouchData(
                       enabled: true,
                       handleBuiltInTouches: true,
+                      touchSpotThreshold: 28,
+                      mouseCursorResolver: (_, __) =>
+                          SystemMouseCursors.precise,
+                      getTouchedSpotIndicator: (
+                        LineChartBarData barData,
+                        List<int> spotIndexes,
+                      ) {
+                        return spotIndexes.map((_) {
+                          return TouchedSpotIndicatorData(
+                            FlLine(
+                              color: barData.color ??
+                                  scheme.primary.withValues(alpha: 0.75),
+                              strokeWidth: 1.6,
+                              dashArray: [4, 4],
+                            ),
+                            FlDotData(
+                              getDotPainter: (spot, percent, barData, index) =>
+                                  FlDotCirclePainter(
+                                radius: 4,
+                                color: barData.color ?? scheme.primary,
+                                strokeWidth: 2,
+                                strokeColor: scheme.surface,
+                              ),
+                            ),
+                          );
+                        }).toList(growable: false);
+                      },
                       touchTooltipData: LineTouchTooltipData(
                         getTooltipColor: (_) => scheme.surfaceContainerHighest,
                         fitInsideHorizontally: true,
@@ -180,7 +210,7 @@ class StatsInteractiveLineChart extends StatelessWidget {
                                 : 'Series';
                             items.add(
                               LineTooltipItem(
-                                '$label: ${spot.y.round()}\n',
+                                '$label: ${formatValue(spot.y)}\n',
                                 KubusTextStyles.navMetaLabel.copyWith(
                                   fontWeight: FontWeight.w600,
                                   color: spot.bar.color ?? scheme.primary,

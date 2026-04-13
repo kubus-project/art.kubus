@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../widgets/charts/stats_interactive_line_chart.dart';
 import '../../../widgets/inline_loading.dart';
+import '../analytics_metric_colors.dart';
 import '../analytics_metric_registry.dart';
 import '../analytics_time.dart';
 import 'analytics_state_widgets.dart';
@@ -98,12 +99,13 @@ class AnalyticsTrendPanel extends StatelessWidget {
         description: 'Activity will appear here as it is recorded.',
       );
     }
+    final accent = AnalyticsMetricColors.resolve(context, metric.id);
     return StatsInteractiveLineChart(
       series: <StatsLineSeries>[
         StatsLineSeries(
           label: 'Current',
           values: summary.values,
-          color: scheme.primary,
+          color: accent,
           showArea: true,
         ),
         StatsLineSeries(
@@ -115,6 +117,7 @@ class AnalyticsTrendPanel extends StatelessWidget {
       xLabels: labels,
       height: height,
       gridColor: scheme.onSurface.withValues(alpha: 0.12),
+      valueFormatter: metric.formatValue,
     );
   }
 }

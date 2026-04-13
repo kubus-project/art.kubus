@@ -51,6 +51,7 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
   late AnalyticsPresetKind _activePresetKind;
   String _lastReviewWallet = '';
   bool _reviewRequestScheduled = false;
+  String? _seededInitialMetricKey;
 
   @override
   void initState() {
@@ -339,6 +340,14 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
       overview: AnalyticsOverviewGrid(
         cards: overviewCards,
         isLoading: snapshotLoading,
+        selectedMetricId: selectedMetric.id,
+        onMetricSelected: (metricId) {
+          filtersProvider.setMetricFor(
+            preset.contextKey,
+            metricId,
+            allowedMetrics: metrics.map((metric) => metric.id),
+          );
+        },
       ),
       trend: canLoadSeries
           ? AnalyticsTrendPanel(
@@ -372,11 +381,33 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
     required List<AnalyticsMetricDefinition> metrics,
     required AnalyticsFiltersProvider filtersProvider,
   }) {
-    final fallback = widget.initialMetricId?.trim().isNotEmpty == true
-        ? widget.initialMetricId!.trim()
+    final initialMetricId = widget.initialMetricId?.trim();
+    final fallback = initialMetricId?.isNotEmpty == true
+        ? initialMetricId!
         : preset.defaultMetric.id;
-    final stored =
-        filtersProvider.metricFor(preset.contextKey, fallback: fallback);
+    final initialMetric = initialMetricId?.isNotEmpty == true
+        ? _metricById(metrics, initialMetricId!)
+        : null;
+    if (initialMetric != null) {
+      final seedKey = '${preset.contextKey}:${initialMetric.id}';
+      if (_seededInitialMetricKey != seedKey) {
+        _seededInitialMetricKey = seedKey;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          filtersProvider.setMetricFor(
+            preset.contextKey,
+            initialMetric.id,
+            allowedMetrics: metrics.map((metric) => metric.id),
+          );
+        });
+        return initialMetric;
+      }
+    }
+
+    final stored = filtersProvider.metricFor(
+      preset.contextKey,
+      fallback: fallback,
+    );
     for (final metric in metrics) {
       if (metric.id == stored) return metric;
     }
@@ -384,6 +415,16 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
       if (metric.id == fallback) return metric;
     }
     return metrics.first;
+  }
+
+  AnalyticsMetricDefinition? _metricById(
+    List<AnalyticsMetricDefinition> metrics,
+    String metricId,
+  ) {
+    for (final metric in metrics) {
+      if (metric.id == metricId) return metric;
+    }
+    return null;
   }
 
   AnalyticsGroupBy? _groupByFor(
@@ -449,6 +490,7 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
       final raw = counters[metric.id];
       cards.add(
         AnalyticsOverviewCardData(
+          metricId: metric.id,
           title: metric.label,
           value: metric.formatValue(raw ?? 0),
           icon: metric.icon,
@@ -462,6 +504,7 @@ class _UnifiedAnalyticsScreenState extends State<UnifiedAnalyticsScreen> {
       final raw = counters[selectedMetric.id];
       cards.add(
         AnalyticsOverviewCardData(
+          metricId: selectedMetric.id,
           title: selectedMetric.label,
           value: selectedMetric.formatValue(
             raw ?? (summary.hasData ? summary.currentTotal : 0),
