@@ -1397,10 +1397,32 @@ class ProfileProvider extends foundation.ChangeNotifier {
     } catch (_) {}
   }
 
-  // Refresh stats from backend
-  Future<void> refreshStats({bool forceRefresh = false}) async {
-    final wallet = _currentWalletAddress;
-    if (wallet == null || wallet.isEmpty) return;
+  // Refresh stats from backend.
+  //
+  // This is intentionally resilient: on first profile open, the UI may render
+  // before profile hydration or before prefs have been loaded into `_prefs`.
+  // We therefore try multiple wallet sources and ensure prefs are available.
+  Future<void> refreshStats({
+    bool forceRefresh = false,
+    String? walletAddress,
+  }) async {
+    final explicit = walletAddress?.trim();
+    String? resolved = (explicit != null && explicit.isNotEmpty)
+        ? explicit
+        : _currentUser?.walletAddress;
+
+    if (resolved == null || resolved.trim().isEmpty) {
+      try {
+        final prefs = await _ensurePrefs();
+        resolved = prefs.getString(PreferenceKeys.walletAddress) ??
+            prefs.getString('wallet_address');
+      } catch (_) {
+        resolved = null;
+      }
+    }
+
+    final wallet = resolved?.trim() ?? '';
+    if (wallet.isEmpty) return;
     await _loadBackendStats(wallet, forceRefresh: forceRefresh);
   }
 

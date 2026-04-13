@@ -107,7 +107,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           try {
             await profileProvider.refreshStats(forceRefresh: true);
           } catch (e) {
-            debugPrint('ProfileScreen: refreshStats failed: $e');
+            AppConfig.debugPrint('ProfileScreen: refreshStats failed: $e');
           }
         });
       } catch (_) {}

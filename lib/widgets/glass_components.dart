@@ -412,6 +412,7 @@ class BackdropGlassSheet extends StatelessWidget {
   final bool showBorder;
   final bool showHandle;
   final double fallbackMinOpacity;
+  final bool enableBlur;
 
   const BackdropGlassSheet({
     super.key,
@@ -423,6 +424,7 @@ class BackdropGlassSheet extends StatelessWidget {
     this.showBorder = true,
     this.showHandle = true,
     this.fallbackMinOpacity = KubusGlassEffects.fallbackOpaqueOpacity,
+    this.enableBlur = true,
   });
 
   @override
@@ -443,6 +445,7 @@ class BackdropGlassSheet extends StatelessWidget {
           showBorder: showBorder,
           backgroundColor: backgroundColor,
           fallbackMinOpacity: fallbackMinOpacity,
+          enableBlur: enableBlur,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

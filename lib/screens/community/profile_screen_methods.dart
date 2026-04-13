@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import '../../config/config.dart';
 import '../../widgets/app_loading.dart';
 import '../../utils/design_tokens.dart';
 import '../../widgets/avatar_widget.dart';
@@ -40,7 +41,10 @@ class ProfileScreenMethods {
 
       try {
         try {
-          await profileProvider.refreshStats(forceRefresh: true);
+          await profileProvider.refreshStats(
+            forceRefresh: true,
+            walletAddress: resolvedWallet,
+          );
         } catch (_) {}
         try {
           await UserService.fetchAndUpdateUserStats(resolvedWallet);
@@ -77,7 +81,10 @@ class ProfileScreenMethods {
 
       try {
         try {
-          await profileProvider.refreshStats(forceRefresh: true);
+          await profileProvider.refreshStats(
+            forceRefresh: true,
+            walletAddress: resolvedWallet,
+          );
         } catch (_) {}
         try {
           await UserService.fetchAndUpdateUserStats(resolvedWallet);
@@ -158,6 +165,20 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
   bool _isLoading = true;
   String? _error;
 
+  String? _stringOrNull(dynamic value) {
+    if (value == null) return null;
+    final s = value.toString().trim();
+    return s.isEmpty ? null : s;
+  }
+
+  bool _boolOrFalse(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    final s = value?.toString().trim().toLowerCase();
+    if (s == 'true' || s == '1' || s == 'yes') return true;
+    return false;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -196,7 +217,7 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint('Error loading followers: $e');
+      AppConfig.debugPrint('ProfileScreenMethods._FollowersBottomSheet: error loading followers: $e');
       if (!mounted) return;
       final l10n = AppLocalizations.of(context)!;
       setState(() {
@@ -225,6 +246,7 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
         showHandle: false,
         padding: EdgeInsets.zero,
         backgroundColor: theme.colorScheme.surface,
+        enableBlur: !isDesktopLike,
         child: Column(
           children: [
             KubusSheetHeader(
@@ -257,17 +279,36 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
 
   Widget _buildFollowersList(ThemeData theme, ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
+    final platform = Provider.of<PlatformProvider>(context, listen: false);
+    final isDesktopLike = platform.isDesktop ||
+        (platform.isWeb && MediaQuery.of(context).size.width >= 900);
+    // BackdropFilter-heavy cards inside scrolling lists are prone to rendering
+    // issues (especially on web/desktop). Force the card surfaces onto the
+    // opaque path in desktop-like layouts for reliability.
+    final enableCardBlur = !isDesktopLike;
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       itemCount: _followers!.length,
       itemBuilder: (context, index) {
         final follower = _followers![index];
-        final rawUsername = (follower['username'] as String?)?.trim() ?? '';
+        final rawUsername = _stringOrNull(follower['username']) ?? '';
         final username = rawUsername.startsWith('@') ? rawUsername.substring(1).trim() : rawUsername;
-        final displayName = (follower['displayName'] ?? follower['display_name'] ?? follower['name']) as String?;
-        final walletAddress = follower['walletAddress'] as String? ?? follower['id'] as String? ?? '';
-        final isVerified = follower['isVerified'] as bool? ?? false;
-        final avatarUrl = (follower['profileImageUrl'] ?? follower['avatar'] ?? follower['avatarUrl'] ?? follower['avatar_url']) as String?;
+        final displayName = _stringOrNull(
+          follower['displayName'] ?? follower['display_name'] ?? follower['name'],
+        );
+        final walletAddress = _stringOrNull(
+              follower['walletAddress'] ??
+                  follower['wallet_address'] ??
+                  follower['id'],
+            ) ??
+            '';
+        final isVerified = _boolOrFalse(follower['isVerified'] ?? follower['is_verified']);
+        final avatarUrl = _stringOrNull(
+          follower['profileImageUrl'] ??
+              follower['avatar'] ??
+              follower['avatarUrl'] ??
+              follower['avatar_url'],
+        );
 
         final formatted = CreatorDisplayFormat.format(
           fallbackLabel: walletAddress.isNotEmpty
@@ -279,28 +320,36 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
         );
         final subtitle = formatted.secondary ?? (walletAddress.isNotEmpty ? maskWallet(walletAddress) : null);
 
+        final canNavigate = walletAddress.isNotEmpty;
+
         return Padding(
           padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
           child: LiquidGlassCard(
             borderRadius: BorderRadius.circular(KubusRadius.md),
+            enableBlur: enableCardBlur,
             padding: const EdgeInsets.symmetric(
               horizontal: KubusSpacing.md,
               vertical: KubusSpacing.xs,
             ),
-            child: ListTile(
-              onTap: () {
-                Navigator.pop(context);
-                UserProfileNavigation.open(
-                  context,
-                  userId: walletAddress,
-                  username: username,
-                );
-              },
+            child: Material(
+              color: Colors.transparent,
+              child: ListTile(
+              onTap: !canNavigate
+                  ? null
+                  : () {
+                      Navigator.pop(context);
+                      UserProfileNavigation.open(
+                        context,
+                        userId: walletAddress,
+                        username: username,
+                      );
+                    },
               contentPadding: EdgeInsets.zero,
               leading: AvatarWidget(
                 wallet: walletAddress,
                 avatarUrl: avatarUrl,
                 radius: 28,
+                enableProfileNavigation: canNavigate,
               ),
               title: Row(
                 children: [
@@ -336,6 +385,7 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
+              ),
             ),
           ),
         );
@@ -425,6 +475,20 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
   bool _isLoading = true;
   String? _error;
 
+  String? _stringOrNull(dynamic value) {
+    if (value == null) return null;
+    final s = value.toString().trim();
+    return s.isEmpty ? null : s;
+  }
+
+  bool _boolOrFalse(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    final s = value?.toString().trim().toLowerCase();
+    if (s == 'true' || s == '1' || s == 'yes') return true;
+    return false;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -463,7 +527,7 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint('Error loading following: $e');
+      AppConfig.debugPrint('ProfileScreenMethods._FollowingBottomSheet: error loading following: $e');
       if (!mounted) return;
       final l10n = AppLocalizations.of(context)!;
       setState(() {
@@ -492,6 +556,7 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
         showHandle: false,
         padding: EdgeInsets.zero,
         backgroundColor: theme.colorScheme.surface,
+        enableBlur: !isDesktopLike,
         child: Column(
           children: [
             KubusSheetHeader(
@@ -524,17 +589,33 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
 
   Widget _buildFollowingList(ThemeData theme, ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
+    final platform = Provider.of<PlatformProvider>(context, listen: false);
+    final isDesktopLike = platform.isDesktop ||
+        (platform.isWeb && MediaQuery.of(context).size.width >= 900);
+    final enableCardBlur = !isDesktopLike;
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       itemCount: _following!.length,
       itemBuilder: (context, index) {
         final user = _following![index];
-        final rawUsername = (user['username'] as String?)?.trim() ?? '';
+        final rawUsername = _stringOrNull(user['username']) ?? '';
         final username = rawUsername.startsWith('@') ? rawUsername.substring(1).trim() : rawUsername;
-        final displayName = (user['displayName'] ?? user['display_name'] ?? user['name']) as String?;
-        final walletAddress = user['walletAddress'] as String? ?? user['id'] as String? ?? '';
-        final isVerified = user['isVerified'] as bool? ?? false;
-        final avatarUrl = (user['profileImageUrl'] ?? user['avatar'] ?? user['avatarUrl'] ?? user['avatar_url']) as String?;
+        final displayName = _stringOrNull(
+          user['displayName'] ?? user['display_name'] ?? user['name'],
+        );
+        final walletAddress = _stringOrNull(
+              user['walletAddress'] ??
+                  user['wallet_address'] ??
+                  user['id'],
+            ) ??
+            '';
+        final isVerified = _boolOrFalse(user['isVerified'] ?? user['is_verified']);
+        final avatarUrl = _stringOrNull(
+          user['profileImageUrl'] ??
+              user['avatar'] ??
+              user['avatarUrl'] ??
+              user['avatar_url'],
+        );
 
         final formatted = CreatorDisplayFormat.format(
           fallbackLabel: walletAddress.isNotEmpty
@@ -546,28 +627,36 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
         );
         final subtitle = formatted.secondary ?? (walletAddress.isNotEmpty ? maskWallet(walletAddress) : null);
 
+        final canNavigate = walletAddress.isNotEmpty;
+
         return Padding(
           padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
           child: LiquidGlassCard(
             borderRadius: BorderRadius.circular(KubusRadius.md),
+            enableBlur: enableCardBlur,
             padding: const EdgeInsets.symmetric(
               horizontal: KubusSpacing.md,
               vertical: KubusSpacing.xs,
             ),
-            child: ListTile(
-              onTap: () {
-                Navigator.pop(context);
-                UserProfileNavigation.open(
-                  context,
-                  userId: walletAddress,
-                  username: username,
-                );
-              },
+            child: Material(
+              color: Colors.transparent,
+              child: ListTile(
+              onTap: !canNavigate
+                  ? null
+                  : () {
+                      Navigator.pop(context);
+                      UserProfileNavigation.open(
+                        context,
+                        userId: walletAddress,
+                        username: username,
+                      );
+                    },
               contentPadding: EdgeInsets.zero,
               leading: AvatarWidget(
                 wallet: walletAddress,
                 avatarUrl: avatarUrl,
                 radius: 28,
+                enableProfileNavigation: canNavigate,
               ),
               title: Row(
                 children: [
@@ -603,6 +692,7 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
+              ),
             ),
           ),
         );
@@ -702,6 +792,7 @@ class _ArtworksBottomSheet extends StatelessWidget {
             showHandle: false,
             padding: EdgeInsets.zero,
             backgroundColor: theme.colorScheme.surface,
+            enableBlur: !isDesktopLike,
             child: Column(
               children: [
                 KubusSheetHeader(
@@ -853,6 +944,7 @@ class _CollectionsBottomSheet extends StatelessWidget {
         showHandle: false,
         padding: EdgeInsets.zero,
         backgroundColor: theme.colorScheme.surface,
+        enableBlur: !isDesktopLike,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
