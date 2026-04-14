@@ -20,6 +20,10 @@ class PresenceProvider extends ChangeNotifier {
   static const Duration _baseAutoRefreshInterval = Duration(seconds: 24);
   static const Duration _heartbeatInterval = Duration(seconds: 45);
   static const Duration _socketHealthyHeartbeatInterval = Duration(minutes: 4);
+  static const Duration _socketHealthyActiveRefreshInterval =
+      Duration(minutes: 2);
+  static const Duration _socketHealthyPassiveRefreshInterval =
+      Duration(minutes: 4);
   static const int _inactiveSurfaceMinWatchers = 8;
 
   /// Prevent unbounded watched-wallet growth (e.g., scrolling long feeds).
@@ -52,6 +56,7 @@ class PresenceProvider extends ChangeNotifier {
   Duration? _autoRefreshIntervalCurrent;
 
   Timer? _heartbeatTimer;
+  Duration? _heartbeatIntervalCurrent;
   bool _heartbeatInFlight = false;
   DateTime? _lastHeartbeatAt;
 
@@ -118,15 +123,9 @@ class PresenceProvider extends ChangeNotifier {
             return;
           }
 
-          // Mark cached entries stale by clearing timestamps, then allow next prefetch to fetch.
-          final keys = _cacheByWalletLower.keys.toList(growable: false);
-          for (final key in keys) {
-            final existing = _cacheByWalletLower[key];
-            if (existing == null) continue;
-            _cacheByWalletLower[key] = existing.copyWith(
-              fetchedAt: DateTime.fromMillisecondsSinceEpoch(0),
-            );
-          }
+          // Mark only watched entries stale so we don't fan out a full-cache
+          // refresh when unrelated refresh versions change.
+          _markCacheEntriesStale(walletKeys: _watchedWalletsLower);
           _scheduleBatchFetch();
         }
       } catch (e) {
@@ -222,7 +221,7 @@ class PresenceProvider extends ChangeNotifier {
     final now = DateTime.now();
     if (_watchedWalletsLower.isEmpty) return;
 
-    _markCacheEntriesStale();
+    _markCacheEntriesStale(walletKeys: _watchedWalletsLower);
 
     for (final key in _watchedWalletsLower) {
       _pendingWalletsLower.add(key);
@@ -235,9 +234,14 @@ class PresenceProvider extends ChangeNotifier {
     }
   }
 
-  void _markCacheEntriesStale() {
+  void _markCacheEntriesStale({Iterable<String>? walletKeys}) {
+    final keys = (walletKeys ?? _watchedWalletsLower)
+        .map((wallet) => wallet.trim().toLowerCase())
+        .where((wallet) => wallet.isNotEmpty)
+        .toSet();
+    if (keys.isEmpty) return;
+
     final staleAt = DateTime.fromMillisecondsSinceEpoch(0);
-    final keys = _cacheByWalletLower.keys.toList(growable: false);
     for (final key in keys) {
       final existing = _cacheByWalletLower[key];
       if (existing == null) continue;
@@ -358,6 +362,15 @@ class PresenceProvider extends ChangeNotifier {
     if (!_isPresenceSurfaceActive &&
         _watchedWalletsLower.length < _inactiveSurfaceMinWatchers) {
       return null;
+    }
+
+    final wallet = (_profileProvider?.currentUser?.walletAddress ?? '').trim();
+    final socketHealthy =
+        wallet.isNotEmpty && _isSocketHealthyForPresence(wallet);
+    if (socketHealthy) {
+      return _isPresenceSurfaceActive
+          ? _socketHealthyActiveRefreshInterval
+          : _socketHealthyPassiveRefreshInterval;
     }
 
     final watcherCount = _watchedWalletsLower.length;
@@ -486,6 +499,7 @@ class PresenceProvider extends ChangeNotifier {
     _autoRefreshIntervalCurrent = null;
     _heartbeatTimer?.cancel();
     _heartbeatTimer = null;
+    _heartbeatIntervalCurrent = null;
     _heartbeatInFlight = false;
     _lastHeartbeatAt = null;
     _pendingWalletsLower.clear();
@@ -524,23 +538,35 @@ class PresenceProvider extends ChangeNotifier {
     if (!signedIn || wallet.isEmpty || !allowVisible) {
       _heartbeatTimer?.cancel();
       _heartbeatTimer = null;
+      _heartbeatIntervalCurrent = null;
       return;
     }
 
     if (!_isPresenceSurfaceActive && _watchedWalletsLower.isEmpty) {
       _heartbeatTimer?.cancel();
       _heartbeatTimer = null;
+      _heartbeatIntervalCurrent = null;
       return;
     }
 
-    _heartbeatTimer ??= Timer.periodic(_heartbeatInterval, (_) {
+    final targetInterval = _isSocketHealthyForPresence(wallet)
+        ? _socketHealthyHeartbeatInterval
+        : _heartbeatInterval;
+    if (_heartbeatTimer != null &&
+        _heartbeatIntervalCurrent == targetInterval) {
+      return;
+    }
+
+    _heartbeatTimer?.cancel();
+    _heartbeatIntervalCurrent = targetInterval;
+    _heartbeatTimer = Timer.periodic(targetInterval, (_) {
       unawaited(_sendHeartbeat());
     });
   }
 
   Future<void> onAppResumed() async {
     _ensureHeartbeatTimer();
-    await _sendHeartbeat(force: true);
+    await _sendHeartbeat();
   }
 
   Future<void> _sendHeartbeat({bool force = false}) async {
@@ -628,8 +654,7 @@ class PresenceProvider extends ChangeNotifier {
 
     final visitKey = '$normalizedType:$normalizedId';
     final lastSent = _lastVisitSentAt[visitKey];
-    if (lastSent != null &&
-        now.difference(lastSent) < _visitDedupeWindow) {
+    if (lastSent != null && now.difference(lastSent) < _visitDedupeWindow) {
       return;
     }
 

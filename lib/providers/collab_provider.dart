@@ -37,7 +37,8 @@ class CollabProvider extends ChangeNotifier {
   bool _connectListenerBound = false;
   String _lastAuthWallet = '';
 
-  final Map<String, List<CollabMember>> _membersByEntityKey = <String, List<CollabMember>>{};
+  final Map<String, List<CollabMember>> _membersByEntityKey =
+      <String, List<CollabMember>>{};
   final List<CollabInvite> _invitesInbox = <CollabInvite>[];
   final Set<String> _knownInviteIds = <String>{};
   static const int _maxKnownInviteIds = 200;
@@ -49,14 +50,16 @@ class CollabProvider extends ChangeNotifier {
   bool _readyToNotifyNewInvites = false;
   DateTime? _lastInviteSyncAt;
   DateTime? _lastInviteSocketEventAt;
-    final int _invitePollJitterSeconds = Random().nextInt(12);
+  final int _invitePollJitterSeconds = Random().nextInt(12);
 
-    static const Duration _inviteSocketStaleAfter = Duration(minutes: 8);
-    static const Duration _inviteSyncStaleAfter = Duration(minutes: 12);
-    static const Duration _inviteForegroundActiveInterval =
-      Duration(seconds: 90);
-    static const Duration _inviteForegroundPassiveInterval =
-      Duration(seconds: 210);
+  static const Duration _inviteSocketStaleAfter = Duration(minutes: 12);
+  static const Duration _inviteSyncStaleAfter = Duration(minutes: 18);
+  static const Duration _inviteForegroundActiveInterval =
+      Duration(seconds: 150);
+  static const Duration _inviteForegroundPassiveInterval =
+      Duration(seconds: 360);
+  static const Duration _inviteHealthyResumeRefreshInterval =
+      Duration(minutes: 3);
 
   DateTime? _inviteBackoffUntil;
   Duration _inviteBackoff = Duration.zero;
@@ -92,7 +95,8 @@ class CollabProvider extends ChangeNotifier {
       '${_normalizeEntityType(entityType)}:${entityId.trim()}';
 
   List<CollabMember> collaboratorsFor(String entityType, String entityId) {
-    return List.unmodifiable(_membersByEntityKey[_key(entityType, entityId)] ?? const <CollabMember>[]);
+    return List.unmodifiable(_membersByEntityKey[_key(entityType, entityId)] ??
+        const <CollabMember>[]);
   }
 
   void bindToRefresh(AppRefreshProvider refreshProvider) {
@@ -115,7 +119,8 @@ class CollabProvider extends ChangeNotifier {
       try {
         final nextGlobal = refreshProvider.globalVersion;
         final nextProfile = refreshProvider.profileVersion;
-        final changed = nextGlobal != _lastGlobalVersion || nextProfile != _lastProfileVersion;
+        final changed = nextGlobal != _lastGlobalVersion ||
+            nextProfile != _lastProfileVersion;
         _lastGlobalVersion = nextGlobal;
         _lastProfileVersion = nextProfile;
 
@@ -206,7 +211,8 @@ class CollabProvider extends ChangeNotifier {
       if (_pollingInFlight) return;
       _pollingInFlight = true;
       unawaited(
-        _refreshInvitesInternal(showLoadingIndicator: false, notifyOnNew: true).whenComplete(() {
+        _refreshInvitesInternal(showLoadingIndicator: false, notifyOnNew: true)
+            .whenComplete(() {
           _pollingInFlight = false;
           _evaluateInvitePollingState();
         }),
@@ -215,14 +221,17 @@ class CollabProvider extends ChangeNotifier {
     }
 
     if (event == 'collab:members-updated') {
-      final rawType = (payload['entityType'] ?? payload['entity_type'] ?? '').toString();
-      final rawId = (payload['entityId'] ?? payload['entity_id'] ?? '').toString();
+      final rawType =
+          (payload['entityType'] ?? payload['entity_type'] ?? '').toString();
+      final rawId =
+          (payload['entityId'] ?? payload['entity_id'] ?? '').toString();
       final entityType = rawType.trim();
       final entityId = rawId.trim();
       if (entityType.isEmpty || entityId.isEmpty) return;
       final key = _key(entityType, entityId);
       if (!_membersByEntityKey.containsKey(key)) return;
-      unawaited(loadCollaborators(entityType, entityId, refresh: true, showLoadingIndicator: false));
+      unawaited(loadCollaborators(entityType, entityId,
+          refresh: true, showLoadingIndicator: false));
     }
   }
 
@@ -287,7 +296,8 @@ class CollabProvider extends ChangeNotifier {
     _evaluateInvitePollingState();
   }
 
-  Future<void> refreshInvites({bool showLoadingIndicator = true, bool notifyOnNew = false}) async {
+  Future<void> refreshInvites(
+      {bool showLoadingIndicator = true, bool notifyOnNew = false}) async {
     await _refreshInvitesInternal(
       showLoadingIndicator: showLoadingIndicator,
       notifyOnNew: notifyOnNew,
@@ -329,6 +339,24 @@ class CollabProvider extends ChangeNotifier {
     final syncRecent = _lastInviteSyncAt != null &&
         now.difference(_lastInviteSyncAt!) <= _inviteSyncStaleAfter;
     return socketEventRecent || syncRecent;
+  }
+
+  bool _shouldRefreshOnResumeOrForeground() {
+    final socketHealthy = _socketHealthyForInviteFeed();
+    if (!socketHealthy) {
+      return true;
+    }
+
+    if (!_isCollabSurfaceActive) {
+      return false;
+    }
+
+    final now = DateTime.now();
+    final last = _lastInviteSocketEventAt ?? _lastInviteSyncAt;
+    if (last == null) {
+      return true;
+    }
+    return now.difference(last) >= _inviteHealthyResumeRefreshInterval;
   }
 
   Duration? _computeInvitePollingInterval() {
@@ -378,7 +406,8 @@ class CollabProvider extends ChangeNotifier {
 
       _pollingInFlight = true;
       unawaited(
-        _refreshInvitesInternal(showLoadingIndicator: false, notifyOnNew: true).whenComplete(() {
+        _refreshInvitesInternal(showLoadingIndicator: false, notifyOnNew: true)
+            .whenComplete(() {
           _pollingInFlight = false;
           _evaluateInvitePollingState();
         }),
@@ -393,7 +422,7 @@ class CollabProvider extends ChangeNotifier {
   }
 
   Future<void> onAppResumed() async {
-    if (_isCollabSurfaceActive || !_socketHealthyForInviteFeed()) {
+    if (_shouldRefreshOnResumeOrForeground()) {
       await refreshInvites(showLoadingIndicator: false, notifyOnNew: false);
     }
     _evaluateInvitePollingState();
@@ -402,7 +431,7 @@ class CollabProvider extends ChangeNotifier {
   void handleAppForegroundChanged(bool isForeground) {
     if (isForeground) {
       _evaluateInvitePollingState();
-      if (_isCollabSurfaceActive || !_socketHealthyForInviteFeed()) {
+      if (_shouldRefreshOnResumeOrForeground()) {
         unawaited(
             refreshInvites(showLoadingIndicator: false, notifyOnNew: false));
       }
@@ -415,7 +444,8 @@ class CollabProvider extends ChangeNotifier {
     _evaluateInvitePollingState();
   }
 
-  Future<void> _refreshInvitesInternal({required bool showLoadingIndicator, required bool notifyOnNew}) async {
+  Future<void> _refreshInvitesInternal(
+      {required bool showLoadingIndicator, required bool notifyOnNew}) async {
     if (showLoadingIndicator) {
       _setLoading(true);
     }
@@ -436,7 +466,10 @@ class CollabProvider extends ChangeNotifier {
       _inviteBackoff = Duration.zero;
 
       final newPendingInvites = invites
-          .where((i) => i.isPending && i.id.trim().isNotEmpty && !_knownInviteIds.contains(i.id))
+          .where((i) =>
+              i.isPending &&
+              i.id.trim().isNotEmpty &&
+              !_knownInviteIds.contains(i.id))
           .toList(growable: false);
 
       _invitesInbox
@@ -488,7 +521,8 @@ class CollabProvider extends ChangeNotifier {
     if (_knownInvitesHydrated) return;
     try {
       final prefs = await SharedPreferences.getInstance();
-      final stored = prefs.getStringList('collab_known_invite_ids_v1') ?? const <String>[];
+      final stored =
+          prefs.getStringList('collab_known_invite_ids_v1') ?? const <String>[];
       for (final id in stored) {
         final trimmed = id.trim();
         if (trimmed.isEmpty) continue;
@@ -519,7 +553,8 @@ class CollabProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> _emitInviteNotifications(List<CollabInvite> newPendingInvites) async {
+  Future<void> _emitInviteNotifications(
+      List<CollabInvite> newPendingInvites) async {
     // Ensure notification service is ready (no-op if already initialized).
     unawaited(_notifications.initialize());
 
@@ -528,7 +563,9 @@ class CollabProvider extends ChangeNotifier {
       final invitedBy = invite.invitedBy;
       final inviterName = (invitedBy?.displayName ?? '').trim().isNotEmpty
           ? invitedBy!.displayName!.trim()
-          : ((invitedBy?.username ?? '').trim().isNotEmpty ? '@${invitedBy!.username}' : null);
+          : ((invitedBy?.username ?? '').trim().isNotEmpty
+              ? '@${invitedBy!.username}'
+              : null);
 
       await _notifications.showCollabInviteNotification(
         inviteId: invite.id,
@@ -582,8 +619,8 @@ class CollabProvider extends ChangeNotifier {
     _setLoading(true);
     _error = null;
     try {
-      final invite =
-          await _api.inviteCollaborator(normalizedType, entityId, invitedIdentifier, role);
+      final invite = await _api.inviteCollaborator(
+          normalizedType, entityId, invitedIdentifier, role);
       // Best effort: refresh invites for invited user is not possible client-side; refresh ours anyway.
       await refreshInvites();
       return invite;
@@ -670,7 +707,8 @@ class CollabProvider extends ChangeNotifier {
     _setLoading(true);
     _error = null;
     try {
-      await _api.updateCollaboratorRole(normalizedType, entityId, memberUserId, role);
+      await _api.updateCollaboratorRole(
+          normalizedType, entityId, memberUserId, role);
       await loadCollaborators(normalizedType, entityId);
     } catch (e) {
       _error = e.toString();

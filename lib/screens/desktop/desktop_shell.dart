@@ -560,9 +560,10 @@ class _DesktopShellState extends State<DesktopShell>
 
   @override
   Widget build(BuildContext context) {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-    final navState =
-        context.select<ProfileProvider, ({bool isSignedIn, bool isArtist, bool isInstitution})>(
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
+    final navState = context.select<ProfileProvider,
+        ({bool isSignedIn, bool isArtist, bool isInstitution})>(
       (p) {
         final user = p.currentUser;
         return (
@@ -685,9 +686,7 @@ class _DesktopShellState extends State<DesktopShell>
                             curve: Curves.easeOutCubic,
                             width: _functionsPanel == DesktopFunctionsPanel.none
                                 ? 0
-                                : (isLarge
-                                    ? 380
-                                    : (isExpanded ? 320 : 280)),
+                                : (isLarge ? 380 : (isExpanded ? 320 : 280)),
                             child: ClipRect(
                               child: IgnorePointer(
                                 ignoring: _functionsPanel ==
@@ -753,9 +752,11 @@ class _DesktopShellState extends State<DesktopShell>
                                       if (!kIsWeb ||
                                           _functionsPanel ==
                                               DesktopFunctionsPanel.none) {
-                                        return panel;
+                                        return RepaintBoundary(child: panel);
                                       }
-                                      return PointerInterceptor(child: panel);
+                                      return RepaintBoundary(
+                                        child: PointerInterceptor(child: panel),
+                                      );
                                     },
                                   ),
                                 ),
@@ -777,22 +778,21 @@ class _DesktopShellState extends State<DesktopShell>
                                     _navExpandAnimation.value;
 
                             final scheme = theme.colorScheme;
-                            final glassTint =
-                                (Color.lerp(
-                                          theme.brightness == Brightness.dark
-                                              ? Colors.black
-                                              : Colors.white,
-                                          activeAccent,
-                                          theme.brightness == Brightness.dark
-                                              ? 0.18
-                                              : 0.10,
-                                        ) ??
-                                        scheme.surface)
-                                    .withValues(
-                                  alpha: theme.brightness == Brightness.dark
-                                      ? 0.24
-                                      : 0.28,
-                                );
+                            final glassTint = (Color.lerp(
+                                      theme.brightness == Brightness.dark
+                                          ? Colors.black
+                                          : Colors.white,
+                                      activeAccent,
+                                      theme.brightness == Brightness.dark
+                                          ? 0.18
+                                          : 0.10,
+                                    ) ??
+                                    scheme.surface)
+                                .withValues(
+                              alpha: theme.brightness == Brightness.dark
+                                  ? 0.24
+                                  : 0.28,
+                            );
 
                             return ClipRRect(
                               child: Container(
@@ -815,30 +815,32 @@ class _DesktopShellState extends State<DesktopShell>
                                   blurSigma: KubusGlassEffects.blurSigmaLight,
                                   showBorder: false,
                                   backgroundColor: glassTint,
-                                  child: DesktopNavigation(
-                                    items: navItems,
-                                    activeAccent: activeAccent,
-                                    selectedIndex:
-                                        selectedIndex < 0 ? 0 : selectedIndex,
-                                    onItemSelected: (index) =>
-                                        _onNavItemSelected(
-                                            index, navItems, isSignedIn),
-                                    isExpanded: _isNavigationExpanded,
-                                    expandAnimation: _navExpandAnimation,
-                                    onToggleExpand: _toggleNavigation,
-                                    onProfileTap: () =>
-                                        _showProfileMenu(context),
-                                    onSettingsTap: () =>
-                                        _showSettingsScreen(context),
-                                    onNotificationsTap: () =>
-                                        unawaited(_toggleNotificationsPanel()),
-                                    onWalletTap: () =>
-                                        _handleWalletTap(isSignedIn),
-                                    onCollabInvitesTap: isSignedIn &&
-                                            AppConfig.isFeatureEnabled(
-                                                'collabInvites')
-                                        ? () => _showCollabInvites()
-                                        : null,
+                                  child: RepaintBoundary(
+                                    child: DesktopNavigation(
+                                      items: navItems,
+                                      activeAccent: activeAccent,
+                                      selectedIndex:
+                                          selectedIndex < 0 ? 0 : selectedIndex,
+                                      onItemSelected: (index) =>
+                                          _onNavItemSelected(
+                                              index, navItems, isSignedIn),
+                                      isExpanded: _isNavigationExpanded,
+                                      expandAnimation: _navExpandAnimation,
+                                      onToggleExpand: _toggleNavigation,
+                                      onProfileTap: () =>
+                                          _showProfileMenu(context),
+                                      onSettingsTap: () =>
+                                          _showSettingsScreen(context),
+                                      onNotificationsTap: () => unawaited(
+                                          _toggleNotificationsPanel()),
+                                      onWalletTap: () =>
+                                          _handleWalletTap(isSignedIn),
+                                      onCollabInvitesTap: isSignedIn &&
+                                              AppConfig.isFeatureEnabled(
+                                                  'collabInvites')
+                                          ? () => _showCollabInvites()
+                                          : null,
+                                    ),
                                   ),
                                 ),
                               ),

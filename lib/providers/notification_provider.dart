@@ -118,7 +118,9 @@ class NotificationProvider extends ChangeNotifier {
         return;
       }
 
-      if (walletChanged && _currentWallet != null && _currentWallet!.isNotEmpty) {
+      if (walletChanged &&
+          _currentWallet != null &&
+          _currentWallet!.isNotEmpty) {
         _resetSessionState(
           clearUnreadCount: true,
         );
@@ -527,11 +529,16 @@ class NotificationProvider extends ChangeNotifier {
         _hasNew = false;
         notifyListeners();
         unawaited(_persistUnreadCount(0));
-        _scheduleServerSync(
-          delay: _isSocketHealthyForNotifications() && !_isNotificationsSurfaceActive
-              ? const Duration(seconds: 3)
-              : const Duration(seconds: 1),
-        );
+        final socketHealthy = _isSocketHealthyForNotifications();
+        final shouldSyncServer =
+            !socketHealthy || _isNotificationsSurfaceActive;
+        if (shouldSyncServer) {
+          _scheduleServerSync(
+            delay: socketHealthy
+                ? const Duration(seconds: 2)
+                : const Duration(seconds: 1),
+          );
+        }
         return;
       }
 
@@ -547,13 +554,6 @@ class NotificationProvider extends ChangeNotifier {
 
       // Show local push notification
       unawaited(handleIncomingNotification(data));
-
-      // Sync with backend
-      _scheduleServerSync(
-        delay: _isSocketHealthyForNotifications() && !_isNotificationsSurfaceActive
-            ? const Duration(seconds: 4)
-            : const Duration(milliseconds: 600),
-      );
     } catch (e) {
       debugPrint('NotificationProvider._handleSocketNotification error: $e');
     }
@@ -672,8 +672,12 @@ class NotificationProvider extends ChangeNotifier {
   ///   and shows a local notification when appropriate.
   Future<void> handleIncomingNotification(Map<String, dynamic> payload) async {
     try {
-      // Refresh authoritative data (non-blocking)
-      _scheduleServerSync(delay: const Duration(milliseconds: 600));
+      // Refresh authoritative data only when socket path is not currently
+      // sufficient (degraded socket) or the notifications surface is active.
+      if (!_isSocketHealthyForNotifications() ||
+          _isNotificationsSurfaceActive) {
+        _scheduleServerSync(delay: const Duration(milliseconds: 600));
+      }
 
       // Parse notification type and relevant payload fields
       // Work on a mutable copy for potential raw wrappers

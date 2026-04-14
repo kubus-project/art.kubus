@@ -157,6 +157,7 @@ class PublicFallbackService extends ChangeNotifier {
   int _consecutiveRecoverySuccesses = 0;
   BackendWritableStatusRecord? _primaryStatus;
   BackendWritableStatusRecord? _standbyStatus;
+  DateTime? _lastStandbyProbeAt;
   PublicSnapshotRegistryRecord? _registryCache;
   final Map<String, List<dynamic>> _datasetCache = <String, List<dynamic>>{};
   final Map<String, String> _datasetCidCache = <String, String>{};
@@ -221,21 +222,45 @@ class PublicFallbackService extends ChangeNotifier {
 
     () async {
       try {
-        final results = await Future.wait<BackendWritableStatusRecord>([
-          _fetchWritableStatus(AppConfig.baseApiUrl),
-          _fetchWritableStatus(AppConfig.standbyApiUrl),
-        ]);
+        final primary = await _fetchWritableStatus(AppConfig.baseApiUrl);
+        final shouldProbeStandby = _shouldProbeStandbyNow(primary: primary);
+        final standby = shouldProbeStandby
+            ? await _fetchWritableStatus(AppConfig.standbyApiUrl)
+            : _standbyStatus;
 
-        _primaryStatus = results[0];
-        _standbyStatus = results[1];
+        _primaryStatus = primary;
+        _standbyStatus = standby;
+        if (shouldProbeStandby) {
+          _lastStandbyProbeAt = DateTime.now().toUtc();
+        }
 
         final hintedMode = _resolveHintedMode(
           primary: _primaryStatus!,
-          standby: _standbyStatus!,
+          standby: _standbyStatus ??
+              BackendWritableStatusRecord(
+                baseUrl: AppConfig.standbyApiUrl,
+                reachable: false,
+                writable: false,
+                databaseRole: 'unavailable',
+                checkedAt: DateTime.now().toUtc(),
+                error: shouldProbeStandby
+                    ? null
+                    : 'standby probe skipped while primary healthy',
+              ),
         );
         final writableMode = _resolveWritableMode(
           primary: _primaryStatus!,
-          standby: _standbyStatus!,
+          standby: _standbyStatus ??
+              BackendWritableStatusRecord(
+                baseUrl: AppConfig.standbyApiUrl,
+                reachable: false,
+                writable: false,
+                databaseRole: 'unavailable',
+                checkedAt: DateTime.now().toUtc(),
+                error: shouldProbeStandby
+                    ? null
+                    : 'standby probe skipped while primary healthy',
+              ),
         );
         final preferredMode = hintedMode ?? writableMode;
 
@@ -466,6 +491,7 @@ class PublicFallbackService extends ChangeNotifier {
     _consecutiveRecoverySuccesses = 0;
     _primaryStatus = null;
     _standbyStatus = null;
+    _lastStandbyProbeAt = null;
     _registryCache = null;
     _datasetCache.clear();
     _datasetCidCache.clear();
@@ -492,6 +518,41 @@ class PublicFallbackService extends ChangeNotifier {
     return atLeastConfigured(const Duration(seconds: 240));
   }
 
+  Duration _standbyProbeIntervalWhenPrimaryHealthy() {
+    if (_isAppForeground) {
+      return const Duration(minutes: 6);
+    }
+    return const Duration(minutes: 12);
+  }
+
+  bool _shouldProbeStandbyNow({
+    required BackendWritableStatusRecord primary,
+  }) {
+    if (_isSameBaseUrl(AppConfig.baseApiUrl, AppConfig.standbyApiUrl)) {
+      return false;
+    }
+
+    if (_standbyStatus == null) {
+      return true;
+    }
+
+    if (!primary.reachable || !primary.writable) {
+      return true;
+    }
+
+    if (_mode != AppRuntimeMode.live) {
+      return true;
+    }
+
+    final lastProbeAt = _lastStandbyProbeAt ?? _standbyStatus?.checkedAt;
+    if (lastProbeAt == null) {
+      return true;
+    }
+
+    final elapsed = DateTime.now().toUtc().difference(lastProbeAt);
+    return elapsed >= _standbyProbeIntervalWhenPrimaryHealthy();
+  }
+
   void _startHealthMonitor({bool forceRestart = false}) {
     final targetInterval = _computeHealthMonitorInterval();
     if (!forceRestart &&
@@ -503,11 +564,9 @@ class PublicFallbackService extends ChangeNotifier {
     _healthTimer?.cancel();
     _healthMonitorInterval = targetInterval;
 
-    final maxJitterMs =
-      (targetInterval.inMilliseconds ~/ 5).clamp(2000, 12000);
+    final maxJitterMs = (targetInterval.inMilliseconds ~/ 5).clamp(2000, 12000);
     final jitterMs = _healthMonitorJitter.nextInt(maxJitterMs);
-    final effectiveInterval =
-        targetInterval + Duration(milliseconds: jitterMs);
+    final effectiveInterval = targetInterval + Duration(milliseconds: jitterMs);
     _healthTimer = Timer.periodic(effectiveInterval, (_) {
       unawaited(refreshBackendMode());
     });
