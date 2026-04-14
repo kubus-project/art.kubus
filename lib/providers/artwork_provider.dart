@@ -21,6 +21,7 @@ class ArtworkProvider extends ChangeNotifier {
   final Map<String, String?> _commentSubmitErrors = <String, String?>{};
   final Map<String, bool> _loadingStates = {};
   final Set<String> _walletsWithPrivateArtworks = <String>{};
+  final Set<String> _walletsWithPublicArtworks = <String>{};
   String? _error;
   SavedItemsProvider? _savedItemsProvider;
   final ArtworkBackendApi _backendApi;
@@ -118,12 +119,13 @@ class ArtworkProvider extends ChangeNotifier {
 
   /// Get user's own artworks (created by current user)
   List<Artwork> get userArtworks {
-    if (_walletsWithPrivateArtworks.isEmpty) {
-      return const <Artwork>[];
+    if (_walletsWithPrivateArtworks.isNotEmpty) {
+      return artworksForWallet(_walletsWithPrivateArtworks.last);
     }
-
-    final wallet = _walletsWithPrivateArtworks.last;
-    return artworksForWallet(wallet);
+    if (_walletsWithPublicArtworks.isNotEmpty) {
+      return artworksForWallet(_walletsWithPublicArtworks.last);
+    }
+    return const <Artwork>[];
   }
 
   List<Artwork> artworksForWallet(String walletAddress) {
@@ -650,6 +652,7 @@ class ArtworkProvider extends ChangeNotifier {
     try {
       if (refresh) {
         _walletsWithPrivateArtworks.clear();
+        _walletsWithPublicArtworks.clear();
       }
       final artworks = await _backendApi.getArtworks(limit: 100);
       _artworks
@@ -668,11 +671,18 @@ class ArtworkProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> loadArtworksForWallet(String walletAddress,
-      {bool force = false}) async {
+  Future<void> loadArtworksForWallet(
+    String walletAddress, {
+    bool force = false,
+    bool includePrivateForWallet = true,
+  }) async {
     if (walletAddress.isEmpty) return;
-    final cacheKey = walletAddress.toLowerCase();
-    if (!force && _walletsWithPrivateArtworks.contains(cacheKey)) {
+    final cacheKey = WalletUtils.canonical(walletAddress);
+    final cacheSet = includePrivateForWallet
+        ? _walletsWithPrivateArtworks
+        : _walletsWithPublicArtworks;
+
+    if (!force && cacheSet.contains(cacheKey)) {
       return;
     }
 
@@ -681,7 +691,7 @@ class ArtworkProvider extends ChangeNotifier {
     try {
       final walletArtworks = await _backendApi.getArtworks(
         walletAddress: walletAddress,
-        includePrivateForWallet: true,
+        includePrivateForWallet: includePrivateForWallet,
         limit: 100,
       );
       bool updated = false;
@@ -695,7 +705,7 @@ class ArtworkProvider extends ChangeNotifier {
         _artworkById[artwork.id] = artwork;
         updated = true;
       }
-      _walletsWithPrivateArtworks.add(cacheKey);
+      cacheSet.add(cacheKey);
       if (updated) {
         notifyListeners();
       }

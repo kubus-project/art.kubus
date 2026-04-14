@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,6 +13,7 @@ import '../services/backend_api_service.dart' show BackendApiRequestException;
 import '../services/collab_api.dart';
 import '../services/push_notification_service.dart';
 import '../services/socket_service.dart';
+import '../utils/wallet_utils.dart';
 
 class CollabProvider extends ChangeNotifier {
   final CollabApi _api;
@@ -32,6 +34,7 @@ class CollabProvider extends ChangeNotifier {
   int _lastProfileVersion = 0;
 
   bool _socketBound = false;
+  bool _connectListenerBound = false;
   String _lastAuthWallet = '';
 
   final Map<String, List<CollabMember>> _membersByEntityKey = <String, List<CollabMember>>{};
@@ -40,9 +43,20 @@ class CollabProvider extends ChangeNotifier {
   static const int _maxKnownInviteIds = 200;
 
   Timer? _invitePollingTimer;
+  Duration? _invitePollingIntervalCurrent;
   bool _pollingInFlight = false;
   bool _knownInvitesHydrated = false;
   bool _readyToNotifyNewInvites = false;
+  DateTime? _lastInviteSyncAt;
+  DateTime? _lastInviteSocketEventAt;
+  final Random _invitePollJitter = Random();
+
+  static const Duration _inviteSocketStaleAfter = Duration(minutes: 5);
+  static const Duration _inviteSyncStaleAfter = Duration(minutes: 8);
+  static const Duration _inviteForegroundActiveInterval =
+      Duration(seconds: 75);
+  static const Duration _inviteForegroundPassiveInterval =
+      Duration(seconds: 150);
 
   DateTime? _inviteBackoffUntil;
   Duration _inviteBackoff = Duration.zero;
@@ -138,6 +152,17 @@ class CollabProvider extends ChangeNotifier {
     if (_socketBound) return;
     _socketBound = true;
     _socket.addCollabListener(_onSocketCollabEvent);
+    if (!_connectListenerBound) {
+      _socket.addConnectListener(_handleSocketReconnect);
+      _connectListenerBound = true;
+    }
+  }
+
+  void _handleSocketReconnect() {
+    if (!AppConfig.isFeatureEnabled('collabInvites')) return;
+    if ((_api.getAuthToken() ?? '').trim().isEmpty) return;
+    unawaited(refreshInvites(showLoadingIndicator: false, notifyOnNew: false));
+    _evaluateInvitePollingState();
   }
 
   void _resetSessionState({
@@ -148,6 +173,9 @@ class CollabProvider extends ChangeNotifier {
     _inviteBackoffUntil = null;
     _inviteBackoff = Duration.zero;
     _readyToNotifyNewInvites = false;
+    _lastInviteSyncAt = null;
+    _lastInviteSocketEventAt = null;
+    _invitePollingIntervalCurrent = null;
     _initialized = false;
     _isLoading = false;
     _lastAuthWallet = '';
@@ -168,11 +196,13 @@ class CollabProvider extends ChangeNotifier {
 
     final event = (payload['event'] ?? '').toString();
     if (event == 'collab:invites-updated') {
+      _lastInviteSocketEventAt = DateTime.now();
       if (_pollingInFlight) return;
       _pollingInFlight = true;
       unawaited(
         _refreshInvitesInternal(showLoadingIndicator: false, notifyOnNew: true).whenComplete(() {
           _pollingInFlight = false;
+          _evaluateInvitePollingState();
         }),
       );
       return;
@@ -217,17 +247,18 @@ class CollabProvider extends ChangeNotifier {
 
     if (_lastAuthWallet != wallet) {
       _resetSessionState();
+      _evaluateInvitePollingState();
       _lastAuthWallet = wallet;
       // Schedule notifyListeners in microtask to avoid synchronous notification.
       Future.microtask(notifyListeners);
       unawaited(initialize(refresh: true));
-      startInvitePolling();
+      _evaluateInvitePollingState();
       return;
     }
 
     if (!_initialized) {
       unawaited(initialize(refresh: true));
-      startInvitePolling();
+      _evaluateInvitePollingState();
     }
   }
 
@@ -247,6 +278,7 @@ class CollabProvider extends ChangeNotifier {
     await _hydrateKnownInvitesOnce();
     await refreshInvites(notifyOnNew: false);
     _readyToNotifyNewInvites = true;
+    _evaluateInvitePollingState();
   }
 
   Future<void> refreshInvites({bool showLoadingIndicator = true, bool notifyOnNew = false}) async {
@@ -256,13 +288,82 @@ class CollabProvider extends ChangeNotifier {
     );
   }
 
+  bool get _isForeground => _refreshProvider?.isAppForeground ?? true;
+
+  bool get _isCollabSurfaceActive {
+    final refresh = _refreshProvider;
+    if (refresh == null) return false;
+    return refresh.isViewActive(
+          AppRefreshProvider.viewCommunity,
+          defaultIfUnknown: false,
+        ) ||
+        refresh.isViewActive(
+          AppRefreshProvider.viewNotifications,
+          defaultIfUnknown: false,
+        ) ||
+        refresh.isViewActive(
+          AppRefreshProvider.viewProfile,
+          defaultIfUnknown: false,
+        );
+  }
+
+  bool _socketHealthyForInviteFeed() {
+    if (!_socket.isConnected) return false;
+    final expectedWallet = WalletUtils.canonical(_lastAuthWallet);
+    if (expectedWallet.isEmpty) return false;
+    final subscribedWallet =
+        WalletUtils.canonical(_socket.currentSubscribedWallet);
+    if (subscribedWallet.isEmpty || subscribedWallet != expectedWallet) {
+      return false;
+    }
+
+    final now = DateTime.now();
+    final socketEventRecent = _lastInviteSocketEventAt != null &&
+        now.difference(_lastInviteSocketEventAt!) <= _inviteSocketStaleAfter;
+    final syncRecent = _lastInviteSyncAt != null &&
+        now.difference(_lastInviteSyncAt!) <= _inviteSyncStaleAfter;
+    return socketEventRecent || syncRecent;
+  }
+
+  Duration? _computeInvitePollingInterval() {
+    if (!AppConfig.isFeatureEnabled('collabInvites')) return null;
+    if ((_api.getAuthToken() ?? '').trim().isEmpty) return null;
+    if (!_isForeground) return null;
+    if (_socketHealthyForInviteFeed()) return null;
+
+    final base = _isCollabSurfaceActive
+        ? _inviteForegroundActiveInterval
+        : _inviteForegroundPassiveInterval;
+    final jitter = Duration(seconds: _invitePollJitter.nextInt(12));
+    return base + jitter;
+  }
+
+  void _evaluateInvitePollingState() {
+    final nextInterval = _computeInvitePollingInterval();
+    if (nextInterval == null) {
+      stopInvitePolling();
+      return;
+    }
+    if (_invitePollingTimer != null &&
+        _invitePollingIntervalCurrent == nextInterval) {
+      return;
+    }
+    startInvitePolling(interval: nextInterval);
+  }
+
   void startInvitePolling({Duration interval = const Duration(seconds: 75)}) {
     if (!AppConfig.isFeatureEnabled('collabInvites')) return;
     final token = (_api.getAuthToken() ?? '').trim();
     if (token.isEmpty) return;
     _invitePollingTimer?.cancel();
+    _invitePollingIntervalCurrent = interval;
     _invitePollingTimer = Timer.periodic(interval, (_) {
       if (_pollingInFlight) return;
+
+      if (_socketHealthyForInviteFeed()) {
+        stopInvitePolling();
+        return;
+      }
 
       final until = _inviteBackoffUntil;
       if (until != null && DateTime.now().isBefore(until)) {
@@ -273,6 +374,7 @@ class CollabProvider extends ChangeNotifier {
       unawaited(
         _refreshInvitesInternal(showLoadingIndicator: false, notifyOnNew: true).whenComplete(() {
           _pollingInFlight = false;
+          _evaluateInvitePollingState();
         }),
       );
     });
@@ -281,10 +383,25 @@ class CollabProvider extends ChangeNotifier {
   void stopInvitePolling() {
     _invitePollingTimer?.cancel();
     _invitePollingTimer = null;
+    _invitePollingIntervalCurrent = null;
   }
 
   Future<void> onAppResumed() async {
     await refreshInvites(showLoadingIndicator: false, notifyOnNew: false);
+    _evaluateInvitePollingState();
+  }
+
+  void handleAppForegroundChanged(bool isForeground) {
+    if (isForeground) {
+      _evaluateInvitePollingState();
+      unawaited(refreshInvites(showLoadingIndicator: false, notifyOnNew: false));
+      return;
+    }
+    stopInvitePolling();
+  }
+
+  void handleViewVisibilityChanged() {
+    _evaluateInvitePollingState();
   }
 
   Future<void> _refreshInvitesInternal({required bool showLoadingIndicator, required bool notifyOnNew}) async {
@@ -301,6 +418,7 @@ class CollabProvider extends ChangeNotifier {
         return;
       }
       final invites = await _api.listMyCollabInvites();
+      _lastInviteSyncAt = DateTime.now();
 
       // Successful response: clear any transient backoff.
       _inviteBackoffUntil = null;
@@ -341,11 +459,13 @@ class CollabProvider extends ChangeNotifier {
 
         _error = 'Invites temporarily unavailable';
         notifyListeners();
+        _evaluateInvitePollingState();
         return;
       }
 
       _error = e.toString();
       notifyListeners();
+      _evaluateInvitePollingState();
     } finally {
       if (showLoadingIndicator) {
         _setLoading(false);
@@ -581,6 +701,10 @@ class CollabProvider extends ChangeNotifier {
     stopInvitePolling();
     if (_socketBound) {
       _socket.removeCollabListener(_onSocketCollabEvent);
+    }
+    if (_connectListenerBound) {
+      _socket.removeConnectListener(_handleSocketReconnect);
+      _connectListenerBound = false;
     }
     if (_refreshProvider != null && _refreshListener != null) {
       try {

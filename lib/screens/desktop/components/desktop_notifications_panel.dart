@@ -52,9 +52,9 @@ class DesktopNotificationsPanel extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final themeProvider = Provider.of<ThemeProvider>(context);
-    final appModeProvider = context.watch<AppModeProvider?>();
     final l10n = AppLocalizations.of(context)!;
-    final isIpfsFallbackMode = appModeProvider?.isIpfsFallbackMode ?? false;
+    final isIpfsFallbackMode =
+      context.select<AppModeProvider?, bool>((p) => p?.isIpfsFallbackMode ?? false);
     final glassStyle = KubusGlassStyle.resolve(
       context,
       surfaceType: KubusGlassSurfaceType.panelBackground,

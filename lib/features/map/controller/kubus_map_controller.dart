@@ -239,6 +239,9 @@ class KubusMapController {
   bool _programmaticCameraMove = false;
   bool _cameraIsMoving = false;
 
+  static const Duration _hoverUpdateThrottle = Duration(milliseconds: 16);
+  static const double _hoverMovementEpsilonPx = 1.0;
+
   bool get programmaticCameraMove => _programmaticCameraMove;
 
   /// Screens that still own some camera animations can keep gesture detection
@@ -263,6 +266,10 @@ class KubusMapController {
   DateTime? _selectedMarkerAt;
 
   String? _hoveredMarkerId;
+  String? _pendingHoverMarkerId;
+  int _lastHoverUpdateMs = 0;
+  math.Point<double>? _lastHoverPoint;
+  Timer? _hoverUpdateTimer;
   String? _pressedMarkerId;
   Timer? _pressedClearTimer;
 
@@ -522,6 +529,10 @@ class KubusMapController {
     _pressedClearTimer?.cancel();
     _pressedClearTimer = null;
     _pressedMarkerId = null;
+    _hoverUpdateTimer?.cancel();
+    _hoverUpdateTimer = null;
+    _pendingHoverMarkerId = null;
+    _lastHoverPoint = null;
 
     // Clear anchor.
     selectedMarkerAnchor.value = null;
@@ -546,6 +557,8 @@ class KubusMapController {
 
   void dispose() {
     detachMapController();
+    _hoverUpdateTimer?.cancel();
+    _hoverUpdateTimer = null;
     _overlayAnchorDebouncer.dispose();
     _viewportVisibilityDebouncer.dispose();
     bearingDegrees.dispose();
@@ -818,27 +831,64 @@ class KubusMapController {
     if (!kIsWeb) return;
     _debugFeatureHoverCount += 1;
 
+    final hoverPoint = _coerceScreenPoint(point);
+    if (hoverPoint != null &&
+        _lastHoverPoint != null &&
+        _hoveredMarkerId != null) {
+      final dx = (hoverPoint.x - _lastHoverPoint!.x).abs();
+      final dy = (hoverPoint.y - _lastHoverPoint!.y).abs();
+      if (dx < _hoverMovementEpsilonPx && dy < _hoverMovementEpsilonPx) {
+        return;
+      }
+    }
+
     final featureId = id?.toString();
     if (featureId == null || featureId.isEmpty) {
-      if (_hoveredMarkerId != null) {
-        _hoveredMarkerId = null;
-        onRequestMarkerLayerStyleUpdate?.call();
-      }
+      _lastHoverPoint = null;
+      _queueHoverStyleUpdate(null);
       return;
     }
 
     if (featureId.startsWith(tapConfig.clusterIdPrefix) ||
         featureId.startsWith(tapConfig.sameLocationClusterIdPrefix)) {
-      if (_hoveredMarkerId != null) {
-        _hoveredMarkerId = null;
-        onRequestMarkerLayerStyleUpdate?.call();
-      }
+      _lastHoverPoint = hoverPoint;
+      _queueHoverStyleUpdate(null);
       return;
     }
 
     final isLeave = eventType == ml.HoverEventType.leave ||
         eventType?.toString() == 'HoverEventType.leave';
+    _lastHoverPoint = isLeave ? null : hoverPoint;
     final next = isLeave ? null : featureId;
+    if (next == _hoveredMarkerId || next == _pendingHoverMarkerId) return;
+    _queueHoverStyleUpdate(next);
+  }
+
+  void _queueHoverStyleUpdate(String? next) {
+    _pendingHoverMarkerId = next;
+
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final elapsedMs = nowMs - _lastHoverUpdateMs;
+    final throttleMs = _hoverUpdateThrottle.inMilliseconds;
+    if (elapsedMs >= throttleMs) {
+      _flushHoverStyleUpdate();
+      return;
+    }
+
+    final waitMs = throttleMs - elapsedMs;
+    _hoverUpdateTimer?.cancel();
+    _hoverUpdateTimer = Timer(Duration(milliseconds: waitMs), () {
+      _flushHoverStyleUpdate();
+    });
+  }
+
+  void _flushHoverStyleUpdate() {
+    _hoverUpdateTimer?.cancel();
+    _hoverUpdateTimer = null;
+    _lastHoverUpdateMs = DateTime.now().millisecondsSinceEpoch;
+    final next = _pendingHoverMarkerId;
+    _pendingHoverMarkerId = null;
+
     if (next == _hoveredMarkerId) return;
     _hoveredMarkerId = next;
     onRequestMarkerLayerStyleUpdate?.call();
@@ -1086,7 +1136,11 @@ class KubusMapController {
     if (_selectedMarkerData == null) return;
     if (!_styleInitialized) return;
 
-    final delay = force ? Duration.zero : const Duration(milliseconds: 66);
+    final delay = force
+        ? Duration.zero
+        : (_cameraIsMoving
+            ? const Duration(milliseconds: 100)
+            : const Duration(milliseconds: 66));
     _overlayAnchorDebouncer(delay, () {
       unawaited(_refreshActiveMarkerAnchor());
     });

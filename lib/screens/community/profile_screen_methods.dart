@@ -16,6 +16,7 @@ import '../../utils/artwork_navigation.dart';
 import '../../utils/creator_display_format.dart';
 import '../../utils/search_suggestions.dart';
 import '../../utils/user_profile_navigation.dart';
+import '../../utils/wallet_utils.dart';
 import '../../widgets/common/kubus_glass_icon_button.dart';
 import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/glass_components.dart';
@@ -27,39 +28,39 @@ class ProfileScreenMethods {
     final platform = Provider.of<PlatformProvider>(context, listen: false);
     final isDesktopLike = platform.isDesktop ||
         (platform.isWeb && MediaQuery.of(context).size.width >= 900);
-    // Prefetch stats so parent UI can update counts before showing list
-    (() async {
-      final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-      final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-      final resolvedWallet = (targetWallet != null && targetWallet.isNotEmpty)
-          ? targetWallet
-          : (profileProvider.currentWalletAddress ?? walletProvider.currentWalletAddress);
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final resolvedWallet = (targetWallet != null && targetWallet.isNotEmpty)
+        ? targetWallet
+        : (profileProvider.currentWalletAddress ??
+            walletProvider.currentWalletAddress);
 
-      if (resolvedWallet == null || resolvedWallet.isEmpty) {
-        return;
-      }
+    if (resolvedWallet == null || resolvedWallet.isEmpty) {
+      return;
+    }
 
+    // Open immediately; do not block UI on best-effort refresh.
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      enableDrag: !isDesktopLike,
+      showDragHandle: false,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _FollowersBottomSheet(walletAddress: resolvedWallet),
+    );
+
+    // Background refresh to keep counts in sync.
+    Future(() async {
       try {
-        try {
-          await profileProvider.refreshStats(
-            forceRefresh: true,
-            walletAddress: resolvedWallet,
-          );
-        } catch (_) {}
-        try {
-          await UserService.fetchAndUpdateUserStats(resolvedWallet);
-        } catch (_) {}
+        await profileProvider.refreshStats(
+          forceRefresh: true,
+          walletAddress: resolvedWallet,
+        );
       } catch (_) {}
-      if (!context.mounted) return;
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        enableDrag: !isDesktopLike,
-        showDragHandle: false,
-        backgroundColor: Colors.transparent,
-        builder: (context) => _FollowersBottomSheet(walletAddress: resolvedWallet),
-      );
-    })();
+      try {
+        await UserService.fetchAndUpdateUserStats(resolvedWallet);
+      } catch (_) {}
+    });
   }
 
   static void showFollowing(BuildContext context, {String? walletAddress}) {
@@ -67,39 +68,37 @@ class ProfileScreenMethods {
     final platform = Provider.of<PlatformProvider>(context, listen: false);
     final isDesktopLike = platform.isDesktop ||
         (platform.isWeb && MediaQuery.of(context).size.width >= 900);
-    // Prefetch stats so parent UI can update counts before showing list
-    (() async {
-      final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-      final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-      final resolvedWallet = (targetWallet != null && targetWallet.isNotEmpty)
-          ? targetWallet
-          : (profileProvider.currentWalletAddress ?? walletProvider.currentWalletAddress);
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final resolvedWallet = (targetWallet != null && targetWallet.isNotEmpty)
+        ? targetWallet
+        : (profileProvider.currentWalletAddress ??
+            walletProvider.currentWalletAddress);
 
-      if (resolvedWallet == null || resolvedWallet.isEmpty) {
-        return;
-      }
+    if (resolvedWallet == null || resolvedWallet.isEmpty) {
+      return;
+    }
 
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      enableDrag: !isDesktopLike,
+      showDragHandle: false,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _FollowingBottomSheet(walletAddress: resolvedWallet),
+    );
+
+    Future(() async {
       try {
-        try {
-          await profileProvider.refreshStats(
-            forceRefresh: true,
-            walletAddress: resolvedWallet,
-          );
-        } catch (_) {}
-        try {
-          await UserService.fetchAndUpdateUserStats(resolvedWallet);
-        } catch (_) {}
+        await profileProvider.refreshStats(
+          forceRefresh: true,
+          walletAddress: resolvedWallet,
+        );
       } catch (_) {}
-      if (!context.mounted) return;
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        enableDrag: !isDesktopLike,
-        showDragHandle: false,
-        backgroundColor: Colors.transparent,
-        builder: (context) => _FollowingBottomSheet(walletAddress: resolvedWallet),
-      );
-    })();
+      try {
+        await UserService.fetchAndUpdateUserStats(resolvedWallet);
+      } catch (_) {}
+    });
   }
 
   static void showArtworks(BuildContext context, {String? walletAddress}) {
@@ -107,32 +106,43 @@ class ProfileScreenMethods {
     final platform = Provider.of<PlatformProvider>(context, listen: false);
     final isDesktopLike = platform.isDesktop ||
         (platform.isWeb && MediaQuery.of(context).size.width >= 900);
-    (() async {
-      final artworkProvider = Provider.of<ArtworkProvider>(context, listen: false);
-      final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-      final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-      final resolvedWallet = (targetWallet != null && targetWallet.isNotEmpty)
-          ? targetWallet
-          : (profileProvider.currentWalletAddress ?? walletProvider.currentWalletAddress);
+    final artworkProvider = Provider.of<ArtworkProvider>(context, listen: false);
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final resolvedWallet = (targetWallet != null && targetWallet.isNotEmpty)
+        ? targetWallet
+        : (profileProvider.currentWalletAddress ??
+            walletProvider.currentWalletAddress);
 
-      if (resolvedWallet == null || resolvedWallet.isEmpty) {
-        return;
-      }
+    if (resolvedWallet == null || resolvedWallet.isEmpty) {
+      return;
+    }
 
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      enableDrag: !isDesktopLike,
+      showDragHandle: false,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _ArtworksBottomSheet(walletAddress: resolvedWallet),
+    );
+
+    // Background load; include private artworks only when viewing the current wallet.
+    final currentWallet = (walletProvider.currentWalletAddress ??
+            profileProvider.currentWalletAddress)
+        ?.trim();
+    final includePrivate = currentWallet != null &&
+        currentWallet.isNotEmpty &&
+        WalletUtils.equals(currentWallet, resolvedWallet);
+    Future(() async {
       try {
-        await artworkProvider.loadArtworksForWallet(resolvedWallet, force: true);
+        await artworkProvider.loadArtworksForWallet(
+          resolvedWallet,
+          force: true,
+          includePrivateForWallet: includePrivate,
+        );
       } catch (_) {}
-
-      if (!context.mounted) return;
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        enableDrag: !isDesktopLike,
-        showDragHandle: false,
-        backgroundColor: Colors.transparent,
-        builder: (context) => _ArtworksBottomSheet(walletAddress: resolvedWallet),
-      );
-    })();
+    });
   }
 
   static void showCollections(BuildContext context) {
@@ -862,10 +872,13 @@ class _ArtworksBottomSheet extends StatelessWidget {
     final platform = Provider.of<PlatformProvider>(context, listen: false);
     final isDesktopLike = platform.isDesktop ||
       (platform.isWeb && MediaQuery.of(context).size.width >= 900);
+    final enableCardBlur = !isDesktopLike;
+    final operationKey = 'load_artworks_wallet_${WalletUtils.canonical(walletAddress)}';
 
     return Consumer<ArtworkProvider>(
       builder: (context, artworkProvider, child) {
         final userArtworks = artworkProvider.artworksForWallet(walletAddress);
+        final isLoading = artworkProvider.isLoading(operationKey);
 
         return SizedBox(
           height: MediaQuery.of(context).size.height * 0.8,
@@ -887,29 +900,31 @@ class _ArtworksBottomSheet extends StatelessWidget {
                   ),
                 ),
                 Expanded(
-                child: userArtworks.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.image_not_supported,
-                            size: 64,
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            l10n.artistGalleryEmptyTitle,
-                            style: KubusTypography.inter(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                child: (isLoading && userArtworks.isEmpty)
+                    ? const AppLoading()
+                    : userArtworks.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.image_not_supported,
+                                  size: 64,
+                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  l10n.artistGalleryEmptyTitle,
+                                  style: KubusTypography.inter(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : GridView.builder(
+                          )
+                        : GridView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
@@ -928,6 +943,7 @@ class _ArtworksBottomSheet extends StatelessWidget {
                           child: LiquidGlassCard(
                             borderRadius:
                                 BorderRadius.circular(KubusRadius.lg),
+                            enableBlur: enableCardBlur,
                             padding: EdgeInsets.zero,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,

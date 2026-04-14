@@ -85,10 +85,12 @@ void _chatProviderResetSessionState(
   try {
     provider._pollTimer?.cancel();
     provider._pollTimer = null;
+    provider._pollIntervalCurrent = null;
   } catch (_) {}
   try {
     provider._subscriptionMonitorTimer?.cancel();
     provider._subscriptionMonitorTimer = null;
+    provider._subscriptionMonitorIntervalCurrent = null;
   } catch (_) {}
 
   provider._openConversationId = null;

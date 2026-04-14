@@ -1,28 +1,246 @@
 part of 'chat_provider.dart';
 
-void _chatProviderStartSubscriptionMonitor(ChatProvider provider) {
-  try {
+const Duration _chatSubscriptionMonitorActiveInterval =
+    Duration(seconds: 45);
+const Duration _chatSubscriptionMonitorPassiveInterval =
+    Duration(seconds: 90);
+const Duration _chatSubscriptionMonitorHealthyInterval =
+    Duration(minutes: 3);
+const Duration _chatSubscriptionMonitorBackgroundInterval =
+    Duration(minutes: 4);
+
+const Duration _chatConversationPollActiveInterval = Duration(seconds: 12);
+const Duration _chatConversationPollPassiveInterval = Duration(seconds: 30);
+
+bool _chatProviderIsForeground(ChatProvider provider) {
+  return provider._boundRefreshProvider?.isAppForeground ?? true;
+}
+
+bool _chatProviderIsChatSurfaceActive(ChatProvider provider) {
+  if ((provider._openConversationId ?? '').isNotEmpty) {
+    return true;
+  }
+  final refresh = provider._boundRefreshProvider;
+  if (refresh == null) return false;
+  return refresh.isViewActive(
+    AppRefreshProvider.viewChat,
+    grace: const Duration(minutes: 2),
+    defaultIfUnknown: false,
+  );
+}
+
+bool _chatProviderSocketHealthyForWallet(ChatProvider provider) {
+  final expectedWallet = WalletUtils.canonical(provider._currentWallet);
+  if (expectedWallet.isEmpty) return false;
+  if (!provider._socket.isConnected) return false;
+  final subscribedWallet =
+      WalletUtils.canonical(provider._socket.currentSubscribedWallet);
+  return subscribedWallet.isNotEmpty && subscribedWallet == expectedWallet;
+}
+
+Duration? _chatProviderComputeSubscriptionMonitorInterval(ChatProvider provider) {
+  if (!provider._hasAuthContext) return null;
+  if (!_chatProviderIsForeground(provider)) {
+    return _chatSubscriptionMonitorBackgroundInterval;
+  }
+  if (_chatProviderSocketHealthyForWallet(provider)) {
+    return _chatSubscriptionMonitorHealthyInterval;
+  }
+  return _chatProviderIsChatSurfaceActive(provider)
+      ? _chatSubscriptionMonitorActiveInterval
+      : _chatSubscriptionMonitorPassiveInterval;
+}
+
+Duration? _chatProviderComputeConversationPollingInterval(
+  ChatProvider provider,
+  String conversationId,
+) {
+  if (!provider._hasAuthContext) return null;
+  if (conversationId.trim().isEmpty) return null;
+  if (!_chatProviderIsForeground(provider)) return null;
+
+  final hasHealthySocket = provider._socket.isConnected &&
+      provider._socket.isSubscribedToConversation(conversationId);
+  if (hasHealthySocket) return null;
+
+  return _chatProviderIsChatSurfaceActive(provider)
+      ? _chatConversationPollActiveInterval
+      : _chatConversationPollPassiveInterval;
+}
+
+void _chatProviderEvaluateSubscriptionMonitor(
+  ChatProvider provider, {
+  bool forceRestart = false,
+}) {
+  final interval = _chatProviderComputeSubscriptionMonitorInterval(provider);
+  if (interval == null) {
     provider._subscriptionMonitorTimer?.cancel();
-    provider._subscriptionMonitorTimer =
-        Timer.periodic(const Duration(seconds: 45), (_) async {
-      try {
-        final expectedWallet = WalletUtils.canonical(provider._currentWallet);
-        if (expectedWallet.isEmpty) return;
-        final subscribed =
-            WalletUtils.canonical(provider._socket.currentSubscribedWallet);
-        if (subscribed.isEmpty || subscribed != expectedWallet) {
+    provider._subscriptionMonitorTimer = null;
+    provider._subscriptionMonitorIntervalCurrent = null;
+    return;
+  }
+
+  if (!forceRestart &&
+      provider._subscriptionMonitorTimer != null &&
+      provider._subscriptionMonitorIntervalCurrent == interval) {
+    return;
+  }
+
+  provider._subscriptionMonitorTimer?.cancel();
+  provider._subscriptionMonitorIntervalCurrent = interval;
+  provider._subscriptionMonitorTimer = Timer.periodic(interval, (_) async {
+    try {
+      if (!provider._hasAuthContext) {
+        provider._subscriptionMonitorTimer?.cancel();
+        provider._subscriptionMonitorTimer = null;
+        provider._subscriptionMonitorIntervalCurrent = null;
+        return;
+      }
+
+      final nextInterval =
+          _chatProviderComputeSubscriptionMonitorInterval(provider);
+      if (nextInterval == null) {
+        provider._subscriptionMonitorTimer?.cancel();
+        provider._subscriptionMonitorTimer = null;
+        provider._subscriptionMonitorIntervalCurrent = null;
+        return;
+      }
+      if (nextInterval != provider._subscriptionMonitorIntervalCurrent) {
+        _chatProviderEvaluateSubscriptionMonitor(
+          provider,
+          forceRestart: true,
+        );
+      }
+
+      final expectedWallet = WalletUtils.canonical(provider._currentWallet);
+      if (expectedWallet.isEmpty) return;
+      final subscribed =
+          WalletUtils.canonical(provider._socket.currentSubscribedWallet);
+      if (subscribed.isEmpty || subscribed != expectedWallet) {
+        if (kDebugMode) {
           debugPrint(
               'ChatProvider: subscription monitor detected mismatch (subscribed=$subscribed expected=${provider._currentWallet}), attempting resubscribe');
-          var ok = await provider._socket
-              .connectAndSubscribe(provider._api.baseUrl, provider._currentWallet!);
+        }
+        var ok = await provider._socket
+            .connectAndSubscribe(provider._api.baseUrl, provider._currentWallet!);
+        if (kDebugMode) {
           debugPrint(
               'ChatProvider subscription monitor: connectAndSubscribe -> $ok');
-          if (!ok) provider._socket.subscribeUser(provider._currentWallet!);
         }
-      } catch (e) {
+        if (!ok) provider._socket.subscribeUser(provider._currentWallet!);
+      }
+
+      _chatProviderEvaluateConversationPolling(provider);
+    } catch (e) {
+      if (kDebugMode) {
         debugPrint('ChatProvider._startSubscriptionMonitor check failed: $e');
       }
-    });
+    }
+  });
+}
+
+void _chatProviderEvaluateConversationPolling(
+  ChatProvider provider, {
+  bool forceRestart = false,
+}) {
+  final nid = provider._openConversationId;
+  if (nid == null || nid.trim().isEmpty) {
+    provider._pollTimer?.cancel();
+    provider._pollTimer = null;
+    provider._pollIntervalCurrent = null;
+    return;
+  }
+
+  final interval = _chatProviderComputeConversationPollingInterval(provider, nid);
+  if (interval == null) {
+    provider._pollTimer?.cancel();
+    provider._pollTimer = null;
+    provider._pollIntervalCurrent = null;
+    return;
+  }
+
+  if (!forceRestart &&
+      provider._pollTimer != null &&
+      provider._pollIntervalCurrent == interval) {
+    return;
+  }
+
+  provider._pollTimer?.cancel();
+  provider._pollIntervalCurrent = interval;
+  provider._pollTimer = Timer.periodic(interval, (timer) async {
+    try {
+      if (provider._openConversationId != nid) {
+        timer.cancel();
+        if (identical(provider._pollTimer, timer)) {
+          provider._pollTimer = null;
+          provider._pollIntervalCurrent = null;
+        }
+        return;
+      }
+
+      final nextInterval =
+          _chatProviderComputeConversationPollingInterval(provider, nid);
+      if (nextInterval == null) {
+        timer.cancel();
+        if (identical(provider._pollTimer, timer)) {
+          provider._pollTimer = null;
+          provider._pollIntervalCurrent = null;
+        }
+        return;
+      }
+      if (nextInterval != provider._pollIntervalCurrent) {
+        _chatProviderEvaluateConversationPolling(provider, forceRestart: true);
+        return;
+      }
+
+      final resp = await provider._api.fetchMessages(nid);
+      if (resp['success'] == true) {
+        final items = (resp['data'] as List<dynamic>?) ?? [];
+        final list = items
+            .map((i) => ChatMessage.fromJson(i as Map<String, dynamic>))
+            .toList();
+        provider._cacheMessages(nid, list);
+        provider._safeNotifyListeners();
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('ChatProvider: periodic fetchMessages failed for $nid: $e');
+      }
+    }
+  });
+}
+
+void _chatProviderEvaluatePollingCadence(
+  ChatProvider provider, {
+  bool forceRestart = false,
+}) {
+  _chatProviderEvaluateSubscriptionMonitor(
+    provider,
+    forceRestart: forceRestart,
+  );
+  _chatProviderEvaluateConversationPolling(
+    provider,
+    forceRestart: forceRestart,
+  );
+}
+
+void _chatProviderHandleAppForegroundChanged(
+  ChatProvider provider,
+  bool isForeground,
+) {
+  _chatProviderEvaluatePollingCadence(provider, forceRestart: true);
+  if (isForeground && provider._hasAuthContext) {
+    unawaited(provider.refreshConversations());
+  }
+}
+
+void _chatProviderHandleViewVisibilityChanged(ChatProvider provider) {
+  _chatProviderEvaluatePollingCadence(provider, forceRestart: true);
+}
+
+void _chatProviderStartSubscriptionMonitor(ChatProvider provider) {
+  try {
+    _chatProviderEvaluateSubscriptionMonitor(provider, forceRestart: true);
   } catch (e) {
     debugPrint('ChatProvider._startSubscriptionMonitor failed to start: $e');
   }
@@ -41,6 +259,7 @@ void _chatProviderBindToRefresh(
     provider._refreshListener = () {
       try {
         if (!provider._hasAuthContext) {
+          _chatProviderEvaluatePollingCadence(provider, forceRestart: true);
           return;
         }
         if (appRefresh.chatVersion != provider._lastChatVersion) {
@@ -56,11 +275,13 @@ void _chatProviderBindToRefresh(
             provider.refreshConversations();
           }
         }
+        _chatProviderEvaluatePollingCadence(provider);
       } catch (e) {
         debugPrint('ChatProvider.bindToRefresh handler error: $e');
       }
     };
     appRefresh.addListener(provider._refreshListener!);
+    _chatProviderEvaluatePollingCadence(provider, forceRestart: true);
   } catch (e) {
     debugPrint('ChatProvider.bindToRefresh failed: $e');
   }
@@ -172,6 +393,7 @@ Future<void> _chatProviderSetCurrentWallet(
           'ChatProvider.setCurrentWallet: refreshConversations failed: $e');
     }
     provider._startSubscriptionMonitor();
+    _chatProviderEvaluateConversationPolling(provider, forceRestart: true);
     provider._safeNotifyListeners(force: true);
   } catch (e) {
     debugPrint('ChatProvider.setCurrentWallet error: $e');
@@ -207,28 +429,7 @@ Future<void> _chatProviderOpenConversation(
   }
 
   try {
-    provider._pollTimer?.cancel();
-    provider._pollTimer = null;
-    final shouldPoll =
-        !provider._socket.isConnected || !provider._socket.isSubscribedToConversation(nid);
-    if (shouldPoll) {
-      provider._pollTimer =
-          Timer.periodic(const Duration(seconds: 12), (timer) async {
-        try {
-          final resp = await provider._api.fetchMessages(nid);
-          if (resp['success'] == true) {
-            final items = (resp['data'] as List<dynamic>?) ?? [];
-            final list = items
-                .map((i) => ChatMessage.fromJson(i as Map<String, dynamic>))
-                .toList();
-            provider._cacheMessages(nid, list);
-            provider._safeNotifyListeners();
-          }
-        } catch (e) {
-          debugPrint('ChatProvider: periodic fetchMessages failed for $nid: $e');
-        }
-      });
-    }
+    _chatProviderEvaluateConversationPolling(provider, forceRestart: true);
   } catch (e) {
     debugPrint('ChatProvider: Failed to start poll timer for conversation $nid: $e');
   }
@@ -251,7 +452,6 @@ Future<void> _chatProviderCloseConversation(
     provider._openConversationId = null;
   }
   try {
-    provider._pollTimer?.cancel();
-    provider._pollTimer = null;
+    _chatProviderEvaluateConversationPolling(provider, forceRestart: true);
   } catch (_) {}
 }

@@ -39,8 +39,9 @@ class NotificationProvider extends ChangeNotifier {
   DateTime? _lastServerSync;
   static const String _prefsUnreadPrefix = 'notifications_unread_count_';
   final Duration _minServerSyncInterval = const Duration(seconds: 8);
-  final Duration _foregroundCadence = const Duration(seconds: 55);
-  final Duration _backgroundCadence = const Duration(seconds: 150);
+  final Duration _degradedForegroundCadence = const Duration(seconds: 55);
+  final Duration _degradedBackgroundCadence = const Duration(seconds: 150);
+  final Duration _healthySocketCadence = const Duration(seconds: 180);
   final Duration _subscriptionCheckInterval = const Duration(seconds: 70);
 
   int _debugCadenceTicks = 0;
@@ -281,6 +282,9 @@ class NotificationProvider extends ChangeNotifier {
       if (!_isForeground) return;
       _debugCadenceTicks++;
       _maybeCheckSubscription();
+      if (_isSocketHealthyForNotifications()) {
+        return;
+      }
       _scheduleServerSync();
     });
   }
@@ -289,8 +293,11 @@ class NotificationProvider extends ChangeNotifier {
     if (!_initialized) return null;
     if (_currentWallet == null || _currentWallet!.isEmpty) return null;
     if (!_isForeground) return null;
+    if (_isSocketHealthyForNotifications()) {
+      return _healthySocketCadence;
+    }
     final active = _isNotificationsSurfaceActive;
-    return active ? _foregroundCadence : _backgroundCadence;
+    return active ? _degradedForegroundCadence : _degradedBackgroundCadence;
   }
 
   bool get _isForeground => _boundRefreshProvider?.isAppForeground ?? true;
@@ -299,8 +306,17 @@ class NotificationProvider extends ChangeNotifier {
     return _boundRefreshProvider?.isViewActive(
           AppRefreshProvider.viewNotifications,
           grace: const Duration(minutes: 2),
+          defaultIfUnknown: false,
         ) ??
-        true;
+        false;
+  }
+
+  bool _isSocketHealthyForNotifications() {
+    final expectedWallet = WalletUtils.canonical(_currentWallet);
+    if (expectedWallet.isEmpty) return false;
+    if (!_socket.isConnected) return false;
+    final subscribed = WalletUtils.canonical(_socket.currentSubscribedWallet);
+    return subscribed.isNotEmpty && subscribed == expectedWallet;
   }
 
   void handleAppForegroundChanged(bool isForeground) {

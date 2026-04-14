@@ -34,15 +34,24 @@ class MapOverlayBlocker extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!enabled) return child;
 
-    Widget result = Listener(
-      behavior: HitTestBehavior.opaque,
-      onPointerDown: (_) {},
-      onPointerMove: (_) {},
-      onPointerUp: (_) {},
-      onPointerCancel: (_) {},
-      onPointerSignal: (_) {},
-      child: child,
-    );
+    Widget result;
+    if (kIsWeb) {
+      result = GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {},
+        child: child,
+      );
+    } else {
+      result = Listener(
+        behavior: HitTestBehavior.opaque,
+        onPointerDown: (_) {},
+        onPointerMove: (_) {},
+        onPointerUp: (_) {},
+        onPointerCancel: (_) {},
+        onPointerSignal: (_) {},
+        child: child,
+      );
+    }
 
     result = MouseRegion(cursor: cursor, child: result);
 

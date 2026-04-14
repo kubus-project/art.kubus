@@ -87,6 +87,7 @@ import 'services/solana_wallet_service.dart';
 import 'services/socket_service.dart';
 import 'services/backend_api_service.dart';
 import 'services/public_action_outbox_service.dart';
+import 'services/public_fallback_service.dart';
 import 'services/telemetry/telemetry_route_observer.dart';
 import 'services/telemetry/telemetry_service.dart';
 import 'services/webgl_context_helper.dart';
@@ -1078,14 +1079,19 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     if (!mounted) return;
     final securityGate = Provider.of<SecurityGateProvider>(ctx, listen: false);
     final refreshProvider = Provider.of<AppRefreshProvider>(ctx, listen: false);
+    final chatProvider = Provider.of<ChatProvider>(ctx, listen: false);
     final presenceProvider = Provider.of<PresenceProvider>(ctx, listen: false);
     final notificationProvider =
         Provider.of<NotificationProvider>(ctx, listen: false);
+    final collabProvider = Provider.of<CollabProvider>(ctx, listen: false);
     final isForeground = state != AppLifecycleState.paused &&
         state != AppLifecycleState.inactive;
     refreshProvider.setAppForeground(isForeground);
+    chatProvider.handleAppForegroundChanged(isForeground);
     notificationProvider.handleAppForegroundChanged(isForeground);
     presenceProvider.handleAppForegroundChanged(isForeground);
+    collabProvider.handleAppForegroundChanged(isForeground);
+    PublicFallbackService().setAppForeground(isForeground);
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
       securityGate.onAppLifecycleChanged(state);
@@ -1094,7 +1100,12 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
       // Refresh core surfaces after returning to foreground (no manual reload needed).
       refreshProvider.triggerForegroundRefresh();
       unawaited(presenceProvider.onAppResumed());
-      unawaited(SocketService().connect());
+      unawaited(() async {
+        try {
+          await BackendApiService().refreshAuthTokenFromStorage();
+        } catch (_) {}
+        await SocketService().connect();
+      }());
     }
   }
 

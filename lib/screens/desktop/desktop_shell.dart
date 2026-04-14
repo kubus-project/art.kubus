@@ -7,7 +7,11 @@ import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../providers/themeprovider.dart';
+import '../../providers/app_refresh_provider.dart';
+import '../../providers/chat_provider.dart';
+import '../../providers/collab_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../providers/presence_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/recent_activity_provider.dart';
 import '../../providers/deep_link_provider.dart';
@@ -192,6 +196,7 @@ class _DesktopShellState extends State<DesktopShell>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _syncTelemetry();
+      _syncRefreshVisibility();
     });
   }
 
@@ -218,6 +223,7 @@ class _DesktopShellState extends State<DesktopShell>
       _screenStack.add(screen);
     });
     _syncTelemetry();
+    _syncRefreshVisibility();
   }
 
   /// Pop a screen from the in-shell stack
@@ -227,6 +233,7 @@ class _DesktopShellState extends State<DesktopShell>
         _screenStack.removeLast();
       });
       _syncTelemetry();
+      _syncRefreshVisibility();
     }
   }
 
@@ -242,6 +249,7 @@ class _DesktopShellState extends State<DesktopShell>
       _screenStack.clear();
     });
     _syncTelemetry();
+    _syncRefreshVisibility();
   }
 
   void _toggleNavigation() {
@@ -264,6 +272,7 @@ class _DesktopShellState extends State<DesktopShell>
     try {
       context.read<RecentActivityProvider>().markAllReadLocally();
     } catch (_) {}
+    _syncRefreshVisibility();
   }
 
   Future<void> _toggleNotificationsPanel() async {
@@ -289,6 +298,7 @@ class _DesktopShellState extends State<DesktopShell>
       _functionsPanel = DesktopFunctionsPanel.notifications;
       _functionsPanelContent = null;
     });
+    _syncRefreshVisibility();
   }
 
   void _openFunctionsPanel(DesktopFunctionsPanel panel, {Widget? content}) {
@@ -315,6 +325,7 @@ class _DesktopShellState extends State<DesktopShell>
       _functionsPanel = panel;
       _functionsPanelContent = nextContent;
     });
+    _syncRefreshVisibility();
   }
 
   void _setFunctionsPanelContent(Widget content) {
@@ -328,6 +339,7 @@ class _DesktopShellState extends State<DesktopShell>
     setState(() {
       _functionsPanelContent = content;
     });
+    _syncRefreshVisibility();
   }
 
   void _onNavItemSelected(
@@ -363,6 +375,46 @@ class _DesktopShellState extends State<DesktopShell>
       _screenStack.clear();
     });
     _syncTelemetry();
+    _syncRefreshVisibility();
+  }
+
+  void _syncRefreshVisibility() {
+    if (!mounted) return;
+    try {
+      final refreshProvider = context.read<AppRefreshProvider>();
+      final chatProvider = context.read<ChatProvider>();
+      final notificationProvider = context.read<NotificationProvider>();
+      final presenceProvider = context.read<PresenceProvider>();
+      final collabProvider = context.read<CollabProvider>();
+
+      final isCommunity = _activeRoute == '/community';
+      final isProfileSubscreen =
+          _screenStack.isNotEmpty && _screenStack.last is ProfileScreen;
+      final notificationsOpen =
+          _functionsPanel == DesktopFunctionsPanel.notifications;
+
+      refreshProvider.setViewActive(
+        AppRefreshProvider.viewCommunity,
+        isCommunity,
+      );
+      refreshProvider.setViewActive(
+        AppRefreshProvider.viewChat,
+        isCommunity,
+      );
+      refreshProvider.setViewActive(
+        AppRefreshProvider.viewNotifications,
+        notificationsOpen || isCommunity,
+      );
+      refreshProvider.setViewActive(
+        AppRefreshProvider.viewProfile,
+        isProfileSubscreen,
+      );
+
+      chatProvider.handleViewVisibilityChanged();
+      notificationProvider.handleViewVisibilityChanged();
+      presenceProvider.handleViewVisibilityChanged();
+      collabProvider.handleViewVisibilityChanged();
+    } catch (_) {}
   }
 
   List<Color>? _backgroundColorsForRoute(BuildContext context, String route) {
@@ -486,11 +538,22 @@ class _DesktopShellState extends State<DesktopShell>
 
   @override
   Widget build(BuildContext context) {
-    final profileProvider = Provider.of<ProfileProvider>(context);
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final navState =
+        context.select<ProfileProvider, ({bool isSignedIn, bool isArtist, bool isInstitution})>(
+      (p) {
+        final user = p.currentUser;
+        return (
+          isSignedIn: p.isSignedIn,
+          isArtist: user?.isArtist ?? false,
+          isInstitution: user?.isInstitution ?? false,
+        );
+      },
+    );
     final authWallet =
         (BackendApiService().getCurrentAuthWalletAddress() ?? '').trim();
     final canHydrateAuthenticatedProfile =
-        !profileProvider.isSignedIn && authWallet.isNotEmpty;
+        !navState.isSignedIn && authWallet.isNotEmpty;
 
     if (canHydrateAuthenticatedProfile && !_pendingProfileHydration) {
       _pendingProfileHydration = true;
@@ -506,10 +569,9 @@ class _DesktopShellState extends State<DesktopShell>
       _pendingProfileHydration = false;
     }
 
-    final isSignedIn = profileProvider.isSignedIn;
-    final currentUser = profileProvider.currentUser;
-    final isArtist = currentUser?.isArtist ?? false;
-    final isInstitution = currentUser?.isInstitution ?? false;
+    final isSignedIn = navState.isSignedIn;
+    final isArtist = navState.isArtist;
+    final isInstitution = navState.isInstitution;
     final navItems = _navItemsForState(isSignedIn,
         isArtist: isArtist, isInstitution: isInstitution);
     final isWalletRoute = _activeRoute == _walletRoute;

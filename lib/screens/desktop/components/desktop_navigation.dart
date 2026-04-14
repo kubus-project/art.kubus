@@ -433,9 +433,10 @@ class _DesktopNavigationState extends State<DesktopNavigation>
           if (AppConfig.isFeatureEnabled('collabInvites') &&
               widget.onCollabInvitesTap != null)
             Expanded(
-              child: Consumer<CollabProvider>(
-                builder: (context, collabProvider, _) {
-                  final pendingCount = collabProvider.pendingInviteCount;
+              child: Selector<CollabProvider, int>(
+                selector: (_, collabProvider) =>
+                    collabProvider.pendingInviteCount,
+                builder: (context, pendingCount, _) {
                   return _buildIconOnlyActionButton(
                     icon: Icons.group_add_outlined,
                     onTap: widget.onCollabInvitesTap!,
@@ -473,9 +474,9 @@ class _DesktopNavigationState extends State<DesktopNavigation>
         // Collab invites (if enabled)
         if (AppConfig.isFeatureEnabled('collabInvites') &&
             widget.onCollabInvitesTap != null)
-          Consumer<CollabProvider>(
-            builder: (context, collabProvider, _) {
-              final pendingCount = collabProvider.pendingInviteCount;
+          Selector<CollabProvider, int>(
+            selector: (_, collabProvider) => collabProvider.pendingInviteCount,
+            builder: (context, pendingCount, _) {
               return _buildCollapsedActionButton(
                 icon: Icons.group_add_outlined,
                 onTap: widget.onCollabInvitesTap!,
@@ -570,9 +571,10 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                 ),
               // Notification badge (uses NotificationProvider)
               if (showBadge && badgeCount == 0)
-                Consumer<NotificationProvider>(
-                  builder: (context, np, _) {
-                    if (np.unreadCount == 0) return const SizedBox.shrink();
+                Selector<NotificationProvider, int>(
+                  selector: (_, np) => np.unreadCount,
+                  builder: (context, unreadCount, _) {
+                    if (unreadCount == 0) return const SizedBox.shrink();
                     return Positioned(
                       right: 0,
                       top: 0,
@@ -662,9 +664,10 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                 ),
               // Notification badge (uses NotificationProvider)
               if (showBadge && badgeCount == 0)
-                Consumer<NotificationProvider>(
-                  builder: (context, np, _) {
-                    if (np.unreadCount == 0) return const SizedBox.shrink();
+                Selector<NotificationProvider, int>(
+                  selector: (_, np) => np.unreadCount,
+                  builder: (context, unreadCount, _) {
+                    if (unreadCount == 0) return const SizedBox.shrink();
                     return Positioned(
                       right: 0,
                       top: 0,

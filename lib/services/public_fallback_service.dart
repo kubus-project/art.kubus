@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -146,6 +147,9 @@ class PublicFallbackService extends ChangeNotifier {
   http.Client _client;
   AppRuntimeMode _mode;
   Timer? _healthTimer;
+  bool _isAppForeground = true;
+  Duration? _healthMonitorInterval;
+  final Random _healthMonitorJitter = Random();
   Future<void>? _initializeFuture;
   Future<void>? _refreshHealthFuture;
   bool _initialized = false;
@@ -197,6 +201,15 @@ class PublicFallbackService extends ChangeNotifier {
     }();
 
     return completer.future;
+  }
+
+  void setAppForeground(bool isForeground) {
+    if (_isAppForeground == isForeground) return;
+    _isAppForeground = isForeground;
+    _startHealthMonitor(forceRestart: true);
+    if (isForeground) {
+      unawaited(refreshBackendMode());
+    }
   }
 
   Future<void> refreshBackendMode() async {
@@ -460,12 +473,42 @@ class PublicFallbackService extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _startHealthMonitor() {
+  Duration _computeHealthMonitorInterval() {
+    Duration atLeastConfigured(Duration candidate) {
+      final configured = AppConfig.backendModeHealthCheckInterval;
+      return candidate < configured ? configured : candidate;
+    }
+
+    if (_mode == AppRuntimeMode.ipfsFallback) {
+      return atLeastConfigured(_isAppForeground
+          ? const Duration(seconds: 25)
+          : const Duration(seconds: 90));
+    }
+
+    if (_isAppForeground) {
+      return atLeastConfigured(const Duration(seconds: 45));
+    }
+
+    return atLeastConfigured(const Duration(seconds: 180));
+  }
+
+  void _startHealthMonitor({bool forceRestart = false}) {
+    final targetInterval = _computeHealthMonitorInterval();
+    if (!forceRestart &&
+        _healthTimer != null &&
+        _healthMonitorInterval == targetInterval) {
+      return;
+    }
+
     _healthTimer?.cancel();
-    _healthTimer = Timer.periodic(
-      AppConfig.backendModeHealthCheckInterval,
-      (_) => unawaited(refreshBackendMode()),
-    );
+    _healthMonitorInterval = targetInterval;
+
+    final jitterMs = _healthMonitorJitter.nextInt(5000);
+    final effectiveInterval =
+        targetInterval + Duration(milliseconds: jitterMs);
+    _healthTimer = Timer.periodic(effectiveInterval, (_) {
+      unawaited(refreshBackendMode());
+    });
   }
 
   Future<void> _hydrateCaches() async {
@@ -666,6 +709,7 @@ class PublicFallbackService extends ChangeNotifier {
       return;
     }
     _mode = nextMode;
+    _startHealthMonitor(forceRestart: true);
     if (notify) {
       notifyListeners();
     }

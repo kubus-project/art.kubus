@@ -84,12 +84,19 @@ class _AvatarWidgetState extends State<AvatarWidget>
     final walletId = WalletUtils.normalize(widget.wallet);
     final cacheKey = walletId.isNotEmpty ? walletId : widget.wallet;
     final fallbackSeed = WalletUtils.canonical(widget.wallet);
-    // 1. If explicit URL provided, trust it completely and skip fetch.
+    // 1. If explicit URL provided, only trust it when it normalizes to a
+    // usable HTTP(S) URL (or a backend-relative path that resolves to one).
+    // Some API responses historically contained malformed absolute URLs like
+    // "https:/api.kubus.site/..." which would otherwise break rendering.
     if (widget.avatarUrl != null && widget.avatarUrl!.isNotEmpty) {
-      setState(() {
-        _effectiveUrl = _normalizeAvatar(widget.avatarUrl);
-      });
-      return;
+      final normalized = _normalizeAvatar(widget.avatarUrl);
+      if (_isUsableNetworkUrl(normalized)) {
+        setState(() {
+          _effectiveUrl = normalized;
+        });
+        return;
+      }
+      // Fall through: treat malformed avatarUrl as absent and try cache/fetch.
     }
 
     // 2. Check cache
@@ -199,8 +206,7 @@ class _AvatarWidgetState extends State<AvatarWidget>
   @override
   Widget build(BuildContext context) {
     final effective = _effectiveUrl ?? '';
-    final useNetwork = effective.isNotEmpty &&
-        (effective.startsWith('http') || effective.startsWith('https'));
+    final useNetwork = _isUsableNetworkUrl(effective);
     final radius = widget.radius;
     final double size = radius * 2;
     final shapeRadius = AvatarWidget.shapeRadiusFor(
@@ -509,6 +515,14 @@ class _AvatarWidgetState extends State<AvatarWidget>
       if (candidate.startsWith('//')) {
         candidate = 'https:$candidate';
       }
+
+      // Repair common malformed absolute URL form: "https:/host/path".
+      // This can happen when a backend/base url is concatenated incorrectly.
+      if (candidate.startsWith('https:/') && !candidate.startsWith('https://')) {
+        candidate = candidate.replaceFirst('https:/', 'https://');
+      } else if (candidate.startsWith('http:/') && !candidate.startsWith('http://')) {
+        candidate = candidate.replaceFirst('http:/', 'http://');
+      }
     } catch (_) {
       return candidate;
     }
@@ -516,5 +530,19 @@ class _AvatarWidgetState extends State<AvatarWidget>
     return MediaUrlResolver.resolveDisplayUrl(candidate) ??
         MediaUrlResolver.resolve(candidate) ??
         candidate;
+  }
+
+  bool _isUsableNetworkUrl(String? candidate) {
+    final value = (candidate ?? '').trim();
+    if (value.isEmpty) return false;
+    if (!(value.startsWith('http://') || value.startsWith('https://'))) {
+      return false;
+    }
+    final uri = Uri.tryParse(value);
+    if (uri == null) return false;
+    if (!uri.hasScheme) return false;
+    if (uri.scheme != 'http' && uri.scheme != 'https') return false;
+    if (uri.host.trim().isEmpty) return false;
+    return true;
   }
 }

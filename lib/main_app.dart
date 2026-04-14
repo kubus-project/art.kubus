@@ -8,6 +8,8 @@ import 'providers/deep_link_provider.dart';
 import 'providers/deferred_onboarding_provider.dart';
 import 'providers/main_tab_provider.dart';
 import 'providers/app_refresh_provider.dart';
+import 'providers/chat_provider.dart';
+import 'providers/collab_provider.dart';
 import 'providers/notification_provider.dart';
 import 'providers/presence_provider.dart';
 import 'core/mobile_shell_registry.dart';
@@ -455,10 +457,13 @@ class _MainAppState extends State<MainApp> {
     try {
       final refreshProvider =
           Provider.of<AppRefreshProvider>(context, listen: false);
+      final chatProvider = Provider.of<ChatProvider>(context, listen: false);
       final notificationProvider =
           Provider.of<NotificationProvider>(context, listen: false);
       final presenceProvider =
           Provider.of<PresenceProvider>(context, listen: false);
+      final collabProvider =
+          Provider.of<CollabProvider>(context, listen: false);
       final isCommunity = index == 2;
       final isProfile = index == 4;
 
@@ -468,8 +473,10 @@ class _MainAppState extends State<MainApp> {
       refreshProvider.setViewActive(
           AppRefreshProvider.viewNotifications, isCommunity);
       refreshProvider.setViewActive(AppRefreshProvider.viewProfile, isProfile);
+      chatProvider.handleViewVisibilityChanged();
       notificationProvider.handleViewVisibilityChanged();
       presenceProvider.handleViewVisibilityChanged();
+      collabProvider.handleViewVisibilityChanged();
     } catch (_) {}
   }
 }

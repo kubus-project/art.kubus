@@ -466,7 +466,9 @@ class ChatProvider extends ChangeNotifier {
   String? _currentWallet;
   String? _openConversationId;
   Timer? _pollTimer;
+  Duration? _pollIntervalCurrent;
   Timer? _subscriptionMonitorTimer;
+  Duration? _subscriptionMonitorIntervalCurrent;
 
   bool _initialized = false;
   AppRefreshProvider? _boundRefreshProvider;
@@ -590,6 +592,10 @@ class ChatProvider extends ChangeNotifier {
         'activeTimers': <String, bool>{
           'pollTimer': _pollTimer?.isActive ?? false,
           'subscriptionMonitor': _subscriptionMonitorTimer?.isActive ?? false,
+        },
+        'timerIntervalsSeconds': <String, int?>{
+          'poll': _pollIntervalCurrent?.inSeconds,
+          'subscriptionMonitor': _subscriptionMonitorIntervalCurrent?.inSeconds,
         },
         'bindings': <String, bool>{
           'refreshProvider': _boundRefreshProvider != null,
@@ -975,6 +981,14 @@ class ChatProvider extends ChangeNotifier {
   /// Bind to AppRefreshProvider for global or targeted chat refresh triggers
   void bindToRefresh(AppRefreshProvider appRefresh) {
     _chatProviderBindToRefresh(this, appRefresh);
+  }
+
+  void handleAppForegroundChanged(bool isForeground) {
+    _chatProviderHandleAppForegroundChanged(this, isForeground);
+  }
+
+  void handleViewVisibilityChanged() {
+    _chatProviderHandleViewVisibilityChanged(this);
   }
   // Force a notify when UI-driven fetches merge into the provider cache.
   // This bypasses the signature dedupe check so profile/avatar updates
