@@ -1821,13 +1821,44 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   Future<void> _loadUser({bool showFullScreenLoader = true}) async {
     if (showFullScreenLoader) setState(() => isLoading = true);
 
+    final targetId = widget.userId.trim();
+
+    if (widget.username == null && targetId.isNotEmpty) {
+      try {
+        final cached = UserService.getCachedUser(targetId);
+        if (cached != null) {
+          setState(() {
+            user = cached;
+            isLoading = false;
+          });
+
+          try {
+            Future(() async {
+              final fresh = await UserService.getUserById(
+                targetId,
+                forceRefresh: true,
+              );
+              if (!mounted) return;
+              if (fresh != null && WalletUtils.equals(fresh.id, targetId)) {
+                setState(() {
+                  user = fresh;
+                });
+              }
+            });
+          } catch (_) {}
+        }
+      } catch (_) {}
+    }
+
     User? loadedUser;
     try {
       if (widget.username != null) {
         loadedUser = await UserService.getUserByUsername(widget.username!);
       } else {
-        loadedUser =
-            await UserService.getUserById(widget.userId, forceRefresh: true);
+        loadedUser = await UserService.getUserById(
+          targetId,
+          forceRefresh: false,
+        );
       }
     } catch (e) {
       debugPrint('Failed to fetch user: $e');

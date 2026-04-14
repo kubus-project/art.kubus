@@ -16,7 +16,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 0.5.8+26041304
+version: 0.5.9+26041401
 
 environment:
   sdk: ">=3.6.0 <4.0.0"
@@ -64,7 +64,7 @@ dependencies:
   # Web3 and Blockchain (Solana-focused)
   http: ^1.4.0
   http_parser: ^4.0.2
-  pointycastle: ^3.9.1 # Compatible with reown_walletkit
+  pointycastle: ^4.0.0 # Compatible with Reown AppKit crypto dependencies
   solana: ^0.32.0 # Updated Solana SDK for Dart
   bip39: ^1.0.6 # BIP39 mnemonic generation
 
@@ -78,7 +78,7 @@ dependencies:
   pointer_interceptor: ^0.10.1
 
   # WalletConnect for real wallet connections (using new package)
-  reown_walletkit: ^1.1.0 # Using a more stable version
+  reown_appkit: ^1.8.3
 
   # QR Code functionality
   qr_flutter: ^4.1.0 # QR code generation
@@ -128,6 +128,9 @@ dependencies:
 dependency_overrides:
   # Override vector_math for all packages
   vector_math: ^2.1.4
+  # Reown AppKit 1.8.x requires pointycastle 4. Solana still pulls bip39 with
+  # an older pointycastle constraint, so this keeps the graph on one version.
+  pointycastle: ^4.0.0
 
 dev_dependencies:
   flutter_test:

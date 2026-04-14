@@ -49,9 +49,10 @@ class Web3Provider extends ChangeNotifier {
 
   bool get hasWalletIdentity => _walletProvider?.hasWalletIdentity ?? false;
   bool get hasSigner => _walletProvider?.hasSigner ?? false;
-  bool get canTransact => _walletProvider?.canTransact ?? false;
-  bool get isReadOnlySession => _walletProvider?.isReadOnlySession ?? false;
-  bool get isConnected => hasWalletIdentity;
+  bool get canTransact => _walletProvider?.authority.canTransact ?? false;
+  bool get isReadOnlySession =>
+      _walletProvider?.authority.isReadOnlyWallet ?? false;
+  bool get isConnected => canTransact;
   Wallet? get wallet => _walletProvider?.wallet;
   String get walletAddress => _walletProvider?.currentWalletAddress ?? '';
   double get solBalance => wallet?.getTokenBySymbol('SOL')?.balance ?? 0.0;
@@ -182,11 +183,25 @@ class Web3Provider extends ChangeNotifier {
   }
 
   Future<String> swapSolToKub8(double solAmount) async {
+    if (!_boundWalletProvider.authority.canTransact) {
+      throw Exception('Wallet signer required for swaps');
+    }
     final signer = _boundWalletProvider.solanaWalletService;
-    final signature = await signer.swapSolToSpl(
-      mint: kub8TokenAddress,
-      solAmount: solAmount,
-    );
+    final signature = _boundWalletProvider.hasLocalSigner
+        ? await signer.swapSolToSpl(
+            mint: kub8TokenAddress,
+            solAmount: solAmount,
+          )
+        : await _boundWalletProvider.signAndSendTransactionBase64(
+            await signer.buildJupiterSwapTransactionBase64(
+              userPublicKey: _boundWalletProvider.currentWalletAddress!,
+              inputMint: ApiKeys.wrappedSolMintAddress,
+              outputMint: kub8TokenAddress,
+              inputAmountRaw: (solAmount * 1000000000).round(),
+              slippageBps: 50,
+              wrapAndUnwrapSol: true,
+            ),
+          );
     await _boundWalletProvider.refreshData();
     return signature;
   }
@@ -196,8 +211,8 @@ class Web3Provider extends ChangeNotifier {
     if (normalizedProposal.isEmpty) {
       throw ArgumentError('proposalId cannot be empty');
     }
-    if (walletAddress.isEmpty) {
-      throw Exception('Wallet not connected');
+    if (!_boundWalletProvider.authority.canTransact) {
+      throw Exception('Wallet signer required for governance voting');
     }
 
     final prefs = await SharedPreferences.getInstance();
@@ -218,9 +233,13 @@ class Web3Provider extends ChangeNotifier {
       return map['proposalId'] != normalizedProposal || map['voter'] != voter;
     }).toList();
 
-    final prefixLen = voter.length >= 8 ? 8 : voter.length;
-    final signature =
-        'local_vote_${DateTime.now().millisecondsSinceEpoch}_${voter.substring(0, prefixLen)}';
+    final signaturePayload = jsonEncode({
+      'proposalId': normalizedProposal,
+      'voter': voter,
+      'support': support,
+      'createdAt': DateTime.now().toIso8601String(),
+    });
+    final signature = await _boundWalletProvider.signMessage(signaturePayload);
     filtered.add({
       'proposalId': normalizedProposal,
       'voter': voter,
@@ -234,6 +253,12 @@ class Web3Provider extends ChangeNotifier {
   }
 
   Future<String> mintArtworkNFT(Map<String, dynamic> metadata) async {
+    if (!_boundWalletProvider.authority.canTransact) {
+      throw Exception('Wallet signer required for NFT minting');
+    }
+    if (!_boundWalletProvider.hasLocalSigner) {
+      throw Exception('Local signer required for NFT minting');
+    }
     return _boundWalletProvider.solanaWalletService.mintNft(metadata: metadata);
   }
 

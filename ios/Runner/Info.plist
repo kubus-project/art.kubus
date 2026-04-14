@@ -32,6 +32,20 @@
 					<string>$(KUBUS_GOOGLE_REVERSED_IOS_CLIENT_ID)</string>
 				</array>
 			</dict>
+			<dict>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>artkubus</string>
+				</array>
+			</dict>
+		</array>
+		<key>LSApplicationQueriesSchemes</key>
+		<array>
+			<string>metamask</string>
+			<string>phantom</string>
+			<string>solflare</string>
 		</array>
 		<key>GIDClientID</key>
 		<string>$(KUBUS_GOOGLE_IOS_CLIENT_ID)</string>

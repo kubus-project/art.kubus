@@ -42,13 +42,14 @@ Future<String?> showWalletBackupPasswordPrompt({
                   obscureText: true,
                   autofocus: true,
                   decoration: InputDecoration(
-                    labelText:
-                        confirm ? 'Recovery password' : l10n.commonPassword,
+                    labelText: confirm
+                        ? l10n.walletBackupRecoveryPasswordLabel
+                        : l10n.commonPassword,
                   ),
                   validator: (value) {
                     final password = (value ?? '').trim();
                     if (password.length < 8) {
-                      return 'Use at least 8 characters.';
+                      return l10n.walletBackupPasswordTooShortError;
                     }
                     return null;
                   },
@@ -63,7 +64,7 @@ Future<String?> showWalletBackupPasswordPrompt({
                     ),
                     validator: (value) {
                       if ((value ?? '') != firstController.text) {
-                        return 'Passwords do not match.';
+                        return l10n.walletBackupPasswordsMismatchError;
                       }
                       return null;
                     },
@@ -136,10 +137,10 @@ Future<String?> showWalletBackupTextPrompt({
                   validator: (value) {
                     final trimmed = (value ?? '').trim();
                     if (trimmed.isEmpty) {
-                      return '$label is required.';
+                      return l10n.walletBackupPromptRequiredError(label);
                     }
                     if (trimmed.length > 120) {
-                      return '$label must be 120 characters or less.';
+                      return l10n.walletBackupPromptTooLongError(label);
                     }
                     return null;
                   },

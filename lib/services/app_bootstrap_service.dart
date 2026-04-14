@@ -78,6 +78,12 @@ class AppBootstrapService {
     var hasAuth = false;
     await _runTask('auth_token', () async {
       hasAuth = await backend.restoreExistingSession();
+      if (hasAuth) {
+        await walletProvider.restoreAccountShellFromBackend(
+          allowRefresh: false,
+          loadWalletData: false,
+        );
+      }
     });
 
     final shouldLoadWeb3 = AppConfig.enableWeb3;

@@ -342,13 +342,13 @@ class EncryptedWalletBackupService {
       );
     }
 
-    final argon2 = _buildArgon2(backupDefinition.kdfParams);
-    final keyEncryptionKey = await argon2.deriveKeyFromPassword(
-      password: recoveryPassword,
-      nonce: _decodeBase64Url(backupDefinition.salt),
-    );
-
     try {
+      final argon2 = _buildArgon2(backupDefinition.kdfParams);
+      final keyEncryptionKey = await argon2.deriveKeyFromPassword(
+        password: recoveryPassword,
+        nonce: _decodeBase64Url(backupDefinition.salt),
+      );
+
       final dekBytes = await _aesGcm.decrypt(
         _secretBoxFromStoredCiphertext(
           ciphertext: backupDefinition.wrappedDekCiphertext,
@@ -380,6 +380,14 @@ class EncryptedWalletBackupService {
 
       return mnemonic;
     } on SecretBoxAuthenticationError {
+      throw const EncryptedWalletBackupException(
+        'Recovery password is incorrect or the backup data was tampered with.',
+      );
+    } on FormatException {
+      throw const EncryptedWalletBackupException(
+        'Recovery password is incorrect or the backup data was tampered with.',
+      );
+    } on ArgumentError {
       throw const EncryptedWalletBackupException(
         'Recovery password is incorrect or the backup data was tampered with.',
       );

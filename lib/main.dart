@@ -471,7 +471,19 @@ class _AppLauncherState extends State<AppLauncher> {
                 },
               ),
               ChangeNotifierProvider(create: (context) => PlatformProvider()),
-              ChangeNotifierProvider(create: (context) => ProfileProvider()),
+              ChangeNotifierProvider(
+                create: (context) => WalletProvider(
+                  solanaWalletService: context.read<SolanaWalletService>(),
+                ),
+              ),
+              ChangeNotifierProxyProvider<WalletProvider, ProfileProvider>(
+                create: (context) => ProfileProvider(),
+                update: (context, walletProvider, profileProvider) {
+                  final provider = profileProvider ?? ProfileProvider();
+                  provider.bindWalletProvider(walletProvider);
+                  return provider;
+                },
+              ),
               ChangeNotifierProxyProvider2<AppRefreshProvider, ConfigProvider,
                   StatsProvider>(
                 create: (context) => StatsProvider(),
@@ -547,17 +559,21 @@ class _AppLauncherState extends State<AppLauncher> {
                 lazy: false,
                 create: (context) => AuthDeepLinkProvider(),
               ),
-              ChangeNotifierProxyProvider2<DeepLinkProvider,
-                  AuthDeepLinkProvider, PlatformDeepLinkListenerProvider>(
+              ChangeNotifierProxyProvider3<
+                  DeepLinkProvider,
+                  AuthDeepLinkProvider,
+                  WalletProvider,
+                  PlatformDeepLinkListenerProvider>(
                 lazy: false,
                 create: (context) => PlatformDeepLinkListenerProvider(),
                 update: (context, deepLinkProvider, authDeepLinkProvider,
-                    listenerProvider) {
+                    walletProvider, listenerProvider) {
                   final provider =
                       listenerProvider ?? PlatformDeepLinkListenerProvider();
                   provider.bindProviders(
                     deepLinkProvider: deepLinkProvider,
                     authDeepLinkProvider: authDeepLinkProvider,
+                    walletProvider: walletProvider,
                   );
                   return provider;
                 },
@@ -615,24 +631,17 @@ class _AppLauncherState extends State<AppLauncher> {
                 create: (context) => InstitutionProvider(),
                 update: (context, profileProvider, daoProvider,
                     institutionProvider) {
-                  final provider =
-                      institutionProvider ?? InstitutionProvider();
+                  final provider = institutionProvider ?? InstitutionProvider();
                   provider.bindProfileProvider(profileProvider);
                   provider.bindDaoProvider(daoProvider);
                   return provider;
                 },
               ),
-              ChangeNotifierProvider(
-                create: (context) => WalletProvider(
-                  solanaWalletService: context.read<SolanaWalletService>(),
-                ),
-              ),
               ProxyProvider2<SolanaWalletService, WalletProvider,
                   PublicActionOutboxService>(
                 lazy: false,
                 create: (context) => PublicActionOutboxService(),
-                update:
-                    (context, solanaWalletService, walletProvider, outbox) {
+                update: (context, solanaWalletService, walletProvider, outbox) {
                   final service = outbox ?? PublicActionOutboxService();
                   service.bindSigner(
                     walletService: solanaWalletService,
@@ -664,7 +673,7 @@ class _AppLauncherState extends State<AppLauncher> {
                     attendanceProvider) {
                   final provider = attendanceProvider ?? AttendanceProvider();
                   provider.bindAuthContext(
-                    isSignedIn: profileProvider.isSignedIn,
+                    isSignedIn: walletProvider.authority.canUseAccount,
                     walletAddress: walletProvider.currentWalletAddress,
                   );
                   return provider;
@@ -680,7 +689,7 @@ class _AppLauncherState extends State<AppLauncher> {
                   provider.bindAuthContext(
                     profileProvider: profileProvider,
                     walletAddress: walletProvider.currentWalletAddress,
-                    isSignedIn: profileProvider.isSignedIn,
+                    isSignedIn: walletProvider.authority.canUseAccount,
                   );
                   return provider;
                 },
@@ -739,10 +748,9 @@ class _AppLauncherState extends State<AppLauncher> {
               ChangeNotifierProxyProvider2<ProfileProvider, WalletProvider,
                   StreetArtClaimsProvider>(
                 create: (context) => StreetArtClaimsProvider(),
-                update: (context, profileProvider, walletProvider,
-                    claimsProvider) {
-                  final provider =
-                      claimsProvider ?? StreetArtClaimsProvider();
+                update:
+                    (context, profileProvider, walletProvider, claimsProvider) {
+                  final provider = claimsProvider ?? StreetArtClaimsProvider();
                   provider.bindWallet(
                     profileProvider.currentUser?.walletAddress ??
                         walletProvider.currentWalletAddress,

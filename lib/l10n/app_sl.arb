@@ -1896,9 +1896,9 @@
   "arSessionResetToast": "AR seja ponastavljena",
   "connectWalletSecureAccessTitle": "Zavaruj denarnico",
   "connectWalletChooseTitle": "Poveži denarnico",
-  "connectWalletChooseDescription": "Izberi, kako želiš nastaviti denarnico svojega računa. Na tej napravi lahko ustvariš novo, uvoziš obstoječo ali uporabiš WalletConnect.",
-  "connectWalletOptionWalletConnectTitle": "WalletConnect",
-  "connectWalletOptionWalletConnectDescription": "Poveži z QR kodo ali URI WalletConnect",
+  "connectWalletChooseDescription": "Izberi, kako želiš nastaviti denarnico računa. Ustvari ali uvozi lokalno obnovitveno frazo ali poveži zunanjo denarnico za podpisovanje.",
+  "connectWalletOptionWalletConnectTitle": "Poveži zunanjo denarnico",
+  "connectWalletOptionWalletConnectDescription": "Uporabi MetaMask, Phantom ali Solflare brez uvoza obnovitvene fraze",
   "connectWalletOptionSignInTitle": "Vpiši se",
   "connectWalletOptionSignInDescription": "Vpiši se z e-naslovom in geslom",
   "connectWalletOptionRegisterTitle": "Registriraj se",
@@ -1961,18 +1961,18 @@
   "connectWalletWeb3GuideFeatureDefiTitle": "Prenosljiv dostop",
   "connectWalletWeb3GuideFeatureDefiDescription": "Isto denarnico lahko uporabljaš v prihodnjih funkcijah art.kubus in združljivih orodjih",
   "connectWalletWeb3GuideGotItButton": "Razumem!",
-  "connectWalletWalletConnectTitle": "Poveži z WalletConnect",
-  "connectWalletWalletConnectDescription": "WalletConnect omogoča povezavo tvoje denarnice z art.kubus.",
+  "connectWalletWalletConnectTitle": "Poveži zunanjo denarnico",
+  "connectWalletWalletConnectDescription": "Z Reown AppKit poveži Solana denarnico za podpisovanje. art.kubus nikoli ne uvozi ali hrani tvojega zasebnega ključa.",
   "connectWalletWalletConnectSupportedTitle": "Podprte denarnice",
-  "connectWalletWalletConnectSupportedList": "Phantom, Solflare, Backpack in druge",
+  "connectWalletWalletConnectSupportedList": "MetaMask, Phantom, Solflare, Backpack in druge",
   "connectWalletWalletConnectHowToTitle": "Kako deluje",
-  "connectWalletWalletConnectStep1": "V aplikaciji denarnice odpri WalletConnect",
-  "connectWalletWalletConnectStep2": "Skeniraj QR kodo ali prilepi URI",
-  "connectWalletWalletConnectStep3": "V denarnici potrdi povezavo",
+  "connectWalletWalletConnectStep1": "Izberi denarnico",
+  "connectWalletWalletConnectStep2": "Potrdi Solana povezavo",
+  "connectWalletWalletConnectStep3": "Vrni se v art.kubus za zaključek",
   "connectWalletWalletConnectConnectingLabel": "Povezujem…",
-  "connectWalletWalletConnectQuickConnectLabel": "Hitro poveži",
-  "connectWalletWalletConnectUriHint": "Prilepi URI WalletConnect (wc:...)",
-  "connectWalletWalletConnectSecurityNote": "Povezuj se samo z denarnicami, ki jim zaupaš. Nikoli ne deli obnovitvene fraze.",
+  "connectWalletWalletConnectQuickConnectLabel": "Odpri izbor denarnice",
+  "connectWalletWalletConnectUriHint": "Seja zunanje denarnice",
+  "connectWalletWalletConnectSecurityNote": "Zunanje denarnice podpisujejo v svoji aplikaciji. Šifrirana kopija je izbirna pomoč, ne skrbništvo.",
   "connectWalletWalletConnectScanQrButton": "Skeniraj QR kodo",
   "connectWalletWalletConnectConnectButton": "Poveži",
   "connectWalletWalletConnectNoWalletPrefix": "Še nimaš denarnice?",
@@ -1981,7 +1981,7 @@
   "connectWalletWalletConnectScanQrHint": "Postavi QR kodo v okvir",
   "connectWalletWalletConnectUriRequiredToast": "Vnesi URI WalletConnect",
   "connectWalletWalletConnectInvalidUriToast": "Neveljaven URI WalletConnect",
-  "connectWalletWalletConnectNeedsLocalWalletToast": "Pred uporabo WalletConnect ustvari ali uvozi denarnico",
+  "connectWalletWalletConnectNeedsLocalWalletToast": "Za nadaljevanje izberi zunanjo denarnico",
   "connectWalletWalletConnectConnectedToast": "Povezano z {address}",
   "@connectWalletWalletConnectConnectedToast": {
     "placeholders": {
@@ -1989,8 +1989,8 @@
     }
   },
   "connectWalletWalletConnectConnectionErrorToast": "Napaka pri povezavi. Poskusi znova.",
-  "connectWalletWalletConnectWaitingApprovalToast": "Čakam na potrditev v denarnici…",
-  "connectWalletWalletConnectFailedToast": "Povezava prek WalletConnect ni uspela",
+  "connectWalletWalletConnectWaitingApprovalToast": "Čakam na potrditev v zunanji denarnici…",
+  "connectWalletWalletConnectFailedToast": "Povezava z zunanjo denarnico ni uspela",
   "walletHomeTitle": "Moja denarnica",
   "walletHomeLoadingLabel": "Nalaganje denarnice…",
   "walletHomeNoWalletDescription": "Za začetek poveži ali obnovi denarnico svojega računa.",
@@ -3098,13 +3098,136 @@
   "walletBackupProtectionEncryptedBody": "Obnovitveno geslo za šifrirano kopijo hrani ločeno od obnovitvene fraze, da obe poti za obnovitev ostaneta uporabni.",
   "walletBackupProtectionPasskeyHeadline": "Šifrirana strežniška kopija, zaščitena s passkeyem, je nastavljena.",
   "walletBackupProtectionPasskeyBody": "Ta šifrirana strežniška kopija je na spletu zaščitena s passkeyem. Obnovitveno geslo še vedno shrani ločeno od obnovitvene fraze.",
-  "walletBackupProtectionReadOnlyHeadline": "Ta naprava ima le read-only dostop do denarnice.",
+  "walletBackupProtectionReadOnlyHeadline": "Ta naprava ima do denarnice dostop samo za branje.",
   "walletBackupProtectionReadOnlyBody": "Pred prenosi in drugimi dejanji, zaščitenimi z denarnico, obnovi možnost podpisovanja s šifrirano kopijo ali obnovitveno frazo.",
+  "walletSessionStateAccountShellOnly": "Samo lupina računa",
+  "walletSessionStateWalletReadOnly": "Identiteta denarnice, samo za branje",
+  "walletSessionStateLocalSignerReady": "Lokalni podpisnik je pripravljen",
+  "walletSessionStateExternalWalletReady": "Zunanja denarnica je pripravljena",
+  "walletSessionStateRecoveryNeeded": "Potrebna je obnova",
+  "walletSessionStateEncryptedBackupAvailable": "Šifrirana kopija je na voljo",
+  "walletSecurityStatusTitle": "Varnostno stanje denarnice",
+  "walletSecuritySignInMethodLabel": "Prijava v račun",
+  "walletSecurityWalletAddressLabel": "Naslov denarnice",
+  "walletSecuritySignerStatusLabel": "Stanje podpisnika",
+  "walletSecurityLocalSignerLabel": "Lokalni podpisnik na tej napravi",
+  "walletSecurityExternalWalletLabel": "Zunanja denarnica",
+  "walletSecurityEncryptedBackupLabel": "Šifrirana kopija",
+  "walletSecurityPasskeyLabel": "Passkey",
+  "walletSecurityRecoveryNeededLabel": "Obnova",
+  "walletSecurityBackendBackupClarifier": "Prijava z e-pošto ali Googlom lahko obnovi samo dostop do računa. Prenosi še vedno zahtevajo lokalnega podpisnika ali povezano zunanjo denarnico. Šifrirana kopija na strežniku je izbirna pomoč in strežnika nikoli ne naredi podpisnika.",
+  "walletSecuritySignedOutMethod": "Odjavljen/-a",
+  "walletSecuritySignInMethodEmail": "E-pošta",
+  "walletSecuritySignInMethodEmailWithAddress": "E-pošta ({email})",
+  "@walletSecuritySignInMethodEmailWithAddress": {
+    "placeholders": {
+      "email": {}
+    }
+  },
+  "walletSecuritySignInMethodGoogle": "Google",
+  "walletSecuritySignInMethodGoogleWithAddress": "Google ({email})",
+  "@walletSecuritySignInMethodGoogleWithAddress": {
+    "placeholders": {
+      "email": {}
+    }
+  },
+  "walletSecuritySignInMethodWallet": "Podpis denarnice",
+  "walletSecuritySignInMethodUnknown": "Prijavljen/-a",
+  "walletSecurityNotAvailable": "Ni na voljo",
+  "walletSecurityAvailable": "Na voljo",
+  "walletSecurityUnavailable": "Ni na voljo",
+  "walletSecurityUnknown": "Neznano",
+  "walletSecurityConnected": "Povezano",
+  "walletSecurityDisconnected": "Ni povezano",
+  "walletSecurityConfigured": "Nastavljeno",
+  "walletSecurityNotConfigured": "Ni nastavljeno",
+  "walletSecurityLocalSignerReadyValue": "Prisoten in pripravljen",
+  "walletSecurityLocalSignerMissingValue": "Ni obnovljen na tej napravi",
+  "walletSecuritySignerLocalReadyValue": "Lokalni podpisnik je pripravljen",
+  "walletSecuritySignerExternalReadyValue": "Zunanja denarnica je pripravljena",
+  "walletSecuritySignerRestoreAvailableValue": "Obnova je na voljo iz šifrirane kopije",
+  "walletSecuritySignerMissingValue": "Podpisnik manjka",
+  "walletSecurityExternalWalletConnectedValue": "Povezano: {walletName}",
+  "@walletSecurityExternalWalletConnectedValue": {
+    "placeholders": {
+      "walletName": {}
+    }
+  },
+  "walletSecurityRecoveryNeededValue": "Potrebna",
+  "walletSecurityRecoveryNotNeededValue": "Ni potrebna",
+  "walletSecurityRestoreSignerAction": "Obnovi podpisnika",
+  "walletSecurityConnectExternalAction": "Poveži zunanjo denarnico",
+  "walletBackupRecoveryPasswordLabel": "Obnovitveno geslo",
+  "walletBackupPasswordTooShortError": "Uporabi vsaj 8 znakov.",
+  "walletBackupPasswordsMismatchError": "Gesli se ne ujemata.",
+  "walletBackupPromptRequiredError": "{field} je obvezno polje.",
+  "@walletBackupPromptRequiredError": {
+    "placeholders": {
+      "field": {}
+    }
+  },
+  "walletBackupPromptTooLongError": "{field} ima lahko največ 120 znakov.",
+  "@walletBackupPromptTooLongError": {
+    "placeholders": {
+      "field": {}
+    }
+  },
+  "walletBackupProtectionTitle": "Zaščiti svojo web3 denarnico",
+  "walletBackupProtectionFeatureLabel": "Varnostna kopija denarnice",
+  "walletBackupProtectionUnavailableTitle": "Varnostna kopija denarnice ni na voljo",
+  "walletBackupProtectionCurrentWalletLabel": "Trenutna denarnica",
+  "walletBackupProtectionOfflineReminder": "Obnovitveno frazo shrani brez povezave, obnovitveno geslo šifrirane kopije pa hrani ločeno.",
+  "walletBackupProtectionLastVerifiedLabel": "Nazadnje preverjeno: {date}",
+  "@walletBackupProtectionLastVerifiedLabel": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "walletBackupProtectionCreateBackupTitle": "Ustvari šifrirano kopijo",
+  "walletBackupProtectionCreateBackupDescription": "Izberi obnovitveno geslo. To geslo odklene kopijo denarnice na novi napravi.",
+  "walletBackupProtectionCreateBackupAction": "Ustvari kopijo",
+  "walletBackupProtectionBackupSavedToast": "Šifrirana kopija denarnice je shranjena.",
+  "walletBackupProtectionVerifyBackupTitle": "Preveri šifrirano kopijo",
+  "walletBackupProtectionVerifyBackupDescription": "Vnesi obnovitveno geslo in preveri, da se šifrirana kopija lahko odklene lokalno.",
+  "walletBackupProtectionVerifyBackupAction": "Preveri šifrirano kopijo",
+  "walletBackupProtectionBackupVerifiedToast": "Šifrirana kopija je preverjena.",
+  "walletBackupProtectionDeleteBackupTitle": "Izbrisati šifrirano kopijo?",
+  "walletBackupProtectionDeleteBackupBody": "To odstrani šifrirano strežniško kopijo za trenutno denarnico. Prepričaj se, da imaš obnovitveno frazo še vedno varno shranjeno brez povezave.",
+  "walletBackupProtectionDeleteBackupAction": "Izbriši šifrirano kopijo",
+  "walletBackupProtectionBackupDeletedToast": "Šifrirana kopija denarnice je izbrisana.",
+  "walletBackupProtectionRestoreSignerTitle": "Obnovi podpisnika denarnice",
+  "walletBackupProtectionRestoreSignerDescription": "Vnesi obnovitveno geslo šifrirane kopije, da na tej napravi obnoviš možnost podpisovanja.",
+  "walletBackupProtectionRestoreSignerAction": "Obnovi podpisnika",
+  "walletBackupProtectionSignerRestoredToast": "Podpisnik denarnice je obnovljen na tej napravi.",
+  "walletBackupProtectionSignerRestoreFailedToast": "Podpisnika denarnice ni bilo mogoče obnoviti.",
+  "walletBackupProtectionUpdateEncryptedBackupButton": "Posodobi šifrirano kopijo",
+  "walletBackupProtectionCreateEncryptedBackupButton": "Ustvari šifrirano kopijo",
+  "walletBackupProtectionRevealRecoveryPhraseButton": "Prikaži in kopiraj obnovitveno frazo",
+  "walletBackupProtectionPasskeysTitle": "Passkeyji",
+  "walletBackupProtectionPasskeysBody": "Na spletu lahko passkey pred prikazom poziva za obnovitveno geslo dodatno zaščiti dostop do šifrirane kopije.",
+  "walletBackupProtectionAddPasskeyTitle": "Dodaj passkey",
+  "walletBackupProtectionPasskeyNameLabel": "Ime passkeyja",
+  "walletBackupProtectionAddPasskeyDescription": "Passkeyju dodaj oznako, da boš napravo ali brskalnik pozneje prepoznal/-a.",
+  "walletBackupProtectionDefaultPasskeyName": "Ta naprava",
+  "walletBackupProtectionAddPasskeyAction": "Dodaj passkey",
+  "walletBackupProtectionPasskeyAddedToast": "Passkey \"{passkey}\" je dodan.",
+  "@walletBackupProtectionPasskeyAddedToast": {
+    "placeholders": {
+      "passkey": {}
+    }
+  },
+  "walletBackupProtectionStoredPasskeyLabel": "Shranjeni passkey",
+  "walletBackupProtectionPasskeyTransports": "Prenosi: {transports}",
+  "@walletBackupProtectionPasskeyTransports": {
+    "placeholders": {
+      "transports": {}
+    }
+  },
   "walletBackupBannerTitle": "Varnostno shrani obnovitveno frazo",
   "walletBackupBannerSubtitle": "Varno jo shrani brez povezave. Potrebuješ jo za obnovitev denarnice in dolgoročni dostop.",
   "walletBackupBannerAction": "Shrani zdaj",
   "walletReconnectSuccessToast": "Seja denarnice je obnovljena.",
-  "walletReconnectReadOnlyToast": "Poverilnice denarnice so osvežene. Seja je še vedno samo za branje.",
+  "walletReconnectReadOnlyToast": "Seja je osvežena. Podpisovanje v tej napravi še vedno ni na voljo.",
   "walletReconnectManualRequiredToast": "Za podpisovanje se znova poveži prek ponudnika denarnice.",
   "settingsProfilePrivacySectionTitle": "Zasebnost profila",
   "settingsPrivateProfileTitle": "Zasebni profil",

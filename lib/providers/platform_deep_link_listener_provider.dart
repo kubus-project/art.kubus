@@ -10,8 +10,10 @@ import '../services/auth/auth_deep_link_parser.dart';
 import '../services/share/share_deep_link_parser.dart';
 import '../utils/share_deep_link_navigation.dart';
 import '../screens/desktop/desktop_shell_registry.dart';
+import '../services/external_wallet_signer_service.dart';
 import 'auth_deep_link_provider.dart';
 import 'deep_link_provider.dart';
+import 'wallet_provider.dart';
 
 /// Listens for incoming platform deep links (Android App Links / custom schemes)
 /// and forwards them into the existing share-deep-link flow.
@@ -23,6 +25,7 @@ class PlatformDeepLinkListenerProvider extends ChangeNotifier {
 
   DeepLinkProvider? _deepLinkProvider;
   AuthDeepLinkProvider? _authDeepLinkProvider;
+  WalletProvider? _walletProvider;
   StreamSubscription<Uri>? _sub;
   bool _initialized = false;
   String? _lastHandledSignature;
@@ -31,9 +34,11 @@ class PlatformDeepLinkListenerProvider extends ChangeNotifier {
   void bindProviders({
     required DeepLinkProvider deepLinkProvider,
     required AuthDeepLinkProvider authDeepLinkProvider,
+    WalletProvider? walletProvider,
   }) {
     _deepLinkProvider = deepLinkProvider;
     _authDeepLinkProvider = authDeepLinkProvider;
+    _walletProvider = walletProvider;
     _ensureInitialized();
   }
 
@@ -54,7 +59,8 @@ class PlatformDeepLinkListenerProvider extends ChangeNotifier {
       },
       onError: (Object err, StackTrace st) {
         if (kDebugMode) {
-          debugPrint('PlatformDeepLinkListenerProvider: uriLinkStream error: $err');
+          debugPrint(
+              'PlatformDeepLinkListenerProvider: uriLinkStream error: $err');
         }
       },
     );
@@ -67,7 +73,8 @@ class PlatformDeepLinkListenerProvider extends ChangeNotifier {
       _handleUri(uri, allowImmediateNavigation: false);
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('PlatformDeepLinkListenerProvider: getInitialLink failed: $e');
+        debugPrint(
+            'PlatformDeepLinkListenerProvider: getInitialLink failed: $e');
       }
     }
   }
@@ -75,6 +82,11 @@ class PlatformDeepLinkListenerProvider extends ChangeNotifier {
   void _handleUri(Uri uri, {bool allowImmediateNavigation = true}) {
     final raw = uri.toString().trim();
     if (raw.isEmpty) return;
+
+    if (ExternalWalletSignerService.instance.isWalletReturnUri(uri)) {
+      unawaited(_walletProvider?.dispatchExternalWalletReturn(uri));
+      return;
+    }
 
     AuthDeepLinkTarget? authTarget;
     try {
@@ -98,14 +110,14 @@ class PlatformDeepLinkListenerProvider extends ChangeNotifier {
       final navigator = appNavigatorKey.currentState;
       final desktopShellContext = DesktopShellRegistry.instance.context;
       final mobileShellContext = MobileShellRegistry.instance.context;
-      final canNavigateNow =
-          allowImmediateNavigation &&
+      final canNavigateNow = allowImmediateNavigation &&
           (desktopShellContext != null ||
               mobileShellContext != null ||
               (navigator != null && navigator.mounted));
 
       if (canNavigateNow) {
-        final ctx = desktopShellContext ?? mobileShellContext ?? navigator!.context;
+        final ctx =
+            desktopShellContext ?? mobileShellContext ?? navigator!.context;
         switch (authTarget.type) {
           case AuthDeepLinkType.verifyEmail:
             Navigator.of(ctx).pushNamed(
@@ -157,15 +169,15 @@ class PlatformDeepLinkListenerProvider extends ChangeNotifier {
     final navigator = appNavigatorKey.currentState;
     final desktopShellContext = DesktopShellRegistry.instance.context;
     final mobileShellContext = MobileShellRegistry.instance.context;
-    final canNavigateNow =
-        allowImmediateNavigation &&
+    final canNavigateNow = allowImmediateNavigation &&
         (desktopShellContext != null ||
             mobileShellContext != null ||
             (navigator != null && navigator.mounted));
 
     if (canNavigateNow) {
       // Navigate immediately if the app is already running.
-      final ctx = desktopShellContext ?? mobileShellContext ?? navigator!.context;
+      final ctx =
+          desktopShellContext ?? mobileShellContext ?? navigator!.context;
       unawaited(ShareDeepLinkNavigation.open(ctx, target));
       return;
     }

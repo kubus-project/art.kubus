@@ -164,6 +164,7 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
   List<Map<String, dynamic>>? _followers;
   bool _isLoading = true;
   String? _error;
+  bool _didWarmProfileCache = false;
 
   String? _stringOrNull(dynamic value) {
     if (value == null) return null;
@@ -216,6 +217,14 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
         _followers = followers;
         _isLoading = false;
       });
+
+      // Best-effort cache warm so list rows and subsequent profile opens have
+      // full profile data without waiting for per-row network fetches.
+      try {
+        Future(() async {
+          await _warmProfileCache(followers);
+        });
+      } catch (_) {}
     } catch (e) {
       AppConfig.debugPrint('ProfileScreenMethods._FollowersBottomSheet: error loading followers: $e');
       if (!mounted) return;
@@ -226,6 +235,27 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
         _followers = [];
       });
     }
+  }
+
+  Future<void> _warmProfileCache(List<Map<String, dynamic>> entries) async {
+    if (_didWarmProfileCache) return;
+    _didWarmProfileCache = true;
+
+    final wallets = <String>[];
+    for (final row in entries) {
+      final w = _stringOrNull(
+        row['walletAddress'] ?? row['wallet_address'] ?? row['id'],
+      );
+      if (w != null && w.isNotEmpty) wallets.add(w);
+    }
+    if (wallets.isEmpty) return;
+
+    try {
+      await UserService.getUsersByWallets(wallets, forceRefresh: false);
+    } catch (_) {}
+
+    if (!mounted) return;
+    setState(() {});
   }
 
   @override
@@ -293,7 +323,7 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
         final follower = _followers![index];
         final rawUsername = _stringOrNull(follower['username']) ?? '';
         final username = rawUsername.startsWith('@') ? rawUsername.substring(1).trim() : rawUsername;
-        final displayName = _stringOrNull(
+        final mapDisplayName = _stringOrNull(
           follower['displayName'] ?? follower['display_name'] ?? follower['name'],
         );
         final walletAddress = _stringOrNull(
@@ -302,20 +332,32 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
                   follower['id'],
             ) ??
             '';
-        final isVerified = _boolOrFalse(follower['isVerified'] ?? follower['is_verified']);
-        final avatarUrl = _stringOrNull(
+        final cachedUser = walletAddress.isNotEmpty
+            ? UserService.getCachedUser(walletAddress)
+            : null;
+
+        final mapIsVerified =
+            _boolOrFalse(follower['isVerified'] ?? follower['is_verified']);
+        final isVerified = mapIsVerified || (cachedUser?.isVerified ?? false);
+
+        final mapAvatarUrl = _stringOrNull(
           follower['profileImageUrl'] ??
               follower['avatar'] ??
               follower['avatarUrl'] ??
               follower['avatar_url'],
         );
 
+        final displayName = mapDisplayName ?? cachedUser?.name;
+        final avatarUrl = mapAvatarUrl ?? cachedUser?.profileImageUrl;
+        final cachedUsername = (cachedUser?.username ?? '').trim();
+        final resolvedUsername = username.isNotEmpty ? username : cachedUsername;
+
         final formatted = CreatorDisplayFormat.format(
           fallbackLabel: walletAddress.isNotEmpty
               ? maskWallet(walletAddress)
               : l10n.commonUnknownArtist,
           displayName: displayName,
-          username: username,
+          username: resolvedUsername,
           wallet: walletAddress,
         );
         final subtitle = formatted.secondary ?? (walletAddress.isNotEmpty ? maskWallet(walletAddress) : null);
@@ -341,7 +383,7 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
                       UserProfileNavigation.open(
                         context,
                         userId: walletAddress,
-                        username: username,
+                        username: resolvedUsername,
                       );
                     },
               contentPadding: EdgeInsets.zero,
@@ -474,6 +516,7 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
   List<Map<String, dynamic>>? _following;
   bool _isLoading = true;
   String? _error;
+  bool _didWarmProfileCache = false;
 
   String? _stringOrNull(dynamic value) {
     if (value == null) return null;
@@ -526,6 +569,12 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
         _following = following;
         _isLoading = false;
       });
+
+      try {
+        Future(() async {
+          await _warmProfileCache(following);
+        });
+      } catch (_) {}
     } catch (e) {
       AppConfig.debugPrint('ProfileScreenMethods._FollowingBottomSheet: error loading following: $e');
       if (!mounted) return;
@@ -536,6 +585,27 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
         _following = [];
       });
     }
+  }
+
+  Future<void> _warmProfileCache(List<Map<String, dynamic>> entries) async {
+    if (_didWarmProfileCache) return;
+    _didWarmProfileCache = true;
+
+    final wallets = <String>[];
+    for (final row in entries) {
+      final w = _stringOrNull(
+        row['walletAddress'] ?? row['wallet_address'] ?? row['id'],
+      );
+      if (w != null && w.isNotEmpty) wallets.add(w);
+    }
+    if (wallets.isEmpty) return;
+
+    try {
+      await UserService.getUsersByWallets(wallets, forceRefresh: false);
+    } catch (_) {}
+
+    if (!mounted) return;
+    setState(() {});
   }
 
   @override
@@ -600,7 +670,7 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
         final user = _following![index];
         final rawUsername = _stringOrNull(user['username']) ?? '';
         final username = rawUsername.startsWith('@') ? rawUsername.substring(1).trim() : rawUsername;
-        final displayName = _stringOrNull(
+        final mapDisplayName = _stringOrNull(
           user['displayName'] ?? user['display_name'] ?? user['name'],
         );
         final walletAddress = _stringOrNull(
@@ -609,20 +679,32 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
                   user['id'],
             ) ??
             '';
-        final isVerified = _boolOrFalse(user['isVerified'] ?? user['is_verified']);
-        final avatarUrl = _stringOrNull(
+        final cachedUser = walletAddress.isNotEmpty
+            ? UserService.getCachedUser(walletAddress)
+            : null;
+
+        final mapIsVerified =
+            _boolOrFalse(user['isVerified'] ?? user['is_verified']);
+        final isVerified = mapIsVerified || (cachedUser?.isVerified ?? false);
+
+        final mapAvatarUrl = _stringOrNull(
           user['profileImageUrl'] ??
               user['avatar'] ??
               user['avatarUrl'] ??
               user['avatar_url'],
         );
 
+        final displayName = mapDisplayName ?? cachedUser?.name;
+        final avatarUrl = mapAvatarUrl ?? cachedUser?.profileImageUrl;
+        final cachedUsername = (cachedUser?.username ?? '').trim();
+        final resolvedUsername = username.isNotEmpty ? username : cachedUsername;
+
         final formatted = CreatorDisplayFormat.format(
           fallbackLabel: walletAddress.isNotEmpty
               ? maskWallet(walletAddress)
               : l10n.commonUnknownArtist,
           displayName: displayName,
-          username: username,
+          username: resolvedUsername,
           wallet: walletAddress,
         );
         final subtitle = formatted.secondary ?? (walletAddress.isNotEmpty ? maskWallet(walletAddress) : null);
@@ -648,7 +730,7 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
                       UserProfileNavigation.open(
                         context,
                         userId: walletAddress,
-                        username: username,
+                        username: resolvedUsername,
                       );
                     },
               contentPadding: EdgeInsets.zero,

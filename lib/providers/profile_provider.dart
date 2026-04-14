@@ -13,6 +13,7 @@ import '../services/user_service.dart';
 import '../services/event_bus.dart';
 import '../models/dao.dart';
 import '../utils/media_url_resolver.dart';
+import 'wallet_provider.dart';
 
 class ProfileProvider extends foundation.ChangeNotifier {
   UserProfile? _currentUser;
@@ -32,9 +33,23 @@ class ProfileProvider extends foundation.ChangeNotifier {
   Map<String, dynamic>? _lastUploadDebug;
   ProfilePreferences? _cachedPreferences;
   bool _hasHydratedProfile = false;
+  WalletProvider? _walletProvider;
+  foundation.VoidCallback? _walletProviderListener;
 
   ProfileProvider({ProfileBackendApi? apiService})
       : _apiService = apiService ?? BackendApiService();
+
+  void bindWalletProvider(WalletProvider walletProvider) {
+    if (identical(_walletProvider, walletProvider)) return;
+    final listener = _walletProviderListener;
+    if (_walletProvider != null && listener != null) {
+      _walletProvider!.removeListener(listener);
+    }
+    _walletProvider = walletProvider;
+    _walletProviderListener = notifyListeners;
+    walletProvider.addListener(_walletProviderListener!);
+    notifyListeners();
+  }
 
   Future<SharedPreferences> _ensurePrefs() async {
     final existing = _prefs;
@@ -273,7 +288,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
   UserProfile? get profile => _currentUser; // Alias for compatibility
   List<UserProfile> get followingUsers => _followingUsers;
   List<UserProfile> get followers => _followers;
-  bool get isSignedIn => _isSignedIn;
+  bool get isSignedIn =>
+      _walletProvider?.authority.accountSignedIn ?? _isSignedIn;
   bool get isLoading => _isLoading;
   bool get hasHydratedProfile => _hasHydratedProfile;
   String? get error => _error;
@@ -1587,5 +1603,14 @@ class ProfileProvider extends foundation.ChangeNotifier {
     _isSignedIn = true;
 
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    final listener = _walletProviderListener;
+    if (_walletProvider != null && listener != null) {
+      _walletProvider!.removeListener(listener);
+    }
+    super.dispose();
   }
 }

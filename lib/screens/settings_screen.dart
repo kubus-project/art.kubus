@@ -27,6 +27,7 @@ import '../services/settings_service.dart';
 import '../widgets/platform_aware_widgets.dart';
 import '../widgets/common/keyboard_inset_padding.dart';
 import '../widgets/glass_components.dart';
+import '../widgets/wallet_custody_status_panel.dart';
 import '../widgets/email_verification_status_badge.dart';
 import '../widgets/common/kubus_screen_header.dart';
 import '../widgets/detail/shared_section_widgets.dart';
@@ -1369,6 +1370,18 @@ class _SettingsScreenState extends State<SettingsScreen>
           Icons.upload_file,
           onTap: _showImportWarningDialog,
         ),
+        const SizedBox(height: KubusSpacing.sm),
+        WalletCustodyStatusPanel(
+          authority: walletProvider.authority,
+          compact: true,
+          onRestoreSigner: walletProvider
+                  .authority.canRestoreFromEncryptedBackup
+              ? () => unawaited(_handleReadOnlyWalletReconnect(walletProvider))
+              : null,
+          onConnectExternalWallet: !walletProvider.authority.canTransact
+              ? () => Navigator.of(context).pushNamed('/connect-wallet')
+              : null,
+        ),
       ],
       sectionColor: AppColorUtils.amberAccent,
     );
@@ -1674,12 +1687,12 @@ class _SettingsScreenState extends State<SettingsScreen>
           isDestructive: isDestructive,
           showChevron: trailing == null,
           backgroundColor: tintBase,
-          borderColor:
-              isDestructive ? Colors.red.withValues(alpha: 0.3) : scheme.outline,
+          borderColor: isDestructive
+              ? Colors.red.withValues(alpha: 0.3)
+              : scheme.outline,
           leadingBackgroundColor: Colors.transparent,
           leadingBorderColor: Colors.transparent,
-          leadingIconColor:
-              isDestructive ? Colors.red : accentColor,
+          leadingIconColor: isDestructive ? Colors.red : accentColor,
           titleStyle: KubusTypography.inter(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -3512,10 +3525,8 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
           subtitleStyle: KubusTypography.inter(
             fontSize: 12,
-            color: Theme.of(context)
-                .colorScheme
-                .onSurface
-                .withValues(alpha: 0.7),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
       ),

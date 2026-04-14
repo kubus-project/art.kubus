@@ -15,6 +15,7 @@ import 'receive_token_screen.dart';
 import '../../settings_screen.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/common/keyboard_inset_padding.dart';
+import '../../../widgets/wallet_custody_status_panel.dart';
 import '../../../utils/app_color_utils.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/utils/wallet_reconnect_action.dart';
@@ -392,6 +393,24 @@ class _WalletHomeState extends State<WalletHome> {
                           ],
                         ],
                       ),
+                    ),
+
+                    SizedBox(
+                      height: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg,
+                    ),
+
+                    WalletCustodyStatusPanel(
+                      authority: walletProvider.authority,
+                      compact: isSmallScreen,
+                      onRestoreSigner:
+                          walletProvider.authority.canRestoreFromEncryptedBackup
+                              ? () => _handleReadOnlyReconnect(walletProvider)
+                              : null,
+                      onConnectExternalWallet: !walletProvider
+                              .authority.canTransact
+                          ? () =>
+                              Navigator.of(context).pushNamed('/connect-wallet')
+                          : null,
                     ),
 
                     SizedBox(

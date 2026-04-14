@@ -1907,9 +1907,9 @@
   "arSessionResetToast": "AR session reset",
   "connectWalletSecureAccessTitle": "Secure your wallet",
   "connectWalletChooseTitle": "Connect your wallet",
-  "connectWalletChooseDescription": "Choose how to set up your account wallet. You can create a new one on this device, import an existing one, or use WalletConnect.",
-  "connectWalletOptionWalletConnectTitle": "WalletConnect",
-  "connectWalletOptionWalletConnectDescription": "Connect using a QR code or WalletConnect URI",
+  "connectWalletChooseDescription": "Choose how to set up your account wallet. Create or import a local recovery phrase, or connect an external wallet for signing.",
+  "connectWalletOptionWalletConnectTitle": "Connect external wallet",
+  "connectWalletOptionWalletConnectDescription": "Use MetaMask, Phantom, or Solflare without importing a recovery phrase",
   "connectWalletOptionSignInTitle": "Sign in",
   "connectWalletOptionSignInDescription": "Sign in with your e-mail and password",
   "connectWalletOptionRegisterTitle": "Register account",
@@ -1972,18 +1972,18 @@
   "connectWalletWeb3GuideFeatureDefiTitle": "Portable access",
   "connectWalletWeb3GuideFeatureDefiDescription": "Use the same wallet across future art.kubus and compatible ecosystem features",
   "connectWalletWeb3GuideGotItButton": "Got it!",
-  "connectWalletWalletConnectTitle": "Connect with WalletConnect",
-  "connectWalletWalletConnectDescription": "Use WalletConnect to connect your wallet app to art.kubus.",
+  "connectWalletWalletConnectTitle": "Connect external wallet",
+  "connectWalletWalletConnectDescription": "Use Reown AppKit to connect a Solana wallet for signing. art.kubus never imports or stores your private key.",
   "connectWalletWalletConnectSupportedTitle": "Supported wallets",
-  "connectWalletWalletConnectSupportedList": "Phantom, Solflare, Backpack, and more",
+  "connectWalletWalletConnectSupportedList": "MetaMask, Phantom, Solflare, Backpack, and more",
   "connectWalletWalletConnectHowToTitle": "How it works",
-  "connectWalletWalletConnectStep1": "Open WalletConnect in your wallet app",
-  "connectWalletWalletConnectStep2": "Scan the QR code or paste the URI",
-  "connectWalletWalletConnectStep3": "Approve the connection in your wallet",
+  "connectWalletWalletConnectStep1": "Choose your wallet",
+  "connectWalletWalletConnectStep2": "Approve the Solana connection",
+  "connectWalletWalletConnectStep3": "Return to art.kubus to finish",
   "connectWalletWalletConnectConnectingLabel": "Connecting…",
-  "connectWalletWalletConnectQuickConnectLabel": "Quick connect",
-  "connectWalletWalletConnectUriHint": "Paste WalletConnect URI (wc:...)",
-  "connectWalletWalletConnectSecurityNote": "Only connect to wallets you trust. Never share your recovery phrase.",
+  "connectWalletWalletConnectQuickConnectLabel": "Open wallet picker",
+  "connectWalletWalletConnectUriHint": "External wallet session",
+  "connectWalletWalletConnectSecurityNote": "External wallets sign in their own app. The encrypted backup is optional convenience, not custody.",
   "connectWalletWalletConnectScanQrButton": "Scan QR code",
   "connectWalletWalletConnectConnectButton": "Connect",
   "connectWalletWalletConnectNoWalletPrefix": "Don’t have a wallet yet?",
@@ -1992,7 +1992,7 @@
   "connectWalletWalletConnectScanQrHint": "Position the QR code within the frame",
   "connectWalletWalletConnectUriRequiredToast": "Please enter a WalletConnect URI",
   "connectWalletWalletConnectInvalidUriToast": "Invalid WalletConnect URI",
-  "connectWalletWalletConnectNeedsLocalWalletToast": "Create or import a wallet before using WalletConnect",
+  "connectWalletWalletConnectNeedsLocalWalletToast": "Choose an external wallet to continue",
   "connectWalletWalletConnectConnectedToast": "Connected to {address}",
   "@connectWalletWalletConnectConnectedToast": {
     "placeholders": {
@@ -2000,8 +2000,8 @@
     }
   },
   "connectWalletWalletConnectConnectionErrorToast": "Connection error. Please try again.",
-  "connectWalletWalletConnectWaitingApprovalToast": "Waiting for wallet approval…",
-  "connectWalletWalletConnectFailedToast": "Failed to connect with WalletConnect",
+  "connectWalletWalletConnectWaitingApprovalToast": "Waiting for external wallet approval…",
+  "connectWalletWalletConnectFailedToast": "Failed to connect external wallet",
   "walletHomeTitle": "My wallet",
   "walletHomeLoadingLabel": "Loading your wallet…",
   "walletHomeNoWalletDescription": "Connect or restore your account wallet to get started.",
@@ -3127,13 +3127,136 @@
   "walletBackupProtectionEncryptedBody": "Keep the encrypted backup recovery password stored separately from the recovery phrase so both recovery paths remain usable.",
   "walletBackupProtectionPasskeyHeadline": "Passkey-protected server backup is configured.",
   "walletBackupProtectionPasskeyBody": "This encrypted server backup is protected with a passkey on web. Keep the recovery password stored separately from the recovery phrase.",
-  "walletBackupProtectionReadOnlyHeadline": "This device only has read-only wallet access.",
+  "walletBackupProtectionReadOnlyHeadline": "This device has read-only wallet access.",
   "walletBackupProtectionReadOnlyBody": "Restore signing access with your encrypted backup or recovery phrase before using transfers and other wallet-protected actions on this device.",
+  "walletSessionStateAccountShellOnly": "Account shell only",
+  "walletSessionStateWalletReadOnly": "Wallet identity, read-only",
+  "walletSessionStateLocalSignerReady": "Local signer ready",
+  "walletSessionStateExternalWalletReady": "External wallet ready",
+  "walletSessionStateRecoveryNeeded": "Recovery needed",
+  "walletSessionStateEncryptedBackupAvailable": "Encrypted backup available",
+  "walletSecurityStatusTitle": "Wallet security status",
+  "walletSecuritySignInMethodLabel": "Account sign-in",
+  "walletSecurityWalletAddressLabel": "Wallet address",
+  "walletSecuritySignerStatusLabel": "Signer status",
+  "walletSecurityLocalSignerLabel": "Local signer on this device",
+  "walletSecurityExternalWalletLabel": "External wallet",
+  "walletSecurityEncryptedBackupLabel": "Encrypted backup",
+  "walletSecurityPasskeyLabel": "Passkey",
+  "walletSecurityRecoveryNeededLabel": "Recovery",
+  "walletSecurityBackendBackupClarifier": "Email or Google sign-in can restore account access only. Transfers still require a local signer or a connected external wallet. Encrypted backend backup is optional convenience and never makes the backend a signer.",
+  "walletSecuritySignedOutMethod": "Signed out",
+  "walletSecuritySignInMethodEmail": "Email",
+  "walletSecuritySignInMethodEmailWithAddress": "Email ({email})",
+  "@walletSecuritySignInMethodEmailWithAddress": {
+    "placeholders": {
+      "email": {}
+    }
+  },
+  "walletSecuritySignInMethodGoogle": "Google",
+  "walletSecuritySignInMethodGoogleWithAddress": "Google ({email})",
+  "@walletSecuritySignInMethodGoogleWithAddress": {
+    "placeholders": {
+      "email": {}
+    }
+  },
+  "walletSecuritySignInMethodWallet": "Wallet signature",
+  "walletSecuritySignInMethodUnknown": "Signed in",
+  "walletSecurityNotAvailable": "Not available",
+  "walletSecurityAvailable": "Available",
+  "walletSecurityUnavailable": "Unavailable",
+  "walletSecurityUnknown": "Unknown",
+  "walletSecurityConnected": "Connected",
+  "walletSecurityDisconnected": "Disconnected",
+  "walletSecurityConfigured": "Configured",
+  "walletSecurityNotConfigured": "Not configured",
+  "walletSecurityLocalSignerReadyValue": "Present and ready",
+  "walletSecurityLocalSignerMissingValue": "Not restored on this device",
+  "walletSecuritySignerLocalReadyValue": "Local signer ready",
+  "walletSecuritySignerExternalReadyValue": "External wallet ready",
+  "walletSecuritySignerRestoreAvailableValue": "Restore available from encrypted backup",
+  "walletSecuritySignerMissingValue": "Signer missing",
+  "walletSecurityExternalWalletConnectedValue": "Connected: {walletName}",
+  "@walletSecurityExternalWalletConnectedValue": {
+    "placeholders": {
+      "walletName": {}
+    }
+  },
+  "walletSecurityRecoveryNeededValue": "Needed",
+  "walletSecurityRecoveryNotNeededValue": "Not needed",
+  "walletSecurityRestoreSignerAction": "Restore signer",
+  "walletSecurityConnectExternalAction": "Connect external wallet",
+  "walletBackupRecoveryPasswordLabel": "Recovery password",
+  "walletBackupPasswordTooShortError": "Use at least 8 characters.",
+  "walletBackupPasswordsMismatchError": "Passwords do not match.",
+  "walletBackupPromptRequiredError": "{field} is required.",
+  "@walletBackupPromptRequiredError": {
+    "placeholders": {
+      "field": {}
+    }
+  },
+  "walletBackupPromptTooLongError": "{field} must be 120 characters or less.",
+  "@walletBackupPromptTooLongError": {
+    "placeholders": {
+      "field": {}
+    }
+  },
+  "walletBackupProtectionTitle": "Protect your web3 wallet",
+  "walletBackupProtectionFeatureLabel": "Wallet backup",
+  "walletBackupProtectionUnavailableTitle": "Wallet backup unavailable",
+  "walletBackupProtectionCurrentWalletLabel": "Current wallet",
+  "walletBackupProtectionOfflineReminder": "Back up the recovery phrase offline and store the encrypted backup recovery password separately.",
+  "walletBackupProtectionLastVerifiedLabel": "Last verified: {date}",
+  "@walletBackupProtectionLastVerifiedLabel": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "walletBackupProtectionCreateBackupTitle": "Create encrypted backup",
+  "walletBackupProtectionCreateBackupDescription": "Choose a recovery password. This password decrypts the wallet backup on a new device.",
+  "walletBackupProtectionCreateBackupAction": "Create backup",
+  "walletBackupProtectionBackupSavedToast": "Encrypted wallet backup saved.",
+  "walletBackupProtectionVerifyBackupTitle": "Verify encrypted backup",
+  "walletBackupProtectionVerifyBackupDescription": "Enter the recovery password to verify the encrypted backup can be decrypted locally.",
+  "walletBackupProtectionVerifyBackupAction": "Verify encrypted backup",
+  "walletBackupProtectionBackupVerifiedToast": "Encrypted backup verified.",
+  "walletBackupProtectionDeleteBackupTitle": "Delete encrypted backup?",
+  "walletBackupProtectionDeleteBackupBody": "This removes the encrypted server backup for the current wallet. Make sure you still have the recovery phrase stored safely offline.",
+  "walletBackupProtectionDeleteBackupAction": "Delete encrypted backup",
+  "walletBackupProtectionBackupDeletedToast": "Encrypted wallet backup deleted.",
+  "walletBackupProtectionRestoreSignerTitle": "Restore wallet signer",
+  "walletBackupProtectionRestoreSignerDescription": "Enter the recovery password for the encrypted backup to restore signing access on this device.",
+  "walletBackupProtectionRestoreSignerAction": "Restore signer",
+  "walletBackupProtectionSignerRestoredToast": "Wallet signer restored on this device.",
+  "walletBackupProtectionSignerRestoreFailedToast": "Unable to restore wallet signer.",
+  "walletBackupProtectionUpdateEncryptedBackupButton": "Update encrypted backup",
+  "walletBackupProtectionCreateEncryptedBackupButton": "Create encrypted backup",
+  "walletBackupProtectionRevealRecoveryPhraseButton": "Reveal and copy recovery phrase",
+  "walletBackupProtectionPasskeysTitle": "Passkeys",
+  "walletBackupProtectionPasskeysBody": "On web, passkeys can gate access to the encrypted backup before the recovery password prompt is shown.",
+  "walletBackupProtectionAddPasskeyTitle": "Add a passkey",
+  "walletBackupProtectionPasskeyNameLabel": "Passkey name",
+  "walletBackupProtectionAddPasskeyDescription": "Give this passkey a label so you can recognize the device or browser later.",
+  "walletBackupProtectionDefaultPasskeyName": "This device",
+  "walletBackupProtectionAddPasskeyAction": "Add passkey",
+  "walletBackupProtectionPasskeyAddedToast": "Passkey \"{passkey}\" added.",
+  "@walletBackupProtectionPasskeyAddedToast": {
+    "placeholders": {
+      "passkey": {}
+    }
+  },
+  "walletBackupProtectionStoredPasskeyLabel": "Stored passkey",
+  "walletBackupProtectionPasskeyTransports": "Transports: {transports}",
+  "@walletBackupProtectionPasskeyTransports": {
+    "placeholders": {
+      "transports": {}
+    }
+  },
   "walletBackupBannerTitle": "Back up your recovery phrase",
   "walletBackupBannerSubtitle": "Store it safely offline. You need it to restore this wallet and keep long-term access.",
   "walletBackupBannerAction": "Back up now",
   "walletReconnectSuccessToast": "Wallet session restored.",
-  "walletReconnectReadOnlyToast": "Wallet credentials refreshed. This session is still read-only.",
+  "walletReconnectReadOnlyToast": "Session refreshed. Signing is still unavailable on this device.",
   "walletReconnectManualRequiredToast": "Reconnect with your wallet provider to enable signing.",
   "manageMarkersTitle": "Manage markers",
   "manageMarkersCardSubtitle": "Create, publish, and edit your map markers",

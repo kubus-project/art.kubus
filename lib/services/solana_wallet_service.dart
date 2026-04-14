@@ -670,6 +670,23 @@ class SolanaWalletService {
     }
   }
 
+  Future<String> buildTransferSolTransactionBase64({
+    required String fromAddress,
+    required String toAddress,
+    required double amount,
+  }) async {
+    final lamports = (amount * _lamportsPerSol).floor();
+    final ix = SystemInstruction.transfer(
+      fundingAccount: Ed25519HDPublicKey.fromBase58(fromAddress),
+      recipientAccount: Ed25519HDPublicKey.fromBase58(toAddress),
+      lamports: lamports,
+    );
+    return _buildUnsignedTransaction(
+      feePayerAddress: fromAddress,
+      instructions: [ix],
+    );
+  }
+
   // Transfer SPL token (KUB8 or others)
   Future<String> transferSplToken({
     required String mint,
@@ -718,6 +735,26 @@ class SolanaWalletService {
     return _sendInstructions(instructions);
   }
 
+  Future<String> buildTransferSplTokenTransactionBase64({
+    required String fromAddress,
+    required String mint,
+    required String toAddress,
+    required double amount,
+    required int decimals,
+  }) async {
+    final instructions = await _buildSplTokenTransferInstructions(
+      fromAddress: fromAddress,
+      mint: mint,
+      toAddress: toAddress,
+      amount: amount,
+      decimals: decimals,
+    );
+    return _buildUnsignedTransaction(
+      feePayerAddress: fromAddress,
+      instructions: instructions,
+    );
+  }
+
   // Swap SOL -> SPL token (e.g., SOL -> KUB8) via DEX aggregator (Jupiter/Raydium)
   Future<String> swapSolToSpl(
       {required String mint,
@@ -748,6 +785,58 @@ class SolanaWalletService {
       slippageBps: (slippage * 10000).round(),
       wrapAndUnwrapSol: false,
     );
+  }
+
+  Future<String> buildJupiterSwapTransactionBase64({
+    required String userPublicKey,
+    required String inputMint,
+    required String outputMint,
+    required int inputAmountRaw,
+    required int slippageBps,
+    required bool wrapAndUnwrapSol,
+  }) async {
+    final quoteUri =
+        Uri.parse('${ApiKeys.jupiterBaseUrl}/quote').replace(queryParameters: {
+      'inputMint': inputMint,
+      'outputMint': outputMint,
+      'amount': '$inputAmountRaw',
+      'slippageBps': '$slippageBps',
+    });
+
+    final quoteResp = await http.get(quoteUri);
+    if (quoteResp.statusCode != 200) {
+      throw Exception(
+          'Jupiter quote failed: ${quoteResp.statusCode} ${quoteResp.body}');
+    }
+    final quoteJson = jsonDecode(quoteResp.body) as Map<String, dynamic>;
+    final route = (quoteJson['data'] as List).isNotEmpty
+        ? quoteJson['data'][0] as Map<String, dynamic>
+        : null;
+    if (route == null) {
+      throw Exception('No Jupiter route available');
+    }
+
+    final swapResp = await http.post(
+      Uri.parse('${ApiKeys.jupiterBaseUrl}/swap'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'quoteResponse': route,
+        'userPublicKey': userPublicKey,
+        'wrapAndUnwrapSol': wrapAndUnwrapSol,
+      }),
+    );
+
+    if (swapResp.statusCode != 200) {
+      throw Exception(
+          'Jupiter swap build failed: ${swapResp.statusCode} ${swapResp.body}');
+    }
+
+    final swapJson = jsonDecode(swapResp.body) as Map<String, dynamic>;
+    final swapTx = swapJson['swapTransaction'] as String?;
+    if (swapTx == null) {
+      throw Exception('Jupiter swapTransaction missing');
+    }
+    return swapTx;
   }
 
   Future<SwapQuote> fetchSwapQuote({
@@ -992,6 +1081,71 @@ class SolanaWalletService {
       skipPreflight: true,
     );
     return sig;
+  }
+
+  Future<String> _buildUnsignedTransaction({
+    required String feePayerAddress,
+    required List<Instruction> instructions,
+  }) async {
+    final latest = await _rpcClient.getLatestBlockhash();
+    final message = Message(instructions: instructions);
+    final compiledMessage = message.compile(
+      recentBlockhash: latest.value.blockhash,
+      feePayer: Ed25519HDPublicKey.fromBase58(feePayerAddress),
+    );
+    final signatures = List<Signature>.generate(
+      compiledMessage.requiredSignatureCount,
+      (index) => Signature(
+        List<int>.filled(64, 0),
+        publicKey: compiledMessage.accountKeys[index],
+      ),
+    );
+    return SignedTx(
+      signatures: signatures,
+      compiledMessage: compiledMessage,
+    ).encode();
+  }
+
+  Future<List<Instruction>> _buildSplTokenTransferInstructions({
+    required String fromAddress,
+    required String mint,
+    required String toAddress,
+    required double amount,
+    required int decimals,
+  }) async {
+    final fromPub = Ed25519HDPublicKey.fromBase58(fromAddress);
+    final mintPub = Ed25519HDPublicKey.fromBase58(mint);
+    final toPub = Ed25519HDPublicKey.fromBase58(toAddress);
+
+    final fromAta =
+        await findAssociatedTokenAddress(owner: fromPub, mint: mintPub);
+    final toAta = await findAssociatedTokenAddress(owner: toPub, mint: mintPub);
+
+    final instructions = <Instruction>[];
+    final toAccountInfo = await _safeGetAccountInfo(toAta.toBase58());
+    if (toAccountInfo == null) {
+      instructions.add(
+        AssociatedTokenAccountInstruction.createAccount(
+          address: toAta,
+          funder: fromPub,
+          owner: toPub,
+          mint: mintPub,
+        ),
+      );
+    }
+
+    final amountRaw = (amount * pow(10, decimals)).round();
+    instructions.add(
+      TokenInstruction.transferChecked(
+        source: fromAta,
+        mint: mintPub,
+        destination: toAta,
+        owner: fromPub,
+        amount: amountRaw,
+        decimals: decimals,
+      ),
+    );
+    return instructions;
   }
 
   Future<String> _executeJupiterSwap({

@@ -4369,13 +4369,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get connectWalletChooseTitle => 'Poveži denarnico';
 
   @override
-  String get connectWalletChooseDescription => 'Izberi, kako želiš nastaviti denarnico svojega računa. Na tej napravi lahko ustvariš novo, uvoziš obstoječo ali uporabiš WalletConnect.';
+  String get connectWalletChooseDescription => 'Izberi, kako želiš nastaviti denarnico računa. Ustvari ali uvozi lokalno obnovitveno frazo ali poveži zunanjo denarnico za podpisovanje.';
 
   @override
-  String get connectWalletOptionWalletConnectTitle => 'WalletConnect';
+  String get connectWalletOptionWalletConnectTitle => 'Poveži zunanjo denarnico';
 
   @override
-  String get connectWalletOptionWalletConnectDescription => 'Poveži z QR kodo ali URI WalletConnect';
+  String get connectWalletOptionWalletConnectDescription => 'Uporabi MetaMask, Phantom ali Solflare brez uvoza obnovitvene fraze';
 
   @override
   String get connectWalletOptionSignInTitle => 'Vpiši se';
@@ -4525,40 +4525,40 @@ class AppLocalizationsSl extends AppLocalizations {
   String get connectWalletWeb3GuideGotItButton => 'Razumem!';
 
   @override
-  String get connectWalletWalletConnectTitle => 'Poveži z WalletConnect';
+  String get connectWalletWalletConnectTitle => 'Poveži zunanjo denarnico';
 
   @override
-  String get connectWalletWalletConnectDescription => 'WalletConnect omogoča povezavo tvoje denarnice z art.kubus.';
+  String get connectWalletWalletConnectDescription => 'Z Reown AppKit poveži Solana denarnico za podpisovanje. art.kubus nikoli ne uvozi ali hrani tvojega zasebnega ključa.';
 
   @override
   String get connectWalletWalletConnectSupportedTitle => 'Podprte denarnice';
 
   @override
-  String get connectWalletWalletConnectSupportedList => 'Phantom, Solflare, Backpack in druge';
+  String get connectWalletWalletConnectSupportedList => 'MetaMask, Phantom, Solflare, Backpack in druge';
 
   @override
   String get connectWalletWalletConnectHowToTitle => 'Kako deluje';
 
   @override
-  String get connectWalletWalletConnectStep1 => 'V aplikaciji denarnice odpri WalletConnect';
+  String get connectWalletWalletConnectStep1 => 'Izberi denarnico';
 
   @override
-  String get connectWalletWalletConnectStep2 => 'Skeniraj QR kodo ali prilepi URI';
+  String get connectWalletWalletConnectStep2 => 'Potrdi Solana povezavo';
 
   @override
-  String get connectWalletWalletConnectStep3 => 'V denarnici potrdi povezavo';
+  String get connectWalletWalletConnectStep3 => 'Vrni se v art.kubus za zaključek';
 
   @override
   String get connectWalletWalletConnectConnectingLabel => 'Povezujem…';
 
   @override
-  String get connectWalletWalletConnectQuickConnectLabel => 'Hitro poveži';
+  String get connectWalletWalletConnectQuickConnectLabel => 'Odpri izbor denarnice';
 
   @override
-  String get connectWalletWalletConnectUriHint => 'Prilepi URI WalletConnect (wc:...)';
+  String get connectWalletWalletConnectUriHint => 'Seja zunanje denarnice';
 
   @override
-  String get connectWalletWalletConnectSecurityNote => 'Povezuj se samo z denarnicami, ki jim zaupaš. Nikoli ne deli obnovitvene fraze.';
+  String get connectWalletWalletConnectSecurityNote => 'Zunanje denarnice podpisujejo v svoji aplikaciji. Šifrirana kopija je izbirna pomoč, ne skrbništvo.';
 
   @override
   String get connectWalletWalletConnectScanQrButton => 'Skeniraj QR kodo';
@@ -4585,7 +4585,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get connectWalletWalletConnectInvalidUriToast => 'Neveljaven URI WalletConnect';
 
   @override
-  String get connectWalletWalletConnectNeedsLocalWalletToast => 'Pred uporabo WalletConnect ustvari ali uvozi denarnico';
+  String get connectWalletWalletConnectNeedsLocalWalletToast => 'Za nadaljevanje izberi zunanjo denarnico';
 
   @override
   String connectWalletWalletConnectConnectedToast(Object address) {
@@ -4596,10 +4596,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get connectWalletWalletConnectConnectionErrorToast => 'Napaka pri povezavi. Poskusi znova.';
 
   @override
-  String get connectWalletWalletConnectWaitingApprovalToast => 'Čakam na potrditev v denarnici…';
+  String get connectWalletWalletConnectWaitingApprovalToast => 'Čakam na potrditev v zunanji denarnici…';
 
   @override
-  String get connectWalletWalletConnectFailedToast => 'Povezava prek WalletConnect ni uspela';
+  String get connectWalletWalletConnectFailedToast => 'Povezava z zunanjo denarnico ni uspela';
 
   @override
   String get walletHomeTitle => 'Moja denarnica';
@@ -7068,10 +7068,275 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletBackupProtectionPasskeyBody => 'Ta šifrirana strežniška kopija je na spletu zaščitena s passkeyem. Obnovitveno geslo še vedno shrani ločeno od obnovitvene fraze.';
 
   @override
-  String get walletBackupProtectionReadOnlyHeadline => 'Ta naprava ima le read-only dostop do denarnice.';
+  String get walletBackupProtectionReadOnlyHeadline => 'Ta naprava ima do denarnice dostop samo za branje.';
 
   @override
   String get walletBackupProtectionReadOnlyBody => 'Pred prenosi in drugimi dejanji, zaščitenimi z denarnico, obnovi možnost podpisovanja s šifrirano kopijo ali obnovitveno frazo.';
+
+  @override
+  String get walletSessionStateAccountShellOnly => 'Samo lupina računa';
+
+  @override
+  String get walletSessionStateWalletReadOnly => 'Identiteta denarnice, samo za branje';
+
+  @override
+  String get walletSessionStateLocalSignerReady => 'Lokalni podpisnik je pripravljen';
+
+  @override
+  String get walletSessionStateExternalWalletReady => 'Zunanja denarnica je pripravljena';
+
+  @override
+  String get walletSessionStateRecoveryNeeded => 'Potrebna je obnova';
+
+  @override
+  String get walletSessionStateEncryptedBackupAvailable => 'Šifrirana kopija je na voljo';
+
+  @override
+  String get walletSecurityStatusTitle => 'Varnostno stanje denarnice';
+
+  @override
+  String get walletSecuritySignInMethodLabel => 'Prijava v račun';
+
+  @override
+  String get walletSecurityWalletAddressLabel => 'Naslov denarnice';
+
+  @override
+  String get walletSecuritySignerStatusLabel => 'Stanje podpisnika';
+
+  @override
+  String get walletSecurityLocalSignerLabel => 'Lokalni podpisnik na tej napravi';
+
+  @override
+  String get walletSecurityExternalWalletLabel => 'Zunanja denarnica';
+
+  @override
+  String get walletSecurityEncryptedBackupLabel => 'Šifrirana kopija';
+
+  @override
+  String get walletSecurityPasskeyLabel => 'Passkey';
+
+  @override
+  String get walletSecurityRecoveryNeededLabel => 'Obnova';
+
+  @override
+  String get walletSecurityBackendBackupClarifier => 'Prijava z e-pošto ali Googlom lahko obnovi samo dostop do računa. Prenosi še vedno zahtevajo lokalnega podpisnika ali povezano zunanjo denarnico. Šifrirana kopija na strežniku je izbirna pomoč in strežnika nikoli ne naredi podpisnika.';
+
+  @override
+  String get walletSecuritySignedOutMethod => 'Odjavljen/-a';
+
+  @override
+  String get walletSecuritySignInMethodEmail => 'E-pošta';
+
+  @override
+  String walletSecuritySignInMethodEmailWithAddress(Object email) {
+    return 'E-pošta ($email)';
+  }
+
+  @override
+  String get walletSecuritySignInMethodGoogle => 'Google';
+
+  @override
+  String walletSecuritySignInMethodGoogleWithAddress(Object email) {
+    return 'Google ($email)';
+  }
+
+  @override
+  String get walletSecuritySignInMethodWallet => 'Podpis denarnice';
+
+  @override
+  String get walletSecuritySignInMethodUnknown => 'Prijavljen/-a';
+
+  @override
+  String get walletSecurityNotAvailable => 'Ni na voljo';
+
+  @override
+  String get walletSecurityAvailable => 'Na voljo';
+
+  @override
+  String get walletSecurityUnavailable => 'Ni na voljo';
+
+  @override
+  String get walletSecurityUnknown => 'Neznano';
+
+  @override
+  String get walletSecurityConnected => 'Povezano';
+
+  @override
+  String get walletSecurityDisconnected => 'Ni povezano';
+
+  @override
+  String get walletSecurityConfigured => 'Nastavljeno';
+
+  @override
+  String get walletSecurityNotConfigured => 'Ni nastavljeno';
+
+  @override
+  String get walletSecurityLocalSignerReadyValue => 'Prisoten in pripravljen';
+
+  @override
+  String get walletSecurityLocalSignerMissingValue => 'Ni obnovljen na tej napravi';
+
+  @override
+  String get walletSecuritySignerLocalReadyValue => 'Lokalni podpisnik je pripravljen';
+
+  @override
+  String get walletSecuritySignerExternalReadyValue => 'Zunanja denarnica je pripravljena';
+
+  @override
+  String get walletSecuritySignerRestoreAvailableValue => 'Obnova je na voljo iz šifrirane kopije';
+
+  @override
+  String get walletSecuritySignerMissingValue => 'Podpisnik manjka';
+
+  @override
+  String walletSecurityExternalWalletConnectedValue(Object walletName) {
+    return 'Povezano: $walletName';
+  }
+
+  @override
+  String get walletSecurityRecoveryNeededValue => 'Potrebna';
+
+  @override
+  String get walletSecurityRecoveryNotNeededValue => 'Ni potrebna';
+
+  @override
+  String get walletSecurityRestoreSignerAction => 'Obnovi podpisnika';
+
+  @override
+  String get walletSecurityConnectExternalAction => 'Poveži zunanjo denarnico';
+
+  @override
+  String get walletBackupRecoveryPasswordLabel => 'Obnovitveno geslo';
+
+  @override
+  String get walletBackupPasswordTooShortError => 'Uporabi vsaj 8 znakov.';
+
+  @override
+  String get walletBackupPasswordsMismatchError => 'Gesli se ne ujemata.';
+
+  @override
+  String walletBackupPromptRequiredError(Object field) {
+    return '$field je obvezno polje.';
+  }
+
+  @override
+  String walletBackupPromptTooLongError(Object field) {
+    return '$field ima lahko največ 120 znakov.';
+  }
+
+  @override
+  String get walletBackupProtectionTitle => 'Zaščiti svojo web3 denarnico';
+
+  @override
+  String get walletBackupProtectionFeatureLabel => 'Varnostna kopija denarnice';
+
+  @override
+  String get walletBackupProtectionUnavailableTitle => 'Varnostna kopija denarnice ni na voljo';
+
+  @override
+  String get walletBackupProtectionCurrentWalletLabel => 'Trenutna denarnica';
+
+  @override
+  String get walletBackupProtectionOfflineReminder => 'Obnovitveno frazo shrani brez povezave, obnovitveno geslo šifrirane kopije pa hrani ločeno.';
+
+  @override
+  String walletBackupProtectionLastVerifiedLabel(Object date) {
+    return 'Nazadnje preverjeno: $date';
+  }
+
+  @override
+  String get walletBackupProtectionCreateBackupTitle => 'Ustvari šifrirano kopijo';
+
+  @override
+  String get walletBackupProtectionCreateBackupDescription => 'Izberi obnovitveno geslo. To geslo odklene kopijo denarnice na novi napravi.';
+
+  @override
+  String get walletBackupProtectionCreateBackupAction => 'Ustvari kopijo';
+
+  @override
+  String get walletBackupProtectionBackupSavedToast => 'Šifrirana kopija denarnice je shranjena.';
+
+  @override
+  String get walletBackupProtectionVerifyBackupTitle => 'Preveri šifrirano kopijo';
+
+  @override
+  String get walletBackupProtectionVerifyBackupDescription => 'Vnesi obnovitveno geslo in preveri, da se šifrirana kopija lahko odklene lokalno.';
+
+  @override
+  String get walletBackupProtectionVerifyBackupAction => 'Preveri šifrirano kopijo';
+
+  @override
+  String get walletBackupProtectionBackupVerifiedToast => 'Šifrirana kopija je preverjena.';
+
+  @override
+  String get walletBackupProtectionDeleteBackupTitle => 'Izbrisati šifrirano kopijo?';
+
+  @override
+  String get walletBackupProtectionDeleteBackupBody => 'To odstrani šifrirano strežniško kopijo za trenutno denarnico. Prepričaj se, da imaš obnovitveno frazo še vedno varno shranjeno brez povezave.';
+
+  @override
+  String get walletBackupProtectionDeleteBackupAction => 'Izbriši šifrirano kopijo';
+
+  @override
+  String get walletBackupProtectionBackupDeletedToast => 'Šifrirana kopija denarnice je izbrisana.';
+
+  @override
+  String get walletBackupProtectionRestoreSignerTitle => 'Obnovi podpisnika denarnice';
+
+  @override
+  String get walletBackupProtectionRestoreSignerDescription => 'Vnesi obnovitveno geslo šifrirane kopije, da na tej napravi obnoviš možnost podpisovanja.';
+
+  @override
+  String get walletBackupProtectionRestoreSignerAction => 'Obnovi podpisnika';
+
+  @override
+  String get walletBackupProtectionSignerRestoredToast => 'Podpisnik denarnice je obnovljen na tej napravi.';
+
+  @override
+  String get walletBackupProtectionSignerRestoreFailedToast => 'Podpisnika denarnice ni bilo mogoče obnoviti.';
+
+  @override
+  String get walletBackupProtectionUpdateEncryptedBackupButton => 'Posodobi šifrirano kopijo';
+
+  @override
+  String get walletBackupProtectionCreateEncryptedBackupButton => 'Ustvari šifrirano kopijo';
+
+  @override
+  String get walletBackupProtectionRevealRecoveryPhraseButton => 'Prikaži in kopiraj obnovitveno frazo';
+
+  @override
+  String get walletBackupProtectionPasskeysTitle => 'Passkeyji';
+
+  @override
+  String get walletBackupProtectionPasskeysBody => 'Na spletu lahko passkey pred prikazom poziva za obnovitveno geslo dodatno zaščiti dostop do šifrirane kopije.';
+
+  @override
+  String get walletBackupProtectionAddPasskeyTitle => 'Dodaj passkey';
+
+  @override
+  String get walletBackupProtectionPasskeyNameLabel => 'Ime passkeyja';
+
+  @override
+  String get walletBackupProtectionAddPasskeyDescription => 'Passkeyju dodaj oznako, da boš napravo ali brskalnik pozneje prepoznal/-a.';
+
+  @override
+  String get walletBackupProtectionDefaultPasskeyName => 'Ta naprava';
+
+  @override
+  String get walletBackupProtectionAddPasskeyAction => 'Dodaj passkey';
+
+  @override
+  String walletBackupProtectionPasskeyAddedToast(Object passkey) {
+    return 'Passkey \"$passkey\" je dodan.';
+  }
+
+  @override
+  String get walletBackupProtectionStoredPasskeyLabel => 'Shranjeni passkey';
+
+  @override
+  String walletBackupProtectionPasskeyTransports(Object transports) {
+    return 'Prenosi: $transports';
+  }
 
   @override
   String get walletBackupBannerTitle => 'Varnostno shrani obnovitveno frazo';
@@ -7086,7 +7351,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletReconnectSuccessToast => 'Seja denarnice je obnovljena.';
 
   @override
-  String get walletReconnectReadOnlyToast => 'Poverilnice denarnice so osvežene. Seja je še vedno samo za branje.';
+  String get walletReconnectReadOnlyToast => 'Seja je osvežena. Podpisovanje v tej napravi še vedno ni na voljo.';
 
   @override
   String get walletReconnectManualRequiredToast => 'Za podpisovanje se znova poveži prek ponudnika denarnice.';

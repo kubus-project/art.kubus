@@ -13,7 +13,6 @@ import '../../../providers/app_refresh_provider.dart';
 import '../../../providers/notification_provider.dart';
 import '../../../providers/recent_activity_provider.dart';
 import '../../../providers/security_gate_provider.dart';
-import '../../../services/solana_walletconnect_service.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../services/app_bootstrap_service.dart';
 import '../../../services/security/post_auth_security_setup_service.dart';
@@ -145,7 +144,9 @@ class _ConnectWalletState extends State<ConnectWallet>
   }
 
   double _stepVerticalPadding(bool isSmallScreen) {
-    if (!widget.embedded) return isSmallScreen ? KubusSpacing.md : KubusSpacing.lg;
+    if (!widget.embedded) {
+      return isSmallScreen ? KubusSpacing.md : KubusSpacing.lg;
+    }
     return isSmallScreen ? KubusSpacing.sm : KubusSpacing.md;
   }
 
@@ -402,9 +403,7 @@ class _ConnectWalletState extends State<ConnectWallet>
                   children: [
                     IconButton(
                       icon: Icon(
-                        _currentStep > 0
-                            ? Icons.arrow_back
-                            : Icons.close,
+                        _currentStep > 0 ? Icons.arrow_back : Icons.close,
                         color: scheme.onSurface,
                       ),
                       onPressed: _handlePrimaryBackOrClose,
@@ -414,16 +413,15 @@ class _ConnectWalletState extends State<ConnectWallet>
                         _getStepTitle(l10n),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style:
-                            KubusTypography.textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                  color: scheme.onSurface,
-                                ) ??
-                                KubusTypography.inter(
-                                  fontSize: KubusHeaderMetrics.sectionTitle,
-                                  fontWeight: FontWeight.bold,
-                                  color: scheme.onSurface,
-                                ),
+                        style: KubusTypography.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: scheme.onSurface,
+                            ) ??
+                            KubusTypography.inter(
+                              fontSize: KubusHeaderMetrics.sectionTitle,
+                              fontWeight: FontWeight.bold,
+                              color: scheme.onSurface,
+                            ),
                       ),
                     ),
                   ],
@@ -476,7 +474,7 @@ class _ConnectWalletState extends State<ConnectWallet>
             : IconButton(
                 icon: Icon(Icons.arrow_back,
                     color: Theme.of(context).colorScheme.onSurface),
-              onPressed: () => _closeFlow(),
+                onPressed: () => _closeFlow(),
               ),
         title: Text(
           _getStepTitle(l10n),
@@ -558,7 +556,9 @@ class _ConnectWalletState extends State<ConnectWallet>
             switchOutCurve: Curves.easeIn,
             child: KeyedSubtree(
               key: ValueKey<String>(
-                canTransact ? 'auth-inline-connected' : 'auth-inline-step-$_currentStep',
+                canTransact
+                    ? 'auth-inline-connected'
+                    : 'auth-inline-step-$_currentStep',
               ),
               child: canTransact
                   ? _buildAuthInlineConnectedView()
@@ -1484,8 +1484,7 @@ class _ConnectWalletState extends State<ConnectWallet>
     try {
       final walletProvider =
           Provider.of<WalletProvider?>(context, listen: false);
-      final gate =
-          Provider.of<SecurityGateProvider?>(context, listen: false);
+      final gate = Provider.of<SecurityGateProvider?>(context, listen: false);
       final navigator = Navigator.of(context);
       final profileProvider =
           Provider.of<ProfileProvider?>(context, listen: false);
@@ -1847,9 +1846,9 @@ class _ConnectWalletState extends State<ConnectWallet>
                                   ? KubusTypography.textTheme.titleLarge
                                   : KubusTypography.textTheme.headlineMedium)
                               ?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ) ??
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ) ??
                           KubusTypography.inter(
                             fontSize: _heroTitleFontSize(isSmallScreen),
                             fontWeight: FontWeight.bold,
@@ -2200,50 +2199,12 @@ class _ConnectWalletState extends State<ConnectWallet>
   }
 
   Future<void> _quickWalletConnect() async {
-    // Try clipboard first
-    try {
-      final clipboardData = await Clipboard.getData('text/plain');
-      final text = clipboardData?.text?.trim();
-      if (text != null && text.startsWith('wc:')) {
-        setState(() {
-          _wcUriController.text = text;
-        });
-        await _connectWithWalletConnect();
-        return;
-      }
-    } catch (_) {}
-
-    // If no URI in clipboard, fall back to scanner (mobile) or prompt
-    if (!mounted) return;
-    await _scanQRCode();
+    await _connectWithWalletConnect();
   }
 
   Future<void> _connectWithWalletConnect() async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
-    final uri = _wcUriController.text.trim();
-
-    if (uri.isEmpty) {
-      messenger.showKubusSnackBar(
-        SnackBar(
-          content: Text(l10n.connectWalletWalletConnectUriRequiredToast),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
-    if (!uri.startsWith('wc:')) {
-      messenger.showKubusSnackBar(
-        SnackBar(
-          content: Text(l10n.connectWalletWalletConnectInvalidUriToast),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
 
     setState(() {
       _isLoading = true;
@@ -2266,146 +2227,67 @@ class _ConnectWalletState extends State<ConnectWallet>
         );
         return;
       }
-      final walletAddress = walletProvider.currentWalletAddress;
-      if (!walletProvider.canTransact ||
-          walletAddress == null ||
-          walletAddress.isEmpty) {
-        setState(() {
-          _isLoading = false;
-          _currentStep = 0;
-        });
+      final gate = Provider.of<SecurityGateProvider?>(context, listen: false);
+      final profileProvider =
+          Provider.of<ProfileProvider?>(context, listen: false);
+      final navigator = Navigator.of(context);
+      final result = await walletProvider.connectExternalWallet(
+        context,
+        allowReplacingWalletIdentity:
+            (walletProvider.currentWalletAddress ?? '').trim().isEmpty,
+      );
+      if (!mounted) return;
+      final address = result.address;
+
+      if (profileProvider != null) {
+        try {
+          await _ensureWalletAccountAndProfile(
+            address: address,
+            profileProvider: profileProvider,
+          );
+        } catch (e, st) {
+          debugPrint(
+              'connectwallet: profile load/create failed after external wallet: $e\n$st');
+        }
+      }
+
+      if (!mounted) return;
+      await const WalletSessionSyncService().bindAuthenticatedWallet(
+        context: context,
+        walletAddress: address,
+        warmUp: false,
+        loadProfile: false,
+      );
+      try {
+        await _runPostWalletConnectRefresh(address);
+      } catch (_) {}
+      final hasAuth =
+          (BackendApiService().getAuthToken() ?? '').trim().isNotEmpty;
+      if (hasAuth && gate != null) {
+        final ok = await const PostAuthSecuritySetupService()
+            .ensurePostAuthSecuritySetup(
+          navigator: navigator,
+          walletProvider: walletProvider,
+          securityGateProvider: gate,
+        );
+        if (!mounted) return;
+        if (!ok) return;
+      }
+      messenger.clearSnackBars();
+      if (!_isAuthEntryFlow) {
         messenger.showKubusSnackBar(
           SnackBar(
-            content: Text(l10n.connectWalletWalletConnectNeedsLocalWalletToast),
-            backgroundColor: Colors.red,
+            content:
+                Text(l10n.connectWalletWalletConnectConnectedToast(address)),
+            backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
           ),
         );
-        return;
       }
-
-      final wcService = SolanaWalletConnectService.instance;
-      wcService.updateActiveWalletAddress(walletAddress);
-
-      // Initialize if not already done
-      if (!wcService.isInitialized) {
-        await wcService.initialize();
-      }
-
-      // Do not capture BuildContext-dependent objects here; capture them
-      // inside the callback after verifying mounted.
-
-      // Set up callbacks
-      wcService.onConnected = (address) async {
-        if (mounted) {
-          final l10n = AppLocalizations.of(context)!;
-          final messenger = ScaffoldMessenger.of(context);
-          final navigator = Navigator.of(context);
-          final walletProvider =
-              Provider.of<WalletProvider?>(context, listen: false);
-          final gate =
-              Provider.of<SecurityGateProvider?>(context, listen: false);
-          final profileProvider =
-              Provider.of<ProfileProvider?>(context, listen: false);
-
-          if (walletProvider == null || gate == null || profileProvider == null) {
-            setState(() {
-              _isLoading = false;
-            });
-            messenger.showKubusSnackBar(
-              SnackBar(
-                content:
-                    Text(l10n.connectWalletWalletConnectConnectionErrorToast),
-                backgroundColor: Colors.red,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-            return;
-          }
-
-          messenger.clearSnackBars();
-          if (!_isAuthEntryFlow) {
-            messenger.showKubusSnackBar(
-              SnackBar(
-                content: Text(
-                    l10n.connectWalletWalletConnectConnectedToast(address)),
-                backgroundColor: Colors.green,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-
-          try {
-            await _ensureWalletAccountAndProfile(
-              address: address,
-              profileProvider: profileProvider,
-            );
-          } catch (e, st) {
-            debugPrint(
-                'connectwallet: profile load/create failed after walletconnect: $e\n$st');
-          }
-
-          if (!mounted) return;
-          await const WalletSessionSyncService().bindAuthenticatedWallet(
-            context: context,
-            walletAddress: address,
-            warmUp: false,
-            loadProfile: false,
-          );
-          try {
-            await _runPostWalletConnectRefresh(address);
-          } catch (_) {}
-          final hasAuth =
-              (BackendApiService().getAuthToken() ?? '').trim().isNotEmpty;
-          if (hasAuth) {
-            final ok = await const PostAuthSecuritySetupService()
-                .ensurePostAuthSecuritySetup(
-              navigator: navigator,
-              walletProvider: walletProvider,
-              securityGateProvider: gate,
-            );
-            if (!mounted) return;
-            if (!ok) return;
-          }
-          _trackWalletAuthSuccess();
-          _closeFlow(_authEntryPayload);
-        }
-      };
-
-      wcService.onError = (error) {
-        debugPrint('connectwallet: walletconnect error: $error');
-        _trackWalletAuthFailure('walletconnect_error');
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-          final l10n = AppLocalizations.of(context)!;
-          messenger.showKubusSnackBar(
-            SnackBar(
-              content:
-                  Text(l10n.connectWalletWalletConnectConnectionErrorToast),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      };
-
-      // Pair with the URI
-      await wcService.pair(uri);
-
-      if (mounted) {
-        messenger.showKubusSnackBar(
-          SnackBar(
-            content: Text(l10n.connectWalletWalletConnectWaitingApprovalToast),
-            backgroundColor: Colors.blue,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
+      _trackWalletAuthSuccess();
+      _closeFlow(_authEntryPayload);
     } catch (e) {
-      debugPrint('connectwallet: walletconnect failed: $e');
+      debugPrint('connectwallet: external wallet failed: $e');
       _trackWalletAuthFailure('walletconnect_failed');
       if (mounted) {
         setState(() {
@@ -2434,8 +2316,7 @@ class _ConnectWalletState extends State<ConnectWallet>
     try {
       final walletProvider =
           Provider.of<WalletProvider?>(context, listen: false);
-      final gate =
-          Provider.of<SecurityGateProvider?>(context, listen: false);
+      final gate = Provider.of<SecurityGateProvider?>(context, listen: false);
       final profileProvider =
           Provider.of<ProfileProvider?>(context, listen: false);
 

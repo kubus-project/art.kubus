@@ -193,22 +193,14 @@ class _AppInitializerState extends State<AppInitializer> {
           Provider.of<WalletProvider>(context, listen: false);
       await _safeStep<void>('wallet.initialize', walletProvider.initialize,
           timeout: const Duration(seconds: 8));
+      await _safeStep<void>(
+        'wallet.restoreAccountShell',
+        () => walletProvider.restoreAccountShellFromBackend(
+          allowRefresh: false,
+        ),
+        timeout: const Duration(seconds: 8),
+      );
       String? walletAddress = walletProvider.currentWalletAddress;
-      final sessionWalletAddress =
-          (BackendApiService().getCurrentAuthWalletAddress() ?? '').trim();
-      if (sessionWalletAddress.isNotEmpty) {
-        if (sessionWalletAddress != (walletAddress ?? '').trim()) {
-          try {
-            await walletProvider
-                .connectWalletWithAddress(sessionWalletAddress)
-                .timeout(const Duration(seconds: 8));
-          } catch (e) {
-            AppConfig.debugPrint(
-                'AppInitializer: wallet sync to authenticated session failed: $e');
-          }
-        }
-        walletAddress = sessionWalletAddress;
-      }
       walletAddress = walletAddress?.trim().isNotEmpty == true
           ? walletAddress!.trim()
           : null;
@@ -284,7 +276,8 @@ class _AppInitializerState extends State<AppInitializer> {
           walletProvider.hasWalletIdentity &&
           walletProvider.isReadOnlySession) {
         try {
-          final managedEligible = await walletProvider.isManagedReconnectEligible();
+          final managedEligible =
+              await walletProvider.isManagedReconnectEligible();
           if (managedEligible) {
             await walletProvider
                 .recoverManagedWalletSession(
@@ -593,8 +586,8 @@ class _AppInitializerState extends State<AppInitializer> {
   @override
   Widget build(BuildContext context) {
     final serverVersion = (_serverVersion ?? '').trim().isEmpty
-      ? _serverVersionOfflineLabel
-      : _serverVersion!.trim();
+        ? _serverVersionOfflineLabel
+        : _serverVersion!.trim();
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,

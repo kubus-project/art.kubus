@@ -459,11 +459,11 @@ class _SignInScreenState extends State<SignInScreen> {
           !WalletUtils.equals(currentWallet, targetWallet)) {
         try {
           await walletProvider
-              .connectWalletWithAddress(targetWallet)
+              .setReadOnlyWalletIdentity(targetWallet)
               .timeout(walletConnectTimeout);
         } catch (e) {
           AppConfig.debugPrint(
-              'SignInScreen: connectWalletWithAddress failed: $e');
+              'SignInScreen: setReadOnlyWalletIdentity failed: $e');
         }
       }
       if (walletProvider.isReadOnlySession) {

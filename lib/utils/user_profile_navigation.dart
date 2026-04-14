@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import '../screens/community/user_profile_screen.dart' as mobile;
 import '../screens/desktop/community/desktop_user_profile_screen.dart'
     as desktop;
 import '../screens/desktop/desktop_shell.dart';
+import '../services/user_service.dart';
 import 'design_tokens.dart';
 
 enum DesktopProfilePresentation {
@@ -35,12 +37,23 @@ class DesktopProfilePresentationScope extends InheritedWidget {
 }
 
 class UserProfileNavigation {
+  static void _prefetchUserProfile(String userId) {
+    final trimmed = userId.trim();
+    if (trimmed.isEmpty) return;
+    // Best-effort warmup: this populates UserService cache so profile screens
+    // can render immediately (cache-first) without waiting for the network.
+    try {
+      unawaited(UserService.getUserById(trimmed, forceRefresh: false));
+    } catch (_) {}
+  }
+
   static Future<void> open(
     BuildContext context, {
     required String userId,
     String? username,
     String? heroTag,
   }) async {
+    _prefetchUserProfile(userId);
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth >= 900;
 
@@ -93,6 +106,7 @@ class UserProfileNavigation {
     String? username,
     String? heroTag,
   }) async {
+    _prefetchUserProfile(userId);
     if (userId.trim().isEmpty) return;
 
     final theme = Theme.of(context);

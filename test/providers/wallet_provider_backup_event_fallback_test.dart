@@ -67,30 +67,42 @@ class _BackupEventFallbackWalletProvider extends WalletProvider {
   bool get hasSigner => true;
 }
 
+Future<
+    ({
+      String walletAddress,
+      String mnemonic,
+      EncryptedWalletBackupDefinition backupDefinition,
+    })> _createBackupFixture() async {
+  final solanaWalletService = SolanaWalletService();
+  final mnemonic = solanaWalletService.generateMnemonic();
+  final derived = await solanaWalletService.derivePreferredKeyPair(mnemonic);
+  return (
+    walletAddress: derived.address,
+    mnemonic: mnemonic,
+    backupDefinition: EncryptedWalletBackupDefinition(
+      walletAddress: derived.address,
+      version: 1,
+      kdfName: 'argon2id',
+      kdfParams: const <String, dynamic>{
+        'memoryKiB': 19456,
+        'iterations': 2,
+        'parallelism': 1,
+        'hashLength': 32,
+      },
+      salt: 'salt',
+      wrappedDekNonce: 'wrapped-dek-nonce',
+      wrappedDekCiphertext: 'wrapped-dek-ciphertext',
+      mnemonicNonce: 'mnemonic-nonce',
+      mnemonicCiphertext: 'mnemonic-ciphertext',
+    ),
+  );
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  const walletAddress = 'wallet-backup-1';
   const recoveryPassword = 'correct horse battery staple';
-  const mnemonic = 'alpha beta gamma delta epsilon zeta eta theta';
   const missingEndpointResponse = '{"success":false,"error":"not found"}';
-
-  const backupDefinition = EncryptedWalletBackupDefinition(
-    walletAddress: walletAddress,
-    version: 1,
-    kdfName: 'argon2id',
-    kdfParams: <String, dynamic>{
-      'memoryKiB': 19456,
-      'iterations': 2,
-      'parallelism': 1,
-      'hashLength': 32,
-    },
-    salt: 'salt',
-    wrappedDekNonce: 'wrapped-dek-nonce',
-    wrappedDekCiphertext: 'wrapped-dek-ciphertext',
-    mnemonicNonce: 'mnemonic-nonce',
-    mnemonicCiphertext: 'mnemonic-ciphertext',
-  );
 
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
@@ -121,36 +133,38 @@ void main() {
 
   test('verifyEncryptedWalletBackup tolerates missing backup event endpoint',
       () async {
+    final fixture = await _createBackupFixture();
     final walletProvider = _BackupEventFallbackWalletProvider(
-      backupDefinition: backupDefinition,
-      decryptedMnemonic: mnemonic,
+      backupDefinition: fixture.backupDefinition,
+      decryptedMnemonic: fixture.mnemonic,
     );
 
     final result = await walletProvider.verifyEncryptedWalletBackup(
       recoveryPassword: recoveryPassword,
-      walletAddress: walletAddress,
+      walletAddress: fixture.walletAddress,
     );
 
-    expect(result, mnemonic);
+    expect(result, fixture.mnemonic);
     expect(walletProvider.encryptedWalletBackupError, isNull);
   });
 
   test(
       'restoreSignerFromEncryptedWalletBackup succeeds when backup event endpoint is unavailable',
       () async {
+    final fixture = await _createBackupFixture();
     final walletProvider = _BackupEventFallbackWalletProvider(
-      backupDefinition: backupDefinition,
-      decryptedMnemonic: mnemonic,
+      backupDefinition: fixture.backupDefinition,
+      decryptedMnemonic: fixture.mnemonic,
     );
 
     final restored =
         await walletProvider.restoreSignerFromEncryptedWalletBackup(
       recoveryPassword: recoveryPassword,
-      walletAddress: walletAddress,
+      walletAddress: fixture.walletAddress,
     );
 
     expect(restored, isTrue);
-    expect(walletProvider.importedMnemonic, mnemonic);
+    expect(walletProvider.importedMnemonic, fixture.mnemonic);
     expect(walletProvider.refreshCalls, 1);
     expect(walletProvider.encryptedWalletBackupError, isNull);
   });

@@ -23,10 +23,11 @@ class WalletSessionAccessSnapshot {
     required ProfileProvider profileProvider,
     required WalletProvider walletProvider,
   }) {
+    final authority = walletProvider.authority;
     return WalletSessionAccessSnapshot(
-      isSignedIn: profileProvider.isSignedIn,
-      hasWalletIdentity: walletProvider.hasWalletIdentity,
-      hasSigner: walletProvider.hasSigner,
+      isSignedIn: authority.accountSignedIn,
+      hasWalletIdentity: authority.hasWalletIdentity,
+      hasSigner: authority.canTransact,
     );
   }
 

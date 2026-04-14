@@ -16,12 +16,17 @@ class _ThrowingWalletProvider extends WalletProvider {
           deferInit: true,
         );
 
-  bool connectAttempted = false;
+  bool restoreAttempted = false;
 
   @override
-  Future<void> connectWalletWithAddress(String address) async {
-    connectAttempted = true;
-    throw Exception('wallet connect failed');
+  Future<void> setReadOnlyWalletIdentity(
+    String address, {
+    bool persist = true,
+    bool loadData = true,
+    bool syncBackend = false,
+  }) async {
+    restoreAttempted = true;
+    throw Exception('wallet restore failed');
   }
 }
 
@@ -87,7 +92,7 @@ void main() {
       warmUp: false,
     );
 
-    expect(walletProvider.connectAttempted, isTrue);
+    expect(walletProvider.restoreAttempted, isTrue);
     expect(profileProvider.loadAttempted, isTrue);
     expect(chatProvider.lastWallet, 'wallet-123');
 

@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,6 +12,7 @@ import 'package:solana/solana.dart' show Ed25519HDKeyPair;
 import '../models/wallet.dart';
 import '../models/swap_quote.dart';
 import '../services/encrypted_wallet_backup_service.dart';
+import '../services/external_wallet_signer_service.dart';
 import '../services/solana_wallet_service.dart';
 import '../services/backend_api_service.dart';
 import '../services/stats_api_service.dart';
@@ -37,6 +40,67 @@ enum WalletSessionPhase {
   restoring,
   ready,
   error,
+}
+
+enum WalletAuthorityState {
+  signedOut,
+  accountShellOnly,
+  walletReadOnly,
+  localSignerReady,
+  externalWalletReady,
+  encryptedBackupAvailableSignerMissing,
+  recoveryNeeded,
+}
+
+enum WalletSignerSource {
+  none,
+  local,
+  external,
+}
+
+class WalletAuthoritySnapshot {
+  const WalletAuthoritySnapshot({
+    required this.state,
+    required this.signerSource,
+    required this.accountSignedIn,
+    required this.signInMethod,
+    required this.accountEmail,
+    required this.walletAddress,
+    required this.hasLocalSigner,
+    required this.hasExternalSigner,
+    required this.externalWalletConnected,
+    required this.externalWalletName,
+    required this.hasEncryptedBackup,
+    required this.encryptedBackupStatusKnown,
+    required this.hasPasskeyProtection,
+    required this.mnemonicBackupRequired,
+    required this.recoveryNeeded,
+  });
+
+  final WalletAuthorityState state;
+  final WalletSignerSource signerSource;
+  final bool accountSignedIn;
+  final AuthSignInMethod signInMethod;
+  final String? accountEmail;
+  final String? walletAddress;
+  final bool hasLocalSigner;
+  final bool hasExternalSigner;
+  final bool externalWalletConnected;
+  final String? externalWalletName;
+  final bool hasEncryptedBackup;
+  final bool encryptedBackupStatusKnown;
+  final bool hasPasskeyProtection;
+  final bool mnemonicBackupRequired;
+  final bool recoveryNeeded;
+
+  bool get hasWalletIdentity => (walletAddress ?? '').trim().isNotEmpty;
+  bool get canUseAccount => accountSignedIn;
+  bool get canReadWallet => hasWalletIdentity;
+  bool get canTransact =>
+      hasWalletIdentity && (hasLocalSigner || hasExternalSigner);
+  bool get canRestoreFromEncryptedBackup =>
+      hasWalletIdentity && !canTransact && hasEncryptedBackup;
+  bool get isReadOnlyWallet => hasWalletIdentity && !canTransact;
 }
 
 enum ManagedWalletReconnectOutcome {
@@ -85,6 +149,13 @@ class WalletProvider extends ChangeNotifier {
   bool _encryptedWalletBackupLoading = false;
   bool _walletBackupRecoveryInProgress = false;
   String? _encryptedWalletBackupError;
+  bool _encryptedWalletBackupStatusKnown = false;
+  bool _mnemonicBackupRequiredForAuthority = false;
+  bool _accountSignedIn = false;
+  AuthSignInMethod _accountSignInMethod = AuthSignInMethod.unknown;
+  String? _accountEmail;
+  String? _externalSignerAddress;
+  String? _externalSignerName;
 
   // Backend supplemental data
   Map<String, dynamic>? _backendProfile;
@@ -136,6 +207,20 @@ class WalletProvider extends ChangeNotifier {
     final next = (address ?? '').trim();
     _currentWalletAddress = next.isEmpty ? null : next;
     _sessionPhase = WalletSessionPhase.ready;
+    notifyListeners();
+  }
+
+  @visibleForTesting
+  void setEncryptedWalletBackupDefinitionForTesting(
+    EncryptedWalletBackupDefinition? definition,
+  ) {
+    _setEncryptedWalletBackupDefinition(definition);
+    notifyListeners();
+  }
+
+  @visibleForTesting
+  void setEncryptedWalletBackupStatusKnownForTesting(bool known) {
+    _encryptedWalletBackupStatusKnown = known;
     notifyListeners();
   }
 
@@ -573,11 +658,19 @@ class WalletProvider extends ChangeNotifier {
   String? get currentWalletAddress => _currentWalletAddress;
   bool get hasWalletIdentity =>
       _currentWalletAddress != null && _currentWalletAddress!.isNotEmpty;
-  bool get hasSigner => _solanaWalletService.hasActiveKeyPair;
-  bool get isReadOnlySession => hasWalletIdentity && !hasSigner;
-  bool get canTransact => hasWalletIdentity && hasSigner;
+  bool get accountSignedIn => authority.accountSignedIn;
+  AuthSignInMethod get accountSignInMethod => authority.signInMethod;
+  String? get accountEmail => authority.accountEmail;
+  bool get hasLocalSigner => _localSignerMatchesCurrentWallet;
+  bool get hasExternalSigner => _externalSignerMatchesCurrentWallet;
+  bool get hasSigner => hasLocalSigner || hasExternalSigner;
+  bool get isReadOnlySession => authority.isReadOnlyWallet;
+  bool get canTransact => authority.canTransact;
   bool get isConnected => hasWalletIdentity;
-  bool get hasActiveKeyPair => _solanaWalletService.hasActiveKeyPair;
+  bool get hasActiveKeyPair => hasLocalSigner;
+  String? get externalSignerAddress => _externalSignerAddress;
+  String? get externalSignerName => _externalSignerName;
+  bool get externalWalletConnected => hasExternalSigner;
   SolanaWalletService get solanaWalletService => _solanaWalletService;
   EncryptedWalletBackupDefinition? get encryptedWalletBackupDefinition =>
       _encryptedWalletBackupDefinition;
@@ -599,6 +692,76 @@ class WalletProvider extends ChangeNotifier {
   List<WalletBackupPasskeyDefinition> get encryptedWalletBackupPasskeys =>
       _encryptedWalletBackupDefinition?.passkeys ??
       const <WalletBackupPasskeyDefinition>[];
+  bool get hasEncryptedWalletBackupPasskey =>
+      encryptedWalletBackupPasskeys.isNotEmpty;
+
+  bool get _localSignerMatchesCurrentWallet {
+    final signer = (_solanaWalletService.activePublicKey ?? '').trim();
+    final wallet = (_currentWalletAddress ?? '').trim();
+    if (signer.isEmpty || wallet.isEmpty) return false;
+    return WalletUtils.equals(signer, wallet);
+  }
+
+  bool get _externalSignerMatchesCurrentWallet {
+    final signer = (_externalSignerAddress ?? '').trim();
+    final wallet = (_currentWalletAddress ?? '').trim();
+    if (signer.isEmpty || wallet.isEmpty) return false;
+    return WalletUtils.equals(signer, wallet);
+  }
+
+  WalletAuthoritySnapshot get authority {
+    final tokenPresent = (_apiService.getAuthToken() ?? '').trim().isNotEmpty;
+    final accountSignedIn = _accountSignedIn || tokenPresent;
+    final hasWallet = hasWalletIdentity;
+    final localReady = _localSignerMatchesCurrentWallet;
+    final externalReady = _externalSignerMatchesCurrentWallet;
+    final canSign = hasWallet && (localReady || externalReady);
+    final hasBackup = hasEncryptedWalletBackup;
+    final hasPasskey = hasEncryptedWalletBackupPasskey;
+    final recoveryNeeded = hasWallet &&
+        !canSign &&
+        _encryptedWalletBackupStatusKnown &&
+        !hasBackup;
+
+    final WalletAuthorityState state;
+    if (canSign && localReady) {
+      state = WalletAuthorityState.localSignerReady;
+    } else if (canSign && externalReady) {
+      state = WalletAuthorityState.externalWalletReady;
+    } else if (hasWallet && hasBackup) {
+      state = WalletAuthorityState.encryptedBackupAvailableSignerMissing;
+    } else if (recoveryNeeded) {
+      state = WalletAuthorityState.recoveryNeeded;
+    } else if (hasWallet) {
+      state = WalletAuthorityState.walletReadOnly;
+    } else if (accountSignedIn) {
+      state = WalletAuthorityState.accountShellOnly;
+    } else {
+      state = WalletAuthorityState.signedOut;
+    }
+
+    return WalletAuthoritySnapshot(
+      state: state,
+      signerSource: localReady
+          ? WalletSignerSource.local
+          : externalReady
+              ? WalletSignerSource.external
+              : WalletSignerSource.none,
+      accountSignedIn: accountSignedIn,
+      signInMethod: _accountSignInMethod,
+      accountEmail: _accountEmail,
+      walletAddress: _currentWalletAddress,
+      hasLocalSigner: localReady,
+      hasExternalSigner: externalReady,
+      externalWalletConnected: externalReady,
+      externalWalletName: _externalSignerName,
+      hasEncryptedBackup: hasBackup,
+      encryptedBackupStatusKnown: _encryptedWalletBackupStatusKnown,
+      hasPasskeyProtection: hasPasskey,
+      mnemonicBackupRequired: _mnemonicBackupRequiredForAuthority,
+      recoveryNeeded: recoveryNeeded,
+    );
+  }
 
   void _setLastError(Object error) {
     _lastError = error.toString();
@@ -616,6 +779,7 @@ class WalletProvider extends ChangeNotifier {
     EncryptedWalletBackupDefinition? definition,
   ) {
     _encryptedWalletBackupDefinition = definition;
+    _encryptedWalletBackupStatusKnown = true;
     _encryptedWalletBackupError = null;
   }
 
@@ -624,6 +788,7 @@ class WalletProvider extends ChangeNotifier {
     _encryptedWalletBackupLoading = false;
     _walletBackupRecoveryInProgress = false;
     _encryptedWalletBackupError = null;
+    _encryptedWalletBackupStatusKnown = false;
   }
 
   Future<void> _persistWalletIdentity(String address) async {
@@ -732,7 +897,11 @@ class WalletProvider extends ChangeNotifier {
         }
       }
 
-      await connectWalletWithAddress(targetWallet);
+      await setReadOnlyWalletIdentity(
+        targetWallet,
+        loadData: true,
+        syncBackend: false,
+      );
       if (WalletUtils.equals(_currentWalletAddress, targetWallet) &&
           canTransact) {
         _clearLastError();
@@ -808,6 +977,10 @@ class WalletProvider extends ChangeNotifier {
     if (required) {
       await prefs.setBool(backedUpKey, false);
     }
+    if (WalletUtils.equals(targetWallet, _currentWalletAddress)) {
+      _mnemonicBackupRequiredForAuthority = required;
+      notifyListeners();
+    }
   }
 
   Future<void> markMnemonicBackedUp({String? walletAddress}) async {
@@ -825,6 +998,10 @@ class WalletProvider extends ChangeNotifier {
     );
     await prefs.setBool(requiredKey, false);
     await prefs.setBool(backedUpKey, true);
+    if (WalletUtils.equals(targetWallet, _currentWalletAddress)) {
+      _mnemonicBackupRequiredForAuthority = false;
+      notifyListeners();
+    }
   }
 
   Future<bool> isMnemonicBackupRequired({String? walletAddress}) async {
@@ -835,7 +1012,11 @@ class WalletProvider extends ChangeNotifier {
       prefix: PreferenceKeys.walletMnemonicBackupRequiredV1Prefix,
       walletAddress: targetWallet,
     );
-    return prefs.getBool(requiredKey) ?? false;
+    final required = prefs.getBool(requiredKey) ?? false;
+    if (WalletUtils.equals(targetWallet, _currentWalletAddress)) {
+      _mnemonicBackupRequiredForAuthority = required;
+    }
+    return required;
   }
 
   Future<String?> _resolveBackupWalletAddress({String? walletAddress}) async {
@@ -1193,8 +1374,17 @@ class WalletProvider extends ChangeNotifier {
         walletAddress: targetWallet,
         emitSecurityEvent: false,
       );
+      final derived = await _solanaWalletService.derivePreferredKeyPair(
+        mnemonic,
+      );
+      if (!WalletUtils.equals(derived.address, targetWallet)) {
+        throw const EncryptedWalletBackupException(
+          'Encrypted backup does not match the selected wallet.',
+        );
+      }
       await importWalletFromMnemonic(
         mnemonic,
+        preDerived: derived,
         markBackedUp: false,
       );
       await refreshEncryptedWalletBackupStatus(walletAddress: targetWallet);
@@ -1229,6 +1419,173 @@ class WalletProvider extends ChangeNotifier {
     final authenticatedWallet =
         (_apiService.getCurrentAuthWalletAddress() ?? '').trim();
     return authenticatedWallet.isEmpty ? null : authenticatedWallet;
+  }
+
+  Future<bool> restoreAccountShellFromBackend({
+    bool allowRefresh = true,
+    bool loadWalletData = true,
+  }) async {
+    final restored = await _apiService.restoreExistingSession(
+      allowRefresh: allowRefresh,
+    );
+    final token = (_apiService.getAuthToken() ?? '').trim();
+    _accountSignedIn = restored || token.isNotEmpty;
+    _accountSignInMethod = await _apiService.resolveLastSignInMethod();
+    _accountEmail = _apiService.getCurrentAuthEmail();
+
+    final accountWallet =
+        (_apiService.getCurrentAuthWalletAddress() ?? '').trim();
+    if (accountWallet.isNotEmpty) {
+      await setReadOnlyWalletIdentity(
+        accountWallet,
+        loadData: loadWalletData,
+        syncBackend: false,
+      );
+    } else {
+      notifyListeners();
+    }
+    return _accountSignedIn;
+  }
+
+  Future<void> clearAccountShell() async {
+    _clearAccountShellState();
+    notifyListeners();
+  }
+
+  void _clearAccountShellState() {
+    _accountSignedIn = false;
+    _accountSignInMethod = AuthSignInMethod.unknown;
+    _accountEmail = null;
+  }
+
+  Future<void> setReadOnlyWalletIdentity(
+    String address, {
+    bool persist = true,
+    bool loadData = true,
+    bool syncBackend = false,
+  }) async {
+    final sanitized = address.trim();
+    if (sanitized.isEmpty) return;
+
+    final activeSignerAddress =
+        (_solanaWalletService.activePublicKey ?? '').trim();
+    if (activeSignerAddress.isNotEmpty &&
+        !WalletUtils.equals(activeSignerAddress, sanitized)) {
+      _solanaWalletService.clearActiveKeyPair();
+      _cachedDerivedCandidate = null;
+    }
+    if ((_externalSignerAddress ?? '').trim().isNotEmpty &&
+        !WalletUtils.equals(_externalSignerAddress, sanitized)) {
+      await clearExternalSigner(notify: false);
+    }
+    if (!WalletUtils.equals(_currentWalletAddress, sanitized)) {
+      _clearEncryptedWalletBackupState();
+      _mnemonicBackupRequiredForAuthority = false;
+    }
+
+    _lastError = null;
+    _sessionPhase = WalletSessionPhase.restoring;
+    _currentWalletAddress = sanitized;
+
+    if (persist) {
+      try {
+        await _persistWalletIdentity(sanitized);
+      } catch (e) {
+        _walletLog('setReadOnlyWalletIdentity: persist failed: $e');
+      }
+    }
+    _apiService.setPreferredWalletAddress(sanitized);
+
+    try {
+      await isMnemonicBackupRequired(walletAddress: sanitized);
+    } catch (_) {}
+    unawaited(
+      refreshEncryptedWalletBackupStatus(
+        walletAddress: sanitized,
+        notify: true,
+      ).catchError((Object error, StackTrace stackTrace) {
+        _walletLog(
+          'setReadOnlyWalletIdentity: encrypted backup status refresh failed: $error',
+        );
+        return null;
+      }),
+    );
+
+    if (loadData) {
+      await _loadData();
+    }
+    if (syncBackend) {
+      await _syncBackendData(sanitized);
+    }
+    _clearLastError();
+    notifyListeners();
+  }
+
+  Future<ExternalWalletConnectionResult> connectExternalWallet(
+    BuildContext context, {
+    bool allowReplacingWalletIdentity = false,
+  }) async {
+    final result = await ExternalWalletSignerService.instance.connect(context);
+    await bindExternalSigner(
+      address: result.address,
+      walletName: result.walletName,
+      allowReplacingWalletIdentity: allowReplacingWalletIdentity,
+    );
+    return result;
+  }
+
+  Future<void> bindExternalSigner({
+    required String address,
+    String? walletName,
+    bool allowReplacingWalletIdentity = false,
+  }) async {
+    final sanitized = address.trim();
+    if (sanitized.isEmpty) {
+      throw ArgumentError('External wallet address cannot be empty');
+    }
+    final current = (_currentWalletAddress ?? '').trim();
+    if (current.isNotEmpty &&
+        !WalletUtils.equals(current, sanitized) &&
+        !allowReplacingWalletIdentity) {
+      throw StateError('External wallet must match the account wallet.');
+    }
+    if (current.isEmpty ||
+        (allowReplacingWalletIdentity &&
+            !WalletUtils.equals(current, sanitized))) {
+      await setReadOnlyWalletIdentity(
+        sanitized,
+        loadData: true,
+        syncBackend: true,
+      );
+    }
+
+    _externalSignerAddress = sanitized;
+    final label = (walletName ?? '').trim();
+    _externalSignerName = label.isEmpty ? 'External wallet' : label;
+    _apiService.setPreferredWalletAddress(sanitized);
+    notifyListeners();
+  }
+
+  Future<void> clearExternalSigner({bool notify = true}) async {
+    _externalSignerAddress = null;
+    _externalSignerName = null;
+    if (notify) notifyListeners();
+  }
+
+  Future<bool> dispatchExternalWalletReturn(Uri uri) async {
+    final handled = await ExternalWalletSignerService.instance.dispatchEnvelope(
+      uri,
+    );
+    if (handled) {
+      final address = ExternalWalletSignerService.instance.connectedAddress;
+      if ((address ?? '').trim().isNotEmpty) {
+        await bindExternalSigner(
+          address: address!,
+          walletName: ExternalWalletSignerService.instance.connectedWalletName,
+        );
+      }
+    }
+    return handled;
   }
 
   Future<void> _loadData() async {
@@ -1553,7 +1910,28 @@ class WalletProvider extends ChangeNotifier {
       final decimals = tokenMeta?.decimals ?? ApiKeys.kub8Decimals;
       final mint = tokenMeta?.contractAddress ?? ApiKeys.kub8MintAddress;
 
-      if (isSol) {
+      if (hasExternalSigner && !hasLocalSigner) {
+        final externalSigner = ExternalWalletSignerService.instance;
+        if (isSol) {
+          final tx =
+              await _solanaWalletService.buildTransferSolTransactionBase64(
+            fromAddress: _currentWalletAddress!,
+            toAddress: toAddress,
+            amount: amount,
+          );
+          signature = await externalSigner.signAndSendTransactionBase64(tx);
+        } else {
+          final tx =
+              await _solanaWalletService.buildTransferSplTokenTransactionBase64(
+            fromAddress: _currentWalletAddress!,
+            mint: mint,
+            toAddress: toAddress,
+            amount: amount,
+            decimals: decimals,
+          );
+          signature = await externalSigner.signAndSendTransactionBase64(tx);
+        }
+      } else if (isSol) {
         signature = await _solanaWalletService.transferSol(
           toAddress: toAddress,
           amount: amount,
@@ -1569,7 +1947,24 @@ class WalletProvider extends ChangeNotifier {
 
       // Fee transfers (match the token being sent)
       if (feeTeam > 0) {
-        if (isSol) {
+        if (hasExternalSigner && !hasLocalSigner) {
+          final tx = isSol
+              ? await _solanaWalletService.buildTransferSolTransactionBase64(
+                  fromAddress: _currentWalletAddress!,
+                  toAddress: ApiKeys.kubusTeamWallet,
+                  amount: feeTeam,
+                )
+              : await _solanaWalletService
+                  .buildTransferSplTokenTransactionBase64(
+                  fromAddress: _currentWalletAddress!,
+                  mint: mint,
+                  toAddress: ApiKeys.kubusTeamWallet,
+                  amount: feeTeam,
+                  decimals: decimals,
+                );
+          await ExternalWalletSignerService.instance
+              .signAndSendTransactionBase64(tx);
+        } else if (isSol) {
           await _solanaWalletService.transferSol(
             toAddress: ApiKeys.kubusTeamWallet,
             amount: feeTeam,
@@ -1584,7 +1979,24 @@ class WalletProvider extends ChangeNotifier {
         }
       }
       if (feeTreasury > 0) {
-        if (isSol) {
+        if (hasExternalSigner && !hasLocalSigner) {
+          final tx = isSol
+              ? await _solanaWalletService.buildTransferSolTransactionBase64(
+                  fromAddress: _currentWalletAddress!,
+                  toAddress: ApiKeys.kubusTreasuryWallet,
+                  amount: feeTreasury,
+                )
+              : await _solanaWalletService
+                  .buildTransferSplTokenTransactionBase64(
+                  fromAddress: _currentWalletAddress!,
+                  mint: mint,
+                  toAddress: ApiKeys.kubusTreasuryWallet,
+                  amount: feeTreasury,
+                  decimals: decimals,
+                );
+          await ExternalWalletSignerService.instance
+              .signAndSendTransactionBase64(tx);
+        } else if (isSol) {
           await _solanaWalletService.transferSol(
             toAddress: ApiKeys.kubusTreasuryWallet,
             amount: feeTreasury,
@@ -1629,6 +2041,43 @@ class WalletProvider extends ChangeNotifier {
     }
   }
 
+  Future<String> signMessage(String message) async {
+    if (!canTransact) {
+      throw StateError('A ready signer is required to sign messages.');
+    }
+    final encoded = base64Encode(utf8.encode(message));
+    if (hasLocalSigner) {
+      return _solanaWalletService.signMessageBase64(encoded);
+    }
+    return ExternalWalletSignerService.instance.signMessageBase64(encoded);
+  }
+
+  Future<String> signTransactionBase64(String transactionBase64) async {
+    if (!canTransact) {
+      throw StateError('A ready signer is required to sign transactions.');
+    }
+    if (hasLocalSigner) {
+      return _solanaWalletService.signTransactionBase64(transactionBase64);
+    }
+    return ExternalWalletSignerService.instance.signTransactionBase64(
+      transactionBase64,
+    );
+  }
+
+  Future<String> signAndSendTransactionBase64(String transactionBase64) async {
+    if (!canTransact) {
+      throw StateError('A ready signer is required to submit transactions.');
+    }
+    if (hasLocalSigner) {
+      return _solanaWalletService.signAndSendTransactionBase64(
+        transactionBase64,
+      );
+    }
+    return ExternalWalletSignerService.instance.signAndSendTransactionBase64(
+      transactionBase64,
+    );
+  }
+
   Future<void> swapTokens({
     required String fromToken,
     required String toToken,
@@ -1648,7 +2097,29 @@ class WalletProvider extends ChangeNotifier {
     try {
       // Simple SOL -> SPL swap via Jupiter (SolanaWalletService).
       String? signature;
-      if (fromToken.toUpperCase() == 'SOL') {
+      final useExternalSigner = hasExternalSigner && !hasLocalSigner;
+      if (useExternalSigner) {
+        final inputMint = fromToken.toUpperCase() == 'SOL'
+            ? ApiKeys.wrappedSolMintAddress
+            : getTokenBySymbol(fromToken)?.contractAddress ?? fromToken;
+        final outputMint =
+            getTokenBySymbol(toToken)?.contractAddress ?? toToken;
+        final inputDecimals = fromToken.toUpperCase() == 'SOL'
+            ? 9
+            : getTokenBySymbol(fromToken)?.decimals ?? ApiKeys.kub8Decimals;
+        final tx = await _solanaWalletService.buildJupiterSwapTransactionBase64(
+          userPublicKey: _currentWalletAddress!,
+          inputMint: inputMint,
+          outputMint: outputMint,
+          inputAmountRaw: (fromAmount * pow(10, inputDecimals)).round(),
+          slippageBps:
+              (((slippage ?? 0.01) * 10000).round()).clamp(1, 5000).toInt(),
+          wrapAndUnwrapSol: fromToken.toUpperCase() == 'SOL' ||
+              toToken.toUpperCase() == 'SOL',
+        );
+        signature = await ExternalWalletSignerService.instance
+            .signAndSendTransactionBase64(tx);
+      } else if (fromToken.toUpperCase() == 'SOL') {
         signature = await _solanaWalletService.swapSolToSpl(
           mint: getTokenBySymbol(toToken)?.contractAddress ?? toToken,
           solAmount: fromAmount,
@@ -1667,20 +2138,54 @@ class WalletProvider extends ChangeNotifier {
       final feeTeam = toAmount * ApiKeys.kubusTeamFeePct;
       final feeTreasury = toAmount * ApiKeys.kubusTreasuryFeePct;
       if (feeTeam > 0) {
-        await _solanaWalletService.transferSplToken(
-          mint: getTokenBySymbol(toToken)?.contractAddress ?? toToken,
-          toAddress: ApiKeys.kubusTeamWallet,
-          amount: feeTeam,
-          decimals: getTokenBySymbol(toToken)?.decimals ?? ApiKeys.kub8Decimals,
-        );
+        if (useExternalSigner) {
+          final mint = getTokenBySymbol(toToken)?.contractAddress ?? toToken;
+          final decimals =
+              getTokenBySymbol(toToken)?.decimals ?? ApiKeys.kub8Decimals;
+          final tx =
+              await _solanaWalletService.buildTransferSplTokenTransactionBase64(
+            fromAddress: _currentWalletAddress!,
+            mint: mint,
+            toAddress: ApiKeys.kubusTeamWallet,
+            amount: feeTeam,
+            decimals: decimals,
+          );
+          await ExternalWalletSignerService.instance
+              .signAndSendTransactionBase64(tx);
+        } else {
+          await _solanaWalletService.transferSplToken(
+            mint: getTokenBySymbol(toToken)?.contractAddress ?? toToken,
+            toAddress: ApiKeys.kubusTeamWallet,
+            amount: feeTeam,
+            decimals:
+                getTokenBySymbol(toToken)?.decimals ?? ApiKeys.kub8Decimals,
+          );
+        }
       }
       if (feeTreasury > 0) {
-        await _solanaWalletService.transferSplToken(
-          mint: getTokenBySymbol(toToken)?.contractAddress ?? toToken,
-          toAddress: ApiKeys.kubusTreasuryWallet,
-          amount: feeTreasury,
-          decimals: getTokenBySymbol(toToken)?.decimals ?? ApiKeys.kub8Decimals,
-        );
+        if (useExternalSigner) {
+          final mint = getTokenBySymbol(toToken)?.contractAddress ?? toToken;
+          final decimals =
+              getTokenBySymbol(toToken)?.decimals ?? ApiKeys.kub8Decimals;
+          final tx =
+              await _solanaWalletService.buildTransferSplTokenTransactionBase64(
+            fromAddress: _currentWalletAddress!,
+            mint: mint,
+            toAddress: ApiKeys.kubusTreasuryWallet,
+            amount: feeTreasury,
+            decimals: decimals,
+          );
+          await ExternalWalletSignerService.instance
+              .signAndSendTransactionBase64(tx);
+        } else {
+          await _solanaWalletService.transferSplToken(
+            mint: getTokenBySymbol(toToken)?.contractAddress ?? toToken,
+            toAddress: ApiKeys.kubusTreasuryWallet,
+            amount: feeTreasury,
+            decimals:
+                getTokenBySymbol(toToken)?.decimals ?? ApiKeys.kub8Decimals,
+          );
+        }
       }
 
       _transactions.insert(
@@ -1813,6 +2318,7 @@ class WalletProvider extends ChangeNotifier {
     }
 
     _currentWalletAddress = keyPair.publicKey;
+    await clearExternalSigner(notify: false);
     _setEncryptedWalletBackupDefinition(null);
     SolanaWalletConnectService.instance
         .updateActiveWalletAddress(_currentWalletAddress);
@@ -1889,6 +2395,7 @@ class WalletProvider extends ChangeNotifier {
       _walletLog('failed to set active keypair for imported wallet: $e');
     }
     _currentWalletAddress = derived.address;
+    await clearExternalSigner(notify: false);
     _setEncryptedWalletBackupDefinition(null);
     SolanaWalletConnectService.instance
         .updateActiveWalletAddress(_currentWalletAddress);
@@ -1950,40 +2457,11 @@ class WalletProvider extends ChangeNotifier {
   }
 
   Future<void> connectWalletWithAddress(String address) async {
-    final sanitized = address.trim();
-    if (sanitized.isEmpty) {
-      _walletLog('connectWalletWithAddress called with empty address');
-      return;
-    }
-    final activeSignerAddress =
-        (_solanaWalletService.activePublicKey ?? '').trim();
-    if (activeSignerAddress.isNotEmpty &&
-        !WalletUtils.equals(activeSignerAddress, sanitized)) {
-      _solanaWalletService.clearActiveKeyPair();
-      _cachedDerivedCandidate = null;
-    }
-    if (!WalletUtils.equals(_currentWalletAddress, sanitized)) {
-      _setEncryptedWalletBackupDefinition(null);
-    }
-
-    _lastError = null;
-    _sessionPhase = WalletSessionPhase.restoring;
-    _currentWalletAddress = sanitized;
-    SolanaWalletConnectService.instance.updateActiveWalletAddress(sanitized);
-
-    try {
-      await _persistWalletIdentity(sanitized);
-      _apiService.setPreferredWalletAddress(sanitized);
-    } catch (e) {
-      _walletLog(
-          'connectWalletWithAddress: failed to persist wallet address: $e');
-    }
-
-    // Load the connected wallet from blockchain
-    await _loadData();
-    await _syncBackendData(sanitized);
-    _clearLastError();
-    notifyListeners();
+    await setReadOnlyWalletIdentity(
+      address,
+      loadData: true,
+      syncBackend: true,
+    );
   }
 
   Future<void> disconnectWallet(
@@ -1994,6 +2472,7 @@ class WalletProvider extends ChangeNotifier {
 
     _solanaWalletService.clearActiveKeyPair();
     SolanaWalletConnectService.instance.updateActiveWalletAddress(null);
+    await clearExternalSigner(notify: false);
     _currentWalletAddress = null;
     _wallet = null;
     _tokens.clear();
@@ -2027,6 +2506,13 @@ class WalletProvider extends ChangeNotifier {
     } catch (e) {
       _walletLog('disconnectWallet: walletconnect cleanup failed: $e');
     }
+    try {
+      await ExternalWalletSignerService.instance
+          .disconnect()
+          .timeout(const Duration(seconds: 2));
+    } catch (e) {
+      _walletLog('disconnectWallet: external signer cleanup failed: $e');
+    }
 
     final nextWallet = (fallbackWallet ?? '').trim();
     if (nextWallet.isNotEmpty) {
@@ -2042,6 +2528,7 @@ class WalletProvider extends ChangeNotifier {
       _clearLastError();
     } else {
       _apiService.setPreferredWalletAddress(null);
+      _clearAccountShellState();
       _sessionPhase = WalletSessionPhase.ready;
       _lastError = null;
     }

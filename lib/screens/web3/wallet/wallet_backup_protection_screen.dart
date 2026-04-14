@@ -13,6 +13,7 @@ import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/app_mode_unavailable_state.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/wallet_backup_prompts.dart';
+import 'package:art_kubus/widgets/wallet_custody_status_panel.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -103,11 +104,10 @@ class _WalletBackupProtectionScreenState
 
     final recoveryPassword = await showWalletBackupPasswordPrompt(
       context: context,
-      title: 'Create encrypted backup',
-      description:
-          'Choose a recovery password. This password decrypts the wallet backup on a new device.',
+      title: l10n.walletBackupProtectionCreateBackupTitle,
+      description: l10n.walletBackupProtectionCreateBackupDescription,
       confirm: true,
-      actionLabel: 'Create backup',
+      actionLabel: l10n.walletBackupProtectionCreateBackupAction,
     );
     if (!mounted || recoveryPassword == null) return;
 
@@ -117,7 +117,7 @@ class _WalletBackupProtectionScreenState
       );
       if (!mounted) return;
       messenger.showKubusSnackBar(
-        const SnackBar(content: Text('Encrypted wallet backup saved.')),
+        SnackBar(content: Text(l10n.walletBackupProtectionBackupSavedToast)),
       );
     });
   }
@@ -125,6 +125,7 @@ class _WalletBackupProtectionScreenState
   Future<void> _verifyBackup() async {
     final walletProvider = context.read<WalletProvider>();
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     await _runProtectedAction(() async {
       if (kIsWeb &&
@@ -135,10 +136,9 @@ class _WalletBackupProtectionScreenState
       if (!mounted) return;
       final recoveryPassword = await showWalletBackupPasswordPrompt(
         context: context,
-        title: 'Verify encrypted backup',
-        description:
-            'Enter the recovery password to verify the encrypted backup can be decrypted locally.',
-        actionLabel: 'Verify backup',
+        title: l10n.walletBackupProtectionVerifyBackupTitle,
+        description: l10n.walletBackupProtectionVerifyBackupDescription,
+        actionLabel: l10n.walletBackupProtectionVerifyBackupAction,
       );
       if (!mounted || recoveryPassword == null) return;
       await walletProvider.verifyEncryptedWalletBackup(
@@ -146,7 +146,7 @@ class _WalletBackupProtectionScreenState
       );
       if (!mounted) return;
       messenger.showKubusSnackBar(
-        const SnackBar(content: Text('Encrypted backup verified.')),
+        SnackBar(content: Text(l10n.walletBackupProtectionBackupVerifiedToast)),
       );
     });
   }
@@ -159,18 +159,16 @@ class _WalletBackupProtectionScreenState
     final confirmed = await showKubusDialog<bool>(
           context: context,
           builder: (dialogContext) => KubusAlertDialog(
-            title: const Text('Delete encrypted backup?'),
-            content: const Text(
-              'This removes the encrypted server backup for the current wallet. Make sure you still have the recovery phrase stored safely offline.',
-            ),
+            title: Text(l10n.walletBackupProtectionDeleteBackupTitle),
+            content: Text(l10n.walletBackupProtectionDeleteBackupBody),
             actions: <Widget>[
               TextButton(
                 onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: const Text('Cancel'),
+                child: Text(l10n.commonCancel),
               ),
               FilledButton(
                 onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: const Text('Delete'),
+                child: Text(l10n.walletBackupProtectionDeleteBackupAction),
               ),
             ],
           ),
@@ -192,7 +190,7 @@ class _WalletBackupProtectionScreenState
       await walletProvider.deleteEncryptedWalletBackup();
       if (!mounted) return;
       messenger.showKubusSnackBar(
-        const SnackBar(content: Text('Encrypted wallet backup deleted.')),
+        SnackBar(content: Text(l10n.walletBackupProtectionBackupDeletedToast)),
       );
     });
   }
@@ -209,14 +207,14 @@ class _WalletBackupProtectionScreenState
   Future<void> _enrollPasskey() async {
     final walletProvider = context.read<WalletProvider>();
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final nickname = await showWalletBackupTextPrompt(
       context: context,
-      title: 'Add a passkey',
-      label: 'Passkey name',
-      description:
-          'Give this passkey a label so you can recognize the device or browser later.',
-      initialValue: 'This device',
-      actionLabel: 'Add passkey',
+      title: l10n.walletBackupProtectionAddPasskeyTitle,
+      label: l10n.walletBackupProtectionPasskeyNameLabel,
+      description: l10n.walletBackupProtectionAddPasskeyDescription,
+      initialValue: l10n.walletBackupProtectionDefaultPasskeyName,
+      actionLabel: l10n.walletBackupProtectionAddPasskeyAction,
     );
     if (!mounted || nickname == null) return;
 
@@ -227,9 +225,9 @@ class _WalletBackupProtectionScreenState
       if (!mounted) return;
       messenger.showKubusSnackBar(
         SnackBar(
-          content: Text(
-            'Passkey "${passkey.nickname ?? passkey.credentialId}" added.',
-          ),
+          content: Text(l10n.walletBackupProtectionPasskeyAddedToast(
+            passkey.nickname ?? passkey.credentialId,
+          )),
         ),
       );
     });
@@ -238,6 +236,7 @@ class _WalletBackupProtectionScreenState
   Future<void> _restoreSignerFromBackup() async {
     final walletProvider = context.read<WalletProvider>();
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     await _runProtectedAction(() async {
       if (kIsWeb &&
@@ -248,10 +247,9 @@ class _WalletBackupProtectionScreenState
       if (!mounted) return;
       final recoveryPassword = await showWalletBackupPasswordPrompt(
         context: context,
-        title: 'Restore wallet signer',
-        description:
-            'Enter the recovery password for the encrypted server backup to restore signing access on this device.',
-        actionLabel: 'Restore signer',
+        title: l10n.walletBackupProtectionRestoreSignerTitle,
+        description: l10n.walletBackupProtectionRestoreSignerDescription,
+        actionLabel: l10n.walletBackupProtectionRestoreSignerAction,
       );
       if (!mounted || recoveryPassword == null) return;
       final restored =
@@ -263,8 +261,8 @@ class _WalletBackupProtectionScreenState
         SnackBar(
           content: Text(
             restored
-                ? 'Wallet signer restored on this device.'
-                : 'Unable to restore wallet signer.',
+                ? l10n.walletBackupProtectionSignerRestoredToast
+                : l10n.walletBackupProtectionSignerRestoreFailedToast,
           ),
         ),
         tone: restored ? KubusSnackBarTone.success : KubusSnackBarTone.error,
@@ -309,12 +307,12 @@ class _WalletBackupProtectionScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Protect your web3 wallet'),
+        title: Text(l10n.walletBackupProtectionTitle),
       ),
       body: isIpfsFallbackMode
-          ? const AppModeUnavailableState(
-              featureLabel: 'Wallet backup',
-              title: 'Wallet backup unavailable',
+          ? AppModeUnavailableState(
+              featureLabel: l10n.walletBackupProtectionFeatureLabel,
+              title: l10n.walletBackupProtectionUnavailableTitle,
               icon: Icons.backup_outlined,
             )
           : RefreshIndicator(
@@ -322,163 +320,214 @@ class _WalletBackupProtectionScreenState
               child: ListView(
                 padding: const EdgeInsets.all(KubusSpacing.lg),
                 children: <Widget>[
-            LiquidGlassCard(
-              padding: const EdgeInsets.all(KubusSpacing.lg),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    'Current wallet',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: scheme.onSurface.withValues(alpha: 0.72),
-                        ),
+                  WalletCustodyStatusPanel(
+                    authority: walletProvider.authority,
+                    compact: true,
+                    onRestoreSigner: needsSignerRestore && hasEncryptedBackup
+                        ? _restoreSignerFromBackup
+                        : null,
+                    onConnectExternalWallet: !walletProvider
+                            .authority.canTransact
+                        ? () =>
+                            Navigator.of(context).pushNamed('/connect-wallet')
+                        : null,
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    _walletLabel(walletAddress),
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
+                  const SizedBox(height: KubusSpacing.lg),
+                  LiquidGlassCard(
+                    padding: const EdgeInsets.all(KubusSpacing.lg),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          l10n.walletBackupProtectionCurrentWalletLabel,
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelLarge
+                              ?.copyWith(
+                                color: scheme.onSurface.withValues(alpha: 0.72),
+                              ),
                         ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    backupStatus.protectionHeadline(l10n),
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: scheme.onSurface.withValues(alpha: 0.82),
-                          fontWeight: FontWeight.w700,
-                          height: 1.4,
+                        const SizedBox(height: 6),
+                        Text(
+                          _walletLabel(walletAddress),
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                  ),
                         ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    backupStatus.protectionBody(l10n),
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: scheme.onSurface.withValues(alpha: 0.78),
-                          height: 1.4,
+                        const SizedBox(height: 12),
+                        Text(
+                          backupStatus.protectionHeadline(l10n),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(
+                                color: scheme.onSurface.withValues(alpha: 0.82),
+                                fontWeight: FontWeight.w700,
+                                height: 1.4,
+                              ),
                         ),
+                        const SizedBox(height: 8),
+                        Text(
+                          backupStatus.protectionBody(l10n),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(
+                                color: scheme.onSurface.withValues(alpha: 0.78),
+                                height: 1.4,
+                              ),
+                        ),
+                        if (_backupRequired && !hasEncryptedBackup) ...<Widget>[
+                          const SizedBox(height: 10),
+                          Text(
+                            l10n.walletBackupProtectionOfflineReminder,
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: scheme.primary,
+                                      fontWeight: FontWeight.w700,
+                                      height: 1.4,
+                                    ),
+                          ),
+                        ],
+                        if (backup?.lastVerifiedAt != null) ...<Widget>[
+                          const SizedBox(height: 10),
+                          Text(
+                            l10n.walletBackupProtectionLastVerifiedLabel(
+                              backup!.lastVerifiedAt!.toLocal().toString(),
+                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color:
+                                      scheme.onSurface.withValues(alpha: 0.72),
+                                ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
-                  if (_backupRequired && !hasEncryptedBackup) ...<Widget>[
-                    const SizedBox(height: 10),
-                    Text(
-                      'Back up the recovery phrase offline and store the encrypted backup recovery password separately.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: scheme.primary,
-                            fontWeight: FontWeight.w700,
-                            height: 1.4,
-                          ),
-                    ),
-                  ],
-                  if (backup?.lastVerifiedAt != null) ...<Widget>[
-                    const SizedBox(height: 10),
-                    Text(
-                      'Last verified: ${backup!.lastVerifiedAt!.toLocal()}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: scheme.onSurface.withValues(alpha: 0.72),
-                          ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: KubusSpacing.lg),
-            if (needsSignerRestore && hasEncryptedBackup) ...<Widget>[
-              FilledButton.tonalIcon(
-                onPressed: isBusy ? null : _restoreSignerFromBackup,
-                icon: const Icon(Icons.login_outlined),
-                label: const Text('Restore wallet signer'),
-              ),
-              const SizedBox(height: KubusSpacing.sm),
-            ],
-            FilledButton.icon(
-              onPressed: isBusy ? null : _createOrUpdateBackup,
-              icon: const Icon(Icons.cloud_upload_outlined),
-              label: Text(
-                hasEncryptedBackup
-                    ? 'Update encrypted server backup'
-                    : 'Create encrypted server backup',
-              ),
-            ),
-            const SizedBox(height: KubusSpacing.sm),
-            OutlinedButton.icon(
-              onPressed: isBusy ? null : _revealRecoveryPhrase,
-              icon: const Icon(Icons.visibility_outlined),
-              label: const Text('Reveal and copy recovery phrase'),
-            ),
-            if (hasEncryptedBackup) ...<Widget>[
-              const SizedBox(height: KubusSpacing.sm),
-              OutlinedButton.icon(
-                onPressed: isBusy ? null : _verifyBackup,
-                icon: const Icon(Icons.verified_user_outlined),
-                label: const Text('Verify encrypted backup'),
-              ),
-              const SizedBox(height: KubusSpacing.sm),
-              OutlinedButton.icon(
-                onPressed: isBusy ? null : _deleteBackup,
-                icon: const Icon(Icons.delete_outline),
-                label: const Text('Delete encrypted backup'),
-              ),
-            ],
-            if (passkeysEnabled) ...<Widget>[
-              const SizedBox(height: KubusSpacing.lg),
-              LiquidGlassCard(
-                padding: const EdgeInsets.all(KubusSpacing.md),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      'Passkeys',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                    ),
-                    const SizedBox(height: KubusSpacing.xs),
-                    Text(
-                      'On web, passkeys can gate access to the encrypted backup before the recovery password prompt is shown.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: scheme.onSurface.withValues(alpha: 0.78),
-                            height: 1.35,
-                          ),
-                    ),
-                    const SizedBox(height: KubusSpacing.sm),
+                  const SizedBox(height: KubusSpacing.lg),
+                  if (needsSignerRestore && hasEncryptedBackup) ...<Widget>[
                     FilledButton.tonalIcon(
-                      onPressed: isBusy ? null : _enrollPasskey,
-                      icon: const Icon(Icons.phishing_outlined),
-                      label: const Text('Add passkey'),
+                      onPressed: isBusy ? null : _restoreSignerFromBackup,
+                      icon: const Icon(Icons.login_outlined),
+                      label:
+                          Text(l10n.walletBackupProtectionRestoreSignerAction),
                     ),
                     const SizedBox(height: KubusSpacing.sm),
-                    ...walletProvider.encryptedWalletBackupPasskeys.map(
-                      (passkey) => FrostedContainer(
-                        margin: const EdgeInsets.only(bottom: KubusSpacing.sm),
-                        child: ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(passkey.nickname ?? passkey.credentialId),
-                          subtitle: Text(
-                            passkey.transports.isEmpty
-                                ? 'Stored passkey'
-                                : 'Transports: ${passkey.transports.join(', ')}',
+                  ],
+                  FilledButton.icon(
+                    onPressed: isBusy ? null : _createOrUpdateBackup,
+                    icon: const Icon(Icons.cloud_upload_outlined),
+                    label: Text(
+                      hasEncryptedBackup
+                          ? l10n
+                              .walletBackupProtectionUpdateEncryptedBackupButton
+                          : l10n
+                              .walletBackupProtectionCreateEncryptedBackupButton,
+                    ),
+                  ),
+                  const SizedBox(height: KubusSpacing.sm),
+                  OutlinedButton.icon(
+                    onPressed: isBusy ? null : _revealRecoveryPhrase,
+                    icon: const Icon(Icons.visibility_outlined),
+                    label: Text(
+                        l10n.walletBackupProtectionRevealRecoveryPhraseButton),
+                  ),
+                  if (hasEncryptedBackup) ...<Widget>[
+                    const SizedBox(height: KubusSpacing.sm),
+                    OutlinedButton.icon(
+                      onPressed: isBusy ? null : _verifyBackup,
+                      icon: const Icon(Icons.verified_user_outlined),
+                      label:
+                          Text(l10n.walletBackupProtectionVerifyBackupAction),
+                    ),
+                    const SizedBox(height: KubusSpacing.sm),
+                    OutlinedButton.icon(
+                      onPressed: isBusy ? null : _deleteBackup,
+                      icon: const Icon(Icons.delete_outline),
+                      label:
+                          Text(l10n.walletBackupProtectionDeleteBackupAction),
+                    ),
+                  ],
+                  if (passkeysEnabled) ...<Widget>[
+                    const SizedBox(height: KubusSpacing.lg),
+                    LiquidGlassCard(
+                      padding: const EdgeInsets.all(KubusSpacing.md),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            l10n.walletBackupProtectionPasskeysTitle,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                ),
                           ),
-                        ),
+                          const SizedBox(height: KubusSpacing.xs),
+                          Text(
+                            l10n.walletBackupProtectionPasskeysBody,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color:
+                                      scheme.onSurface.withValues(alpha: 0.78),
+                                  height: 1.35,
+                                ),
+                          ),
+                          const SizedBox(height: KubusSpacing.sm),
+                          FilledButton.tonalIcon(
+                            onPressed: isBusy ? null : _enrollPasskey,
+                            icon: const Icon(Icons.phishing_outlined),
+                            label: Text(
+                                l10n.walletBackupProtectionAddPasskeyAction),
+                          ),
+                          const SizedBox(height: KubusSpacing.sm),
+                          ...walletProvider.encryptedWalletBackupPasskeys.map(
+                            (passkey) => FrostedContainer(
+                              margin: const EdgeInsets.only(
+                                  bottom: KubusSpacing.sm),
+                              child: ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                title: Text(
+                                    passkey.nickname ?? passkey.credentialId),
+                                subtitle: Text(
+                                  passkey.transports.isEmpty
+                                      ? l10n
+                                          .walletBackupProtectionStoredPasskeyLabel
+                                      : l10n
+                                          .walletBackupProtectionPasskeyTransports(
+                                          passkey.transports.join(', '),
+                                        ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
-                ),
-              ),
-            ],
-            if (walletProvider.encryptedWalletBackupError != null &&
-                walletProvider.encryptedWalletBackupError!
-                    .trim()
-                    .isNotEmpty) ...<Widget>[
-              const SizedBox(height: KubusSpacing.lg),
-              FrostedContainer(
-                backgroundColor: scheme.errorContainer.withValues(alpha: 0.28),
-                child: Text(
-                  walletProvider.encryptedWalletBackupError!,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: scheme.error,
+                  if (walletProvider.encryptedWalletBackupError != null &&
+                      walletProvider.encryptedWalletBackupError!
+                          .trim()
+                          .isNotEmpty) ...<Widget>[
+                    const SizedBox(height: KubusSpacing.lg),
+                    FrostedContainer(
+                      backgroundColor:
+                          scheme.errorContainer.withValues(alpha: 0.28),
+                      child: Text(
+                        walletProvider.encryptedWalletBackupError!,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: scheme.error,
+                            ),
                       ),
-                ),
-              ),
-            ],
+                    ),
+                  ],
                 ],
               ),
             ),

@@ -5,13 +5,11 @@ import '../../../l10n/app_localizations.dart';
 import '../../../config/config.dart';
 import '../../../models/collectible.dart';
 import '../../../providers/collectibles_provider.dart';
-import '../../../providers/profile_provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../models/wallet.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/media_url_resolver.dart';
-import '../../../utils/wallet_action_guard.dart';
 import '../../../utils/wallet_reconnect_action.dart';
 import '../../../widgets/detail/detail_shell_components.dart';
 import '../components/desktop_widgets.dart';
@@ -23,6 +21,7 @@ import '../../web3/wallet/connectwallet_screen.dart';
 import '../../../widgets/glass_components.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
+import '../../../widgets/wallet_custody_status_panel.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 /// Desktop wallet screen with professional dashboard layout
@@ -336,17 +335,13 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
   Widget _buildHeader(
       ThemeProvider themeProvider, WalletProvider walletProvider) {
     final l10n = AppLocalizations.of(context)!;
-    final profileProvider = Provider.of<ProfileProvider>(context);
-    final access = WalletSessionAccessSnapshot.fromProviders(
-      profileProvider: profileProvider,
-      walletProvider: walletProvider,
-    );
-    final canTransact = access.canTransact;
+    final authority = walletProvider.authority;
+    final canTransact = authority.canTransact;
     final network = walletProvider.currentSolanaNetwork;
     final walletAddress = (walletProvider.currentWalletAddress ?? '').trim();
     final statusColor = canTransact
         ? Theme.of(context).colorScheme.tertiary
-        : access.hasWalletIdentity
+        : authority.hasWalletIdentity
             ? Theme.of(context).colorScheme.primary
             : Theme.of(context).colorScheme.secondary;
 
@@ -368,7 +363,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                 children: [
                   Expanded(
                     child: KubusScreenHeaderBar(
-                      title: 'Wallet',
+                      title: l10n.walletHomeTitle,
                       subtitle: canTransact
                           ? '${l10n.settingsWalletConnectionConnected} · $network'
                           : '${l10n.walletSessionSignerMissing} · $network',
@@ -391,7 +386,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                       _buildNetworkSelector(themeProvider, walletProvider),
                       _buildHeaderActionButton(
                         icon: Icons.refresh,
-                        label: 'Refresh',
+                        label: l10n.commonRefresh,
                         onPressed: () async {
                           final walletProvider = Provider.of<WalletProvider>(
                               context,
@@ -424,35 +419,20 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                     _buildCopyAddressChip(walletAddress),
                   ],
                 ),
-                if (access.isReadOnlySession) ...[
-                  SizedBox(height: DetailSpacing.md),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          l10n.walletReconnectManualRequiredToast,
-                          style: KubusTextStyles.sectionSubtitle.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.72),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: DetailSpacing.md),
-                      OutlinedButton.icon(
-                        onPressed: () async {
-                          await WalletReconnectAction.handleReadOnlyReconnect(
+                SizedBox(height: DetailSpacing.md),
+                WalletCustodyStatusPanel(
+                  authority: authority,
+                  compact: true,
+                  onRestoreSigner: authority.canRestoreFromEncryptedBackup
+                      ? () => WalletReconnectAction.handleReadOnlyReconnect(
                             context: context,
                             walletProvider: walletProvider,
-                          );
-                        },
-                        icon: const Icon(Icons.refresh),
-                        label: Text(l10n.commonReconnect),
-                      ),
-                    ],
-                  ),
-                ],
+                          )
+                      : null,
+                  onConnectExternalWallet: !authority.canTransact
+                      ? () => Navigator.of(context).pushNamed('/connect-wallet')
+                      : null,
+                ),
               ],
             ],
           ),

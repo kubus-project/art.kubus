@@ -49,7 +49,7 @@ void main() {
     await tester.pumpWidget(_buildHarness(walletProvider: walletProvider));
     await tester.pumpAndSettle();
 
-    expect(find.text('Back up your wallet recovery phrase'), findsOneWidget);
+    expect(find.text('Back up your recovery phrase'), findsOneWidget);
     expect(find.text('Back up now'), findsOneWidget);
   });
 
@@ -69,7 +69,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(WalletBackupBannerCard), findsOneWidget);
-    expect(find.text('Back up your wallet recovery phrase'), findsNothing);
+    expect(find.text('Back up your recovery phrase'), findsNothing);
   });
 
   testWidgets('updates visibility when active wallet changes', (tester) async {
@@ -87,12 +87,12 @@ void main() {
     await tester.pumpWidget(_buildHarness(walletProvider: walletProvider));
     await tester.pumpAndSettle();
 
-    expect(find.text('Back up your wallet recovery phrase'), findsNothing);
+    expect(find.text('Back up your recovery phrase'), findsNothing);
 
     walletProvider.setCurrentWalletAddressForTesting(walletB);
     await tester.pump();
     await tester.pumpAndSettle();
 
-    expect(find.text('Back up your wallet recovery phrase'), findsOneWidget);
+    expect(find.text('Back up your recovery phrase'), findsOneWidget);
   });
 }

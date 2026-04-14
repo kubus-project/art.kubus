@@ -469,11 +469,11 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
           !WalletUtils.equals(currentWallet, targetWallet)) {
         try {
           await walletProvider
-              .connectWalletWithAddress(targetWallet)
+              .setReadOnlyWalletIdentity(targetWallet)
               .timeout(walletConnectTimeout);
         } catch (e) {
           AppConfig.debugPrint(
-              'AuthMethodsPanel: connectWalletWithAddress failed: $e');
+              'AuthMethodsPanel: setReadOnlyWalletIdentity failed: $e');
         }
       }
       if (walletProvider.isReadOnlySession) {
@@ -901,5 +901,4 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       form: form,
     );
   }
-
 }

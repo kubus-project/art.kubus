@@ -36,7 +36,7 @@ void main() {
     await tester.tap(find.text('Connect wallet').first);
     await tester.pumpAndSettle();
 
-    expect(find.text('WalletConnect'), findsOneWidget);
+    expect(find.text('Connect external wallet'), findsOneWidget);
     expect(find.text('Create a new wallet'), findsOneWidget);
     expect(find.text('Link existing wallet'), findsOneWidget);
     expect(find.text('Advanced'), findsNWidgets(2));
@@ -56,7 +56,7 @@ void main() {
     await tester.tap(find.text('Connect wallet').first);
     await tester.pumpAndSettle();
 
-    expect(find.text('WalletConnect'), findsOneWidget);
+    expect(find.text('Connect external wallet'), findsOneWidget);
     expect(find.text('Create a new wallet'), findsOneWidget);
     expect(find.text('Link existing wallet'), findsOneWidget);
     expect(find.text('Advanced'), findsNWidgets(2));

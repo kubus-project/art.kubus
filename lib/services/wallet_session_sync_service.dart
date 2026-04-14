@@ -70,7 +70,11 @@ class WalletSessionSyncService {
       await _runNonFatal(
         'wallet bind',
         () => walletProvider
-            .connectWalletWithAddress(normalizedWallet)
+            .setReadOnlyWalletIdentity(
+              normalizedWallet,
+              loadData: true,
+              syncBackend: false,
+            )
             .timeout(_walletBindTimeout),
       );
     }

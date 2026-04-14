@@ -243,13 +243,47 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       });
     }
 
+    final targetId = widget.userId.trim();
+
+    // Cache-first: if we already have this user cached (e.g., via prefetch),
+    // render immediately and refresh in the background.
+    if (widget.username == null && targetId.isNotEmpty) {
+      try {
+        final cached = UserService.getCachedUser(targetId);
+        if (cached != null) {
+          setState(() {
+            user = cached;
+            isLoading = false;
+          });
+
+          // Background refresh (best-effort).
+          try {
+            Future(() async {
+              final fresh = await UserService.getUserById(
+                targetId,
+                forceRefresh: true,
+              );
+              if (!mounted) return;
+              if (fresh != null && WalletUtils.equals(fresh.id, targetId)) {
+                setState(() {
+                  user = fresh;
+                });
+              }
+            });
+          } catch (_) {}
+        }
+      } catch (_) {}
+    }
+
     User? loadedUser;
     try {
       if (widget.username != null) {
         loadedUser = await UserService.getUserByUsername(widget.username!);
       } else {
-        loadedUser =
-            await UserService.getUserById(widget.userId, forceRefresh: true);
+        loadedUser = await UserService.getUserById(
+          targetId,
+          forceRefresh: false,
+        );
       }
     } catch (e) {
       debugPrint('UserProfileScreen._loadUser: failed to fetch user: $e');

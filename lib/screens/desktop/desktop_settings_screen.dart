@@ -8,7 +8,6 @@ import '../../providers/themeprovider.dart';
 import '../../providers/glass_capabilities_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/stats_provider.dart';
-import '../../providers/web3provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/platform_provider.dart';
 import '../../providers/security_gate_provider.dart';
@@ -27,7 +26,6 @@ import '../../widgets/support/support_ticket_dialog.dart';
 import '../../utils/app_animations.dart';
 import 'components/desktop_widgets.dart';
 import 'desktop_shell_scope.dart';
-import 'web3/desktop_wallet_screen.dart';
 import '../web3/wallet/wallet_backup_protection_screen.dart';
 import '../auth/secure_account_screen.dart';
 import '../onboarding/onboarding_flow_screen.dart';
@@ -36,9 +34,9 @@ import '../../providers/locale_provider.dart';
 import '../../utils/app_color_utils.dart';
 import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/glass_components.dart';
+import '../../widgets/wallet_custody_status_panel.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/wallet_backup_status.dart';
-import '../../utils/wallet_action_guard.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/utils/wallet_reconnect_action.dart';
 
@@ -134,19 +132,6 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       context: context,
       walletProvider: walletProvider,
       refreshBackendSession: true,
-    );
-  }
-
-  void _openShellAwareScreen(Widget screen) {
-    final shellScope = DesktopShellScope.of(context);
-    if (shellScope != null) {
-      shellScope.pushScreen(screen);
-      return;
-    }
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => screen),
     );
   }
 
@@ -767,22 +752,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
   Widget _buildWalletSettings(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
-    final web3Provider = Provider.of<Web3Provider>(context);
     final walletProvider = Provider.of<WalletProvider>(context);
-    final profileProvider = Provider.of<ProfileProvider>(context);
-    final access = WalletSessionAccessSnapshot.fromProviders(
-      profileProvider: profileProvider,
-      walletProvider: walletProvider,
-    );
-    final hasWalletIdentity = access.hasWalletIdentity;
-    final canTransact = access.canTransact;
-    final walletAddress = (walletProvider.currentWalletAddress ?? '').trim();
-    final walletStatusLabel = access.walletStatusLabel(l10n);
-    final statusColor = canTransact
-        ? Theme.of(context).colorScheme.tertiary
-        : hasWalletIdentity
-            ? Theme.of(context).colorScheme.primary
-            : Theme.of(context).colorScheme.secondary;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.xl),
@@ -795,118 +765,6 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
               subtitle: l10n.desktopSettingsWalletSectionSubtitle,
             ),
             const SizedBox(height: KubusSpacing.lg),
-
-            // Connection status
-            DesktopCard(
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: KubusHeaderMetrics.searchBarHeight,
-                        height: KubusHeaderMetrics.searchBarHeight,
-                        decoration: BoxDecoration(
-                          color: statusColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(KubusRadius.md),
-                        ),
-                        child: Icon(
-                          canTransact
-                              ? Icons.check_circle
-                              : hasWalletIdentity
-                                  ? Icons.visibility
-                                  : Icons.warning,
-                          color: statusColor,
-                        ),
-                      ),
-                      const SizedBox(width: KubusSpacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              walletStatusLabel,
-                              style: KubusTextStyles.sectionTitle.copyWith(
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                            ),
-                            Text(
-                              access.settingsStatusSummary(l10n),
-                              style: KubusTextStyles.navMetaLabel.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.72),
-                              ),
-                            ),
-                            if (hasWalletIdentity)
-                              Text(
-                                web3Provider.formatAddress(walletAddress),
-                                style: KubusTextStyles.navMetaLabel.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.6),
-                                ),
-                              ),
-                            if (walletProvider.isReadOnlySession)
-                              Text(
-                                  l10n.walletReconnectManualRequiredToast,
-                                style: KubusTextStyles.navMetaLabel.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.6),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      if (hasWalletIdentity)
-                        ElevatedButton.icon(
-                          onPressed: () async {
-                            if (walletProvider.isReadOnlySession) {
-                              await _handleReadOnlyWalletReconnect(
-                                walletProvider,
-                              );
-                              return;
-                            }
-                            _openShellAwareScreen(const DesktopWalletScreen());
-                          },
-                          icon: Icon(
-                            walletProvider.isReadOnlySession
-                                ? Icons.login
-                                : Icons.visibility,
-                            size: 18,
-                          ),
-                          label: Text(
-                            walletProvider.isReadOnlySession
-                              ? l10n.commonReconnect
-                                : l10n.desktopSettingsViewWalletButton,
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColorUtils.amberAccent,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      if (!hasWalletIdentity)
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.of(context).pushNamed('/connect-wallet');
-                          },
-                          icon: const Icon(Icons.login, size: 18),
-                          label: const Text('Connect wallet'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColorUtils.amberAccent,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
 
             // Network selection
             DesktopCard(
@@ -984,17 +842,40 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                     ),
                     const Divider(height: 32),
                     _buildSettingsRow(
-                      l10n.desktopSettingsDisconnectWalletTileTitle,
-                      l10n.desktopSettingsDisconnectWalletTileSubtitle,
-                      Icons.logout,
-                      isDestructive: true,
+                      walletProvider.isReadOnlySession
+                          ? l10n.commonReconnect
+                          : l10n.desktopSettingsDisconnectWalletTileTitle,
+                      walletProvider.isReadOnlySession
+                          ? l10n.walletReconnectManualRequiredToast
+                          : l10n.desktopSettingsDisconnectWalletTileSubtitle,
+                      walletProvider.isReadOnlySession
+                          ? Icons.link
+                          : Icons.logout,
+                      isDestructive: !walletProvider.isReadOnlySession,
                       tileKey: const Key('desktop_settings_wallet_disconnect'),
-                      onTap: () => _showDisconnectConfirmation(),
+                      onTap: walletProvider.isReadOnlySession
+                          ? () => unawaited(
+                                _handleReadOnlyWalletReconnect(walletProvider),
+                              )
+                          : () => _showDisconnectConfirmation(),
                     ),
                   ],
                 ),
               ),
             ],
+            const SizedBox(height: 24),
+            WalletCustodyStatusPanel(
+              authority: walletProvider.authority,
+              onRestoreSigner:
+                  walletProvider.authority.canRestoreFromEncryptedBackup
+                      ? () => unawaited(
+                            _handleReadOnlyWalletReconnect(walletProvider),
+                          )
+                      : null,
+              onConnectExternalWallet: !walletProvider.authority.canTransact
+                  ? () => Navigator.of(context).pushNamed('/connect-wallet')
+                  : null,
+            ),
           ],
         ),
       ),
@@ -3631,11 +3512,11 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       borderRadius: BorderRadius.circular(KubusRadius.sm),
       leadingBoxSize: KubusHeaderMetrics.actionHitArea,
       leadingIconSize: KubusHeaderMetrics.actionIcon,
-      leadingBackgroundColor:
-          isDestructive ? errorColor.withValues(alpha: 0.1) : scheme.primaryContainer,
-      leadingIconColor: isDestructive
-          ? errorColor
-          : scheme.onSurface.withValues(alpha: 0.7),
+      leadingBackgroundColor: isDestructive
+          ? errorColor.withValues(alpha: 0.1)
+          : scheme.primaryContainer,
+      leadingIconColor:
+          isDestructive ? errorColor : scheme.onSurface.withValues(alpha: 0.7),
       titleStyle: KubusTextStyles.sectionTitle.copyWith(
         color: isDestructive ? errorColor : scheme.onSurface,
       ),

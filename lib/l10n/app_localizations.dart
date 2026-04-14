@@ -61,8 +61,17 @@ import 'app_localizations_sl.dart';
 /// you wish to add from the pop-up menu in the Value field. This list should
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
+String _canonicalizedAppLocaleName(String locale) {
+  final raw = locale.trim();
+  if (raw.isEmpty || raw == 'undefined' || raw == 'null') {
+    return 'sl';
+  }
+  return intl.Intl.canonicalizedLocale(raw);
+}
+
 abstract class AppLocalizations {
-  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale)
+      : localeName = _canonicalizedAppLocaleName(locale.toString());
 
   final String localeName;
 
@@ -70,7 +79,8 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate =
+      _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -82,7 +92,8 @@ abstract class AppLocalizations {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
+      <LocalizationsDelegate<dynamic>>[
     delegate,
     GlobalMaterialLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
@@ -3003,7 +3014,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Account: {accountStatus} · Wallet: {walletStatus} · Signing: {signerStatus}'**
-  String walletSessionStatusSummary(Object accountStatus, Object walletStatus, Object signerStatus);
+  String walletSessionStatusSummary(
+      Object accountStatus, Object walletStatus, Object signerStatus);
 
   /// No description provided for @walletActionSignInRequiredToast.
   ///
@@ -8390,19 +8402,19 @@ abstract class AppLocalizations {
   /// No description provided for @connectWalletChooseDescription.
   ///
   /// In en, this message translates to:
-  /// **'Choose how to set up your account wallet. You can create a new one on this device, import an existing one, or use WalletConnect.'**
+  /// **'Choose how to set up your account wallet. Create or import a local recovery phrase, or connect an external wallet for signing.'**
   String get connectWalletChooseDescription;
 
   /// No description provided for @connectWalletOptionWalletConnectTitle.
   ///
   /// In en, this message translates to:
-  /// **'WalletConnect'**
+  /// **'Connect external wallet'**
   String get connectWalletOptionWalletConnectTitle;
 
   /// No description provided for @connectWalletOptionWalletConnectDescription.
   ///
   /// In en, this message translates to:
-  /// **'Connect using a QR code or WalletConnect URI'**
+  /// **'Use MetaMask, Phantom, or Solflare without importing a recovery phrase'**
   String get connectWalletOptionWalletConnectDescription;
 
   /// No description provided for @connectWalletOptionSignInTitle.
@@ -8690,13 +8702,13 @@ abstract class AppLocalizations {
   /// No description provided for @connectWalletWalletConnectTitle.
   ///
   /// In en, this message translates to:
-  /// **'Connect with WalletConnect'**
+  /// **'Connect external wallet'**
   String get connectWalletWalletConnectTitle;
 
   /// No description provided for @connectWalletWalletConnectDescription.
   ///
   /// In en, this message translates to:
-  /// **'Use WalletConnect to connect your wallet app to art.kubus.'**
+  /// **'Use Reown AppKit to connect a Solana wallet for signing. art.kubus never imports or stores your private key.'**
   String get connectWalletWalletConnectDescription;
 
   /// No description provided for @connectWalletWalletConnectSupportedTitle.
@@ -8708,7 +8720,7 @@ abstract class AppLocalizations {
   /// No description provided for @connectWalletWalletConnectSupportedList.
   ///
   /// In en, this message translates to:
-  /// **'Phantom, Solflare, Backpack, and more'**
+  /// **'MetaMask, Phantom, Solflare, Backpack, and more'**
   String get connectWalletWalletConnectSupportedList;
 
   /// No description provided for @connectWalletWalletConnectHowToTitle.
@@ -8720,19 +8732,19 @@ abstract class AppLocalizations {
   /// No description provided for @connectWalletWalletConnectStep1.
   ///
   /// In en, this message translates to:
-  /// **'Open WalletConnect in your wallet app'**
+  /// **'Choose your wallet'**
   String get connectWalletWalletConnectStep1;
 
   /// No description provided for @connectWalletWalletConnectStep2.
   ///
   /// In en, this message translates to:
-  /// **'Scan the QR code or paste the URI'**
+  /// **'Approve the Solana connection'**
   String get connectWalletWalletConnectStep2;
 
   /// No description provided for @connectWalletWalletConnectStep3.
   ///
   /// In en, this message translates to:
-  /// **'Approve the connection in your wallet'**
+  /// **'Return to art.kubus to finish'**
   String get connectWalletWalletConnectStep3;
 
   /// No description provided for @connectWalletWalletConnectConnectingLabel.
@@ -8744,19 +8756,19 @@ abstract class AppLocalizations {
   /// No description provided for @connectWalletWalletConnectQuickConnectLabel.
   ///
   /// In en, this message translates to:
-  /// **'Quick connect'**
+  /// **'Open wallet picker'**
   String get connectWalletWalletConnectQuickConnectLabel;
 
   /// No description provided for @connectWalletWalletConnectUriHint.
   ///
   /// In en, this message translates to:
-  /// **'Paste WalletConnect URI (wc:...)'**
+  /// **'External wallet session'**
   String get connectWalletWalletConnectUriHint;
 
   /// No description provided for @connectWalletWalletConnectSecurityNote.
   ///
   /// In en, this message translates to:
-  /// **'Only connect to wallets you trust. Never share your recovery phrase.'**
+  /// **'External wallets sign in their own app. The encrypted backup is optional convenience, not custody.'**
   String get connectWalletWalletConnectSecurityNote;
 
   /// No description provided for @connectWalletWalletConnectScanQrButton.
@@ -8810,7 +8822,7 @@ abstract class AppLocalizations {
   /// No description provided for @connectWalletWalletConnectNeedsLocalWalletToast.
   ///
   /// In en, this message translates to:
-  /// **'Create or import a wallet before using WalletConnect'**
+  /// **'Choose an external wallet to continue'**
   String get connectWalletWalletConnectNeedsLocalWalletToast;
 
   /// No description provided for @connectWalletWalletConnectConnectedToast.
@@ -8828,13 +8840,13 @@ abstract class AppLocalizations {
   /// No description provided for @connectWalletWalletConnectWaitingApprovalToast.
   ///
   /// In en, this message translates to:
-  /// **'Waiting for wallet approval…'**
+  /// **'Waiting for external wallet approval…'**
   String get connectWalletWalletConnectWaitingApprovalToast;
 
   /// No description provided for @connectWalletWalletConnectFailedToast.
   ///
   /// In en, this message translates to:
-  /// **'Failed to connect with WalletConnect'**
+  /// **'Failed to connect external wallet'**
   String get connectWalletWalletConnectFailedToast;
 
   /// No description provided for @walletHomeTitle.
@@ -11169,7 +11181,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Are you sure you want to delegate your {votingPower} voting power to {delegateName}?'**
-  String daoDelegateVotingPowerDialogBody(Object votingPower, Object delegateName);
+  String daoDelegateVotingPowerDialogBody(
+      Object votingPower, Object delegateName);
 
   /// No description provided for @daoDelegationBenefitsTitle.
   ///
@@ -13412,7 +13425,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletBackupProtectionReadOnlyHeadline.
   ///
   /// In en, this message translates to:
-  /// **'This device only has read-only wallet access.'**
+  /// **'This device has read-only wallet access.'**
   String get walletBackupProtectionReadOnlyHeadline;
 
   /// No description provided for @walletBackupProtectionReadOnlyBody.
@@ -13420,6 +13433,504 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Restore signing access with your encrypted backup or recovery phrase before using transfers and other wallet-protected actions on this device.'**
   String get walletBackupProtectionReadOnlyBody;
+
+  /// No description provided for @walletSessionStateAccountShellOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Account shell only'**
+  String get walletSessionStateAccountShellOnly;
+
+  /// No description provided for @walletSessionStateWalletReadOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet identity, read-only'**
+  String get walletSessionStateWalletReadOnly;
+
+  /// No description provided for @walletSessionStateLocalSignerReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Local signer ready'**
+  String get walletSessionStateLocalSignerReady;
+
+  /// No description provided for @walletSessionStateExternalWalletReady.
+  ///
+  /// In en, this message translates to:
+  /// **'External wallet ready'**
+  String get walletSessionStateExternalWalletReady;
+
+  /// No description provided for @walletSessionStateRecoveryNeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery needed'**
+  String get walletSessionStateRecoveryNeeded;
+
+  /// No description provided for @walletSessionStateEncryptedBackupAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypted backup available'**
+  String get walletSessionStateEncryptedBackupAvailable;
+
+  /// No description provided for @walletSecurityStatusTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet security status'**
+  String get walletSecurityStatusTitle;
+
+  /// No description provided for @walletSecuritySignInMethodLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Account sign-in'**
+  String get walletSecuritySignInMethodLabel;
+
+  /// No description provided for @walletSecurityWalletAddressLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet address'**
+  String get walletSecurityWalletAddressLabel;
+
+  /// No description provided for @walletSecuritySignerStatusLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Signer status'**
+  String get walletSecuritySignerStatusLabel;
+
+  /// No description provided for @walletSecurityLocalSignerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Local signer on this device'**
+  String get walletSecurityLocalSignerLabel;
+
+  /// No description provided for @walletSecurityExternalWalletLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'External wallet'**
+  String get walletSecurityExternalWalletLabel;
+
+  /// No description provided for @walletSecurityEncryptedBackupLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypted backup'**
+  String get walletSecurityEncryptedBackupLabel;
+
+  /// No description provided for @walletSecurityPasskeyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Passkey'**
+  String get walletSecurityPasskeyLabel;
+
+  /// No description provided for @walletSecurityRecoveryNeededLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery'**
+  String get walletSecurityRecoveryNeededLabel;
+
+  /// No description provided for @walletSecurityBackendBackupClarifier.
+  ///
+  /// In en, this message translates to:
+  /// **'Email or Google sign-in can restore account access only. Transfers still require a local signer or a connected external wallet. Encrypted backend backup is optional convenience and never makes the backend a signer.'**
+  String get walletSecurityBackendBackupClarifier;
+
+  /// No description provided for @walletSecuritySignedOutMethod.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed out'**
+  String get walletSecuritySignedOutMethod;
+
+  /// No description provided for @walletSecuritySignInMethodEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get walletSecuritySignInMethodEmail;
+
+  /// No description provided for @walletSecuritySignInMethodEmailWithAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Email ({email})'**
+  String walletSecuritySignInMethodEmailWithAddress(Object email);
+
+  /// No description provided for @walletSecuritySignInMethodGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Google'**
+  String get walletSecuritySignInMethodGoogle;
+
+  /// No description provided for @walletSecuritySignInMethodGoogleWithAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Google ({email})'**
+  String walletSecuritySignInMethodGoogleWithAddress(Object email);
+
+  /// No description provided for @walletSecuritySignInMethodWallet.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet signature'**
+  String get walletSecuritySignInMethodWallet;
+
+  /// No description provided for @walletSecuritySignInMethodUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in'**
+  String get walletSecuritySignInMethodUnknown;
+
+  /// No description provided for @walletSecurityNotAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Not available'**
+  String get walletSecurityNotAvailable;
+
+  /// No description provided for @walletSecurityAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Available'**
+  String get walletSecurityAvailable;
+
+  /// No description provided for @walletSecurityUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get walletSecurityUnavailable;
+
+  /// No description provided for @walletSecurityUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown'**
+  String get walletSecurityUnknown;
+
+  /// No description provided for @walletSecurityConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get walletSecurityConnected;
+
+  /// No description provided for @walletSecurityDisconnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnected'**
+  String get walletSecurityDisconnected;
+
+  /// No description provided for @walletSecurityConfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'Configured'**
+  String get walletSecurityConfigured;
+
+  /// No description provided for @walletSecurityNotConfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'Not configured'**
+  String get walletSecurityNotConfigured;
+
+  /// No description provided for @walletSecurityLocalSignerReadyValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Present and ready'**
+  String get walletSecurityLocalSignerReadyValue;
+
+  /// No description provided for @walletSecurityLocalSignerMissingValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Not restored on this device'**
+  String get walletSecurityLocalSignerMissingValue;
+
+  /// No description provided for @walletSecuritySignerLocalReadyValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Local signer ready'**
+  String get walletSecuritySignerLocalReadyValue;
+
+  /// No description provided for @walletSecuritySignerExternalReadyValue.
+  ///
+  /// In en, this message translates to:
+  /// **'External wallet ready'**
+  String get walletSecuritySignerExternalReadyValue;
+
+  /// No description provided for @walletSecuritySignerRestoreAvailableValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore available from encrypted backup'**
+  String get walletSecuritySignerRestoreAvailableValue;
+
+  /// No description provided for @walletSecuritySignerMissingValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Signer missing'**
+  String get walletSecuritySignerMissingValue;
+
+  /// No description provided for @walletSecurityExternalWalletConnectedValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected: {walletName}'**
+  String walletSecurityExternalWalletConnectedValue(Object walletName);
+
+  /// No description provided for @walletSecurityRecoveryNeededValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Needed'**
+  String get walletSecurityRecoveryNeededValue;
+
+  /// No description provided for @walletSecurityRecoveryNotNeededValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Not needed'**
+  String get walletSecurityRecoveryNotNeededValue;
+
+  /// No description provided for @walletSecurityRestoreSignerAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore signer'**
+  String get walletSecurityRestoreSignerAction;
+
+  /// No description provided for @walletSecurityConnectExternalAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect external wallet'**
+  String get walletSecurityConnectExternalAction;
+
+  /// No description provided for @walletBackupRecoveryPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery password'**
+  String get walletBackupRecoveryPasswordLabel;
+
+  /// No description provided for @walletBackupPasswordTooShortError.
+  ///
+  /// In en, this message translates to:
+  /// **'Use at least 8 characters.'**
+  String get walletBackupPasswordTooShortError;
+
+  /// No description provided for @walletBackupPasswordsMismatchError.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords do not match.'**
+  String get walletBackupPasswordsMismatchError;
+
+  /// No description provided for @walletBackupPromptRequiredError.
+  ///
+  /// In en, this message translates to:
+  /// **'{field} is required.'**
+  String walletBackupPromptRequiredError(Object field);
+
+  /// No description provided for @walletBackupPromptTooLongError.
+  ///
+  /// In en, this message translates to:
+  /// **'{field} must be 120 characters or less.'**
+  String walletBackupPromptTooLongError(Object field);
+
+  /// No description provided for @walletBackupProtectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Protect your web3 wallet'**
+  String get walletBackupProtectionTitle;
+
+  /// No description provided for @walletBackupProtectionFeatureLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet backup'**
+  String get walletBackupProtectionFeatureLabel;
+
+  /// No description provided for @walletBackupProtectionUnavailableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet backup unavailable'**
+  String get walletBackupProtectionUnavailableTitle;
+
+  /// No description provided for @walletBackupProtectionCurrentWalletLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Current wallet'**
+  String get walletBackupProtectionCurrentWalletLabel;
+
+  /// No description provided for @walletBackupProtectionOfflineReminder.
+  ///
+  /// In en, this message translates to:
+  /// **'Back up the recovery phrase offline and store the encrypted backup recovery password separately.'**
+  String get walletBackupProtectionOfflineReminder;
+
+  /// No description provided for @walletBackupProtectionLastVerifiedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Last verified: {date}'**
+  String walletBackupProtectionLastVerifiedLabel(Object date);
+
+  /// No description provided for @walletBackupProtectionCreateBackupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create encrypted backup'**
+  String get walletBackupProtectionCreateBackupTitle;
+
+  /// No description provided for @walletBackupProtectionCreateBackupDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a recovery password. This password decrypts the wallet backup on a new device.'**
+  String get walletBackupProtectionCreateBackupDescription;
+
+  /// No description provided for @walletBackupProtectionCreateBackupAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Create backup'**
+  String get walletBackupProtectionCreateBackupAction;
+
+  /// No description provided for @walletBackupProtectionBackupSavedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypted wallet backup saved.'**
+  String get walletBackupProtectionBackupSavedToast;
+
+  /// No description provided for @walletBackupProtectionVerifyBackupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify encrypted backup'**
+  String get walletBackupProtectionVerifyBackupTitle;
+
+  /// No description provided for @walletBackupProtectionVerifyBackupDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the recovery password to verify the encrypted backup can be decrypted locally.'**
+  String get walletBackupProtectionVerifyBackupDescription;
+
+  /// No description provided for @walletBackupProtectionVerifyBackupAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify encrypted backup'**
+  String get walletBackupProtectionVerifyBackupAction;
+
+  /// No description provided for @walletBackupProtectionBackupVerifiedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypted backup verified.'**
+  String get walletBackupProtectionBackupVerifiedToast;
+
+  /// No description provided for @walletBackupProtectionDeleteBackupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete encrypted backup?'**
+  String get walletBackupProtectionDeleteBackupTitle;
+
+  /// No description provided for @walletBackupProtectionDeleteBackupBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This removes the encrypted server backup for the current wallet. Make sure you still have the recovery phrase stored safely offline.'**
+  String get walletBackupProtectionDeleteBackupBody;
+
+  /// No description provided for @walletBackupProtectionDeleteBackupAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete encrypted backup'**
+  String get walletBackupProtectionDeleteBackupAction;
+
+  /// No description provided for @walletBackupProtectionBackupDeletedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypted wallet backup deleted.'**
+  String get walletBackupProtectionBackupDeletedToast;
+
+  /// No description provided for @walletBackupProtectionRestoreSignerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore wallet signer'**
+  String get walletBackupProtectionRestoreSignerTitle;
+
+  /// No description provided for @walletBackupProtectionRestoreSignerDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the recovery password for the encrypted backup to restore signing access on this device.'**
+  String get walletBackupProtectionRestoreSignerDescription;
+
+  /// No description provided for @walletBackupProtectionRestoreSignerAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore signer'**
+  String get walletBackupProtectionRestoreSignerAction;
+
+  /// No description provided for @walletBackupProtectionSignerRestoredToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet signer restored on this device.'**
+  String get walletBackupProtectionSignerRestoredToast;
+
+  /// No description provided for @walletBackupProtectionSignerRestoreFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to restore wallet signer.'**
+  String get walletBackupProtectionSignerRestoreFailedToast;
+
+  /// No description provided for @walletBackupProtectionUpdateEncryptedBackupButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Update encrypted backup'**
+  String get walletBackupProtectionUpdateEncryptedBackupButton;
+
+  /// No description provided for @walletBackupProtectionCreateEncryptedBackupButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Create encrypted backup'**
+  String get walletBackupProtectionCreateEncryptedBackupButton;
+
+  /// No description provided for @walletBackupProtectionRevealRecoveryPhraseButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Reveal and copy recovery phrase'**
+  String get walletBackupProtectionRevealRecoveryPhraseButton;
+
+  /// No description provided for @walletBackupProtectionPasskeysTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Passkeys'**
+  String get walletBackupProtectionPasskeysTitle;
+
+  /// No description provided for @walletBackupProtectionPasskeysBody.
+  ///
+  /// In en, this message translates to:
+  /// **'On web, passkeys can gate access to the encrypted backup before the recovery password prompt is shown.'**
+  String get walletBackupProtectionPasskeysBody;
+
+  /// No description provided for @walletBackupProtectionAddPasskeyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a passkey'**
+  String get walletBackupProtectionAddPasskeyTitle;
+
+  /// No description provided for @walletBackupProtectionPasskeyNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Passkey name'**
+  String get walletBackupProtectionPasskeyNameLabel;
+
+  /// No description provided for @walletBackupProtectionAddPasskeyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Give this passkey a label so you can recognize the device or browser later.'**
+  String get walletBackupProtectionAddPasskeyDescription;
+
+  /// No description provided for @walletBackupProtectionDefaultPasskeyName.
+  ///
+  /// In en, this message translates to:
+  /// **'This device'**
+  String get walletBackupProtectionDefaultPasskeyName;
+
+  /// No description provided for @walletBackupProtectionAddPasskeyAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add passkey'**
+  String get walletBackupProtectionAddPasskeyAction;
+
+  /// No description provided for @walletBackupProtectionPasskeyAddedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Passkey \"{passkey}\" added.'**
+  String walletBackupProtectionPasskeyAddedToast(Object passkey);
+
+  /// No description provided for @walletBackupProtectionStoredPasskeyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Stored passkey'**
+  String get walletBackupProtectionStoredPasskeyLabel;
+
+  /// No description provided for @walletBackupProtectionPasskeyTransports.
+  ///
+  /// In en, this message translates to:
+  /// **'Transports: {transports}'**
+  String walletBackupProtectionPasskeyTransports(Object transports);
 
   /// No description provided for @walletBackupBannerTitle.
   ///
@@ -13448,7 +13959,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletReconnectReadOnlyToast.
   ///
   /// In en, this message translates to:
-  /// **'Wallet credentials refreshed. This session is still read-only.'**
+  /// **'Session refreshed. Signing is still unavailable on this device.'**
   String get walletReconnectReadOnlyToast;
 
   /// No description provided for @walletReconnectManualRequiredToast.
@@ -16575,7 +17086,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Activity was recorded on {activeBuckets} of {totalBuckets} buckets.'**
-  String analyticsRecommendationConsistencyDescription(Object activeBuckets, Object totalBuckets);
+  String analyticsRecommendationConsistencyDescription(
+      Object activeBuckets, Object totalBuckets);
 
   /// No description provided for @analyticsRecommendationReverseDecline.
   ///
@@ -16899,7 +17411,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{totalVotes} votes • {supportPct}% support'**
-  String daoProposalVotesSupportSummaryLabel(Object totalVotes, Object supportPct);
+  String daoProposalVotesSupportSummaryLabel(
+      Object totalVotes, Object supportPct);
 
   /// No description provided for @commonSearchHint.
   ///
@@ -17310,7 +17823,8 @@ abstract class AppLocalizations {
   String promotionBuilderGuaranteedSlots(num count);
 }
 
-class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate
+    extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -17319,25 +17833,25 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
   }
 
   @override
-  bool isSupported(Locale locale) => <String>['en', 'sl'].contains(locale.languageCode);
+  bool isSupported(Locale locale) =>
+      <String>['en', 'sl'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
-
-
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en': return AppLocalizationsEn();
-    case 'sl': return AppLocalizationsSl();
+    case 'en':
+      return AppLocalizationsEn();
+    case 'sl':
+      return AppLocalizationsSl();
   }
 
   throw FlutterError(
-    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-    'an issue with the localizations generation tool. Please file an issue '
-    'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.'
-  );
+      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+      'an issue with the localizations generation tool. Please file an issue '
+      'on GitHub with a reproducible sample app and the gen-l10n configuration '
+      'that was used.');
 }

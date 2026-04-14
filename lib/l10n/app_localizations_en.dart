@@ -4355,13 +4355,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletChooseTitle => 'Connect your wallet';
 
   @override
-  String get connectWalletChooseDescription => 'Choose how to set up your account wallet. You can create a new one on this device, import an existing one, or use WalletConnect.';
+  String get connectWalletChooseDescription => 'Choose how to set up your account wallet. Create or import a local recovery phrase, or connect an external wallet for signing.';
 
   @override
-  String get connectWalletOptionWalletConnectTitle => 'WalletConnect';
+  String get connectWalletOptionWalletConnectTitle => 'Connect external wallet';
 
   @override
-  String get connectWalletOptionWalletConnectDescription => 'Connect using a QR code or WalletConnect URI';
+  String get connectWalletOptionWalletConnectDescription => 'Use MetaMask, Phantom, or Solflare without importing a recovery phrase';
 
   @override
   String get connectWalletOptionSignInTitle => 'Sign in';
@@ -4511,40 +4511,40 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletWeb3GuideGotItButton => 'Got it!';
 
   @override
-  String get connectWalletWalletConnectTitle => 'Connect with WalletConnect';
+  String get connectWalletWalletConnectTitle => 'Connect external wallet';
 
   @override
-  String get connectWalletWalletConnectDescription => 'Use WalletConnect to connect your wallet app to art.kubus.';
+  String get connectWalletWalletConnectDescription => 'Use Reown AppKit to connect a Solana wallet for signing. art.kubus never imports or stores your private key.';
 
   @override
   String get connectWalletWalletConnectSupportedTitle => 'Supported wallets';
 
   @override
-  String get connectWalletWalletConnectSupportedList => 'Phantom, Solflare, Backpack, and more';
+  String get connectWalletWalletConnectSupportedList => 'MetaMask, Phantom, Solflare, Backpack, and more';
 
   @override
   String get connectWalletWalletConnectHowToTitle => 'How it works';
 
   @override
-  String get connectWalletWalletConnectStep1 => 'Open WalletConnect in your wallet app';
+  String get connectWalletWalletConnectStep1 => 'Choose your wallet';
 
   @override
-  String get connectWalletWalletConnectStep2 => 'Scan the QR code or paste the URI';
+  String get connectWalletWalletConnectStep2 => 'Approve the Solana connection';
 
   @override
-  String get connectWalletWalletConnectStep3 => 'Approve the connection in your wallet';
+  String get connectWalletWalletConnectStep3 => 'Return to art.kubus to finish';
 
   @override
   String get connectWalletWalletConnectConnectingLabel => 'Connecting…';
 
   @override
-  String get connectWalletWalletConnectQuickConnectLabel => 'Quick connect';
+  String get connectWalletWalletConnectQuickConnectLabel => 'Open wallet picker';
 
   @override
-  String get connectWalletWalletConnectUriHint => 'Paste WalletConnect URI (wc:...)';
+  String get connectWalletWalletConnectUriHint => 'External wallet session';
 
   @override
-  String get connectWalletWalletConnectSecurityNote => 'Only connect to wallets you trust. Never share your recovery phrase.';
+  String get connectWalletWalletConnectSecurityNote => 'External wallets sign in their own app. The encrypted backup is optional convenience, not custody.';
 
   @override
   String get connectWalletWalletConnectScanQrButton => 'Scan QR code';
@@ -4571,7 +4571,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletWalletConnectInvalidUriToast => 'Invalid WalletConnect URI';
 
   @override
-  String get connectWalletWalletConnectNeedsLocalWalletToast => 'Create or import a wallet before using WalletConnect';
+  String get connectWalletWalletConnectNeedsLocalWalletToast => 'Choose an external wallet to continue';
 
   @override
   String connectWalletWalletConnectConnectedToast(Object address) {
@@ -4582,10 +4582,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletWalletConnectConnectionErrorToast => 'Connection error. Please try again.';
 
   @override
-  String get connectWalletWalletConnectWaitingApprovalToast => 'Waiting for wallet approval…';
+  String get connectWalletWalletConnectWaitingApprovalToast => 'Waiting for external wallet approval…';
 
   @override
-  String get connectWalletWalletConnectFailedToast => 'Failed to connect with WalletConnect';
+  String get connectWalletWalletConnectFailedToast => 'Failed to connect external wallet';
 
   @override
   String get walletHomeTitle => 'My wallet';
@@ -7046,10 +7046,275 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletBackupProtectionPasskeyBody => 'This encrypted server backup is protected with a passkey on web. Keep the recovery password stored separately from the recovery phrase.';
 
   @override
-  String get walletBackupProtectionReadOnlyHeadline => 'This device only has read-only wallet access.';
+  String get walletBackupProtectionReadOnlyHeadline => 'This device has read-only wallet access.';
 
   @override
   String get walletBackupProtectionReadOnlyBody => 'Restore signing access with your encrypted backup or recovery phrase before using transfers and other wallet-protected actions on this device.';
+
+  @override
+  String get walletSessionStateAccountShellOnly => 'Account shell only';
+
+  @override
+  String get walletSessionStateWalletReadOnly => 'Wallet identity, read-only';
+
+  @override
+  String get walletSessionStateLocalSignerReady => 'Local signer ready';
+
+  @override
+  String get walletSessionStateExternalWalletReady => 'External wallet ready';
+
+  @override
+  String get walletSessionStateRecoveryNeeded => 'Recovery needed';
+
+  @override
+  String get walletSessionStateEncryptedBackupAvailable => 'Encrypted backup available';
+
+  @override
+  String get walletSecurityStatusTitle => 'Wallet security status';
+
+  @override
+  String get walletSecuritySignInMethodLabel => 'Account sign-in';
+
+  @override
+  String get walletSecurityWalletAddressLabel => 'Wallet address';
+
+  @override
+  String get walletSecuritySignerStatusLabel => 'Signer status';
+
+  @override
+  String get walletSecurityLocalSignerLabel => 'Local signer on this device';
+
+  @override
+  String get walletSecurityExternalWalletLabel => 'External wallet';
+
+  @override
+  String get walletSecurityEncryptedBackupLabel => 'Encrypted backup';
+
+  @override
+  String get walletSecurityPasskeyLabel => 'Passkey';
+
+  @override
+  String get walletSecurityRecoveryNeededLabel => 'Recovery';
+
+  @override
+  String get walletSecurityBackendBackupClarifier => 'Email or Google sign-in can restore account access only. Transfers still require a local signer or a connected external wallet. Encrypted backend backup is optional convenience and never makes the backend a signer.';
+
+  @override
+  String get walletSecuritySignedOutMethod => 'Signed out';
+
+  @override
+  String get walletSecuritySignInMethodEmail => 'Email';
+
+  @override
+  String walletSecuritySignInMethodEmailWithAddress(Object email) {
+    return 'Email ($email)';
+  }
+
+  @override
+  String get walletSecuritySignInMethodGoogle => 'Google';
+
+  @override
+  String walletSecuritySignInMethodGoogleWithAddress(Object email) {
+    return 'Google ($email)';
+  }
+
+  @override
+  String get walletSecuritySignInMethodWallet => 'Wallet signature';
+
+  @override
+  String get walletSecuritySignInMethodUnknown => 'Signed in';
+
+  @override
+  String get walletSecurityNotAvailable => 'Not available';
+
+  @override
+  String get walletSecurityAvailable => 'Available';
+
+  @override
+  String get walletSecurityUnavailable => 'Unavailable';
+
+  @override
+  String get walletSecurityUnknown => 'Unknown';
+
+  @override
+  String get walletSecurityConnected => 'Connected';
+
+  @override
+  String get walletSecurityDisconnected => 'Disconnected';
+
+  @override
+  String get walletSecurityConfigured => 'Configured';
+
+  @override
+  String get walletSecurityNotConfigured => 'Not configured';
+
+  @override
+  String get walletSecurityLocalSignerReadyValue => 'Present and ready';
+
+  @override
+  String get walletSecurityLocalSignerMissingValue => 'Not restored on this device';
+
+  @override
+  String get walletSecuritySignerLocalReadyValue => 'Local signer ready';
+
+  @override
+  String get walletSecuritySignerExternalReadyValue => 'External wallet ready';
+
+  @override
+  String get walletSecuritySignerRestoreAvailableValue => 'Restore available from encrypted backup';
+
+  @override
+  String get walletSecuritySignerMissingValue => 'Signer missing';
+
+  @override
+  String walletSecurityExternalWalletConnectedValue(Object walletName) {
+    return 'Connected: $walletName';
+  }
+
+  @override
+  String get walletSecurityRecoveryNeededValue => 'Needed';
+
+  @override
+  String get walletSecurityRecoveryNotNeededValue => 'Not needed';
+
+  @override
+  String get walletSecurityRestoreSignerAction => 'Restore signer';
+
+  @override
+  String get walletSecurityConnectExternalAction => 'Connect external wallet';
+
+  @override
+  String get walletBackupRecoveryPasswordLabel => 'Recovery password';
+
+  @override
+  String get walletBackupPasswordTooShortError => 'Use at least 8 characters.';
+
+  @override
+  String get walletBackupPasswordsMismatchError => 'Passwords do not match.';
+
+  @override
+  String walletBackupPromptRequiredError(Object field) {
+    return '$field is required.';
+  }
+
+  @override
+  String walletBackupPromptTooLongError(Object field) {
+    return '$field must be 120 characters or less.';
+  }
+
+  @override
+  String get walletBackupProtectionTitle => 'Protect your web3 wallet';
+
+  @override
+  String get walletBackupProtectionFeatureLabel => 'Wallet backup';
+
+  @override
+  String get walletBackupProtectionUnavailableTitle => 'Wallet backup unavailable';
+
+  @override
+  String get walletBackupProtectionCurrentWalletLabel => 'Current wallet';
+
+  @override
+  String get walletBackupProtectionOfflineReminder => 'Back up the recovery phrase offline and store the encrypted backup recovery password separately.';
+
+  @override
+  String walletBackupProtectionLastVerifiedLabel(Object date) {
+    return 'Last verified: $date';
+  }
+
+  @override
+  String get walletBackupProtectionCreateBackupTitle => 'Create encrypted backup';
+
+  @override
+  String get walletBackupProtectionCreateBackupDescription => 'Choose a recovery password. This password decrypts the wallet backup on a new device.';
+
+  @override
+  String get walletBackupProtectionCreateBackupAction => 'Create backup';
+
+  @override
+  String get walletBackupProtectionBackupSavedToast => 'Encrypted wallet backup saved.';
+
+  @override
+  String get walletBackupProtectionVerifyBackupTitle => 'Verify encrypted backup';
+
+  @override
+  String get walletBackupProtectionVerifyBackupDescription => 'Enter the recovery password to verify the encrypted backup can be decrypted locally.';
+
+  @override
+  String get walletBackupProtectionVerifyBackupAction => 'Verify encrypted backup';
+
+  @override
+  String get walletBackupProtectionBackupVerifiedToast => 'Encrypted backup verified.';
+
+  @override
+  String get walletBackupProtectionDeleteBackupTitle => 'Delete encrypted backup?';
+
+  @override
+  String get walletBackupProtectionDeleteBackupBody => 'This removes the encrypted server backup for the current wallet. Make sure you still have the recovery phrase stored safely offline.';
+
+  @override
+  String get walletBackupProtectionDeleteBackupAction => 'Delete encrypted backup';
+
+  @override
+  String get walletBackupProtectionBackupDeletedToast => 'Encrypted wallet backup deleted.';
+
+  @override
+  String get walletBackupProtectionRestoreSignerTitle => 'Restore wallet signer';
+
+  @override
+  String get walletBackupProtectionRestoreSignerDescription => 'Enter the recovery password for the encrypted backup to restore signing access on this device.';
+
+  @override
+  String get walletBackupProtectionRestoreSignerAction => 'Restore signer';
+
+  @override
+  String get walletBackupProtectionSignerRestoredToast => 'Wallet signer restored on this device.';
+
+  @override
+  String get walletBackupProtectionSignerRestoreFailedToast => 'Unable to restore wallet signer.';
+
+  @override
+  String get walletBackupProtectionUpdateEncryptedBackupButton => 'Update encrypted backup';
+
+  @override
+  String get walletBackupProtectionCreateEncryptedBackupButton => 'Create encrypted backup';
+
+  @override
+  String get walletBackupProtectionRevealRecoveryPhraseButton => 'Reveal and copy recovery phrase';
+
+  @override
+  String get walletBackupProtectionPasskeysTitle => 'Passkeys';
+
+  @override
+  String get walletBackupProtectionPasskeysBody => 'On web, passkeys can gate access to the encrypted backup before the recovery password prompt is shown.';
+
+  @override
+  String get walletBackupProtectionAddPasskeyTitle => 'Add a passkey';
+
+  @override
+  String get walletBackupProtectionPasskeyNameLabel => 'Passkey name';
+
+  @override
+  String get walletBackupProtectionAddPasskeyDescription => 'Give this passkey a label so you can recognize the device or browser later.';
+
+  @override
+  String get walletBackupProtectionDefaultPasskeyName => 'This device';
+
+  @override
+  String get walletBackupProtectionAddPasskeyAction => 'Add passkey';
+
+  @override
+  String walletBackupProtectionPasskeyAddedToast(Object passkey) {
+    return 'Passkey \"$passkey\" added.';
+  }
+
+  @override
+  String get walletBackupProtectionStoredPasskeyLabel => 'Stored passkey';
+
+  @override
+  String walletBackupProtectionPasskeyTransports(Object transports) {
+    return 'Transports: $transports';
+  }
 
   @override
   String get walletBackupBannerTitle => 'Back up your recovery phrase';
@@ -7064,7 +7329,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletReconnectSuccessToast => 'Wallet session restored.';
 
   @override
-  String get walletReconnectReadOnlyToast => 'Wallet credentials refreshed. This session is still read-only.';
+  String get walletReconnectReadOnlyToast => 'Session refreshed. Signing is still unavailable on this device.';
 
   @override
   String get walletReconnectManualRequiredToast => 'Reconnect with your wallet provider to enable signing.';
