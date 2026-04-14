@@ -520,12 +520,14 @@ class PresenceProvider extends ChangeNotifier {
     if (!AppConfig.isFeatureEnabled('presence')) {
       _heartbeatTimer?.cancel();
       _heartbeatTimer = null;
+      _heartbeatIntervalCurrent = null;
       return;
     }
 
     if (!_isForeground) {
       _heartbeatTimer?.cancel();
       _heartbeatTimer = null;
+      _heartbeatIntervalCurrent = null;
       return;
     }
 

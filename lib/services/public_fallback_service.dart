@@ -769,6 +769,10 @@ class PublicFallbackService extends ChangeNotifier {
       }
       return;
     }
+
+    _datasetCache.clear();
+    _datasetCidCache.clear();
+
     _mode = nextMode;
     _startHealthMonitor(forceRestart: true);
     if (notify) {

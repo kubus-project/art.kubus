@@ -172,6 +172,13 @@ class CollabProvider extends ChangeNotifier {
   void _handleSocketReconnect() {
     if (!AppConfig.isFeatureEnabled('collabInvites')) return;
     if ((_api.getAuthToken() ?? '').trim().isEmpty) return;
+
+    final backoffUntil = _inviteBackoffUntil;
+    if (backoffUntil != null && DateTime.now().isBefore(backoffUntil)) {
+      _evaluateInvitePollingState();
+      return;
+    }
+
     unawaited(refreshInvites(showLoadingIndicator: false, notifyOnNew: false));
     _evaluateInvitePollingState();
   }

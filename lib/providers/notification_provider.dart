@@ -249,6 +249,19 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   void _handleSocketReconnect() {
+    final wallet = _currentWallet;
+    if (wallet != null && wallet.isNotEmpty) {
+      unawaited(
+        _socket.connectAndSubscribe(_backend.baseUrl, wallet).then((ok) {
+          if (!ok) {
+            _socket.subscribeUser(wallet);
+          }
+        }).catchError((e) {
+          debugPrint('NotificationProvider: reconnect resubscribe failed: $e');
+        }),
+      );
+    }
+
     // When socket reconnects (after background or connectivity issues), refresh
     // the unread count so badges remain accurate without waiting for the next
     // server push event.
