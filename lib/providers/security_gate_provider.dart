@@ -351,9 +351,10 @@ class SecurityGateProvider extends ChangeNotifier
       final sessionStatus =
           AuthGatingService.evaluateStoredSession(prefs: prefs);
       if (sessionStatus == StoredSessionStatus.refreshRequired) {
-        final refreshed =
-            await BackendApiService().refreshAuthTokenFromStorage();
-        if (refreshed) {
+        final restored = await BackendApiService().restoreExistingSession(
+          allowRefresh: false,
+        );
+        if (restored) {
           _cooldownUntil = DateTime.now().add(_promptCooldown);
           return const AuthReauthResult(AuthReauthOutcome.success);
         }
@@ -564,16 +565,15 @@ class SecurityGateProvider extends ChangeNotifier
             walletAddress: walletAddress.trim(),
             refreshBackendSession: true,
           );
+        } else if (await wallet.ensureBackendSessionForActiveSigner(
+          walletAddress: walletAddress.trim(),
+        )) {
+          return true;
         } else {
-          await BackendApiService().registerWallet(
-            walletAddress: walletAddress.trim(),
-          );
-          await BackendApiService().loadAuthToken();
+          await BackendApiService().restoreExistingSession(allowRefresh: false);
         }
       } else {
-        await BackendApiService()
-            .registerWallet(walletAddress: walletAddress.trim());
-        await BackendApiService().loadAuthToken();
+        await BackendApiService().restoreExistingSession(allowRefresh: false);
       }
       return (BackendApiService().getAuthToken() ?? '').trim().isNotEmpty;
     } catch (e) {

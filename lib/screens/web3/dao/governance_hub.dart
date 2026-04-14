@@ -1254,7 +1254,7 @@ class _GovernanceHubState extends State<GovernanceHub>
             children: [
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () => _voteOnProposal(proposal.id, true),
+                  onPressed: () => _submitProposalVote(proposal.id, true),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: color,
                     foregroundColor: Theme.of(context).colorScheme.onSurface,
@@ -1268,7 +1268,7 @@ class _GovernanceHubState extends State<GovernanceHub>
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () => _voteOnProposal(proposal.id, false),
+                  onPressed: () => _submitProposalVote(proposal.id, false),
                   style: ElevatedButton.styleFrom(
                     backgroundColor:
                         Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -2850,7 +2850,7 @@ class _GovernanceHubState extends State<GovernanceHub>
     );
   }
 
-  Future<void> _voteOnProposal(String proposalId, bool isYes) async {
+  Future<void> _submitProposalVote(String proposalId, bool isYes) async {
     final daoProvider = context.read<DAOProvider>();
     final web3Provider = context.read<Web3Provider>();
     final walletProvider = context.read<WalletProvider>();

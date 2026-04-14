@@ -4,7 +4,6 @@ Future<Map<String, dynamic>> _backendApiRegisterWallet(
   BackendApiService service, {
   required String walletAddress,
   String? username,
-  bool recordSignInMethod = false,
 }) async {
   try {
     service.setPreferredWalletAddress(walletAddress);
@@ -22,10 +21,6 @@ Future<Map<String, dynamic>> _backendApiRegisterWallet(
     );
     if (response.statusCode == 200 || response.statusCode == 201) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
-      await service._persistTokenFromResponse(data);
-      if (recordSignInMethod) {
-        await service.setLastSignInMethod(AuthSignInMethod.wallet);
-      }
       return data;
     }
     throw Exception('Register failed: ${response.statusCode} ${response.body}');

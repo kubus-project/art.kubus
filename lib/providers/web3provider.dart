@@ -1,7 +1,4 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:solana/solana.dart' show Ed25519HDKeyPair;
 
 import '../config/api_keys.dart';
@@ -203,52 +200,6 @@ class Web3Provider extends ChangeNotifier {
             ),
           );
     await _boundWalletProvider.refreshData();
-    return signature;
-  }
-
-  Future<String> voteOnProposal(String proposalId, bool support) async {
-    final normalizedProposal = proposalId.trim();
-    if (normalizedProposal.isEmpty) {
-      throw ArgumentError('proposalId cannot be empty');
-    }
-    if (!_boundWalletProvider.authority.canTransact) {
-      throw Exception('Wallet signer required for governance voting');
-    }
-
-    final prefs = await SharedPreferences.getInstance();
-    const key = 'governance_votes_v1';
-    final raw = prefs.getString(key);
-    final List<dynamic> existing;
-    if (raw == null || raw.trim().isEmpty) {
-      existing = <dynamic>[];
-    } else {
-      final decoded = jsonDecode(raw);
-      existing = decoded is List ? decoded : <dynamic>[];
-    }
-
-    final voter = walletAddress;
-    final filtered = existing.where((e) {
-      if (e is! Map) return false;
-      final map = Map<String, dynamic>.from(e);
-      return map['proposalId'] != normalizedProposal || map['voter'] != voter;
-    }).toList();
-
-    final signaturePayload = jsonEncode({
-      'proposalId': normalizedProposal,
-      'voter': voter,
-      'support': support,
-      'createdAt': DateTime.now().toIso8601String(),
-    });
-    final signature = await _boundWalletProvider.signMessage(signaturePayload);
-    filtered.add({
-      'proposalId': normalizedProposal,
-      'voter': voter,
-      'support': support,
-      'signature': signature,
-      'createdAt': DateTime.now().toIso8601String(),
-    });
-
-    await prefs.setString(key, jsonEncode(filtered));
     return signature;
   }
 

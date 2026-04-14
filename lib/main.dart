@@ -1102,7 +1102,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
       unawaited(presenceProvider.onAppResumed());
       unawaited(() async {
         try {
-          await BackendApiService().refreshAuthTokenFromStorage();
+          await BackendApiService().restoreExistingSession(allowRefresh: false);
         } catch (_) {}
         await SocketService().connect();
       }());

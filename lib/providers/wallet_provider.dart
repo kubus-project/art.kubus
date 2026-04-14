@@ -885,16 +885,9 @@ class WalletProvider extends ChangeNotifier {
 
     try {
       if (refreshBackendSession) {
-        try {
-          await _apiService
-              .registerWallet(
-                walletAddress: targetWallet,
-              )
-              .timeout(const Duration(seconds: 8));
-          await _apiService.loadAuthToken().timeout(const Duration(seconds: 4));
-        } catch (e) {
-          _walletLog('managed reconnect backend refresh failed: $e');
-        }
+        await _apiService
+            .restoreExistingSession(allowRefresh: false)
+            .timeout(const Duration(seconds: 4));
       }
 
       await setReadOnlyWalletIdentity(
@@ -904,6 +897,9 @@ class WalletProvider extends ChangeNotifier {
       );
       if (WalletUtils.equals(_currentWalletAddress, targetWallet) &&
           canTransact) {
+        if (refreshBackendSession) {
+          await ensureBackendSessionForActiveSigner(walletAddress: targetWallet);
+        }
         _clearLastError();
         return ManagedWalletReconnectOutcome.signerRestored;
       }
@@ -938,6 +934,9 @@ class WalletProvider extends ChangeNotifier {
       );
       if (WalletUtils.equals(_currentWalletAddress, targetWallet) &&
           canTransact) {
+        if (refreshBackendSession) {
+          await ensureBackendSessionForActiveSigner(walletAddress: targetWallet);
+        }
         _clearLastError();
         return ManagedWalletReconnectOutcome.signerRestored;
       }
@@ -1796,19 +1795,18 @@ class WalletProvider extends ChangeNotifier {
         _walletLog('stats snapshot fetch failed: $e');
       }
 
-      // Try to issue backend token for this wallet to ensure API auth is ready
+      // Keep backend auth aligned only when this provider owns signer
+      // authority. Profile bootstrap above is separate from session issuance.
       try {
-        // Keep API layer aligned with the active wallet. This prevents stale
-        // tokens from a previous wallet session from causing 403s on
-        // ownership-gated endpoints (marker edit/delete).
-        _apiService.setPreferredWalletAddress(address);
-        if (AppConfig.enableDebugIssueToken) {
-          final issued = await _apiService.issueTokenForWallet(address);
-          _walletLog('_syncBackendData: token issued');
+        if (await ensureBackendSessionForActiveSigner(walletAddress: address)) {
+          _walletLog('_syncBackendData: signer-backed session ensured');
+        } else if (AppConfig.enableDebugIssueToken) {
+          final issued = await _apiService.issueDebugTokenForWallet(address);
+          _walletLog('_syncBackendData: debug token issued=$issued');
           if (issued) await _apiService.loadAuthToken();
         }
       } catch (e) {
-        _walletLog('_syncBackendData: token issuance failed: $e');
+        _walletLog('_syncBackendData: session ensure failed: $e');
       }
 
       notifyListeners();
@@ -2050,6 +2048,32 @@ class WalletProvider extends ChangeNotifier {
       return _solanaWalletService.signMessageBase64(encoded);
     }
     return ExternalWalletSignerService.instance.signMessageBase64(encoded);
+  }
+
+  Future<bool> ensureBackendSessionForActiveSigner({
+    String? walletAddress,
+  }) async {
+    final targetWallet = (walletAddress ?? _currentWalletAddress ?? '').trim();
+    if (targetWallet.isEmpty ||
+        !canTransact ||
+        !WalletUtils.equals(_currentWalletAddress, targetWallet)) {
+      return false;
+    }
+
+    try {
+      _apiService.setPreferredWalletAddress(targetWallet);
+      await _apiService.ensureSessionForActiveSigner(
+        walletAddress: targetWallet,
+        signMessage: signMessage,
+      );
+      final authWallet =
+          (_apiService.getCurrentAuthWalletAddress() ?? '').trim();
+      return (_apiService.getAuthToken() ?? '').trim().isNotEmpty &&
+          WalletUtils.equals(authWallet, targetWallet);
+    } catch (e) {
+      _walletLog('ensureBackendSessionForActiveSigner failed: $e');
+      return false;
+    }
   }
 
   Future<String> signTransactionBase64(String transactionBase64) async {

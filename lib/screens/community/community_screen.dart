@@ -27,7 +27,6 @@ import '../../widgets/community/community_subject_picker.dart';
 import 'package:provider/provider.dart';
 import '../../providers/app_mode_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:location/location.dart' as loc;
 import 'dart:io';
@@ -4178,15 +4177,27 @@ class _CommunityScreenState extends State<CommunityScreen>
         _showSnack(l10n.communityConnectWalletFirstToast);
         return null;
       }
-      await BackendApiService().loadAuthToken();
-      final storage = const FlutterSecureStorage();
-      final token = await storage.read(key: 'jwt_token');
-      if (token == null || token.isEmpty) {
-        await BackendApiService().registerWallet(
-          walletAddress: walletAddress,
-          username:
-              'user_${walletAddress.substring(0, math.min(8, walletAddress.length))}',
-        );
+      final api = BackendApiService();
+      await api.restoreExistingSession(allowRefresh: false);
+      final currentAuthWallet = (api.getCurrentAuthWalletAddress() ?? '').trim();
+      final hasMatchingSession = (api.getAuthToken() ?? '').trim().isNotEmpty &&
+          WalletUtils.equals(currentAuthWallet, walletAddress);
+      if (!hasMatchingSession) {
+        final walletProvider = ctx.read<WalletProvider?>();
+        final signerReady = walletProvider != null &&
+            walletProvider.canTransact &&
+            WalletUtils.equals(
+              walletProvider.currentWalletAddress,
+              walletAddress,
+            );
+        if (!signerReady ||
+            !await walletProvider.ensureBackendSessionForActiveSigner(
+              walletAddress: walletAddress,
+            )) {
+          throw StateError(
+            'A ready signer is required to authenticate posting.',
+          );
+        }
       }
       return walletAddress;
     } catch (e) {

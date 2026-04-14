@@ -239,7 +239,7 @@ void main() {
     );
   });
 
-  test('issueTokenForWallet retries on standby when primary returns 503',
+  test('issueDebugTokenForWallet retries on standby when primary returns 503',
       () async {
     final api = BackendApiService();
     final requestHosts = <String>[];
@@ -279,7 +279,7 @@ void main() {
       }),
     );
 
-    final success = await api.issueTokenForWallet(
+    final success = await api.issueDebugTokenForWallet(
       'WalletTest111111111111111111111111111111111',
     );
 

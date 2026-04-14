@@ -358,10 +358,6 @@ void main() {
       throwsA(isA<Exception>()),
     );
     await expectLater(
-      web3Provider.voteOnProposal('proposal-1', true),
-      throwsA(isA<Exception>()),
-    );
-    await expectLater(
       web3Provider.mintArtworkNFT(const <String, dynamic>{
         'name': 'Read-only mint',
       }),

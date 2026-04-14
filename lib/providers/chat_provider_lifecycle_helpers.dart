@@ -369,10 +369,10 @@ Future<void> _chatProviderSetCurrentWallet(
     try {
       var ok = await provider._socket
           .connectAndSubscribe(provider._api.baseUrl, provider._currentWallet!);
-      if (!ok) {
+      if (!ok && AppConfig.enableDebugIssueToken) {
         try {
-          final issued =
-              await provider._api.issueTokenForWallet(provider._currentWallet!);
+          final issued = await provider._api
+              .issueDebugTokenForWallet(provider._currentWallet!);
           if (issued) {
             await provider._api.loadAuthToken();
             ok = await provider._socket.connectAndSubscribe(

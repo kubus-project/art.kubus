@@ -238,7 +238,7 @@ Future<Map<String, dynamic>> _backendApiUploadConversationAvatarImpl(
 }) async {
   try {
     var uri = Uri.parse(
-        '${service.baseUrl}/api/conversations/$conversationId/avatar');
+        '${service.baseUrl}/api/messages/$conversationId/avatar');
     var uploadBytes = Uint8List.fromList(bytes);
     var uploadFileName = filename;
     var uploadContentType = contentType;

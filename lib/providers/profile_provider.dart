@@ -683,7 +683,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
         debugPrint(
             'ProfileProvider: Profile not found on backend, auto-registering via auth: $e');
-        // Profile doesn't exist — ask auth/register to create user+profile and return token
+        // Profile doesn't exist; ask auth/register to bootstrap the wallet-root
+        // user/profile. Signer-backed session issuance is separate.
         try {
           final reg = await _apiService.registerWallet(
             walletAddress: walletAddress,
@@ -1162,7 +1163,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
     // Compute effective username once and use it for both username and displayName
     final effectiveUsername = username ?? _generateUsername(walletAddress);
     // Instead of saving profile client-side, call server auth/register so server
-    // creates user+profile and returns a JWT. Backend will handle username/avatar defaults.
+    // creates the wallet-root user/profile. Backend handles username/avatar
+    // defaults; signer-backed sessions are issued by wallet challenge login.
     final reg = await _apiService.registerWallet(
         walletAddress: walletAddress, username: effectiveUsername);
     final result = reg['success'] == true || reg['message'] != null;

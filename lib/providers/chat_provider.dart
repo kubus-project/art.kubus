@@ -779,7 +779,8 @@ class ChatProvider extends ChangeNotifier {
                 'ChatProvider: connectAndSubscribe failed, attempting token issuance and retry');
             try {
               if (AppConfig.enableDebugIssueToken) {
-                final issued = await _api.issueTokenForWallet(_currentWallet!);
+                final issued =
+                    await _api.issueDebugTokenForWallet(_currentWallet!);
                 if (issued) {
                   await _api.loadAuthToken();
                   ok = await _socket.connectAndSubscribe(
@@ -1402,20 +1403,13 @@ class ChatProvider extends ChangeNotifier {
       resp = await _api.fetchMessages(conversationId);
     } catch (e) {
       debugPrint(
-          'ChatProvider: fetchMessages failed, attempting token refresh and retry: $e');
-      // If we have a wallet, try to issue token and retry once
+          'ChatProvider: fetchMessages failed, attempting session restore and retry: $e');
       try {
-        if (_currentWallet != null && _currentWallet!.isNotEmpty) {
-          final issued = await _api.issueTokenForWallet(_currentWallet!);
-          if (issued) {
-            await _api.loadAuthToken();
-            resp = await _api.fetchMessages(conversationId);
-          } else {
-            rethrow;
-          }
-        } else {
+        final restored = await _api.restoreExistingSession();
+        if (!restored) {
           rethrow;
         }
+        resp = await _api.fetchMessages(conversationId);
       } catch (e2) {
         debugPrint('ChatProvider: Second attempt to fetchMessages failed: $e2');
         rethrow;
@@ -1586,8 +1580,10 @@ class ChatProvider extends ChangeNotifier {
             }
           }
 
-          if (_currentWallet != null && _currentWallet!.isNotEmpty) {
-            final issued = await _api.issueTokenForWallet(_currentWallet!);
+          if (AppConfig.enableDebugIssueToken &&
+              _currentWallet != null &&
+              _currentWallet!.isNotEmpty) {
+            final issued = await _api.issueDebugTokenForWallet(_currentWallet!);
             if (issued) {
               try {
                 await _api.loadAuthToken();
@@ -1731,8 +1727,10 @@ class ChatProvider extends ChangeNotifier {
           }
         }
 
-        if (_currentWallet != null && _currentWallet!.isNotEmpty) {
-          final issued = await _api.issueTokenForWallet(_currentWallet!);
+        if (AppConfig.enableDebugIssueToken &&
+            _currentWallet != null &&
+            _currentWallet!.isNotEmpty) {
+          final issued = await _api.issueDebugTokenForWallet(_currentWallet!);
           if (issued) {
             try {
               await _api.loadAuthToken();

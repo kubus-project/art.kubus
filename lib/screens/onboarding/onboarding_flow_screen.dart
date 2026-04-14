@@ -1737,7 +1737,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         );
       }
 
-      await BackendApiService().refreshAuthTokenFromStorage();
+      await BackendApiService().restoreExistingSession(allowRefresh: false);
       await _syncWalletSessionIntoProviders();
       await _syncWalletBackupRequirement();
       try {
@@ -1985,7 +1985,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       final api = BackendApiService();
       _clearPendingEmailVerificationState();
       await _persistLocalDrafts();
-      await api.refreshAuthTokenFromStorage();
+      await api.restoreExistingSession(allowRefresh: false);
       await _syncWalletSessionIntoProviders();
       _refreshAuthDerivedSteps();
 

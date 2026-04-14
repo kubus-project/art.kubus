@@ -264,12 +264,11 @@ class _AppInitializerState extends State<AppInitializer> {
       bool hasValidSession = sessionStatus == StoredSessionStatus.valid;
       if (sessionStatus == StoredSessionStatus.refreshRequired) {
         try {
-          final refreshed =
-              await BackendApiService().refreshAuthTokenFromStorage();
-          hasValidSession = refreshed;
+          hasValidSession =
+              await BackendApiService().restoreExistingSession(allowRefresh: false);
         } catch (e) {
           AppConfig.debugPrint(
-              'AppInitializer: refreshAuthTokenFromStorage failed: $e');
+              'AppInitializer: restoreExistingSession failed: $e');
         }
       }
       if (hasValidSession &&

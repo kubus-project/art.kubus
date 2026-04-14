@@ -35,6 +35,12 @@ import 'telemetry/kubus_client_context.dart';
 
 part 'backend_api_service_auth_helpers.dart';
 part 'backend_api_service_auth_account_helpers.dart';
+part 'backend_api_service_auth_transport.dart';
+part 'backend_api_service_recovery_transport.dart';
+part 'backend_api_service_public_object_transport.dart';
+part 'backend_api_service_signed_action_transport.dart';
+part 'backend_api_service_dao_transport.dart';
+part 'backend_api_service_collectibles_attestations_transport.dart';
 part 'backend_api_service_messages.dart';
 part 'backend_api_service_profile_helpers.dart';
 part 'backend_api_service_parsers.dart';
@@ -233,7 +239,6 @@ class BackendApiService
   final PublicActionOutboxService _publicActionOutboxService =
       PublicActionOutboxService();
   String? _authToken;
-  String? _refreshToken;
   String? _authWalletCanonical;
   String? _preferredWalletCanonical;
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
@@ -404,6 +409,7 @@ class BackendApiService
   @visibleForTesting
   void setAuthTokenForTesting(String? token) {
     _authToken = token;
+    _authWalletCanonical = _tryExtractWalletFromToken(token);
   }
 
   void _debugLogThrottled(
@@ -499,8 +505,10 @@ class BackendApiService
     return 'Rate limit exceeded. Please retry in ~$human.';
   }
 
-  /// Ensure auth token is loaded. If token missing and wallet provided,
-  /// attempt a token issuance for that wallet and persist it.
+  /// Ensure an existing backend account session is loaded.
+  ///
+  /// This restores JWT state only. It does not create/register an account and
+  /// never implies local or external signer restoration.
   Future<void> ensureAuthLoaded({String? walletAddress}) async {
     // Fast path when token already present
     if ((_authToken ?? '').isNotEmpty) {
@@ -513,88 +521,32 @@ class BackendApiService
         return;
       }
     }
-    // Run initialization (allowed to retry when token still missing)
-    _authInitFuture = _doAuthInit(walletAddress, forceWalletIssuance: true);
+    // Run initialization (allowed to retry when token still missing).
+    // Deliberately session-only: signer-backed login is handled by
+    // ensureSessionForActiveSigner in the auth transport part.
+    _authInitFuture = _doAuthInit(walletAddress);
     await _authInitFuture;
   }
 
-  Future<void> _doAuthInit(String? walletAddress,
-      {bool forceWalletIssuance = false}) async {
+  Future<void> _doAuthInit(String? walletAddress) async {
     try {
       await loadAuthToken();
-      final hasToken = (_authToken ?? '').isNotEmpty;
-      final shouldIssueForWallet = (!hasToken) &&
-          (forceWalletIssuance ||
-              (walletAddress != null && walletAddress.isNotEmpty));
-      if (shouldIssueForWallet &&
-          walletAddress != null &&
-          walletAddress.isNotEmpty) {
-        // Prefer the real auth flow.
-        // NOTE: /api/profiles/issue-token is API key/admin gated and should
-        // not be used for client auto-auth in production.
-        try {
-          await registerWallet(
-            walletAddress: walletAddress,
-            username:
-                'user_${walletAddress.substring(0, walletAddress.length >= 8 ? 8 : walletAddress.length)}',
-          );
-          await loadAuthToken();
-        } catch (e) {
-          if (kDebugMode) {
-            AppConfig.debugPrint(
-                'BackendApiService._doAuthInit: registerWallet failed: $e');
-          }
-        }
-      }
     } finally {
       _authInitFuture = null;
     }
   }
 
-  /// Ensure we have token loaded; if missing, attempt to issue using a stored wallet.
+  /// Ensure stored session state is loaded.
+  ///
+  /// This intentionally does not issue or register a token for a stored wallet.
+  /// Wallet-root account bootstrap is explicit, and signer-backed login must
+  /// go through the challenge/sign/login flow.
   Future<void> _ensureAuthWithStoredWallet() async {
     // If token already loaded, nothing to do
     if ((_authToken ?? '').isNotEmpty) return;
     // Try to load token from storage
     await loadAuthToken();
     if ((_authToken ?? '').isNotEmpty) return;
-    // Try refresh token before attempting wallet issuance
-    final refreshed = await refreshAuthTokenFromStorage();
-    if (refreshed) return;
-    // No token: check for stored wallet and try issuance
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      if (!AuthGatingService.hasLocalAccountSync(prefs: prefs)) {
-        return;
-      }
-      final storedWallet = prefs.getString('wallet_address') ??
-          prefs.getString('wallet') ??
-          prefs.getString('walletAddress') ??
-          prefs.getString('user_id');
-      if (storedWallet != null && storedWallet.isNotEmpty) {
-        _preferredWalletCanonical = WalletUtils.canonical(storedWallet);
-        // Attempt to obtain a real JWT for the wallet.
-        // This is idempotent server-side (returns token for existing users too).
-        try {
-          await registerWallet(
-            walletAddress: storedWallet,
-            username:
-                'user_${storedWallet.substring(0, storedWallet.length >= 8 ? 8 : storedWallet.length)}',
-          );
-          await loadAuthToken();
-        } catch (e) {
-          if (kDebugMode) {
-            AppConfig.debugPrint(
-                'BackendApiService: registerWallet failed for stored wallet: $e');
-          }
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        AppConfig.debugPrint(
-            'BackendApiService: _ensureAuthWithStoredWallet failed: $e');
-      }
-    }
   }
 
   Future<void> _ensureAuthBeforeRequest({String? walletAddress}) async {
@@ -641,35 +593,16 @@ class BackendApiService
           'BackendApiService: auth token wallet mismatch, re-issuing token',
           throttle: const Duration(seconds: 15),
         );
-        // Clear existing token before requesting a token for the desired wallet.
+        // Clear the mismatched account token. Re-authentication must be
+        // performed explicitly through wallet signature or linked auth.
         await clearAuth();
-        try {
-          await registerWallet(
-            walletAddress: walletAddress ?? desiredCanonical,
-            username:
-                'user_${(walletAddress ?? desiredCanonical).substring(0, (walletAddress ?? desiredCanonical).length >= 8 ? 8 : (walletAddress ?? desiredCanonical).length)}',
-          );
-          await loadAuthToken();
-        } catch (e) {
-          AppConfig.debugPrint('BackendApiService: token re-issue failed: $e');
-        }
       }
     }
 
     if ((_authToken ?? '').isNotEmpty) return;
     await _ensureAuthWithStoredWallet();
     if ((_authToken ?? '').isNotEmpty) return;
-    // Only attempt issuance for the desired wallet (which is either the
-    // preferred wallet or, on cold start, an explicitly requested wallet).
-    final desiredRaw = desiredCanonical;
-    if (desiredRaw.isNotEmpty) {
-      try {
-        await ensureAuthLoaded(walletAddress: desiredRaw);
-      } catch (e) {
-        AppConfig.debugPrint(
-            'BackendApiService: ensureAuthLoaded for $desiredRaw failed: $e');
-      }
-    }
+    await ensureAuthLoaded(walletAddress: desiredCanonical);
   }
 
   /// Set authentication token for API requests
@@ -703,7 +636,6 @@ class BackendApiService
   Future<void> setRefreshToken(String token) async {
     final trimmed = token.trim();
     if (trimmed.isEmpty) return;
-    _refreshToken = trimmed;
     try {
       await _secureStorage
           .write(key: 'refresh_token', value: trimmed)
@@ -745,39 +677,17 @@ class BackendApiService
     }
 
     if (refreshToken != null && refreshToken.trim().isNotEmpty) {
-      _refreshToken = refreshToken.trim();
     }
   }
 
   Future<bool> refreshAuthTokenFromStorage() async {
+    // The backend does not expose /api/auth/refresh. Keep this compatibility
+    // shim non-transport so older call sites cannot accidentally depend on a
+    // missing route or infer signer restoration from stored session state.
     await _loadRefreshTokenFromStorage();
-    final refreshToken = (_refreshToken ?? '').trim();
-    if (refreshToken.isEmpty) return false;
-
-    try {
-      const path = '/api/auth/refresh';
-      final response = await _sendAuthRequestWithFailover(
-        'POST',
-        path,
-        includeAuth: false,
-        headers: _getHeaders(includeAuth: false),
-        body: jsonEncode({'refreshToken': refreshToken}),
-      );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        await _persistTokenFromResponse(data);
-        return (_authToken ?? '').isNotEmpty;
-      }
-
-      if (response.statusCode == 401 || response.statusCode == 403) {
-        await clearAuth();
-      }
-    } catch (e) {
-      AppConfig.debugPrint(
-          'BackendApiService: refreshAuthTokenFromStorage failed: $e');
-    }
-
+    AppConfig.debugPrint(
+      'BackendApiService.refreshAuthTokenFromStorage: refresh transport is not configured',
+    );
     return false;
   }
 
@@ -854,7 +764,6 @@ class BackendApiService
   /// Clear authentication
   Future<void> clearAuth() async {
     _authToken = null;
-    _refreshToken = null;
     _authWalletCanonical = null;
     _authCoordinator?.reset();
     try {
@@ -907,7 +816,7 @@ class BackendApiService
         return false;
       }
 
-      return await refreshAuthTokenFromStorage();
+      return false;
     } catch (e) {
       AppConfig.debugPrint(
         'BackendApiService.restoreExistingSession failed: $e',
@@ -2230,20 +2139,21 @@ class BackendApiService
     });
   }
 
-  /// Register a wallet-based user via auth endpoint
+  /// Bootstrap a wallet-root user/profile via auth endpoint.
+  ///
+  /// This does not prove signer authority and does not persist the returned
+  /// bootstrap token as the app session. Use ensureSessionForActiveSigner for
+  /// challenge/sign/login when a signer is available.
   /// POST /api/auth/register { walletAddress, username? }
-  /// On success stores returned JWT token for subsequent authenticated calls.
   @override
   Future<Map<String, dynamic>> registerWallet({
     required String walletAddress,
     String? username,
-    bool recordSignInMethod = false,
   }) =>
       _backendApiRegisterWallet(
         this,
         walletAddress: walletAddress,
         username: username,
-        recordSignInMethod: recordSignInMethod,
       );
 
   /// Login with wallet signature
@@ -2585,44 +2495,6 @@ class BackendApiService
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getMyProfile failed: $e');
       return {'success': false, 'error': e.toString()};
-    }
-  }
-
-  /// Issue a short-lived backend token for a wallet (used for socket auth)
-  /// POST /api/profiles/issue-token { walletAddress }
-  Future<bool> issueTokenForWallet(String walletAddress) async {
-    try {
-      final resp = await _post(
-        Uri.parse('$baseUrl/api/profiles/issue-token'),
-        includeAuth: false,
-        headers: _getHeaders(includeAuth: false),
-        body: jsonEncode({'walletAddress': walletAddress}),
-      );
-      AppConfig.debugPrint(
-          'BackendApiService.issueTokenForWallet: status=${resp.statusCode}');
-      AppConfig.debugPrint(
-          'BackendApiService.issueTokenForWallet: bodyLen=${resp.body.length}');
-      if (resp.statusCode == 200 || resp.statusCode == 201) {
-        final body = jsonDecode(resp.body) as Map<String, dynamic>;
-        final token =
-            body['token'] as String? ?? body['data']?['token'] as String?;
-        AppConfig.debugPrint(
-            'BackendApiService.issueTokenForWallet: tokenPresent=${token != null && token.isNotEmpty}');
-        if (token != null && token.isNotEmpty) {
-          await setAuthToken(token);
-          try {
-            await _secureStorage.write(key: 'jwt_token', value: token);
-          } catch (e) {
-            AppConfig.debugPrint(
-                'BackendApiService.issueTokenForWallet: failed to persist token: $e');
-          }
-          return true;
-        }
-      }
-      return false;
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.issueTokenForWallet failed: $e');
-      return false;
     }
   }
 
@@ -6518,228 +6390,6 @@ class BackendApiService
     }
   }
 
-  // ==================== NFT Endpoints ====================
-
-  /// Create an NFT series
-  /// POST /api/nfts/series
-  Future<Map<String, dynamic>> createNFTSeries({
-    required String artworkId,
-    required String name,
-    required String description,
-    required int totalSupply,
-    required String rarity,
-    required String type,
-    required double mintPrice,
-    String? imageUrl,
-    String? animationUrl,
-    Map<String, dynamic>? metadata,
-    bool requiresARInteraction = false,
-    double? royaltyPercentage,
-  }) async {
-    try {
-      final response = await _post(
-        Uri.parse('$baseUrl/api/nfts/series'),
-        headers: _getHeaders(),
-        body: jsonEncode({
-          'artworkId': artworkId,
-          'name': name,
-          'description': description,
-          'totalSupply': totalSupply,
-          'rarity': rarity,
-          'type': type,
-          'mintPrice': mintPrice,
-          if (imageUrl != null) 'imageUrl': imageUrl,
-          if (animationUrl != null) 'animationUrl': animationUrl,
-          if (metadata != null) 'metadata': metadata,
-          'requiresARInteraction': requiresARInteraction,
-          if (royaltyPercentage != null) 'royaltyPercentage': royaltyPercentage,
-        }),
-      );
-
-      if (response.statusCode == 201) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
-      } else {
-        throw Exception(
-            'Failed to create NFT series: ${response.statusCode} ${response.body}');
-      }
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.createNFTSeries failed: $e');
-      rethrow;
-    }
-  }
-
-  /// Mint an NFT from a series
-  /// POST /api/nfts/mint
-  Future<Map<String, dynamic>> mintNFT({
-    required String seriesId,
-    required String transactionHash,
-    Map<String, dynamic>? properties,
-  }) async {
-    try {
-      final response = await _post(
-        Uri.parse('$baseUrl/api/nfts/mint'),
-        headers: _getHeaders(),
-        body: jsonEncode({
-          'seriesId': seriesId,
-          'transactionHash': transactionHash,
-          if (properties != null) 'properties': properties,
-        }),
-      );
-
-      if (response.statusCode == 201) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
-      } else {
-        throw Exception(
-            'Failed to mint NFT: ${response.statusCode} ${response.body}');
-      }
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.mintNFT failed: $e');
-      rethrow;
-    }
-  }
-
-  /// Get NFT series by artwork ID
-  /// GET /api/nfts/series/artwork/:artworkId
-  Future<Map<String, dynamic>?> getNFTSeriesByArtwork(String artworkId) async {
-    try {
-      final response = await _get(
-        Uri.parse('$baseUrl/api/nfts/series/artwork/$artworkId'),
-        headers: _getHeaders(),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return data['series'] as Map<String, dynamic>?;
-      } else if (response.statusCode == 404) {
-        return null;
-      } else {
-        throw Exception('Failed to get NFT series: ${response.statusCode}');
-      }
-    } catch (e) {
-      AppConfig.debugPrint(
-          'BackendApiService.getNFTSeriesByArtwork failed: $e');
-      return null;
-    }
-  }
-
-  /// Get user's minted NFTs
-  /// GET /api/nfts/user/:userId
-  Future<List<Map<String, dynamic>>> getUserNFTs({
-    required String userId,
-    int page = 1,
-    int limit = 50,
-  }) async {
-    try {
-      final queryParams = <String, String>{
-        'page': page.toString(),
-        'limit': limit.toString(),
-      };
-
-      final uri = Uri.parse('$baseUrl/api/nfts/user/$userId')
-          .replace(queryParameters: queryParams);
-      final response = await _get(uri, headers: _getHeaders());
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return (data['nfts'] as List<dynamic>)
-            .map((json) => json as Map<String, dynamic>)
-            .toList();
-      } else {
-        throw Exception('Failed to get user NFTs: ${response.statusCode}');
-      }
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.getUserNFTs failed: $e');
-      rethrow;
-    }
-  }
-
-  /// List NFT for sale
-  /// POST /api/nfts/:id/list
-  Future<void> listNFT({
-    required String nftId,
-    required double price,
-  }) async {
-    try {
-      final response = await _post(
-        Uri.parse('$baseUrl/api/nfts/$nftId/list'),
-        headers: _getHeaders(),
-        body: jsonEncode({
-          'price': price,
-        }),
-      );
-
-      if (response.statusCode != 200 && response.statusCode != 201) {
-        throw Exception('Failed to list NFT: ${response.statusCode}');
-      }
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.listNFT failed: $e');
-      rethrow;
-    }
-  }
-
-  /// Buy an NFT
-  /// POST /api/nfts/:id/buy
-  Future<Map<String, dynamic>> buyNFT({
-    required String nftId,
-    required String transactionHash,
-  }) async {
-    try {
-      final response = await _post(
-        Uri.parse('$baseUrl/api/nfts/$nftId/buy'),
-        headers: _getHeaders(),
-        body: jsonEncode({
-          'transactionHash': transactionHash,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
-      } else {
-        throw Exception(
-            'Failed to buy NFT: ${response.statusCode} ${response.body}');
-      }
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.buyNFT failed: $e');
-      rethrow;
-    }
-  }
-
-  /// Get listed NFTs (marketplace)
-  /// GET /api/nfts/marketplace
-  Future<List<Map<String, dynamic>>> getMarketplaceNFTs({
-    int page = 1,
-    int limit = 20,
-    String? rarity,
-    String? type,
-  }) async {
-    try {
-      final queryParams = <String, String>{
-        'page': page.toString(),
-        'limit': limit.toString(),
-      };
-
-      if (rarity != null) queryParams['rarity'] = rarity;
-      if (type != null) queryParams['type'] = type;
-
-      final uri = Uri.parse('$baseUrl/api/nfts/marketplace')
-          .replace(queryParameters: queryParams);
-      final response = await _get(uri, headers: _getHeaders());
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return (data['nfts'] as List<dynamic>)
-            .map((json) => json as Map<String, dynamic>)
-            .toList();
-      } else {
-        throw Exception(
-            'Failed to get marketplace NFTs: ${response.statusCode}');
-      }
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.getMarketplaceNFTs failed: $e');
-      rethrow;
-    }
-  }
-
   // ==================== Achievement Endpoints ====================
 
   /// Get user achievements
@@ -8265,29 +7915,6 @@ class BackendApiService
 
   // ==================== Health Check ====================
 
-  /// Send telemetry/analytics event to backend
-  /// POST /api/telemetry (best-effort; backend may ignore)
-  Future<void> sendTelemetryEvent(
-      String eventName, Map<String, dynamic>? params) async {
-    try {
-      final uri = Uri.parse('$baseUrl/api/telemetry');
-      final body = jsonEncode({'event': eventName, 'params': params ?? {}});
-      final response = await _post(
-        uri,
-        includeAuth: false,
-        headers: _getHeaders(includeAuth: false),
-        body: body,
-        isIdempotent: true,
-      );
-      if (response.statusCode >= 200 && response.statusCode < 300) return;
-      // Non-fatal: ignore telemetry failures
-      AppConfig.debugPrint(
-          'BackendApiService.sendTelemetryEvent: status ${response.statusCode}');
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.sendTelemetryEvent failed: $e');
-    }
-  }
-
   /// Ingest app client telemetry in batches (best-effort; non-blocking).
   ///
   /// POST /api/analytics/app
@@ -8913,13 +8540,13 @@ class BackendApiService
   // ==================== Message Reactions ====================
 
   /// Add a reaction to a message
-  /// POST /api/conversations/:conversationId/messages/:messageId/reactions
+  /// POST /api/messages/:conversationId/messages/:messageId/reactions
   Future<void> addMessageReaction(
       String conversationId, String messageId, String emoji) async {
     try {
       final response = await _post(
         Uri.parse(
-            '$baseUrl/api/conversations/$conversationId/messages/$messageId/reactions'),
+            '$baseUrl/api/messages/$conversationId/messages/$messageId/reactions'),
         headers: _getHeaders(),
         isIdempotent: true,
         body: jsonEncode({'emoji': emoji}),
@@ -8935,13 +8562,13 @@ class BackendApiService
   }
 
   /// Remove a reaction from a message
-  /// DELETE /api/conversations/:conversationId/messages/:messageId/reactions
+  /// DELETE /api/messages/:conversationId/messages/:messageId/reactions
   Future<void> removeMessageReaction(
       String conversationId, String messageId, String emoji) async {
     try {
       final response = await _delete(
         Uri.parse(
-            '$baseUrl/api/conversations/$conversationId/messages/$messageId/reactions'),
+            '$baseUrl/api/messages/$conversationId/messages/$messageId/reactions'),
         headers: _getHeaders(),
         body: jsonEncode({'emoji': emoji}),
         isIdempotent: true,

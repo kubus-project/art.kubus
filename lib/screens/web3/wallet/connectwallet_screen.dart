@@ -61,7 +61,6 @@ class _ConnectWalletState extends State<ConnectWallet>
   final TextEditingController _mnemonicController = TextEditingController();
 
   bool _isLoading = false;
-  Map<String, dynamic>? _authEntryPayload;
   late int
       _currentStep; // 0: Choose option, 1: Connect existing (mnemonic), 2: Create new (generate mnemonic), 3: WalletConnect
   final TextEditingController _wcUriController = TextEditingController();
@@ -212,17 +211,7 @@ class _ConnectWalletState extends State<ConnectWallet>
 
   bool get _isAuthEntryFlow => _normalizedAuthFlow() != null;
 
-  String _fallbackWalletUsername(String address) {
-    final prefix = address.length >= 6 ? address.substring(0, 6) : address;
-    return 'user_$prefix';
-  }
 
-  String? _normalizedProfileUsername(ProfileProvider profileProvider) {
-    final raw = (profileProvider.currentUser?.username ?? '').trim();
-    if (raw.isEmpty) return null;
-    final normalized = raw.replaceFirst(RegExp(r'^@+'), '').trim();
-    return normalized.isEmpty ? null : normalized;
-  }
 
   void _emitProfileUpdate(ProfileProvider profileProvider) {
     final currentUser = profileProvider.currentUser;
@@ -251,6 +240,7 @@ class _ConnectWalletState extends State<ConnectWallet>
   Future<void> _ensureWalletAccountAndProfile({
     required String address,
     required ProfileProvider profileProvider,
+    WalletProvider? walletProvider,
   }) async {
     final backendApiService = BackendApiService();
 
@@ -300,17 +290,18 @@ class _ConnectWalletState extends State<ConnectWallet>
         !hasAuthToken || currentAuthWallet != address.trim().toLowerCase();
 
     if (needsWalletAuth) {
-      final username = _normalizedProfileUsername(profileProvider) ??
-          _fallbackWalletUsername(address);
-      final reg = await backendApiService.registerWallet(
-        walletAddress: address,
-        username: username,
-        recordSignInMethod: _isAuthEntryFlow,
-      );
-      if (_isAuthEntryFlow) {
-        _authEntryPayload = reg;
+      final signerReady = walletProvider != null &&
+          walletProvider.canTransact &&
+          WalletUtils.equals(walletProvider.currentWalletAddress, address);
+      if (signerReady) {
+        await backendApiService.ensureSessionForActiveSigner(
+          walletAddress: address,
+          signMessage: walletProvider.signMessage,
+        );
+      } else {
+        debugPrint(
+            'connectwallet: signer unavailable; leaving backend auth unchanged for $address');
       }
-      debugPrint('connectwallet: registerWallet response: $reg');
     }
 
     try {
@@ -950,7 +941,7 @@ class _ConnectWalletState extends State<ConnectWallet>
         ),
         const SizedBox(height: KubusSpacing.md),
         KubusButton(
-          onPressed: () => _closeFlow(_authEntryPayload),
+          onPressed: () => _closeFlow(),
           label: l10n.connectWalletConnectedStartExploringButton,
           isFullWidth: true,
         ),
@@ -1528,6 +1519,7 @@ class _ConnectWalletState extends State<ConnectWallet>
         await _ensureWalletAccountAndProfile(
           address: address,
           profileProvider: profileProvider,
+          walletProvider: walletProvider,
         );
 
         if (!mounted) return;
@@ -1567,7 +1559,7 @@ class _ConnectWalletState extends State<ConnectWallet>
           );
         }
         _trackWalletAuthSuccess();
-        _closeFlow(_authEntryPayload);
+        _closeFlow();
       }
     } catch (e) {
       debugPrint('connectwallet: import wallet failed: $e');
@@ -2244,6 +2236,7 @@ class _ConnectWalletState extends State<ConnectWallet>
           await _ensureWalletAccountAndProfile(
             address: address,
             profileProvider: profileProvider,
+            walletProvider: walletProvider,
           );
         } catch (e, st) {
           debugPrint(
@@ -2285,7 +2278,7 @@ class _ConnectWalletState extends State<ConnectWallet>
         );
       }
       _trackWalletAuthSuccess();
-      _closeFlow(_authEntryPayload);
+      _closeFlow();
     } catch (e) {
       debugPrint('connectwallet: external wallet failed: $e');
       _trackWalletAuthFailure('walletconnect_failed');
@@ -2363,6 +2356,7 @@ class _ConnectWalletState extends State<ConnectWallet>
           await _ensureWalletAccountAndProfile(
             address: address,
             profileProvider: profileProvider,
+            walletProvider: walletProvider,
           );
         }
 
@@ -2393,7 +2387,7 @@ class _ConnectWalletState extends State<ConnectWallet>
             );
           }
           _trackWalletAuthSuccess();
-          _closeFlow(_authEntryPayload);
+          _closeFlow();
         }
       }
     } catch (e) {
@@ -2475,7 +2469,7 @@ class _ConnectWalletState extends State<ConnectWallet>
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => _closeFlow(_authEntryPayload),
+                onPressed: () => _closeFlow(),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(0xFF10B981),
                   padding: EdgeInsets.symmetric(
