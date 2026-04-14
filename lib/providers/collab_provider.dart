@@ -49,14 +49,14 @@ class CollabProvider extends ChangeNotifier {
   bool _readyToNotifyNewInvites = false;
   DateTime? _lastInviteSyncAt;
   DateTime? _lastInviteSocketEventAt;
-  final Random _invitePollJitter = Random();
+    final int _invitePollJitterSeconds = Random().nextInt(12);
 
-  static const Duration _inviteSocketStaleAfter = Duration(minutes: 5);
-  static const Duration _inviteSyncStaleAfter = Duration(minutes: 8);
-  static const Duration _inviteForegroundActiveInterval =
-      Duration(seconds: 75);
-  static const Duration _inviteForegroundPassiveInterval =
-      Duration(seconds: 150);
+    static const Duration _inviteSocketStaleAfter = Duration(minutes: 8);
+    static const Duration _inviteSyncStaleAfter = Duration(minutes: 12);
+    static const Duration _inviteForegroundActiveInterval =
+      Duration(seconds: 90);
+    static const Duration _inviteForegroundPassiveInterval =
+      Duration(seconds: 210);
 
   DateTime? _inviteBackoffUntil;
   Duration _inviteBackoff = Duration.zero;
@@ -120,7 +120,7 @@ class CollabProvider extends ChangeNotifier {
         _lastProfileVersion = nextProfile;
 
         if (changed) {
-          if (_isCollabSurfaceActive || _socketHealthyForInviteFeed()) {
+          if (_isCollabSurfaceActive || !_socketHealthyForInviteFeed()) {
             unawaited(
               refreshInvites(showLoadingIndicator: false, notifyOnNew: false),
             );
@@ -340,7 +340,7 @@ class CollabProvider extends ChangeNotifier {
     final base = _isCollabSurfaceActive
         ? _inviteForegroundActiveInterval
         : _inviteForegroundPassiveInterval;
-    final jitter = Duration(seconds: _invitePollJitter.nextInt(12));
+    final jitter = Duration(seconds: _invitePollJitterSeconds);
     return base + jitter;
   }
 
@@ -393,14 +393,19 @@ class CollabProvider extends ChangeNotifier {
   }
 
   Future<void> onAppResumed() async {
-    await refreshInvites(showLoadingIndicator: false, notifyOnNew: false);
+    if (_isCollabSurfaceActive || !_socketHealthyForInviteFeed()) {
+      await refreshInvites(showLoadingIndicator: false, notifyOnNew: false);
+    }
     _evaluateInvitePollingState();
   }
 
   void handleAppForegroundChanged(bool isForeground) {
     if (isForeground) {
       _evaluateInvitePollingState();
-      unawaited(refreshInvites(showLoadingIndicator: false, notifyOnNew: false));
+      if (_isCollabSurfaceActive || !_socketHealthyForInviteFeed()) {
+        unawaited(
+            refreshInvites(showLoadingIndicator: false, notifyOnNew: false));
+      }
       return;
     }
     stopInvitePolling();

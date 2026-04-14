@@ -17,9 +17,10 @@ class PresenceProvider extends ChangeNotifier {
   static const Duration _visitDedupeWindow = Duration(minutes: 5);
   static const Duration _cacheMaxAge = Duration(minutes: 10);
   // Keep presence feeling "live" without spamming the backend.
-  static const Duration _baseAutoRefreshInterval = Duration(seconds: 20);
-  static const Duration _heartbeatInterval = Duration(seconds: 30);
-  static const Duration _socketHealthyHeartbeatInterval = Duration(minutes: 3);
+  static const Duration _baseAutoRefreshInterval = Duration(seconds: 24);
+  static const Duration _heartbeatInterval = Duration(seconds: 45);
+  static const Duration _socketHealthyHeartbeatInterval = Duration(minutes: 4);
+  static const int _inactiveSurfaceMinWatchers = 8;
 
   /// Prevent unbounded watched-wallet growth (e.g., scrolling long feeds).
   ///
@@ -354,6 +355,11 @@ class PresenceProvider extends ChangeNotifier {
     if (_watchedWalletsLower.isEmpty) return null;
     if (!_isForeground) return null;
 
+    if (!_isPresenceSurfaceActive &&
+        _watchedWalletsLower.length < _inactiveSurfaceMinWatchers) {
+      return null;
+    }
+
     final watcherCount = _watchedWalletsLower.length;
     Duration interval = _baseAutoRefreshInterval;
     if (watcherCount >= 80) {
@@ -365,8 +371,8 @@ class PresenceProvider extends ChangeNotifier {
     }
 
     if (!_isPresenceSurfaceActive) {
-      final doubled = interval.inSeconds * 2;
-      interval = Duration(seconds: doubled.clamp(35, 120));
+      final tripled = interval.inSeconds * 3;
+      interval = Duration(seconds: tripled.clamp(90, 240));
     }
 
     return interval;
@@ -581,6 +587,11 @@ class PresenceProvider extends ChangeNotifier {
       _autoRefreshTimer?.cancel();
       _autoRefreshTimer = null;
       _autoRefreshIntervalCurrent = null;
+      return;
+    }
+
+    if (_isPresenceSurfaceActive && _watchedWalletsLower.isNotEmpty) {
+      _refreshWatchedWallets();
     }
   }
 

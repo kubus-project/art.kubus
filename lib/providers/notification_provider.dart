@@ -41,8 +41,8 @@ class NotificationProvider extends ChangeNotifier {
   final Duration _minServerSyncInterval = const Duration(seconds: 8);
   final Duration _degradedForegroundCadence = const Duration(seconds: 55);
   final Duration _degradedBackgroundCadence = const Duration(seconds: 150);
-  final Duration _healthySocketCadence = const Duration(seconds: 180);
-  final Duration _subscriptionCheckInterval = const Duration(seconds: 70);
+  final Duration _healthySocketCadence = const Duration(minutes: 5);
+  final Duration _subscriptionCheckInterval = const Duration(minutes: 3);
 
   int _debugCadenceTicks = 0;
   int _debugSyncs = 0;
@@ -294,7 +294,7 @@ class NotificationProvider extends ChangeNotifier {
     if (_currentWallet == null || _currentWallet!.isEmpty) return null;
     if (!_isForeground) return null;
     if (_isSocketHealthyForNotifications()) {
-      return _healthySocketCadence;
+      return _isNotificationsSurfaceActive ? _healthySocketCadence : null;
     }
     final active = _isNotificationsSurfaceActive;
     return active ? _degradedForegroundCadence : _degradedBackgroundCadence;
@@ -322,12 +322,23 @@ class NotificationProvider extends ChangeNotifier {
   void handleAppForegroundChanged(bool isForeground) {
     _ensureCadenceTimer(forceRestart: true);
     if (isForeground) {
-      _scheduleServerSync(force: true);
+      if (_isSocketHealthyForNotifications()) {
+        if (_isNotificationsSurfaceActive) {
+          _scheduleServerSync(force: true);
+        } else {
+          _maybeCheckSubscription();
+        }
+      } else {
+        _scheduleServerSync(force: true);
+      }
     }
   }
 
   void handleViewVisibilityChanged() {
     _ensureCadenceTimer(forceRestart: true);
+    if (_isNotificationsSurfaceActive && !_isSocketHealthyForNotifications()) {
+      _scheduleServerSync();
+    }
   }
 
   void _stopAutoRefreshLoop() {
@@ -341,6 +352,12 @@ class NotificationProvider extends ChangeNotifier {
       return;
     }
     if (!_hasAuthContext) {
+      return;
+    }
+    if (!force &&
+        delay == null &&
+        _isSocketHealthyForNotifications() &&
+        !_isNotificationsSurfaceActive) {
       return;
     }
     if (_refreshInFlight && !force) {
@@ -510,7 +527,11 @@ class NotificationProvider extends ChangeNotifier {
         _hasNew = false;
         notifyListeners();
         unawaited(_persistUnreadCount(0));
-        _scheduleServerSync(delay: const Duration(seconds: 1));
+        _scheduleServerSync(
+          delay: _isSocketHealthyForNotifications() && !_isNotificationsSurfaceActive
+              ? const Duration(seconds: 3)
+              : const Duration(seconds: 1),
+        );
         return;
       }
 
@@ -528,7 +549,11 @@ class NotificationProvider extends ChangeNotifier {
       unawaited(handleIncomingNotification(data));
 
       // Sync with backend
-      _scheduleServerSync(delay: const Duration(milliseconds: 600));
+      _scheduleServerSync(
+        delay: _isSocketHealthyForNotifications() && !_isNotificationsSurfaceActive
+            ? const Duration(seconds: 4)
+            : const Duration(milliseconds: 600),
+      );
     } catch (e) {
       debugPrint('NotificationProvider._handleSocketNotification error: $e');
     }
@@ -576,16 +601,23 @@ class NotificationProvider extends ChangeNotifier {
           final socketHealthy = _isSocketHealthyForNotifications();
 
           if (notificationsChanged) {
-            if (notificationsSurfaceActive || !socketHealthy) {
+            if (notificationsSurfaceActive) {
               refresh(force: true);
-            } else {
+            } else if (!socketHealthy) {
               _scheduleServerSync();
+            } else {
+              _maybeCheckSubscription();
             }
             return;
           }
 
           if (globalChanged && notificationsSurfaceActive) {
             refresh(force: true);
+            return;
+          }
+
+          if (globalChanged && !socketHealthy) {
+            _scheduleServerSync();
           }
         } catch (e) {/* ignore */}
       };

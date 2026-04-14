@@ -100,6 +100,10 @@ class _DesktopShellState extends State<DesktopShell>
   bool _pendingRouteCorrection = false;
   bool _pendingNavCollapse = false;
   bool _pendingProfileHydration = false;
+  bool? _lastCommunityViewActive;
+  bool? _lastChatViewActive;
+  bool? _lastNotificationsViewActive;
+  bool? _lastProfileViewActive;
 
   static final List<DesktopNavItem> _signedInNavItems = [
     DesktopNavItem(
@@ -196,7 +200,7 @@ class _DesktopShellState extends State<DesktopShell>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _syncTelemetry();
-      _syncRefreshVisibility();
+      _syncRefreshVisibility(force: true);
     });
   }
 
@@ -378,7 +382,7 @@ class _DesktopShellState extends State<DesktopShell>
     _syncRefreshVisibility();
   }
 
-  void _syncRefreshVisibility() {
+  void _syncRefreshVisibility({bool force = false}) {
     if (!mounted) return;
     try {
       final refreshProvider = context.read<AppRefreshProvider>();
@@ -393,21 +397,39 @@ class _DesktopShellState extends State<DesktopShell>
       final notificationsOpen =
           _functionsPanel == DesktopFunctionsPanel.notifications;
 
+      final nextCommunityViewActive = isCommunity;
+      final nextChatViewActive = isCommunity;
+      final nextNotificationsViewActive = notificationsOpen || isCommunity;
+      final nextProfileViewActive = isProfileSubscreen;
+
+      if (!force &&
+          _lastCommunityViewActive == nextCommunityViewActive &&
+          _lastChatViewActive == nextChatViewActive &&
+          _lastNotificationsViewActive == nextNotificationsViewActive &&
+          _lastProfileViewActive == nextProfileViewActive) {
+        return;
+      }
+
+      _lastCommunityViewActive = nextCommunityViewActive;
+      _lastChatViewActive = nextChatViewActive;
+      _lastNotificationsViewActive = nextNotificationsViewActive;
+      _lastProfileViewActive = nextProfileViewActive;
+
       refreshProvider.setViewActive(
         AppRefreshProvider.viewCommunity,
-        isCommunity,
+        nextCommunityViewActive,
       );
       refreshProvider.setViewActive(
         AppRefreshProvider.viewChat,
-        isCommunity,
+        nextChatViewActive,
       );
       refreshProvider.setViewActive(
         AppRefreshProvider.viewNotifications,
-        notificationsOpen || isCommunity,
+        nextNotificationsViewActive,
       );
       refreshProvider.setViewActive(
         AppRefreshProvider.viewProfile,
-        isProfileSubscreen,
+        nextProfileViewActive,
       );
 
       chatProvider.handleViewVisibilityChanged();

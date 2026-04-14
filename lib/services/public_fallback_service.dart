@@ -481,15 +481,15 @@ class PublicFallbackService extends ChangeNotifier {
 
     if (_mode == AppRuntimeMode.ipfsFallback) {
       return atLeastConfigured(_isAppForeground
-          ? const Duration(seconds: 25)
-          : const Duration(seconds: 90));
+          ? const Duration(seconds: 40)
+          : const Duration(seconds: 120));
     }
 
     if (_isAppForeground) {
-      return atLeastConfigured(const Duration(seconds: 45));
+      return atLeastConfigured(const Duration(seconds: 75));
     }
 
-    return atLeastConfigured(const Duration(seconds: 180));
+    return atLeastConfigured(const Duration(seconds: 240));
   }
 
   void _startHealthMonitor({bool forceRestart = false}) {
@@ -503,7 +503,9 @@ class PublicFallbackService extends ChangeNotifier {
     _healthTimer?.cancel();
     _healthMonitorInterval = targetInterval;
 
-    final jitterMs = _healthMonitorJitter.nextInt(5000);
+    final maxJitterMs =
+      (targetInterval.inMilliseconds ~/ 5).clamp(2000, 12000);
+    final jitterMs = _healthMonitorJitter.nextInt(maxJitterMs);
     final effectiveInterval =
         targetInterval + Duration(milliseconds: jitterMs);
     _healthTimer = Timer.periodic(effectiveInterval, (_) {
