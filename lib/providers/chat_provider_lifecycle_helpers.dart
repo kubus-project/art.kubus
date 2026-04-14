@@ -1,16 +1,16 @@
 part of 'chat_provider.dart';
 
 const Duration _chatSubscriptionMonitorActiveInterval =
-    Duration(seconds: 45);
+  Duration(seconds: 60);
 const Duration _chatSubscriptionMonitorPassiveInterval =
-    Duration(seconds: 90);
+  Duration(seconds: 150);
 const Duration _chatSubscriptionMonitorHealthyInterval =
     Duration(minutes: 3);
 const Duration _chatSubscriptionMonitorBackgroundInterval =
     Duration(minutes: 4);
 
-const Duration _chatConversationPollActiveInterval = Duration(seconds: 12);
-const Duration _chatConversationPollPassiveInterval = Duration(seconds: 30);
+const Duration _chatConversationPollActiveInterval = Duration(seconds: 18);
+const Duration _chatConversationPollPassiveInterval = Duration(seconds: 45);
 
 bool _chatProviderIsForeground(ChatProvider provider) {
   return provider._boundRefreshProvider?.isAppForeground ?? true;
@@ -262,16 +262,17 @@ void _chatProviderBindToRefresh(
           _chatProviderEvaluatePollingCadence(provider, forceRestart: true);
           return;
         }
+        final shouldRefreshConversations =
+            _chatProviderIsChatSurfaceActive(provider) ||
+                !_chatProviderSocketHealthyForWallet(provider);
         if (appRefresh.chatVersion != provider._lastChatVersion) {
           provider._lastChatVersion = appRefresh.chatVersion;
-          if (appRefresh.isViewActive(AppRefreshProvider.viewChat) ||
-              appRefresh.isAppForeground) {
+          if (shouldRefreshConversations) {
             provider.refreshConversations();
           }
         } else if (appRefresh.globalVersion != provider._lastGlobalVersion) {
           provider._lastGlobalVersion = appRefresh.globalVersion;
-          if (appRefresh.isViewActive(AppRefreshProvider.viewChat) ||
-              appRefresh.isAppForeground) {
+          if (shouldRefreshConversations) {
             provider.refreshConversations();
           }
         }

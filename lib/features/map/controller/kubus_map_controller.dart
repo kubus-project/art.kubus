@@ -838,6 +838,10 @@ class KubusMapController {
       final dx = (hoverPoint.x - _lastHoverPoint!.x).abs();
       final dy = (hoverPoint.y - _lastHoverPoint!.y).abs();
       if (dx < _hoverMovementEpsilonPx && dy < _hoverMovementEpsilonPx) {
+        if (_pendingHoverMarkerId == _hoveredMarkerId) {
+          _hoverUpdateTimer?.cancel();
+          _hoverUpdateTimer = null;
+        }
         return;
       }
     }
@@ -1137,7 +1141,9 @@ class KubusMapController {
     if (!_styleInitialized) return;
 
     final delay = force
-        ? Duration.zero
+      ? (_cameraIsMoving
+        ? const Duration(milliseconds: 100)
+        : const Duration(milliseconds: 16))
         : (_cameraIsMoving
             ? const Duration(milliseconds: 100)
             : const Duration(milliseconds: 66));

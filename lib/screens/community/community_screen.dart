@@ -1106,8 +1106,9 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   @override
   Widget build(BuildContext context) {
-    final hub = context.watch<CommunityHubProvider>();
-    _maybeHandleComposerOpenRequest(hub);
+    final composerOpenNonce =
+        context.select<CommunityHubProvider, int>((hub) => hub.composerOpenNonce);
+    _maybeHandleComposerOpenRequest(composerOpenNonce);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -5449,8 +5450,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     );
   }
 
-  void _maybeHandleComposerOpenRequest(CommunityHubProvider hub) {
-    final nonce = hub.composerOpenNonce;
+  void _maybeHandleComposerOpenRequest(int nonce) {
     if (nonce == 0) return;
     if (nonce == _lastHandledComposerOpenNonce) return;
     _lastHandledComposerOpenNonce = nonce;

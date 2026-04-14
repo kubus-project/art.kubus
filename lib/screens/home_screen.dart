@@ -1230,7 +1230,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return LayoutBuilder(
       builder: (context, constraints) {
         final navigationProvider = Provider.of<NavigationProvider>(context);
-        final profileProvider = context.watch<ProfileProvider>();
+        final persona =
+            context.select<ProfileProvider, UserPersona?>((p) => p.userPersona);
+        final currentUser =
+            context.select<ProfileProvider, UserProfile?>((p) => p.currentUser);
         final l10n = AppLocalizations.of(context)!;
         final theme = Theme.of(context);
         final scheme = theme.colorScheme;
@@ -1239,9 +1242,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
         final frequentScreens =
             navigationProvider.getQuickActionScreens(maxItems: 12);
-        final persona = profileProvider.userPersona;
         final suggestedKeys = _suggestedQuickActionKeys(
-                persona, profileProvider.currentUser)
+          persona, currentUser)
             .where(
                 (key) => NavigationProvider.screenDefinitions.containsKey(key))
             .toList(growable: false);

@@ -112,6 +112,11 @@ class PresenceProvider extends ChangeNotifier {
         _lastChatVersion = nextChat;
 
         if (shouldRefresh) {
+          if (!_isPresenceSurfaceActive) {
+            _ensureAutoRefreshTimer();
+            return;
+          }
+
           // Mark cached entries stale by clearing timestamps, then allow next prefetch to fetch.
           final keys = _cacheByWalletLower.keys.toList(growable: false);
           for (final key in keys) {

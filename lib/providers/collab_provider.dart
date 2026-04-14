@@ -120,7 +120,13 @@ class CollabProvider extends ChangeNotifier {
         _lastProfileVersion = nextProfile;
 
         if (changed) {
-          unawaited(refreshInvites(showLoadingIndicator: false, notifyOnNew: false));
+          if (_isCollabSurfaceActive || _socketHealthyForInviteFeed()) {
+            unawaited(
+              refreshInvites(showLoadingIndicator: false, notifyOnNew: false),
+            );
+          } else {
+            _evaluateInvitePollingState();
+          }
         }
       } catch (e) {
         if (kDebugMode) {

@@ -1011,9 +1011,12 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     final exhibitionsProvider = Provider.of<ExhibitionsProvider>(context);
     final statsProvider = context.watch<StatsProvider>();
     final l10n = AppLocalizations.of(context)!;
-    final walletAddress =
-        (Provider.of<WalletProvider>(context).currentWalletAddress ?? '')
-            .trim();
+    final walletAddress = context
+        .select<WalletProvider, String?>(
+          (provider) => provider.currentWalletAddress,
+        )
+        ?.trim() ??
+        '';
     final publicSnapshot = walletAddress.isEmpty
         ? null
         : statsProvider.getSnapshot(
@@ -1186,12 +1189,14 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
 
   Widget _buildQuickActions() {
     final navigationProvider = Provider.of<NavigationProvider>(context);
-    final profileProvider = context.watch<ProfileProvider>();
+    final persona =
+      context.select<ProfileProvider, UserPersona?>((p) => p.userPersona);
+    final currentUser =
+      context.select<ProfileProvider, UserProfile?>((p) => p.currentUser);
     final l10n = AppLocalizations.of(context)!;
     final quickScreens = navigationProvider.getQuickActionScreens(maxItems: 12);
-    final persona = profileProvider.userPersona;
-    final suggestedKeys = _suggestedQuickActionKeys(
-            persona, profileProvider.currentUser)
+    final suggestedKeys =
+      _suggestedQuickActionKeys(persona, currentUser)
         .where((key) => NavigationProvider.screenDefinitions.containsKey(key))
         .toList(growable: false);
 

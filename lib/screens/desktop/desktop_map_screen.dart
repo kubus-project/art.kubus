@@ -2087,15 +2087,17 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   Widget _buildArtworkDetailPanel(
       ThemeProvider themeProvider, AppAnimationTheme animationTheme) {
-    final artworkProvider = context.watch<ArtworkProvider>();
     // Guard against null to prevent race condition between check and access.
     final selectedArtwork = _selectedArtwork;
     if (selectedArtwork == null) {
       return const SizedBox.shrink();
     }
+    final hydratedArtwork = context.select<ArtworkProvider, Artwork?>(
+      (provider) => provider.getArtworkById(selectedArtwork.id),
+    );
     // Get the latest artwork from provider to ensure like/save states are updated
-    final artwork =
-        artworkProvider.getArtworkById(selectedArtwork.id) ?? selectedArtwork;
+    final artwork = hydratedArtwork ?? selectedArtwork;
+    final artworkProvider = context.read<ArtworkProvider>();
     final scheme = Theme.of(context).colorScheme;
     final accent = themeProvider.accentColor;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -2630,9 +2632,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final l10n = AppLocalizations.of(context)!;
     final eventAccent = AppColorUtils.eventColor;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final eventsProvider = context.watch<EventsProvider>();
-    final exhibitionsCount =
-        eventsProvider.exhibitionsForEvent(event.id).length;
+    final exhibitionsCount = context.select<EventsProvider, int>(
+      (provider) => provider.exhibitionsForEvent(event.id).length,
+    );
 
     String? dateRange;
     if (event.startsAt != null || event.endsAt != null) {

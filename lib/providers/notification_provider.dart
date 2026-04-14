@@ -553,19 +553,39 @@ class NotificationProvider extends ChangeNotifier {
       _lastGlobalVersion = appRefresh.globalVersion;
       _refreshListener = () {
         try {
+          handleViewVisibilityChanged();
           if (!_hasAuthContext) {
             return;
           }
-          if (appRefresh.notificationsVersion != _lastNotifVersion) {
+          final notificationsChanged =
+              appRefresh.notificationsVersion != _lastNotifVersion;
+          final globalChanged = appRefresh.globalVersion != _lastGlobalVersion;
+
+          if (!notificationsChanged && !globalChanged) {
+            return;
+          }
+
+          if (notificationsChanged) {
             _lastNotifVersion = appRefresh.notificationsVersion;
-            if (_isNotificationsSurfaceActive || _isForeground) {
-              refresh(force: true);
-            }
-          } else if (appRefresh.globalVersion != _lastGlobalVersion) {
+          }
+          if (globalChanged) {
             _lastGlobalVersion = appRefresh.globalVersion;
-            if (_isNotificationsSurfaceActive || _isForeground) {
+          }
+
+          final notificationsSurfaceActive = _isNotificationsSurfaceActive;
+          final socketHealthy = _isSocketHealthyForNotifications();
+
+          if (notificationsChanged) {
+            if (notificationsSurfaceActive || !socketHealthy) {
               refresh(force: true);
+            } else {
+              _scheduleServerSync();
             }
+            return;
+          }
+
+          if (globalChanged && notificationsSurfaceActive) {
+            refresh(force: true);
           }
         } catch (e) {/* ignore */}
       };
