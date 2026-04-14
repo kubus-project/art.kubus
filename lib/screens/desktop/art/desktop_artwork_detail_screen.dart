@@ -17,9 +17,11 @@ import '../../../providers/task_provider.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../config/config.dart';
 import '../../../services/backend_api_service.dart';
+import '../../../services/map_data_controller.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
 import '../../../utils/artwork_media_resolver.dart';
+import '../../../features/map/shared/map_screen_shared_helpers.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../widgets/artwork_gallery_view.dart';
@@ -30,6 +32,7 @@ import '../../../widgets/detail/detail_shell_components.dart';
 import '../../web3/artist/artwork_ar_manager_screen.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import '../../../widgets/map/dialogs/street_art_claims_dialog.dart';
 
 class DesktopArtworkDetailScreen extends StatefulWidget {
   final String artworkId;
@@ -579,6 +582,11 @@ class _DesktopArtworkDetailScreenState
     final messenger = ScaffoldMessenger.of(context);
     final canInteract = isSignedIn;
 
+    final markerIdCandidate = (artwork.arMarkerId ?? '').toString().trim();
+    final canShowStreetArtClaimCta =
+      AppConfig.isFeatureEnabled('streetArtClaims') &&
+        markerIdCandidate.isNotEmpty;
+
     Future<void> requireSignInToast() async {
       messenger.showKubusSnackBar(
         SnackBar(
@@ -649,7 +657,49 @@ class _DesktopArtworkDetailScreenState
           background: scheme.surfaceContainerHighest,
           tooltip: l10n.commonShare,
         ),
+        if (canShowStreetArtClaimCta)
+          _actionButton(
+            icon: Icons.fact_check_outlined,
+            label: l10n.mapMarkerClaimButton,
+            onPressed: () => unawaited(
+              _openStreetArtClaimsForMarkerId(markerIdCandidate),
+            ),
+            foreground: scheme.onPrimaryContainer,
+            background: scheme.primaryContainer.withValues(alpha: 0.65),
+            tooltip: l10n.mapMarkerClaimButton,
+          ),
       ],
+    );
+  }
+
+  Future<void> _openStreetArtClaimsForMarkerId(String markerId) async {
+    if (!AppConfig.isFeatureEnabled('streetArtClaims')) return;
+
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+
+    final marker = await MapDataController().getArtMarkerById(markerId);
+    if (!mounted) return;
+
+    if (marker == null || !KubusMarkerOverlayHelpers.canOpenStreetArtClaims(marker)) {
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.commonNotAvailable)),
+        tone: KubusSnackBarTone.warning,
+      );
+      return;
+    }
+
+    final isMarkerOwner = KubusMarkerOverlayHelpers.markerOwnedByCurrentUser(
+      marker: marker,
+      walletAddress: context.read<WalletProvider>().currentWalletAddress,
+      currentUserId: context.read<ProfileProvider>().currentUser?.id,
+    );
+
+    await StreetArtClaimsDialog.show(
+      context: context,
+      marker: marker,
+      isMarkerOwner: isMarkerOwner,
+      canUseDaoReviewActions: false,
     );
   }
 

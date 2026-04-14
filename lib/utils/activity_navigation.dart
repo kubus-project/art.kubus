@@ -1,17 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 
+import '../config/config.dart';
+import '../features/map/shared/map_screen_shared_helpers.dart';
 import '../models/recent_activity.dart';
+import '../providers/profile_provider.dart';
+import '../providers/wallet_provider.dart';
 import '../screens/community/post_detail_screen.dart';
 import '../screens/activity/saved_items_screen.dart';
 import '../screens/web3/wallet/wallet_home.dart';
 import '../screens/web3/achievements/achievements_page.dart';
 import '../screens/web3/marketplace/marketplace.dart';
+import '../services/map_data_controller.dart';
+import '../services/share/share_deep_link_parser.dart';
+import '../services/share/share_types.dart';
 import 'artwork_navigation.dart';
+import 'share_deep_link_navigation.dart';
 import 'user_profile_navigation.dart';
 import '../screens/desktop/desktop_shell_scope.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import '../widgets/map/dialogs/street_art_claims_dialog.dart';
 
 class ActivityNavigation {
   ActivityNavigation._();
@@ -232,6 +242,24 @@ class ActivityNavigation {
     final query = uri.queryParameters;
 
     switch (root) {
+      case 'm':
+      case 'marker':
+      case 'markers':
+        if (segments.length >= 2) {
+          final markerId = segments[1];
+          final open = (query['open'] ?? '').toString().trim().toLowerCase();
+          final openClaims = open == 'claims' || query['claims'] == '1';
+
+          await _openMarker(context, markerId);
+          if (!context.mounted) {
+            return true;
+          }
+          if (openClaims) {
+            await _openStreetArtClaims(context, markerId);
+          }
+          return true;
+        }
+        break;
       case 'community':
         if (segments.length >= 2) {
           final section = segments[1].toLowerCase();
@@ -306,6 +334,55 @@ class ActivityNavigation {
         return true;
     }
     return false;
+  }
+
+  static Future<void> _openMarker(
+    BuildContext context,
+    String markerId,
+  ) async {
+    await ShareDeepLinkNavigation.open(
+      context,
+      ShareDeepLinkTarget(type: ShareEntityType.marker, id: markerId),
+      ensureShell: true,
+    );
+  }
+
+  static Future<void> _openStreetArtClaims(
+    BuildContext context,
+    String markerId,
+  ) async {
+    if (!AppConfig.isFeatureEnabled('streetArtClaims')) {
+      return;
+    }
+
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+
+    final marker = await MapDataController().getArtMarkerById(markerId);
+    if (!context.mounted) {
+      return;
+    }
+
+    if (marker == null || !KubusMarkerOverlayHelpers.canOpenStreetArtClaims(marker)) {
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.commonNotAvailable)),
+        tone: KubusSnackBarTone.warning,
+      );
+      return;
+    }
+
+    final isMarkerOwner = KubusMarkerOverlayHelpers.markerOwnedByCurrentUser(
+      marker: marker,
+      walletAddress: context.read<WalletProvider>().currentWalletAddress,
+      currentUserId: context.read<ProfileProvider>().currentUser?.id,
+    );
+
+    await StreetArtClaimsDialog.show(
+      context: context,
+      marker: marker,
+      isMarkerOwner: isMarkerOwner,
+      canUseDaoReviewActions: false,
+    );
   }
 
   static Future<void> _openPost(

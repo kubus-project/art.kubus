@@ -20,10 +20,12 @@ import '../../providers/task_provider.dart';
 import '../../models/artwork.dart';
 import '../../models/artwork_comment.dart';
 import '../../services/backend_api_service.dart';
+import '../../services/map_data_controller.dart';
 import '../../services/nft_minting_service.dart';
 import '../../models/collectible.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/artwork_media_resolver.dart';
+import '../../features/map/shared/map_screen_shared_helpers.dart';
 import '../../utils/map_navigation.dart';
 import '../../utils/artwork_edit_navigation.dart';
 import '../../utils/wallet_action_guard.dart';
@@ -37,6 +39,7 @@ import '../../widgets/glass_components.dart';
 import '../../widgets/common/keyboard_inset_padding.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../utils/design_tokens.dart';
+import '../../widgets/map/dialogs/street_art_claims_dialog.dart';
 
 class ArtDetailScreen extends StatefulWidget {
   final String artworkId;
@@ -736,6 +739,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         AppConfig.isFeatureEnabled('web3') &&
         AppConfig.isFeatureEnabled('nftMinting');
 
+    final markerIdCandidate = (artwork.arMarkerId ?? '').toString().trim();
+    final canShowStreetArtClaimCta =
+      AppConfig.isFeatureEnabled('streetArtClaims') && markerIdCandidate.isNotEmpty;
+
     return Column(
       children: [
         Row(
@@ -897,6 +904,25 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
             ),
           ],
         ),
+        if (canShowStreetArtClaimCta) ...[
+          const SizedBox(height: DetailSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: DetailActionButton(
+                  icon: Icons.fact_check_outlined,
+                  label: l10n.mapMarkerClaimButton,
+                  backgroundColor:
+                      scheme.primaryContainer.withValues(alpha: 0.45),
+                  foregroundColor: scheme.onPrimaryContainer,
+                  onPressed: () => unawaited(
+                    _openStreetArtClaimsForMarkerId(markerIdCandidate),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
         const SizedBox(height: DetailSpacing.md),
         if (canMint)
           SizedBox(
@@ -923,6 +949,37 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
             ),
           ),
       ],
+    );
+  }
+
+  Future<void> _openStreetArtClaimsForMarkerId(String markerId) async {
+    if (!AppConfig.isFeatureEnabled('streetArtClaims')) return;
+
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+
+    final marker = await MapDataController().getArtMarkerById(markerId);
+    if (!mounted) return;
+
+    if (marker == null || !KubusMarkerOverlayHelpers.canOpenStreetArtClaims(marker)) {
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.commonNotAvailable)),
+        tone: KubusSnackBarTone.warning,
+      );
+      return;
+    }
+
+    final isMarkerOwner = KubusMarkerOverlayHelpers.markerOwnedByCurrentUser(
+      marker: marker,
+      walletAddress: context.read<WalletProvider>().currentWalletAddress,
+      currentUserId: context.read<ProfileProvider>().currentUser?.id,
+    );
+
+    await StreetArtClaimsDialog.show(
+      context: context,
+      marker: marker,
+      isMarkerOwner: isMarkerOwner,
+      canUseDaoReviewActions: false,
     );
   }
 
