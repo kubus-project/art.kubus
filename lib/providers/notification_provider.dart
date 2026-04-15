@@ -43,6 +43,10 @@ class NotificationProvider extends ChangeNotifier {
   final Duration _degradedBackgroundCadence = const Duration(seconds: 150);
   final Duration _healthySocketCadence = const Duration(minutes: 5);
   final Duration _subscriptionCheckInterval = const Duration(minutes: 3);
+  final Duration _reconnectAuthoritativeSyncMinInterval =
+      const Duration(seconds: 20);
+  final Duration _activeSurfaceSocketSyncMinInterval =
+      const Duration(seconds: 20);
 
   int _debugCadenceTicks = 0;
   int _debugSyncs = 0;
@@ -266,7 +270,11 @@ class NotificationProvider extends ChangeNotifier {
     // the unread count so badges remain accurate without waiting for the next
     // server push event.
     if (_hasAuthContext) {
-      unawaited(refresh(force: true));
+      if (_shouldForceReconnectSync()) {
+        unawaited(refresh(force: true));
+      } else {
+        _maybeCheckSubscription();
+      }
     }
   }
 
@@ -405,6 +413,21 @@ class NotificationProvider extends ChangeNotifier {
     final elapsed = DateTime.now().difference(_lastServerSync!);
     if (elapsed >= _minServerSyncInterval) return Duration.zero;
     return _minServerSyncInterval - elapsed;
+  }
+
+  bool _shouldForceReconnectSync() {
+    final lastSync = _lastServerSync;
+    if (lastSync == null) return true;
+    return DateTime.now().difference(lastSync) >=
+        _reconnectAuthoritativeSyncMinInterval;
+  }
+
+  bool _shouldSyncActiveSurfaceSocketEvent() {
+    if (!_isNotificationsSurfaceActive) return false;
+    final lastSync = _lastServerSync;
+    if (lastSync == null) return true;
+    return DateTime.now().difference(lastSync) >=
+        _activeSurfaceSocketSyncMinInterval;
   }
 
   String _unreadCacheKey(String wallet) {
@@ -687,9 +710,11 @@ class NotificationProvider extends ChangeNotifier {
     try {
       // Refresh authoritative data only when socket path is not currently
       // sufficient (degraded socket) or the notifications surface is active.
-      if (!_isSocketHealthyForNotifications() ||
-          _isNotificationsSurfaceActive) {
+      final socketHealthy = _isSocketHealthyForNotifications();
+      if (!socketHealthy) {
         _scheduleServerSync(delay: const Duration(milliseconds: 600));
+      } else if (_shouldSyncActiveSurfaceSocketEvent()) {
+        _scheduleServerSync(delay: const Duration(seconds: 2));
       }
 
       // Parse notification type and relevant payload fields

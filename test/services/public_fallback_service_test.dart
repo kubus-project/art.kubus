@@ -241,4 +241,43 @@ void main() {
     expect(cachedArtworks, hasLength(1));
     expect(cachedArtworks.first['title'], 'Snapshot Artwork');
   });
+
+  test(
+    'refreshBackendMode reduces standby probe frequency in deep prolonged IPFS fallback outages',
+    () async {
+      var primaryChecks = 0;
+      var standbyChecks = 0;
+
+      service.bindHttpClient(
+        MockClient((request) async {
+          if (request.url.path != '/health/writable') {
+            return http.Response('Not Found', 404);
+          }
+
+          if (request.url.host == Uri.parse(AppConfig.baseApiUrl).host) {
+            primaryChecks += 1;
+          }
+          if (request.url.host == Uri.parse(AppConfig.standbyApiUrl).host) {
+            standbyChecks += 1;
+          }
+
+          throw Exception('offline');
+        }),
+      );
+
+      for (var i = 0; i < 9; i++) {
+        await service.refreshBackendMode();
+      }
+
+      expect(service.mode, AppRuntimeMode.ipfsFallback);
+      expect(service.consecutiveDualFailures, 9);
+      expect(primaryChecks, 9);
+      expect(standbyChecks, 9);
+
+      await service.refreshBackendMode();
+
+      expect(primaryChecks, 10);
+      expect(standbyChecks, 9);
+    },
+  );
 }

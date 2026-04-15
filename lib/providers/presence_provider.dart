@@ -20,6 +20,8 @@ class PresenceProvider extends ChangeNotifier {
   static const Duration _baseAutoRefreshInterval = Duration(seconds: 24);
   static const Duration _heartbeatInterval = Duration(seconds: 45);
   static const Duration _socketHealthyHeartbeatInterval = Duration(minutes: 4);
+  static const Duration _socketHealthyPassiveHeartbeatInterval =
+      Duration(minutes: 6);
   static const Duration _socketHealthyActiveRefreshInterval =
       Duration(minutes: 2);
   static const Duration _socketHealthyPassiveRefreshInterval =
@@ -551,9 +553,7 @@ class PresenceProvider extends ChangeNotifier {
       return;
     }
 
-    final targetInterval = _isSocketHealthyForPresence(wallet)
-        ? _socketHealthyHeartbeatInterval
-        : _heartbeatInterval;
+    final targetInterval = _heartbeatIntervalForWallet(wallet);
     if (_heartbeatTimer != null &&
         _heartbeatIntervalCurrent == targetInterval) {
       return;
@@ -583,9 +583,7 @@ class PresenceProvider extends ChangeNotifier {
     final prefs = profile?.preferences;
     if (prefs?.showActivityStatus != true) return;
 
-    final minHeartbeatInterval = _isSocketHealthyForPresence(wallet)
-        ? _socketHealthyHeartbeatInterval
-        : _heartbeatInterval;
+    final minHeartbeatInterval = _heartbeatIntervalForWallet(wallet);
     final last = _lastHeartbeatAt;
     if (!force &&
         last != null &&
@@ -634,6 +632,19 @@ class PresenceProvider extends ChangeNotifier {
     if (!_socket.isConnected) return false;
     final subscribed = _walletLowerOrNull(_socket.currentSubscribedWallet);
     return subscribed != null && subscribed == expectedWallet;
+  }
+
+  Duration _heartbeatIntervalForWallet(String walletAddress) {
+    final socketHealthy = _isSocketHealthyForPresence(walletAddress);
+    if (!socketHealthy) {
+      return _heartbeatInterval;
+    }
+
+    if (_isPresenceSurfaceActive) {
+      return _socketHealthyHeartbeatInterval;
+    }
+
+    return _socketHealthyPassiveHeartbeatInterval;
   }
 
   void recordVisit({required String type, required String id}) {

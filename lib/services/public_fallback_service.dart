@@ -506,9 +506,16 @@ class PublicFallbackService extends ChangeNotifier {
     }
 
     if (_mode == AppRuntimeMode.ipfsFallback) {
+      final deepOutage = _consecutiveDualFailures >=
+          (AppConfig.backendOutageFailureThreshold * 2);
+      if (deepOutage) {
+        return atLeastConfigured(_isAppForeground
+            ? const Duration(seconds: 120)
+            : const Duration(seconds: 300));
+      }
       return atLeastConfigured(_isAppForeground
-          ? const Duration(seconds: 40)
-          : const Duration(seconds: 120));
+          ? const Duration(seconds: 60)
+          : const Duration(seconds: 180));
     }
 
     if (_isAppForeground) {
@@ -525,6 +532,25 @@ class PublicFallbackService extends ChangeNotifier {
     return const Duration(minutes: 12);
   }
 
+  Duration _standbyProbeIntervalWhenNotLive() {
+    if (_mode == AppRuntimeMode.ipfsFallback) {
+      final deepOutage = _consecutiveDualFailures >=
+          (AppConfig.backendOutageFailureThreshold * 2);
+      if (deepOutage) {
+        return _isAppForeground
+            ? const Duration(minutes: 8)
+            : const Duration(minutes: 16);
+      }
+      return _isAppForeground
+          ? const Duration(minutes: 3)
+          : const Duration(minutes: 6);
+    }
+
+    return _isAppForeground
+        ? const Duration(minutes: 2)
+        : const Duration(minutes: 4);
+  }
+
   bool _shouldProbeStandbyNow({
     required BackendWritableStatusRecord primary,
   }) {
@@ -537,11 +563,33 @@ class PublicFallbackService extends ChangeNotifier {
     }
 
     if (!primary.reachable || !primary.writable) {
-      return true;
+      final deepIpfsOutage = _mode == AppRuntimeMode.ipfsFallback &&
+          _consecutiveDualFailures >=
+              (AppConfig.backendOutageFailureThreshold * 3);
+      if (!deepIpfsOutage) {
+        return true;
+      }
+      final lastProbeAt = _lastStandbyProbeAt ?? _standbyStatus?.checkedAt;
+      if (lastProbeAt == null) {
+        return true;
+      }
+      final elapsed = DateTime.now().toUtc().difference(lastProbeAt);
+      return elapsed >= _standbyProbeIntervalWhenNotLive();
     }
 
     if (_mode != AppRuntimeMode.live) {
-      return true;
+      final deepIpfsOutage = _mode == AppRuntimeMode.ipfsFallback &&
+          _consecutiveDualFailures >=
+              (AppConfig.backendOutageFailureThreshold * 3);
+      if (!deepIpfsOutage) {
+        return true;
+      }
+      final lastProbeAt = _lastStandbyProbeAt ?? _standbyStatus?.checkedAt;
+      if (lastProbeAt == null) {
+        return true;
+      }
+      final elapsed = DateTime.now().toUtc().difference(lastProbeAt);
+      return elapsed >= _standbyProbeIntervalWhenNotLive();
     }
 
     final lastProbeAt = _lastStandbyProbeAt ?? _standbyStatus?.checkedAt;

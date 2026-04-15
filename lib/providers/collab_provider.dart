@@ -60,6 +60,8 @@ class CollabProvider extends ChangeNotifier {
       Duration(seconds: 360);
   static const Duration _inviteHealthyResumeRefreshInterval =
       Duration(minutes: 3);
+  static const Duration _inviteReconnectRefreshMinInterval =
+      Duration(seconds: 20);
 
   DateTime? _inviteBackoffUntil;
   Duration _inviteBackoff = Duration.zero;
@@ -179,7 +181,14 @@ class CollabProvider extends ChangeNotifier {
       return;
     }
 
-    unawaited(refreshInvites(showLoadingIndicator: false, notifyOnNew: false));
+    final lastSync = _lastInviteSyncAt;
+    final shouldRefresh = lastSync == null ||
+        DateTime.now().difference(lastSync) >=
+            _inviteReconnectRefreshMinInterval;
+    if (shouldRefresh) {
+      unawaited(
+          refreshInvites(showLoadingIndicator: false, notifyOnNew: false));
+    }
     _evaluateInvitePollingState();
   }
 
@@ -359,11 +368,19 @@ class CollabProvider extends ChangeNotifier {
     }
 
     final now = DateTime.now();
-    final last = _lastInviteSocketEventAt ?? _lastInviteSyncAt;
+    final last = _latestInviteFreshnessAt();
     if (last == null) {
       return true;
     }
     return now.difference(last) >= _inviteHealthyResumeRefreshInterval;
+  }
+
+  DateTime? _latestInviteFreshnessAt() {
+    final socketAt = _lastInviteSocketEventAt;
+    final syncAt = _lastInviteSyncAt;
+    if (socketAt == null) return syncAt;
+    if (syncAt == null) return socketAt;
+    return socketAt.isAfter(syncAt) ? socketAt : syncAt;
   }
 
   Duration? _computeInvitePollingInterval() {
