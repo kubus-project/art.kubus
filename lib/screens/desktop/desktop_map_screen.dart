@@ -104,6 +104,7 @@ import '../../widgets/common/kubus_sort_option.dart';
 import '../../widgets/common/kubus_search_overlay_scaffold.dart';
 import '../../widgets/map/overlays/kubus_marker_overlay_card_wrapper.dart'
     as overlay_wrapper;
+import '../../widgets/detail/detail_shell_primitives.dart';
 import '../../widgets/search/kubus_general_search.dart';
 import '../../widgets/search/kubus_search_config.dart';
 import '../../widgets/search/kubus_search_controller.dart';
@@ -2101,13 +2102,15 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final scheme = Theme.of(context).colorScheme;
     final accent = themeProvider.accentColor;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final useMapBlur = kubusMapBlurEnabled(context);
+    final l10n = AppLocalizations.of(context)!;
     final coverUrl = ArtworkMediaResolver.resolveCover(
       artwork: artwork,
       metadata:
           _kubusMapController.selectedMarkerData?.metadata ?? artwork.metadata,
     );
     final distanceLabel = _formatDistanceToArtwork(artwork);
+    final categoryLabel = artwork.category.trim();
+    final artistLabel = artwork.artist.trim();
     final arBadge = artwork.arEnabled
         ? Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -2125,7 +2128,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  AppLocalizations.of(context)!.mapArReadyChipLabel,
+                  l10n.mapArReadyChipLabel,
                   style: KubusTextStyles.navMetaLabel.copyWith(
                     fontWeight: FontWeight.w600,
                     color: accent,
@@ -2146,7 +2149,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           artwork.updatedAt ?? artwork.createdAt,
         ),
         accentColor: accent,
-        closeTooltip: AppLocalizations.of(context)!.commonClose,
+        closeTooltip: l10n.commonClose,
         onClose: () {
           setState(() => _selectedArtwork = null);
         },
@@ -2160,13 +2163,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                artwork.title,
-                style: KubusTextStyles.screenTitle.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
+              DetailIdentityBlock(
+                title: artwork.title,
+                kicker: l10n.commonArtwork,
+                subtitle: (artistLabel.isNotEmpty && artistLabel != artwork.title)
+                    ? artistLabel
+                    : null,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: KubusSpacing.xs),
               ArtworkCreatorByline(
                 artwork: artwork,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -2176,187 +2180,158 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     ),
                 maxLines: 1,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: KubusSpacing.md),
+              DetailMetadataBlock(
+                compact: true,
+                items: [
+                  if (distanceLabel != null)
+                    DetailMetaItem(
+                      icon: Icons.near_me,
+                      label: distanceLabel,
+                    ),
+                  if (categoryLabel.isNotEmpty && categoryLabel != 'General')
+                    DetailMetaItem(
+                      icon: Icons.palette_outlined,
+                      label: categoryLabel,
+                    ),
+                  DetailMetaItem(
+                    icon: Icons.calendar_today_outlined,
+                    label: _formatPanelDate(artwork.createdAt),
+                  ),
+                ],
+              ),
+              const SizedBox(height: KubusSpacing.md),
               if (artwork.description.isNotEmpty) ...[
                 Text(
                   artwork.description,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontSize: KubusHeaderMetrics.screenSubtitle,
-                        height: 1.6,
+                        height: 1.5,
                         color: Theme.of(context)
                             .colorScheme
                             .onSurface
-                            .withValues(alpha: 0.7),
+                            .withValues(alpha: 0.78),
                       ),
+                  maxLines: 8,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: KubusSpacing.md),
               ],
-              Wrap(
-                spacing: 24,
-                runSpacing: 12,
-                children: [
-                  _buildDetailStat(Icons.favorite, '${artwork.likesCount}'),
-                  _buildDetailStat(Icons.visibility, '${artwork.viewsCount}'),
+              DetailContextCluster(
+                compact: true,
+                items: [
+                  DetailContextItem(
+                    icon: Icons.favorite,
+                    value: '${artwork.likesCount}',
+                  ),
+                  DetailContextItem(
+                    icon: Icons.visibility,
+                    value: '${artwork.viewsCount}',
+                  ),
                   if (artwork.discoveryCount > 0)
-                    _buildDetailStat(
-                      Icons.explore,
-                      AppLocalizations.of(context)!
-                          .desktopMapDiscoveriesCount(artwork.discoveryCount),
+                    DetailContextItem(
+                      icon: Icons.explore,
+                      value: l10n.desktopMapDiscoveriesCount(
+                        artwork.discoveryCount,
+                      ),
                     ),
                   if (artwork.actualRewards > 0)
-                    _buildDetailStat(
-                      Icons.token,
-                      '${artwork.actualRewards} KUB8',
+                    DetailContextItem(
+                      icon: Icons.token,
+                      value: '${artwork.actualRewards}',
+                      label: 'KUB8',
                     ),
-                  if (distanceLabel != null)
-                    _buildDetailStat(Icons.location_on, distanceLabel),
                 ],
               ),
-              const SizedBox(height: 24),
-              DetailActionRow(
-                children: [
+              const SizedBox(height: KubusSpacing.md),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    unawaited(
+                      openArtwork(
+                        context,
+                        artwork.id,
+                        source: 'desktop_map',
+                        attendanceMarkerId: artwork.arMarkerId,
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.info_outline, size: 18),
+                  label: Text(l10n.commonViewDetails),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accent,
+                    foregroundColor: AppColorUtils.contrastText(accent),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 14,
+                      horizontal: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(KubusRadius.md),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: KubusSpacing.sm),
+              DetailSecondaryActionCluster(
+                maxVisible: 5,
+                actions: [
                   if (artwork.arEnabled &&
                       AppConfig.isFeatureEnabled('ar') &&
                       !kIsWeb)
-                    SizedBox(
-                      width: 170,
-                      child: ElevatedButton.icon(
-                        onPressed: () async {
-                          final messenger = ScaffoldMessenger.of(context);
-                          final modelUrl = artwork.model3DURL ??
-                              (artwork.model3DCID != null
-                                  ? 'ipfs://${artwork.model3DCID}'
-                                  : null);
-                          if (modelUrl == null) {
-                            final l10n = AppLocalizations.of(context)!;
-                            messenger.showKubusSnackBar(
-                              SnackBar(
-                                content: Text(l10n.desktopMapNoArAssetToast),
-                              ),
-                              tone: KubusSnackBarTone.warning,
-                            );
-                            return;
-                          }
-                          unawaited(ARService().launchARViewer(
-                            modelUrl: modelUrl,
-                            title: artwork.title,
-                          ));
-                        },
-                        icon: const Icon(Icons.view_in_ar, size: 20),
-                        label:
-                            Text(AppLocalizations.of(context)!.commonViewInAr),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: accent,
-                          foregroundColor: AppColorUtils.contrastText(accent),
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 14,
-                            horizontal: 12,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(KubusRadius.md),
-                          ),
-                        ),
-                      ),
-                    ),
-                  SizedBox(
-                    width: 170,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        unawaited(
-                          openArtwork(
-                            context,
-                            artwork.id,
-                            source: 'desktop_map',
-                            attendanceMarkerId: artwork.arMarkerId,
-                          ),
-                        );
+                    DetailSecondaryAction(
+                      icon: Icons.view_in_ar,
+                      label: l10n.commonViewInAr,
+                      onTap: () async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        final modelUrl = artwork.model3DURL ??
+                            (artwork.model3DCID != null
+                                ? 'ipfs://${artwork.model3DCID}'
+                                : null);
+                        if (modelUrl == null) {
+                          messenger.showKubusSnackBar(
+                            SnackBar(content: Text(l10n.desktopMapNoArAssetToast)),
+                            tone: KubusSnackBarTone.warning,
+                          );
+                          return;
+                        }
+                        unawaited(ARService().launchARViewer(
+                          modelUrl: modelUrl,
+                          title: artwork.title,
+                        ));
                       },
-                      icon: const Icon(Icons.info_outline, size: 18),
-                      label:
-                          Text(AppLocalizations.of(context)!.commonViewDetails),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 14,
-                          horizontal: 12,
-                        ),
-                        side: BorderSide(
-                          color: accent.withValues(alpha: 0.75),
-                          width: 1.2,
-                        ),
-                        foregroundColor: accent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(KubusRadius.md),
-                        ),
-                      ),
+                      tooltip: l10n.commonViewInAr,
                     ),
+                  DetailSecondaryAction(
+                    icon: artwork.isFavoriteByCurrentUser || artwork.isFavorite
+                        ? Icons.bookmark
+                        : Icons.bookmark_border,
+                    label: (artwork.isFavoriteByCurrentUser || artwork.isFavorite)
+                        ? l10n.commonSavedToast
+                        : l10n.commonSave,
+                    onTap: () {
+                      unawaited(artworkProvider.toggleFavorite(artwork.id));
+                    },
+                    isActive: artwork.isFavoriteByCurrentUser || artwork.isFavorite,
+                    activeColor: accent,
+                    tooltip: l10n.commonSave,
                   ),
-                  SizedBox(
-                    width: 170,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        unawaited(artworkProvider.toggleFavorite(artwork.id));
-                      },
-                      icon: Icon(
-                        artwork.isFavoriteByCurrentUser || artwork.isFavorite
-                            ? Icons.bookmark
-                            : Icons.bookmark_border,
-                        size: 18,
-                      ),
-                      label: Text(
-                        (artwork.isFavoriteByCurrentUser || artwork.isFavorite)
-                            ? AppLocalizations.of(context)!.commonSavedToast
-                            : AppLocalizations.of(context)!.commonSave,
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 14,
-                          horizontal: 12,
-                        ),
-                        side: BorderSide(
-                          color: (artwork.isFavoriteByCurrentUser ||
-                                  artwork.isFavorite)
-                              ? accent
-                              : accent.withValues(alpha: 0.55),
-                          width: (artwork.isFavoriteByCurrentUser ||
-                                  artwork.isFavorite)
-                              ? 1.5
-                              : 1.1,
-                        ),
-                        foregroundColor: (artwork.isFavoriteByCurrentUser ||
-                                artwork.isFavorite)
-                            ? accent
-                            : scheme.onSurface,
-                        backgroundColor: (artwork.isFavoriteByCurrentUser ||
-                                artwork.isFavorite)
-                            ? accent.withValues(alpha: 0.08)
-                            : null,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(KubusRadius.md),
-                        ),
-                      ),
-                    ),
-                  ),
-                  KubusGlassIconButton(
+                  DetailSecondaryAction(
                     icon: artwork.isLikedByCurrentUser
                         ? Icons.favorite
                         : Icons.favorite_border,
-                    tooltip:
-                        '${artwork.likesCount} ${artwork.isLikedByCurrentUser ? AppLocalizations.of(context)!.artworkDetailLiked : AppLocalizations.of(context)!.artworkDetailLike}',
-                    active: artwork.isLikedByCurrentUser,
-                    accentColor: themeProvider.accentColor,
-                    activeTint: scheme.error.withValues(alpha: 0.18),
-                    activeIconColor: scheme.error,
-                    enableBlur: useMapBlur,
-                    onPressed: () {
+                    label: l10n.commonLikes,
+                    onTap: () {
                       unawaited(artworkProvider.toggleLike(artwork.id));
                     },
+                    isActive: artwork.isLikedByCurrentUser,
+                    activeColor: scheme.error,
+                    tooltip: l10n.commonLikes,
                   ),
-                  KubusGlassIconButton(
+                  DetailSecondaryAction(
                     icon: Icons.share,
-                    accentColor: themeProvider.accentColor,
-                    tooltip: AppLocalizations.of(context)!.commonShare,
-                    enableBlur: useMapBlur,
-                    onPressed: () {
+                    label: l10n.commonShare,
+                    onTap: () {
                       ShareService().showShareSheet(
                         context,
                         target: ShareTarget.artwork(
@@ -2366,10 +2341,25 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                         sourceScreen: 'desktop_map',
                       );
                     },
+                    tooltip: l10n.commonShare,
+                  ),
+                  DetailSecondaryAction(
+                    icon: Icons.directions,
+                    label: l10n.commonGetDirections,
+                    onTap: () async {
+                      final uri = Uri.parse(
+                        'https://www.google.com/maps/dir/?api=1&destination=${artwork.position.latitude},${artwork.position.longitude}',
+                      );
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri,
+                            mode: LaunchMode.externalApplication);
+                      }
+                    },
+                    tooltip: l10n.commonGetDirections,
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: KubusSpacing.sm),
               OutlinedButton.icon(
                 onPressed: () async {
                   final uri = Uri.parse(
@@ -2380,36 +2370,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   }
                 },
                 icon: const Icon(Icons.directions),
-                label: Text(AppLocalizations.of(context)!.commonGetDirections),
+                label: Text(l10n.commonGetDirections),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  side: BorderSide(color: accent),
+                  side: BorderSide(color: accent.withValues(alpha: 0.5)),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(KubusRadius.md),
                   ),
                 ),
               ),
             ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDetailStat(IconData icon, String value) {
-    return Row(
-      children: [
-        Icon(
-          icon,
-          size: 18,
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          value,
-          style: KubusTextStyles.navLabel.copyWith(
-            fontWeight: FontWeight.w500,
-            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ],
@@ -2495,51 +2465,55 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                exhibition.title,
-                style: KubusTextStyles.screenTitle.copyWith(
-                  color: scheme.onSurface,
-                ),
+              DetailIdentityBlock(
+                title: exhibition.title,
+                kicker: l10n.commonExhibition,
+                subtitle: exhibition.host == null
+                    ? null
+                    : 'Hosted by ${exhibition.host!.displayName ?? exhibition.host!.username ?? 'Unknown'}',
               ),
-              if (exhibition.host != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  'Hosted by ${exhibition.host!.displayName ?? exhibition.host!.username ?? 'Unknown'}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: KubusHeaderMetrics.screenSubtitle,
-                        color: exhibitionAccent,
-                        fontWeight: FontWeight.w500,
-                      ),
-                ),
-              ],
-              const SizedBox(height: 16),
-              if (dateRange != null)
-                DetailMetaRow(
-                  icon: Icons.schedule,
-                  label: dateRange,
-                ),
-              if (location != null)
-                DetailMetaRow(
-                  icon: Icons.place_outlined,
-                  label: location,
-                ),
-              DetailMetaRow(
-                icon: Icons.event_available_outlined,
-                label:
-                    'Status: ${_labelForExhibitionStatus(exhibition.status)}',
+              const SizedBox(height: KubusSpacing.md),
+              DetailMetadataBlock(
+                compact: true,
+                items: [
+                  if (dateRange != null)
+                    DetailMetaItem(icon: Icons.schedule, label: dateRange),
+                  if (location != null)
+                    DetailMetaItem(
+                      icon: Icons.place_outlined,
+                      label: location,
+                    ),
+                  DetailMetaItem(
+                    icon: Icons.event_available_outlined,
+                    label: _labelForExhibitionStatus(exhibition.status),
+                  ),
+                ],
               ),
               if ((exhibition.description ?? '').trim().isNotEmpty) ...[
-                const SizedBox(height: 16),
+                const SizedBox(height: KubusSpacing.md),
                 Text(
                   exhibition.description!,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontSize: KubusHeaderMetrics.screenSubtitle,
-                        height: 1.6,
-                        color: scheme.onSurface.withValues(alpha: 0.7),
+                        height: 1.5,
+                        color: scheme.onSurface.withValues(alpha: 0.78),
                       ),
+                  maxLines: 7,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
-              const SizedBox(height: 24),
+              const SizedBox(height: KubusSpacing.md),
+              DetailContextCluster(
+                compact: true,
+                items: [
+                  DetailContextItem(
+                    icon: Icons.art_track,
+                    value: '${exhibition.artworkIds.length}',
+                    label: l10n.exhibitionDetailArtworksTitle,
+                  ),
+                ],
+              ),
+              const SizedBox(height: KubusSpacing.md),
               Row(
                 children: [
                   Expanded(
@@ -2591,29 +2565,42 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   ),
                 ],
               ),
-              if (exhibition.lat != null && exhibition.lng != null) ...[
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    final uri = Uri.parse(
-                      'https://www.google.com/maps/dir/?api=1&destination=${exhibition.lat},${exhibition.lng}',
-                    );
-                    if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri,
-                          mode: LaunchMode.externalApplication);
-                    }
-                  },
-                  icon: const Icon(Icons.directions),
-                  label: Text(l10n.commonGetDirections),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    side: BorderSide(color: exhibitionAccent),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(KubusRadius.md),
-                    ),
+              const SizedBox(height: KubusSpacing.sm),
+              DetailSecondaryActionCluster(
+                maxVisible: 3,
+                actions: [
+                  DetailSecondaryAction(
+                    icon: Icons.share_outlined,
+                    label: l10n.commonShare,
+                    onTap: () {
+                      ShareService().showShareSheet(
+                        context,
+                        target: ShareTarget.exhibition(
+                          exhibitionId: exhibition.id,
+                          title: exhibition.title,
+                        ),
+                        sourceScreen: 'desktop_map',
+                      );
+                    },
+                    tooltip: l10n.commonShare,
                   ),
-                ),
-              ],
+                  if (exhibition.lat != null && exhibition.lng != null)
+                    DetailSecondaryAction(
+                      icon: Icons.directions,
+                      label: l10n.commonGetDirections,
+                      onTap: () async {
+                        final uri = Uri.parse(
+                          'https://www.google.com/maps/dir/?api=1&destination=${exhibition.lat},${exhibition.lng}',
+                        );
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri,
+                              mode: LaunchMode.externalApplication);
+                        }
+                      },
+                      tooltip: l10n.commonGetDirections,
+                    ),
+                ],
+              ),
             ],
           ),
         ),
@@ -2703,55 +2690,60 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                event.title,
-                style: KubusTextStyles.screenTitle.copyWith(
-                  color: scheme.onSurface,
-                ),
+              DetailIdentityBlock(
+                title: event.title,
+                kicker: l10n.mapMarkerSubjectTypeEvent,
+                subtitle: event.host == null
+                    ? null
+                    : 'Hosted by ${event.host!.displayName ?? event.host!.username ?? 'Unknown'}',
               ),
-              if (event.host != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  'Hosted by ${event.host!.displayName ?? event.host!.username ?? 'Unknown'}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: KubusHeaderMetrics.screenSubtitle,
-                        color: eventAccent,
-                        fontWeight: FontWeight.w500,
-                      ),
-                ),
-              ],
-              const SizedBox(height: 16),
-              if (dateRange != null)
-                DetailMetaRow(
-                  icon: Icons.schedule,
-                  label: dateRange,
-                ),
-              if (location != null)
-                DetailMetaRow(
-                  icon: Icons.place_outlined,
-                  label: location,
-                ),
-              DetailMetaRow(
-                icon: Icons.collections_outlined,
-                label: 'Exhibitions: $exhibitionsCount',
+              const SizedBox(height: KubusSpacing.md),
+              DetailMetadataBlock(
+                compact: true,
+                items: [
+                  if (dateRange != null)
+                    DetailMetaItem(icon: Icons.schedule, label: dateRange),
+                  if (location != null)
+                    DetailMetaItem(
+                      icon: Icons.place_outlined,
+                      label: location,
+                    ),
+                  DetailMetaItem(
+                    icon: Icons.collections_outlined,
+                    label: 'Exhibitions: $exhibitionsCount',
+                  ),
+                  if ((event.status ?? '').trim().isNotEmpty)
+                    DetailMetaItem(
+                      icon: Icons.event_available_outlined,
+                      label: _labelForPanelStatus(event.status),
+                    ),
+                ],
               ),
-              if ((event.status ?? '').trim().isNotEmpty)
-                DetailMetaRow(
-                  icon: Icons.event_available_outlined,
-                  label: 'Status: ${_labelForPanelStatus(event.status)}',
-                ),
               if ((event.description ?? '').trim().isNotEmpty) ...[
-                const SizedBox(height: 16),
+                const SizedBox(height: KubusSpacing.md),
                 Text(
                   event.description!,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontSize: KubusHeaderMetrics.screenSubtitle,
-                        height: 1.6,
-                        color: scheme.onSurface.withValues(alpha: 0.7),
+                        height: 1.5,
+                        color: scheme.onSurface.withValues(alpha: 0.78),
                       ),
+                  maxLines: 7,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
-              const SizedBox(height: 24),
+              const SizedBox(height: KubusSpacing.md),
+              DetailContextCluster(
+                compact: true,
+                items: [
+                  DetailContextItem(
+                    icon: Icons.collections_outlined,
+                    value: '$exhibitionsCount',
+                    label: 'Exhibitions',
+                  ),
+                ],
+              ),
+              const SizedBox(height: KubusSpacing.md),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -2798,6 +2790,42 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     ),
                   ),
                 ),
+              ),
+              const SizedBox(height: KubusSpacing.sm),
+              DetailSecondaryActionCluster(
+                maxVisible: 3,
+                actions: [
+                  DetailSecondaryAction(
+                    icon: Icons.share_outlined,
+                    label: l10n.commonShare,
+                    onTap: () {
+                      ShareService().showShareSheet(
+                        context,
+                        target: ShareTarget.event(
+                          eventId: event.id,
+                          title: event.title,
+                        ),
+                        sourceScreen: 'desktop_map',
+                      );
+                    },
+                    tooltip: l10n.commonShare,
+                  ),
+                  if (event.lat != null && event.lng != null)
+                    DetailSecondaryAction(
+                      icon: Icons.directions,
+                      label: l10n.commonGetDirections,
+                      onTap: () async {
+                        final uri = Uri.parse(
+                          'https://www.google.com/maps/dir/?api=1&destination=${event.lat},${event.lng}',
+                        );
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri,
+                              mode: LaunchMode.externalApplication);
+                        }
+                      },
+                      tooltip: l10n.commonGetDirections,
+                    ),
+                ],
               ),
             ],
           ),

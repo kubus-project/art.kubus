@@ -13,9 +13,10 @@ extension _KubusMarkerOverlayCardMediaParts on KubusMarkerOverlayCard {
   }) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final resolvedHeight = constraints.maxWidth.isFinite
-            ? math.min(imageHeight, constraints.maxWidth / 1.68)
+        final widthBoundHeight = constraints.maxWidth.isFinite
+            ? math.min(imageHeight, constraints.maxWidth / 1.42)
             : imageHeight;
+        final resolvedHeight = math.max(widthBoundHeight, 152.0);
         return ClipRRect(
           borderRadius: BorderRadius.circular(KubusRadius.md),
           child: SizedBox(

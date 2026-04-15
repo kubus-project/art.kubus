@@ -1,17 +1,5 @@
 part of 'kubus_marker_overlay_card.dart';
 
-bool _hasChips({required ArtMarker marker, required Artwork? artwork}) {
-  return (artwork != null &&
-          artwork.category.isNotEmpty &&
-          artwork.category != 'General') ||
-      marker.metadata?['subjectCategory'] != null ||
-      marker.metadata?['subject_category'] != null ||
-      marker.metadata?['locationName'] != null ||
-      marker.metadata?['location'] != null ||
-      marker.isCommunityMarker ||
-      (artwork != null && artwork.rewards > 0);
-}
-
 String _normalizeDescription(String input) {
   if (input.isEmpty) return '';
   return input.replaceAll(RegExp(r'\s+'), ' ').trim();
@@ -35,15 +23,6 @@ String _truncateDescription(
     return '${cappedByWords.substring(0, maxChars)}...';
   }
   return '${cappedByWords.substring(0, safeIndex)}...';
-}
-
-int _wordCount(String input) {
-  if (input.trim().isEmpty) return 0;
-  return input
-      .trim()
-      .split(RegExp(r'\s+'))
-      .where((segment) => segment.trim().isNotEmpty)
-      .length;
 }
 
 class _CardTapArea extends StatelessWidget {
@@ -120,48 +99,42 @@ class _OverlayIconButton extends StatelessWidget {
   }
 }
 
-class _OverlayChip extends StatelessWidget {
-  const _OverlayChip({
+class _OverlayMetaBadge extends StatelessWidget {
+  const _OverlayMetaBadge({
     required this.label,
     required this.icon,
     required this.accent,
-    required this.selected,
   });
 
   final String label;
   final IconData icon;
   final Color accent;
-  final bool selected;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final border = selected
-        ? accent.withValues(alpha: 0.35)
-        : scheme.outlineVariant.withValues(alpha: 0.30);
-    final fg = selected ? accent : scheme.onSurfaceVariant;
+    final fg = accent;
 
     return buildKubusMapGlassSurface(
       context: context,
       kind: KubusMapGlassSurfaceKind.button,
       borderRadius: BorderRadius.circular(999),
-      tintBase: selected ? accent : scheme.surface,
+      tintBase: accent.withValues(alpha: 0.09),
       padding: const EdgeInsets.symmetric(
-        horizontal: KubusSpacing.sm,
-        vertical: KubusSpacing.xs,
+        horizontal: KubusSpacing.sm - KubusSpacing.xxs,
+        vertical: KubusSpacing.xxs + 1,
       ),
-      border: Border.all(color: border),
+      border: Border.all(color: accent.withValues(alpha: 0.24)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: fg),
-          const SizedBox(width: KubusSpacing.xs),
+          Icon(icon, size: 11, color: fg.withValues(alpha: 0.9)),
+          const SizedBox(width: KubusSpacing.xxs),
           Text(
             label,
             style: KubusTypography.textTheme.labelSmall?.copyWith(
-              fontSize: KubusSizes.badgeCountFontSize,
-              fontWeight: FontWeight.w700,
-              color: fg,
+              fontSize: KubusHeaderMetrics.sectionSubtitle - 3,
+              fontWeight: FontWeight.w600,
+              color: fg.withValues(alpha: 0.95),
             ),
           ),
         ],
@@ -179,8 +152,8 @@ class _OverlayActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final border = spec.isActive
-        ? spec.activeColor.withValues(alpha: 0.35)
-        : scheme.outlineVariant.withValues(alpha: 0.30);
+        ? spec.activeColor.withValues(alpha: 0.30)
+        : scheme.outlineVariant.withValues(alpha: 0.26);
     final fg = spec.isActive ? spec.activeColor : scheme.onSurfaceVariant;
 
     final content = MouseRegion(
@@ -191,7 +164,9 @@ class _OverlayActionButton extends StatelessWidget {
         context: context,
         kind: KubusMapGlassSurfaceKind.button,
         borderRadius: BorderRadius.circular(KubusRadius.sm),
-        tintBase: spec.isActive ? spec.activeColor : scheme.surface,
+        tintBase: spec.isActive
+            ? spec.activeColor.withValues(alpha: 0.14)
+            : scheme.surface.withValues(alpha: 0.15),
         padding: const EdgeInsets.symmetric(
           horizontal: KubusSpacing.sm - KubusSpacing.xxs,
           vertical: KubusSpacing.sm - KubusSpacing.xxs,
@@ -210,7 +185,7 @@ class _OverlayActionButton extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: KubusTypography.textTheme.bodyMedium?.copyWith(
                   fontSize: KubusHeaderMetrics.sectionSubtitle - 2.5,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
                   color: fg,
                 ),
                 overflow: TextOverflow.ellipsis,
@@ -240,6 +215,60 @@ class _OverlayActionButton extends StatelessWidget {
   }
 }
 
+class _OverlayActionOverflowMenu extends StatelessWidget {
+  const _OverlayActionOverflowMenu({
+    required this.actions,
+  });
+
+  final List<MarkerOverlayActionSpec> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    if (actions.isEmpty) return const SizedBox.shrink();
+
+    return PopupMenuButton<int>(
+      tooltip: 'More',
+      icon: Icon(
+        Icons.more_horiz,
+        size: 18,
+        color: scheme.onSurfaceVariant,
+      ),
+      itemBuilder: (context) => [
+        for (var i = 0; i < actions.length; i++)
+          PopupMenuItem<int>(
+            value: i,
+            enabled: actions[i].onTap != null,
+            child: Row(
+              children: [
+                Icon(
+                  actions[i].icon,
+                  size: 16,
+                  color: actions[i].isActive
+                      ? actions[i].activeColor
+                      : scheme.onSurface,
+                ),
+                const SizedBox(width: KubusSpacing.sm),
+                Expanded(
+                  child: Text(
+                    actions[i].label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+      onSelected: (index) {
+        if (index < 0 || index >= actions.length) return;
+        actions[index].onTap?.call();
+      },
+    );
+  }
+}
+
 class _OverlayPager extends StatelessWidget {
   const _OverlayPager({
     required this.count,
@@ -263,6 +292,7 @@ class _OverlayPager extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final effectiveArrowColor = arrowColor.withValues(alpha: 0.74);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
@@ -274,8 +304,12 @@ class _OverlayPager extends StatelessWidget {
           child: GestureDetector(
             onTap: onPrevious,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Icon(Icons.chevron_left, size: 20, color: arrowColor),
+              padding: const EdgeInsets.symmetric(horizontal: 6.0),
+              child: Icon(
+                Icons.chevron_left,
+                size: 17,
+                color: effectiveArrowColor,
+              ),
             ),
           ),
         ),
@@ -285,11 +319,13 @@ class _OverlayPager extends StatelessWidget {
             final isActive = index == dotIndex;
             final dot = AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              width: isActive ? 12 : 6,
-              height: 6,
+              width: isActive ? 11 : 5,
+              height: 5,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(3),
-                color: isActive ? accent : inactiveColor,
+                color: isActive
+                    ? accent.withValues(alpha: 0.92)
+                    : inactiveColor.withValues(alpha: 0.8),
               ),
             );
 
@@ -319,8 +355,12 @@ class _OverlayPager extends StatelessWidget {
           child: GestureDetector(
             onTap: onNext,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Icon(Icons.chevron_right, size: 20, color: arrowColor),
+              padding: const EdgeInsets.symmetric(horizontal: 6.0),
+              child: Icon(
+                Icons.chevron_right,
+                size: 17,
+                color: effectiveArrowColor,
+              ),
             ),
           ),
         ),
@@ -363,9 +403,9 @@ class _OverlayPrimaryButton extends StatelessWidget {
         border: Border.all(color: accent.withValues(alpha: 0.45)),
         boxShadow: [
           BoxShadow(
-            color: accent.withValues(alpha: 0.12),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: accent.withValues(alpha: 0.10),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
         onTap: onPressed,

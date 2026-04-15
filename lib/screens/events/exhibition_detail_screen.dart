@@ -609,7 +609,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
           : AppBar(
               title: Text(ex.title,
                   style: KubusTypography.inter(fontWeight: FontWeight.w600)),
-              actions: headerActions,
+              actions: const [],
             ),
       body: Center(
         child: ConstrainedBox(
@@ -619,16 +619,13 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final isWide = constraints.maxWidth >= 900;
-                final embeddedActions = widget.embedded
-                    ? Padding(
-                        padding:
-                            const EdgeInsets.only(bottom: DetailSpacing.md),
-                        child: Align(
-                          alignment: Alignment.centerRight,
-                          child: Wrap(spacing: 4, children: headerActions),
-                        ),
-                      )
-                    : const SizedBox.shrink();
+                final topActions = Padding(
+                  padding: const EdgeInsets.only(bottom: DetailSpacing.md),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Wrap(spacing: 4, children: headerActions),
+                  ),
+                );
 
                 final details = Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -692,7 +689,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  if (widget.embedded) embeddedActions,
+                                  topActions,
                                   details,
                                   const SizedBox(height: DetailSpacing.lg),
                                   artworksCard,
@@ -717,7 +714,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
 
                 return ListView(
                   children: [
-                    if (widget.embedded) embeddedActions,
+                    topActions,
                     details,
                     const SizedBox(height: DetailSpacing.lg),
                     artworksCard,
@@ -813,67 +810,18 @@ class _LinkedArtworksListState extends State<_LinkedArtworksList> {
       final imageUrl = ArtworkMediaResolver.resolveCover(artwork: art);
 
       tiles.add(
-        ListTile(
-          dense: true,
-          contentPadding: EdgeInsets.zero,
+        DetailArtworkCard(
+          title: title,
+          subtitle: subtitle,
+          imageUrl: imageUrl,
           onTap: () {
             openArtwork(context, id, source: 'exhibition_detail');
           },
-          title: Text(
-            title,
-            style: KubusTypography.inter(fontWeight: FontWeight.w600),
-          ),
-          subtitle: Text(
-            subtitle,
-            style: KubusTypography.inter(
-              fontSize: 12,
-              color: scheme.onSurface.withValues(alpha: 0.75),
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          leading: ClipRRect(
-            borderRadius: BorderRadius.circular(KubusRadius.sm),
-            child: SizedBox(
-              width: 44,
-              height: 44,
-              child: imageUrl == null
-                  ? DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: scheme.surfaceContainerHighest,
-                      ),
-                      child: Icon(
-                        Icons.image_outlined,
-                        color: scheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                    )
-                  : Image.network(
-                      imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: scheme.surfaceContainerHighest,
-                        ),
-                        child: Icon(
-                          Icons.broken_image_outlined,
-                          color: scheme.onSurface.withValues(alpha: 0.6),
-                        ),
-                      ),
-                    ),
-            ),
-          ),
-          trailing: Icon(
-            Icons.chevron_right,
-            color: scheme.onSurface.withValues(alpha: 0.55),
-          ),
         ),
       );
-      tiles.add(
-        Divider(height: 1, color: scheme.outlineVariant.withValues(alpha: 0.5)),
-      );
+      tiles.add(const SizedBox(height: DetailSpacing.sm));
     }
 
-    // Drop trailing divider.
     if (tiles.isNotEmpty) tiles.removeLast();
     return Column(children: tiles);
   }
@@ -917,26 +865,31 @@ class _ExhibitionDetailsCard extends StatelessWidget {
         ? exhibition.locationName!.trim()
         : null;
 
+    final hostLabel = exhibition.host == null
+        ? null
+        : 'Hosted by ${exhibition.host!.displayName ?? exhibition.host!.username ?? 'Unknown'}';
+
     return DetailCard(
       borderRadius: DetailRadius.md,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
-          SectionHeader(
-            title: l10n.exhibitionDetailOverviewTitle,
-            trailing: canManage
+          DetailIdentityBlock(
+            title: exhibition.title,
+            kicker: l10n.commonExhibition,
+            subtitle: hostLabel,
+            trailing: canManage && onChangeCover != null
                 ? TextButton.icon(
                     onPressed: onChangeCover,
                     icon: const Icon(Icons.image_outlined, size: 16),
-                    label: Text(l10n.commonChangeCover,
-                        style: DetailTypography.button(context)),
+                    label: Text(
+                      l10n.commonChangeCover,
+                      style: DetailTypography.button(context),
+                    ),
                   )
                 : null,
           ),
           const SizedBox(height: DetailSpacing.md),
-
-          // Cover image
           if (coverUrl != null) ...[
             ClipRRect(
               borderRadius: BorderRadius.circular(DetailRadius.sm),
@@ -958,44 +911,42 @@ class _ExhibitionDetailsCard extends StatelessWidget {
             const SizedBox(height: DetailSpacing.lg),
           ],
 
-          // Metadata rows
-          if (dateRange != null)
-            InfoRow(icon: Icons.schedule_outlined, label: dateRange),
-          if (location != null)
-            InfoRow(icon: Icons.place_outlined, label: location),
-          InfoRow(
-            icon: Icons.event_available_outlined,
-            label: l10n.exhibitionDetailStatusRowLabel(
-                _labelForStatus(l10n, exhibition.status)),
+          DetailMetadataBlock(
+            items: [
+              if (dateRange != null)
+                DetailMetaItem(icon: Icons.schedule_outlined, label: dateRange),
+              if (location != null)
+                DetailMetaItem(icon: Icons.place_outlined, label: location),
+              DetailMetaItem(
+                icon: Icons.event_available_outlined,
+                label: l10n.exhibitionDetailStatusRowLabel(
+                  _labelForStatus(l10n, exhibition.status),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: DetailSpacing.md),
+          DetailContextCluster(
+            items: [
+              DetailContextItem(
+                icon: Icons.art_track,
+                value: '${exhibition.artworkIds.length}',
+                label: l10n.exhibitionDetailArtworksTitle,
+              ),
+            ],
+            compact: true,
           ),
 
-          // Publish toggle
-          if (canPublish) ...[
-            const SizedBox(height: DetailSpacing.sm),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value:
-                  (exhibition.status ?? '').trim().toLowerCase() == 'published',
-              onChanged: onPublishChanged,
-              title: Text(l10n.commonPublish,
-                  style: DetailTypography.cardTitle(context)),
-              subtitle: Text(
-                (exhibition.status ?? '').trim().toLowerCase() == 'published'
-                    ? l10n.commonPublished
-                    : l10n.commonDraft,
-                style: DetailTypography.label(context),
-              ),
+          if ((exhibition.description ?? '').trim().isNotEmpty) ...[
+            const SizedBox(height: DetailSpacing.md),
+            Text(
+              exhibition.description!,
+              maxLines: 8,
+              overflow: TextOverflow.ellipsis,
+              style: DetailTypography.body(context),
             ),
           ],
 
-          // Description
-          if ((exhibition.description ?? '').trim().isNotEmpty) ...[
-            const SizedBox(height: DetailSpacing.md),
-            Text(exhibition.description!,
-                style: DetailTypography.body(context)),
-          ],
-
-          // POAP badge section
           if (poap?.poap != null) ...[
             const SizedBox(height: DetailSpacing.lg),
             Divider(color: scheme.outlineVariant.withValues(alpha: 0.4)),
@@ -1008,6 +959,30 @@ class _ExhibitionDetailsCard extends StatelessWidget {
                   ? l10n.exhibitionDetailBadgeClaimed
                   : l10n.exhibitionDetailBadgeNotClaimed,
               style: DetailTypography.caption(context),
+            ),
+          ],
+
+          if (canPublish) ...[
+            const SizedBox(height: DetailSpacing.lg),
+            DetailManagementSection(
+              title: 'Management',
+              initiallyExpanded: false,
+              child: SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value:
+                    (exhibition.status ?? '').trim().toLowerCase() == 'published',
+                onChanged: onPublishChanged,
+                title: Text(
+                  l10n.commonPublish,
+                  style: DetailTypography.cardTitle(context),
+                ),
+                subtitle: Text(
+                  (exhibition.status ?? '').trim().toLowerCase() == 'published'
+                      ? l10n.commonPublished
+                      : l10n.commonDraft,
+                  style: DetailTypography.label(context),
+                ),
+              ),
             ),
           ],
         ],

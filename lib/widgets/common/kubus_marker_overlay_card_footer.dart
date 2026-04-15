@@ -15,16 +15,23 @@ extension _KubusMarkerOverlayCardFooterParts on KubusMarkerOverlayCard {
     required IconData primaryActionIcon,
     required String primaryActionLabel,
   }) {
+    final visibleActions = actions.take(2).toList(growable: false);
+    final overflowActions = actions.skip(2).toList(growable: false);
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (actions.isNotEmpty) ...[
+        if (visibleActions.isNotEmpty) ...[
           Row(
             children: [
-              for (var i = 0; i < actions.length; i++) ...[
+              for (var i = 0; i < visibleActions.length; i++) ...[
                 if (i > 0) const SizedBox(width: KubusSpacing.sm),
-                Expanded(child: _OverlayActionButton(spec: actions[i])),
+                Expanded(child: _OverlayActionButton(spec: visibleActions[i])),
+              ],
+              if (overflowActions.isNotEmpty) ...[
+                const SizedBox(width: KubusSpacing.xs),
+                _OverlayActionOverflowMenu(actions: overflowActions),
               ],
             ],
           ),
@@ -43,12 +50,12 @@ extension _KubusMarkerOverlayCardFooterParts on KubusMarkerOverlayCard {
               onSelectIndex: onSelectStackIndex,
             ),
           ),
-          const SizedBox(height: KubusSpacing.xs),
+          const SizedBox(height: KubusSpacing.sm),
         ],
         SizedBox(
           width: double.infinity,
           child: Semantics(
-            label: 'marker_more_info',
+            label: primaryActionLabel,
             button: true,
             child: _OverlayPrimaryButton(
               accent: baseColor,

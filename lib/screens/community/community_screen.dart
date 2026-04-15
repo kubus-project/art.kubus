@@ -4167,6 +4167,7 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   Future<String?> _ensureWalletForPosting(BuildContext ctx) async {
     try {
+      final walletProvider = ctx.read<WalletProvider?>();
       final prefs = await SharedPreferences.getInstance();
       final walletAddress = prefs.getString('wallet') ??
           prefs.getString('wallet_address') ??
@@ -4183,7 +4184,6 @@ class _CommunityScreenState extends State<CommunityScreen>
       final hasMatchingSession = (api.getAuthToken() ?? '').trim().isNotEmpty &&
           WalletUtils.equals(currentAuthWallet, walletAddress);
       if (!hasMatchingSession) {
-        final walletProvider = ctx.read<WalletProvider?>();
         final signerReady = walletProvider != null &&
             walletProvider.canTransact &&
             WalletUtils.equals(

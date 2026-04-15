@@ -134,7 +134,6 @@ class KubusMarkerOverlayCard extends StatelessWidget {
       maxWords: maxPreviewWords,
       maxChars: maxPreviewChars,
     );
-    final descriptionWordCount = _wordCount(visibleDescription);
 
     final rawImageUrl = ArtworkMediaResolver.resolveCover(
       artwork: artwork,
@@ -147,18 +146,17 @@ class KubusMarkerOverlayCard extends StatelessWidget {
     final imageVersion = KubusCachedImage.versionTokenFromDate(
       artwork?.updatedAt ?? marker.updatedAt,
     );
-    final dpr = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
+    final dpr = (MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0)
+      .clamp(1.0, 2.0);
     final cacheWidth = (304 * dpr).clamp(128.0, 960.0).round();
     final hasConstrainedHeight = maxHeight != null && maxHeight!.isFinite;
-    final constrainedImageHeight = KubusSpacing.xl * 3 + KubusSpacing.xxs;
-    final unconstrainedImageHeight = KubusSpacing.xl * 3 + KubusSpacing.sm;
+    final constrainedImageHeight = KubusSpacing.xl * 4 + KubusSpacing.xs;
+    final unconstrainedImageHeight = KubusSpacing.xl * 5 + KubusSpacing.xs;
     final imageHeight = hasConstrainedHeight
         ? constrainedImageHeight
         : unconstrainedImageHeight;
-    final cacheHeight = (imageHeight * dpr).clamp(96.0, 720.0).round();
+    final cacheHeight = (imageHeight * dpr).clamp(160.0, 720.0).round();
 
-    final showChips =
-        _hasChips(marker: marker, artwork: artwork) || canPresentExhibition;
     final isPromoted =
         marker.isPromoted || (artwork?.promotion.isPromoted ?? false);
     final actionFg = AppColorUtils.contrastText(baseColor);
@@ -200,8 +198,6 @@ class KubusMarkerOverlayCard extends StatelessWidget {
                 baseColor: baseColor,
                 displayTitle: displayTitle,
                 artwork: artwork,
-                distanceText: distanceText,
-                isPromoted: isPromoted,
                 canPresentExhibition: canPresentExhibition,
                 onTitleTap: resolvedTitleTap,
                 linkedSubjectTypeLabel: linkedSubjectTypeLabel,
@@ -218,12 +214,12 @@ class KubusMarkerOverlayCard extends StatelessWidget {
                             ? math.min(
                                 imageHeight,
                                 math.max(
-                                  KubusSpacing.xl * 2.5,
-                                  previewHeight * 0.62,
+                                  KubusSpacing.xl * 3 + KubusSpacing.xs,
+                                  previewHeight * 0.56,
                                 ),
                               )
                             : imageHeight;
-                    final showImage = constrainedImageHeight >= 72.0;
+                    final showImage = constrainedImageHeight >= 132.0;
 
                     return _CardTapArea(
                       onTap: resolvedCardTap,
@@ -245,18 +241,23 @@ class KubusMarkerOverlayCard extends StatelessWidget {
                             const SizedBox(
                               height: KubusSpacing.sm + KubusSpacing.xxs,
                             ),
+                            _buildMetadataTier(
+                              context: context,
+                              scheme: scheme,
+                              baseColor: baseColor,
+                              artwork: artwork,
+                              marker: marker,
+                              canPresentExhibition: canPresentExhibition,
+                              isPromoted: isPromoted,
+                              distanceText: distanceText,
+                            ),
+                            const SizedBox(height: KubusSpacing.sm),
                           ],
                           Expanded(
                             child: _buildBody(
-                              l10n: l10n,
-                              baseColor: baseColor,
+                              context: context,
                               scheme: scheme,
-                              artwork: artwork,
-                              marker: marker,
                               visibleDescription: visibleDescription,
-                              descriptionWordCount: descriptionWordCount,
-                              showChips: showChips,
-                              canPresentExhibition: canPresentExhibition,
                               isConstrained: hasConstrainedHeight,
                             ),
                           ),

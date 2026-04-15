@@ -8,8 +8,6 @@ extension _KubusMarkerOverlayCardHeaderParts on KubusMarkerOverlayCard {
     required Color baseColor,
     required String displayTitle,
     required Artwork? artwork,
-    required String? distanceText,
-    required bool isPromoted,
     required bool canPresentExhibition,
     required VoidCallback? onTitleTap,
     required String? linkedSubjectTypeLabel,
@@ -23,8 +21,9 @@ extension _KubusMarkerOverlayCardHeaderParts on KubusMarkerOverlayCard {
     final showLinkedTitle = normalizedLinkedTitle != null &&
         normalizedLinkedTitle.isNotEmpty &&
         normalizedLinkedTitle != displayTitleNormalized;
-    final showLinkedSubtitle =
-        normalizedLinkedSubtitle != null && normalizedLinkedSubtitle.isNotEmpty;
+    final showLinkedSubtitle = normalizedLinkedSubtitle != null &&
+      normalizedLinkedSubtitle.isNotEmpty &&
+      !showLinkedTitle;
     final showLinkedContext = showLinkedTitle || showLinkedSubtitle;
 
     final titleWidget = Text(
@@ -128,66 +127,6 @@ extension _KubusMarkerOverlayCardHeaderParts on KubusMarkerOverlayCard {
             ],
           ),
         ),
-        const SizedBox(width: KubusSpacing.sm),
-        if (distanceText != null && distanceText.isNotEmpty)
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: KubusSpacing.sm - KubusSpacing.xxs,
-              vertical: KubusSpacing.xxs + 1,
-            ),
-            decoration: BoxDecoration(
-              color: baseColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.near_me, size: 10, color: baseColor),
-                const SizedBox(width: KubusSpacing.xs),
-                Text(
-                  distanceText,
-                  style: KubusTypography.textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: baseColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        if (isPromoted) ...[
-          const SizedBox(width: KubusSpacing.xs),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: KubusSpacing.sm - KubusSpacing.xxs,
-              vertical: KubusSpacing.xxs + 1,
-            ),
-            decoration: BoxDecoration(
-              color: KubusColorRoles.of(context)
-                  .achievementGold
-                  .withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.star,
-                  size: KubusTypography.textTheme.labelSmall?.fontSize,
-                  color: KubusColorRoles.of(context).achievementGold,
-                ),
-                const SizedBox(width: KubusSpacing.xs),
-                Text(
-                  'Promoted',
-                  style: TextStyle(
-                    fontSize: KubusSizes.badgeCountFontSize,
-                    fontWeight: FontWeight.w700,
-                    color: KubusColorRoles.of(context).achievementGold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
         const SizedBox(width: KubusSpacing.xs),
         _OverlayIconButton(
           icon: Icons.close,

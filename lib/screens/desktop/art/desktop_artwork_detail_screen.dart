@@ -226,50 +226,39 @@ class _DesktopArtworkDetailScreenState
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final showTwoColumns = constraints.maxWidth >= 900;
-                final sideWidth =
-                    (constraints.maxWidth >= 1200) ? 460.0 : 400.0;
-
-                if (!showTwoColumns) {
-                  final commentsHeight =
-                      (constraints.maxHeight * 0.55).clamp(360.0, 560.0);
-                  return Column(
-                    children: [
-                      Expanded(
-                        child: _buildLeftPane(
-                          artwork: artwork,
-                          coverUrl: coverUrl,
-                          artworkProvider: artworkProvider,
-                          isSignedIn: isSignedIn,
-                        ),
-                      ),
-                      const SizedBox(height: DetailSpacing.lg),
-                      SizedBox(
-                        height: commentsHeight,
-                        child: _buildCommentsPanel(
-                            artwork, artworkProvider, isSignedIn),
-                      ),
-                    ],
-                  );
-                }
-
+                final commentsHeight = showTwoColumns
+                    ? (constraints.maxHeight * 0.36).clamp(320.0, 480.0)
+                    : (constraints.maxHeight * 0.55).clamp(360.0, 560.0);
                 return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Expanded(
-                      child: _buildLeftPane(
-                        artwork: artwork,
-                        coverUrl: coverUrl,
-                        artworkProvider: artworkProvider,
-                        isSignedIn: isSignedIn,
-                      ),
-                    ),
-                    const SizedBox(width: DetailSpacing.xl),
-                    SizedBox(
-                      width: sideWidth,
-                      child: _buildRightPane(
-                        artwork: artwork,
-                        artworkProvider: artworkProvider,
-                        isSignedIn: isSignedIn,
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: _buildLeftPane(
+                              artwork: artwork,
+                              coverUrl: coverUrl,
+                              artworkProvider: artworkProvider,
+                              isSignedIn: isSignedIn,
+                            ),
+                          ),
+                          const SizedBox(height: DetailSpacing.lg),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: SizedBox(
+                              height: commentsHeight,
+                              width: showTwoColumns
+                                  ? constraints.maxWidth * 0.72
+                                  : double.infinity,
+                              child: _buildCommentsPanel(
+                                artwork,
+                                artworkProvider,
+                                isSignedIn,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -298,6 +287,31 @@ class _DesktopArtworkDetailScreenState
             children: [
               _buildHeader(artwork),
               const SizedBox(height: DetailSpacing.md),
+              DetailContextCluster(
+                compact: true,
+                items: [
+                  DetailContextItem(
+                    icon: Icons.favorite,
+                    value: '${artwork.likesCount}',
+                  ),
+                  DetailContextItem(
+                    icon: Icons.visibility,
+                    value: '${artwork.viewsCount}',
+                  ),
+                  if (artwork.discoveryCount > 0)
+                    DetailContextItem(
+                      icon: Icons.explore,
+                      value: '${artwork.discoveryCount}',
+                    ),
+                  if (artwork.actualRewards > 0)
+                    DetailContextItem(
+                      icon: Icons.token,
+                      value: '${artwork.actualRewards}',
+                      label: 'KUB8',
+                    ),
+                ],
+              ),
+              const SizedBox(height: DetailSpacing.md),
               _buildActionsRow(artwork, artworkProvider, isSignedIn),
             ],
           ),
@@ -309,14 +323,6 @@ class _DesktopArtworkDetailScreenState
         _buildPoapInfoCard(artwork),
       ],
     );
-  }
-
-  Widget _buildRightPane({
-    required Artwork artwork,
-    required ArtworkProvider artworkProvider,
-    required bool isSignedIn,
-  }) {
-    return _buildCommentsPanel(artwork, artworkProvider, isSignedIn);
   }
 
   Widget _buildMedia(Artwork artwork, String? coverUrl) {
@@ -462,16 +468,15 @@ class _DesktopArtworkDetailScreenState
   }
 
   Widget _buildHeader(Artwork artwork) {
+    final category = artwork.category.trim();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        KubusHeaderText(
+        DetailIdentityBlock(
           title: artwork.title,
-          subtitle: artwork.category.trim().isNotEmpty &&
-                  artwork.category.trim() != 'General'
-              ? artwork.category.trim()
+          kicker: category.isNotEmpty && category != 'General'
+              ? category
               : null,
-          kind: KubusHeaderKind.screen,
         ),
         const SizedBox(height: DetailSpacing.sm),
         ArtworkCreatorByline(
@@ -578,13 +583,14 @@ class _DesktopArtworkDetailScreenState
   Widget _buildActionsRow(
       Artwork artwork, ArtworkProvider artworkProvider, bool isSignedIn) {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
     final messenger = ScaffoldMessenger.of(context);
     final canInteract = isSignedIn;
+    final showArPrimaryAction =
+        artwork.arEnabled && AppConfig.isFeatureEnabled('ar');
 
     final markerIdCandidate = (artwork.arMarkerId ?? '').toString().trim();
     final canShowStreetArtClaimCta =
-      AppConfig.isFeatureEnabled('streetArtClaims') &&
+        AppConfig.isFeatureEnabled('streetArtClaims') &&
         markerIdCandidate.isNotEmpty;
 
     Future<void> requireSignInToast() async {
@@ -597,77 +603,88 @@ class _DesktopArtworkDetailScreenState
       );
     }
 
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _actionButton(
-          icon: artwork.isLikedByCurrentUser
-              ? Icons.favorite
-              : Icons.favorite_border,
-          label: '${artwork.likesCount}',
-          onPressed: canInteract
-              ? () => artworkProvider.toggleLike(artwork.id)
-              : requireSignInToast,
-          foreground:
-              artwork.isLikedByCurrentUser ? scheme.error : scheme.onSurface,
-          background: scheme.surfaceContainerHighest,
-          tooltip: l10n.commonLikes,
-        ),
-        _actionButton(
-          icon: artwork.isFavoriteByCurrentUser
-              ? Icons.bookmark
-              : Icons.bookmark_border,
-          label: l10n.commonSave,
-          onPressed: canInteract
-              ? () => artworkProvider.toggleFavorite(artwork.id)
-              : requireSignInToast,
-          foreground: scheme.onSurface,
-          background: scheme.surfaceContainerHighest,
-          tooltip: l10n.commonSave,
-        ),
-        _actionButton(
-          icon: Icons.comment_outlined,
-          label: '${artwork.commentsCount}',
-          onPressed: () {
-            if (_commentsScrollController.hasClients) {
-              _commentsScrollController.animateTo(
-                0,
-                duration: const Duration(milliseconds: 250),
-                curve: Curves.easeOut,
-              );
-            }
-          },
-          foreground: scheme.onSurface,
-          background: scheme.surfaceContainerHighest,
-          tooltip: l10n.commonComments,
-        ),
-        _actionButton(
-          icon: Icons.share_outlined,
-          label: l10n.commonShare,
-          onPressed: () {
-            ShareService().showShareSheet(
-              context,
-              target: ShareTarget.artwork(
-                  artworkId: artwork.id, title: artwork.title),
-              sourceScreen: 'desktop_art_detail',
-            );
-          },
-          foreground: scheme.onSurface,
-          background: scheme.surfaceContainerHighest,
-          tooltip: l10n.commonShare,
-        ),
-        if (canShowStreetArtClaimCta)
-          _actionButton(
-            icon: Icons.fact_check_outlined,
-            label: l10n.mapMarkerClaimButton,
-            onPressed: () => unawaited(
-              _openStreetArtClaimsForMarkerId(markerIdCandidate),
+        if (showArPrimaryAction) ...[
+          SizedBox(
+            width: double.infinity,
+            child: DetailActionButton(
+              icon: Icons.view_in_ar,
+              label: l10n.commonViewInAr,
+              onPressed: () => Navigator.pushNamed(context, '/ar'),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
             ),
-            foreground: scheme.onPrimaryContainer,
-            background: scheme.primaryContainer.withValues(alpha: 0.65),
-            tooltip: l10n.mapMarkerClaimButton,
           ),
+          const SizedBox(height: DetailSpacing.sm),
+        ],
+        DetailSecondaryActionCluster(
+          maxVisible: 5,
+          actions: [
+            DetailSecondaryAction(
+              icon: artwork.isLikedByCurrentUser
+                  ? Icons.favorite
+                  : Icons.favorite_border,
+              label: l10n.commonLikes,
+              onTap: canInteract
+                  ? () => artworkProvider.toggleLike(artwork.id)
+                  : requireSignInToast,
+              isActive: artwork.isLikedByCurrentUser,
+              activeColor: Theme.of(context).colorScheme.error,
+              tooltip: l10n.commonLikes,
+            ),
+            DetailSecondaryAction(
+              icon: artwork.isFavoriteByCurrentUser
+                  ? Icons.bookmark
+                  : Icons.bookmark_border,
+              label: l10n.commonSave,
+              onTap: canInteract
+                  ? () => artworkProvider.toggleFavorite(artwork.id)
+                  : requireSignInToast,
+              isActive: artwork.isFavoriteByCurrentUser,
+              tooltip: l10n.commonSave,
+            ),
+            DetailSecondaryAction(
+              icon: Icons.comment_outlined,
+              label: '${artwork.commentsCount}',
+              onTap: () {
+                if (_commentsScrollController.hasClients) {
+                  _commentsScrollController.animateTo(
+                    0,
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeOut,
+                  );
+                }
+              },
+              tooltip: l10n.commonComments,
+            ),
+            DetailSecondaryAction(
+              icon: Icons.share_outlined,
+              label: l10n.commonShare,
+              onTap: () {
+                ShareService().showShareSheet(
+                  context,
+                  target: ShareTarget.artwork(
+                    artworkId: artwork.id,
+                    title: artwork.title,
+                  ),
+                  sourceScreen: 'desktop_art_detail',
+                );
+              },
+              tooltip: l10n.commonShare,
+            ),
+            if (canShowStreetArtClaimCta)
+              DetailSecondaryAction(
+                icon: Icons.fact_check_outlined,
+                label: l10n.mapMarkerClaimButton,
+                onTap: () => unawaited(
+                  _openStreetArtClaimsForMarkerId(markerIdCandidate),
+                ),
+                tooltip: l10n.mapMarkerClaimButton,
+              ),
+          ],
+        ),
       ],
     );
   }
@@ -935,44 +952,6 @@ class _DesktopArtworkDetailScreenState
         tone: KubusSnackBarTone.error,
       );
     }
-  }
-
-  Widget _actionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onPressed,
-    required Color foreground,
-    required Color background,
-    required String tooltip,
-  }) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(DetailRadius.md),
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-              horizontal: DetailSpacing.md, vertical: DetailSpacing.sm + 2),
-          decoration: BoxDecoration(
-            color: background,
-            borderRadius: BorderRadius.circular(DetailRadius.md),
-            border: Border.all(
-                color: Theme.of(context)
-                    .colorScheme
-                    .outlineVariant
-                    .withValues(alpha: 0.4)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 18, color: foreground),
-              const SizedBox(width: DetailSpacing.sm),
-              Text(label, style: DetailTypography.button(context)),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   Widget _buildCommentsPanel(

@@ -52,19 +52,6 @@ List<MarkerOverlayActionSpec> buildMarkerOverlayActions({
 
   actions.addAll(<MarkerOverlayActionSpec>[
     MarkerOverlayActionSpec(
-      icon: artwork.isLikedByCurrentUser
-          ? Icons.favorite
-          : Icons.favorite_border,
-      label: '${artwork.likesCount}',
-      isActive: artwork.isLikedByCurrentUser,
-      activeColor: scheme.error,
-      tooltip: l10n.commonLikes,
-      semanticsLabel: 'marker_like',
-      onTap: () {
-        unawaited(artworkProvider.toggleLike(artwork.id));
-      },
-    ),
-    MarkerOverlayActionSpec(
       icon: artwork.isFavoriteByCurrentUser || artwork.isFavorite
           ? Icons.bookmark
           : Icons.bookmark_border,
@@ -93,6 +80,19 @@ List<MarkerOverlayActionSpec> buildMarkerOverlayActions({
           ),
           sourceScreen: sourceScreen,
         );
+      },
+    ),
+    MarkerOverlayActionSpec(
+      icon: artwork.isLikedByCurrentUser
+          ? Icons.favorite
+          : Icons.favorite_border,
+      label: '${artwork.likesCount}',
+      isActive: artwork.isLikedByCurrentUser,
+      activeColor: scheme.error,
+      tooltip: l10n.commonLikes,
+      semanticsLabel: 'marker_like',
+      onTap: () {
+        unawaited(artworkProvider.toggleLike(artwork.id));
       },
     ),
   ]);
