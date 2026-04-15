@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -1820,10 +1822,16 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
   // Helper methods
   Future<void> _handleRefresh() async {
-    await _loadUser(showFullScreenLoader: false);
+    await _loadUser(
+      showFullScreenLoader: false,
+      forceModalPrefetch: true,
+    );
   }
 
-  Future<void> _loadUser({bool showFullScreenLoader = true}) async {
+  Future<void> _loadUser({
+    bool showFullScreenLoader = true,
+    bool forceModalPrefetch = false,
+  }) async {
     if (showFullScreenLoader) setState(() => isLoading = true);
 
     final targetId = widget.userId.trim();
@@ -1877,14 +1885,18 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
     if (user == null) return;
 
-    Future<void>? modalPrefetchFuture;
     try {
-      modalPrefetchFuture = ProfileScreenMethods.prefetchOtherUserProfileData(
+      final prefetchFuture = ProfileScreenMethods.prefetchOtherUserProfileData(
         context,
         walletAddress: user!.id,
-        force: false,
+        force: forceModalPrefetch,
         prefetchStatsSnapshot: false,
       );
+      if (forceModalPrefetch) {
+        await prefetchFuture;
+      } else {
+        unawaited(prefetchFuture);
+      }
     } catch (_) {}
 
     try {
@@ -1892,11 +1904,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     } catch (_) {}
 
     await _loadUserStats(skipFollowersOverwrite: true, forceRefresh: true);
-    if (modalPrefetchFuture != null) {
-      try {
-        await modalPrefetchFuture;
-      } catch (_) {}
-    }
     await _loadPosts();
     await _maybeLoadArtistData(force: true);
   }
@@ -2064,6 +2071,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           backgroundColor: theme.colorScheme.error,
         ),
       );
+      await _loadUserStats(skipFollowersOverwrite: true);
       return;
     }
 
@@ -2098,12 +2106,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     await _loadUserStats(forceRefresh: true);
     if (!mounted) return;
     try {
-      ProfileScreenMethods.prefetchOtherUserProfileData(
+      unawaited(ProfileScreenMethods.prefetchOtherUserProfileData(
         context,
         walletAddress: user!.id,
         force: true,
         prefetchStatsSnapshot: false,
-      );
+      ));
     } catch (_) {}
     try {
       if (user != null) UserService.setUsersInCache([user!]);

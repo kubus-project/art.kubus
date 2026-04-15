@@ -1,4 +1,6 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:async';
+
+import 'package:flutter/material.dart';
 import '../../config/config.dart';
 import '../../widgets/app_loading.dart';
 import '../../utils/design_tokens.dart';
@@ -39,6 +41,8 @@ class ProfileScreenMethods {
       <String, _ProfileListCacheEntry>{};
   static final Map<String, _ProfileListCacheEntry> _followingCache =
       <String, _ProfileListCacheEntry>{};
+  static final Map<String, String> _followersErrors = <String, String>{};
+  static final Map<String, String> _followingErrors = <String, String>{};
 
   static final Map<String, Future<List<Map<String, dynamic>>>>
       _followersFetchInFlight = <String, Future<List<Map<String, dynamic>>>>{};
@@ -80,6 +84,16 @@ class ProfileScreenMethods {
     return _cloneRows(cached.entries);
   }
 
+  static List<Map<String, dynamic>>? getCachedFollowers(
+    String walletAddress, {
+    bool allowStale = true,
+  }) {
+    return prefetchedFollowersForWallet(
+      walletAddress,
+      allowStale: allowStale,
+    );
+  }
+
   static List<Map<String, dynamic>>? prefetchedFollowingForWallet(
     String walletAddress, {
     bool allowStale = true,
@@ -92,6 +106,40 @@ class ProfileScreenMethods {
       return null;
     }
     return _cloneRows(cached.entries);
+  }
+
+  static List<Map<String, dynamic>>? getCachedFollowing(
+    String walletAddress, {
+    bool allowStale = true,
+  }) {
+    return prefetchedFollowingForWallet(
+      walletAddress,
+      allowStale: allowStale,
+    );
+  }
+
+  static bool isFollowersLoading(String walletAddress) {
+    final canonicalWallet = _canonicalWallet(walletAddress);
+    if (canonicalWallet.isEmpty) return false;
+    return _followersFetchInFlight.containsKey(canonicalWallet);
+  }
+
+  static bool isFollowingLoading(String walletAddress) {
+    final canonicalWallet = _canonicalWallet(walletAddress);
+    if (canonicalWallet.isEmpty) return false;
+    return _followingFetchInFlight.containsKey(canonicalWallet);
+  }
+
+  static String? followersErrorForWallet(String walletAddress) {
+    final canonicalWallet = _canonicalWallet(walletAddress);
+    if (canonicalWallet.isEmpty) return null;
+    return _followersErrors[canonicalWallet];
+  }
+
+  static String? followingErrorForWallet(String walletAddress) {
+    final canonicalWallet = _canonicalWallet(walletAddress);
+    if (canonicalWallet.isEmpty) return null;
+    return _followingErrors[canonicalWallet];
   }
 
   static bool isFollowersCacheStale(String walletAddress) {
@@ -129,21 +177,34 @@ class ProfileScreenMethods {
       return existingInFlight;
     }
 
-    final future = BackendApiService()
-        .getFollowers(walletAddress: canonicalWallet)
-        .then((rows) {
-      final normalizedRows = _cloneRows(rows);
-      _followersCache[canonicalWallet] = _ProfileListCacheEntry(
-        entries: normalizedRows,
-        fetchedAt: DateTime.now(),
-      );
-      return _cloneRows(normalizedRows);
-    }).whenComplete(() {
-      _followersFetchInFlight.remove(canonicalWallet);
-    });
+    final future = (() async {
+      try {
+        final rows = await BackendApiService()
+            .getFollowers(walletAddress: canonicalWallet);
+        final normalizedRows = _cloneRows(rows);
+        _followersCache[canonicalWallet] = _ProfileListCacheEntry(
+          entries: normalizedRows,
+          fetchedAt: DateTime.now(),
+        );
+        _followersErrors.remove(canonicalWallet);
+        return _cloneRows(normalizedRows);
+      } catch (e) {
+        _followersErrors[canonicalWallet] = e.toString();
+        rethrow;
+      } finally {
+        _followersFetchInFlight.remove(canonicalWallet);
+      }
+    })();
 
     _followersFetchInFlight[canonicalWallet] = future;
     return future;
+  }
+
+  static Future<List<Map<String, dynamic>>> prefetchFollowers(
+    String walletAddress, {
+    bool force = false,
+  }) {
+    return fetchFollowersForWallet(walletAddress, force: force);
   }
 
   static Future<List<Map<String, dynamic>>> fetchFollowingForWallet(
@@ -165,21 +226,34 @@ class ProfileScreenMethods {
       return existingInFlight;
     }
 
-    final future = BackendApiService()
-        .getFollowing(walletAddress: canonicalWallet)
-        .then((rows) {
-      final normalizedRows = _cloneRows(rows);
-      _followingCache[canonicalWallet] = _ProfileListCacheEntry(
-        entries: normalizedRows,
-        fetchedAt: DateTime.now(),
-      );
-      return _cloneRows(normalizedRows);
-    }).whenComplete(() {
-      _followingFetchInFlight.remove(canonicalWallet);
-    });
+    final future = (() async {
+      try {
+        final rows = await BackendApiService()
+            .getFollowing(walletAddress: canonicalWallet);
+        final normalizedRows = _cloneRows(rows);
+        _followingCache[canonicalWallet] = _ProfileListCacheEntry(
+          entries: normalizedRows,
+          fetchedAt: DateTime.now(),
+        );
+        _followingErrors.remove(canonicalWallet);
+        return _cloneRows(normalizedRows);
+      } catch (e) {
+        _followingErrors[canonicalWallet] = e.toString();
+        rethrow;
+      } finally {
+        _followingFetchInFlight.remove(canonicalWallet);
+      }
+    })();
 
     _followingFetchInFlight[canonicalWallet] = future;
     return future;
+  }
+
+  static Future<List<Map<String, dynamic>>> prefetchFollowing(
+    String walletAddress, {
+    bool force = false,
+  }) {
+    return fetchFollowingForWallet(walletAddress, force: force);
   }
 
   static Future<void> prefetchOtherUserProfileData(
@@ -285,7 +359,11 @@ class ProfileScreenMethods {
       return;
     }
 
-    final prefetchedFollowers = prefetchedFollowersForWallet(resolvedWallet);
+    // Kick off data prep before opening; modal opens immediately with cache.
+    try {
+      unawaited(prefetchFollowers(resolvedWallet));
+    } catch (_) {}
+    final prefetchedFollowers = getCachedFollowers(resolvedWallet);
 
     // Open immediately; do not block UI on best-effort refresh.
     showModalBottomSheet(
@@ -299,16 +377,6 @@ class ProfileScreenMethods {
         initialFollowers: prefetchedFollowers,
       ),
     );
-
-    // Best-effort background prefetch to keep cached stats/lists coherent.
-    try {
-      prefetchOtherUserProfileData(
-        context,
-        walletAddress: resolvedWallet,
-        force: false,
-        prefetchStatsSnapshot: false,
-      );
-    } catch (_) {}
   }
 
   static void showFollowing(BuildContext context, {String? walletAddress}) {
@@ -328,7 +396,10 @@ class ProfileScreenMethods {
       return;
     }
 
-    final prefetchedFollowing = prefetchedFollowingForWallet(resolvedWallet);
+    try {
+      unawaited(prefetchFollowing(resolvedWallet));
+    } catch (_) {}
+    final prefetchedFollowing = getCachedFollowing(resolvedWallet);
 
     showModalBottomSheet(
       context: context,
@@ -341,15 +412,6 @@ class ProfileScreenMethods {
         initialFollowing: prefetchedFollowing,
       ),
     );
-
-    try {
-      prefetchOtherUserProfileData(
-        context,
-        walletAddress: resolvedWallet,
-        force: false,
-        prefetchStatsSnapshot: false,
-      );
-    } catch (_) {}
   }
 
   static void showArtworks(BuildContext context, {String? walletAddress}) {
@@ -371,6 +433,23 @@ class ProfileScreenMethods {
       return;
     }
 
+    // Prime wallet-keyed artworks cache before modal open (non-blocking).
+    final currentWallet = (walletProvider.currentWalletAddress ??
+            profileProvider.currentWalletAddress)
+        ?.trim();
+    final includePrivate = currentWallet != null &&
+        currentWallet.isNotEmpty &&
+        WalletUtils.equals(currentWallet, resolvedWallet);
+    try {
+      unawaited(
+        artworkProvider.loadArtworksForWallet(
+          resolvedWallet,
+          force: false,
+          includePrivateForWallet: includePrivate,
+        ),
+      );
+    } catch (_) {}
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -379,23 +458,6 @@ class ProfileScreenMethods {
       backgroundColor: Colors.transparent,
       builder: (context) => _ArtworksBottomSheet(walletAddress: resolvedWallet),
     );
-
-    // Background load; include private artworks only when viewing the current wallet.
-    final currentWallet = (walletProvider.currentWalletAddress ??
-            profileProvider.currentWalletAddress)
-        ?.trim();
-    final includePrivate = currentWallet != null &&
-        currentWallet.isNotEmpty &&
-        WalletUtils.equals(currentWallet, resolvedWallet);
-    Future(() async {
-      try {
-        await artworkProvider.loadArtworksForWallet(
-          resolvedWallet,
-          force: false,
-          includePrivateForWallet: includePrivate,
-        );
-      } catch (_) {}
-    });
   }
 
   static void showCollections(BuildContext context) {
@@ -521,7 +583,7 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
         return;
       }
 
-      final followers = await ProfileScreenMethods.fetchFollowersForWallet(
+      final followers = await ProfileScreenMethods.prefetchFollowers(
         resolvedWallet,
         force: force,
       );
@@ -941,7 +1003,7 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
         return;
       }
 
-      final following = await ProfileScreenMethods.fetchFollowingForWallet(
+      final following = await ProfileScreenMethods.prefetchFollowing(
         resolvedWallet,
         force: force,
       );

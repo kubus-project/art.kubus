@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -21,6 +23,7 @@ import '../../providers/chat_provider.dart';
 import '../../providers/dao_provider.dart';
 import '../../providers/stats_provider.dart';
 import '../../providers/app_refresh_provider.dart';
+import '../../providers/artwork_provider.dart';
 import '../../core/conversation_navigator.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/user_activity_status_line.dart';
@@ -236,7 +239,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     }
   }
 
-  Future<void> _loadUser({bool showFullScreenLoader = true}) async {
+  Future<void> _loadUser({
+    bool showFullScreenLoader = true,
+    bool forceModalPrefetch = false,
+  }) async {
     if (showFullScreenLoader) {
       setState(() {
         isLoading = true;
@@ -307,21 +313,20 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       UserService.fetchAndUpdateUserStats(user!.id);
     } catch (_) {}
 
-    Future<void>? modalPrefetchFuture;
     try {
-      modalPrefetchFuture = ProfileScreenMethods.prefetchOtherUserProfileData(
+      final prefetchFuture = ProfileScreenMethods.prefetchOtherUserProfileData(
         context,
         walletAddress: user!.id,
-        force: false,
+        force: forceModalPrefetch,
         prefetchStatsSnapshot: false,
       );
+      if (forceModalPrefetch) {
+        await prefetchFuture;
+      } else {
+        unawaited(prefetchFuture);
+      }
     } catch (_) {}
     await _loadUserStats(skipFollowersOverwrite: true, forceRefresh: true);
-    if (modalPrefetchFuture != null) {
-      try {
-        await modalPrefetchFuture;
-      } catch (_) {}
-    }
     await _loadPosts();
     await _maybeLoadArtistData(force: true);
   }
@@ -405,7 +410,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   }
 
   Future<void> _handleRefresh() async {
-    await _loadUser(showFullScreenLoader: false);
+    await _loadUser(
+      showFullScreenLoader: false,
+      forceModalPrefetch: true,
+    );
   }
 
   Future<void> _toggleFollow() async {
@@ -478,12 +486,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     await _loadUserStats(forceRefresh: true);
     if (!mounted) return;
     try {
-      ProfileScreenMethods.prefetchOtherUserProfileData(
+      unawaited(ProfileScreenMethods.prefetchOtherUserProfileData(
         context,
         walletAddress: user!.id,
         force: true,
         prefetchStatsSnapshot: false,
-      );
+      ));
     } catch (_) {}
     // Persist updated user in cache so other screens see immediate change
     try {
@@ -928,6 +936,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   }
 
   Widget _buildStatsRow(AppLocalizations l10n) {
+    final artworksCount = Provider.of<ArtworkProvider>(context, listen: true)
+        .artworksForWallet(user!.id)
+        .length;
+
     return LiquidGlassCard(
       margin: EdgeInsets.zero,
       borderRadius: BorderRadius.circular(KubusRadius.lg),
@@ -966,6 +978,21 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               value: _formatCount(user!.followingCount),
               onTap: () {
                 ProfileScreenMethods.showFollowing(
+                  context,
+                  walletAddress: user!.id,
+                );
+              }),
+          Container(
+            width: 1,
+            height: 40,
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
+          ),
+          _buildInlineStat(
+              label: l10n.userProfileArtworksTitle,
+              value: _formatCount(artworksCount),
+              onTap: () {
+                ProfileScreenMethods.showArtworks(
                   context,
                   walletAddress: user!.id,
                 );
