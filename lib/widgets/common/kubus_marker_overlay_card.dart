@@ -205,7 +205,8 @@ class KubusMarkerOverlayCard extends StatelessWidget {
                 linkedSubjectSubtitle: linkedSubjectSubtitle,
               ),
               const SizedBox(height: KubusSpacing.sm),
-              Expanded(
+              Flexible(
+                fit: hasConstrainedHeight ? FlexFit.tight : FlexFit.loose,
                 child: LayoutBuilder(
                   builder: (context, previewConstraints) {
                     final previewHeight = previewConstraints.maxHeight;
@@ -253,14 +254,15 @@ class KubusMarkerOverlayCard extends StatelessWidget {
                             ),
                             const SizedBox(height: KubusSpacing.sm),
                           ],
-                          Expanded(
-                            child: _buildBody(
-                              context: context,
-                              scheme: scheme,
-                              visibleDescription: visibleDescription,
-                              isConstrained: hasConstrainedHeight,
+                          if (visibleDescription.isNotEmpty)
+                            Expanded(
+                              child: _buildBody(
+                                context: context,
+                                scheme: scheme,
+                                visibleDescription: visibleDescription,
+                                isConstrained: hasConstrainedHeight,
+                              ),
                             ),
-                          ),
                         ],
                       ),
                     );

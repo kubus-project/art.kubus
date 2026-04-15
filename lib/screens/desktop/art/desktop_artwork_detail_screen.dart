@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:async';
-import 'package:art_kubus/widgets/glass_components.dart';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -9,7 +8,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../../../models/artwork.dart';
-import '../../../models/artwork_comment.dart';
 import '../../../providers/artwork_provider.dart';
 import '../../../providers/attendance_provider.dart';
 import '../../../providers/profile_provider.dart';
@@ -22,13 +20,12 @@ import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
 import '../../../utils/artwork_media_resolver.dart';
 import '../../../features/map/shared/map_screen_shared_helpers.dart';
-import '../../../utils/wallet_utils.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../widgets/artwork_gallery_view.dart';
 import '../../../widgets/artwork_creator_byline.dart';
-import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/detail/detail_shell_components.dart';
+import '../../../widgets/detail/artwork_engagement_sections.dart';
 import '../../web3/artist/artwork_ar_manager_screen.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -53,11 +50,8 @@ class DesktopArtworkDetailScreen extends StatefulWidget {
 
 class _DesktopArtworkDetailScreenState
     extends State<DesktopArtworkDetailScreen> {
-  late final TextEditingController _commentController;
-  late final FocusNode _commentFocusNode;
-  late final ScrollController _commentsScrollController;
-  String? _replyToCommentId;
-  String? _replyToAuthorName;
+  final ArtworkCommentsPanelController _commentsPanelController =
+      ArtworkCommentsPanelController();
   String? _prefetchedAttendanceMarkerId;
   bool _artworkLoading = true;
   String? _artworkError;
@@ -66,10 +60,6 @@ class _DesktopArtworkDetailScreenState
   @override
   void initState() {
     super.initState();
-    _commentController = TextEditingController();
-    _commentFocusNode = FocusNode();
-    _commentsScrollController = ScrollController();
-
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       await _loadArtworkDetails();
@@ -81,9 +71,6 @@ class _DesktopArtworkDetailScreenState
 
   @override
   void dispose() {
-    _commentController.dispose();
-    _commentFocusNode.dispose();
-    _commentsScrollController.dispose();
     super.dispose();
   }
 
@@ -229,7 +216,7 @@ class _DesktopArtworkDetailScreenState
                 final showTwoColumns = constraints.maxWidth >= 900;
                 if (showTwoColumns) {
                   final sidePanelWidth =
-                      (constraints.maxWidth * 0.34).clamp(320.0, 420.0);
+                      (constraints.maxWidth * 0.34).clamp(332.0, 430.0);
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -245,9 +232,9 @@ class _DesktopArtworkDetailScreenState
                       AnimatedContainer(
                         duration: const Duration(milliseconds: 220),
                         curve: Curves.easeOutCubic,
-                        width: _commentsSidebarExpanded ? sidePanelWidth : 54,
+                        width: _commentsSidebarExpanded ? sidePanelWidth : 72,
                         child: _commentsSidebarExpanded
-                            ? _buildCommentsPanel(
+                            ? _buildDesktopSidePanel(
                                 artwork,
                                 artworkProvider,
                                 isSignedIn,
@@ -281,10 +268,19 @@ class _DesktopArtworkDetailScreenState
                       child: SizedBox(
                         height: commentsHeight,
                         width: double.infinity,
-                        child: _buildCommentsPanel(
-                          artwork,
-                          artworkProvider,
-                          isSignedIn,
+                        child: ArtworkCommentsExpandableCard(
+                          artwork: artwork,
+                          isSignedIn: isSignedIn,
+                          controller: _commentsPanelController,
+                          layoutMode: ArtworkCommentsLayoutMode.fill,
+                          signInArguments: {
+                            'redirectRoute': '/artwork',
+                            'redirectArguments': {
+                              'artworkId': artwork.id,
+                              'attendanceMarkerId':
+                                  widget.attendanceMarkerId ?? artwork.arMarkerId,
+                            },
+                          },
                         ),
                       ),
                     ),
@@ -304,6 +300,8 @@ class _DesktopArtworkDetailScreenState
     required ArtworkProvider artworkProvider,
     required bool isSignedIn,
   }) {
+    final l10n = AppLocalizations.of(context)!;
+
     return ListView(
       children: [
         _buildMedia(artwork, coverUrl),
@@ -314,13 +312,10 @@ class _DesktopArtworkDetailScreenState
             children: [
               _buildHeader(artwork),
               const SizedBox(height: DetailSpacing.md),
+              DetailSectionLabel(label: l10n.commonDetails),
               DetailContextCluster(
                 compact: true,
                 items: [
-                  DetailContextItem(
-                    icon: Icons.favorite,
-                    value: '${artwork.likesCount}',
-                  ),
                   DetailContextItem(
                     icon: Icons.visibility,
                     value: '${artwork.viewsCount}',
@@ -338,11 +333,12 @@ class _DesktopArtworkDetailScreenState
                     ),
                 ],
               ),
-              const SizedBox(height: DetailSpacing.md),
+              const SizedBox(height: DetailSpacing.lg),
               _buildActionsRow(artwork, artworkProvider, isSignedIn),
             ],
           ),
         ),
+        _buildGallerySection(artwork, coverUrl),
         _buildAttendanceConfirmSection(
             artwork: artwork, isSignedIn: isSignedIn),
         _buildArSetupSection(artwork),
@@ -354,22 +350,19 @@ class _DesktopArtworkDetailScreenState
 
   Widget _buildMedia(Artwork artwork, String? coverUrl) {
     final scheme = Theme.of(context).colorScheme;
-    final urls = <String>[
+    final primaryCover = <String>[
       if (coverUrl != null && coverUrl.trim().isNotEmpty) coverUrl.trim(),
       ...artwork.galleryUrls.map((u) => u.trim()).where((u) => u.isNotEmpty),
-    ];
+    ].firstWhere(
+      (url) => url.isNotEmpty,
+      orElse: () => '',
+    );
 
-    final seen = <String>{};
-    final unique = <String>[];
-    for (final url in urls) {
-      if (seen.add(url)) unique.add(url);
-    }
-
-    if (unique.isEmpty) {
+    if (primaryCover.isEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(KubusRadius.lg),
         child: AspectRatio(
-          aspectRatio: 16 / 9,
+          aspectRatio: 14 / 9,
           child: Container(
             color: scheme.surfaceContainerHighest,
             child:
@@ -379,7 +372,90 @@ class _DesktopArtworkDetailScreenState
       );
     }
 
-    return ArtworkGalleryView(imageUrls: unique, height: 320);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final tunedCoverHeight =
+            (constraints.maxWidth / (14 / 9)).clamp(220.0, 320.0).toDouble();
+        return ArtworkGalleryView(
+          imageUrls: [primaryCover],
+          height: tunedCoverHeight,
+        );
+      },
+    );
+  }
+
+  Widget _buildGallerySection(Artwork artwork, String? coverUrl) {
+    final l10n = AppLocalizations.of(context)!;
+    final normalizedCover = (coverUrl ?? '').trim();
+    final urls = artwork.galleryUrls
+        .map((u) => u.trim())
+        .where((u) => u.isNotEmpty && u != normalizedCover)
+        .toList(growable: false);
+
+    if (urls.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: DetailSpacing.lg),
+      child: DetailCard(
+        child: DetailSection(
+          title: l10n.artistStudioTabGallery,
+          collapsible: true,
+          initiallyExpanded: true,
+          child: Padding(
+            padding: const EdgeInsets.only(top: DetailSpacing.sm),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final galleryHeight =
+                    (constraints.maxWidth / 1.9).clamp(180.0, 260.0).toDouble();
+                return ArtworkGalleryView(
+                  imageUrls: urls,
+                  height: galleryHeight,
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDesktopSidePanel(
+    Artwork artwork,
+    ArtworkProvider provider,
+    bool isSignedIn, {
+    VoidCallback? onToggleVisibility,
+  }) {
+    final showCollaboration =
+        AppConfig.isFeatureEnabled('collabInvites') && isSignedIn;
+
+    return Column(
+      children: [
+        if (showCollaboration) ...[
+          ArtworkCollaboratorsExpandableCard(
+            artwork: artwork,
+            initiallyExpanded: false,
+          ),
+          const SizedBox(height: DetailSpacing.md),
+        ],
+        Expanded(
+          child: ArtworkCommentsExpandableCard(
+            artwork: artwork,
+            isSignedIn: isSignedIn,
+            controller: _commentsPanelController,
+            onClose: onToggleVisibility,
+            layoutMode: ArtworkCommentsLayoutMode.fill,
+            signInArguments: {
+              'redirectRoute': '/artwork',
+              'redirectArguments': {
+                'artworkId': artwork.id,
+                'attendanceMarkerId':
+                    widget.attendanceMarkerId ?? artwork.arMarkerId,
+              },
+            },
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildArSetupSection(Artwork artwork) {
@@ -501,9 +577,8 @@ class _DesktopArtworkDetailScreenState
       children: [
         DetailIdentityBlock(
           title: artwork.title,
-          kicker: category.isNotEmpty && category != 'General'
-              ? category
-              : null,
+          kicker:
+              category.isNotEmpty && category != 'General' ? category : null,
         ),
         const SizedBox(height: DetailSpacing.sm),
         ArtworkCreatorByline(
@@ -618,7 +693,7 @@ class _DesktopArtworkDetailScreenState
     final markerIdCandidate = (artwork.arMarkerId ?? '').toString().trim();
     final canShowStreetArtClaimCta =
         AppConfig.isFeatureEnabled('streetArtClaims') &&
-        markerIdCandidate.isNotEmpty;
+            markerIdCandidate.isNotEmpty;
 
     Future<void> requireSignInToast() async {
       messenger.showKubusSnackBar(
@@ -630,94 +705,81 @@ class _DesktopArtworkDetailScreenState
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (showArPrimaryAction) ...[
-          SizedBox(
-            width: double.infinity,
-            child: DetailActionButton(
-              icon: Icons.view_in_ar,
-              label: l10n.commonViewInAr,
-              onPressed: () => Navigator.pushNamed(context, '/ar'),
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              foregroundColor: Theme.of(context).colorScheme.onPrimary,
-            ),
-          ),
-          const SizedBox(height: DetailSpacing.sm),
-        ],
-        DetailSecondaryActionCluster(
-          maxVisible: 5,
-          actions: [
-            DetailSecondaryAction(
-              icon: artwork.isLikedByCurrentUser
-                  ? Icons.favorite
-                  : Icons.favorite_border,
-              label: '${artwork.likesCount}',
-              onTap: canInteract
-                  ? () => artworkProvider.toggleLike(artwork.id)
-                  : requireSignInToast,
-              isActive: artwork.isLikedByCurrentUser,
-              activeColor: Theme.of(context).colorScheme.error,
-              tooltip: l10n.commonLikes,
-            ),
-            DetailSecondaryAction(
-              icon: artwork.isFavoriteByCurrentUser
-                  ? Icons.bookmark
-                  : Icons.bookmark_border,
-              label: l10n.commonSave,
-              onTap: canInteract
-                  ? () => artworkProvider.toggleFavorite(artwork.id)
-                  : requireSignInToast,
-              isActive: artwork.isFavoriteByCurrentUser,
-              tooltip: l10n.commonSave,
-            ),
-            DetailSecondaryAction(
-              icon: Icons.comment_outlined,
-              label: '${artwork.commentsCount}',
-              onTap: () {
-                if (!_commentsSidebarExpanded &&
-                    MediaQuery.sizeOf(context).width >= 900) {
-                  setState(() {
-                    _commentsSidebarExpanded = true;
-                  });
-                }
-                if (_commentsScrollController.hasClients) {
-                  _commentsScrollController.animateTo(
-                    0,
-                    duration: const Duration(milliseconds: 250),
-                    curve: Curves.easeOut,
-                  );
-                }
-              },
-              tooltip: l10n.commonComments,
-            ),
-            DetailSecondaryAction(
-              icon: Icons.share_outlined,
-              label: l10n.commonShare,
-              onTap: () {
-                ShareService().showShareSheet(
-                  context,
-                  target: ShareTarget.artwork(
-                    artworkId: artwork.id,
-                    title: artwork.title,
-                  ),
-                  sourceScreen: 'desktop_art_detail',
-                );
-              },
-              tooltip: l10n.commonShare,
-            ),
-            if (canShowStreetArtClaimCta)
-              DetailSecondaryAction(
-                icon: Icons.fact_check_outlined,
-                label: l10n.mapMarkerClaimButton,
-                onTap: () => unawaited(
-                  _openStreetArtClaimsForMarkerId(markerIdCandidate),
-                ),
-                tooltip: l10n.mapMarkerClaimButton,
+    return DetailActionsSection(
+      title: l10n.commonActions,
+      maxVisibleActions: 5,
+      primaryAction: showArPrimaryAction
+          ? SizedBox(
+              width: double.infinity,
+              child: DetailActionButton(
+                icon: Icons.view_in_ar,
+                label: l10n.commonViewInAr,
+                onPressed: () => Navigator.pushNamed(context, '/ar'),
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
               ),
-          ],
+            )
+          : null,
+      actions: [
+        DetailSecondaryAction(
+          icon:
+              artwork.isLikedByCurrentUser ? Icons.favorite : Icons.favorite_border,
+          label: '${artwork.likesCount}',
+          onTap: canInteract
+              ? () => artworkProvider.toggleLike(artwork.id)
+              : requireSignInToast,
+          isActive: artwork.isLikedByCurrentUser,
+          activeColor: Theme.of(context).colorScheme.error,
+          tooltip: l10n.commonLikes,
         ),
+        DetailSecondaryAction(
+          icon: artwork.isFavoriteByCurrentUser
+              ? Icons.bookmark
+              : Icons.bookmark_border,
+          label: l10n.commonSave,
+          onTap: canInteract
+              ? () => artworkProvider.toggleFavorite(artwork.id)
+              : requireSignInToast,
+          isActive: artwork.isFavoriteByCurrentUser,
+          tooltip: l10n.commonSave,
+        ),
+        DetailSecondaryAction(
+          icon: Icons.comment_outlined,
+          label: '${artwork.commentsCount}',
+          onTap: () {
+            if (!_commentsSidebarExpanded && MediaQuery.sizeOf(context).width >= 900) {
+              setState(() {
+                _commentsSidebarExpanded = true;
+              });
+            }
+            _commentsPanelController.openAndScrollToTop();
+          },
+          tooltip: l10n.commonComments,
+        ),
+        DetailSecondaryAction(
+          icon: Icons.share_outlined,
+          label: l10n.commonShare,
+          onTap: () {
+            ShareService().showShareSheet(
+              context,
+              target: ShareTarget.artwork(
+                artworkId: artwork.id,
+                title: artwork.title,
+              ),
+              sourceScreen: 'desktop_art_detail',
+            );
+          },
+          tooltip: l10n.commonShare,
+        ),
+        if (canShowStreetArtClaimCta)
+          DetailSecondaryAction(
+            icon: Icons.fact_check_outlined,
+            label: l10n.mapMarkerClaimButton,
+            onTap: () => unawaited(
+              _openStreetArtClaimsForMarkerId(markerIdCandidate),
+            ),
+            tooltip: l10n.mapMarkerClaimButton,
+          ),
       ],
     );
   }
@@ -731,7 +793,8 @@ class _DesktopArtworkDetailScreenState
     final marker = await MapDataController().getArtMarkerById(markerId);
     if (!mounted) return;
 
-    if (marker == null || !KubusMarkerOverlayHelpers.canOpenStreetArtClaims(marker)) {
+    if (marker == null ||
+        !KubusMarkerOverlayHelpers.canOpenStreetArtClaims(marker)) {
       messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.commonNotAvailable)),
         tone: KubusSnackBarTone.warning,
@@ -995,716 +1058,47 @@ class _DesktopArtworkDetailScreenState
       padding: EdgeInsets.zero,
       borderRadius: DetailRadius.lg,
       child: Center(
-        child: Tooltip(
-          message: l10n.commonComments,
-          child: IconButton(
-            onPressed: () {
-              setState(() {
-                _commentsSidebarExpanded = true;
-              });
-            },
-            icon: Icon(
-              Icons.comment_outlined,
-              color: scheme.onSurface,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCommentsPanel(
-    Artwork artwork,
-    ArtworkProvider provider,
-    bool isSignedIn, {
-    VoidCallback? onToggleVisibility,
-  }) {
-    final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-
-    final comments = provider.getComments(artwork.id);
-    final isLoading = provider.isLoading('load_comments_${artwork.id}');
-    final loadError = provider.commentLoadError(artwork.id);
-
-    return DetailCard(
-      padding: EdgeInsets.zero,
-      borderRadius: DetailRadius.lg,
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-                DetailSpacing.lg, 14, DetailSpacing.lg, DetailSpacing.md),
-            child: Row(
-              children: [
-                Text(
-                  '${l10n.commonComments} (${artwork.commentsCount})',
-                  style: DetailTypography.sectionTitle(context),
-                ),
-                const Spacer(),
-                if (onToggleVisibility != null)
-                  IconButton(
-                    tooltip: l10n.commonClose,
-                    onPressed: onToggleVisibility,
-                    icon: const Icon(Icons.chevron_right),
-                  ),
-                IconButton(
-                  tooltip: l10n.commonRefresh,
-                  onPressed: () =>
-                      provider.loadComments(artwork.id, force: true),
-                  icon: const Icon(Icons.refresh),
-                ),
-              ],
-            ),
-          ),
-          Divider(
-              height: 1, color: scheme.outlineVariant.withValues(alpha: 0.3)),
-          Expanded(
-            child: isLoading
-                ? const Center(child: InlineLoading())
-                : (loadError != null)
-                    ? _buildCommentsError(loadError,
-                        onRetry: () =>
-                            provider.loadComments(artwork.id, force: true))
-                    : (comments.isEmpty)
-                        ? _buildCommentsEmpty()
-                        : ListView(
-                            controller: _commentsScrollController,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: DetailSpacing.lg,
-                                vertical: DetailSpacing.md),
-                            children: [
-                              for (final c in comments) ...[
-                                ..._buildCommentTreeWidgets(
-                                  artwork: artwork,
-                                  comment: c,
-                                  provider: provider,
-                                  depth: 0,
-                                ),
-                              ],
-                            ],
-                          ),
-          ),
-          Divider(
-              height: 1, color: scheme.outlineVariant.withValues(alpha: 0.3)),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-            child: _buildCommentComposer(artwork, provider, isSignedIn),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCommentsEmpty() {
-    final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            l10n.postDetailNoCommentsTitle,
-            style: KubusTextStyles.sectionTitle.copyWith(
-              color: scheme.onSurface.withValues(alpha: 0.8),
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            l10n.postDetailNoCommentsDescription,
-            style: KubusTextStyles.sectionSubtitle.copyWith(
-              color: scheme.onSurface.withValues(alpha: 0.65),
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCommentsError(String message, {required VoidCallback onRetry}) {
-    final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(KubusSpacing.md),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              message,
-              style: KubusTextStyles.sectionSubtitle.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.8),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
-            OutlinedButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: Text(l10n.commonRetry),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  List<Widget> _buildCommentTreeWidgets({
-    required Artwork artwork,
-    required ArtworkComment comment,
-    required ArtworkProvider provider,
-    required int depth,
-  }) {
-    final widgets = <Widget>[
-      _buildCommentTile(
-        artwork: artwork,
-        comment: comment,
-        provider: provider,
-        depth: depth,
-      ),
-      const SizedBox(height: DetailSpacing.md),
-    ];
-
-    for (final r in comment.replies) {
-      widgets.addAll(
-        _buildCommentTreeWidgets(
-          artwork: artwork,
-          comment: r,
-          provider: provider,
-          depth: depth + 1,
-        ),
-      );
-    }
-
-    return widgets;
-  }
-
-  Widget _buildCommentTile({
-    required Artwork artwork,
-    required ArtworkComment comment,
-    required ArtworkProvider provider,
-    required int depth,
-  }) {
-    final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    final profile = context.read<ProfileProvider>().currentUser;
-    final walletProvider = context.read<WalletProvider>();
-
-    final currentWallet = WalletUtils.canonical(
-      (profile?.walletAddress ?? walletProvider.currentWalletAddress ?? '')
-          .toString(),
-    );
-    final currentId = WalletUtils.canonical((profile?.id ?? '').toString());
-    final authorKey = WalletUtils.canonical(comment.userId);
-    final canModify = authorKey.isNotEmpty &&
-        (authorKey == currentWallet ||
-            (currentId.isNotEmpty && authorKey == currentId));
-
-    Future<void> showHistory() async {
-      if (!comment.isEdited || comment.originalContent == null) return;
-      await showKubusDialog<void>(
-        context: context,
-        builder: (dialogContext) {
-          return KubusAlertDialog(
-            title: Text(l10n.commentHistoryTitle),
-            content: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.commentHistoryCurrentLabel,
-                    style: KubusTextStyles.sectionTitle,
-                  ),
-                  const SizedBox(height: 8),
-                  SelectableText(
-                    comment.content,
-                    style: KubusTextStyles.detailBody,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    l10n.commentHistoryOriginalLabel,
-                    style: KubusTextStyles.sectionTitle,
-                  ),
-                  const SizedBox(height: 8),
-                  SelectableText(
-                    comment.originalContent ?? '',
-                    style: KubusTextStyles.detailBody,
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(),
-                child: Text(l10n.commonClose),
-              ),
-            ],
-          );
-        },
-      );
-    }
-
-    Future<void> promptEdit() async {
-      final messenger = ScaffoldMessenger.of(context);
-      final controller = TextEditingController(text: comment.content);
-      bool saving = false;
-      await showKubusDialog<void>(
-        context: context,
-        barrierDismissible: !saving,
-        builder: (dialogContext) {
-          return StatefulBuilder(
-            builder: (context, setDialogState) {
-              return KubusAlertDialog(
-                title: Text(l10n.commentEditTitle),
-                content: TextField(
-                  controller: controller,
-                  maxLines: null,
-                  autofocus: true,
-                  decoration: InputDecoration(
-                      hintText: l10n.postDetailWriteCommentHint),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed:
-                        saving ? null : () => Navigator.of(dialogContext).pop(),
-                    child: Text(l10n.commonCancel),
-                  ),
-                  FilledButton(
-                    onPressed: saving
-                        ? null
-                        : () async {
-                            final next = controller.text.trim();
-                            if (next.isEmpty) return;
-                            setDialogState(() => saving = true);
-                            try {
-                              await provider.editArtworkComment(
-                                artworkId: artwork.id,
-                                commentId: comment.id,
-                                content: next,
-                              );
-                              if (!mounted) return;
-                              if (!dialogContext.mounted) return;
-                              Navigator.of(dialogContext).pop();
-                              messenger.showKubusSnackBar(SnackBar(
-                                  content: Text(l10n.commentUpdatedToast)));
-                            } catch (_) {
-                              if (!mounted) return;
-                              messenger.showKubusSnackBar(
-                                SnackBar(
-                                  content: Text(l10n.commentEditFailedToast),
-                                  backgroundColor: scheme.errorContainer,
-                                ),
-                              );
-                            } finally {
-                              if (dialogContext.mounted) {
-                                setDialogState(() => saving = false);
-                              }
-                            }
-                          },
-                    child: Text(l10n.commonSave),
-                  ),
-                ],
-              );
-            },
-          );
-        },
-      );
-      controller.dispose();
-    }
-
-    Future<void> promptDelete() async {
-      final messenger = ScaffoldMessenger.of(context);
-      final confirmed = await showKubusDialog<bool>(
-        context: context,
-        builder: (dialogContext) {
-          return KubusAlertDialog(
-            title: Text(l10n.commentDeleteConfirmTitle),
-            content: Text(l10n.commentDeleteConfirmMessage),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: Text(l10n.commonCancel),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                style: FilledButton.styleFrom(
-                  backgroundColor: scheme.error,
-                  foregroundColor: scheme.onError,
-                ),
-                child: Text(l10n.commonDelete),
-              ),
-            ],
-          );
-        },
-      );
-      if (confirmed != true) return;
-      try {
-        await provider.deleteArtworkComment(
-            artworkId: artwork.id, commentId: comment.id);
-        if (!mounted) return;
-        messenger.showKubusSnackBar(
-            SnackBar(content: Text(l10n.commentDeletedToast)));
-      } catch (_) {
-        if (!mounted) return;
-        messenger.showKubusSnackBar(
-          SnackBar(
-            content: Text(l10n.commentDeleteFailedToast),
-            backgroundColor: scheme.errorContainer,
-          ),
-        );
-      }
-    }
-
-    final isReply = depth > 0;
-
-    return Padding(
-      padding: EdgeInsets.only(left: depth * 48.0),
-      child: Container(
-        padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerHighest.withValues(alpha: 0.3),
-          borderRadius: BorderRadius.circular(KubusRadius.md),
-          border: Border.all(color: scheme.outline.withValues(alpha: 0.12)),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AvatarWidget(
-              avatarUrl: comment.userAvatarUrl,
-              wallet: comment.userId,
-              radius: isReply ? 14 : 18,
-            ),
-            const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          comment.userName,
-                          style: KubusTextStyles.actionTileTitle.copyWith(
-                            fontSize: KubusHeaderMetrics.sectionSubtitle,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: KubusSpacing.sm),
-                      Text(
-                        comment.timeAgo,
-                        style: KubusTextStyles.navMetaLabel.copyWith(
-                          color: scheme.onSurface.withValues(alpha: 0.6),
-                        ),
-                      ),
-                      if (comment.isEdited) ...[
-                        const SizedBox(width: 8),
-                        Text(
-                          l10n.commonEditedTag,
-                          style: KubusTextStyles.compactBadge.copyWith(
-                            color: scheme.onSurface.withValues(alpha: 0.6),
-                          ),
-                        ),
-                      ],
-                      if (canModify)
-                        PopupMenuButton<String>(
-                          tooltip: l10n.commonMore,
-                          onSelected: (value) async {
-                            if (value == 'edit') {
-                              await promptEdit();
-                            } else if (value == 'delete') {
-                              await promptDelete();
-                            }
-                          },
-                          itemBuilder: (context) => [
-                            PopupMenuItem(
-                                value: 'edit', child: Text(l10n.commonEdit)),
-                            PopupMenuItem(
-                                value: 'delete',
-                                child: Text(l10n.commonDelete)),
-                          ],
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: (comment.isEdited && comment.originalContent != null)
-                        ? showHistory
-                        : null,
-                    child: Text(
-                      comment.content,
-                      style: KubusTextStyles.detailBody.copyWith(
-                        fontSize: KubusHeaderMetrics.sectionSubtitle,
-                        height: 1.35,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed: () =>
-                            provider.toggleCommentLike(artwork.id, comment.id),
-                        icon: Icon(
-                          comment.isLikedByCurrentUser
-                              ? Icons.favorite
-                              : Icons.favorite_border,
-                          size: 16,
-                          color: comment.isLikedByCurrentUser
-                              ? scheme.error
-                              : scheme.onSurface.withValues(alpha: 0.8),
-                        ),
-                        tooltip: l10n.commonLikes,
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      if (comment.likesCount > 0)
-                        Text(
-                          comment.likesCount.toString(),
-                          style: KubusTextStyles.navMetaLabel.copyWith(
-                            color: scheme.onSurface.withValues(alpha: 0.7),
-                          ),
-                        ),
-                      const SizedBox(width: 12),
-                      TextButton(
-                        onPressed: () {
-                          setState(() {
-                            _replyToCommentId = comment.id;
-                            _replyToAuthorName = comment.userName;
-                          });
-                          _commentController.text = '@${comment.userName} ';
-                          _commentController.selection =
-                              TextSelection.fromPosition(
-                            TextPosition(
-                                offset: _commentController.text.length),
-                          );
-                          FocusScope.of(context)
-                              .requestFocus(_commentFocusNode);
-                        },
-                        child: Text(
-                          l10n.commonReply,
-                          style: KubusTextStyles.navMetaLabel,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCommentComposer(
-      Artwork artwork, ArtworkProvider provider, bool isSignedIn) {
-    final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-
-    final isSubmitting = provider.isLoading('comment_${artwork.id}');
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (_replyToAuthorName != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    l10n.postDetailReplyingToLabel(_replyToAuthorName!),
-                    style: KubusTextStyles.sectionSubtitle.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.7),
-                    ),
-                  ),
-                ),
-                IconButton(
-                  tooltip: l10n.commonClose,
-                  onPressed: () {
-                    setState(() {
-                      _replyToAuthorName = null;
-                      _replyToCommentId = null;
-                    });
-                    _commentController.clear();
-                  },
-                  icon: const Icon(Icons.close),
-                ),
-              ],
-            ),
-          ),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _commentController,
-                focusNode: _commentFocusNode,
-                minLines: 1,
-                maxLines: 4,
-                decoration: InputDecoration(
-                  hintText: l10n.artworkCommentAddHint,
-                  filled: true,
-                  fillColor:
-                      scheme.surfaceContainerHighest.withValues(alpha: 0.35),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(KubusRadius.md)),
-                ),
-              ),
-            ),
-            const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-            ElevatedButton(
-              onPressed: isSubmitting
-                  ? null
-                  : () => _submitComment(artwork, provider, isSignedIn),
-              style: ElevatedButton.styleFrom(
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: Tooltip(
+            message: l10n.commonComments,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(DetailRadius.lg),
+              onTap: () {
+                setState(() {
+                  _commentsSidebarExpanded = true;
+                });
+              },
+              child: Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: KubusSpacing.sm + KubusSpacing.xs,
-                  vertical: KubusSpacing.sm + KubusSpacing.xs,
+                  horizontal: DetailSpacing.xs,
+                  vertical: DetailSpacing.md,
                 ),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(KubusRadius.md)),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.comment_outlined,
+                      color: scheme.onSurface,
+                    ),
+                    const SizedBox(height: DetailSpacing.xs),
+                    Text(
+                      l10n.commonComments,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: DetailTypography.label(context).copyWith(
+                        fontSize: KubusHeaderMetrics.sectionSubtitle - 3,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              child: isSubmitting
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child:
-                          InlineLoading(shape: BoxShape.circle, tileSize: 3.5),
-                    )
-                  : Icon(Icons.send, size: 18, color: scheme.onPrimary),
             ),
-          ],
+          ),
         ),
-      ],
+      ),
     );
-  }
-
-  Future<void> _submitComment(
-      Artwork artwork, ArtworkProvider provider, bool isSignedIn) async {
-    final content = _commentController.text.trim();
-    if (content.isEmpty) return;
-
-    final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-    final l10n = AppLocalizations.of(context)!;
-
-    if (!isSignedIn) {
-      messenger.showKubusSnackBar(
-        SnackBar(
-          content: Text(l10n.communityCommentAuthRequiredToast,
-              style: KubusTypography.inter()),
-          action: SnackBarAction(
-            label: l10n.commonSignIn,
-            onPressed: () {
-              navigator.pushNamed(
-                '/sign-in',
-                arguments: {
-                  'redirectRoute': '/artwork',
-                  'redirectArguments': {'artworkId': artwork.id},
-                },
-              );
-            },
-          ),
-        ),
-      );
-      return;
-    }
-
-    final parentId = _replyToCommentId;
-    setState(() {
-      _replyToCommentId = null;
-      _replyToAuthorName = null;
-    });
-
-    try {
-      await provider.addComment(
-        artworkId: artwork.id,
-        content: content,
-        parentCommentId: parentId,
-      );
-      if (!mounted) return;
-      _commentController.clear();
-      // With oldest-first ordering, new comments appear at the bottom.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        if (_commentsScrollController.hasClients) {
-          _commentsScrollController.animateTo(
-            _commentsScrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOut,
-          );
-        }
-      });
-      messenger.showKubusSnackBar(
-        SnackBar(
-          content: Text(l10n.artworkCommentAddedToast,
-              style: KubusTypography.inter()),
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    } on BackendApiRequestException catch (e) {
-      if (!mounted) return;
-      final authRequired = e.statusCode == 401 || e.statusCode == 403;
-      String? backendMessage;
-      if (!authRequired) {
-        try {
-          final raw = (e.body ?? '').trim();
-          if (raw.isNotEmpty) {
-            final decoded = jsonDecode(raw);
-            if (decoded is Map<String, dynamic>) {
-              final msg = (decoded['error'] ?? decoded['message'] ?? '')
-                  .toString()
-                  .trim();
-              if (msg.isNotEmpty) {
-                backendMessage =
-                    msg.length > 140 ? '${msg.substring(0, 140)}\u2026' : msg;
-              }
-            }
-          }
-        } catch (_) {
-          // Ignore body parse failures and fall back to a generic message.
-        }
-      }
-      backendMessage = backendMessage
-          ?.replaceAll('\u00C3\u00A2\u00E2\u201A\u00AC\u00C2\u00A6', '\u2026')
-          .replaceAll(
-            '\u00C3\u0192\u00C2\u00A2\u00C3\u00A2\u20AC\u0161\u00C2\u00AC\u00C3\u201A\u00C2\u00A6',
-            '\u2026',
-          );
-      messenger.showKubusSnackBar(
-        SnackBar(
-          content: Text(
-            authRequired
-                ? l10n.communityCommentAuthRequiredToast
-                : (backendMessage ??
-                    '${l10n.commonSomethingWentWrong} (${e.statusCode})'),
-            style: KubusTypography.inter(),
-          ),
-          action: authRequired
-              ? SnackBarAction(
-                  label: l10n.commonSignIn,
-                  onPressed: () {
-                    navigator.pushNamed(
-                      '/sign-in',
-                      arguments: {
-                        'redirectRoute': '/artwork',
-                        'redirectArguments': {'artworkId': artwork.id},
-                      },
-                    );
-                  },
-                )
-              : null,
-        ),
-      );
-    } catch (_) {
-      if (!mounted) return;
-      messenger.showKubusSnackBar(
-        SnackBar(
-            content: Text(l10n.commonSomethingWentWrong,
-                style: KubusTypography.inter())),
-      );
-    }
   }
 }

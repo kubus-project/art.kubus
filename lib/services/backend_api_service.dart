@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:latlong2/latlong.dart';
@@ -425,6 +426,15 @@ class BackendApiService
     AppConfig.debugPrint(message);
   }
 
+  bool get _hasInitializedBinding {
+    try {
+      WidgetsBinding.instance;
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   bool _isExhibitionsPath(Uri uri) {
     final path = uri.path;
     return path.startsWith('/api/exhibitions') ||
@@ -610,6 +620,12 @@ class BackendApiService
     _authToken = token;
     _authWalletCanonical = _tryExtractWalletFromToken(token);
     AppConfig.debugPrint('BackendApiService: Auth token set (in-memory)');
+    if (!_hasInitializedBinding) {
+      AppConfig.debugPrint(
+        'BackendApiService: skipping auth token persistence (binding not initialized)',
+      );
+      return;
+    }
     // Persist token to secure storage and shared preferences (web fallback)
     try {
       await _secureStorage
@@ -636,6 +652,12 @@ class BackendApiService
   Future<void> setRefreshToken(String token) async {
     final trimmed = token.trim();
     if (trimmed.isEmpty) return;
+    if (!_hasInitializedBinding) {
+      AppConfig.debugPrint(
+        'BackendApiService: skipping refresh token persistence (binding not initialized)',
+      );
+      return;
+    }
     try {
       await _secureStorage
           .write(key: 'refresh_token', value: trimmed)

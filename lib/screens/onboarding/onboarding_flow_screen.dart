@@ -3393,77 +3393,36 @@ class _WelcomeDecisionPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: scheme.surface.withValues(alpha: isDark ? 0.18 : 0.84),
-        borderRadius: BorderRadius.circular(32),
-        border: Border.all(
-          color: scheme.outlineVariant.withValues(alpha: isDark ? 0.18 : 0.12),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.18 : 0.08),
-            blurRadius: 28,
-            offset: const Offset(0, 18),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(compact ? KubusSpacing.lg : KubusSpacing.xl),
-        child: Column(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final decisionContent = Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (compact)
-              _WelcomeChoiceCard(
-                compact: compact,
-                icon: Icons.travel_explore_rounded,
-                title: discoverTitle,
-                body: discoverBody,
-                action: KubusButton(
-                  onPressed: () => unawaited(onSelectGuest()),
-                  label: discoverTitle,
-                  isFullWidth: true,
-                ),
-              )
-            else
-              _WelcomeChoiceCard(
-                compact: compact,
-                icon: Icons.travel_explore_rounded,
-                title: discoverTitle,
-                body: discoverBody,
-                action: KubusButton(
-                  onPressed: () => unawaited(onSelectGuest()),
-                  label: discoverTitle,
-                  isFullWidth: true,
-                ),
+            _WelcomeChoiceCard(
+              compact: compact,
+              icon: Icons.travel_explore_rounded,
+              title: discoverTitle,
+              body: discoverBody,
+              action: KubusButton(
+                onPressed: () => unawaited(onSelectGuest()),
+                label: discoverTitle,
+                isFullWidth: true,
               ),
+            ),
             const SizedBox(height: KubusSpacing.md),
-            if (compact)
-              _WelcomeChoiceCard(
-                compact: compact,
-                icon: Icons.person_add_alt_1_rounded,
-                title: createTitle,
-                body: createBody,
-                action: KubusOutlineButton(
-                  onPressed: () => unawaited(onSelectAccount()),
-                  label: createTitle,
-                  isFullWidth: true,
-                ),
-              )
-            else
-              _WelcomeChoiceCard(
-                compact: compact,
-                icon: Icons.person_add_alt_1_rounded,
-                title: createTitle,
-                body: createBody,
-                action: KubusOutlineButton(
-                  onPressed: () => unawaited(onSelectAccount()),
-                  label: createTitle,
-                  isFullWidth: true,
-                ),
+            _WelcomeChoiceCard(
+              compact: compact,
+              icon: Icons.person_add_alt_1_rounded,
+              title: createTitle,
+              body: createBody,
+              action: KubusOutlineButton(
+                onPressed: () => unawaited(onSelectAccount()),
+                label: createTitle,
+                isFullWidth: true,
               ),
-            const SizedBox(height: KubusSpacing.lg),
+            ),
+            SizedBox(height: compact ? KubusSpacing.md : KubusSpacing.lg),
             Center(
               child: TextButton(
                 onPressed: onSignIn,
@@ -3474,8 +3433,35 @@ class _WelcomeDecisionPanel extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
+        );
+
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            color: scheme.surface.withValues(alpha: isDark ? 0.18 : 0.84),
+            borderRadius: BorderRadius.circular(32),
+            border: Border.all(
+              color:
+                  scheme.outlineVariant.withValues(alpha: isDark ? 0.18 : 0.12),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.18 : 0.08),
+                blurRadius: 28,
+                offset: const Offset(0, 18),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(compact ? KubusSpacing.lg : KubusSpacing.xl),
+            child: compact
+                ? SingleChildScrollView(
+                    padding: const EdgeInsets.only(bottom: KubusSpacing.xs),
+                    child: decisionContent,
+                  )
+                : decisionContent,
+          ),
+        );
+      },
     );
   }
 }

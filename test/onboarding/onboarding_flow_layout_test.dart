@@ -220,8 +220,15 @@ void main() {
     );
     await _pumpOnboardingReady(tester);
 
-    expect(find.text('Protect your wallet access'), findsOneWidget);
-    expect(find.text('Reveal and copy phrase'), findsOneWidget);
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(OnboardingFlowScreen)),
+    )!;
+
+    expect(find.text(l10n.onboardingFlowWalletBackupIntroTitle), findsOneWidget);
+    expect(
+      find.text(l10n.onboardingFlowWalletBackupIntroRevealAction),
+      findsOneWidget,
+    );
     await tester.scrollUntilVisible(
       find.text('Encrypted server backup'),
       250,

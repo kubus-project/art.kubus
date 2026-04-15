@@ -20,6 +20,7 @@ class AuthEntryShell extends StatelessWidget {
     this.topAction,
     this.footer,
     this.eyebrow,
+    this.allowMobilePageScroll = true,
   });
 
   final String title;
@@ -32,6 +33,7 @@ class AuthEntryShell extends StatelessWidget {
   final Widget? topAction;
   final Widget? footer;
   final String? eyebrow;
+  final bool allowMobilePageScroll;
 
   @override
   Widget build(BuildContext context) {
@@ -135,54 +137,108 @@ class AuthEntryShell extends StatelessWidget {
                                       children: [
                                         Expanded(
                                           child: Center(
-                                            child: SingleChildScrollView(
-                                              padding: EdgeInsets.only(
-                                                bottom: keyboardVisible
-                                                    ? KubusSpacing.sm
-                                                    : 0,
-                                              ),
-                                              child: ConstrainedBox(
-                                                constraints:
-                                                    const BoxConstraints(
-                                                  maxWidth: 560,
-                                                ),
-                                                child: Column(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment
-                                                          .stretch,
-                                                  children: [
-                                                    if (!keyboardVisible) ...[
-                                                      Text(
-                                                        subtitle,
-                                                        style: theme.textTheme
-                                                            .bodyMedium
-                                                            ?.copyWith(
-                                                          color: theme
-                                                              .colorScheme
-                                                              .onSurface
-                                                              .withValues(
-                                                                  alpha: 0.72),
-                                                          height: 1.45,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(
-                                                        height:
-                                                            KubusSpacing.md,
-                                                      ),
-                                                    ],
-                                                    _FormSurface(
-                                                      footer: keyboardVisible
-                                                          ? null
-                                                          : footer,
-                                                      compact: compactSurface,
-                                                      child: form,
+                                            child: allowMobilePageScroll
+                                                ? SingleChildScrollView(
+                                                    padding: EdgeInsets.only(
+                                                      bottom: keyboardVisible
+                                                          ? KubusSpacing.sm
+                                                          : 0,
                                                     ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
+                                                    child: ConstrainedBox(
+                                                      constraints:
+                                                          const BoxConstraints(
+                                                        maxWidth: 560,
+                                                      ),
+                                                      child: Column(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .stretch,
+                                                        children: [
+                                                          if (!keyboardVisible)
+                                                            ...[
+                                                              Text(
+                                                                subtitle,
+                                                                style: theme
+                                                                    .textTheme
+                                                                    .bodyMedium
+                                                                    ?.copyWith(
+                                                                  color: theme
+                                                                      .colorScheme
+                                                                      .onSurface
+                                                                      .withValues(
+                                                                          alpha:
+                                                                              0.72),
+                                                                  height: 1.45,
+                                                                ),
+                                                              ),
+                                                              const SizedBox(
+                                                                height:
+                                                                    KubusSpacing
+                                                                        .md,
+                                                              ),
+                                                            ],
+                                                          _FormSurface(
+                                                            footer:
+                                                                keyboardVisible
+                                                                    ? null
+                                                                    : footer,
+                                                            compact:
+                                                                compactSurface,
+                                                            child: form,
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  )
+                                                : ConstrainedBox(
+                                                    constraints:
+                                                        const BoxConstraints(
+                                                      maxWidth: 560,
+                                                    ),
+                                                    child: Column(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .stretch,
+                                                      children: [
+                                                        if (!keyboardVisible)
+                                                          ...[
+                                                            Text(
+                                                              subtitle,
+                                                              style: theme
+                                                                  .textTheme
+                                                                  .bodyMedium
+                                                                  ?.copyWith(
+                                                                color: theme
+                                                                    .colorScheme
+                                                                    .onSurface
+                                                                    .withValues(
+                                                                        alpha:
+                                                                            0.72),
+                                                                height: 1.45,
+                                                              ),
+                                                            ),
+                                                            const SizedBox(
+                                                              height:
+                                                                  KubusSpacing
+                                                                      .md,
+                                                            ),
+                                                          ],
+                                                        _FormSurface(
+                                                          footer:
+                                                              keyboardVisible
+                                                                  ? null
+                                                                  : footer,
+                                                          compact:
+                                                              compactSurface,
+                                                          child: form,
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
                                           ),
                                         ),
                                       ],

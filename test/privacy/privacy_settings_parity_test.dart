@@ -104,7 +104,7 @@ void main() {
     await tester.tap(find.byKey(const Key('settings_privacy_show_activity_status')));
     await tester.pump();
 
-    final shareTile = tester.widget<SwitchListTile>(
+    final shareTile = tester.widget<Switch>(
       find.byKey(const Key('settings_privacy_share_last_visited_location')),
     );
     expect(shareTile.value, false);

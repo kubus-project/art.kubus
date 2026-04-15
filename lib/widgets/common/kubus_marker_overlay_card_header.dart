@@ -22,8 +22,7 @@ extension _KubusMarkerOverlayCardHeaderParts on KubusMarkerOverlayCard {
         normalizedLinkedTitle.isNotEmpty &&
         normalizedLinkedTitle != displayTitleNormalized;
     final showLinkedSubtitle = normalizedLinkedSubtitle != null &&
-      normalizedLinkedSubtitle.isNotEmpty &&
-      !showLinkedTitle;
+      normalizedLinkedSubtitle.isNotEmpty;
     final showLinkedContext = showLinkedTitle || showLinkedSubtitle;
 
     final titleWidget = Text(
@@ -83,7 +82,7 @@ extension _KubusMarkerOverlayCardHeaderParts on KubusMarkerOverlayCard {
               else
                 titleWidget,
               if (showLinkedContext) ...[
-                const SizedBox(height: KubusSpacing.xxs),
+                const SizedBox(height: KubusSpacing.xs),
                 if (showLinkedTitle)
                   Text(
                     normalizedLinkedTitle,
@@ -112,7 +111,7 @@ extension _KubusMarkerOverlayCardHeaderParts on KubusMarkerOverlayCard {
                 ],
               ],
               if (artwork != null) ...[
-                const SizedBox(height: KubusSpacing.xxs),
+                const SizedBox(height: KubusSpacing.xs),
                 ArtworkCreatorByline(
                   artwork: artwork,
                   maxLines: 1,
@@ -127,7 +126,7 @@ extension _KubusMarkerOverlayCardHeaderParts on KubusMarkerOverlayCard {
             ],
           ),
         ),
-        const SizedBox(width: KubusSpacing.xs),
+        const SizedBox(width: KubusSpacing.sm),
         _OverlayIconButton(
           icon: Icons.close,
           tooltip: l10n.commonClose,

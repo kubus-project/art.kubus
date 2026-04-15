@@ -53,7 +53,10 @@ Future<Map<String, dynamic>> _backendApiLoginWithWallet(
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       await service._persistTokenFromResponse(data);
-      await service.syncSecureAccountStatusFromResponse(data);
+      await service.syncSecureAccountStatusFromResponse(
+        data,
+        fetchIfMissing: false,
+      );
       await service.setLastSignInMethod(AuthSignInMethod.wallet);
       return data;
     }
@@ -107,7 +110,10 @@ Future<Map<String, dynamic>> _backendApiRegisterWithEmail(
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode == 200 || response.statusCode == 201) {
       await service._persistTokenFromResponse(data);
-      await service.syncSecureAccountStatusFromResponse(data);
+      await service.syncSecureAccountStatusFromResponse(
+        data,
+        fetchIfMissing: false,
+      );
       await service.setLastSignInMethod(AuthSignInMethod.email);
       return data;
     }
@@ -153,7 +159,10 @@ Future<Map<String, dynamic>> _backendApiLoginWithEmail(
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode == 200) {
       await service._persistTokenFromResponse(data);
-      await service.syncSecureAccountStatusFromResponse(data);
+      await service.syncSecureAccountStatusFromResponse(
+        data,
+        fetchIfMissing: false,
+      );
       await service.setLastSignInMethod(AuthSignInMethod.email);
       return data;
     }
@@ -501,7 +510,10 @@ Future<Map<String, dynamic>> _backendApiLoginWithGoogle(
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode == 200 || response.statusCode == 201) {
       await service._persistTokenFromResponse(data);
-      await service.syncSecureAccountStatusFromResponse(data);
+      await service.syncSecureAccountStatusFromResponse(
+        data,
+        fetchIfMissing: false,
+      );
       await service.setLastSignInMethod(AuthSignInMethod.google);
       return data;
     }

@@ -22,7 +22,7 @@ extension _KubusMarkerOverlayCardFooterParts on KubusMarkerOverlayCard {
 
     return Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (actionRows.isNotEmpty) ...[
           for (var rowIndex = 0; rowIndex < actionRows.length; rowIndex++) ...[
@@ -39,7 +39,7 @@ extension _KubusMarkerOverlayCardFooterParts on KubusMarkerOverlayCard {
             if (rowIndex < actionRows.length - 1)
               const SizedBox(height: KubusSpacing.xs),
           ],
-          const SizedBox(height: KubusSpacing.xs),
+          const SizedBox(height: KubusSpacing.sm),
         ],
         if (stackCount > 1) ...[
           Center(

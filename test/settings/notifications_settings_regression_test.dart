@@ -130,7 +130,7 @@ void main() {
     await pumpFrames(tester, count: 6);
 
     expect(find.text('Push notifications'), findsWidgets);
-    expect(find.text('Promotion alerts'), findsWidgets);
+    expect(find.text('Promotion activity'), findsWidgets);
     expect(find.text('Promotion notifications'), findsWidgets);
   });
 
@@ -185,7 +185,7 @@ void main() {
     await pumpFrames(tester, count: 6);
 
     expect(find.text('Account management'), findsWidgets);
-    expect(find.text('Promotion alerts'), findsOneWidget);
+    expect(find.text('Promotion activity'), findsOneWidget);
     expect(find.text('Promotion notifications'), findsOneWidget);
   });
 }

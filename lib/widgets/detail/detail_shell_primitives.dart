@@ -277,6 +277,55 @@ class DetailActionButton extends StatelessWidget {
   }
 }
 
+class DetailPrimaryCtaButton extends StatelessWidget {
+  const DetailPrimaryCtaButton({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.backgroundColor,
+    required this.onPressed,
+    this.foregroundColor,
+    this.iconSize = 20,
+    this.padding = const EdgeInsets.symmetric(
+      vertical: 14,
+      horizontal: 12,
+    ),
+    this.borderRadius = KubusRadius.md,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color backgroundColor;
+  final VoidCallback? onPressed;
+  final Color? foregroundColor;
+  final double iconSize;
+  final EdgeInsetsGeometry padding;
+  final double borderRadius;
+
+  @override
+  Widget build(BuildContext context) {
+    final resolvedForeground = foregroundColor ??
+        (ThemeData.estimateBrightnessForColor(backgroundColor) ==
+                Brightness.dark
+            ? KubusColors.textPrimaryDark
+            : KubusColors.textPrimaryLight);
+
+    return ElevatedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: iconSize),
+      label: Text(label),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: backgroundColor,
+        foregroundColor: resolvedForeground,
+        padding: padding,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(borderRadius),
+        ),
+      ),
+    );
+  }
+}
+
 class DetailMetaItem {
   const DetailMetaItem({
     required this.icon,
@@ -463,6 +512,109 @@ class DetailSecondaryAction {
   final Color? activeColor;
   final String? tooltip;
   final String? semanticsLabel;
+}
+
+class DetailSectionLabel extends StatelessWidget {
+  const DetailSectionLabel({
+    super.key,
+    required this.label,
+    this.bottomSpacing = DetailSpacing.xs,
+    this.fontWeight = FontWeight.w700,
+  });
+
+  final String label;
+  final double? bottomSpacing;
+  final FontWeight fontWeight;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: DetailTypography.label(context).copyWith(
+            fontWeight: fontWeight,
+          ),
+        ),
+        if (bottomSpacing != null && bottomSpacing! > 0)
+          SizedBox(height: bottomSpacing),
+      ],
+    );
+  }
+}
+
+enum DetailActionLabelPosition {
+  beforePrimary,
+  afterPrimary,
+}
+
+class DetailActionsSection extends StatelessWidget {
+  const DetailActionsSection({
+    super.key,
+    required this.title,
+    required this.actions,
+    this.primaryAction,
+    this.maxVisibleActions = 4,
+    this.labelPosition = DetailActionLabelPosition.beforePrimary,
+    this.labelBottomSpacing = DetailSpacing.xs,
+    this.primaryBottomSpacing = DetailSpacing.sm,
+    this.primaryToLabelSpacing = DetailSpacing.md,
+  });
+
+  final String title;
+  final List<DetailSecondaryAction> actions;
+  final Widget? primaryAction;
+  final int maxVisibleActions;
+  final DetailActionLabelPosition labelPosition;
+  final double? labelBottomSpacing;
+  final double? primaryBottomSpacing;
+  final double? primaryToLabelSpacing;
+
+  @override
+  Widget build(BuildContext context) {
+    final children = <Widget>[];
+
+    if (labelPosition == DetailActionLabelPosition.beforePrimary) {
+      children.add(
+        DetailSectionLabel(
+          label: title,
+          bottomSpacing: labelBottomSpacing,
+        ),
+      );
+      if (primaryAction != null) {
+        children.add(primaryAction!);
+        if (primaryBottomSpacing != null && primaryBottomSpacing! > 0) {
+          children.add(SizedBox(height: primaryBottomSpacing));
+        }
+      }
+    } else {
+      if (primaryAction != null) {
+        children.add(primaryAction!);
+        if (primaryToLabelSpacing != null && primaryToLabelSpacing! > 0) {
+          children.add(SizedBox(height: primaryToLabelSpacing));
+        }
+      }
+      children.add(
+        DetailSectionLabel(
+          label: title,
+          bottomSpacing: labelBottomSpacing,
+        ),
+      );
+    }
+
+    children.add(
+      DetailSecondaryActionCluster(
+        maxVisible: maxVisibleActions,
+        actions: actions,
+      ),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children,
+    );
+  }
 }
 
 class DetailSecondaryActionCluster extends StatelessWidget {

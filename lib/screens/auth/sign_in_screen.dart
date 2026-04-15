@@ -896,6 +896,7 @@ class _SignInScreenState extends State<SignInScreen> {
       heroIcon: Icons.login_rounded,
       gradientStart: accentStart,
       gradientEnd: accentEnd,
+      allowMobilePageScroll: false,
       highlights: [
         l10n.authHighlightSignInMethods,
         l10n.authHighlightNoFees,

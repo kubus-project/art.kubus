@@ -398,7 +398,7 @@ class SearchService {
           case KubusSearchResultKind.profile:
             return resolvedId.isNotEmpty;
           case KubusSearchResultKind.institution:
-            return resolvedId.isNotEmpty || result.position != null;
+            return result.position != null;
           case KubusSearchResultKind.event:
           case KubusSearchResultKind.marker:
             return result.position != null;
@@ -409,7 +409,7 @@ class SearchService {
       case KubusSearchScope.community:
         switch (result.kind) {
           case KubusSearchResultKind.institution:
-            return resolvedId.isNotEmpty || result.position != null;
+            return result.position != null;
           case KubusSearchResultKind.event:
           case KubusSearchResultKind.marker:
             return result.position != null;

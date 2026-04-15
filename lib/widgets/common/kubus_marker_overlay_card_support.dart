@@ -173,25 +173,30 @@ class _OverlayActionButton extends StatelessWidget {
         ),
         border: Border.all(color: border),
         onTap: spec.onTap,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.max,
-          children: [
-            Icon(spec.icon, size: 15, color: fg),
-            const SizedBox(width: KubusSpacing.xs),
-            Flexible(
-              child: Text(
-                spec.label,
-                textAlign: TextAlign.center,
-                style: KubusTypography.textTheme.bodyMedium?.copyWith(
-                  fontSize: KubusHeaderMetrics.sectionSubtitle - 2.5,
-                  fontWeight: FontWeight.w500,
-                  color: fg,
+        child: SizedBox(
+          height: 40,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.max,
+            children: [
+              Icon(spec.icon, size: 15, color: fg),
+              const SizedBox(width: KubusSpacing.xs),
+              Flexible(
+                child: Text(
+                  spec.label,
+                  textAlign: TextAlign.center,
+                  style: KubusTypography.textTheme.bodyMedium?.copyWith(
+                    fontSize: KubusHeaderMetrics.sectionSubtitle - 2.5,
+                    fontWeight: FontWeight.w500,
+                    color: fg,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  softWrap: false,
                 ),
-                overflow: TextOverflow.ellipsis,
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -355,23 +360,28 @@ class _OverlayPrimaryButton extends StatelessWidget {
           ),
         ],
         onTap: onPressed,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 16, color: foregroundColor),
-            const SizedBox(width: KubusSpacing.sm - KubusSpacing.xxs),
-            Flexible(
-              child: Text(
-                label,
-                overflow: TextOverflow.ellipsis,
-                style: KubusTypography.textTheme.labelLarge?.copyWith(
-                  fontSize: KubusHeaderMetrics.sectionSubtitle,
-                  fontWeight: FontWeight.w700,
-                  color: foregroundColor,
+        child: SizedBox(
+          height: 44,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 16, color: foregroundColor),
+              const SizedBox(width: KubusSpacing.sm - KubusSpacing.xxs),
+              Flexible(
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  softWrap: false,
+                  style: KubusTypography.textTheme.labelLarge?.copyWith(
+                    fontSize: KubusHeaderMetrics.sectionSubtitle,
+                    fontWeight: FontWeight.w700,
+                    color: foregroundColor,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
