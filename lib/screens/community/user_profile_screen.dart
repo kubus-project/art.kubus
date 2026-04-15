@@ -307,7 +307,21 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       UserService.fetchAndUpdateUserStats(user!.id);
     } catch (_) {}
 
+    Future<void>? modalPrefetchFuture;
+    try {
+      modalPrefetchFuture = ProfileScreenMethods.prefetchOtherUserProfileData(
+        context,
+        walletAddress: user!.id,
+        force: false,
+        prefetchStatsSnapshot: false,
+      );
+    } catch (_) {}
     await _loadUserStats(skipFollowersOverwrite: true, forceRefresh: true);
+    if (modalPrefetchFuture != null) {
+      try {
+        await modalPrefetchFuture;
+      } catch (_) {}
+    }
     await _loadPosts();
     await _maybeLoadArtistData(force: true);
   }
@@ -462,6 +476,15 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     }
 
     await _loadUserStats(forceRefresh: true);
+    if (!mounted) return;
+    try {
+      ProfileScreenMethods.prefetchOtherUserProfileData(
+        context,
+        walletAddress: user!.id,
+        force: true,
+        prefetchStatsSnapshot: false,
+      );
+    } catch (_) {}
     // Persist updated user in cache so other screens see immediate change
     try {
       if (user != null) UserService.setUsersInCache([user!]);
@@ -926,13 +949,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           _buildInlineStat(
               label: l10n.userProfileFollowersStatLabel,
               value: _formatCount(user!.followersCount),
-              onTap: () async {
-                try {
-                  await _loadUserStats();
-                } catch (_) {}
-                if (!mounted) return;
-                ProfileScreenMethods.showFollowers(context,
-                    walletAddress: user!.id);
+              onTap: () {
+                ProfileScreenMethods.showFollowers(
+                  context,
+                  walletAddress: user!.id,
+                );
               }),
           Container(
             width: 1,
@@ -943,13 +964,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           _buildInlineStat(
               label: l10n.userProfileFollowingStatLabel,
               value: _formatCount(user!.followingCount),
-              onTap: () async {
-                try {
-                  await _loadUserStats();
-                } catch (_) {}
-                if (!mounted) return;
-                ProfileScreenMethods.showFollowing(context,
-                    walletAddress: user!.id);
+              onTap: () {
+                ProfileScreenMethods.showFollowing(
+                  context,
+                  walletAddress: user!.id,
+                );
               }),
         ],
       ),

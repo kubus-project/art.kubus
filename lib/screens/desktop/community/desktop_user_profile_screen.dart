@@ -22,6 +22,7 @@ import '../../../providers/chat_provider.dart';
 import '../../../providers/dao_provider.dart';
 import '../../../providers/stats_provider.dart';
 import '../../../providers/app_refresh_provider.dart';
+import '../../../providers/artwork_provider.dart';
 import '../../../core/conversation_navigator.dart';
 import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/user_activity_status_line.dart';
@@ -924,7 +925,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       ThemeProvider themeProvider, bool isLarge, AppLocalizations l10n) {
     final screenWidth = MediaQuery.of(context).size.width;
     final maxCols = screenWidth >= 1400 ? 4 : (isLarge ? 4 : 2);
-    final artworksCount = _artistArtworks.length;
+    final artworksCount = Provider.of<ArtworkProvider>(context, listen: true)
+        .artworksForWallet(user!.id)
+        .length;
 
     return DesktopGrid(
       minCrossAxisCount: 2,
@@ -947,13 +950,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           color: _profileStatAccentForIcon(Icons.people_outline),
           centeredWatermarkAlignment: Alignment.center,
           centeredWatermarkScale: 0.84,
-          onTap: () async {
-            try {
-              await _loadUserStats(forceRefresh: true);
-            } catch (_) {}
-            if (!mounted) return;
-            ProfileScreenMethods.showFollowers(context,
-                walletAddress: user!.id);
+          onTap: () {
+            ProfileScreenMethods.showFollowers(
+              context,
+              walletAddress: user!.id,
+            );
           },
         ),
         DesktopStatCard(
@@ -963,13 +964,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           color: _profileStatAccentForIcon(Icons.person_add_outlined),
           centeredWatermarkAlignment: Alignment.center,
           centeredWatermarkScale: 0.84,
-          onTap: () async {
-            try {
-              await _loadUserStats(forceRefresh: true);
-            } catch (_) {}
-            if (!mounted) return;
-            ProfileScreenMethods.showFollowing(context,
-                walletAddress: user!.id);
+          onTap: () {
+            ProfileScreenMethods.showFollowing(
+              context,
+              walletAddress: user!.id,
+            );
           },
         ),
         DesktopStatCard(
@@ -979,6 +978,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           color: _profileStatAccentForIcon(Icons.palette_outlined),
           centeredWatermarkAlignment: Alignment.center,
           centeredWatermarkScale: 0.84,
+          onTap: () {
+            ProfileScreenMethods.showArtworks(
+              context,
+              walletAddress: user!.id,
+            );
+          },
         ),
       ],
     );
@@ -1872,11 +1877,26 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
     if (user == null) return;
 
+    Future<void>? modalPrefetchFuture;
+    try {
+      modalPrefetchFuture = ProfileScreenMethods.prefetchOtherUserProfileData(
+        context,
+        walletAddress: user!.id,
+        force: false,
+        prefetchStatsSnapshot: false,
+      );
+    } catch (_) {}
+
     try {
       UserService.fetchAndUpdateUserStats(user!.id);
     } catch (_) {}
 
     await _loadUserStats(skipFollowersOverwrite: true, forceRefresh: true);
+    if (modalPrefetchFuture != null) {
+      try {
+        await modalPrefetchFuture;
+      } catch (_) {}
+    }
     await _loadPosts();
     await _maybeLoadArtistData(force: true);
   }
@@ -2076,6 +2096,15 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     }
 
     await _loadUserStats(forceRefresh: true);
+    if (!mounted) return;
+    try {
+      ProfileScreenMethods.prefetchOtherUserProfileData(
+        context,
+        walletAddress: user!.id,
+        force: true,
+        prefetchStatsSnapshot: false,
+      );
+    } catch (_) {}
     try {
       if (user != null) UserService.setUsersInCache([user!]);
     } catch (_) {}
