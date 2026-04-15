@@ -123,11 +123,14 @@ class KubusMarkerOverlayCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     const cardPadding = KubusSpacing.md - KubusSpacing.xs;
 
-    final rawDescription = (description ??
-            (marker.description.isNotEmpty
-                ? marker.description
-                : (artwork?.description ?? '')))
-        .trim();
+    final rawDescriptionCandidate = (description ??
+        (marker.description.isNotEmpty
+          ? marker.description
+          : (artwork?.description ?? '')))
+      .trim();
+    final rawDescription = rawDescriptionCandidate.isNotEmpty
+      ? rawDescriptionCandidate
+      : (linkedSubjectSubtitle ?? '').trim();
     final normalizedDescription = _normalizeDescription(rawDescription);
     final visibleDescription = _truncateDescription(
       normalizedDescription,
@@ -215,8 +218,8 @@ class KubusMarkerOverlayCard extends StatelessWidget {
                             ? math.min(
                                 imageHeight,
                                 math.max(
-                                  KubusSpacing.xl * 3 + KubusSpacing.xs,
-                                  previewHeight * 0.56,
+                                  112.0,
+                                  previewHeight * 0.42,
                                 ),
                               )
                             : imageHeight;

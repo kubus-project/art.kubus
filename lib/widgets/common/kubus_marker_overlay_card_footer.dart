@@ -39,7 +39,7 @@ extension _KubusMarkerOverlayCardFooterParts on KubusMarkerOverlayCard {
             if (rowIndex < actionRows.length - 1)
               const SizedBox(height: KubusSpacing.xs),
           ],
-          const SizedBox(height: KubusSpacing.sm),
+          const SizedBox(height: KubusSpacing.xs),
         ],
         if (stackCount > 1) ...[
           Center(

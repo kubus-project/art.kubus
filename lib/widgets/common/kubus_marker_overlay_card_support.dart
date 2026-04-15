@@ -168,25 +168,25 @@ class _OverlayActionButton extends StatelessWidget {
             ? spec.activeColor.withValues(alpha: 0.14)
             : scheme.surface.withValues(alpha: 0.15),
         padding: const EdgeInsets.symmetric(
-          horizontal: KubusSpacing.sm - KubusSpacing.xxs,
-          vertical: KubusSpacing.sm - KubusSpacing.xxs,
+          horizontal: KubusSpacing.sm - KubusSpacing.xs,
+          vertical: KubusSpacing.xxs + 1,
         ),
         border: Border.all(color: border),
         onTap: spec.onTap,
         child: SizedBox(
-          height: 40,
+          height: 34,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.max,
             children: [
-              Icon(spec.icon, size: 15, color: fg),
+              Icon(spec.icon, size: 14, color: fg),
               const SizedBox(width: KubusSpacing.xs),
               Flexible(
                 child: Text(
                   spec.label,
                   textAlign: TextAlign.center,
                   style: KubusTypography.textTheme.bodyMedium?.copyWith(
-                    fontSize: KubusHeaderMetrics.sectionSubtitle - 2.5,
+                    fontSize: KubusHeaderMetrics.sectionSubtitle - 3,
                     fontWeight: FontWeight.w500,
                     color: fg,
                   ),
@@ -349,7 +349,7 @@ class _OverlayPrimaryButton extends StatelessWidget {
         tintBase: accent,
         padding: const EdgeInsets.symmetric(
           horizontal: KubusSpacing.sm + KubusSpacing.xxs,
-          vertical: KubusSpacing.sm,
+          vertical: KubusSpacing.xs,
         ),
         border: Border.all(color: accent.withValues(alpha: 0.45)),
         boxShadow: [
@@ -361,11 +361,11 @@ class _OverlayPrimaryButton extends StatelessWidget {
         ],
         onTap: onPressed,
         child: SizedBox(
-          height: 44,
+          height: 38,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 16, color: foregroundColor),
+              Icon(icon, size: 15, color: foregroundColor),
               const SizedBox(width: KubusSpacing.sm - KubusSpacing.xxs),
               Flexible(
                 child: Text(
@@ -374,7 +374,7 @@ class _OverlayPrimaryButton extends StatelessWidget {
                   maxLines: 1,
                   softWrap: false,
                   style: KubusTypography.textTheme.labelLarge?.copyWith(
-                    fontSize: KubusHeaderMetrics.sectionSubtitle,
+                    fontSize: KubusHeaderMetrics.sectionSubtitle - 1,
                     fontWeight: FontWeight.w700,
                     color: foregroundColor,
                   ),
