@@ -2148,6 +2148,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         imageVersion: KubusCachedImage.versionTokenFromDate(
           artwork.updatedAt ?? artwork.createdAt,
         ),
+        height: 248,
         accentColor: accent,
         closeTooltip: l10n.commonClose,
         onClose: () {
@@ -2320,7 +2321,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     icon: artwork.isLikedByCurrentUser
                         ? Icons.favorite
                         : Icons.favorite_border,
-                    label: l10n.commonLikes,
+                    label: '${artwork.likesCount}',
                     onTap: () {
                       unawaited(artworkProvider.toggleLike(artwork.id));
                     },
@@ -2358,26 +2359,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     tooltip: l10n.commonGetDirections,
                   ),
                 ],
-              ),
-              const SizedBox(height: KubusSpacing.sm),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  final uri = Uri.parse(
-                    'https://www.google.com/maps/dir/?api=1&destination=${artwork.position.latitude},${artwork.position.longitude}',
-                  );
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }
-                },
-                icon: const Icon(Icons.directions),
-                label: Text(l10n.commonGetDirections),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  side: BorderSide(color: accent.withValues(alpha: 0.5)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(KubusRadius.md),
-                  ),
-                ),
               ),
             ],
           ),
@@ -2450,6 +2431,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         imageVersion: KubusCachedImage.versionTokenFromDate(
           exhibition.updatedAt ?? exhibition.createdAt,
         ),
+        height: 248,
         accentColor: exhibitionAccent,
         closeTooltip: l10n.commonClose,
         onClose: () {
@@ -2675,6 +2657,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         imageVersion: KubusCachedImage.versionTokenFromDate(
           event.updatedAt ?? event.createdAt,
         ),
+        height: 248,
         accentColor: eventAccent,
         closeTooltip: l10n.commonClose,
         onClose: () {
@@ -4228,8 +4211,27 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         );
       },
       heightResolver: (constraints, mediaQuery, maxHeight) {
-        return MapOverlaySizing.resolveFixedCardHeight(
+        final selectedMarker = selection.selectedMarker;
+        if (selectedMarker == null) {
+          return MapOverlaySizing.resolveFixedCardHeight(
+            maxCardHeight: maxHeight,
+          );
+        }
+
+        final selectedArtwork = selectedMarker.isExhibitionMarker
+            ? null
+            : artworkProvider.getArtworkById(selectedMarker.artworkId ?? '');
+        final linkedEvent = KubusMarkerOverlayHelpers.resolveLinkedEvent(
+          marker: selectedMarker,
+          events: context.read<EventsProvider>().events,
+        );
+
+        return KubusMarkerOverlayHelpers.estimateCardHeight(
+          marker: selectedMarker,
+          artwork: selectedArtwork,
+          event: linkedEvent,
           maxCardHeight: maxHeight,
+          isCompactWidth: constraints.maxWidth < 600,
         );
       },
       markerOffset: (() {

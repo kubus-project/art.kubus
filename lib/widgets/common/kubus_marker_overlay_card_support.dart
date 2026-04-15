@@ -215,60 +215,6 @@ class _OverlayActionButton extends StatelessWidget {
   }
 }
 
-class _OverlayActionOverflowMenu extends StatelessWidget {
-  const _OverlayActionOverflowMenu({
-    required this.actions,
-  });
-
-  final List<MarkerOverlayActionSpec> actions;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    if (actions.isEmpty) return const SizedBox.shrink();
-
-    return PopupMenuButton<int>(
-      tooltip: 'More',
-      icon: Icon(
-        Icons.more_horiz,
-        size: 18,
-        color: scheme.onSurfaceVariant,
-      ),
-      itemBuilder: (context) => [
-        for (var i = 0; i < actions.length; i++)
-          PopupMenuItem<int>(
-            value: i,
-            enabled: actions[i].onTap != null,
-            child: Row(
-              children: [
-                Icon(
-                  actions[i].icon,
-                  size: 16,
-                  color: actions[i].isActive
-                      ? actions[i].activeColor
-                      : scheme.onSurface,
-                ),
-                const SizedBox(width: KubusSpacing.sm),
-                Expanded(
-                  child: Text(
-                    actions[i].label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ),
-      ],
-      onSelected: (index) {
-        if (index < 0 || index >= actions.length) return;
-        actions[index].onTap?.call();
-      },
-    );
-  }
-}
-
 class _OverlayPager extends StatelessWidget {
   const _OverlayPager({
     required this.count,

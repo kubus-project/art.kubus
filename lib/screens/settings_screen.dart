@@ -1046,16 +1046,15 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
 
     final managedEmailEnabled =
-        emailPreferencesProvider.preferences.productUpdates ||
-            emailPreferencesProvider.preferences.newsletter ||
-            emailPreferencesProvider.preferences.communityDigest ||
-            emailPreferencesProvider.preferences.securityAlerts ||
-            emailPreferencesProvider.preferences.artNotifications ||
-            emailPreferencesProvider.preferences.communityNotifications ||
-            emailPreferencesProvider.preferences.daoNotifications ||
-            emailPreferencesProvider.preferences.artistHubNotifications ||
-            emailPreferencesProvider.preferences.institutionHubNotifications ||
-            emailPreferencesProvider.preferences.promotionAlerts;
+      emailPreferencesProvider.preferences.marketingProductUpdates ||
+        emailPreferencesProvider.preferences.marketingNewsletter ||
+        emailPreferencesProvider.preferences.marketingCommunityDigest ||
+        emailPreferencesProvider.preferences.activityArt ||
+        emailPreferencesProvider.preferences.activityCommunity ||
+        emailPreferencesProvider.preferences.activityDao ||
+        emailPreferencesProvider.preferences.activityArtistHub ||
+        emailPreferencesProvider.preferences.activityInstitutionHub ||
+        emailPreferencesProvider.preferences.activityPromotion;
     final emailNotificationsState = emailPreferencesProvider.canManage
         ? (managedEmailEnabled ? l10n.commonOn : l10n.commonOff)
         : (_emailNotifications ? l10n.commonOn : l10n.commonOff);
@@ -4170,10 +4169,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                       _buildSwitchTile(
                         l10n.settingsEmailPreferencesProductUpdatesTitle,
                         l10n.settingsEmailPreferencesProductUpdatesSubtitle,
-                        emailPreferences.preferences.productUpdates,
+                        emailPreferences.preferences.marketingProductUpdates,
                         (value) {
                           final next = emailPreferences.preferences
-                              .copyWith(productUpdates: value);
+                              .copyWith(marketingProductUpdates: value);
                           unawaited(persistEmailPreferences(next));
                         },
                         enabled: emailPreferences.canManage &&
@@ -4182,10 +4181,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                       _buildSwitchTile(
                         l10n.settingsEmailPreferencesNewsletterTitle,
                         l10n.settingsEmailPreferencesNewsletterSubtitle,
-                        emailPreferences.preferences.newsletter,
+                        emailPreferences.preferences.marketingNewsletter,
                         (value) {
                           final next = emailPreferences.preferences
-                              .copyWith(newsletter: value);
+                              .copyWith(marketingNewsletter: value);
                           unawaited(persistEmailPreferences(next));
                         },
                         enabled: emailPreferences.canManage &&
@@ -4194,83 +4193,82 @@ class _SettingsScreenState extends State<SettingsScreen>
                       _buildSwitchTile(
                         l10n.settingsEmailPreferencesCommunityDigestTitle,
                         l10n.settingsEmailPreferencesCommunityDigestSubtitle,
-                        emailPreferences.preferences.communityDigest,
+                        emailPreferences.preferences.marketingCommunityDigest,
                         (value) {
                           final next = emailPreferences.preferences
-                              .copyWith(communityDigest: value);
+                              .copyWith(marketingCommunityDigest: value);
                           unawaited(persistEmailPreferences(next));
                         },
                         enabled: emailPreferences.canManage &&
                             !emailPreferences.isUpdating,
                       ),
                       _buildSwitchTile(
-                        l10n.settingsEmailPreferencesSecurityAlertsTitle,
-                        l10n.settingsEmailPreferencesSecurityAlertsSubtitle,
-                        emailPreferences.preferences.securityAlerts,
+                        l10n.settingsEmailPreferencesActivityArtTitle,
+                        l10n.settingsEmailPreferencesActivityArtSubtitle,
+                        emailPreferences.preferences.activityArt,
                         (value) {
                           final next = emailPreferences.preferences
-                              .copyWith(securityAlerts: value);
+                              .copyWith(activityArt: value);
                           unawaited(persistEmailPreferences(next));
                         },
                         enabled: emailPreferences.canManage &&
                             !emailPreferences.isUpdating,
                       ),
                       _buildSwitchTile(
-                        'Art notifications',
-                        'Emails for artwork activity, achievements, and discovery updates.',
-                        emailPreferences.preferences.artNotifications,
+                        l10n.settingsEmailPreferencesActivityCommunityTitle,
+                        l10n.settingsEmailPreferencesActivityCommunitySubtitle,
+                        emailPreferences.preferences.activityCommunity,
                         (value) {
                           final next = emailPreferences.preferences
-                              .copyWith(artNotifications: value);
+                              .copyWith(activityCommunity: value);
                           unawaited(persistEmailPreferences(next));
                         },
                         enabled: emailPreferences.canManage &&
                             !emailPreferences.isUpdating,
                       ),
                       _buildSwitchTile(
-                        'Community notifications',
-                        'Emails for likes, comments, follows, shares, and direct community activity.',
-                        emailPreferences.preferences.communityNotifications,
+                        l10n.settingsEmailPreferencesActivityDaoTitle,
+                        l10n.settingsEmailPreferencesActivityDaoSubtitle,
+                        emailPreferences.preferences.activityDao,
                         (value) {
                           final next = emailPreferences.preferences
-                              .copyWith(communityNotifications: value);
+                              .copyWith(activityDao: value);
                           unawaited(persistEmailPreferences(next));
                         },
                         enabled: emailPreferences.canManage &&
                             !emailPreferences.isUpdating,
                       ),
                       _buildSwitchTile(
-                        'DAO notifications',
-                        'Emails for DAO application decisions and governance review updates.',
-                        emailPreferences.preferences.daoNotifications,
+                        l10n.settingsEmailPreferencesActivityArtistHubTitle,
+                        l10n.settingsEmailPreferencesActivityArtistHubSubtitle,
+                        emailPreferences.preferences.activityArtistHub,
                         (value) {
                           final next = emailPreferences.preferences
-                              .copyWith(daoNotifications: value);
+                              .copyWith(activityArtistHub: value);
                           unawaited(persistEmailPreferences(next));
                         },
                         enabled: emailPreferences.canManage &&
                             !emailPreferences.isUpdating,
                       ),
                       _buildSwitchTile(
-                        'Artist hub emails',
-                        'Emails for artist profile, studio, and artist hub actions.',
-                        emailPreferences.preferences.artistHubNotifications,
+                        l10n.settingsEmailPreferencesActivityInstitutionHubTitle,
+                        l10n.settingsEmailPreferencesActivityInstitutionHubSubtitle,
+                        emailPreferences.preferences.activityInstitutionHub,
                         (value) {
                           final next = emailPreferences.preferences
-                              .copyWith(artistHubNotifications: value);
+                              .copyWith(activityInstitutionHub: value);
                           unawaited(persistEmailPreferences(next));
                         },
                         enabled: emailPreferences.canManage &&
                             !emailPreferences.isUpdating,
                       ),
                       _buildSwitchTile(
-                        'Institution hub emails',
-                        'Emails for institution profile, approvals, and institution hub actions.',
-                        emailPreferences
-                            .preferences.institutionHubNotifications,
+                        l10n.settingsEmailPreferencesActivityPromotionTitle,
+                        l10n.settingsEmailPreferencesActivityPromotionSubtitle,
+                        emailPreferences.preferences.activityPromotion,
                         (value) {
                           final next = emailPreferences.preferences.copyWith(
-                            institutionHubNotifications: value,
+                            activityPromotion: value,
                           );
                           unawaited(persistEmailPreferences(next));
                         },
@@ -4278,17 +4276,18 @@ class _SettingsScreenState extends State<SettingsScreen>
                             !emailPreferences.isUpdating,
                       ),
                       _buildSwitchTile(
-                        'Promotion alerts',
-                        'Emails for promotion approvals, rejections, reminders, and campaign lifecycle updates.',
-                        emailPreferences.preferences.promotionAlerts,
-                        (value) {
-                          final next = emailPreferences.preferences.copyWith(
-                            promotionAlerts: value,
-                          );
-                          unawaited(persistEmailPreferences(next));
-                        },
-                        enabled: emailPreferences.canManage &&
-                            !emailPreferences.isUpdating,
+                        l10n.settingsEmailPreferencesCriticalAccountSecurityTitle,
+                        l10n.settingsEmailPreferencesCriticalAccountSecuritySubtitle,
+                        true,
+                        (_) {},
+                        enabled: false,
+                      ),
+                      _buildSwitchTile(
+                        l10n.settingsEmailPreferencesCriticalWalletSecurityTitle,
+                        l10n.settingsEmailPreferencesCriticalWalletSecuritySubtitle,
+                        true,
+                        (_) {},
+                        enabled: false,
                       ),
                       _buildSwitchTile(
                         l10n.settingsEmailPreferencesTransactionalTitle,
@@ -4317,8 +4316,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                         },
                       ),
                       _buildSwitchTile(
-                        'All app notifications',
-                        'Master switch for in-app and push notification categories.',
+                        l10n.settingsInAppNotificationsMasterTitle,
+                        l10n.settingsInAppNotificationsMasterSubtitle,
                         notificationPreferences.enabled,
                         (value) {
                           final next =
@@ -4327,8 +4326,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                         },
                       ),
                       _buildSwitchTile(
-                        'Art notifications',
-                        'In-app notifications for artwork activity and achievements.',
+                        l10n.settingsInAppNotificationsArtTitle,
+                        l10n.settingsInAppNotificationsArtSubtitle,
                         notificationPreferences.art,
                         (value) {
                           final next =
@@ -4338,8 +4337,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                         enabled: notificationPreferences.enabled,
                       ),
                       _buildSwitchTile(
-                        'Community notifications',
-                        'In-app notifications for comments, likes, follows, and shares.',
+                        l10n.settingsInAppNotificationsCommunityTitle,
+                        l10n.settingsInAppNotificationsCommunitySubtitle,
                         notificationPreferences.community,
                         (value) {
                           final next = notificationPreferences.copyWith(
@@ -4350,8 +4349,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                         enabled: notificationPreferences.enabled,
                       ),
                       _buildSwitchTile(
-                        'DAO notifications',
-                        'In-app notifications for DAO form reviews and governance decisions.',
+                        l10n.settingsInAppNotificationsDaoTitle,
+                        l10n.settingsInAppNotificationsDaoSubtitle,
                         notificationPreferences.dao,
                         (value) {
                           final next =
@@ -4361,8 +4360,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                         enabled: notificationPreferences.enabled,
                       ),
                       _buildSwitchTile(
-                        'Artist hub notifications',
-                        'In-app notifications for artist workflow and studio updates.',
+                        l10n.settingsInAppNotificationsArtistHubTitle,
+                        l10n.settingsInAppNotificationsArtistHubSubtitle,
                         notificationPreferences.artistHub,
                         (value) {
                           final next = notificationPreferences.copyWith(
@@ -4373,8 +4372,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                         enabled: notificationPreferences.enabled,
                       ),
                       _buildSwitchTile(
-                        'Institution hub notifications',
-                        'In-app notifications for institution workflow and review updates.',
+                        l10n.settingsInAppNotificationsInstitutionHubTitle,
+                        l10n.settingsInAppNotificationsInstitutionHubSubtitle,
                         notificationPreferences.institutionHub,
                         (value) {
                           final next = notificationPreferences.copyWith(
@@ -4385,8 +4384,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                         enabled: notificationPreferences.enabled,
                       ),
                       _buildSwitchTile(
-                        'Account notifications',
-                        'In-app notifications for security, access, and account updates.',
+                        l10n.settingsInAppNotificationsAccountTitle,
+                        l10n.settingsInAppNotificationsAccountSubtitle,
                         notificationPreferences.account,
                         (value) {
                           final next = notificationPreferences.copyWith(
@@ -4397,8 +4396,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                         enabled: notificationPreferences.enabled,
                       ),
                       _buildSwitchTile(
-                        'Promotion notifications',
-                        'In-app notifications for promotion outcomes and upcoming campaign milestones.',
+                        l10n.settingsInAppNotificationsPromotionTitle,
+                        l10n.settingsInAppNotificationsPromotionSubtitle,
                         notificationPreferences.promotion,
                         (value) {
                           final next = notificationPreferences.copyWith(

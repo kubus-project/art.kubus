@@ -3868,8 +3868,29 @@ class _MapScreenState extends State<MapScreen>
         );
       },
       heightResolver: (constraints, mediaQuery, maxCardHeight) {
-        return MapOverlaySizing.resolveFixedCardHeight(
+        final selectedMarker = selection.selectedMarker;
+        if (selectedMarker == null) {
+          return MapOverlaySizing.resolveFixedCardHeight(
+            maxCardHeight: maxCardHeight,
+          );
+        }
+
+        final selectedArtwork = selectedMarker.isExhibitionMarker
+            ? null
+            : context.read<ArtworkProvider>().getArtworkById(
+                  selectedMarker.artworkId ?? '',
+                );
+        final linkedEvent = KubusMarkerOverlayHelpers.resolveLinkedEvent(
+          marker: selectedMarker,
+          events: context.read<EventsProvider>().events,
+        );
+
+        return KubusMarkerOverlayHelpers.estimateCardHeight(
+          marker: selectedMarker,
+          artwork: selectedArtwork,
+          event: linkedEvent,
           maxCardHeight: maxCardHeight,
+          isCompactWidth: constraints.maxWidth < 600,
         );
       },
       fallbackAnchorResolver: (constraints) {

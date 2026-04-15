@@ -15,26 +15,30 @@ extension _KubusMarkerOverlayCardFooterParts on KubusMarkerOverlayCard {
     required IconData primaryActionIcon,
     required String primaryActionLabel,
   }) {
-    final visibleActions = actions.take(2).toList(growable: false);
-    final overflowActions = actions.skip(2).toList(growable: false);
+    final actionRows = <List<MarkerOverlayActionSpec>>[];
+    for (var i = 0; i < actions.length; i += 2) {
+      actionRows.add(actions.skip(i).take(2).toList(growable: false));
+    }
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (visibleActions.isNotEmpty) ...[
-          Row(
-            children: [
-              for (var i = 0; i < visibleActions.length; i++) ...[
-                if (i > 0) const SizedBox(width: KubusSpacing.sm),
-                Expanded(child: _OverlayActionButton(spec: visibleActions[i])),
+        if (actionRows.isNotEmpty) ...[
+          for (var rowIndex = 0; rowIndex < actionRows.length; rowIndex++) ...[
+            Row(
+              children: [
+                for (var i = 0; i < actionRows[rowIndex].length; i++) ...[
+                  if (i > 0) const SizedBox(width: KubusSpacing.sm),
+                  Expanded(
+                    child: _OverlayActionButton(spec: actionRows[rowIndex][i]),
+                  ),
+                ],
               ],
-              if (overflowActions.isNotEmpty) ...[
-                const SizedBox(width: KubusSpacing.xs),
-                _OverlayActionOverflowMenu(actions: overflowActions),
-              ],
-            ],
-          ),
+            ),
+            if (rowIndex < actionRows.length - 1)
+              const SizedBox(height: KubusSpacing.xs),
+          ],
           const SizedBox(height: KubusSpacing.xs),
         ],
         if (stackCount > 1) ...[

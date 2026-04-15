@@ -61,6 +61,7 @@ class _DesktopArtworkDetailScreenState
   String? _prefetchedAttendanceMarkerId;
   bool _artworkLoading = true;
   String? _artworkError;
+  bool _commentsSidebarExpanded = true;
 
   @override
   void initState() {
@@ -226,39 +227,65 @@ class _DesktopArtworkDetailScreenState
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final showTwoColumns = constraints.maxWidth >= 900;
-                final commentsHeight = showTwoColumns
-                    ? (constraints.maxHeight * 0.36).clamp(320.0, 480.0)
-                    : (constraints.maxHeight * 0.55).clamp(360.0, 560.0);
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        children: [
-                          Expanded(
-                            child: _buildLeftPane(
-                              artwork: artwork,
-                              coverUrl: coverUrl,
-                              artworkProvider: artworkProvider,
-                              isSignedIn: isSignedIn,
-                            ),
-                          ),
-                          const SizedBox(height: DetailSpacing.lg),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: SizedBox(
-                              height: commentsHeight,
-                              width: showTwoColumns
-                                  ? constraints.maxWidth * 0.72
-                                  : double.infinity,
-                              child: _buildCommentsPanel(
+                if (showTwoColumns) {
+                  final sidePanelWidth =
+                      (constraints.maxWidth * 0.34).clamp(320.0, 420.0);
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: _buildLeftPane(
+                          artwork: artwork,
+                          coverUrl: coverUrl,
+                          artworkProvider: artworkProvider,
+                          isSignedIn: isSignedIn,
+                        ),
+                      ),
+                      const SizedBox(width: DetailSpacing.lg),
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOutCubic,
+                        width: _commentsSidebarExpanded ? sidePanelWidth : 54,
+                        child: _commentsSidebarExpanded
+                            ? _buildCommentsPanel(
                                 artwork,
                                 artworkProvider,
                                 isSignedIn,
-                              ),
-                            ),
-                          ),
-                        ],
+                                onToggleVisibility: () {
+                                  setState(() {
+                                    _commentsSidebarExpanded = false;
+                                  });
+                                },
+                              )
+                            : _buildCommentsSidebarToggleButton(),
+                      ),
+                    ],
+                  );
+                }
+
+                final commentsHeight =
+                    (constraints.maxHeight * 0.55).clamp(360.0, 560.0);
+                return Column(
+                  children: [
+                    Expanded(
+                      child: _buildLeftPane(
+                        artwork: artwork,
+                        coverUrl: coverUrl,
+                        artworkProvider: artworkProvider,
+                        isSignedIn: isSignedIn,
+                      ),
+                    ),
+                    const SizedBox(height: DetailSpacing.lg),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: SizedBox(
+                        height: commentsHeight,
+                        width: double.infinity,
+                        child: _buildCommentsPanel(
+                          artwork,
+                          artworkProvider,
+                          isSignedIn,
+                        ),
                       ),
                     ),
                   ],
@@ -626,7 +653,7 @@ class _DesktopArtworkDetailScreenState
               icon: artwork.isLikedByCurrentUser
                   ? Icons.favorite
                   : Icons.favorite_border,
-              label: l10n.commonLikes,
+              label: '${artwork.likesCount}',
               onTap: canInteract
                   ? () => artworkProvider.toggleLike(artwork.id)
                   : requireSignInToast,
@@ -649,6 +676,12 @@ class _DesktopArtworkDetailScreenState
               icon: Icons.comment_outlined,
               label: '${artwork.commentsCount}',
               onTap: () {
+                if (!_commentsSidebarExpanded &&
+                    MediaQuery.sizeOf(context).width >= 900) {
+                  setState(() {
+                    _commentsSidebarExpanded = true;
+                  });
+                }
                 if (_commentsScrollController.hasClients) {
                   _commentsScrollController.animateTo(
                     0,
@@ -954,8 +987,38 @@ class _DesktopArtworkDetailScreenState
     }
   }
 
+  Widget _buildCommentsSidebarToggleButton() {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+
+    return DetailCard(
+      padding: EdgeInsets.zero,
+      borderRadius: DetailRadius.lg,
+      child: Center(
+        child: Tooltip(
+          message: l10n.commonComments,
+          child: IconButton(
+            onPressed: () {
+              setState(() {
+                _commentsSidebarExpanded = true;
+              });
+            },
+            icon: Icon(
+              Icons.comment_outlined,
+              color: scheme.onSurface,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildCommentsPanel(
-      Artwork artwork, ArtworkProvider provider, bool isSignedIn) {
+    Artwork artwork,
+    ArtworkProvider provider,
+    bool isSignedIn, {
+    VoidCallback? onToggleVisibility,
+  }) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
 
@@ -978,6 +1041,12 @@ class _DesktopArtworkDetailScreenState
                   style: DetailTypography.sectionTitle(context),
                 ),
                 const Spacer(),
+                if (onToggleVisibility != null)
+                  IconButton(
+                    tooltip: l10n.commonClose,
+                    onPressed: onToggleVisibility,
+                    icon: const Icon(Icons.chevron_right),
+                  ),
                 IconButton(
                   tooltip: l10n.commonRefresh,
                   onPressed: () =>

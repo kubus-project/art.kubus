@@ -167,17 +167,34 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
             ),
           ),
           const SizedBox(width: KubusSpacing.lg),
-          Consumer3<Web3Provider, WalletProvider, ProfileProvider>(
-            builder:
-                (context, web3Provider, walletProvider, profileProvider, _) {
+          Consumer<Web3Provider>(
+            builder: (context, web3Provider, _) {
+              final walletProvider = Provider.of<WalletProvider?>(
+                context,
+                listen: false,
+              );
+              final profileProvider = Provider.of<ProfileProvider?>(
+                context,
+                listen: false,
+              );
+
               final canCreate = web3Provider.canTransact;
-              final hasWalletIdentity = walletProvider.hasWalletIdentity;
+              final hasWalletIdentity = walletProvider?.hasWalletIdentity ??
+                  web3Provider.walletAddress.trim().isNotEmpty;
+
               return ElevatedButton.icon(
                 onPressed: () async {
                   if (canCreate) {
                     // Create NFT
                     return;
                   }
+
+                  if (walletProvider == null || profileProvider == null) {
+                    if (!context.mounted) return;
+                    Navigator.of(context).pushNamed('/connect-wallet');
+                    return;
+                  }
+
                   await WalletActionGuard.ensureSignerAccess(
                     context: context,
                     profileProvider: profileProvider,

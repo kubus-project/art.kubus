@@ -79,8 +79,7 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate =
-      _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -92,8 +91,7 @@ abstract class AppLocalizations {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
-      <LocalizationsDelegate<dynamic>>[
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
     delegate,
     GlobalMaterialLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
@@ -3014,8 +3012,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Account: {accountStatus} · Wallet: {walletStatus} · Signing: {signerStatus}'**
-  String walletSessionStatusSummary(
-      Object accountStatus, Object walletStatus, Object signerStatus);
+  String walletSessionStatusSummary(Object accountStatus, Object walletStatus, Object signerStatus);
 
   /// No description provided for @walletActionSignInRequiredToast.
   ///
@@ -4298,7 +4295,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsEmailPreferencesTransactionalNote.
   ///
   /// In en, this message translates to:
-  /// **'Account emails (verification and password reset) are always enabled.'**
+  /// **'Critical account and wallet security emails are always enabled.'**
   String get settingsEmailPreferencesTransactionalNote;
 
   /// No description provided for @settingsEmailPreferencesProductUpdatesTitle.
@@ -4337,6 +4334,78 @@ abstract class AppLocalizations {
   /// **'Periodic summary of community activity'**
   String get settingsEmailPreferencesCommunityDigestSubtitle;
 
+  /// No description provided for @settingsEmailPreferencesActivityArtTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork activity'**
+  String get settingsEmailPreferencesActivityArtTitle;
+
+  /// No description provided for @settingsEmailPreferencesActivityArtSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Updates about your artworks, collections, and related activity'**
+  String get settingsEmailPreferencesActivityArtSubtitle;
+
+  /// No description provided for @settingsEmailPreferencesActivityCommunityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Community activity'**
+  String get settingsEmailPreferencesActivityCommunityTitle;
+
+  /// No description provided for @settingsEmailPreferencesActivityCommunitySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Replies, mentions, and updates from community spaces'**
+  String get settingsEmailPreferencesActivityCommunitySubtitle;
+
+  /// No description provided for @settingsEmailPreferencesActivityDaoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'DAO activity'**
+  String get settingsEmailPreferencesActivityDaoTitle;
+
+  /// No description provided for @settingsEmailPreferencesActivityDaoSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Governance updates, proposals, and voting reminders'**
+  String get settingsEmailPreferencesActivityDaoSubtitle;
+
+  /// No description provided for @settingsEmailPreferencesActivityArtistHubTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist Hub activity'**
+  String get settingsEmailPreferencesActivityArtistHubTitle;
+
+  /// No description provided for @settingsEmailPreferencesActivityArtistHubSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Updates from Artist Hub features and workflows'**
+  String get settingsEmailPreferencesActivityArtistHubSubtitle;
+
+  /// No description provided for @settingsEmailPreferencesActivityInstitutionHubTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution Hub activity'**
+  String get settingsEmailPreferencesActivityInstitutionHubTitle;
+
+  /// No description provided for @settingsEmailPreferencesActivityInstitutionHubSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Updates from Institution Hub features and collaborations'**
+  String get settingsEmailPreferencesActivityInstitutionHubSubtitle;
+
+  /// No description provided for @settingsEmailPreferencesActivityPromotionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Promotion activity'**
+  String get settingsEmailPreferencesActivityPromotionTitle;
+
+  /// No description provided for @settingsEmailPreferencesActivityPromotionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Status changes and lifecycle updates for your promotions'**
+  String get settingsEmailPreferencesActivityPromotionSubtitle;
+
   /// No description provided for @settingsEmailPreferencesSecurityAlertsTitle.
   ///
   /// In en, this message translates to:
@@ -4349,6 +4418,30 @@ abstract class AppLocalizations {
   /// **'Important account security notifications'**
   String get settingsEmailPreferencesSecurityAlertsSubtitle;
 
+  /// No description provided for @settingsEmailPreferencesCriticalAccountSecurityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Critical account security'**
+  String get settingsEmailPreferencesCriticalAccountSecurityTitle;
+
+  /// No description provided for @settingsEmailPreferencesCriticalAccountSecuritySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account security alerts and suspicious activity notices (always on)'**
+  String get settingsEmailPreferencesCriticalAccountSecuritySubtitle;
+
+  /// No description provided for @settingsEmailPreferencesCriticalWalletSecurityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Critical wallet security'**
+  String get settingsEmailPreferencesCriticalWalletSecurityTitle;
+
+  /// No description provided for @settingsEmailPreferencesCriticalWalletSecuritySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet and custody security alerts (always on)'**
+  String get settingsEmailPreferencesCriticalWalletSecuritySubtitle;
+
   /// No description provided for @settingsEmailPreferencesTransactionalTitle.
   ///
   /// In en, this message translates to:
@@ -4358,7 +4451,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsEmailPreferencesTransactionalSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Verification and password reset emails are always enabled'**
+  /// **'Transactional emails (verification, reset, and recovery) are always enabled'**
   String get settingsEmailPreferencesTransactionalSubtitle;
 
   /// No description provided for @settingsEmailPreferencesUpdateFailedToast.
@@ -4366,6 +4459,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not update email preferences. Please try again.'**
   String get settingsEmailPreferencesUpdateFailedToast;
+
+  /// No description provided for @settingsInAppNotificationsMasterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'All app notifications'**
+  String get settingsInAppNotificationsMasterTitle;
+
+  /// No description provided for @settingsInAppNotificationsMasterSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Master switch for in-app and push notification categories.'**
+  String get settingsInAppNotificationsMasterSubtitle;
+
+  /// No description provided for @settingsInAppNotificationsArtTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Art notifications'**
+  String get settingsInAppNotificationsArtTitle;
+
+  /// No description provided for @settingsInAppNotificationsArtSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'In-app notifications for artwork activity and achievements.'**
+  String get settingsInAppNotificationsArtSubtitle;
+
+  /// No description provided for @settingsInAppNotificationsCommunityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Community notifications'**
+  String get settingsInAppNotificationsCommunityTitle;
+
+  /// No description provided for @settingsInAppNotificationsCommunitySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'In-app notifications for comments, likes, follows, and shares.'**
+  String get settingsInAppNotificationsCommunitySubtitle;
+
+  /// No description provided for @settingsInAppNotificationsDaoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'DAO notifications'**
+  String get settingsInAppNotificationsDaoTitle;
+
+  /// No description provided for @settingsInAppNotificationsDaoSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'In-app notifications for DAO form reviews and governance decisions.'**
+  String get settingsInAppNotificationsDaoSubtitle;
+
+  /// No description provided for @settingsInAppNotificationsArtistHubTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist hub notifications'**
+  String get settingsInAppNotificationsArtistHubTitle;
+
+  /// No description provided for @settingsInAppNotificationsArtistHubSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'In-app notifications for artist workflow and studio updates.'**
+  String get settingsInAppNotificationsArtistHubSubtitle;
+
+  /// No description provided for @settingsInAppNotificationsInstitutionHubTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution hub notifications'**
+  String get settingsInAppNotificationsInstitutionHubTitle;
+
+  /// No description provided for @settingsInAppNotificationsInstitutionHubSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'In-app notifications for institution workflow and review updates.'**
+  String get settingsInAppNotificationsInstitutionHubSubtitle;
+
+  /// No description provided for @settingsInAppNotificationsAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account notifications'**
+  String get settingsInAppNotificationsAccountTitle;
+
+  /// No description provided for @settingsInAppNotificationsAccountSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'In-app notifications for security, access, and account updates.'**
+  String get settingsInAppNotificationsAccountSubtitle;
+
+  /// No description provided for @settingsInAppNotificationsPromotionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Promotion notifications'**
+  String get settingsInAppNotificationsPromotionTitle;
+
+  /// No description provided for @settingsInAppNotificationsPromotionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'In-app notifications for promotion outcomes and upcoming campaign milestones.'**
+  String get settingsInAppNotificationsPromotionSubtitle;
 
   /// No description provided for @settingsAccountTypeTitle.
   ///
@@ -11181,8 +11370,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Are you sure you want to delegate your {votingPower} voting power to {delegateName}?'**
-  String daoDelegateVotingPowerDialogBody(
-      Object votingPower, Object delegateName);
+  String daoDelegateVotingPowerDialogBody(Object votingPower, Object delegateName);
 
   /// No description provided for @daoDelegationBenefitsTitle.
   ///
@@ -17086,8 +17274,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Activity was recorded on {activeBuckets} of {totalBuckets} buckets.'**
-  String analyticsRecommendationConsistencyDescription(
-      Object activeBuckets, Object totalBuckets);
+  String analyticsRecommendationConsistencyDescription(Object activeBuckets, Object totalBuckets);
 
   /// No description provided for @analyticsRecommendationReverseDecline.
   ///
@@ -17411,8 +17598,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{totalVotes} votes • {supportPct}% support'**
-  String daoProposalVotesSupportSummaryLabel(
-      Object totalVotes, Object supportPct);
+  String daoProposalVotesSupportSummaryLabel(Object totalVotes, Object supportPct);
 
   /// No description provided for @commonSearchHint.
   ///
@@ -17823,8 +18009,7 @@ abstract class AppLocalizations {
   String promotionBuilderGuaranteedSlots(num count);
 }
 
-class _AppLocalizationsDelegate
-    extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -17833,25 +18018,25 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['en', 'sl'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['en', 'sl'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
+
+
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en':
-      return AppLocalizationsEn();
-    case 'sl':
-      return AppLocalizationsSl();
+    case 'en': return AppLocalizationsEn();
+    case 'sl': return AppLocalizationsSl();
   }
 
   throw FlutterError(
-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-      'an issue with the localizations generation tool. Please file an issue '
-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
-      'that was used.');
+    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.'
+  );
 }

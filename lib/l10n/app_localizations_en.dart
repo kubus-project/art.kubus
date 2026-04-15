@@ -2147,7 +2147,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsEmailPreferencesSectionTitle => 'Email preferences';
 
   @override
-  String get settingsEmailPreferencesTransactionalNote => 'Account emails (verification and password reset) are always enabled.';
+  String get settingsEmailPreferencesTransactionalNote => 'Critical account and wallet security emails are always enabled.';
 
   @override
   String get settingsEmailPreferencesProductUpdatesTitle => 'Product updates';
@@ -2168,19 +2168,115 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsEmailPreferencesCommunityDigestSubtitle => 'Periodic summary of community activity';
 
   @override
+  String get settingsEmailPreferencesActivityArtTitle => 'Artwork activity';
+
+  @override
+  String get settingsEmailPreferencesActivityArtSubtitle => 'Updates about your artworks, collections, and related activity';
+
+  @override
+  String get settingsEmailPreferencesActivityCommunityTitle => 'Community activity';
+
+  @override
+  String get settingsEmailPreferencesActivityCommunitySubtitle => 'Replies, mentions, and updates from community spaces';
+
+  @override
+  String get settingsEmailPreferencesActivityDaoTitle => 'DAO activity';
+
+  @override
+  String get settingsEmailPreferencesActivityDaoSubtitle => 'Governance updates, proposals, and voting reminders';
+
+  @override
+  String get settingsEmailPreferencesActivityArtistHubTitle => 'Artist Hub activity';
+
+  @override
+  String get settingsEmailPreferencesActivityArtistHubSubtitle => 'Updates from Artist Hub features and workflows';
+
+  @override
+  String get settingsEmailPreferencesActivityInstitutionHubTitle => 'Institution Hub activity';
+
+  @override
+  String get settingsEmailPreferencesActivityInstitutionHubSubtitle => 'Updates from Institution Hub features and collaborations';
+
+  @override
+  String get settingsEmailPreferencesActivityPromotionTitle => 'Promotion activity';
+
+  @override
+  String get settingsEmailPreferencesActivityPromotionSubtitle => 'Status changes and lifecycle updates for your promotions';
+
+  @override
   String get settingsEmailPreferencesSecurityAlertsTitle => 'Security alerts';
 
   @override
   String get settingsEmailPreferencesSecurityAlertsSubtitle => 'Important account security notifications';
 
   @override
+  String get settingsEmailPreferencesCriticalAccountSecurityTitle => 'Critical account security';
+
+  @override
+  String get settingsEmailPreferencesCriticalAccountSecuritySubtitle => 'Account security alerts and suspicious activity notices (always on)';
+
+  @override
+  String get settingsEmailPreferencesCriticalWalletSecurityTitle => 'Critical wallet security';
+
+  @override
+  String get settingsEmailPreferencesCriticalWalletSecuritySubtitle => 'Wallet and custody security alerts (always on)';
+
+  @override
   String get settingsEmailPreferencesTransactionalTitle => 'Account emails';
 
   @override
-  String get settingsEmailPreferencesTransactionalSubtitle => 'Verification and password reset emails are always enabled';
+  String get settingsEmailPreferencesTransactionalSubtitle => 'Transactional emails (verification, reset, and recovery) are always enabled';
 
   @override
   String get settingsEmailPreferencesUpdateFailedToast => 'Could not update email preferences. Please try again.';
+
+  @override
+  String get settingsInAppNotificationsMasterTitle => 'All app notifications';
+
+  @override
+  String get settingsInAppNotificationsMasterSubtitle => 'Master switch for in-app and push notification categories.';
+
+  @override
+  String get settingsInAppNotificationsArtTitle => 'Art notifications';
+
+  @override
+  String get settingsInAppNotificationsArtSubtitle => 'In-app notifications for artwork activity and achievements.';
+
+  @override
+  String get settingsInAppNotificationsCommunityTitle => 'Community notifications';
+
+  @override
+  String get settingsInAppNotificationsCommunitySubtitle => 'In-app notifications for comments, likes, follows, and shares.';
+
+  @override
+  String get settingsInAppNotificationsDaoTitle => 'DAO notifications';
+
+  @override
+  String get settingsInAppNotificationsDaoSubtitle => 'In-app notifications for DAO form reviews and governance decisions.';
+
+  @override
+  String get settingsInAppNotificationsArtistHubTitle => 'Artist hub notifications';
+
+  @override
+  String get settingsInAppNotificationsArtistHubSubtitle => 'In-app notifications for artist workflow and studio updates.';
+
+  @override
+  String get settingsInAppNotificationsInstitutionHubTitle => 'Institution hub notifications';
+
+  @override
+  String get settingsInAppNotificationsInstitutionHubSubtitle => 'In-app notifications for institution workflow and review updates.';
+
+  @override
+  String get settingsInAppNotificationsAccountTitle => 'Account notifications';
+
+  @override
+  String get settingsInAppNotificationsAccountSubtitle => 'In-app notifications for security, access, and account updates.';
+
+  @override
+  String get settingsInAppNotificationsPromotionTitle => 'Promotion notifications';
+
+  @override
+  String get settingsInAppNotificationsPromotionSubtitle => 'In-app notifications for promotion outcomes and upcoming campaign milestones.';
 
   @override
   String get settingsAccountTypeTitle => 'Account type';

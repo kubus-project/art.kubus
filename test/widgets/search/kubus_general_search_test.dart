@@ -117,9 +117,11 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.text('Ocean Light'), findsOneWidget);
+    final oceanResultTile = find.widgetWithText(ListTile, 'Ocean Light');
+    expect(oceanResultTile, findsOneWidget);
 
-    await tester.tap(find.text('Ocean Light'));
+    final oceanTileWidget = tester.widget<ListTile>(oceanResultTile);
+    oceanTileWidget.onTap?.call();
     await tester.pumpAndSettle();
 
     expect(tappedResult?.id, 'art-1');
@@ -163,7 +165,12 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.text('Ada'), findsOneWidget);
+    final adaResultTile = find.widgetWithText(ListTile, 'Ada');
+    expect(adaResultTile, findsOneWidget);
+    expect(
+      find.descendant(of: adaResultTile, matching: find.byType(AvatarWidget)),
+      findsOneWidget,
+    );
     expect(find.byType(AvatarWidget), findsOneWidget);
   });
 }

@@ -107,7 +107,11 @@ class EmailPreferencesProvider extends ChangeNotifier {
     if (!canManage) return false;
 
     final previous = _preferences;
-    _preferences = next.copyWith(transactional: true);
+    _preferences = next.copyWith(
+      criticalAccountSecurity: true,
+      criticalWalletSecurity: true,
+      criticalTransactional: true,
+    );
     _isUpdating = true;
     _lastError = null;
     notifyListeners();

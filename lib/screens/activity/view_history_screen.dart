@@ -35,7 +35,9 @@ class _ViewHistoryScreenState extends State<ViewHistoryScreen> {
           : AppBar(
               title: Text(
                 l10n.profileMenuViewHistoryTitle,
-                style: KubusTextStyles.mobileAppBarTitle.copyWith(
+                style: KubusTextStyles.screenTitle.copyWith(
+                  fontSize: KubusHeaderMetrics.screenTitle,
+                  fontWeight: FontWeight.w600,
                   color: scheme.onSurface,
                 ),
               ),

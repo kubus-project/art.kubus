@@ -2429,13 +2429,13 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   _buildToggleSetting(
                     l10n.settingsEmailPreferencesProductUpdatesTitle,
                     l10n.settingsEmailPreferencesProductUpdatesSubtitle,
-                    emailPreferencesProvider.preferences.productUpdates,
+                    emailPreferencesProvider.preferences.marketingProductUpdates,
                     saveAfterToggle: false,
                     enabled: emailPreferencesProvider.canManage &&
                         !emailPreferencesProvider.isUpdating,
                     onChanged: (value) {
                       final next = emailPreferencesProvider.preferences
-                          .copyWith(productUpdates: value);
+                          .copyWith(marketingProductUpdates: value);
                       unawaited(persistEmailPreferences(next));
                     },
                   ),
@@ -2443,13 +2443,13 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   _buildToggleSetting(
                     l10n.settingsEmailPreferencesNewsletterTitle,
                     l10n.settingsEmailPreferencesNewsletterSubtitle,
-                    emailPreferencesProvider.preferences.newsletter,
+                    emailPreferencesProvider.preferences.marketingNewsletter,
                     saveAfterToggle: false,
                     enabled: emailPreferencesProvider.canManage &&
                         !emailPreferencesProvider.isUpdating,
                     onChanged: (value) {
                       final next = emailPreferencesProvider.preferences
-                          .copyWith(newsletter: value);
+                          .copyWith(marketingNewsletter: value);
                       unawaited(persistEmailPreferences(next));
                     },
                   ),
@@ -2457,118 +2457,192 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   _buildToggleSetting(
                     l10n.settingsEmailPreferencesCommunityDigestTitle,
                     l10n.settingsEmailPreferencesCommunityDigestSubtitle,
-                    emailPreferencesProvider.preferences.communityDigest,
-                    saveAfterToggle: false,
-                    enabled: emailPreferencesProvider.canManage &&
-                        !emailPreferencesProvider.isUpdating,
-                    onChanged: (value) {
-                      final next = emailPreferencesProvider.preferences
-                          .copyWith(communityDigest: value);
-                      unawaited(persistEmailPreferences(next));
-                    },
-                  ),
-                  const Divider(height: 32),
-                  _buildToggleSetting(
-                    l10n.settingsEmailPreferencesSecurityAlertsTitle,
-                    l10n.settingsEmailPreferencesSecurityAlertsSubtitle,
-                    emailPreferencesProvider.preferences.securityAlerts,
-                    saveAfterToggle: false,
-                    enabled: emailPreferencesProvider.canManage &&
-                        !emailPreferencesProvider.isUpdating,
-                    onChanged: (value) {
-                      final next = emailPreferencesProvider.preferences
-                          .copyWith(securityAlerts: value);
-                      unawaited(persistEmailPreferences(next));
-                    },
-                  ),
-                  const Divider(height: 32),
-                  _buildToggleSetting(
-                    'Art notifications',
-                    'Emails for artwork activity, achievements, and discovery updates.',
-                    emailPreferencesProvider.preferences.artNotifications,
-                    saveAfterToggle: false,
-                    enabled: emailPreferencesProvider.canManage &&
-                        !emailPreferencesProvider.isUpdating,
-                    onChanged: (value) {
-                      final next = emailPreferencesProvider.preferences
-                          .copyWith(artNotifications: value);
-                      unawaited(persistEmailPreferences(next));
-                    },
-                  ),
-                  const Divider(height: 32),
-                  _buildToggleSetting(
-                    'Community notifications',
-                    'Emails for likes, comments, follows, shares, and direct community activity.',
-                    emailPreferencesProvider.preferences.communityNotifications,
-                    saveAfterToggle: false,
-                    enabled: emailPreferencesProvider.canManage &&
-                        !emailPreferencesProvider.isUpdating,
-                    onChanged: (value) {
-                      final next = emailPreferencesProvider.preferences
-                          .copyWith(communityNotifications: value);
-                      unawaited(persistEmailPreferences(next));
-                    },
-                  ),
-                  const Divider(height: 32),
-                  _buildToggleSetting(
-                    'DAO notifications',
-                    'Emails for DAO application decisions and governance review updates.',
-                    emailPreferencesProvider.preferences.daoNotifications,
-                    saveAfterToggle: false,
-                    enabled: emailPreferencesProvider.canManage &&
-                        !emailPreferencesProvider.isUpdating,
-                    onChanged: (value) {
-                      final next = emailPreferencesProvider.preferences
-                          .copyWith(daoNotifications: value);
-                      unawaited(persistEmailPreferences(next));
-                    },
-                  ),
-                  const Divider(height: 32),
-                  _buildToggleSetting(
-                    'Artist hub emails',
-                    'Emails for artist profile, studio, and artist hub actions.',
-                    emailPreferencesProvider.preferences.artistHubNotifications,
-                    saveAfterToggle: false,
-                    enabled: emailPreferencesProvider.canManage &&
-                        !emailPreferencesProvider.isUpdating,
-                    onChanged: (value) {
-                      final next = emailPreferencesProvider.preferences
-                          .copyWith(artistHubNotifications: value);
-                      unawaited(persistEmailPreferences(next));
-                    },
-                  ),
-                  const Divider(height: 32),
-                  _buildToggleSetting(
-                    'Institution hub emails',
-                    'Emails for institution profile, approvals, and institution hub actions.',
                     emailPreferencesProvider
-                        .preferences.institutionHubNotifications,
+                        .preferences.marketingCommunityDigest,
                     saveAfterToggle: false,
                     enabled: emailPreferencesProvider.canManage &&
                         !emailPreferencesProvider.isUpdating,
                     onChanged: (value) {
-                      final next =
-                          emailPreferencesProvider.preferences.copyWith(
-                        institutionHubNotifications: value,
-                      );
+                      final next = emailPreferencesProvider.preferences
+                          .copyWith(marketingCommunityDigest: value);
                       unawaited(persistEmailPreferences(next));
                     },
                   ),
                   const Divider(height: 32),
                   _buildToggleSetting(
-                    'Promotion alerts',
-                    'Emails for promotion approvals, rejections, reminders, and campaign lifecycle updates.',
-                    emailPreferencesProvider.preferences.promotionAlerts,
+                    l10n.settingsEmailPreferencesActivityArtTitle,
+                    l10n.settingsEmailPreferencesActivityArtSubtitle,
+                    emailPreferencesProvider.preferences.activityArt,
+                    saveAfterToggle: false,
+                    enabled: emailPreferencesProvider.canManage &&
+                        !emailPreferencesProvider.isUpdating,
+                    onChanged: (value) {
+                      final next = emailPreferencesProvider.preferences
+                          .copyWith(activityArt: value);
+                      unawaited(persistEmailPreferences(next));
+                    },
+                  ),
+                  const Divider(height: 32),
+                  _buildToggleSetting(
+                    l10n.settingsEmailPreferencesActivityCommunityTitle,
+                    l10n.settingsEmailPreferencesActivityCommunitySubtitle,
+                    emailPreferencesProvider.preferences.activityCommunity,
+                    saveAfterToggle: false,
+                    enabled: emailPreferencesProvider.canManage &&
+                        !emailPreferencesProvider.isUpdating,
+                    onChanged: (value) {
+                      final next = emailPreferencesProvider.preferences
+                          .copyWith(activityCommunity: value);
+                      unawaited(persistEmailPreferences(next));
+                    },
+                  ),
+                  const Divider(height: 32),
+                  _buildToggleSetting(
+                    l10n.settingsEmailPreferencesActivityDaoTitle,
+                    l10n.settingsEmailPreferencesActivityDaoSubtitle,
+                    emailPreferencesProvider.preferences.activityDao,
+                    saveAfterToggle: false,
+                    enabled: emailPreferencesProvider.canManage &&
+                        !emailPreferencesProvider.isUpdating,
+                    onChanged: (value) {
+                      final next = emailPreferencesProvider.preferences
+                          .copyWith(activityDao: value);
+                      unawaited(persistEmailPreferences(next));
+                    },
+                  ),
+                  const Divider(height: 32),
+                  _buildToggleSetting(
+                    l10n.settingsEmailPreferencesActivityArtistHubTitle,
+                    l10n.settingsEmailPreferencesActivityArtistHubSubtitle,
+                    emailPreferencesProvider.preferences.activityArtistHub,
+                    saveAfterToggle: false,
+                    enabled: emailPreferencesProvider.canManage &&
+                        !emailPreferencesProvider.isUpdating,
+                    onChanged: (value) {
+                      final next = emailPreferencesProvider.preferences
+                          .copyWith(activityArtistHub: value);
+                      unawaited(persistEmailPreferences(next));
+                    },
+                  ),
+                  const Divider(height: 32),
+                  _buildToggleSetting(
+                    l10n.settingsEmailPreferencesActivityInstitutionHubTitle,
+                    l10n.settingsEmailPreferencesActivityInstitutionHubSubtitle,
+                    emailPreferencesProvider.preferences.activityInstitutionHub,
+                    saveAfterToggle: false,
+                    enabled: emailPreferencesProvider.canManage &&
+                        !emailPreferencesProvider.isUpdating,
+                    onChanged: (value) {
+                      final next = emailPreferencesProvider.preferences
+                          .copyWith(activityInstitutionHub: value);
+                      unawaited(persistEmailPreferences(next));
+                    },
+                  ),
+                  const Divider(height: 32),
+                  _buildToggleSetting(
+                    l10n.settingsEmailPreferencesActivityPromotionTitle,
+                    l10n.settingsEmailPreferencesActivityPromotionSubtitle,
+                    emailPreferencesProvider.preferences.activityPromotion,
                     saveAfterToggle: false,
                     enabled: emailPreferencesProvider.canManage &&
                         !emailPreferencesProvider.isUpdating,
                     onChanged: (value) {
                       final next =
                           emailPreferencesProvider.preferences.copyWith(
-                        promotionAlerts: value,
+                        activityPromotion: value,
                       );
                       unawaited(persistEmailPreferences(next));
                     },
+                  ),
+                  const Divider(height: 32),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n
+                                  .settingsEmailPreferencesCriticalAccountSecurityTitle,
+                              style: KubusTextStyles.sectionTitle.copyWith(
+                                fontSize: KubusChromeMetrics.profileName + 1,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                            Text(
+                              l10n
+                                  .settingsEmailPreferencesCriticalAccountSecuritySubtitle,
+                              style: KubusTextStyles.detailCaption.copyWith(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.5),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Switch(
+                        value: true,
+                        onChanged: null,
+                        activeTrackColor: Provider.of<ThemeProvider>(context)
+                            .accentColor
+                            .withValues(alpha: 0.5),
+                        thumbColor: WidgetStateProperty.resolveWith((states) {
+                          if (states.contains(WidgetState.selected)) {
+                            return Provider.of<ThemeProvider>(context,
+                                    listen: false)
+                                .accentColor;
+                          }
+                          return null;
+                        }),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 32),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n
+                                  .settingsEmailPreferencesCriticalWalletSecurityTitle,
+                              style: KubusTextStyles.sectionTitle.copyWith(
+                                fontSize: KubusChromeMetrics.profileName + 1,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                            Text(
+                              l10n
+                                  .settingsEmailPreferencesCriticalWalletSecuritySubtitle,
+                              style: KubusTextStyles.detailCaption.copyWith(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.5),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Switch(
+                        value: true,
+                        onChanged: null,
+                        activeTrackColor: Provider.of<ThemeProvider>(context)
+                            .accentColor
+                            .withValues(alpha: 0.5),
+                        thumbColor: WidgetStateProperty.resolveWith((states) {
+                          if (states.contains(WidgetState.selected)) {
+                            return Provider.of<ThemeProvider>(context,
+                                    listen: false)
+                                .accentColor;
+                          }
+                          return null;
+                        }),
+                      ),
+                    ],
                   ),
                   const Divider(height: 32),
                   Row(
@@ -2623,8 +2697,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   ),
                   const Divider(height: 32),
                   _buildToggleSetting(
-                    'All app notifications',
-                    'Master switch for in-app and push notification categories.',
+                    l10n.settingsInAppNotificationsMasterTitle,
+                    l10n.settingsInAppNotificationsMasterSubtitle,
                     notificationPreferences.enabled,
                     saveAfterToggle: false,
                     onChanged: (value) {
@@ -2635,8 +2709,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   ),
                   const Divider(height: 32),
                   _buildToggleSetting(
-                    'Art notifications',
-                    'In-app notifications for artwork activity and achievements.',
+                    l10n.settingsInAppNotificationsArtTitle,
+                    l10n.settingsInAppNotificationsArtSubtitle,
                     notificationPreferences.art,
                     saveAfterToggle: false,
                     enabled: notificationPreferences.enabled,
@@ -2647,8 +2721,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   ),
                   const Divider(height: 32),
                   _buildToggleSetting(
-                    'Community notifications',
-                    'In-app notifications for comments, likes, follows, and shares.',
+                    l10n.settingsInAppNotificationsCommunityTitle,
+                    l10n.settingsInAppNotificationsCommunitySubtitle,
                     notificationPreferences.community,
                     saveAfterToggle: false,
                     enabled: notificationPreferences.enabled,
@@ -2660,8 +2734,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   ),
                   const Divider(height: 32),
                   _buildToggleSetting(
-                    'DAO notifications',
-                    'In-app notifications for DAO form reviews and governance decisions.',
+                    l10n.settingsInAppNotificationsDaoTitle,
+                    l10n.settingsInAppNotificationsDaoSubtitle,
                     notificationPreferences.dao,
                     saveAfterToggle: false,
                     enabled: notificationPreferences.enabled,
@@ -2672,8 +2746,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   ),
                   const Divider(height: 32),
                   _buildToggleSetting(
-                    'Artist hub notifications',
-                    'In-app notifications for artist workflow and studio updates.',
+                    l10n.settingsInAppNotificationsArtistHubTitle,
+                    l10n.settingsInAppNotificationsArtistHubSubtitle,
                     notificationPreferences.artistHub,
                     saveAfterToggle: false,
                     enabled: notificationPreferences.enabled,
@@ -2685,8 +2759,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   ),
                   const Divider(height: 32),
                   _buildToggleSetting(
-                    'Institution hub notifications',
-                    'In-app notifications for institution workflow and review updates.',
+                    l10n.settingsInAppNotificationsInstitutionHubTitle,
+                    l10n.settingsInAppNotificationsInstitutionHubSubtitle,
                     notificationPreferences.institutionHub,
                     saveAfterToggle: false,
                     enabled: notificationPreferences.enabled,
@@ -2699,8 +2773,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   ),
                   const Divider(height: 32),
                   _buildToggleSetting(
-                    'Account notifications',
-                    'In-app notifications for security, access, and account updates.',
+                    l10n.settingsInAppNotificationsAccountTitle,
+                    l10n.settingsInAppNotificationsAccountSubtitle,
                     notificationPreferences.account,
                     saveAfterToggle: false,
                     enabled: notificationPreferences.enabled,
@@ -2712,8 +2786,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   ),
                   const Divider(height: 32),
                   _buildToggleSetting(
-                    'Promotion notifications',
-                    'In-app notifications for promotion outcomes and upcoming campaign milestones.',
+                    l10n.settingsInAppNotificationsPromotionTitle,
+                    l10n.settingsInAppNotificationsPromotionSubtitle,
                     notificationPreferences.promotion,
                     saveAfterToggle: false,
                     enabled: notificationPreferences.enabled,

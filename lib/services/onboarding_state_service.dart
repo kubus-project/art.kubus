@@ -202,7 +202,11 @@ class OnboardingStateService {
     if (normalizedScope.isNotEmpty) {
       final scopedKey =
           _scopedKey(PreferenceKeys.pendingAuthOnboarding, normalizedScope);
-      return prefs.getBool(scopedKey) ?? false;
+      if (prefs.getBool(scopedKey) ?? false) {
+        return true;
+      }
+      // Backward compatibility for pre-scope auth onboarding state.
+      // Some existing sessions persisted the base key only.
     }
 
     final baseKey = PreferenceKeys.pendingAuthOnboarding;

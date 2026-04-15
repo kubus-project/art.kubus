@@ -90,7 +90,7 @@ class DetailHeader extends StatelessWidget {
     required this.onClose,
     this.imageUrl,
     this.imageVersion,
-    this.height = 248,
+    this.height = 220,
     this.borderRadius = KubusRadius.lg,
     this.badge,
     this.fallbackIcon = Icons.image_outlined,

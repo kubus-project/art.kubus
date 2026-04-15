@@ -24,6 +24,7 @@ import '../../../widgets/common/kubus_marker_overlay_card.dart';
 import '../../../widgets/map_marker_style_config.dart';
 import '../../../widgets/map/cards/kubus_discovery_card.dart';
 import 'map_marker_overlay_presentation.dart';
+import 'map_overlay_sizing.dart';
 import '../map_layers_manager.dart';
 import '../controller/kubus_map_controller.dart';
 import '../../../screens/map_core/map_ui_state_coordinator.dart';
@@ -572,6 +573,52 @@ class KubusMapDiscoveryCardHelpers {
 
 class KubusMarkerOverlayHelpers {
   const KubusMarkerOverlayHelpers._();
+
+  static double estimateCardHeight({
+    required ArtMarker marker,
+    required Artwork? artwork,
+    required KubusEvent? event,
+    required double maxCardHeight,
+    required bool isCompactWidth,
+  }) {
+    final presentation = resolveMarkerOverlayPresentation(
+      marker: marker,
+      artwork: artwork,
+      event: event,
+    );
+
+    final normalizedDescription = presentation.description
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    final cappedChars = normalizedDescription.length.clamp(0, 1800);
+    final hasDescription = cappedChars > 0;
+    final hasLinkedContext =
+        presentation.linkedSubject.kind !=
+            MapMarkerOverlayLinkedSubjectKind.none ||
+      (presentation.linkedSubject.title ?? '').trim().isNotEmpty ||
+      (presentation.linkedSubject.subtitle ?? '').trim().isNotEmpty;
+
+    var estimated = isCompactWidth ? 364.0 : 340.0;
+    if (hasDescription) {
+      estimated += math.min(148.0, cappedChars * 0.085);
+    } else {
+      estimated -= 24.0;
+    }
+
+    if (hasLinkedContext) {
+      estimated += 12.0;
+    }
+
+    if (marker.isPromoted || (artwork?.promotion.isPromoted ?? false)) {
+      estimated += 8.0;
+    }
+
+    return MapOverlaySizing.resolveCardHeight(
+      estimatedHeight: estimated,
+      maxCardHeight: maxCardHeight,
+      isCompactWidth: isCompactWidth,
+    );
+  }
 
   static bool canOpenStreetArtClaims(ArtMarker marker) {
     return AppConfig.isFeatureEnabled('streetArtClaims') &&

@@ -2147,7 +2147,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get settingsEmailPreferencesSectionTitle => 'Nastavitve e‑pošte';
 
   @override
-  String get settingsEmailPreferencesTransactionalNote => 'E‑pošta za račun (potrditev in ponastavitev gesla) je vedno omogočena.';
+  String get settingsEmailPreferencesTransactionalNote => 'Kritična varnostna e‑pošta za račun in denarnico je vedno omogočena.';
 
   @override
   String get settingsEmailPreferencesProductUpdatesTitle => 'Posodobitve izdelka';
@@ -2168,19 +2168,115 @@ class AppLocalizationsSl extends AppLocalizations {
   String get settingsEmailPreferencesCommunityDigestSubtitle => 'Periodični povzetek aktivnosti skupnosti';
 
   @override
+  String get settingsEmailPreferencesActivityArtTitle => 'Aktivnost umetnin';
+
+  @override
+  String get settingsEmailPreferencesActivityArtSubtitle => 'Posodobitve o tvojih umetninah, zbirkah in povezanih dejavnostih';
+
+  @override
+  String get settingsEmailPreferencesActivityCommunityTitle => 'Aktivnost skupnosti';
+
+  @override
+  String get settingsEmailPreferencesActivityCommunitySubtitle => 'Odgovori, omembe in posodobitve iz skupnosti';
+
+  @override
+  String get settingsEmailPreferencesActivityDaoTitle => 'Aktivnost DAO';
+
+  @override
+  String get settingsEmailPreferencesActivityDaoSubtitle => 'Posodobitve upravljanja, predlogi in opomniki za glasovanje';
+
+  @override
+  String get settingsEmailPreferencesActivityArtistHubTitle => 'Aktivnost Artist Huba';
+
+  @override
+  String get settingsEmailPreferencesActivityArtistHubSubtitle => 'Posodobitve funkcij in delovnih tokov Artist Huba';
+
+  @override
+  String get settingsEmailPreferencesActivityInstitutionHubTitle => 'Aktivnost Institution Huba';
+
+  @override
+  String get settingsEmailPreferencesActivityInstitutionHubSubtitle => 'Posodobitve funkcij in sodelovanj Institution Huba';
+
+  @override
+  String get settingsEmailPreferencesActivityPromotionTitle => 'Aktivnost promocij';
+
+  @override
+  String get settingsEmailPreferencesActivityPromotionSubtitle => 'Spremembe stanja in življenjskega cikla tvojih promocij';
+
+  @override
   String get settingsEmailPreferencesSecurityAlertsTitle => 'Varnostna opozorila';
 
   @override
   String get settingsEmailPreferencesSecurityAlertsSubtitle => 'Pomembna obvestila o varnosti računa';
 
   @override
+  String get settingsEmailPreferencesCriticalAccountSecurityTitle => 'Kritična varnost računa';
+
+  @override
+  String get settingsEmailPreferencesCriticalAccountSecuritySubtitle => 'Varnostna opozorila računa in obvestila o sumljivi dejavnosti (vedno vključeno)';
+
+  @override
+  String get settingsEmailPreferencesCriticalWalletSecurityTitle => 'Kritična varnost denarnice';
+
+  @override
+  String get settingsEmailPreferencesCriticalWalletSecuritySubtitle => 'Varnostna opozorila za denarnico in skrbništvo (vedno vključeno)';
+
+  @override
   String get settingsEmailPreferencesTransactionalTitle => 'E‑pošta za račun';
 
   @override
-  String get settingsEmailPreferencesTransactionalSubtitle => 'E‑pošta za potrditev in ponastavitev gesla je vedno omogočena';
+  String get settingsEmailPreferencesTransactionalSubtitle => 'Transakcijska e‑pošta (potrditev, ponastavitev in obnova) je vedno omogočena';
 
   @override
   String get settingsEmailPreferencesUpdateFailedToast => 'Nastavitev e‑pošte ni bilo mogoče posodobiti. Poskusi znova.';
+
+  @override
+  String get settingsInAppNotificationsMasterTitle => 'Vsa obvestila aplikacije';
+
+  @override
+  String get settingsInAppNotificationsMasterSubtitle => 'Glavno stikalo za kategorije obvestil v aplikaciji in potisnih obvestil.';
+
+  @override
+  String get settingsInAppNotificationsArtTitle => 'Obvestila o umetninah';
+
+  @override
+  String get settingsInAppNotificationsArtSubtitle => 'Obvestila v aplikaciji za aktivnosti umetnin in dosežke.';
+
+  @override
+  String get settingsInAppNotificationsCommunityTitle => 'Obvestila skupnosti';
+
+  @override
+  String get settingsInAppNotificationsCommunitySubtitle => 'Obvestila v aplikaciji za komentarje, všečke, sledenja in delitve.';
+
+  @override
+  String get settingsInAppNotificationsDaoTitle => 'DAO obvestila';
+
+  @override
+  String get settingsInAppNotificationsDaoSubtitle => 'Obvestila v aplikaciji za preglede DAO obrazcev in odločitve upravljanja.';
+
+  @override
+  String get settingsInAppNotificationsArtistHubTitle => 'Obvestila Artist Huba';
+
+  @override
+  String get settingsInAppNotificationsArtistHubSubtitle => 'Obvestila v aplikaciji za delovne tokove umetnikov in posodobitve studia.';
+
+  @override
+  String get settingsInAppNotificationsInstitutionHubTitle => 'Obvestila Institution Huba';
+
+  @override
+  String get settingsInAppNotificationsInstitutionHubSubtitle => 'Obvestila v aplikaciji za institucionalne delovne tokove in preglede.';
+
+  @override
+  String get settingsInAppNotificationsAccountTitle => 'Obvestila računa';
+
+  @override
+  String get settingsInAppNotificationsAccountSubtitle => 'Obvestila v aplikaciji za varnost, dostop in posodobitve računa.';
+
+  @override
+  String get settingsInAppNotificationsPromotionTitle => 'Obvestila promocij';
+
+  @override
+  String get settingsInAppNotificationsPromotionSubtitle => 'Obvestila v aplikaciji za izide promocij in prihajajoče mejnike kampanj.';
 
   @override
   String get settingsAccountTypeTitle => 'Vrsta računa';
