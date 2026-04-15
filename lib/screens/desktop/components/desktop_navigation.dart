@@ -66,7 +66,7 @@ class DesktopNavItem {
   });
 }
 
-/// Sleek right-side navigation bar inspired by Twitter/X
+/// Desktop primary navigation rail
 class DesktopNavigation extends StatefulWidget {
   /// Width guidance for the surrounding desktop shell.
   ///
@@ -170,7 +170,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
             IconButton(
               onPressed: widget.onToggleExpand,
               icon: Icon(
-                Icons.chevron_left,
+                Icons.chevron_right,
                 color: widget.activeAccent.withValues(alpha: 0.72),
                 size: KubusChromeMetrics.navCompactIcon,
               ),
@@ -206,7 +206,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'art.kubus',
+                    l10n.appTitle,
                     style: KubusTextStyles.sectionTitle.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -228,7 +228,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
           IconButton(
             onPressed: widget.onToggleExpand,
             icon: Icon(
-              Icons.chevron_right,
+              Icons.chevron_left,
               color: widget.activeAccent.withValues(alpha: 0.72),
               size: KubusChromeMetrics.navCompactIcon,
             ),

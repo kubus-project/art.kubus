@@ -219,9 +219,7 @@ class HomeWeb3CardStrip extends StatelessWidget {
       child: Row(
         children: orderedCards.asMap().entries.map((entry) {
           return Padding(
-            padding: EdgeInsets.only(
-              right: entry.key < orderedCards.length - 1 ? 12 : 0,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.xs),
             child: buildWeb3CardEntry(entry.value),
           );
         }).toList(growable: false),
@@ -565,6 +563,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           builder: (context, constraints) {
                             final screenWidth = constraints.crossAxisExtent;
                             final isSmallScreen = screenWidth < 375;
+                            final isDesktopGuidedLayout = screenWidth >= 1120;
                             final padding = isSmallScreen
                                 ? KubusSpacing.lg
                                 : KubusChromeMetrics.cardPadding;
@@ -588,6 +587,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   _buildAnimatedSections(
                                     spacing,
                                     headerDisplayName,
+                                    desktopGuidedLayout: isDesktopGuidedLayout,
                                   ),
                                 ),
                               ),
@@ -619,6 +619,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   List<Widget> _buildAnimatedSections(
     double spacing,
     String headerDisplayName,
+    {
+      required bool desktopGuidedLayout,
+    }
   ) {
     final sections = <Widget>[];
     var animationIndex = 0;
@@ -634,13 +637,48 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     sections.add(animated(_buildWelcomeSection(headerDisplayName)));
     sections.add(SizedBox(height: spacing));
-    sections.add(animated(_buildQuickActions()));
-    sections.add(SizedBox(height: spacing));
-    sections.add(animated(_buildStatsCards()));
-    sections.add(SizedBox(height: spacing));
-    sections.add(animated(_buildWeb3Section()));
-    sections.add(SizedBox(height: spacing));
-    sections.add(animated(_buildRecentActivity()));
+    if (desktopGuidedLayout) {
+      sections.add(
+        animated(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 3,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildQuickActions(),
+                    SizedBox(height: spacing),
+                    _buildWeb3Section(),
+                  ],
+                ),
+              ),
+              SizedBox(width: spacing),
+              Expanded(
+                flex: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildStatsCards(),
+                    SizedBox(height: spacing),
+                    _buildRecentActivity(),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else {
+      sections.add(animated(_buildQuickActions()));
+      sections.add(SizedBox(height: spacing));
+      sections.add(animated(_buildStatsCards()));
+      sections.add(SizedBox(height: spacing));
+      sections.add(animated(_buildWeb3Section()));
+      sections.add(SizedBox(height: spacing));
+      sections.add(animated(_buildRecentActivity()));
+    }
     sections.add(SizedBox(height: spacing));
     sections.add(animated(_buildHomeRails()));
     sections.add(SizedBox(height: spacing));
@@ -1076,7 +1114,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             ],
                           ],
                         ),
-                        SizedBox(height: isSmallScreen ? 6 : 8),
+                        SizedBox(
+                          height:
+                              isSmallScreen ? KubusSpacing.xs : KubusSpacing.sm,
+                        ),
                         Text(
                           l10n.homeWelcomeSubtitle,
                           style: KubusTextStyles.heroSubtitle.copyWith(
@@ -1242,6 +1283,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             scheme.surface.withValues(alpha: isDark ? 0.16 : 0.10);
         final frequentScreens =
             navigationProvider.getQuickActionScreens(maxItems: 12);
+        const sectionHeaderGap = KubusSpacing.sm + KubusSpacing.xs;
+        const sectionBlockGap = KubusSpacing.md;
         final suggestedKeys = _suggestedQuickActionKeys(
           persona, currentUser)
             .where(
@@ -1290,7 +1333,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
               ],
             ),
-            const SizedBox(height: 12),
+              const SizedBox(height: sectionHeaderGap),
             if (frequentScreens.isEmpty)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1309,7 +1352,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           color: scheme.onSurface.withValues(alpha: 0.5),
                           size: 32,
                         ),
-                        const SizedBox(width: 16),
+                        const SizedBox(width: KubusSpacing.lg),
                         Expanded(
                           child: Text(
                             l10n.homeQuickActionsEmptyDescription,
@@ -1322,7 +1365,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                   ),
                   if (suggestedKeys.isNotEmpty) ...[
-                    const SizedBox(height: 12),
+                    const SizedBox(height: sectionBlockGap),
                     buildActionStrip(
                       suggestedKeys.map((key) {
                         final def = NavigationProvider.screenDefinitions[key]!;

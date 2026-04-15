@@ -92,7 +92,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                 // Right: Quick actions, DAO stats, and voting info
                 if (isLarge)
                   SizedBox(
-                    width: 400,
+                    width: 380,
                     child: _buildRightPanel(themeProvider),
                   ),
               ],
@@ -108,6 +108,9 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
+    const sectionGap = KubusSpacing.lg;
+    const sectionHeaderGap = KubusSpacing.sm + KubusSpacing.xs;
+    const blockGap = KubusSpacing.md + KubusSpacing.xs;
     final panelGlassStyle = KubusGlassStyle.resolve(
       context,
       surfaceType: KubusGlassSurfaceType.sidebarBackground,
@@ -132,75 +135,104 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
         backgroundColor: panelGlassStyle.tintColor,
         blurSigma: panelGlassStyle.blurSigma,
         fallbackMinOpacity: panelGlassStyle.fallbackMinOpacity,
-        child: ListView(
-          padding: const EdgeInsets.all(KubusSpacing.lg),
-          children: [
-            KubusHeaderText(
-              title: l10n.desktopGovernanceSidebarOverviewTitle,
-              kind: KubusHeaderKind.section,
-            ),
-            const SizedBox(height: KubusSpacing.lg),
+        child: ValueListenableBuilder<int>(
+          valueListenable: _hubSelectedIndex,
+          builder: (context, currentSection, _) => ListView(
+            padding: const EdgeInsets.all(KubusSpacing.lg),
+            children: [
+              KubusHeaderText(
+                title: l10n.desktopGovernanceSidebarOverviewTitle,
+                kind: KubusHeaderKind.section,
+              ),
+              const SizedBox(height: KubusSpacing.xs),
+              Text(
+                _governanceSectionLabel(l10n, currentSection),
+                style: KubusTextStyles.sectionSubtitle.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.66),
+                ),
+              ),
+              const SizedBox(height: sectionGap),
 
-            // Voting power card
-            _buildVotingPowerCard(themeProvider),
-            const SizedBox(height: KubusSpacing.md + KubusSpacing.xs),
+              // Voting power card
+              _buildVotingPowerCard(themeProvider),
+              const SizedBox(height: blockGap),
 
-            // Quick actions
-            KubusHeaderText(
-              title: l10n.desktopGovernanceSidebarQuickActionsTitle,
-              kind: KubusHeaderKind.section,
-            ),
-            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
-            KubusActionSidebarTile(
-              title: l10n.desktopGovernanceQuickActionCreateProposalTitle,
-              subtitle: l10n.desktopGovernanceQuickActionCreateProposalSubtitle,
-              icon: Icons.add_box_outlined,
-              semantic: KubusActionSemantic.create,
-              onTap: () => _hubSelectedIndex.value = 2,
-            ),
-            KubusActionSidebarTile(
-              title: l10n.desktopGovernanceQuickActionVoteTitle,
-              subtitle: l10n.desktopGovernanceQuickActionVoteSubtitle,
-              icon: Icons.how_to_vote_outlined,
-              semantic: KubusActionSemantic.manage,
-              onTap: () => _hubSelectedIndex.value = 0,
-            ),
-            KubusActionSidebarTile(
-              title: l10n.desktopGovernanceQuickActionAnalyticsTitle,
-              subtitle: l10n.desktopGovernanceQuickActionAnalyticsSubtitle,
-              icon: Icons.analytics_outlined,
-              semantic: KubusActionSemantic.analytics,
-              onTap: () {
-                DesktopShellScope.of(context)?.pushScreen(
-                  DesktopSubScreen(
-                    title: l10n.desktopGovernanceAnalyticsScreenTitle,
-                    child: const DAOAnalytics(embedded: true),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: KubusSpacing.lg),
+              // Quick actions
+              KubusHeaderText(
+                title: l10n.desktopGovernanceSidebarQuickActionsTitle,
+                kind: KubusHeaderKind.section,
+              ),
+              const SizedBox(height: sectionHeaderGap),
+              if (currentSection != 2)
+                KubusActionSidebarTile(
+                  title: l10n.desktopGovernanceQuickActionCreateProposalTitle,
+                  subtitle:
+                      l10n.desktopGovernanceQuickActionCreateProposalSubtitle,
+                  icon: Icons.add_box_outlined,
+                  semantic: KubusActionSemantic.create,
+                  onTap: () => _hubSelectedIndex.value = 2,
+                ),
+              if (currentSection != 0)
+                KubusActionSidebarTile(
+                  title: l10n.desktopGovernanceQuickActionVoteTitle,
+                  subtitle: l10n.desktopGovernanceQuickActionVoteSubtitle,
+                  icon: Icons.how_to_vote_outlined,
+                  semantic: KubusActionSemantic.manage,
+                  onTap: () => _hubSelectedIndex.value = 0,
+                ),
+              KubusActionSidebarTile(
+                title: l10n.desktopGovernanceQuickActionAnalyticsTitle,
+                subtitle: l10n.desktopGovernanceQuickActionAnalyticsSubtitle,
+                icon: Icons.analytics_outlined,
+                semantic: KubusActionSemantic.analytics,
+                onTap: () {
+                  DesktopShellScope.of(context)?.pushScreen(
+                    DesktopSubScreen(
+                      title: l10n.desktopGovernanceAnalyticsScreenTitle,
+                      child: const DAOAnalytics(embedded: true),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: sectionGap),
 
-            // DAO Stats
-            KubusHeaderText(
-              title: l10n.desktopGovernanceSidebarStatisticsTitle,
-              kind: KubusHeaderKind.section,
-            ),
-            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
-            _buildDAOStatsGrid(themeProvider),
-            const SizedBox(height: KubusSpacing.lg),
+              // DAO Stats
+              KubusHeaderText(
+                title: l10n.desktopGovernanceSidebarStatisticsTitle,
+                kind: KubusHeaderKind.section,
+              ),
+              const SizedBox(height: sectionHeaderGap),
+              _buildDAOStatsGrid(themeProvider),
+              const SizedBox(height: sectionGap),
 
-            // Recent governance activity
-            KubusHeaderText(
-              title: l10n.desktopGovernanceSidebarRecentActivityTitle,
-              kind: KubusHeaderKind.section,
-            ),
-            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
-            _buildRecentActivity(themeProvider),
-          ],
+              // Recent governance activity
+              KubusHeaderText(
+                title: l10n.desktopGovernanceSidebarRecentActivityTitle,
+                kind: KubusHeaderKind.section,
+              ),
+              const SizedBox(height: sectionHeaderGap),
+              _buildRecentActivity(themeProvider),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  String _governanceSectionLabel(AppLocalizations l10n, int sectionIndex) {
+    switch (sectionIndex) {
+      case 1:
+        return l10n.daoHubTabVotingHistory;
+      case 2:
+        return l10n.daoHubTabCreateProposal;
+      case 3:
+        return l10n.daoHubTabTreasury;
+      case 4:
+        return l10n.daoHubTabDelegation;
+      case 0:
+      default:
+        return l10n.daoHubTabActiveProposals;
+    }
   }
 
   Widget _buildVotingPowerCard(ThemeProvider themeProvider) {
@@ -257,7 +289,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Your voting power',
+                              l10n.daoHubStatYourVotingPowerLabel,
                               style:
                                   KubusTextStyles.actionTileSubtitle.copyWith(
                                 color: Theme.of(context)
@@ -324,6 +356,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
   Widget _buildDAOStatsGrid(ThemeProvider themeProvider) {
     return Consumer<DAOProvider>(
       builder: (context, daoProvider, _) {
+        final l10n = AppLocalizations.of(context)!;
         final proposals = daoProvider.proposals;
         final activeProposals =
             proposals.where((p) => p.status == ProposalStatus.active).length;
@@ -335,7 +368,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
               children: [
                 Expanded(
                   child: _buildStatCard(
-                    'Proposals',
+                    l10n.daoHubTabActiveProposals,
                     proposals.length.toString(),
                     Icons.description_outlined,
                     Theme.of(context).colorScheme.primary,
@@ -344,7 +377,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                 const SizedBox(width: KubusSpacing.sm),
                 Expanded(
                   child: _buildStatCard(
-                    'Active',
+                    l10n.daoHubStatActiveProposalsLabel,
                     activeProposals.toString(),
                     Icons.pending_actions_outlined,
                     KubusColorRoles.of(context).statTeal,
@@ -357,7 +390,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
               children: [
                 Expanded(
                   child: _buildStatCard(
-                    'Members',
+                    l10n.daoHubStatTotalDelegatesLabel,
                     totalMembers.toString(),
                     Icons.people_outline,
                     KubusColorRoles.of(context).statCoral,
@@ -366,7 +399,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                 const SizedBox(width: KubusSpacing.sm),
                 Expanded(
                   child: _buildStatCard(
-                    'Treasury',
+                    l10n.daoHubTabTreasury,
                     '${(daoProvider.treasuryOnChainBalance ?? 0).toStringAsFixed(2)} KUB8',
                     Icons.account_balance_outlined,
                     KubusColorRoles.of(context).positiveAction,
@@ -393,6 +426,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
   Widget _buildRecentActivity(ThemeProvider themeProvider) {
     return Consumer<DAOProvider>(
       builder: (context, daoProvider, _) {
+        final l10n = AppLocalizations.of(context)!;
         final recentProposals = daoProvider.proposals.take(3).toList();
         final activityGlassStyle = KubusGlassStyle.resolve(
           context,
@@ -419,7 +453,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                 ),
                 const SizedBox(height: KubusSpacing.sm),
                 Text(
-                  'No recent activity',
+                  l10n.homeNoRecentActivityTitle,
                   style: KubusTextStyles.actionTileSubtitle.copyWith(
                     color: Theme.of(context)
                         .colorScheme

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/design_tokens.dart';
@@ -98,9 +99,10 @@ class _DesktopInstitutionHubScreenState
   }
 
   String? _institutionPromotionUnavailableReason() {
+    final l10n = AppLocalizations.of(context)!;
     final wallet = _resolveWalletAddress();
     if (wallet.isEmpty) {
-      return 'Connect an approved institution wallet to request institution promotion.';
+      return l10n.desktopInstitutionPromotionWalletRequiredReason;
     }
 
     final daoProvider = context.read<DAOProvider>();
@@ -113,10 +115,10 @@ class _DesktopInstitutionHubScreenState
 
     if (verification.isApprovedFor(DaoRoleType.artist) ||
         verification.isPendingFor(DaoRoleType.artist)) {
-      return 'Artist wallets cannot self-serve institution promotion. Use a dedicated institution wallet.';
+      return l10n.desktopInstitutionPromotionArtistConflictReason;
     }
     if (!verification.isApprovedFor(DaoRoleType.institution)) {
-      return 'Institution promotion is available only for approved institution wallets.';
+      return l10n.desktopInstitutionPromotionRequiresApprovalReason;
     }
     return null;
   }
@@ -209,7 +211,7 @@ class _DesktopInstitutionHubScreenState
                 // Right: Quick actions, stats, and analytics
                 if (isLarge)
                   SizedBox(
-                    width: 400,
+                    width: 380,
                     child: _buildRightPanel(themeProvider),
                   ),
               ],
@@ -222,8 +224,12 @@ class _DesktopInstitutionHubScreenState
 
   Widget _buildRightPanel(ThemeProvider themeProvider) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final scheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
+    const sectionGap = KubusSpacing.lg;
+    const sectionHeaderGap = KubusSpacing.sm + KubusSpacing.xs;
+    const blockGap = KubusSpacing.md + KubusSpacing.xs;
     final persona = context.watch<ProfileProvider>().userPersona;
     final showCreateActions =
         persona == null || persona == UserPersona.institution;
@@ -256,13 +262,13 @@ class _DesktopInstitutionHubScreenState
     String sectionTitle() {
       switch (section) {
         case DesktopInstitutionSection.events:
-          return 'Events';
+          return l10n.userProfileAchievementCategoryEvents;
         case DesktopInstitutionSection.exhibitions:
-          return 'Exhibitions';
+          return l10n.artistStudioTabExhibitions;
         case DesktopInstitutionSection.create:
-          return 'Create';
+          return l10n.commonCreate;
         case DesktopInstitutionSection.analytics:
-          return 'Analytics';
+          return l10n.desktopArtistStudioQuickActionAnalyticsTitle;
       }
     }
 
@@ -290,23 +296,30 @@ class _DesktopInstitutionHubScreenState
           children: [
             // Header
             Text(
-              sectionTitle(),
+              l10n.navigationScreenInstitutionHub,
               style:
                   KubusTextStyles.screenTitle.copyWith(color: scheme.onSurface),
             ),
-            const SizedBox(height: KubusSpacing.lg),
+            const SizedBox(height: KubusSpacing.xs),
+            Text(
+              sectionTitle(),
+              style: KubusTextStyles.sectionSubtitle.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.66),
+              ),
+            ),
+            const SizedBox(height: sectionGap),
 
             // Verification status
             _buildVerificationStatusCard(themeProvider),
-            const SizedBox(height: KubusSpacing.md + KubusSpacing.xs),
+            const SizedBox(height: blockGap),
 
             // Quick actions
             Text(
-              'Quick Actions',
+              l10n.desktopArtistStudioQuickActionsTitle,
               style: KubusTextStyles.sectionTitle
                   .copyWith(color: scheme.onSurface),
             ),
-            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+            const SizedBox(height: sectionHeaderGap),
             if (AppConfig.isFeatureEnabled('collabInvites'))
               Consumer<CollabProvider>(
                 builder: (context, collabProvider, _) {
@@ -330,16 +343,18 @@ class _DesktopInstitutionHubScreenState
                       : null;
 
                   return KubusActionSidebarTile(
-                    title: 'Invites',
+                    title: l10n.desktopArtistStudioQuickActionInvitesTitle,
                     subtitle: pending > 0
-                        ? 'You have pending collaboration invites'
-                        : 'View collaboration invites',
+                        ? l10n
+                            .desktopArtistStudioQuickActionInvitesPendingSubtitle
+                        : l10n.desktopArtistStudioQuickActionInvitesSubtitle,
                     icon: Icons.inbox_outlined,
                     semantic: KubusActionSemantic.invite,
                     onTap: () {
                       DesktopShellScope.of(context)?.pushScreen(
                         DesktopSubScreen(
-                          title: 'Collaboration Invites',
+                          title: l10n
+                              .desktopArtistStudioQuickActionCollaborationInvitesTitle,
                           child: const InvitesInboxScreen(embedded: true),
                         ),
                       );
@@ -350,8 +365,8 @@ class _DesktopInstitutionHubScreenState
               ),
             if (canSelfServeInstitutionPromotion)
               KubusActionSidebarTile(
-                title: 'Promote my institution',
-                subtitle: 'Request featured institution placement',
+                title: l10n.desktopInstitutionPromoteProfileTitle,
+                subtitle: l10n.desktopInstitutionPromoteProfileSubtitle,
                 icon: Icons.campaign_outlined,
                 semantic: KubusActionSemantic.publish,
                 onTap: _openInstitutionPromotionFlow,
@@ -361,14 +376,14 @@ class _DesktopInstitutionHubScreenState
                 showCreateActions &&
                 AppConfig.isFeatureEnabled('events'))
               KubusActionSidebarTile(
-                title: 'Create Event',
-                subtitle: 'Schedule a new event',
+                title: l10n.desktopInstitutionCreateEventTitle,
+                subtitle: l10n.desktopInstitutionCreateEventSubtitle,
                 icon: Icons.event_outlined,
                 semantic: KubusActionSemantic.create,
                 onTap: () {
                   DesktopShellScope.of(context)?.pushScreen(
                     DesktopSubScreen(
-                      title: 'Create Event',
+                      title: l10n.desktopInstitutionCreateEventTitle,
                       child: const EventCreator(embedded: true),
                     ),
                   );
@@ -379,14 +394,14 @@ class _DesktopInstitutionHubScreenState
                 showCreateActions &&
                 showExhibitions)
               KubusActionSidebarTile(
-                title: 'Create Exhibition',
-                subtitle: 'Publish a new exhibition',
+                title: l10n.exhibitionCreatorAppBarTitle,
+                subtitle: l10n.desktopInstitutionCreateExhibitionSubtitle,
                 icon: Icons.museum_outlined,
                 semantic: KubusActionSemantic.publish,
                 onTap: () {
                   DesktopShellScope.of(context)?.pushScreen(
                     DesktopSubScreen(
-                      title: 'Create Exhibition',
+                      title: l10n.exhibitionCreatorAppBarTitle,
                       child: const ExhibitionCreatorScreen(embedded: true),
                     ),
                   );
@@ -396,14 +411,14 @@ class _DesktopInstitutionHubScreenState
                 isApprovedInstitution &&
                 showCreateActions)
               KubusActionSidebarTile(
-                title: 'Manage Markers',
-                subtitle: 'Create, publish, and edit map markers',
+                title: l10n.manageMarkersTitle,
+                subtitle: l10n.manageMarkersQuickActionSubtitle,
                 icon: Icons.place_outlined,
                 semantic: KubusActionSemantic.manage,
                 onTap: () {
                   DesktopShellScope.of(context)?.pushScreen(
                     DesktopSubScreen(
-                      title: 'Manage Markers',
+                      title: l10n.manageMarkersTitle,
                       child: const ManageMarkersScreen(embedded: true),
                     ),
                   );
@@ -412,14 +427,14 @@ class _DesktopInstitutionHubScreenState
             if (section == DesktopInstitutionSection.events &&
                 isApprovedInstitution)
               KubusActionSidebarTile(
-                title: 'Manage Events',
-                subtitle: 'View all events',
+                title: l10n.desktopInstitutionManageEventsTitle,
+                subtitle: l10n.desktopInstitutionManageEventsSubtitle,
                 icon: Icons.event_note_outlined,
                 semantic: KubusActionSemantic.manage,
                 onTap: () {
                   DesktopShellScope.of(context)?.pushScreen(
                     DesktopSubScreen(
-                      title: 'Manage Events',
+                      title: l10n.desktopInstitutionManageEventsTitle,
                       child: const EventManager(embedded: true),
                     ),
                   );
@@ -429,21 +444,21 @@ class _DesktopInstitutionHubScreenState
                 isApprovedInstitution &&
                 showExhibitions)
               KubusActionSidebarTile(
-                title: 'My Exhibitions',
-                subtitle: 'View hosted and collaborating exhibitions',
+                title: l10n.desktopInstitutionMyExhibitionsTitle,
+                subtitle: l10n.desktopInstitutionMyExhibitionsSubtitle,
                 icon: Icons.collections_bookmark_outlined,
                 semantic: KubusActionSemantic.view,
                 onTap: () {
                   DesktopShellScope.of(context)?.pushScreen(
                     DesktopSubScreen(
-                      title: 'My Exhibitions',
+                      title: l10n.desktopInstitutionMyExhibitionsTitle,
                       child: ExhibitionListScreen(
                         embedded: true,
                         canCreate: true,
                         onCreateExhibition: () {
                           DesktopShellScope.of(context)?.pushScreen(
                             DesktopSubScreen(
-                              title: 'Create Exhibition',
+                              title: l10n.exhibitionCreatorAppBarTitle,
                               child:
                                   const ExhibitionCreatorScreen(embedded: true),
                             ),
@@ -469,14 +484,14 @@ class _DesktopInstitutionHubScreenState
             if (section == DesktopInstitutionSection.analytics &&
                 isApprovedInstitution)
               KubusActionSidebarTile(
-                title: 'Analytics',
-                subtitle: 'View performance stats',
+                title: l10n.desktopArtistStudioQuickActionAnalyticsTitle,
+                subtitle: l10n.desktopArtistStudioQuickActionAnalyticsSubtitle,
                 icon: Icons.analytics_outlined,
                 semantic: KubusActionSemantic.analytics,
                 onTap: () {
                   DesktopShellScope.of(context)?.pushScreen(
                     DesktopSubScreen(
-                      title: 'Analytics',
+                      title: l10n.desktopArtistStudioQuickActionAnalyticsTitle,
                       child: const InstitutionAnalytics(),
                     ),
                   );
@@ -485,7 +500,7 @@ class _DesktopInstitutionHubScreenState
             if (section == DesktopInstitutionSection.analytics) ...[
               const SizedBox(height: KubusSpacing.sm),
               _buildAnalyticsTimeframeSelector(
-                title: 'Timeframe',
+                title: l10n.analyticsTimeframeLabel,
                 value: context
                     .watch<AnalyticsFiltersProvider>()
                     .institutionTimeframe,
@@ -494,26 +509,26 @@ class _DesktopInstitutionHubScreenState
                     .setInstitutionTimeframe(v),
               ),
             ],
-            const SizedBox(height: KubusSpacing.lg),
+            const SizedBox(height: sectionGap),
 
             // Stats
             Text(
-              'Institution Statistics',
+              l10n.desktopInstitutionStatsTitle,
               style: KubusTextStyles.sectionTitle
                   .copyWith(color: scheme.onSurface),
             ),
-            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+            const SizedBox(height: sectionHeaderGap),
             _buildStatsGrid(),
-            const SizedBox(height: KubusSpacing.lg),
+            const SizedBox(height: sectionGap),
 
             // Upcoming events
             if (section == DesktopInstitutionSection.events) ...[
               Text(
-                'Upcoming Events',
+                l10n.profileUpcomingEventsTitle,
                 style: KubusTextStyles.sectionTitle
                     .copyWith(color: scheme.onSurface),
               ),
-              const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+              const SizedBox(height: sectionHeaderGap),
               _buildUpcomingEvents(themeProvider),
             ],
           ],
@@ -600,11 +615,13 @@ class _DesktopInstitutionHubScreenState
       context: context,
       entityType: PromotionEntityType.institution,
       entityId: entityId,
-      entityLabel: profile?.displayName ?? 'my institution',
+      entityLabel:
+          profile?.displayName ?? AppLocalizations.of(context)!.navigationScreenInstitutionHub,
     );
   }
 
   Widget _buildVerificationStatusCard(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     final wallet = _resolveWalletAddress();
     final daoProvider = context.watch<DAOProvider>();
     final review = _institutionReview ??
@@ -621,27 +638,30 @@ class _DesktopInstitutionHubScreenState
 
     Color statusColor = scheme.onSurface.withValues(alpha: 0.6);
     IconData statusIcon = Icons.help_outline;
-    String statusText = 'Not Applied';
-    String statusDescription = 'Apply for institution verification';
+    String statusText = l10n.desktopInstitutionVerificationNotAppliedTitle;
+    String statusDescription =
+        l10n.desktopInstitutionVerificationNotAppliedDescription;
 
     if (_reviewLoading) {
-      statusText = 'Loading...';
-      statusDescription = 'Checking verification status';
+      statusText = l10n.desktopArtistStudioVerificationLoadingTitle;
+      statusDescription =
+          l10n.desktopArtistStudioVerificationLoadingDescription;
     } else if (isApproved) {
       statusColor = roles.positiveAction;
       statusIcon = Icons.verified;
-      statusText = 'Verified Institution';
-      statusDescription = 'Your organization is verified';
+      statusText = l10n.profileEditVerifiedInstitutionTitle;
+      statusDescription = l10n.desktopInstitutionVerificationApprovedDescription;
     } else if (isPending) {
       statusColor = roles.warningAction;
       statusIcon = Icons.pending;
-      statusText = 'Pending Review';
-      statusDescription = 'Application under review';
+      statusText = l10n.desktopArtistStudioVerificationPendingTitle;
+      statusDescription = l10n.desktopInstitutionVerificationPendingDescription;
     } else if (isRejected) {
       statusColor = roles.negativeAction;
       statusIcon = Icons.cancel;
-      statusText = 'Application Rejected';
-      statusDescription = 'Please resubmit with improvements';
+      statusText = l10n.desktopArtistStudioVerificationRejectedTitle;
+      statusDescription =
+          l10n.desktopArtistStudioVerificationRejectedDescription;
     }
 
     return DesktopCard(
@@ -688,7 +708,7 @@ class _DesktopInstitutionHubScreenState
           if (!isApproved && !isPending && wallet.isNotEmpty) ...[
             const SizedBox(height: KubusSpacing.md),
             Text(
-              'Use the Institution Hub panel to submit verification.',
+              l10n.desktopInstitutionVerificationApplyHint,
               style: KubusTextStyles.actionTileSubtitle.copyWith(
                 color: scheme.onSurface.withValues(alpha: 0.6),
               ),
@@ -700,6 +720,7 @@ class _DesktopInstitutionHubScreenState
   }
 
   Widget _buildStatsGrid() {
+    final l10n = AppLocalizations.of(context)!;
     final roles = KubusColorRoles.of(context);
     final statsProvider = context.watch<StatsProvider>();
     final wallet = _resolveWalletAddress(listen: true);
@@ -757,7 +778,7 @@ class _DesktopInstitutionHubScreenState
           children: [
             Expanded(
               child: _buildStatCard(
-                'Events',
+                l10n.userProfileAchievementCategoryEvents,
                 displayCount(events),
                 Icons.event_outlined,
                 roles.web3InstitutionAccent,
@@ -766,7 +787,7 @@ class _DesktopInstitutionHubScreenState
             const SizedBox(width: KubusSpacing.sm),
             Expanded(
               child: _buildStatCard(
-                'Visitors',
+                l10n.desktopInstitutionStatVisitors,
                 displayCount(visitors),
                 Icons.people_outline,
                 roles.web3InstitutionAccent,
@@ -779,7 +800,7 @@ class _DesktopInstitutionHubScreenState
           children: [
             Expanded(
               child: _buildStatCard(
-                'Artworks',
+                l10n.desktopArtistStudioStatArtworks,
                 displayCount(artworks),
                 Icons.collections_outlined,
                 roles.statCoral,
@@ -788,7 +809,7 @@ class _DesktopInstitutionHubScreenState
             const SizedBox(width: KubusSpacing.sm),
             Expanded(
               child: _buildStatCard(
-                'Revenue',
+                l10n.desktopInstitutionStatRevenue,
                 displayKub8(revenue),
                 Icons.attach_money,
                 roles.positiveAction,
@@ -811,6 +832,7 @@ class _DesktopInstitutionHubScreenState
   }
 
   Widget _buildUpcomingEvents(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final cardStyle = KubusGlassStyle.resolve(
       context,
@@ -832,7 +854,7 @@ class _DesktopInstitutionHubScreenState
           ),
           const SizedBox(height: KubusSpacing.sm),
           Text(
-            'No upcoming events',
+            l10n.desktopInstitutionNoUpcomingEventsLabel,
             style: KubusTextStyles.actionTileTitle.copyWith(
               color: scheme.onSurface.withValues(alpha: 0.6),
             ),

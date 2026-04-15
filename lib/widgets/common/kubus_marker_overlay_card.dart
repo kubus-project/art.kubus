@@ -258,7 +258,8 @@ class KubusMarkerOverlayCard extends StatelessWidget {
                             const SizedBox(height: KubusSpacing.sm),
                           ],
                           if (visibleDescription.isNotEmpty)
-                            Expanded(
+                            Flexible(
+                              fit: FlexFit.loose,
                               child: _buildBody(
                                 context: context,
                                 scheme: scheme,

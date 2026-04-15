@@ -61,17 +61,8 @@ import 'app_localizations_sl.dart';
 /// you wish to add from the pop-up menu in the Value field. This list should
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
-String _canonicalizedAppLocaleName(String locale) {
-  final raw = locale.trim();
-  if (raw.isEmpty || raw == 'undefined' || raw == 'null') {
-    return 'sl';
-  }
-  return intl.Intl.canonicalizedLocale(raw);
-}
-
 abstract class AppLocalizations {
-  AppLocalizations(String locale)
-      : localeName = _canonicalizedAppLocaleName(locale.toString());
+  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -1075,6 +1066,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Email sign-in failed. Please try again.'**
   String get authEmailSignInFailed;
+
+  /// No description provided for @authWalletOnlyAccountSignInHint.
+  ///
+  /// In en, this message translates to:
+  /// **'This account uses wallet sign-in. Connect the original wallet to continue.'**
+  String get authWalletOnlyAccountSignInHint;
 
   /// No description provided for @authRegistrationFailed.
   ///
@@ -10574,6 +10571,24 @@ abstract class AppLocalizations {
   /// **'No recent activity'**
   String get desktopArtistStudioNoRecentActivityLabel;
 
+  /// No description provided for @desktopArtistStudioPromoteProfileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Promote Profile'**
+  String get desktopArtistStudioPromoteProfileTitle;
+
+  /// No description provided for @desktopArtistStudioPromoteProfileSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Boost profile visibility with priority placement'**
+  String get desktopArtistStudioPromoteProfileSubtitle;
+
+  /// No description provided for @desktopArtistStudioMyProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'my profile'**
+  String get desktopArtistStudioMyProfile;
+
   /// No description provided for @desktopArtistStudioVerificationNotAppliedTitle.
   ///
   /// In en, this message translates to:
@@ -10663,6 +10678,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sales'**
   String get desktopArtistStudioStatSales;
+
+  /// No description provided for @desktopInstitutionPromotionWalletRequiredReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect your wallet to create promotions.'**
+  String get desktopInstitutionPromotionWalletRequiredReason;
+
+  /// No description provided for @desktopInstitutionPromotionArtistConflictReason.
+  ///
+  /// In en, this message translates to:
+  /// **'This wallet is verified as an artist. Use an institution wallet to promote institution content.'**
+  String get desktopInstitutionPromotionArtistConflictReason;
+
+  /// No description provided for @desktopInstitutionPromotionRequiresApprovalReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution approval is required before creating promotions.'**
+  String get desktopInstitutionPromotionRequiresApprovalReason;
+
+  /// No description provided for @desktopInstitutionPromoteProfileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Promote Institution'**
+  String get desktopInstitutionPromoteProfileTitle;
+
+  /// No description provided for @desktopInstitutionPromoteProfileSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Boost institution visibility with priority placement'**
+  String get desktopInstitutionPromoteProfileSubtitle;
+
+  /// No description provided for @desktopInstitutionCreateEventTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Event'**
+  String get desktopInstitutionCreateEventTitle;
+
+  /// No description provided for @desktopInstitutionCreateEventSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule and publish institution events'**
+  String get desktopInstitutionCreateEventSubtitle;
+
+  /// No description provided for @desktopInstitutionCreateExhibitionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a curated exhibition experience'**
+  String get desktopInstitutionCreateExhibitionSubtitle;
+
+  /// No description provided for @desktopInstitutionManageEventsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Events'**
+  String get desktopInstitutionManageEventsTitle;
+
+  /// No description provided for @desktopInstitutionManageEventsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit upcoming events and attendance details'**
+  String get desktopInstitutionManageEventsSubtitle;
+
+  /// No description provided for @desktopInstitutionMyExhibitionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My Exhibitions'**
+  String get desktopInstitutionMyExhibitionsTitle;
+
+  /// No description provided for @desktopInstitutionMyExhibitionsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review and update institution exhibitions'**
+  String get desktopInstitutionMyExhibitionsSubtitle;
+
+  /// No description provided for @desktopInstitutionStatsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution Stats'**
+  String get desktopInstitutionStatsTitle;
+
+  /// No description provided for @desktopInstitutionVerificationNotAppliedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not Applied'**
+  String get desktopInstitutionVerificationNotAppliedTitle;
+
+  /// No description provided for @desktopInstitutionVerificationNotAppliedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply for institution verification'**
+  String get desktopInstitutionVerificationNotAppliedDescription;
+
+  /// No description provided for @desktopInstitutionVerificationApprovedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Your institution is verified'**
+  String get desktopInstitutionVerificationApprovedDescription;
+
+  /// No description provided for @desktopInstitutionVerificationPendingDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Application under review'**
+  String get desktopInstitutionVerificationPendingDescription;
+
+  /// No description provided for @desktopInstitutionVerificationApplyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification unlocks institution publishing tools and promotions.'**
+  String get desktopInstitutionVerificationApplyHint;
+
+  /// No description provided for @desktopInstitutionStatVisitors.
+  ///
+  /// In en, this message translates to:
+  /// **'Visitors'**
+  String get desktopInstitutionStatVisitors;
+
+  /// No description provided for @desktopInstitutionStatRevenue.
+  ///
+  /// In en, this message translates to:
+  /// **'Revenue'**
+  String get desktopInstitutionStatRevenue;
+
+  /// No description provided for @desktopInstitutionNoUpcomingEventsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'No upcoming events'**
+  String get desktopInstitutionNoUpcomingEventsLabel;
 
   /// No description provided for @commonRemove.
   ///

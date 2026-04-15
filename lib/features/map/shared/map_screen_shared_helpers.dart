@@ -590,7 +590,13 @@ class KubusMarkerOverlayHelpers {
     final normalizedDescription = presentation.description
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
-    final cappedChars = normalizedDescription.length.clamp(0, 1800);
+    final words = normalizedDescription.isEmpty
+        ? const <String>[]
+        : normalizedDescription.split(' ');
+    final wordCapped = words.length > 220
+        ? words.take(220).join(' ')
+        : normalizedDescription;
+    final cappedChars = wordCapped.length.clamp(0, 1800);
     final hasDescription = cappedChars > 0;
     final hasLinkedContext =
         presentation.linkedSubject.kind !=
@@ -600,7 +606,15 @@ class KubusMarkerOverlayHelpers {
 
     var estimated = isCompactWidth ? 364.0 : 340.0;
     if (hasDescription) {
-      estimated += math.min(148.0, cappedChars * 0.085);
+      final approxCharsPerLine = isCompactWidth ? 34.0 : 42.0;
+      final approxLines = math.max(1, (cappedChars / approxCharsPerLine).ceil());
+      final cappedLines = approxLines.clamp(3, isCompactWidth ? 14 : 11);
+      final lineHeightPx = isCompactWidth ? 17.0 : 16.0;
+      final descriptionHeight = cappedLines * lineHeightPx;
+      estimated += math.min(
+        isCompactWidth ? 208.0 : 176.0,
+        descriptionHeight,
+      );
     } else {
       estimated -= 24.0;
     }

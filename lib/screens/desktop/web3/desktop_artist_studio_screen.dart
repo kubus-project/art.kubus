@@ -267,7 +267,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                 // Right: Quick actions, stats, and analytics
                 if (isLarge)
                   SizedBox(
-                    width: 400,
+                    width: 380,
                     child: _buildRightPanel(themeProvider),
                   ),
               ],
@@ -282,6 +282,9 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    const sectionGap = KubusSpacing.lg;
+    const sectionHeaderGap = KubusSpacing.sm + KubusSpacing.xs;
+    const blockGap = KubusSpacing.md + KubusSpacing.xs;
     final dashboardState = context.watch<DesktopDashboardStateProvider>();
     final section = dashboardState.artistStudioSection;
 
@@ -336,15 +339,22 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
           children: [
             // Header
             Text(
-              sectionTitle(),
+              l10n.desktopArtistStudioOverviewTitle,
               style:
                   KubusTextStyles.screenTitle.copyWith(color: scheme.onSurface),
             ),
-            const SizedBox(height: KubusSpacing.lg),
+            const SizedBox(height: KubusSpacing.xs),
+            Text(
+              sectionTitle(),
+              style: KubusTextStyles.sectionSubtitle.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.66),
+              ),
+            ),
+            const SizedBox(height: sectionGap),
 
             // Verification status
             _buildVerificationStatusCard(themeProvider),
-            const SizedBox(height: KubusSpacing.md + KubusSpacing.xs),
+            const SizedBox(height: blockGap),
 
             // Contextual sidebar actions
             Text(
@@ -352,7 +362,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
               style: KubusTextStyles.sectionTitle
                   .copyWith(color: scheme.onSurface),
             ),
-            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+            const SizedBox(height: sectionHeaderGap),
             if (AppConfig.isFeatureEnabled('collabInvites'))
               Consumer<CollabProvider>(
                 builder: (context, collabProvider, _) {
@@ -398,8 +408,8 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
               ),
             if (isApprovedArtist)
               KubusActionSidebarTile(
-                title: 'Promote my profile',
-                subtitle: 'Request featured placement on home and map',
+                title: l10n.desktopArtistStudioPromoteProfileTitle,
+                subtitle: l10n.desktopArtistStudioPromoteProfileSubtitle,
                 icon: Icons.campaign_outlined,
                 semantic: KubusActionSemantic.publish,
                 onTap: _openProfilePromotionFlow,
@@ -555,7 +565,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
             if (section == DesktopArtistStudioSection.analytics) ...[
               const SizedBox(height: KubusSpacing.sm),
               _buildAnalyticsTimeframeSelector(
-                title: 'Timeframe',
+                title: l10n.analyticsTimeframeLabel,
                 value:
                     context.watch<AnalyticsFiltersProvider>().artistTimeframe,
                 onChanged: (v) => context
@@ -563,7 +573,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                     .setArtistTimeframe(v),
               ),
             ],
-            const SizedBox(height: KubusSpacing.lg),
+            const SizedBox(height: sectionGap),
 
             // Stats
             Text(
@@ -571,9 +581,9 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
               style: KubusTextStyles.sectionTitle
                   .copyWith(color: scheme.onSurface),
             ),
-            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+            const SizedBox(height: sectionHeaderGap),
             _buildStatsGrid(),
-            const SizedBox(height: KubusSpacing.lg),
+            const SizedBox(height: sectionGap),
 
             if (section == DesktopArtistStudioSection.gallery) ...[
               Text(
@@ -581,7 +591,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                 style: KubusTextStyles.sectionTitle
                     .copyWith(color: scheme.onSurface),
               ),
-              const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+              const SizedBox(height: sectionHeaderGap),
               _buildRecentActivity(themeProvider),
             ],
           ],
@@ -662,6 +672,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
   }
 
   Future<void> _openProfilePromotionFlow() async {
+    final l10n = AppLocalizations.of(context)!;
     final profile = context.read<ProfileProvider>().currentUser;
     final wallet = _resolveWalletAddress(listen: false);
     final entityId = WalletUtils.coalesce(
@@ -674,7 +685,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
       context: context,
       entityType: PromotionEntityType.profile,
       entityId: entityId,
-      entityLabel: profile?.displayName ?? 'my profile',
+      entityLabel: profile?.displayName ?? l10n.desktopArtistStudioMyProfile,
     );
   }
 

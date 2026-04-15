@@ -499,6 +499,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get authEmailSignInFailed => 'Prijava z e-pošto ni uspela. Poskusi znova.';
 
   @override
+  String get authWalletOnlyAccountSignInHint => 'Ta račun uporablja prijavo z denarnico. Za nadaljevanje poveži izvorno denarnico.';
+
+  @override
   String get authRegistrationFailed => 'Registracija ni uspela. Poskusi znova.';
 
   @override
@@ -5534,6 +5537,15 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopArtistStudioNoRecentActivityLabel => 'Ni nedavne dejavnosti';
 
   @override
+  String get desktopArtistStudioPromoteProfileTitle => 'Promoviraj profil';
+
+  @override
+  String get desktopArtistStudioPromoteProfileSubtitle => 'Povečaj vidnost profila s prednostno umestitvijo';
+
+  @override
+  String get desktopArtistStudioMyProfile => 'moj profil';
+
+  @override
   String get desktopArtistStudioVerificationNotAppliedTitle => 'Ni prijave';
 
   @override
@@ -5577,6 +5589,69 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get desktopArtistStudioStatSales => 'Prodaje';
+
+  @override
+  String get desktopInstitutionPromotionWalletRequiredReason => 'Za ustvarjanje promocij poveži denarnico.';
+
+  @override
+  String get desktopInstitutionPromotionArtistConflictReason => 'Ta denarnica je preverjena kot umetniška. Za promocijo vsebin institucije uporabi institucijsko denarnico.';
+
+  @override
+  String get desktopInstitutionPromotionRequiresApprovalReason => 'Pred ustvarjanjem promocij je potrebna odobritev institucije.';
+
+  @override
+  String get desktopInstitutionPromoteProfileTitle => 'Promoviraj institucijo';
+
+  @override
+  String get desktopInstitutionPromoteProfileSubtitle => 'Povečaj vidnost institucije s prednostno umestitvijo';
+
+  @override
+  String get desktopInstitutionCreateEventTitle => 'Ustvari dogodek';
+
+  @override
+  String get desktopInstitutionCreateEventSubtitle => 'Načrtuj in objavi dogodke institucije';
+
+  @override
+  String get desktopInstitutionCreateExhibitionSubtitle => 'Ustvari kurirano razstavno izkušnjo';
+
+  @override
+  String get desktopInstitutionManageEventsTitle => 'Upravljaj dogodke';
+
+  @override
+  String get desktopInstitutionManageEventsSubtitle => 'Uredi prihajajoče dogodke in podrobnosti udeležbe';
+
+  @override
+  String get desktopInstitutionMyExhibitionsTitle => 'Moje razstave';
+
+  @override
+  String get desktopInstitutionMyExhibitionsSubtitle => 'Preglej in posodobi razstave institucije';
+
+  @override
+  String get desktopInstitutionStatsTitle => 'Statistika institucije';
+
+  @override
+  String get desktopInstitutionVerificationNotAppliedTitle => 'Ni prijave';
+
+  @override
+  String get desktopInstitutionVerificationNotAppliedDescription => 'Prijavi se za preverjanje institucije';
+
+  @override
+  String get desktopInstitutionVerificationApprovedDescription => 'Tvoja institucija je preverjena';
+
+  @override
+  String get desktopInstitutionVerificationPendingDescription => 'Prijava je v pregledu';
+
+  @override
+  String get desktopInstitutionVerificationApplyHint => 'Preverjanje odklene orodja za objavljanje in promocije institucije.';
+
+  @override
+  String get desktopInstitutionStatVisitors => 'Obiskovalci';
+
+  @override
+  String get desktopInstitutionStatRevenue => 'Prihodki';
+
+  @override
+  String get desktopInstitutionNoUpcomingEventsLabel => 'Ni prihajajočih dogodkov';
 
   @override
   String get commonRemove => 'Odstrani';

@@ -624,9 +624,9 @@ class _SignInScreenState extends State<SignInScreen> {
       if (!mounted) return;
       if (_isEmailPasswordNotConfigured(e)) {
         ScaffoldMessenger.of(context).showKubusSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              'This account is currently wallet-only. Sign in with wallet, then open Secure account to add email + password.',
+              l10n.authWalletOnlyAccountSignInHint,
             ),
           ),
           tone: KubusSnackBarTone.error,
@@ -952,6 +952,7 @@ class _SignInScreenState extends State<SignInScreen> {
         viewportSize.height < 820 ||
         viewportSize.width < 430;
     final showSectionCopy = !widget.embedded && !compactLayout;
+    final methodGap = compactLayout ? KubusSpacing.sm : KubusSpacing.md;
     final emailSurface = Color.lerp(
         colorScheme.surface, colorScheme.primary, isDark ? 0.18 : 0.10)!;
     final walletSurface = Color.lerp(
@@ -993,7 +994,11 @@ class _SignInScreenState extends State<SignInScreen> {
             foregroundColor: colorScheme.onSurface,
             isFullWidth: true,
           ),
-          SizedBox(height: compactLayout ? KubusSpacing.xs : KubusSpacing.sm),
+          if (enableGoogle || enableEmail) ...[
+            SizedBox(height: methodGap),
+            _buildMethodDivider(l10n.commonContinue),
+            SizedBox(height: methodGap),
+          ],
         ],
         if (!showEmailForm && enableGoogle) ...[
           if (kIsWeb)
@@ -1060,12 +1065,12 @@ class _SignInScreenState extends State<SignInScreen> {
               isLoading: _isGoogleSubmitting,
               colorScheme: colorScheme,
             ),
-          SizedBox(height: compactLayout ? KubusSpacing.xs : KubusSpacing.sm),
+          SizedBox(height: methodGap),
         ],
         if (!showEmailForm && enableEmail) ...[
           if (showSectionCopy)
             _buildMethodDivider(l10n.authOrLogInWithEmailOrUsername),
-          SizedBox(height: compactLayout ? KubusSpacing.xs : KubusSpacing.sm),
+          SizedBox(height: methodGap),
           KubusButton(
             onPressed: () {
               setState(() => _showCompactEmailForm = true);
@@ -1085,7 +1090,7 @@ class _SignInScreenState extends State<SignInScreen> {
         ],
         if (showEmailForm) ...[
           _buildEmailForm(),
-          const SizedBox(height: KubusSpacing.sm),
+          SizedBox(height: methodGap),
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
@@ -1134,6 +1139,7 @@ class _SignInScreenState extends State<SignInScreen> {
         KeyboardInsetResolver.isKeyboardVisible(context) ||
         viewportSize.height < 820 ||
         viewportSize.width < 430;
+    final fieldGap = compact ? KubusSpacing.sm : KubusSpacing.md;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1152,7 +1158,7 @@ class _SignInScreenState extends State<SignInScreen> {
             compact: compact,
           ),
         ),
-        SizedBox(height: compact ? KubusSpacing.xs : KubusSpacing.sm),
+        SizedBox(height: fieldGap),
         TextField(
           controller: _passwordController,
           focusNode: _passwordFocusNode,
@@ -1196,7 +1202,7 @@ class _SignInScreenState extends State<SignInScreen> {
             child: Text(AppLocalizations.of(context)!.authForgotPasswordLink),
           ),
         ),
-        const SizedBox(height: KubusSpacing.md),
+        SizedBox(height: fieldGap),
         KubusButton(
           onPressed: _isEmailSubmitting ? null : _submitEmail,
           isLoading: _isEmailSubmitting,

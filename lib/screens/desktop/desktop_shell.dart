@@ -624,6 +624,9 @@ class _DesktopShellState extends State<DesktopShell>
     final isLarge = DesktopBreakpoints.isLarge(context);
     final isExpanded = DesktopBreakpoints.isExpanded(context);
     final theme = Theme.of(context);
+    const functionsPanelWidthLarge = 380.0;
+    const functionsPanelWidthExpanded = 320.0;
+    const functionsPanelWidthMedium = 300.0;
 
     // Auto-collapse navigation on medium screens
     if (!isLarge && _isNavigationExpanded && !isExpanded) {
@@ -670,7 +673,91 @@ class _DesktopShellState extends State<DesktopShell>
                     backgroundColor: Colors.transparent,
                     body: Row(
                       children: [
-                        // Main content area (takes most space)
+                        // Primary navigation rail anchored to the LEFT edge.
+                        AnimatedBuilder(
+                          animation: _navExpandAnimation,
+                          builder: (context, child) {
+                            final expandedWidth = isLarge
+                                ? DesktopNavigation.expandedWidthLarge
+                                : DesktopNavigation.expandedWidthMedium;
+                            final collapsedWidth =
+                                DesktopNavigation.collapsedWidth;
+                            final currentWidth = collapsedWidth +
+                                (expandedWidth - collapsedWidth) *
+                                    _navExpandAnimation.value;
+
+                            final scheme = theme.colorScheme;
+                            final glassTint = (Color.lerp(
+                                      theme.brightness == Brightness.dark
+                                          ? Colors.black
+                                          : Colors.white,
+                                      activeAccent,
+                                      theme.brightness == Brightness.dark
+                                          ? 0.18
+                                          : 0.10,
+                                    ) ??
+                                    scheme.surface)
+                                .withValues(
+                              alpha: theme.brightness == Brightness.dark
+                                  ? 0.24
+                                  : 0.28,
+                            );
+
+                            return ClipRRect(
+                              child: Container(
+                                width: currentWidth,
+                                decoration: BoxDecoration(
+                                  border: Border(
+                                    right: BorderSide(
+                                      color: theme.brightness == Brightness.dark
+                                          ? Colors.white.withValues(alpha: 0.06)
+                                          : scheme.outline
+                                              .withValues(alpha: 0.15),
+                                      width: 1,
+                                    ),
+                                  ),
+                                ),
+                                child: LiquidGlassPanel(
+                                  padding: EdgeInsets.zero,
+                                  margin: EdgeInsets.zero,
+                                  borderRadius: BorderRadius.zero,
+                                  blurSigma: KubusGlassEffects.blurSigmaLight,
+                                  showBorder: false,
+                                  backgroundColor: glassTint,
+                                  child: RepaintBoundary(
+                                    child: DesktopNavigation(
+                                      items: navItems,
+                                      activeAccent: activeAccent,
+                                      selectedIndex:
+                                          selectedIndex < 0 ? 0 : selectedIndex,
+                                      onItemSelected: (index) =>
+                                          _onNavItemSelected(
+                                              index, navItems, isSignedIn),
+                                      isExpanded: _isNavigationExpanded,
+                                      expandAnimation: _navExpandAnimation,
+                                      onToggleExpand: _toggleNavigation,
+                                      onProfileTap: () =>
+                                          _showProfileMenu(context),
+                                      onSettingsTap: () =>
+                                          _showSettingsScreen(context),
+                                      onNotificationsTap: () => unawaited(
+                                          _toggleNotificationsPanel()),
+                                      onWalletTap: () =>
+                                          _handleWalletTap(isSignedIn),
+                                      onCollabInvitesTap: isSignedIn &&
+                                              AppConfig.isFeatureEnabled(
+                                                  'collabInvites')
+                                          ? () => _showCollabInvites()
+                                          : null,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+
+                        // Main content area (dominant workspace)
                         Expanded(
                           child: _screenStack.isNotEmpty
                               ? _screenStack.last
@@ -686,7 +773,11 @@ class _DesktopShellState extends State<DesktopShell>
                             curve: Curves.easeOutCubic,
                             width: _functionsPanel == DesktopFunctionsPanel.none
                                 ? 0
-                                : (isLarge ? 380 : (isExpanded ? 320 : 280)),
+                                : (isLarge
+                                    ? functionsPanelWidthLarge
+                                    : (isExpanded
+                                        ? functionsPanelWidthExpanded
+                                        : functionsPanelWidthMedium)),
                             child: ClipRect(
                               child: IgnorePointer(
                                 ignoring: _functionsPanel ==
@@ -763,90 +854,6 @@ class _DesktopShellState extends State<DesktopShell>
                               ),
                             ),
                           ),
-
-                        // Primary navigation (must stay on the RIGHT).
-                        AnimatedBuilder(
-                          animation: _navExpandAnimation,
-                          builder: (context, child) {
-                            final expandedWidth = isLarge
-                                ? DesktopNavigation.expandedWidthLarge
-                                : DesktopNavigation.expandedWidthMedium;
-                            final collapsedWidth =
-                                DesktopNavigation.collapsedWidth;
-                            final currentWidth = collapsedWidth +
-                                (expandedWidth - collapsedWidth) *
-                                    _navExpandAnimation.value;
-
-                            final scheme = theme.colorScheme;
-                            final glassTint = (Color.lerp(
-                                      theme.brightness == Brightness.dark
-                                          ? Colors.black
-                                          : Colors.white,
-                                      activeAccent,
-                                      theme.brightness == Brightness.dark
-                                          ? 0.18
-                                          : 0.10,
-                                    ) ??
-                                    scheme.surface)
-                                .withValues(
-                              alpha: theme.brightness == Brightness.dark
-                                  ? 0.24
-                                  : 0.28,
-                            );
-
-                            return ClipRRect(
-                              child: Container(
-                                width: currentWidth,
-                                decoration: BoxDecoration(
-                                  border: Border(
-                                    left: BorderSide(
-                                      color: theme.brightness == Brightness.dark
-                                          ? Colors.white.withValues(alpha: 0.06)
-                                          : scheme.outline
-                                              .withValues(alpha: 0.15),
-                                      width: 1,
-                                    ),
-                                  ),
-                                ),
-                                child: LiquidGlassPanel(
-                                  padding: EdgeInsets.zero,
-                                  margin: EdgeInsets.zero,
-                                  borderRadius: BorderRadius.zero,
-                                  blurSigma: KubusGlassEffects.blurSigmaLight,
-                                  showBorder: false,
-                                  backgroundColor: glassTint,
-                                  child: RepaintBoundary(
-                                    child: DesktopNavigation(
-                                      items: navItems,
-                                      activeAccent: activeAccent,
-                                      selectedIndex:
-                                          selectedIndex < 0 ? 0 : selectedIndex,
-                                      onItemSelected: (index) =>
-                                          _onNavItemSelected(
-                                              index, navItems, isSignedIn),
-                                      isExpanded: _isNavigationExpanded,
-                                      expandAnimation: _navExpandAnimation,
-                                      onToggleExpand: _toggleNavigation,
-                                      onProfileTap: () =>
-                                          _showProfileMenu(context),
-                                      onSettingsTap: () =>
-                                          _showSettingsScreen(context),
-                                      onNotificationsTap: () => unawaited(
-                                          _toggleNotificationsPanel()),
-                                      onWalletTap: () =>
-                                          _handleWalletTap(isSignedIn),
-                                      onCollabInvitesTap: isSignedIn &&
-                                              AppConfig.isFeatureEnabled(
-                                                  'collabInvites')
-                                          ? () => _showCollabInvites()
-                                          : null,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
                       ],
                     ),
                   ),

@@ -499,6 +499,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authEmailSignInFailed => 'Email sign-in failed. Please try again.';
 
   @override
+  String get authWalletOnlyAccountSignInHint => 'This account uses wallet sign-in. Connect the original wallet to continue.';
+
+  @override
   String get authRegistrationFailed => 'Registration failed. Please try again.';
 
   @override
@@ -5518,6 +5521,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopArtistStudioNoRecentActivityLabel => 'No recent activity';
 
   @override
+  String get desktopArtistStudioPromoteProfileTitle => 'Promote Profile';
+
+  @override
+  String get desktopArtistStudioPromoteProfileSubtitle => 'Boost profile visibility with priority placement';
+
+  @override
+  String get desktopArtistStudioMyProfile => 'my profile';
+
+  @override
   String get desktopArtistStudioVerificationNotAppliedTitle => 'Not Applied';
 
   @override
@@ -5561,6 +5573,69 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get desktopArtistStudioStatSales => 'Sales';
+
+  @override
+  String get desktopInstitutionPromotionWalletRequiredReason => 'Connect your wallet to create promotions.';
+
+  @override
+  String get desktopInstitutionPromotionArtistConflictReason => 'This wallet is verified as an artist. Use an institution wallet to promote institution content.';
+
+  @override
+  String get desktopInstitutionPromotionRequiresApprovalReason => 'Institution approval is required before creating promotions.';
+
+  @override
+  String get desktopInstitutionPromoteProfileTitle => 'Promote Institution';
+
+  @override
+  String get desktopInstitutionPromoteProfileSubtitle => 'Boost institution visibility with priority placement';
+
+  @override
+  String get desktopInstitutionCreateEventTitle => 'Create Event';
+
+  @override
+  String get desktopInstitutionCreateEventSubtitle => 'Schedule and publish institution events';
+
+  @override
+  String get desktopInstitutionCreateExhibitionSubtitle => 'Create a curated exhibition experience';
+
+  @override
+  String get desktopInstitutionManageEventsTitle => 'Manage Events';
+
+  @override
+  String get desktopInstitutionManageEventsSubtitle => 'Edit upcoming events and attendance details';
+
+  @override
+  String get desktopInstitutionMyExhibitionsTitle => 'My Exhibitions';
+
+  @override
+  String get desktopInstitutionMyExhibitionsSubtitle => 'Review and update institution exhibitions';
+
+  @override
+  String get desktopInstitutionStatsTitle => 'Institution Stats';
+
+  @override
+  String get desktopInstitutionVerificationNotAppliedTitle => 'Not Applied';
+
+  @override
+  String get desktopInstitutionVerificationNotAppliedDescription => 'Apply for institution verification';
+
+  @override
+  String get desktopInstitutionVerificationApprovedDescription => 'Your institution is verified';
+
+  @override
+  String get desktopInstitutionVerificationPendingDescription => 'Application under review';
+
+  @override
+  String get desktopInstitutionVerificationApplyHint => 'Verification unlocks institution publishing tools and promotions.';
+
+  @override
+  String get desktopInstitutionStatVisitors => 'Visitors';
+
+  @override
+  String get desktopInstitutionStatRevenue => 'Revenue';
+
+  @override
+  String get desktopInstitutionNoUpcomingEventsLabel => 'No upcoming events';
 
   @override
   String get commonRemove => 'Remove';

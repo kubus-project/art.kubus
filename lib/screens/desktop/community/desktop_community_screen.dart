@@ -838,8 +838,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
         // Floating actions
         Positioned(
-          bottom: 20,
-          right: 20,
+          bottom: KubusSpacing.lg,
+          right: KubusSpacing.lg,
           child: _buildFloatingActions(themeProvider),
         ),
       ],
@@ -3384,11 +3384,21 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
   Widget _buildRightSidebar(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
+    const sidebarTabHorizontalPadding = KubusSpacing.md;
+    const sidebarTabVerticalPadding = KubusSpacing.sm + KubusSpacing.xs;
+    final currentTab = _tabs[_tabController.index];
+    final showTrending = currentTab == 'discover' || currentTab == 'art';
+    final showWhoToFollow =
+        currentTab == 'discover' || currentTab == 'following';
+    final showActiveCommunities = true;
     return Column(
       children: [
         // Sidebar tabs
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(
+            horizontal: sidebarTabHorizontalPadding,
+            vertical: sidebarTabVerticalPadding,
+          ),
           decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(
@@ -3410,7 +3420,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   themeProvider,
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: KubusSpacing.sm),
               Expanded(
                 child: _buildSidebarTab(
                   l10n.messagesTitle,
@@ -3431,12 +3441,18 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   padding: const EdgeInsets.all(KubusSpacing.lg),
                   children: [
                     _buildCreatePostPrompt(themeProvider),
-                    const SizedBox(height: 24),
-                    _buildTrendingSection(themeProvider),
-                    const SizedBox(height: 24),
-                    _buildWhoToFollowSection(themeProvider),
-                    const SizedBox(height: 24),
-                    _buildActiveCommunitiesSection(themeProvider),
+                    if (showTrending) ...[
+                      const SizedBox(height: KubusSpacing.lg),
+                      _buildTrendingSection(themeProvider),
+                    ],
+                    if (showWhoToFollow) ...[
+                      const SizedBox(height: KubusSpacing.lg),
+                      _buildWhoToFollowSection(themeProvider),
+                    ],
+                    if (showActiveCommunities) ...[
+                      const SizedBox(height: KubusSpacing.lg),
+                      _buildActiveCommunitiesSection(themeProvider),
+                    ],
                   ],
                 ),
         ),
@@ -3451,6 +3467,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     VoidCallback onTap,
     ThemeProvider themeProvider,
   ) {
+    final scheme = Theme.of(context).colorScheme;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -3477,21 +3494,26 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             border: Border.all(
               color: isSelected
                   ? themeProvider.accentColor.withValues(alpha: 0.4)
-                  : Theme.of(context)
-                      .colorScheme
-                      .outline
-                      .withValues(alpha: 0.1),
+                  : scheme.outline.withValues(alpha: 0.2),
               width: isSelected ? 1.5 : 1,
             ),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
                       color: themeProvider.accentColor.withValues(alpha: 0.15),
-                      blurRadius: 8,
+                      blurRadius: KubusSpacing.sm + KubusSpacing.xs,
                       offset: const Offset(0, 2),
+                      spreadRadius: 0,
                     ),
                   ]
-                : null,
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: KubusSpacing.sm,
+                      offset: const Offset(0, 1),
+                      spreadRadius: 0,
+                    ),
+                  ],
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -5171,7 +5193,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
         if (_isLoadingTrending)
           Center(
             child: CircularProgressIndicator(
@@ -5247,7 +5269,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     ),
                   ),
                 ),
-              ..._trendingTopics.asMap().entries.map((entry) {
+              ..._trendingTopics.take(5).toList().asMap().entries.map((entry) {
                 final topic = entry.value;
                 final rank = entry.key + 1;
                 final rawTag = topic['tag']?.toString() ?? '';
@@ -5566,7 +5588,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
         if (_isLoadingSuggestions)
           Center(
             child: CircularProgressIndicator(
@@ -5623,7 +5645,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           )
         else
           Column(
-            children: _suggestedArtists.map((artist) {
+            children: _suggestedArtists.take(4).map((artist) {
               final entityType =
                   (artist['entityType'] ?? PromotionEntityType.profile.apiValue)
                       .toString();
@@ -5781,7 +5803,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   ),
               ],
             ),
-            const SizedBox(height: 12),
+              const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
             if (groups.isEmpty && !isLoading)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16),
@@ -5796,9 +5818,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 ),
               )
             else
-              ...groups.take(5).map((group) =>
+              ...groups.take(3).map((group) =>
                   _buildCommunityItemFromGroup(group, themeProvider)),
-            if (groups.length > 5)
+            if (groups.length > 3)
               TextButton(
                 onPressed: () {
                   final groupsIndex = _tabs.indexOf('groups');

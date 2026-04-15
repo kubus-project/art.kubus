@@ -26,6 +26,7 @@ The app uses a bottom navigation bar (mobile) or side rail (desktop) with these 
 - Quick navigation to wallet, marketplace, and studio
 - Nearby artwork recommendations
 - Search functionality
+- Desktop-guided content hierarchy on wide layouts (actions + Web3 context balanced against stats + activity)
 
 **Files:**
 - Mobile: `lib/screens/home_screen.dart`
@@ -148,6 +149,7 @@ The app uses a bottom navigation bar (mobile) or side rail (desktop) with these 
 - Group discovery
 - Notifications
 - Real-time updates via WebSocket
+- Desktop right sidebar supports focused feed/messages toggling with context-aware section density for lower cognitive load
 
 **Files:**
 - Mobile: `lib/screens/community/community_screen.dart`
@@ -319,6 +321,7 @@ The app uses a bottom navigation bar (mobile) or side rail (desktop) with these 
 - Analytics tab
 - Create new artwork/collection/exhibition
 - Draft management
+- Desktop workspace panel uses tighter utility width and clearer “overview + current section” hierarchy
 
 **Files:**
 - Mobile: `lib/screens/web3/artist/artist_studio.dart`
@@ -336,6 +339,7 @@ The app uses a bottom navigation bar (mobile) or side rail (desktop) with these 
 - Delegate management
 - Treasury overview
 - Create proposal form
+- Desktop right panel emphasizes actionable governance metrics with current-section context and consistent localized labels
 
 **Files:**
 - Mobile: `lib/screens/web3/dao/governance_hub.dart`
@@ -353,6 +357,7 @@ The app uses a bottom navigation bar (mobile) or side rail (desktop) with these 
 - Marker management
 - Institution analytics
 - Application form
+- Desktop operations panel uses tighter utility width, localized status copy, and clearer verification/action grouping
 
 **Files:**
 - Mobile: `lib/screens/web3/institution/institution_hub.dart`
@@ -483,6 +488,7 @@ The app uses a bottom navigation bar (mobile) or side rail (desktop) with these 
 - Wallet connection
 - Guest mode
 - Password reset
+- Method hierarchy emphasizes wallet-first flow while preserving clear fallback options for other sign-in methods
 
 **Files:**
 - Mobile: `lib/screens/auth/sign_in_screen.dart`
@@ -592,10 +598,10 @@ The app uses a bottom navigation bar (mobile) or side rail (desktop) with these 
 **Purpose:** Main desktop layout wrapper.
 
 **Key Features:**
-- Side navigation rail
+- Left-anchored primary navigation rail
 - In-shell routing
 - Notifications panel
-- Functions panel
+- Right-side functions panel
 - Responsive layout
 
 **File:** `lib/screens/desktop/desktop_shell.dart`
