@@ -2620,6 +2620,27 @@ class AppLocalizationsSl extends AppLocalizations {
   String get web3InstitutionHubP5Feature4 => 'Zgradi kulturno mrežo';
 
   @override
+  String get institutionHubHelpTooltip => 'Pomoč';
+
+  @override
+  String get institutionHubInvitesTooltip => 'Vabila';
+
+  @override
+  String get institutionHubTabExhibitions => 'Razstave';
+
+  @override
+  String get institutionHubTabCreate => 'Ustvari';
+
+  @override
+  String get institutionHubTabAnalytics => 'Analitika';
+
+  @override
+  String get institutionHubSeparateWalletsTip => 'Namig: Uporabi ločeni denarnici za vloge umetnika in institucije, da se izogneš DAO konfliktom.';
+
+  @override
+  String get institutionHubApplyForReviewAction => 'Oddaj prijavo za pregled';
+
+  @override
   String get web3MarketplaceP1Title => 'Dobrodošel/a na tržnici';
 
   @override

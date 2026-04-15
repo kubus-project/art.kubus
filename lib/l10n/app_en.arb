@@ -990,6 +990,34 @@
   "web3InstitutionHubP5Feature2": "Explore community events",
   "web3InstitutionHubP5Feature3": "Connect with other institutions",
   "web3InstitutionHubP5Feature4": "Build your cultural network",
+  "institutionHubHelpTooltip": "Help",
+  "@institutionHubHelpTooltip": {
+    "description": "Tooltip label for the Institution Hub top-bar help icon that opens onboarding/help content."
+  },
+  "institutionHubInvitesTooltip": "Invites",
+  "@institutionHubInvitesTooltip": {
+    "description": "Tooltip label for the Institution Hub top-bar invites icon that opens collaboration invites inbox."
+  },
+  "institutionHubTabExhibitions": "Exhibitions",
+  "@institutionHubTabExhibitions": {
+    "description": "Institution Hub navigation tab label for browsing and managing exhibitions."
+  },
+  "institutionHubTabCreate": "Create",
+  "@institutionHubTabCreate": {
+    "description": "Institution Hub navigation tab label for creation tools (event/program creation flow)."
+  },
+  "institutionHubTabAnalytics": "Analytics",
+  "@institutionHubTabAnalytics": {
+    "description": "Institution Hub navigation tab label for analytics and performance insights."
+  },
+  "institutionHubSeparateWalletsTip": "Tip: Use separate wallets for artist and institution roles to avoid DAO conflicts.",
+  "@institutionHubSeparateWalletsTip": {
+    "description": "Advisory helper text shown in Institution Hub role-blocked state, recommending separate wallets for artist vs institution roles."
+  },
+  "institutionHubApplyForReviewAction": "Apply for review",
+  "@institutionHubApplyForReviewAction": {
+    "description": "Primary call-to-action label in Institution Hub locked state to start DAO review application."
+  },
   "web3MarketplaceP1Title": "Welcome to the marketplace",
   "web3MarketplaceP1Description": "Discover digital works and collectibles from artists and institutions, then collect or offer them with clear provenance.",
   "web3MarketplaceP1Feature1": "Browse collectibles",

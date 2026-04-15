@@ -5,7 +5,6 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../config/config.dart';
 import '../../models/artwork.dart';
 import '../../models/artwork_comment.dart';
 import '../../providers/artwork_provider.dart';

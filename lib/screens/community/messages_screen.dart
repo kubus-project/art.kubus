@@ -588,9 +588,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
           ),
         ),
         body: isIpfsFallbackMode
-            ? const AppModeUnavailableState(
-                featureLabel: 'Messages',
-                title: 'Messages unavailable',
+            ? AppModeUnavailableState(
+                featureLabel: l10n.messagesTitle,
+                title: l10n.messagesTitle,
                 icon: Icons.chat_bubble_outline,
               )
             : Consumer<ChatProvider>(builder: (context, cp, _) {

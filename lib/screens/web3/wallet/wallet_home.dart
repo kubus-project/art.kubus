@@ -475,7 +475,8 @@ class _WalletHomeState extends State<WalletHome> {
                                   const Key('wallet_home_action_receive'),
                             ),
                           ),
-                          const SizedBox(width: 12),
+                            const SizedBox(
+                              width: KubusSpacing.sm + KubusSpacing.xs),
                           Expanded(
                             child: _buildActionButton(
                               l10n.walletHomeActionSwap,
@@ -497,7 +498,8 @@ class _WalletHomeState extends State<WalletHome> {
                               enabled: canTransact,
                             ),
                           ),
-                          const SizedBox(width: 12),
+                            const SizedBox(
+                              width: KubusSpacing.sm + KubusSpacing.xs),
                           Expanded(
                             child: _buildActionButton(
                               l10n.walletHomeActionNfts,

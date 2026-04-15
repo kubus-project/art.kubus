@@ -2620,6 +2620,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3InstitutionHubP5Feature4 => 'Build your cultural network';
 
   @override
+  String get institutionHubHelpTooltip => 'Help';
+
+  @override
+  String get institutionHubInvitesTooltip => 'Invites';
+
+  @override
+  String get institutionHubTabExhibitions => 'Exhibitions';
+
+  @override
+  String get institutionHubTabCreate => 'Create';
+
+  @override
+  String get institutionHubTabAnalytics => 'Analytics';
+
+  @override
+  String get institutionHubSeparateWalletsTip => 'Tip: Use separate wallets for artist and institution roles to avoid DAO conflicts.';
+
+  @override
+  String get institutionHubApplyForReviewAction => 'Apply for review';
+
+  @override
   String get web3MarketplaceP1Title => 'Welcome to the marketplace';
 
   @override

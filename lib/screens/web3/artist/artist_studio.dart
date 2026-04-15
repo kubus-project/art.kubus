@@ -271,7 +271,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
               ),
               actions: [
                 TopBarIcon(
-                  tooltip: 'Help',
+                  tooltip: l10n.artistCreatorHelpTitle,
                   icon: Icon(
                     Icons.help_outline,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -283,7 +283,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
                     builder: (context, collabProvider, _) {
                       final pendingCount = collabProvider.pendingInviteCount;
                       return TopBarIcon(
-                        tooltip: 'Invites',
+                        tooltip: l10n.desktopArtistStudioQuickActionInvitesTitle,
                         badgeCount: pendingCount,
                         badgeColor: Theme.of(context).colorScheme.error,
                         icon: Icon(
@@ -306,7 +306,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
                       Icons.campaign_outlined,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
-                    tooltip: 'Promote my profile',
+                    tooltip: l10n.desktopArtistStudioPromoteProfileTitle,
                     onPressed: _openProfilePromotionFlow,
                   ),
                 TopBarIcon(
@@ -445,8 +445,8 @@ class _ArtistStudioState extends State<ArtistStudio> {
                           child: OutlinedButton.icon(
                             onPressed: _openProfilePromotionFlow,
                             icon: const Icon(Icons.campaign_outlined),
-                            label: const Text(
-                              'Promote my profile',
+                            label: Text(
+                              l10n.desktopArtistStudioPromoteProfileTitle,
                               maxLines: 1,
                               softWrap: false,
                               overflow: TextOverflow.fade,

@@ -560,8 +560,12 @@ class _CommunityScreenState extends State<CommunityScreen>
           final fallbackFeed = targetFollowing
               ? CommunityFeedType.discover
               : CommunityFeedType.following;
+          final l10n = AppLocalizations.of(context)!;
           _showSnack(
-              'Showing ${fallbackFeed == CommunityFeedType.following ? 'Following' : 'Discover'} feed while we retry.');
+            fallbackFeed == CommunityFeedType.following
+                ? l10n.communityFollowingFeedUnavailableToast
+                : l10n.communityDiscoverFeedUnavailableToast,
+          );
           setState(() {
             _activeFeed = fallbackFeed;
             _communityPosts = alternative;
@@ -1592,10 +1596,10 @@ class _CommunityScreenState extends State<CommunityScreen>
           ListView.builder(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(
-              24,
-              24,
-              24,
-              24 + KubusLayout.mainBottomNavBarHeight,
+              KubusSpacing.lg,
+              KubusSpacing.lg,
+              KubusSpacing.lg,
+              KubusSpacing.lg + KubusLayout.mainBottomNavBarHeight,
             ),
             itemCount: filteredPosts.length +
                 (AppConfig.isFeatureEnabled('season0') ? 1 : 0),
@@ -1858,10 +1862,10 @@ class _CommunityScreenState extends State<CommunityScreen>
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(
-            24,
-            24,
-            24,
-            24 + KubusLayout.mainBottomNavBarHeight,
+            KubusSpacing.lg,
+            KubusSpacing.lg,
+            KubusSpacing.lg,
+            KubusSpacing.lg + KubusLayout.mainBottomNavBarHeight,
           ),
           children: [
             _buildArtFeedHeader(),

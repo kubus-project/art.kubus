@@ -1544,10 +1544,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
       controller: _scrollController,
       reverse: true,
       padding: const EdgeInsets.fromLTRB(
-        KubusSpacing.sm,
-        KubusSpacing.sm,
+        KubusSpacing.md,
         KubusSpacing.sm,
         KubusSpacing.md,
+        KubusSpacing.md + KubusSpacing.xs,
       ),
       itemCount: display.length,
       itemBuilder: (context, index) {
@@ -1696,7 +1696,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                           radius: avatarRadius)
                       : const SizedBox.shrink(),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: KubusSpacing.sm),
               ],
               bubble,
             ],
@@ -1736,6 +1736,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
   }
 
   Widget _buildReplyOverlay(ChatMessage message, bool isMe) {
+    final l10n = AppLocalizations.of(context)!;
     final reply = message.replyTo!;
     final scheme = Theme.of(context).colorScheme;
     final senderWallet = reply.senderWallet;
@@ -1744,7 +1745,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
         _displayNameCache[senderWallet] ??
         _cacheProvider.getDisplayName(senderWallet) ??
         fallbackName;
-    final resolvedName = nameSource.isNotEmpty ? nameSource : 'User';
+    final resolvedName = nameSource.trim();
+    final localizedName =
+      resolvedName.isNotEmpty ? resolvedName : l10n.commonUser;
     final overlayBase = isMe
         ? scheme.primaryContainer.withValues(alpha: 0.4)
         : scheme.surfaceContainerHighest;
@@ -1771,7 +1774,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  resolvedName,
+                  localizedName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -1785,7 +1788,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            reply.message ?? 'Message',
+            (reply.message ?? '').trim().isEmpty
+                ? l10n.messagesFallbackConversationTitle
+                : reply.message!,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(

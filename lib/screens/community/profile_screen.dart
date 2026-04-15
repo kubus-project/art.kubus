@@ -235,7 +235,20 @@ class _ProfileScreenState extends State<ProfileScreen>
                           child: SizedBox(height: DetailSpacing.xl)),
                       SliverToBoxAdapter(child: _buildPerformanceStats()),
                       const SliverToBoxAdapter(
-                          child: SizedBox(height: DetailSpacing.xl)),
+                          child: SizedBox(height: DetailSpacing.lg)),
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: DetailSpacing.lg,
+                          ),
+                          child: Divider(
+                            height: KubusSizes.hairline,
+                            thickness: KubusSizes.hairline,
+                          ),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(
+                          child: SizedBox(height: DetailSpacing.lg)),
                       SliverToBoxAdapter(child: _buildPostsSection()),
                       if (isArtist) ...[
                         const SliverToBoxAdapter(

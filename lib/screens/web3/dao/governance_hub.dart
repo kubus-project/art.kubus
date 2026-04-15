@@ -176,7 +176,7 @@ class _GovernanceHubState extends State<GovernanceHub>
               ),
               actions: [
                 TopBarIcon(
-                  tooltip: 'Help',
+                  tooltip: l10n.profileHelpSupportTitle,
                   icon: Icon(
                     Icons.help_outline,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -314,7 +314,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                                   crossAxisAlignment: WrapCrossAlignment.center,
                                   children: [
                                     Text(
-                                      'art.kubus DAO',
+                                      l10n.daoHubAppBarTitle,
                                       style: titleStyle,
                                       maxLines:
                                           constraints.maxWidth < 280 ? 2 : 1,

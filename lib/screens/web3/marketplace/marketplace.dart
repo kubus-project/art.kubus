@@ -97,6 +97,7 @@ class _MarketplaceState extends State<Marketplace>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
@@ -109,7 +110,7 @@ class _MarketplaceState extends State<Marketplace>
           children: [
             Flexible(
               child: Text(
-                'NFT Marketplace',
+                l10n.navigationScreenMarketplace,
                 style: KubusTypography.inter(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -157,6 +158,7 @@ class _MarketplaceState extends State<Marketplace>
   }
 
   void _showSettings() {
+    final l10n = AppLocalizations.of(context)!;
     final themeProvider = context.read<ThemeProvider>();
     final web3Provider = context.read<Web3Provider>();
     final colorScheme = Theme.of(context).colorScheme;
@@ -168,7 +170,7 @@ class _MarketplaceState extends State<Marketplace>
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(KubusRadius.lg)),
         title: Text(
-          'Marketplace Settings',
+          '${l10n.navigationScreenMarketplace} ${l10n.settingsTitle}',
           style: KubusTypography.inter(
             fontSize: 16,
             fontWeight: FontWeight.w700,
@@ -261,6 +263,7 @@ class _MarketplaceState extends State<Marketplace>
   }
 
   Widget _buildMarketplaceHeader() {
+    final l10n = AppLocalizations.of(context)!;
     final roles = KubusColorRoles.of(context);
     final labsFeature = KubusLabsFeature.marketplace;
     return Container(
@@ -299,7 +302,7 @@ class _MarketplaceState extends State<Marketplace>
               size: 22,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: KubusSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -310,7 +313,7 @@ class _MarketplaceState extends State<Marketplace>
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
-                      'NFT Marketplace',
+                      l10n.navigationScreenMarketplace,
                       style: KubusTypography.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -325,7 +328,7 @@ class _MarketplaceState extends State<Marketplace>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Discover, buy, and sell unique digital artworks',
+                  l10n.homeWeb3MarketplaceSubtitle,
                   style: KubusTypography.inter(
                     fontSize: 10,
                     color: Theme.of(context)
@@ -346,7 +349,7 @@ class _MarketplaceState extends State<Marketplace>
 
   Widget _buildNavigationTabs() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+      margin: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(KubusRadius.md),

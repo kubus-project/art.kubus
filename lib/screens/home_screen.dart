@@ -611,8 +611,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (walletAddress.trim().isEmpty) return;
     await Clipboard.setData(ClipboardData(text: walletAddress.trim()));
     if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showKubusSnackBar(
-      const SnackBar(content: Text('Wallet address copied')),
+      SnackBar(content: Text(l10n.walletHomeAddressCopiedToast)),
     );
   }
 
@@ -697,6 +698,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final user = profileProvider.currentUser;
     final isArtist = user?.isArtist ?? false;
     final isInstitution = user?.isInstitution ?? false;
+    final networkName = web3Provider.currentNetwork.trim();
+    final networkLabel = networkName.isEmpty
+      ? l10n.commonNotAvailableShort
+      : networkName.toUpperCase();
+    final isMainnet = networkLabel == 'MAINNET';
+    final networkColor = isMainnet ? scheme.tertiary : scheme.secondary;
     return SliverAppBar(
       floating: true,
       snap: true,
@@ -819,25 +826,25 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                                 vertical: KubusSpacing.xxs,
                                               ),
                                               decoration: BoxDecoration(
-                                                color: Colors.orange
-                                                    .withValues(alpha: 0.1),
+                                                color: networkColor
+                                                    .withValues(alpha: 0.12),
                                                 borderRadius:
                                                     BorderRadius.circular(
                                                   KubusRadius.sm,
                                                 ),
                                                 border: Border.all(
-                                                  color: Colors.orange
-                                                      .withValues(alpha: 0.3),
+                                                  color: networkColor
+                                                      .withValues(alpha: 0.36),
                                                   width: KubusSizes.hairline,
                                                 ),
                                               ),
                                               child: Text(
-                                                'DEVNET',
+                                                networkLabel,
                                                 style: KubusTypography
                                                     .textTheme.labelSmall
                                                     ?.copyWith(
                                                   fontWeight: FontWeight.w700,
-                                                  color: Colors.orange,
+                                                  color: networkColor,
                                                 ),
                                               ),
                                             ),

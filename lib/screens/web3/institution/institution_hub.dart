@@ -129,9 +129,10 @@ class _InstitutionHubState extends State<InstitutionHub> {
   }
 
   String? _institutionPromotionUnavailableReason() {
+    final l10n = AppLocalizations.of(context)!;
     final wallet = _resolveWalletAddress();
     if (wallet.isEmpty) {
-      return 'Connect an approved institution wallet to request institution promotion.';
+      return l10n.desktopInstitutionPromotionWalletRequiredReason;
     }
 
     final daoProvider = context.read<DAOProvider>();
@@ -144,10 +145,10 @@ class _InstitutionHubState extends State<InstitutionHub> {
 
     if (verification.isApprovedFor(DaoRoleType.artist) ||
         verification.isPendingFor(DaoRoleType.artist)) {
-      return 'Artist wallets cannot self-serve institution promotion. Use a dedicated institution wallet.';
+      return l10n.desktopInstitutionPromotionArtistConflictReason;
     }
     if (!verification.isApprovedFor(DaoRoleType.institution)) {
-      return 'Institution promotion is available only for approved institution wallets.';
+      return l10n.desktopInstitutionPromotionRequiresApprovalReason;
     }
     return null;
   }
@@ -242,7 +243,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
                 tintBase: KubusColorRoles.of(context).web3InstitutionAccent,
               ),
               title: Text(
-                'Institution Hub',
+                l10n.navigationScreenInstitutionHub,
                 style: KubusTextStyles.responsiveMobileAppBarTitle(context)
                     .copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
@@ -251,7 +252,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
               ),
               actions: [
                 TopBarIcon(
-                  tooltip: 'Help',
+                  tooltip: l10n.institutionHubHelpTooltip,
                   icon: Icon(
                     Icons.help_outline,
                     color: Theme.of(context).colorScheme.onSurface,
@@ -277,7 +278,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
                     builder: (context, collabProvider, _) {
                       final pendingCount = collabProvider.pendingInviteCount;
                       return TopBarIcon(
-                        tooltip: 'Invites',
+                        tooltip: l10n.institutionHubInvitesTooltip,
                         badgeCount: pendingCount,
                         badgeColor: Theme.of(context).colorScheme.error,
                         icon: Icon(
@@ -296,7 +297,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
                   ),
                 if (canSelfServeInstitutionPromotion)
                   TopBarIcon(
-                    tooltip: 'Promote my institution',
+                    tooltip: l10n.desktopInstitutionPromoteProfileTitle,
                     icon: Icon(
                       Icons.campaign_outlined,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -369,12 +370,12 @@ class _InstitutionHubState extends State<InstitutionHub> {
     final persona = context.watch<ProfileProvider>().userPersona;
     final subtitle = switch (persona) {
       UserPersona.institution =>
-        'Host events, exhibitions, and AR experiences for your visitors',
+        l10n.web3InstitutionHubP1Description,
       UserPersona.creator =>
-        'Collaborate with institutions and curate exhibitions',
+        l10n.web3InstitutionHubP5Feature3,
       UserPersona.lover =>
-        'Discover exhibitions and events curated by institutions',
-      null => 'Host events, exhibitions, and AR experiences for your visitors',
+        l10n.web3InstitutionHubP5Description,
+      null => l10n.web3InstitutionHubP1Description,
     };
     final panelStyle = KubusGlassStyle.resolve(
       context,
@@ -437,7 +438,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
                     ),
                     const SizedBox(height: KubusSpacing.xs),
                     Text(
-                      'Manage exhibitions, events, and institutional visibility from one shared workspace.',
+                      l10n.web3InstitutionHubP2Description,
                       style: KubusTextStyles.actionTileSubtitle.copyWith(
                         color: scheme.onSurface.withValues(alpha: 0.74),
                       ),
@@ -454,8 +455,8 @@ class _InstitutionHubState extends State<InstitutionHub> {
                           child: OutlinedButton.icon(
                             onPressed: _openInstitutionPromotionFlow,
                             icon: const Icon(Icons.campaign_outlined),
-                            label: const Text(
-                              'Promote my institution',
+                            label: Text(
+                              l10n.desktopInstitutionPromoteProfileTitle,
                               maxLines: 1,
                               softWrap: false,
                               overflow: TextOverflow.fade,
@@ -690,6 +691,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
   }
 
   Widget _buildNavigationTabs(bool enabled) {
+    final l10n = AppLocalizations.of(context)!;
     final roles = KubusColorRoles.of(context);
     final scheme = Theme.of(context).colorScheme;
     final exhibitionsEnabled = AppConfig.isFeatureEnabled('exhibitions');
@@ -710,7 +712,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
         children: [
           Expanded(
             child: _buildTabButton(
-              'Events',
+              l10n.desktopInstitutionManageEventsTitle,
               Icons.event,
               0,
               enabled,
@@ -720,7 +722,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
           if (exhibitionsEnabled)
             Expanded(
               child: _buildTabButton(
-                'Exhibitions',
+                l10n.institutionHubTabExhibitions,
                 Icons.collections_bookmark,
                 1,
                 enabled,
@@ -729,7 +731,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
             ),
           Expanded(
             child: _buildTabButton(
-              'Create',
+              l10n.institutionHubTabCreate,
               Icons.add_box,
               exhibitionsEnabled ? 2 : 1,
               enabled,
@@ -738,7 +740,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
           ),
           Expanded(
             child: _buildTabButton(
-              'Analytics',
+              l10n.institutionHubTabAnalytics,
               Icons.analytics,
               exhibitionsEnabled ? 3 : 2,
               enabled,
@@ -795,9 +797,12 @@ class _InstitutionHubState extends State<InstitutionHub> {
         onTap: enabled
             ? () => _setSelectedIndex(index)
             : () => ScaffoldMessenger.of(context).showKubusSnackBar(
-                  const SnackBar(
-                      content:
-                          Text('Institution tools unlock after DAO approval.')),
+                  SnackBar(
+                    content: Text(
+                      AppLocalizations.of(context)!
+                          .desktopInstitutionVerificationApplyHint,
+                    ),
+                  ),
                 ),
         padding: const EdgeInsets.symmetric(
           vertical: KubusSpacing.md,
@@ -906,6 +911,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
     required IconData icon,
   }) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(KubusSpacing.lg),
@@ -941,7 +947,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
             ),
             const SizedBox(height: KubusSpacing.md + KubusSpacing.xs),
             Text(
-              'Tip: Keep artist and institution roles on separate wallets to avoid DAO conflicts.',
+              l10n.institutionHubSeparateWalletsTip,
               style: KubusTextStyles.actionTileSubtitle.copyWith(
                 color: scheme.onSurface.withValues(alpha: 0.6),
               ),
@@ -989,6 +995,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
   }
 
   Future<void> _openInstitutionPromotionFlow() async {
+    final l10n = AppLocalizations.of(context)!;
     final unavailableReason = _institutionPromotionUnavailableReason();
     if (unavailableReason != null) {
       ScaffoldMessenger.of(context).showKubusSnackBar(
@@ -1009,7 +1016,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
       context: context,
       entityType: PromotionEntityType.institution,
       entityId: entityId,
-      entityLabel: profile?.displayName ?? 'my institution',
+      entityLabel: profile?.displayName ?? l10n.navigationScreenInstitutionHub,
     );
   }
 
@@ -1175,6 +1182,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
 
   Widget _buildLockedContent() {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(KubusSpacing.lg),
@@ -1195,13 +1203,13 @@ class _InstitutionHubState extends State<InstitutionHub> {
             ),
             const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
             Text(
-              'Institution tools are locked',
+              l10n.desktopInstitutionVerificationNotAppliedTitle,
               style: KubusTypography.textTheme.titleLarge
                   ?.copyWith(color: scheme.onSurface),
             ),
             const SizedBox(height: KubusSpacing.sm),
             Text(
-              'Apply for DAO review to unlock events, creation tools, and analytics.',
+              l10n.desktopInstitutionVerificationApplyHint,
               style: KubusTextStyles.actionTileTitle.copyWith(
                 color: scheme.onSurface.withValues(alpha: 0.7),
               ),
@@ -1212,7 +1220,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
               child: OutlinedButton.icon(
                 onPressed: () => _showInstitutionApplicationModal(),
                 icon: const Icon(Icons.send_rounded),
-                label: const Text('Apply for DAO review'),
+                label: Text(l10n.institutionHubApplyForReviewAction),
                 style: OutlinedButton.styleFrom(
                   alignment: Alignment.center,
                 ),

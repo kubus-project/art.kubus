@@ -5225,6 +5225,48 @@ abstract class AppLocalizations {
   /// **'Build your cultural network'**
   String get web3InstitutionHubP5Feature4;
 
+  /// Tooltip label for the Institution Hub top-bar help icon that opens onboarding/help content.
+  ///
+  /// In en, this message translates to:
+  /// **'Help'**
+  String get institutionHubHelpTooltip;
+
+  /// Tooltip label for the Institution Hub top-bar invites icon that opens collaboration invites inbox.
+  ///
+  /// In en, this message translates to:
+  /// **'Invites'**
+  String get institutionHubInvitesTooltip;
+
+  /// Institution Hub navigation tab label for browsing and managing exhibitions.
+  ///
+  /// In en, this message translates to:
+  /// **'Exhibitions'**
+  String get institutionHubTabExhibitions;
+
+  /// Institution Hub navigation tab label for creation tools (event/program creation flow).
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get institutionHubTabCreate;
+
+  /// Institution Hub navigation tab label for analytics and performance insights.
+  ///
+  /// In en, this message translates to:
+  /// **'Analytics'**
+  String get institutionHubTabAnalytics;
+
+  /// Advisory helper text shown in Institution Hub role-blocked state, recommending separate wallets for artist vs institution roles.
+  ///
+  /// In en, this message translates to:
+  /// **'Tip: Use separate wallets for artist and institution roles to avoid DAO conflicts.'**
+  String get institutionHubSeparateWalletsTip;
+
+  /// Primary call-to-action label in Institution Hub locked state to start DAO review application.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply for review'**
+  String get institutionHubApplyForReviewAction;
+
   /// No description provided for @web3MarketplaceP1Title.
   ///
   /// In en, this message translates to:
