@@ -3211,7 +3211,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              '\u00A9 2025 kubus',
+              '\u00A9 2026 kubus',
               style: KubusTypography.inter(
                 color: Theme.of(context)
                     .colorScheme
