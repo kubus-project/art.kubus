@@ -81,12 +81,14 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
         isDark ? Colors.white.withValues(alpha: 0.96) : const Color(0xFF1A1A1A);
     final submitForeground = isDark ? const Color(0xFF1A1A1A) : Colors.white;
     final border = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(widget.compact ? 14 : 18),
       borderSide: BorderSide(
         color: colorScheme.outlineVariant.withValues(alpha: 0.14),
       ),
     );
-    final fieldSpacing = widget.compact ? 8.0 : 10.0;
+    final fieldSpacing = widget.compact ? KubusSpacing.sm : KubusSpacing.md;
+    final showOptionalUsernameSection =
+        widget.showUsername && widget.usernameController != null && !widget.requireUsername;
 
     return AutofillGroup(
       child: Column(
@@ -180,24 +182,54 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
               widget.usernameController != null &&
               (!widget.compact || widget.showUsernameInCompact)) ...[
             SizedBox(height: fieldSpacing),
-            TextField(
-              controller: widget.usernameController,
-              focusNode: _usernameFocusNode,
-              textInputAction: TextInputAction.done,
-              autofillHints: const [AutofillHints.username],
-              onSubmitted: (_) => widget.onSubmit?.call(),
-              onTapOutside: (_) =>
-                  FocusManager.instance.primaryFocus?.unfocus(),
-              decoration: _decoration(
-                labelText: widget.requireUsername
-                    ? l10n.profileEditUsernameHint
-                    : l10n.commonUsernameOptional,
-                errorText: widget.usernameError,
-                border: border,
-                colorScheme: colorScheme,
-                compact: widget.compact,
+            if (showOptionalUsernameSection)
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: colorScheme.surface.withValues(alpha: isDark ? 0.18 : 0.62),
+                  borderRadius: BorderRadius.circular(widget.compact ? 14 : 16),
+                  border: Border.all(
+                    color: colorScheme.outlineVariant.withValues(alpha: 0.16),
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(KubusSpacing.sm),
+                  child: TextField(
+                    controller: widget.usernameController,
+                    focusNode: _usernameFocusNode,
+                    textInputAction: TextInputAction.done,
+                    autofillHints: const [AutofillHints.username],
+                    onSubmitted: (_) => widget.onSubmit?.call(),
+                    onTapOutside: (_) =>
+                        FocusManager.instance.primaryFocus?.unfocus(),
+                    decoration: _decoration(
+                      labelText: l10n.commonUsernameOptional,
+                      errorText: widget.usernameError,
+                      border: border,
+                      colorScheme: colorScheme,
+                      compact: widget.compact,
+                    ),
+                  ),
+                ),
+              )
+            else
+              TextField(
+                controller: widget.usernameController,
+                focusNode: _usernameFocusNode,
+                textInputAction: TextInputAction.done,
+                autofillHints: const [AutofillHints.username],
+                onSubmitted: (_) => widget.onSubmit?.call(),
+                onTapOutside: (_) =>
+                    FocusManager.instance.primaryFocus?.unfocus(),
+                decoration: _decoration(
+                  labelText: widget.requireUsername
+                      ? l10n.profileEditUsernameHint
+                      : l10n.commonUsernameOptional,
+                  errorText: widget.usernameError,
+                  border: border,
+                  colorScheme: colorScheme,
+                  compact: widget.compact,
+                ),
               ),
-            ),
           ],
           SizedBox(height: fieldSpacing),
           KubusButton(
@@ -231,7 +263,7 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
       errorMaxLines: 3,
       suffixIcon: suffixIcon,
       filled: true,
-      fillColor: Colors.white.withValues(alpha: 0.06),
+      fillColor: colorScheme.surface.withValues(alpha: 0.54),
       contentPadding: EdgeInsets.symmetric(
         horizontal: KubusSpacing.md,
         vertical: compact ? 14 : 18,

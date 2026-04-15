@@ -25,12 +25,15 @@ class AuthTitleRow extends StatelessWidget {
     final resolvedSubtitle = subtitle?.trim();
     final resolvedForeground = foregroundColor ?? scheme.onSurface;
     final resolvedSubtitleColor =
-        subtitleColor ?? resolvedForeground.withValues(alpha: 0.78);
+      subtitleColor ?? resolvedForeground.withValues(alpha: 0.82);
+    final hasSubtitle = (resolvedSubtitle ?? '').isNotEmpty;
 
     return ConstrainedBox(
       constraints: BoxConstraints(
-        minHeight: KubusHeaderMetrics.actionHitArea +
-            (compact ? KubusSpacing.xs : KubusSpacing.sm),
+      minHeight: KubusHeaderMetrics.actionHitArea +
+        (hasSubtitle
+          ? (compact ? KubusSpacing.xs : KubusSpacing.sm)
+          : 0),
       ),
       child: SizedBox(
         width: double.infinity,
@@ -40,7 +43,7 @@ class AuthTitleRow extends StatelessWidget {
           kind: KubusHeaderKind.screen,
           titleColor: resolvedForeground,
           subtitleColor: resolvedSubtitleColor,
-          maxTitleLines: compact ? 3 : 2,
+          maxTitleLines: compact ? 2 : 2,
         ),
       ),
     );

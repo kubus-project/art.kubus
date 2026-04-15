@@ -72,12 +72,18 @@ class AuthEntryShell extends StatelessWidget {
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final compactSurface = !isDesktop &&
-                      (constraints.maxWidth < 430 || keyboardVisible);
+                      (constraints.maxWidth < 430 ||
+                          keyboardVisible ||
+                          constraints.maxHeight < 700);
 
                   return Padding(
                     padding: EdgeInsets.symmetric(
                       horizontal: isDesktop ? KubusSpacing.xl : KubusSpacing.md,
-                      vertical: isDesktop ? KubusSpacing.lg : KubusSpacing.md,
+                      vertical: isDesktop
+                          ? KubusSpacing.lg
+                          : (compactSurface
+                              ? KubusSpacing.sm
+                              : KubusSpacing.md),
                     ),
                     child: Align(
                       alignment: Alignment.center,
@@ -106,6 +112,7 @@ class AuthEntryShell extends StatelessWidget {
                                               CrossAxisAlignment.start,
                                           children: [
                                             Expanded(
+                                              flex: 7,
                                               child: _HeroColumn(
                                                 title: title,
                                                 subtitle: subtitle,
@@ -119,12 +126,22 @@ class AuthEntryShell extends StatelessWidget {
                                             ),
                                             const SizedBox(
                                                 width: KubusSpacing.xl),
-                                            SizedBox(
-                                              width: 440,
-                                              child: _FormSurface(
-                                                footer: footer,
-                                                compact: compactSurface,
-                                                child: form,
+                                            Expanded(
+                                              flex: 6,
+                                              child: Align(
+                                                alignment: Alignment.topCenter,
+                                                child: ConstrainedBox(
+                                                  constraints:
+                                                      const BoxConstraints(
+                                                    maxWidth: 500,
+                                                    minWidth: 380,
+                                                  ),
+                                                  child: _FormSurface(
+                                                    footer: footer,
+                                                    compact: compactSurface,
+                                                    child: form,
+                                                  ),
+                                                ),
                                               ),
                                             ),
                                           ],
@@ -275,34 +292,30 @@ class _ShellTopBar extends StatelessWidget {
     final controls = AuthEntryControls(compact: compact);
 
     if (compact) {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  softWrap: false,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontWeight: FontWeight.w800,
-                        height: 1.05,
-                      ),
+          Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontWeight: FontWeight.w800,
+                  height: 1.05,
                 ),
-              ),
-            ),
           ),
-          const SizedBox(width: KubusSpacing.sm),
-          if (action != null) ...[
-            Flexible(child: action!),
-            const SizedBox(width: KubusSpacing.xs),
-          ],
-          controls,
+          const SizedBox(height: KubusSpacing.xs),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              if (action != null) ...[
+                Flexible(child: action!),
+                const SizedBox(width: KubusSpacing.xs),
+              ],
+              controls,
+            ],
+          ),
         ],
       );
     }
@@ -502,7 +515,7 @@ class _FormSurface extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: scheme.surface.withValues(alpha: isDark ? 0.2 : 0.86),
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(28),
         border: Border.all(
           color: scheme.outlineVariant.withValues(alpha: isDark ? 0.12 : 0.08),
         ),
@@ -515,7 +528,7 @@ class _FormSurface extends StatelessWidget {
         ],
       ),
       child: Padding(
-        padding: EdgeInsets.all(compact ? KubusSpacing.md : KubusSpacing.xl),
+        padding: EdgeInsets.all(compact ? KubusSpacing.md : KubusSpacing.lg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -33,6 +33,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonContinue => 'Continue';
 
   @override
+  String get commonOr => 'or';
+
+  @override
   String get commonSkip => 'Skip';
 
   @override
@@ -651,6 +654,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authContinueWithEmail => 'Continue with email';
 
   @override
+  String get authShowOtherOptions => 'Show other options';
+
+  @override
+  String get authHideOtherOptions => 'Hide other options';
+
+  @override
+  String get authOtherOptionsLabel => 'Other ways to continue';
+
+  @override
+  String get authRestoreWalletTitle => 'Restore wallet from encrypted backup';
+
+  @override
+  String get authRestoreWalletBeforeSignInDescription => 'Enter the recovery password to restore the wallet signer before sign-in completes.';
+
+  @override
+  String get authRestoreWalletForAccountDescription => 'Enter the recovery password to restore the wallet signer for this account on this device.';
+
+  @override
+  String get authRestoreWalletAction => 'Restore wallet';
+
+  @override
   String get authSecureAccountTitle => 'Secure your account';
 
   @override
@@ -883,6 +907,138 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingFlowVerifyContinue => 'I verified / Continue';
+
+  @override
+  String get onboardingFlowWelcomeDecisionHint => 'Choose one path to get started.';
+
+  @override
+  String get onboardingFlowVerifySignInPrompt => 'Verified - please enter password to finish signing in';
+
+  @override
+  String get onboardingFlowVerifySigningIn => 'Verified - signing you in...';
+
+  @override
+  String get onboardingFlowVerifySignedInSuccess => 'Verified account signed in successfully.';
+
+  @override
+  String get onboardingFlowVerifySessionMismatch => 'Sign-in session mismatch. Please sign in with your verified email.';
+
+  @override
+  String onboardingFlowVerificationDifferentAccountWarning(Object email) {
+    return 'Sign-in used a different account. Use $email to finish verification.';
+  }
+
+  @override
+  String get onboardingFlowProfileRefreshPending => 'Signed in, but profile refresh is still syncing. Please continue.';
+
+  @override
+  String get onboardingFlowSignedInFinishing => 'Signed in. Finishing onboarding...';
+
+  @override
+  String get onboardingFlowVerifyEmailConfirmedHint => 'Email confirmed. Continue to finish onboarding.';
+
+  @override
+  String get onboardingFlowVerifySignInTitle => 'Sign in to finish';
+
+  @override
+  String get onboardingFlowVerifySignInDescription => 'Use your verified email and password to finish onboarding.';
+
+  @override
+  String get onboardingFlowProfileAvatarPickFailed => 'Unable to select avatar right now.';
+
+  @override
+  String get onboardingFlowProfileInstitutionIntro => 'Add the organization details people should see first. The DAO review step comes right after this.';
+
+  @override
+  String get onboardingFlowProfileCreatorIntro => 'Set up your public creator profile now so your review submission has the right context.';
+
+  @override
+  String get onboardingFlowProfileOrganizationNameLabel => 'Organization name';
+
+  @override
+  String get onboardingFlowProfileInstitutionBioLabel => 'About your institution';
+
+  @override
+  String get onboardingFlowProfileSelectingAvatar => 'Selecting...';
+
+  @override
+  String get onboardingFlowWalletBackupCreateEncryptedTitle => 'Create encrypted server backup';
+
+  @override
+  String get onboardingFlowWalletBackupCreateEncryptedDescription => 'Choose a recovery password and store it separately from your recovery phrase.';
+
+  @override
+  String get onboardingFlowWalletBackupCreateEncryptedAction => 'Create backup';
+
+  @override
+  String get onboardingFlowWalletBackupEncryptedSaved => 'Encrypted server backup saved.';
+
+  @override
+  String get onboardingFlowWalletBackupPasskeyDialogTitle => 'Add a passkey';
+
+  @override
+  String get onboardingFlowWalletBackupPasskeyDialogLabel => 'Passkey name';
+
+  @override
+  String get onboardingFlowWalletBackupPasskeyDialogDescription => 'Add a passkey to protect the encrypted server backup on this browser or device.';
+
+  @override
+  String get onboardingFlowWalletBackupPasskeyDialogDefaultName => 'This device';
+
+  @override
+  String get onboardingFlowWalletBackupPasskeyDialogAction => 'Add passkey';
+
+  @override
+  String onboardingFlowWalletBackupPasskeyAdded(Object passkeyName) {
+    return 'Passkey \"$passkeyName\" added.';
+  }
+
+  @override
+  String get onboardingFlowDaoReviewTitle => 'DAO review';
+
+  @override
+  String get onboardingFlowDaoReviewInstitutionBody => 'Submit your institution details for DAO review before account setup is completed.';
+
+  @override
+  String get onboardingFlowDaoReviewArtistBody => 'Submit your practice for DAO review before account setup is completed.';
+
+  @override
+  String get onboardingFlowDaoReviewCompleteFormError => 'Complete the review form before continuing.';
+
+  @override
+  String get onboardingFlowDaoReviewSubmitFailed => 'Unable to submit the DAO review right now.';
+
+  @override
+  String onboardingFlowDaoReviewStatus(Object status) {
+    return 'Current status: $status';
+  }
+
+  @override
+  String get onboardingFlowDaoReviewOrganizationLabel => 'Organization';
+
+  @override
+  String get onboardingFlowDaoReviewContactLabel => 'Contact URL or email';
+
+  @override
+  String get onboardingFlowDaoReviewPortfolioLabel => 'Portfolio URL';
+
+  @override
+  String get onboardingFlowDaoReviewInstitutionFocusLabel => 'Institution focus';
+
+  @override
+  String get onboardingFlowDaoReviewPrimaryMediumLabel => 'Primary medium';
+
+  @override
+  String get onboardingFlowDaoReviewMissionLabel => 'Mission';
+
+  @override
+  String get onboardingFlowDaoReviewArtistStatementLabel => 'Artist statement';
+
+  @override
+  String get onboardingFlowDaoReviewReviewerNotes => 'Reviewer notes';
+
+  @override
+  String get onboardingFlowDaoReviewSubmitAction => 'Submit for DAO review';
 
   @override
   String get onboardingWelcomeTitle => 'Welcome to art.kubus';

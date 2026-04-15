@@ -1020,6 +1020,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     if (_verificationPollInFlight || !mounted) return;
     final email = (_pendingVerificationEmail ?? '').trim();
     if (email.isEmpty) return;
+    final l10n = AppLocalizations.of(context)!;
 
     _logVerificationRefresh('refresh start trigger=$trigger');
     setState(() {
@@ -1055,7 +1056,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         if (!_finishSignInPromptShown) {
           _finishSignInPromptShown = true;
           _showVerificationSnack(
-            'Verified - please enter password to finish signing in',
+            l10n.onboardingFlowVerifySignInPrompt,
             tone: KubusSnackBarTone.warning,
           );
         }
@@ -1065,7 +1066,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       if (!_verifiedSigningInMessageShown) {
         _verifiedSigningInMessageShown = true;
         _showVerificationSnack(
-          'Verified - signing you in...',
+          l10n.onboardingFlowVerifySigningIn,
           tone: KubusSnackBarTone.neutral,
         );
       }
@@ -1183,13 +1184,14 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }
 
   Future<void> _submitDaoReview() async {
+    final l10n = AppLocalizations.of(context)!;
     final persona = _effectivePersona;
     final draft = _daoDraft;
     if (persona == null || draft == null || !draft.isSubmittable) {
       if (mounted) {
         ScaffoldMessenger.of(context).showKubusSnackBar(
-          const SnackBar(
-            content: Text('Complete the review form before continuing.'),
+          SnackBar(
+            content: Text(l10n.onboardingFlowDaoReviewCompleteFormError),
           ),
           tone: KubusSnackBarTone.warning,
         );
@@ -1240,8 +1242,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     if (submittedReview == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showKubusSnackBar(
-          const SnackBar(
-            content: Text('Unable to submit the DAO review right now.'),
+          SnackBar(
+            content: Text(l10n.onboardingFlowDaoReviewSubmitFailed),
           ),
           tone: KubusSnackBarTone.error,
         );
@@ -1589,6 +1591,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
   Future<void> _handleEmbeddedSignInSuccess(
       Map<String, dynamic> payload) async {
+    final l10n = AppLocalizations.of(context)!;
     final data = (payload['data'] as Map<String, dynamic>?) ?? payload;
     final user = (data['user'] as Map<String, dynamic>?) ?? data;
     final signedInEmail = (user['email'] ?? '').toString().trim().toLowerCase();
@@ -1604,7 +1607,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     } else if (pendingEmail.isNotEmpty) {
       _finishSignInPromptShown = false;
       _showVerificationSnack(
-        'Sign-in used a different account. Use $pendingEmail to finish verification.',
+        l10n.onboardingFlowVerificationDifferentAccountWarning(pendingEmail),
         tone: KubusSnackBarTone.warning,
       );
       _refreshAuthDerivedSteps();
@@ -1720,9 +1723,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       if (!_sessionMatchesPendingVerificationEmail()) {
         _finishSignInPromptShown = true;
         messenger.showKubusSnackBar(
-          const SnackBar(
-            content:
-                Text('Verified - please enter password to finish signing in'),
+          SnackBar(
+            content: Text(l10n.onboardingFlowVerifySignInPrompt),
           ),
           tone: KubusSnackBarTone.warning,
         );
@@ -1732,7 +1734,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       if (!_verifiedSigningInMessageShown) {
         _verifiedSigningInMessageShown = true;
         messenger.showKubusSnackBar(
-          const SnackBar(content: Text('Verified - signing you in...')),
+          SnackBar(content: Text(l10n.onboardingFlowVerifySigningIn)),
           tone: KubusSnackBarTone.neutral,
         );
       }
@@ -1748,10 +1750,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
               'OnboardingFlowScreen._confirmVerificationAndContinue profile refresh failed: $error');
         }
         messenger.showKubusSnackBar(
-          const SnackBar(
-            content: Text(
-              'Signed in, but profile refresh is still syncing. Please continue.',
-            ),
+          SnackBar(
+            content: Text(l10n.onboardingFlowProfileRefreshPending),
           ),
           tone: KubusSnackBarTone.warning,
         );
@@ -1759,10 +1759,8 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
 
       if (!_sessionMatchesPendingVerificationEmail()) {
         messenger.showKubusSnackBar(
-          const SnackBar(
-            content: Text(
-              'Sign-in session mismatch. Please sign in with your verified email.',
-            ),
+          SnackBar(
+            content: Text(l10n.onboardingFlowVerifySessionMismatch),
           ),
           tone: KubusSnackBarTone.error,
         );
@@ -1772,8 +1770,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       _clearPendingEmailVerificationState();
       await _persistLocalDrafts();
       messenger.showKubusSnackBar(
-        const SnackBar(
-            content: Text('Verified account signed in successfully.')),
+        SnackBar(
+          content: Text(l10n.onboardingFlowVerifySignedInSuccess),
+        ),
         tone: KubusSnackBarTone.success,
       );
     }
@@ -1882,15 +1881,15 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }
 
   Future<void> _handleWalletBackupIntroCreateEncryptedBackup() async {
+    final l10n = AppLocalizations.of(context)!;
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final messenger = ScaffoldMessenger.of(context);
     final recoveryPassword = await showWalletBackupPasswordPrompt(
       context: context,
-      title: 'Create encrypted server backup',
-      description:
-          'Choose a recovery password and store it separately from your recovery phrase.',
+      title: l10n.onboardingFlowWalletBackupCreateEncryptedTitle,
+      description: l10n.onboardingFlowWalletBackupCreateEncryptedDescription,
       confirm: true,
-      actionLabel: 'Create backup',
+      actionLabel: l10n.onboardingFlowWalletBackupCreateEncryptedAction,
     );
     if (!mounted || recoveryPassword == null) return;
 
@@ -1902,7 +1901,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       _refreshAuthDerivedSteps();
       if (!mounted) return;
       messenger.showKubusSnackBar(
-        const SnackBar(content: Text('Encrypted server backup saved.')),
+        SnackBar(
+          content: Text(l10n.onboardingFlowWalletBackupEncryptedSaved),
+        ),
         tone: KubusSnackBarTone.success,
       );
       if (await _completeWalletBackupStepsIfReady()) {
@@ -1919,16 +1920,16 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
   }
 
   Future<void> _handleWalletBackupIntroAddPasskey() async {
+    final l10n = AppLocalizations.of(context)!;
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final messenger = ScaffoldMessenger.of(context);
     final nickname = await showWalletBackupTextPrompt(
       context: context,
-      title: 'Add a passkey',
-      label: 'Passkey name',
-      description:
-          'Add a passkey to protect the encrypted server backup on this browser or device.',
-      initialValue: 'This device',
-      actionLabel: 'Add passkey',
+      title: l10n.onboardingFlowWalletBackupPasskeyDialogTitle,
+      label: l10n.onboardingFlowWalletBackupPasskeyDialogLabel,
+      description: l10n.onboardingFlowWalletBackupPasskeyDialogDescription,
+      initialValue: l10n.onboardingFlowWalletBackupPasskeyDialogDefaultName,
+      actionLabel: l10n.onboardingFlowWalletBackupPasskeyDialogAction,
     );
     if (!mounted || nickname == null) return;
 
@@ -1941,7 +1942,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       messenger.showKubusSnackBar(
         SnackBar(
           content: Text(
-            'Passkey "${passkey.nickname ?? passkey.credentialId}" added.',
+            l10n.onboardingFlowWalletBackupPasskeyAdded(
+              passkey.nickname ?? passkey.credentialId,
+            ),
           ),
         ),
         tone: KubusSnackBarTone.success,
@@ -2130,6 +2133,93 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     final skipLabel = l10n.commonSkip;
     final iconBoxSize = headerCompact ? 42.0 : 48.0;
     final iconGlyphSize = headerCompact ? 20.0 : 24.0;
+    final titleWidget = Text(
+      l10n.onboardingFlowTitle,
+      maxLines: 1,
+      softWrap: false,
+      overflow: TextOverflow.ellipsis,
+      style: (headerCompact
+              ? Theme.of(context).textTheme.titleMedium
+              : Theme.of(context).textTheme.titleLarge)
+          ?.copyWith(
+        color: scheme.onSurface,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.2,
+      ),
+    );
+    final skipButton = TextButton(
+      onPressed: _isSkippingFlow ? null : _skipForNow,
+      style: TextButton.styleFrom(
+        foregroundColor: scheme.onSurface,
+        backgroundColor: scheme.surface.withValues(alpha: 0.72),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(999),
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: KubusSpacing.sm,
+          vertical: 6,
+        ),
+        minimumSize: const Size(50, 32),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        visualDensity: VisualDensity.compact,
+      ),
+      child: Text(
+        skipLabel,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: scheme.onSurface,
+              fontWeight: FontWeight.w600,
+            ),
+      ),
+    );
+
+    if (headerCompact) {
+      return Padding(
+        padding: EdgeInsets.only(
+          top: KubusSpacing.xs,
+          bottom: KubusSpacing.xs,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  width: iconBoxSize,
+                  height: iconBoxSize,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(KubusRadius.lg),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        _paletteForStep(_currentStep).start,
+                        _paletteForStep(_currentStep).end,
+                      ],
+                    ),
+                  ),
+                  child: Icon(
+                    _stepIcon(_currentStep),
+                    color: Colors.white,
+                    size: iconGlyphSize,
+                  ),
+                ),
+                const SizedBox(width: KubusSpacing.md),
+                Expanded(child: titleWidget),
+                const SizedBox(width: KubusSpacing.xs),
+                skipButton,
+              ],
+            ),
+            const SizedBox(height: KubusSpacing.xs),
+            const Align(
+              alignment: Alignment.centerRight,
+              child: AuthEntryControls(compact: true),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Padding(
       padding: EdgeInsets.only(
         top: headerCompact ? KubusSpacing.xs : KubusSpacing.sm,
@@ -2160,54 +2250,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
           ),
           const SizedBox(width: KubusSpacing.md),
           Expanded(
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  l10n.onboardingFlowTitle,
-                  maxLines: 1,
-                  softWrap: false,
-                  style: (headerCompact
-                          ? Theme.of(context).textTheme.titleMedium
-                          : Theme.of(context).textTheme.titleLarge)
-                      ?.copyWith(
-                    color: scheme.onSurface,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-              ),
-            ),
+            child: titleWidget,
           ),
           const SizedBox(width: KubusSpacing.sm),
           const AuthEntryControls(compact: true),
           const SizedBox(width: KubusSpacing.xs),
-          TextButton(
-            onPressed: _isSkippingFlow ? null : _skipForNow,
-            style: TextButton.styleFrom(
-              foregroundColor: scheme.onSurface,
-              backgroundColor: scheme.surface.withValues(alpha: 0.72),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(999),
-              ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: KubusSpacing.sm,
-                vertical: 6,
-              ),
-              minimumSize: const Size(50, 32),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              visualDensity: VisualDensity.compact,
-            ),
-            child: Text(
-              skipLabel,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: scheme.onSurface,
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-          ),
+          skipButton,
         ],
       ),
     );
@@ -2379,10 +2427,10 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         break;
       case _OnboardingStep.daoReview:
         content = _DaoReviewStep(
-          title: 'DAO review',
+          title: l10n.onboardingFlowDaoReviewTitle,
           body: _effectivePersona == UserPersona.institution
-              ? 'Submit your institution details for DAO review before the account setup is completed.'
-              : 'Submit your practice for DAO review before the account setup is completed.',
+              ? l10n.onboardingFlowDaoReviewInstitutionBody
+              : l10n.onboardingFlowDaoReviewArtistBody,
           persona: _effectivePersona,
           draft: _daoDraft,
           review: _daoReview,
@@ -2422,7 +2470,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     if (_isDesktop) {
       return AnimatedContainer(
         duration: const Duration(milliseconds: 260),
-        padding: const EdgeInsets.fromLTRB(28, 24, 28, 24),
+        padding: const EdgeInsets.fromLTRB(
+          KubusSpacing.lg,
+          KubusSpacing.lg,
+          KubusSpacing.lg,
+          KubusSpacing.lg,
+        ),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(KubusRadius.xl),
           color: scheme.surface.withValues(alpha: 0.12),
@@ -2450,7 +2503,10 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: KubusSpacing.sm,
+        vertical: KubusSpacing.xs,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -2614,7 +2670,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
         case _OnboardingStep.walletBackup:
           return l10n.onboardingFlowWalletBackupTitle;
         case _OnboardingStep.daoReview:
-          return 'DAO review';
+          return l10n.onboardingFlowDaoReviewTitle;
         case _OnboardingStep.accountPermissions:
           return l10n.onboardingFlowPermissionsTitle;
         case _OnboardingStep.done:
@@ -3134,22 +3190,32 @@ class _AccountStepState extends State<_AccountStep> {
               Text(
                 widget.verifyHint,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.65),
+                      color: Colors.white.withValues(alpha: 0.72),
                     ),
               ),
             ],
             const SizedBox(height: KubusSpacing.sm),
-            _OnboardingAuthModeSwitch(
-              showSignIn: _showSignIn,
-              compact: compact,
-              onShowCreateAccount: () {
-                setState(() => _showSignIn = false);
-              },
-              onShowSignIn: () {
-                setState(() => _showSignIn = true);
-              },
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(KubusRadius.lg),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.12),
+                ),
+              ),
+              padding: const EdgeInsets.all(KubusSpacing.xs),
+              child: _OnboardingAuthModeSwitch(
+                showSignIn: _showSignIn,
+                compact: compact,
+                onShowCreateAccount: () {
+                  setState(() => _showSignIn = false);
+                },
+                onShowSignIn: () {
+                  setState(() => _showSignIn = true);
+                },
+              ),
             ),
-            SizedBox(height: compact ? KubusSpacing.xs : 10),
+            SizedBox(height: compact ? KubusSpacing.xs : KubusSpacing.sm),
             Expanded(
               child: _showSignIn
                   ? SignInScreen(
@@ -3202,37 +3268,28 @@ class _OnboardingAuthModeSwitch extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.12),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(4),
-        child: Row(
-          children: [
-            Expanded(
-              child: _OnboardingAuthModeButton(
-                label: l10n.commonCreateAccount,
-                selected: !showSignIn,
-                compact: compact,
-                onTap: onShowCreateAccount,
-              ),
+    return Padding(
+      padding: const EdgeInsets.all(KubusSpacing.xxs),
+      child: Row(
+        children: [
+          Expanded(
+            child: _OnboardingAuthModeButton(
+              label: l10n.commonCreateAccount,
+              selected: !showSignIn,
+              compact: compact,
+              onTap: onShowCreateAccount,
             ),
-            const SizedBox(width: 4),
-            Expanded(
-              child: _OnboardingAuthModeButton(
-                label: l10n.commonSignIn,
-                selected: showSignIn,
-                compact: compact,
-                onTap: onShowSignIn,
-              ),
+          ),
+          const SizedBox(width: KubusSpacing.xxs),
+          Expanded(
+            child: _OnboardingAuthModeButton(
+              label: l10n.commonSignIn,
+              selected: showSignIn,
+              compact: compact,
+              onTap: onShowSignIn,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -3393,22 +3450,19 @@ class _WelcomeDecisionPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return LayoutBuilder(
       builder: (context, constraints) {
         final decisionContent = Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _WelcomeChoiceCard(
-              compact: compact,
-              icon: Icons.travel_explore_rounded,
-              title: discoverTitle,
-              body: discoverBody,
-              action: KubusButton(
-                onPressed: () => unawaited(onSelectGuest()),
-                label: discoverTitle,
-                isFullWidth: true,
-              ),
+            Text(
+              l10n.onboardingFlowWelcomeDecisionHint,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.74),
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
             const SizedBox(height: KubusSpacing.md),
             _WelcomeChoiceCard(
@@ -3416,9 +3470,21 @@ class _WelcomeDecisionPanel extends StatelessWidget {
               icon: Icons.person_add_alt_1_rounded,
               title: createTitle,
               body: createBody,
-              action: KubusOutlineButton(
+              action: KubusButton(
                 onPressed: () => unawaited(onSelectAccount()),
                 label: createTitle,
+                isFullWidth: true,
+              ),
+            ),
+            const SizedBox(height: KubusSpacing.md),
+            _WelcomeChoiceCard(
+              compact: compact,
+              icon: Icons.travel_explore_rounded,
+              title: discoverTitle,
+              body: discoverBody,
+              action: KubusOutlineButton(
+                onPressed: () => unawaited(onSelectGuest()),
+                label: discoverTitle,
                 isFullWidth: true,
               ),
             ),
@@ -3452,7 +3518,11 @@ class _WelcomeDecisionPanel extends StatelessWidget {
             ],
           ),
           child: Padding(
-            padding: EdgeInsets.all(compact ? KubusSpacing.lg : KubusSpacing.xl),
+            padding: EdgeInsets.all(
+              constraints.maxWidth < 600
+                  ? KubusSpacing.md
+                  : (compact ? KubusSpacing.lg : KubusSpacing.xl),
+            ),
             child: compact
                 ? SingleChildScrollView(
                     padding: const EdgeInsets.only(bottom: KubusSpacing.xs),
@@ -3510,7 +3580,7 @@ class _WelcomeChoiceCard extends StatelessWidget {
             const SizedBox(height: KubusSpacing.xs),
             Text(
               body,
-              maxLines: compact ? 2 : null,
+              maxLines: compact ? 3 : null,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: scheme.onSurface.withValues(alpha: 0.72),
                     height: 1.45,
@@ -3761,7 +3831,8 @@ class _InlineVerificationPanelState extends State<_InlineVerificationPanel> {
         ] else ...[
           const SizedBox(height: KubusSpacing.sm),
           Text(
-            'Email confirmed. Continue to finish onboarding.',
+            AppLocalizations.of(context)!
+                .onboardingFlowVerifyEmailConfirmedHint,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: scheme.onSurface.withValues(alpha: 0.76),
                 ),
@@ -3770,14 +3841,15 @@ class _InlineVerificationPanelState extends State<_InlineVerificationPanel> {
         if (widget.requiresFinishSignIn && widget.email.isNotEmpty) ...[
           const SizedBox(height: KubusSpacing.md),
           Text(
-            'Sign in to finish',
+            AppLocalizations.of(context)!.onboardingFlowVerifySignInTitle,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
           ),
           const SizedBox(height: KubusSpacing.xs),
           Text(
-            'Use your verified email and password to finish onboarding.',
+            AppLocalizations.of(context)!
+                .onboardingFlowVerifySignInDescription,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: scheme.onSurface.withValues(alpha: 0.78),
                 ),
@@ -3879,7 +3951,7 @@ class _FinishVerificationSignInPanelState
       );
       if (!mounted) return;
       messenger.showKubusSnackBar(
-        const SnackBar(content: Text('Signed in. Finishing onboarding...')),
+        SnackBar(content: Text(l10n.onboardingFlowSignedInFinishing)),
         tone: KubusSnackBarTone.success,
       );
       await widget.onAuthSuccess(result);
@@ -3887,8 +3959,7 @@ class _FinishVerificationSignInPanelState
       if (!mounted) return;
       if (_isEmailPasswordNotConfigured(error)) {
         setState(() {
-          _inlineError =
-              'This account is currently wallet-only. Sign in with wallet, then open Secure account to add email + password.';
+          _inlineError = l10n.authWalletOnlyAccountSignInHint;
         });
         return;
       }
@@ -4097,8 +4168,9 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
       );
     } catch (_) {
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showKubusSnackBar(
-        const SnackBar(content: Text('Unable to select avatar right now.')),
+        SnackBar(content: Text(l10n.onboardingFlowProfileAvatarPickFailed)),
         tone: KubusSnackBarTone.error,
       );
     } finally {
@@ -4179,15 +4251,16 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
     final isInstitution = widget.persona == UserPersona.institution;
     final isCreator = widget.persona == UserPersona.creator;
     final introBody = isInstitution
-        ? 'Add the organization details people should see first. The DAO review step comes right after this.'
+      ? l10n.onboardingFlowProfileInstitutionIntro
         : isCreator
-            ? 'Set up your public creator profile now so your review submission has the right context.'
+        ? l10n.onboardingFlowProfileCreatorIntro
             : widget.body;
     final displayNameLabel = isInstitution
-        ? 'Organization name'
+      ? l10n.onboardingFlowProfileOrganizationNameLabel
         : l10n.desktopSettingsDisplayNameLabel;
     final bioLabel =
-        isInstitution ? 'About your institution' : l10n.desktopSettingsBioLabel;
+      isInstitution ? l10n.onboardingFlowProfileInstitutionBioLabel : l10n.desktopSettingsBioLabel;
+    const fieldGap = KubusSpacing.sm;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -4240,7 +4313,7 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
                               )
                             : const Icon(Icons.photo_camera_outlined),
                         label: Text(_uploadingAvatar
-                            ? 'Selecting...'
+                            ? l10n.onboardingFlowProfileSelectingAvatar
                             : l10n.commonUpload),
                       ),
                     ],
@@ -4258,7 +4331,7 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
                     labelText: displayNameLabel,
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: fieldGap),
                 TextField(
                   controller: _username,
                   focusNode: _usernameFocusNode,
@@ -4270,7 +4343,7 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
                     labelText: l10n.desktopSettingsUsernameLabel,
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: fieldGap),
                 TextField(
                   controller: _bio,
                   focusNode: _bioFocusNode,
@@ -4285,7 +4358,7 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
                   ),
                 ),
                 if (isInstitution) ...[
-                  const SizedBox(height: 10),
+                  const SizedBox(height: fieldGap),
                   TextField(
                     controller: _website,
                     keyboardType: TextInputType.url,
@@ -4300,7 +4373,7 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
                   ),
                 ],
                 if (isCreator) ...[
-                  const SizedBox(height: 10),
+                  const SizedBox(height: fieldGap),
                   TextField(
                     controller: _fieldOfWork,
                     textInputAction: TextInputAction.next,
@@ -4311,7 +4384,7 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
                       helperText: l10n.profileEditArtistSpecialtiesHelper,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: fieldGap),
                   TextField(
                     controller: _yearsActive,
                     keyboardType: TextInputType.number,
@@ -4325,7 +4398,7 @@ class _InlineProfileStepState extends State<_InlineProfileStep> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 14),
+                const SizedBox(height: KubusSpacing.md),
                 KubusButton(
                   onPressed: (_saving || _uploadingAvatar) ? null : _save,
                   isLoading: _saving,
@@ -4413,6 +4486,7 @@ class _DaoReviewStepState extends State<_DaoReviewStep> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final isInstitution = widget.persona == UserPersona.institution;
     final role = isInstitution ? DaoRoleType.institution : DaoRoleType.artist;
@@ -4423,7 +4497,10 @@ class _DaoReviewStepState extends State<_DaoReviewStep> {
     final isSatisfied =
         verification.isApprovedFor(role) || verification.isPendingFor(role);
     final status = widget.review?.status.toLowerCase() ?? '';
-    final statusLabel = status.isEmpty ? null : 'Current status: $status';
+    final statusLabel = status.isEmpty
+      ? null
+      : l10n.onboardingFlowDaoReviewStatus(status.toUpperCase());
+    const fieldGap = KubusSpacing.sm;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -4475,16 +4552,16 @@ class _DaoReviewStepState extends State<_DaoReviewStep> {
                 if (isInstitution) ...[
                   TextField(
                     controller: _title,
-                    decoration: const InputDecoration(
-                      labelText: 'Organization',
+                    decoration: InputDecoration(
+                      labelText: l10n.onboardingFlowDaoReviewOrganizationLabel,
                     ),
                     onChanged: (_) => unawaited(_saveDraft()),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: fieldGap),
                   TextField(
                     controller: _contact,
-                    decoration: const InputDecoration(
-                      labelText: 'Contact URL or email',
+                    decoration: InputDecoration(
+                      labelText: l10n.onboardingFlowDaoReviewContactLabel,
                     ),
                     onChanged: (_) => unawaited(_saveDraft()),
                   ),
@@ -4492,41 +4569,44 @@ class _DaoReviewStepState extends State<_DaoReviewStep> {
                   TextField(
                     controller: _portfolioUrl,
                     keyboardType: TextInputType.url,
-                    decoration: const InputDecoration(
-                      labelText: 'Portfolio URL',
+                    decoration: InputDecoration(
+                      labelText: l10n.onboardingFlowDaoReviewPortfolioLabel,
                     ),
                     onChanged: (_) => unawaited(_saveDraft()),
                   ),
                 ],
-                const SizedBox(height: 10),
+                const SizedBox(height: fieldGap),
                 TextField(
                   controller: _medium,
                   decoration: InputDecoration(
-                    labelText:
-                        isInstitution ? 'Institution focus' : 'Primary medium',
+                    labelText: isInstitution
+                        ? l10n.onboardingFlowDaoReviewInstitutionFocusLabel
+                        : l10n.onboardingFlowDaoReviewPrimaryMediumLabel,
                   ),
                   onChanged: (_) => unawaited(_saveDraft()),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: fieldGap),
                 TextField(
                   controller: _statement,
                   minLines: 3,
                   maxLines: 5,
                   decoration: InputDecoration(
-                    labelText: isInstitution ? 'Mission' : 'Artist statement',
+                    labelText: isInstitution
+                        ? l10n.onboardingFlowDaoReviewMissionLabel
+                        : l10n.onboardingFlowDaoReviewArtistStatementLabel,
                   ),
                   onChanged: (_) => unawaited(_saveDraft()),
                 ),
                 if ((widget.review?.reviewerNotes ?? '').trim().isNotEmpty) ...[
-                  const SizedBox(height: 12),
+                  const SizedBox(height: KubusSpacing.md),
                   Text(
-                    'Reviewer notes',
+                    l10n.onboardingFlowDaoReviewReviewerNotes,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.w700,
                         ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: KubusSpacing.xs),
                   Text(
                     widget.review!.reviewerNotes!,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -4541,7 +4621,9 @@ class _DaoReviewStepState extends State<_DaoReviewStep> {
         const SizedBox(height: KubusSpacing.sm),
         KubusButton(
           onPressed: widget.isLoadingReview ? null : widget.onSubmit,
-          label: isSatisfied ? 'Continue' : 'Submit for DAO review',
+          label: isSatisfied
+              ? l10n.commonContinue
+              : l10n.onboardingFlowDaoReviewSubmitAction,
           isFullWidth: true,
         ),
       ],

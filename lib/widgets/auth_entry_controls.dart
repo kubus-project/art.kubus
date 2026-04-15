@@ -89,7 +89,7 @@ class AuthEntryControls extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           controls[0],
-          const SizedBox(width: KubusSpacing.xs),
+          const SizedBox(width: 2),
           controls[1],
         ],
       );
@@ -139,54 +139,68 @@ class _AuthEntryControlChip extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: scheme.surface.withValues(alpha: isDark ? 0.18 : 0.78),
+        color: scheme.surface.withValues(alpha: compact
+            ? (isDark ? 0.12 : 0.7)
+            : (isDark ? 0.18 : 0.78)),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: scheme.outlineVariant.withValues(alpha: isDark ? 0.22 : 0.18),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: theme.shadowColor.withValues(alpha: isDark ? 0.06 : 0.08),
-            blurRadius: compact ? 16 : 20,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: compact ? 8 : 14,
-          vertical: compact ? 8 : 10,
-        ),
-        child: compact
-            ? Icon(
-                icon,
-                size: 18,
-                color: iconColor,
-              )
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    icon,
-                    size: 18,
-                    color: iconColor,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    label,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: scheme.onSurface.withValues(alpha: 0.88),
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(
-                    Icons.expand_more_rounded,
-                    size: 18,
-                    color: scheme.onSurface.withValues(alpha: 0.58),
-                  ),
-                ],
+        border: compact
+            ? null
+            : Border.all(
+                color: scheme.outlineVariant
+                    .withValues(alpha: isDark ? 0.22 : 0.18),
               ),
+        boxShadow: compact
+            ? const []
+            : [
+                BoxShadow(
+                  color:
+                      theme.shadowColor.withValues(alpha: isDark ? 0.06 : 0.08),
+                  blurRadius: 20,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+      ),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          minWidth: compact ? 34 : 0,
+          minHeight: compact ? 34 : 0,
+        ),
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 7 : 14,
+            vertical: compact ? 7 : 10,
+          ),
+          child: compact
+              ? Icon(
+                  icon,
+                  size: 17,
+                  color: iconColor,
+                )
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      icon,
+                      size: 18,
+                      color: iconColor,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      label,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: scheme.onSurface.withValues(alpha: 0.88),
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.expand_more_rounded,
+                      size: 18,
+                      color: scheme.onSurface.withValues(alpha: 0.58),
+                    ),
+                  ],
+                ),
+        ),
       ),
     );
   }

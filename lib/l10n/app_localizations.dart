@@ -143,6 +143,12 @@ abstract class AppLocalizations {
   /// **'Continue'**
   String get commonContinue;
 
+  /// No description provided for @commonOr.
+  ///
+  /// In en, this message translates to:
+  /// **'or'**
+  String get commonOr;
+
   /// No description provided for @commonSkip.
   ///
   /// In en, this message translates to:
@@ -1367,6 +1373,48 @@ abstract class AppLocalizations {
   /// **'Continue with email'**
   String get authContinueWithEmail;
 
+  /// No description provided for @authShowOtherOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Show other options'**
+  String get authShowOtherOptions;
+
+  /// No description provided for @authHideOtherOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide other options'**
+  String get authHideOtherOptions;
+
+  /// No description provided for @authOtherOptionsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Other ways to continue'**
+  String get authOtherOptionsLabel;
+
+  /// No description provided for @authRestoreWalletTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore wallet from encrypted backup'**
+  String get authRestoreWalletTitle;
+
+  /// No description provided for @authRestoreWalletBeforeSignInDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the recovery password to restore the wallet signer before sign-in completes.'**
+  String get authRestoreWalletBeforeSignInDescription;
+
+  /// No description provided for @authRestoreWalletForAccountDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the recovery password to restore the wallet signer for this account on this device.'**
+  String get authRestoreWalletForAccountDescription;
+
+  /// No description provided for @authRestoreWalletAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore wallet'**
+  String get authRestoreWalletAction;
+
   /// No description provided for @authSecureAccountTitle.
   ///
   /// In en, this message translates to:
@@ -1834,6 +1882,258 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'I verified / Continue'**
   String get onboardingFlowVerifyContinue;
+
+  /// No description provided for @onboardingFlowWelcomeDecisionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose one path to get started.'**
+  String get onboardingFlowWelcomeDecisionHint;
+
+  /// No description provided for @onboardingFlowVerifySignInPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified - please enter password to finish signing in'**
+  String get onboardingFlowVerifySignInPrompt;
+
+  /// No description provided for @onboardingFlowVerifySigningIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified - signing you in...'**
+  String get onboardingFlowVerifySigningIn;
+
+  /// No description provided for @onboardingFlowVerifySignedInSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified account signed in successfully.'**
+  String get onboardingFlowVerifySignedInSuccess;
+
+  /// No description provided for @onboardingFlowVerifySessionMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in session mismatch. Please sign in with your verified email.'**
+  String get onboardingFlowVerifySessionMismatch;
+
+  /// No description provided for @onboardingFlowVerificationDifferentAccountWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in used a different account. Use {email} to finish verification.'**
+  String onboardingFlowVerificationDifferentAccountWarning(Object email);
+
+  /// No description provided for @onboardingFlowProfileRefreshPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in, but profile refresh is still syncing. Please continue.'**
+  String get onboardingFlowProfileRefreshPending;
+
+  /// No description provided for @onboardingFlowSignedInFinishing.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in. Finishing onboarding...'**
+  String get onboardingFlowSignedInFinishing;
+
+  /// No description provided for @onboardingFlowVerifyEmailConfirmedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Email confirmed. Continue to finish onboarding.'**
+  String get onboardingFlowVerifyEmailConfirmedHint;
+
+  /// No description provided for @onboardingFlowVerifySignInTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to finish'**
+  String get onboardingFlowVerifySignInTitle;
+
+  /// No description provided for @onboardingFlowVerifySignInDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Use your verified email and password to finish onboarding.'**
+  String get onboardingFlowVerifySignInDescription;
+
+  /// No description provided for @onboardingFlowProfileAvatarPickFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to select avatar right now.'**
+  String get onboardingFlowProfileAvatarPickFailed;
+
+  /// No description provided for @onboardingFlowProfileInstitutionIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Add the organization details people should see first. The DAO review step comes right after this.'**
+  String get onboardingFlowProfileInstitutionIntro;
+
+  /// No description provided for @onboardingFlowProfileCreatorIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up your public creator profile now so your review submission has the right context.'**
+  String get onboardingFlowProfileCreatorIntro;
+
+  /// No description provided for @onboardingFlowProfileOrganizationNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Organization name'**
+  String get onboardingFlowProfileOrganizationNameLabel;
+
+  /// No description provided for @onboardingFlowProfileInstitutionBioLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'About your institution'**
+  String get onboardingFlowProfileInstitutionBioLabel;
+
+  /// No description provided for @onboardingFlowProfileSelectingAvatar.
+  ///
+  /// In en, this message translates to:
+  /// **'Selecting...'**
+  String get onboardingFlowProfileSelectingAvatar;
+
+  /// No description provided for @onboardingFlowWalletBackupCreateEncryptedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create encrypted server backup'**
+  String get onboardingFlowWalletBackupCreateEncryptedTitle;
+
+  /// No description provided for @onboardingFlowWalletBackupCreateEncryptedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a recovery password and store it separately from your recovery phrase.'**
+  String get onboardingFlowWalletBackupCreateEncryptedDescription;
+
+  /// No description provided for @onboardingFlowWalletBackupCreateEncryptedAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Create backup'**
+  String get onboardingFlowWalletBackupCreateEncryptedAction;
+
+  /// No description provided for @onboardingFlowWalletBackupEncryptedSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypted server backup saved.'**
+  String get onboardingFlowWalletBackupEncryptedSaved;
+
+  /// No description provided for @onboardingFlowWalletBackupPasskeyDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a passkey'**
+  String get onboardingFlowWalletBackupPasskeyDialogTitle;
+
+  /// No description provided for @onboardingFlowWalletBackupPasskeyDialogLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Passkey name'**
+  String get onboardingFlowWalletBackupPasskeyDialogLabel;
+
+  /// No description provided for @onboardingFlowWalletBackupPasskeyDialogDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a passkey to protect the encrypted server backup on this browser or device.'**
+  String get onboardingFlowWalletBackupPasskeyDialogDescription;
+
+  /// No description provided for @onboardingFlowWalletBackupPasskeyDialogDefaultName.
+  ///
+  /// In en, this message translates to:
+  /// **'This device'**
+  String get onboardingFlowWalletBackupPasskeyDialogDefaultName;
+
+  /// No description provided for @onboardingFlowWalletBackupPasskeyDialogAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add passkey'**
+  String get onboardingFlowWalletBackupPasskeyDialogAction;
+
+  /// No description provided for @onboardingFlowWalletBackupPasskeyAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Passkey \"{passkeyName}\" added.'**
+  String onboardingFlowWalletBackupPasskeyAdded(Object passkeyName);
+
+  /// No description provided for @onboardingFlowDaoReviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'DAO review'**
+  String get onboardingFlowDaoReviewTitle;
+
+  /// No description provided for @onboardingFlowDaoReviewInstitutionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit your institution details for DAO review before account setup is completed.'**
+  String get onboardingFlowDaoReviewInstitutionBody;
+
+  /// No description provided for @onboardingFlowDaoReviewArtistBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit your practice for DAO review before account setup is completed.'**
+  String get onboardingFlowDaoReviewArtistBody;
+
+  /// No description provided for @onboardingFlowDaoReviewCompleteFormError.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete the review form before continuing.'**
+  String get onboardingFlowDaoReviewCompleteFormError;
+
+  /// No description provided for @onboardingFlowDaoReviewSubmitFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to submit the DAO review right now.'**
+  String get onboardingFlowDaoReviewSubmitFailed;
+
+  /// No description provided for @onboardingFlowDaoReviewStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Current status: {status}'**
+  String onboardingFlowDaoReviewStatus(Object status);
+
+  /// No description provided for @onboardingFlowDaoReviewOrganizationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Organization'**
+  String get onboardingFlowDaoReviewOrganizationLabel;
+
+  /// No description provided for @onboardingFlowDaoReviewContactLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact URL or email'**
+  String get onboardingFlowDaoReviewContactLabel;
+
+  /// No description provided for @onboardingFlowDaoReviewPortfolioLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Portfolio URL'**
+  String get onboardingFlowDaoReviewPortfolioLabel;
+
+  /// No description provided for @onboardingFlowDaoReviewInstitutionFocusLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution focus'**
+  String get onboardingFlowDaoReviewInstitutionFocusLabel;
+
+  /// No description provided for @onboardingFlowDaoReviewPrimaryMediumLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Primary medium'**
+  String get onboardingFlowDaoReviewPrimaryMediumLabel;
+
+  /// No description provided for @onboardingFlowDaoReviewMissionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Mission'**
+  String get onboardingFlowDaoReviewMissionLabel;
+
+  /// No description provided for @onboardingFlowDaoReviewArtistStatementLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist statement'**
+  String get onboardingFlowDaoReviewArtistStatementLabel;
+
+  /// No description provided for @onboardingFlowDaoReviewReviewerNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Reviewer notes'**
+  String get onboardingFlowDaoReviewReviewerNotes;
+
+  /// No description provided for @onboardingFlowDaoReviewSubmitAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit for DAO review'**
+  String get onboardingFlowDaoReviewSubmitAction;
 
   /// No description provided for @onboardingWelcomeTitle.
   ///

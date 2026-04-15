@@ -22,10 +22,12 @@ class AuthMethodsPanelRegistrationMethods extends StatelessWidget {
     required this.enableWallet,
     required this.enableEmail,
     required this.enableGoogle,
+    required this.showAlternativeMethods,
     required this.isGoogleSubmitting,
     required this.emailFormShell,
     required this.inlineWalletSurface,
     required this.onShowCompactEmailForm,
+    required this.onToggleAlternativeMethods,
     required this.onShowConnectWalletModal,
     required this.onGooglePressed,
     required this.onWebGoogleAuthResult,
@@ -41,10 +43,12 @@ class AuthMethodsPanelRegistrationMethods extends StatelessWidget {
   final bool enableWallet;
   final bool enableEmail;
   final bool enableGoogle;
+  final bool showAlternativeMethods;
   final bool isGoogleSubmitting;
   final Widget emailFormShell;
   final Widget inlineWalletSurface;
   final VoidCallback onShowCompactEmailForm;
+  final ValueChanged<bool> onToggleAlternativeMethods;
   final VoidCallback onShowConnectWalletModal;
   final VoidCallback onGooglePressed;
   final Future<void> Function(GoogleAuthResult googleResult)
@@ -66,19 +70,28 @@ class AuthMethodsPanelRegistrationMethods extends StatelessWidget {
       roles.web3MarketplaceAccent,
       isDark ? 0.24 : 0.14,
     )!;
+    final secondarySurface = colorScheme.surface.withValues(
+      alpha: isDark ? 0.18 : 0.78,
+    );
+    final hasAlternativeMethods = enableGoogle || enableWallet;
+    final shouldShowAlternativeMethods =
+        !showCompactEmailForm && (showAlternativeMethods || !enableEmail);
+    final methodGap = compactLayout ? KubusSpacing.sm : KubusSpacing.md;
 
     final registerMethods = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (showSectionCopy) ...[
           Text(
-            showCompactEmailForm ? l10n.authOrUseEmail : l10n.authRegisterSubtitle,
+            showCompactEmailForm
+                ? l10n.authOrUseEmail
+                : l10n.authRegisterSubtitle,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: colorScheme.onSurface,
                   fontWeight: FontWeight.w800,
                 ),
           ),
-          const SizedBox(height: KubusSpacing.xs),
+          const SizedBox(height: KubusSpacing.sm),
           Text(
             showCompactEmailForm
                 ? l10n.authRegisterSubtitle
@@ -90,48 +103,95 @@ class AuthMethodsPanelRegistrationMethods extends StatelessWidget {
           ),
           SizedBox(height: compactLayout ? KubusSpacing.md : KubusSpacing.lg),
         ],
-        if (!showCompactEmailForm && enableGoogle) ...[
-          if (kIsWeb)
-            GoogleSignInWebButton(
-              colorScheme: colorScheme,
-              isLoading: isGoogleSubmitting,
-              onAuthResult: onWebGoogleAuthResult,
-              onAuthError: onWebGoogleAuthError,
-            )
-          else
-            GoogleSignInButton(
-              onPressed: () async => onGooglePressed(),
-              isLoading: isGoogleSubmitting,
-              colorScheme: colorScheme,
-            ),
-          SizedBox(height: compactLayout ? KubusSpacing.xs : KubusSpacing.sm),
-        ],
         if (!showCompactEmailForm && enableEmail) ...[
           KubusButton(
             onPressed: onShowCompactEmailForm,
             icon: Icons.email_outlined,
             label: l10n.authContinueWithEmail,
-            variant: KubusButtonVariant.secondary,
+            variant: KubusButtonVariant.primary,
             backgroundColor: emailSurface,
             foregroundColor: colorScheme.onSurface,
             isFullWidth: true,
           ),
-          SizedBox(height: compactLayout ? KubusSpacing.xs : KubusSpacing.sm),
+          if (hasAlternativeMethods) ...[
+            SizedBox(height: methodGap),
+            TextButton.icon(
+              onPressed: () =>
+                  onToggleAlternativeMethods(!showAlternativeMethods),
+              style: TextButton.styleFrom(
+                foregroundColor: colorScheme.onSurface.withValues(alpha: 0.82),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.sm,
+                  vertical: KubusSpacing.xs,
+                ),
+              ),
+              icon: Icon(
+                showAlternativeMethods
+                    ? Icons.expand_less_rounded
+                    : Icons.expand_more_rounded,
+              ),
+              label: Text(
+                showAlternativeMethods
+                    ? l10n.authHideOtherOptions
+                    : l10n.authShowOtherOptions,
+              ),
+            ),
+          ],
         ],
-        if (!showCompactEmailForm && enableWallet) ...[
-          if (showSectionCopy)
-            const AuthMethodsPanelMethodDivider(),
-          SizedBox(height: compactLayout ? KubusSpacing.xs : KubusSpacing.sm),
-          KubusButton(
-            onPressed: onShowConnectWalletModal,
-            icon: Icons.account_balance_wallet_outlined,
-            label: l10n.authConnectWalletButton,
-            variant: KubusButtonVariant.secondary,
-            backgroundColor: walletSurface,
-            foregroundColor: colorScheme.onSurface,
-            isFullWidth: true,
+        if (shouldShowAlternativeMethods && hasAlternativeMethods)
+          Container(
+            decoration: BoxDecoration(
+              color: secondarySurface,
+              borderRadius: BorderRadius.circular(KubusRadius.lg),
+              border: Border.all(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+              ),
+            ),
+            padding: EdgeInsets.all(compactLayout ? KubusSpacing.sm : KubusSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  l10n.authOtherOptionsLabel,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: colorScheme.onSurface.withValues(alpha: 0.78),
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                SizedBox(height: methodGap),
+                if (enableGoogle) ...[
+                  if (kIsWeb)
+                    GoogleSignInWebButton(
+                      colorScheme: colorScheme,
+                      isLoading: isGoogleSubmitting,
+                      onAuthResult: onWebGoogleAuthResult,
+                      onAuthError: onWebGoogleAuthError,
+                    )
+                  else
+                    GoogleSignInButton(
+                      onPressed: () async => onGooglePressed(),
+                      isLoading: isGoogleSubmitting,
+                      colorScheme: colorScheme,
+                    ),
+                ],
+                if (enableGoogle && enableWallet) ...[
+                  SizedBox(height: methodGap),
+                  AuthMethodsPanelMethodDivider(label: l10n.commonOr),
+                  SizedBox(height: methodGap),
+                ],
+                if (enableWallet)
+                  KubusButton(
+                    onPressed: onShowConnectWalletModal,
+                    icon: Icons.account_balance_wallet_outlined,
+                    label: l10n.authConnectWalletButton,
+                    variant: KubusButtonVariant.secondary,
+                    backgroundColor: walletSurface,
+                    foregroundColor: colorScheme.onSurface,
+                    isFullWidth: true,
+                  ),
+              ],
+            ),
           ),
-        ],
         if (showCompactEmailForm) ...[
           emailFormShell,
         ],
@@ -266,7 +326,8 @@ class AuthMethodsPanelMethodDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final resolvedLabel = label ?? AppLocalizations.of(context)!.authHighlightOptionalWeb3;
+    final resolvedLabel =
+      label ?? AppLocalizations.of(context)!.authHighlightOptionalWeb3;
 
     return Row(
       children: [
@@ -276,14 +337,19 @@ class AuthMethodsPanelMethodDivider extends StatelessWidget {
             height: 1,
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.sm),
-          child: Text(
-            resolvedLabel,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: scheme.onSurface.withValues(alpha: 0.56),
-                  fontWeight: FontWeight.w600,
-                ),
+        Flexible(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.sm),
+            child: Text(
+              resolvedLabel,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.56),
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
           ),
         ),
         Expanded(

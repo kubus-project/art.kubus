@@ -33,6 +33,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get commonContinue => 'Nadaljuj';
 
   @override
+  String get commonOr => 'ali';
+
+  @override
   String get commonSkip => 'Preskoči';
 
   @override
@@ -651,6 +654,27 @@ class AppLocalizationsSl extends AppLocalizations {
   String get authContinueWithEmail => 'Nadaljuj z e-pošto';
 
   @override
+  String get authShowOtherOptions => 'Prikaži druge možnosti';
+
+  @override
+  String get authHideOtherOptions => 'Skrij druge možnosti';
+
+  @override
+  String get authOtherOptionsLabel => 'Drugi načini za nadaljevanje';
+
+  @override
+  String get authRestoreWalletTitle => 'Obnovi denarnico iz šifrirane varnostne kopije';
+
+  @override
+  String get authRestoreWalletBeforeSignInDescription => 'Vnesi obnovitveno geslo, da pred zaključkom prijave obnoviš podpisnika denarnice.';
+
+  @override
+  String get authRestoreWalletForAccountDescription => 'Vnesi obnovitveno geslo, da na tej napravi obnoviš podpisnika denarnice za ta račun.';
+
+  @override
+  String get authRestoreWalletAction => 'Obnovi denarnico';
+
+  @override
   String get authSecureAccountTitle => 'Zavaruj svoj račun';
 
   @override
@@ -883,6 +907,138 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get onboardingFlowVerifyContinue => 'Potrjeno / Nadaljuj';
+
+  @override
+  String get onboardingFlowWelcomeDecisionHint => 'Izberi eno pot za začetek.';
+
+  @override
+  String get onboardingFlowVerifySignInPrompt => 'Potrjeno – za dokončanje prijave vnesi geslo';
+
+  @override
+  String get onboardingFlowVerifySigningIn => 'Potrjeno – prijavljamo te ...';
+
+  @override
+  String get onboardingFlowVerifySignedInSuccess => 'Potrjen račun je uspešno prijavljen.';
+
+  @override
+  String get onboardingFlowVerifySessionMismatch => 'Seja prijave se ne ujema. Prijavi se s potrjenim e-poštnim naslovom.';
+
+  @override
+  String onboardingFlowVerificationDifferentAccountWarning(Object email) {
+    return 'Prijava je uporabila drug račun. Za dokončanje potrditve uporabi $email.';
+  }
+
+  @override
+  String get onboardingFlowProfileRefreshPending => 'Prijava je uspela, osvežitev profila pa se še usklajuje. Nadaljuj.';
+
+  @override
+  String get onboardingFlowSignedInFinishing => 'Prijava je uspela. Dokončujemo uvodno nastavitev ...';
+
+  @override
+  String get onboardingFlowVerifyEmailConfirmedHint => 'E-pošta je potrjena. Nadaljuj za dokončanje uvodne nastavitve.';
+
+  @override
+  String get onboardingFlowVerifySignInTitle => 'Za dokončanje se prijavi';
+
+  @override
+  String get onboardingFlowVerifySignInDescription => 'Za dokončanje uvodne nastavitve uporabi potrjeno e-pošto in geslo.';
+
+  @override
+  String get onboardingFlowProfileAvatarPickFailed => 'Izbira avatarja trenutno ni na voljo.';
+
+  @override
+  String get onboardingFlowProfileInstitutionIntro => 'Dodaj podatke o organizaciji, ki jih naj drugi najprej vidijo. Korak pregleda DAO sledi takoj za tem.';
+
+  @override
+  String get onboardingFlowProfileCreatorIntro => 'Nastavi svoj javni profil ustvarjalca, da bo prijava za pregled imela pravi kontekst.';
+
+  @override
+  String get onboardingFlowProfileOrganizationNameLabel => 'Ime organizacije';
+
+  @override
+  String get onboardingFlowProfileInstitutionBioLabel => 'O vaši instituciji';
+
+  @override
+  String get onboardingFlowProfileSelectingAvatar => 'Izbiranje ...';
+
+  @override
+  String get onboardingFlowWalletBackupCreateEncryptedTitle => 'Ustvari šifrirano strežniško varnostno kopijo';
+
+  @override
+  String get onboardingFlowWalletBackupCreateEncryptedDescription => 'Izberi obnovitveno geslo in ga shrani ločeno od obnovitvene fraze.';
+
+  @override
+  String get onboardingFlowWalletBackupCreateEncryptedAction => 'Ustvari kopijo';
+
+  @override
+  String get onboardingFlowWalletBackupEncryptedSaved => 'Šifrirana strežniška varnostna kopija je shranjena.';
+
+  @override
+  String get onboardingFlowWalletBackupPasskeyDialogTitle => 'Dodaj passkey';
+
+  @override
+  String get onboardingFlowWalletBackupPasskeyDialogLabel => 'Ime passkeya';
+
+  @override
+  String get onboardingFlowWalletBackupPasskeyDialogDescription => 'Dodaj passkey za zaščito šifrirane strežniške varnostne kopije v tem brskalniku ali napravi.';
+
+  @override
+  String get onboardingFlowWalletBackupPasskeyDialogDefaultName => 'Ta naprava';
+
+  @override
+  String get onboardingFlowWalletBackupPasskeyDialogAction => 'Dodaj passkey';
+
+  @override
+  String onboardingFlowWalletBackupPasskeyAdded(Object passkeyName) {
+    return 'Passkey \"$passkeyName\" je dodan.';
+  }
+
+  @override
+  String get onboardingFlowDaoReviewTitle => 'DAO pregled';
+
+  @override
+  String get onboardingFlowDaoReviewInstitutionBody => 'Oddaj podatke institucije za DAO pregled pred zaključkom nastavitve računa.';
+
+  @override
+  String get onboardingFlowDaoReviewArtistBody => 'Oddaj opis svoje prakse za DAO pregled pred zaključkom nastavitve računa.';
+
+  @override
+  String get onboardingFlowDaoReviewCompleteFormError => 'Pred nadaljevanjem izpolni obrazec pregleda.';
+
+  @override
+  String get onboardingFlowDaoReviewSubmitFailed => 'Oddaja DAO pregleda trenutno ni uspela.';
+
+  @override
+  String onboardingFlowDaoReviewStatus(Object status) {
+    return 'Trenutno stanje: $status';
+  }
+
+  @override
+  String get onboardingFlowDaoReviewOrganizationLabel => 'Organizacija';
+
+  @override
+  String get onboardingFlowDaoReviewContactLabel => 'Kontaktni URL ali e-pošta';
+
+  @override
+  String get onboardingFlowDaoReviewPortfolioLabel => 'URL portfelja';
+
+  @override
+  String get onboardingFlowDaoReviewInstitutionFocusLabel => 'Področje institucije';
+
+  @override
+  String get onboardingFlowDaoReviewPrimaryMediumLabel => 'Primarni medij';
+
+  @override
+  String get onboardingFlowDaoReviewMissionLabel => 'Poslanstvo';
+
+  @override
+  String get onboardingFlowDaoReviewArtistStatementLabel => 'Izjava umetnika';
+
+  @override
+  String get onboardingFlowDaoReviewReviewerNotes => 'Opombe pregledovalca';
+
+  @override
+  String get onboardingFlowDaoReviewSubmitAction => 'Oddaj za DAO pregled';
 
   @override
   String get onboardingWelcomeTitle => 'Dobrodošel/a v art.kubus';

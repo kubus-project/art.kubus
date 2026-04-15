@@ -73,6 +73,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
   String? _confirmPasswordError;
   String? _usernameError;
   bool _showCompactEmailForm = false;
+  bool _showAlternativeMethods = false;
   bool _walletFlowOpening = false;
   bool _showInlineWalletFlow = false;
   int _walletInlineInitialStep = 0;
@@ -598,10 +599,9 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
 
       final recoveryPassword = await showWalletBackupPasswordPrompt(
         context: context,
-        title: 'Restore wallet from encrypted backup',
-        description:
-            'Enter the recovery password to restore the real wallet signer for this account on this device.',
-        actionLabel: 'Restore wallet',
+        title: l10n.authRestoreWalletTitle,
+        description: l10n.authRestoreWalletForAccountDescription,
+        actionLabel: l10n.authRestoreWalletAction,
       );
       if (!mounted || recoveryPassword == null) {
         return false;
@@ -705,6 +705,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
           _walletInlineInitialStep = initialStep;
           _walletInlineRequiredWalletAddress = requiredWalletAddress;
           _showCompactEmailForm = false;
+          _showAlternativeMethods = false;
         });
       }
 
@@ -797,6 +798,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       enableWallet: enableWallet,
       enableEmail: enableEmail,
       enableGoogle: enableGoogle,
+      showAlternativeMethods: _showAlternativeMethods,
       isGoogleSubmitting: _isGoogleSubmitting,
       emailFormShell: AuthMethodsPanelEmailFormShell(
         emailController: _emailController,
@@ -822,7 +824,13 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         onFlowComplete: (result) => _completeInlineWalletFlow(result),
       ),
       onShowCompactEmailForm: () {
-        setState(() => _showCompactEmailForm = true);
+        setState(() {
+          _showCompactEmailForm = true;
+          _showAlternativeMethods = true;
+        });
+      },
+      onToggleAlternativeMethods: (visible) {
+        setState(() => _showAlternativeMethods = visible);
       },
       onShowConnectWalletModal: _showConnectWalletModal,
       onGooglePressed: _registerWithGoogle,
