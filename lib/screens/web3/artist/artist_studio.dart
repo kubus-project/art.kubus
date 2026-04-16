@@ -33,10 +33,13 @@ import '../../../widgets/topbar_icon.dart';
 String? resolveArtistPromotionUnavailableReason({
   required String walletAddress,
   required DAOReview? review,
+  required String walletRequiredReason,
+  required String institutionConflictReason,
+  required String approvalRequiredReason,
 }) {
   final normalizedWallet = walletAddress.trim();
   if (normalizedWallet.isEmpty) {
-    return 'Connect an approved artist wallet to request profile promotion.';
+    return walletRequiredReason;
   }
 
   final verification = DaoRoleVerification(
@@ -46,10 +49,10 @@ String? resolveArtistPromotionUnavailableReason({
 
   if (verification.isApprovedFor(DaoRoleType.institution) ||
       verification.isPendingFor(DaoRoleType.institution)) {
-    return 'Institution wallets cannot self-serve artist promotion. Use a dedicated artist wallet.';
+    return institutionConflictReason;
   }
   if (!verification.isApprovedFor(DaoRoleType.artist)) {
-    return 'Profile promotion is available only for approved artist wallets.';
+    return approvalRequiredReason;
   }
   return null;
 }
@@ -160,12 +163,17 @@ class _ArtistStudioState extends State<ArtistStudio> {
   }
 
   String? _artistPromotionUnavailableReason() {
+    final l10n = AppLocalizations.of(context)!;
     final daoProvider = context.read<DAOProvider>();
     final wallet = _resolveWalletAddress();
     final review = _artistReview ?? daoProvider.findReviewForWallet(wallet);
     return resolveArtistPromotionUnavailableReason(
       walletAddress: wallet,
       review: review,
+      walletRequiredReason: l10n.artistPromotionRequiresWalletReason,
+      institutionConflictReason:
+          l10n.artistPromotionConflictWithInstitutionReason,
+      approvalRequiredReason: l10n.artistPromotionRequiresApprovalReason,
     );
   }
 
@@ -1087,6 +1095,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
   Future<void> debugOpenProfilePromotionFlow() => _openProfilePromotionFlow();
 
   Future<void> _openProfilePromotionFlow() async {
+    final l10n = AppLocalizations.of(context)!;
     final unavailableReason = _artistPromotionUnavailableReason();
     if (unavailableReason != null) {
       ScaffoldMessenger.of(context).showKubusSnackBar(
@@ -1107,7 +1116,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
       context: context,
       entityType: PromotionEntityType.profile,
       entityId: entityId,
-      entityLabel: profile?.displayName ?? 'my profile',
+      entityLabel: profile?.displayName ?? l10n.desktopArtistStudioMyProfile,
     );
   }
 

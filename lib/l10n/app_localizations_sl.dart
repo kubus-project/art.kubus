@@ -5592,6 +5592,15 @@ class AppLocalizationsSl extends AppLocalizations {
   String get artistStudioCtaApplyForDaoReview => 'Prijavi za pregled DAO';
 
   @override
+  String get artistPromotionRequiresWalletReason => 'Poveži odobreno umetniško denarnico za zahtevo promocije profila.';
+
+  @override
+  String get artistPromotionConflictWithInstitutionReason => 'Institucijske denarnice ne morejo same upravljati promocije umetnika. Uporabi ločeno umetniško denarnico.';
+
+  @override
+  String get artistPromotionRequiresApprovalReason => 'Promocija profila je na voljo samo za odobrene umetniške denarnice.';
+
+  @override
   String get artistStudioTabGallery => 'Galerija';
 
   @override

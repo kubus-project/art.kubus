@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/dao.dart';
 import 'package:art_kubus/models/user_profile.dart';
+import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/providers/collab_provider.dart';
 import 'package:art_kubus/providers/dao_provider.dart';
 import 'package:art_kubus/providers/exhibitions_provider.dart';
@@ -227,13 +228,23 @@ Future<void> _pumpInstitutionHub(
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  const walletRequiredReason =
+      'Connect an approved artist wallet to request profile promotion.';
+  const institutionConflictReason =
+      'Institution wallets cannot self-serve artist promotion. Use a dedicated artist wallet.';
+  const approvalRequiredReason =
+      'Profile promotion is available only for approved artist wallets.';
+
   test('artist promotion helper covers non-approved artist states', () {
     expect(
       resolveArtistPromotionUnavailableReason(
         walletAddress: '',
         review: null,
+        walletRequiredReason: walletRequiredReason,
+        institutionConflictReason: institutionConflictReason,
+        approvalRequiredReason: approvalRequiredReason,
       ),
-      'Connect an approved artist wallet to request profile promotion.',
+      walletRequiredReason,
     );
 
     expect(
@@ -242,8 +253,11 @@ void main() {
         review: DAOReview.fromJson(
           _daoReviewJson(status: 'pending', role: 'artist'),
         ),
+        walletRequiredReason: walletRequiredReason,
+        institutionConflictReason: institutionConflictReason,
+        approvalRequiredReason: approvalRequiredReason,
       ),
-      'Profile promotion is available only for approved artist wallets.',
+      approvalRequiredReason,
     );
 
     expect(
@@ -252,16 +266,22 @@ void main() {
         review: DAOReview.fromJson(
           _daoReviewJson(status: 'rejected', role: 'artist'),
         ),
+        walletRequiredReason: walletRequiredReason,
+        institutionConflictReason: institutionConflictReason,
+        approvalRequiredReason: approvalRequiredReason,
       ),
-      'Profile promotion is available only for approved artist wallets.',
+      approvalRequiredReason,
     );
 
     expect(
       resolveArtistPromotionUnavailableReason(
         walletAddress: 'wallet-1',
         review: null,
+        walletRequiredReason: walletRequiredReason,
+        institutionConflictReason: institutionConflictReason,
+        approvalRequiredReason: approvalRequiredReason,
       ),
-      'Profile promotion is available only for approved artist wallets.',
+      approvalRequiredReason,
     );
 
     expect(
@@ -270,8 +290,11 @@ void main() {
         review: DAOReview.fromJson(
           _daoReviewJson(status: 'pending', role: 'institution'),
         ),
+        walletRequiredReason: walletRequiredReason,
+        institutionConflictReason: institutionConflictReason,
+        approvalRequiredReason: approvalRequiredReason,
       ),
-      'Institution wallets cannot self-serve artist promotion. Use a dedicated artist wallet.',
+      institutionConflictReason,
     );
   });
 
@@ -283,8 +306,17 @@ void main() {
       reviewJson: _daoReviewJson(status: 'approved', role: 'artist'),
     );
 
-    expect(find.byTooltip('Promote my profile'), findsOneWidget);
-    expect(find.text('Promote my profile'), findsOneWidget);
+    final context = tester.element(find.byType(ArtistStudio));
+    final l10n = AppLocalizations.of(context)!;
+
+    expect(
+      find.byTooltip(l10n.desktopArtistStudioPromoteProfileTitle),
+      findsOneWidget,
+    );
+    expect(
+      find.text(l10n.desktopArtistStudioPromoteProfileTitle),
+      findsOneWidget,
+    );
   });
 
   testWidgets(
@@ -303,10 +335,11 @@ void main() {
     await state.debugOpenProfilePromotionFlow();
     await tester.pumpAndSettle();
 
+    final context = tester.element(find.byType(ArtistStudio));
+    final l10n = AppLocalizations.of(context)!;
+
     expect(
-      find.text(
-        'Institution wallets cannot self-serve artist promotion. Use a dedicated artist wallet.',
-      ),
+      find.text(l10n.artistPromotionConflictWithInstitutionReason),
       findsOneWidget,
     );
   });
@@ -320,10 +353,17 @@ void main() {
       reviewJson: _daoReviewJson(status: 'approved', role: 'institution'),
     );
 
-    expect(find.text('Create event'), findsNothing);
-    expect(find.text('Events'), findsOneWidget);
-    expect(find.text('Exhibitions'), findsOneWidget);
-    expect(find.text('Create'), findsOneWidget);
-    expect(find.text('Analytics'), findsOneWidget);
+    final context = tester.element(find.byType(InstitutionHub));
+    final l10n = AppLocalizations.of(context)!;
+
+    expect(find.text(l10n.desktopInstitutionCreateEventTitle), findsNothing);
+    expect(find.text(l10n.desktopInstitutionManageEventsTitle), findsOneWidget);
+    if (AppConfig.isFeatureEnabled('exhibitions')) {
+      expect(find.text(l10n.institutionHubTabExhibitions), findsOneWidget);
+    } else {
+      expect(find.text(l10n.institutionHubTabExhibitions), findsNothing);
+    }
+    expect(find.text(l10n.institutionHubTabCreate), findsOneWidget);
+    expect(find.text(l10n.institutionHubTabAnalytics), findsOneWidget);
   });
 }

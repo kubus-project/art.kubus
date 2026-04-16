@@ -10673,6 +10673,24 @@ abstract class AppLocalizations {
   /// **'Apply for DAO review'**
   String get artistStudioCtaApplyForDaoReview;
 
+  /// No description provided for @artistPromotionRequiresWalletReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect an approved artist wallet to request profile promotion.'**
+  String get artistPromotionRequiresWalletReason;
+
+  /// No description provided for @artistPromotionConflictWithInstitutionReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution wallets cannot self-serve artist promotion. Use a dedicated artist wallet.'**
+  String get artistPromotionConflictWithInstitutionReason;
+
+  /// No description provided for @artistPromotionRequiresApprovalReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile promotion is available only for approved artist wallets.'**
+  String get artistPromotionRequiresApprovalReason;
+
   /// No description provided for @artistStudioTabGallery.
   ///
   /// In en, this message translates to:

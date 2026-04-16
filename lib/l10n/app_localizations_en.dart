@@ -5576,6 +5576,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artistStudioCtaApplyForDaoReview => 'Apply for DAO review';
 
   @override
+  String get artistPromotionRequiresWalletReason => 'Connect an approved artist wallet to request profile promotion.';
+
+  @override
+  String get artistPromotionConflictWithInstitutionReason => 'Institution wallets cannot self-serve artist promotion. Use a dedicated artist wallet.';
+
+  @override
+  String get artistPromotionRequiresApprovalReason => 'Profile promotion is available only for approved artist wallets.';
+
+  @override
   String get artistStudioTabGallery => 'Gallery';
 
   @override
