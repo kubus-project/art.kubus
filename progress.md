@@ -35,3 +35,40 @@ The artworks modal needed real artwork card media rendering. Cards had titles an
 
 ## Final Status
 Complete. The remaining modal rendering gap is fixed, with targeted static validation passing.
+
+---
+
+## Follow-up Regression Fix (2026-04-17)
+
+### Problem
+On other-user profile open, followers/following modals were already prefetched and populated, but the stat card numbers could stay stale on first render.
+
+### Root Cause
+Both other-user profile `_loadUser()` flows called:
+- `_loadUserStats(skipFollowersOverwrite: true, forceRefresh: true)`
+
+That preserved existing cached follower/following values during normal profile open (and pull-to-refresh, which reuses `_loadUser()`), preventing freshly fetched counters from replacing stale values.
+
+### Minimal Fix Applied
+- `lib/screens/community/user_profile_screen.dart`
+	- In `_loadUser()`, changed stats refresh call to `await _loadUserStats(forceRefresh: true);`
+- `lib/screens/desktop/community/desktop_user_profile_screen.dart`
+	- In `_loadUser()`, changed stats refresh call to `await _loadUserStats(forceRefresh: true);`
+
+Kept optimistic-only preservation intact in explicit follow/unfollow failure handling:
+- `await _loadUserStats(skipFollowersOverwrite: true);`
+
+### Validation Performed
+- Formatted touched Dart files.
+- Ran analyzer on touched files:
+	- `flutter analyze lib/screens/community/user_profile_screen.dart lib/screens/desktop/community/desktop_user_profile_screen.dart`
+	- Result: **No issues found**.
+- Ran focused community+desktop tests:
+	- task `Flutter: Safe test (focused community+desktop)`
+	- Result: **All tests passed**.
+
+### Outcome
+- Initial other-user profile load now allows fresh follower/following counters to overwrite stale cached values.
+- Pull-to-refresh follows same corrected behavior.
+- Modal prefetch behavior remains unchanged and populated.
+- Artworks stat behavior remains unchanged.

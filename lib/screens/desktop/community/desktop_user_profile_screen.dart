@@ -1903,7 +1903,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       UserService.fetchAndUpdateUserStats(user!.id);
     } catch (_) {}
 
-    await _loadUserStats(skipFollowersOverwrite: true, forceRefresh: true);
+    await _loadUserStats(forceRefresh: true);
     await _loadPosts();
     await _maybeLoadArtistData(force: true);
   }
