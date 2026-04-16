@@ -346,11 +346,11 @@ class _InstitutionHubState extends State<InstitutionHub> {
         body: isCrossRoleBlocked
             ? _buildRoleBlockedContent(
                 title: hasArtistBadge
-                    ? 'Artist badge active'
-                    : 'Artist review in progress',
+                    ? l10n.institutionHubArtistBadgeActiveTitle
+                    : l10n.institutionHubArtistReviewInProgressTitle,
                 description: hasArtistBadge
-                    ? 'Artist wallets unlock creation tooling. Institution flows need a dedicated wallet without creator approvals.'
-                    : 'You have an active artist application. Wait for that decision or reset it before continuing as an institution.',
+                    ? l10n.institutionHubArtistBadgeActiveDescription
+                    : l10n.institutionHubArtistReviewInProgressDescription,
                 icon: Icons.palette_outlined,
               )
             : isApprovedInstitution
@@ -369,12 +369,9 @@ class _InstitutionHubState extends State<InstitutionHub> {
     final roles = KubusColorRoles.of(context);
     final persona = context.watch<ProfileProvider>().userPersona;
     final subtitle = switch (persona) {
-      UserPersona.institution =>
-        l10n.web3InstitutionHubP1Description,
-      UserPersona.creator =>
-        l10n.web3InstitutionHubP5Feature3,
-      UserPersona.lover =>
-        l10n.web3InstitutionHubP5Description,
+      UserPersona.institution => l10n.web3InstitutionHubP1Description,
+      UserPersona.creator => l10n.web3InstitutionHubP5Feature3,
+      UserPersona.lover => l10n.web3InstitutionHubP5Description,
       null => l10n.web3InstitutionHubP1Description,
     };
     final panelStyle = KubusGlassStyle.resolve(
@@ -485,18 +482,19 @@ class _InstitutionHubState extends State<InstitutionHub> {
     required bool hasArtistBadge,
     required bool hasConflictingArtistReview,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     if (isCrossRoleBlocked) {
       final scheme = Theme.of(context).colorScheme;
       final title = hasArtistBadge
-          ? 'Artist badge active'
+          ? l10n.institutionHubArtistBadgeActiveTitle
           : hasConflictingArtistReview
-              ? 'Artist review in progress'
-              : 'Role conflict detected';
+              ? l10n.institutionHubArtistReviewInProgressTitle
+              : l10n.institutionHubCrossRoleConflictTitle;
       final message = hasArtistBadge
-          ? 'Artist wallets are optimized for creation tooling. Switch to a dedicated institutional wallet before applying for curation tools.'
+          ? l10n.institutionHubArtistWalletSwitchDescription
           : hasConflictingArtistReview
-              ? 'You currently have an artist application pending. Finish that review or request a reset prior to submitting an institution application.'
-              : 'We detected an artist submission for this wallet. Clear it from settings before continuing as an institution.';
+              ? l10n.institutionHubArtistReviewPendingResetDescription
+              : l10n.institutionHubArtistSubmissionConflictDescription;
       return _buildRoleBanner(
         icon: Icons.palette_outlined,
         title: title,
@@ -514,10 +512,10 @@ class _InstitutionHubState extends State<InstitutionHub> {
     final isPending = status == 'pending';
     final isRejected = status == 'rejected';
     final statusLabel = isApprovedInstitution
-        ? 'APPROVED'
+        ? l10n.institutionHubDaoStatusApproved
         : review != null
             ? status.toUpperCase()
-            : 'NOT APPLIED';
+            : l10n.institutionHubDaoStatusNotApplied;
     final statusColor = isApprovedInstitution
         ? roles.positiveAction
         : isRejected
@@ -528,11 +526,11 @@ class _InstitutionHubState extends State<InstitutionHub> {
         (!isPending && !isApprovedInstitution || isRejected);
     final ctaLabel = !canSubmit
         ? (isApprovedInstitution
-            ? 'Approved by DAO'
+            ? l10n.institutionHubCtaApprovedByDao
             : isPending
-                ? 'Pending DAO review'
-                : 'Connect wallet to apply')
-        : 'Apply for review';
+                ? l10n.institutionHubCtaPendingDaoReview
+                : l10n.institutionHubCtaConnectWalletToApply)
+        : l10n.institutionHubApplyForReviewAction;
     final IconData ctaIcon = isApprovedInstitution
         ? Icons.verified_outlined
         : isPending
@@ -583,14 +581,14 @@ class _InstitutionHubState extends State<InstitutionHub> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Institution application',
+                          l10n.institutionHubApplicationTitle,
                           style: KubusTextStyles.sectionTitle.copyWith(
                             color: scheme.onSurface,
                           ),
                         ),
                         const SizedBox(height: KubusSpacing.xs),
                         Text(
-                          'Submit your organization for DAO review and unlock institutional tooling.',
+                          l10n.institutionHubApplicationCardSubtitle,
                           style: KubusTextStyles.actionTileSubtitle.copyWith(
                             color: scheme.onSurface.withValues(alpha: 0.7),
                           ),
@@ -634,7 +632,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
                       )
                     else if (review != null)
                       Text(
-                        'Status synced from DAO',
+                        l10n.institutionHubDaoStatusSyncedLabel,
                         style: KubusTextStyles.badgeCount.copyWith(
                           color: scheme.onSurface.withValues(alpha: 0.6),
                         ),
@@ -653,11 +651,11 @@ class _InstitutionHubState extends State<InstitutionHub> {
                   const SizedBox(height: KubusSpacing.sm),
                   Text(
                     isPending
-                        ? 'Your submission is in the DAO review queue.'
+                        ? l10n.institutionHubDaoReviewQueueMessage
                         : isApprovedInstitution
-                            ? 'Congratulations! Approved for institution tools.'
+                            ? l10n.institutionHubApprovedToolsMessage
                             : isRejected
-                                ? 'Your last submission was rejected. You can resubmit with updates.'
+                                ? l10n.institutionHubRejectedResubmitMessage
                                 : '',
                     style: KubusTextStyles.actionTileSubtitle.copyWith(
                       color: scheme.onSurface.withValues(alpha: 0.7),
@@ -1032,6 +1030,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
+        final l10n = AppLocalizations.of(sheetContext)!;
         final scheme = Theme.of(context).colorScheme;
         final roles = KubusColorRoles.of(context);
         return SingleChildScrollView(
@@ -1047,59 +1046,59 @@ class _InstitutionHubState extends State<InstitutionHub> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   KubusSheetHeader(
-                    title: 'Institution application',
-                    subtitle:
-                        'Share your mission, programming focus, and how you plan to collaborate with the DAO.',
+                    title: l10n.institutionHubApplicationTitle,
+                    subtitle: l10n.institutionHubApplicationSubtitle,
                     showHandle: false,
                   ),
                   const SizedBox(height: KubusSpacing.sm),
                   TextFormField(
                     controller: _organizationController,
-                    decoration: const InputDecoration(
-                      labelText: 'Organization name',
+                    decoration: InputDecoration(
+                      labelText:
+                          l10n.institutionHubApplicationOrganizationLabel,
                       border: OutlineInputBorder(),
                     ),
                     validator: (value) =>
                         (value == null || value.trim().isEmpty)
-                            ? 'Please provide your organization name'
+                            ? l10n.institutionHubApplicationOrganizationRequired
                             : null,
                   ),
                   const SizedBox(height: KubusSpacing.md),
                   TextFormField(
                     controller: _contactController,
-                    decoration: const InputDecoration(
-                      labelText: 'Website or contact email',
+                    decoration: InputDecoration(
+                      labelText: l10n.institutionHubApplicationContactLabel,
                       border: OutlineInputBorder(),
                     ),
                     validator: (value) =>
                         (value == null || value.trim().isEmpty)
-                            ? 'Share a website or contact email'
+                            ? l10n.institutionHubApplicationContactRequired
                             : null,
                   ),
                   const SizedBox(height: KubusSpacing.md),
                   TextFormField(
                     controller: _focusController,
-                    decoration: const InputDecoration(
-                      labelText: 'Curation focus',
+                    decoration: InputDecoration(
+                      labelText: l10n.institutionHubApplicationFocusLabel,
                       border: OutlineInputBorder(),
                     ),
                     validator: (value) =>
                         (value == null || value.trim().isEmpty)
-                            ? 'Let us know your programming focus'
+                            ? l10n.institutionHubApplicationFocusRequired
                             : null,
                   ),
                   const SizedBox(height: KubusSpacing.md),
                   TextFormField(
                     controller: _missionController,
                     maxLines: 4,
-                    decoration: const InputDecoration(
-                      labelText: 'Mission and goals',
+                    decoration: InputDecoration(
+                      labelText: l10n.institutionHubApplicationMissionLabel,
                       alignLabelWithHint: true,
                       border: OutlineInputBorder(),
                     ),
                     validator: (value) =>
                         (value == null || value.trim().length < 20)
-                            ? 'Describe your mission in at least 20 characters'
+                            ? l10n.institutionHubApplicationMissionRequired
                             : null,
                   ),
                   const SizedBox(height: KubusSpacing.lg),
@@ -1118,9 +1117,9 @@ class _InstitutionHubState extends State<InstitutionHub> {
                                 web3Provider.walletAddress;
                         if (wallet.isEmpty) {
                           scaffold.showKubusSnackBar(
-                            const SnackBar(
+                            SnackBar(
                               content: Text(
-                                'Connect your wallet before submitting.',
+                                l10n.institutionHubApplicationWalletRequired,
                               ),
                             ),
                           );
@@ -1147,8 +1146,10 @@ class _InstitutionHubState extends State<InstitutionHub> {
                             SnackBar(
                               content: Text(
                                 review != null
-                                    ? 'Application submitted to DAO reviewers.'
-                                    : 'Unable to submit application right now.',
+                                    ? l10n
+                                        .institutionHubApplicationSubmittedToast
+                                    : l10n
+                                        .institutionHubApplicationSubmitUnavailableToast,
                               ),
                               backgroundColor: review != null
                                   ? roles.positiveAction
@@ -1159,13 +1160,17 @@ class _InstitutionHubState extends State<InstitutionHub> {
                           if (!mounted) return;
                           scaffold.showKubusSnackBar(
                             SnackBar(
-                              content: Text('Submission failed: $e'),
+                              content: Text(
+                                l10n.institutionHubApplicationSubmitFailedToast(
+                                  e,
+                                ),
+                              ),
                               backgroundColor: roles.negativeAction,
                             ),
                           );
                         }
                       },
-                      label: 'Submit application',
+                      label: l10n.institutionHubApplicationSubmitButton,
                       isFullWidth: true,
                       backgroundColor: scheme.primary,
                       foregroundColor: scheme.onPrimary,

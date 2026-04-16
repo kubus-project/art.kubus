@@ -619,11 +619,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   List<Widget> _buildAnimatedSections(
     double spacing,
-    String headerDisplayName,
-    {
-      required bool desktopGuidedLayout,
-    }
-  ) {
+    String headerDisplayName, {
+    required bool desktopGuidedLayout,
+  }) {
     final sections = <Widget>[];
     var animationIndex = 0;
 
@@ -700,8 +698,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final isInstitution = user?.isInstitution ?? false;
     final networkName = web3Provider.currentNetwork.trim();
     final networkLabel = networkName.isEmpty
-      ? l10n.commonNotAvailableShort
-      : networkName.toUpperCase();
+        ? l10n.commonNotAvailableShort
+        : networkName.toUpperCase();
     final isMainnet = networkLabel == 'MAINNET';
     final networkColor = isMainnet ? scheme.tertiary : scheme.secondary;
     return SliverAppBar(
@@ -777,9 +775,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                                   web3Provider.walletAddress,
                                                 ),
                                                 child: Padding(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                    horizontal: KubusSpacing.xxs,
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                    horizontal:
+                                                        KubusSpacing.xxs,
                                                     vertical: KubusSpacing.xxs,
                                                   ),
                                                   child: Row(
@@ -797,7 +796,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                                             .copyWith(
                                                           fontFamily:
                                                               'RobotoMono',
-                                                          color: scheme.onSurface
+                                                          color: scheme
+                                                              .onSurface
                                                               .withValues(
                                                             alpha: 0.6,
                                                           ),
@@ -826,8 +826,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                                 vertical: KubusSpacing.xxs,
                                               ),
                                               decoration: BoxDecoration(
-                                                color: networkColor
-                                                    .withValues(alpha: 0.12),
+                                                color: networkColor.withValues(
+                                                    alpha: 0.12),
                                                 borderRadius:
                                                     BorderRadius.circular(
                                                   KubusRadius.sm,
@@ -1292,8 +1292,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             navigationProvider.getQuickActionScreens(maxItems: 12);
         const sectionHeaderGap = KubusSpacing.sm + KubusSpacing.xs;
         const sectionBlockGap = KubusSpacing.md;
-        final suggestedKeys = _suggestedQuickActionKeys(
-          persona, currentUser)
+        final suggestedKeys = _suggestedQuickActionKeys(persona, currentUser)
             .where(
                 (key) => NavigationProvider.screenDefinitions.containsKey(key))
             .toList(growable: false);
@@ -1340,7 +1339,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
               ],
             ),
-              const SizedBox(height: sectionHeaderGap),
+            const SizedBox(height: sectionHeaderGap),
             if (frequentScreens.isEmpty)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -2237,18 +2236,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         if (rails.isEmpty) {
           final locale = Localizations.localeOf(context).languageCode;
           final hasError = (promotionProvider.error ?? '').trim().isNotEmpty;
+          final l10n = AppLocalizations.of(context)!;
           return EmptyStateCard(
             icon: hasError
                 ? Icons.campaign_outlined
                 : Icons.auto_awesome_mosaic_outlined,
             title: hasError
-                ? 'Home rails unavailable'
-                : 'Discovery rails are warming up',
+                ? l10n.homeRailsUnavailableTitle
+                : l10n.homeRailsWarmingTitle,
             description: hasError
-                ? 'We could not load ranked home rails right now.'
-                : 'Featured artworks, artists, institutions, events, and exhibitions will appear here once ranked content is available.',
+                ? l10n.homeRailsUnavailableDescription
+                : l10n.homeRailsWarmingDescription,
             showAction: hasError,
-            actionLabel: hasError ? 'Retry' : null,
+            actionLabel: hasError ? l10n.commonRetry : null,
             onAction: hasError
                 ? () {
                     context.read<PromotionProvider>().loadHomeRails(
@@ -2282,12 +2282,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     List<HomeRailItem> items,
   ) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final title = switch (rail.entityType) {
-      PromotionEntityType.artwork => 'Artworks',
-      PromotionEntityType.profile => 'Artists',
-      PromotionEntityType.institution => 'Institutions',
-      PromotionEntityType.event => 'Events',
-      PromotionEntityType.exhibition => 'Exhibitions',
+      PromotionEntityType.artwork => l10n.homeRailArtworksTitle,
+      PromotionEntityType.profile => l10n.homeRailArtistsTitle,
+      PromotionEntityType.institution => l10n.homeRailInstitutionsTitle,
+      PromotionEntityType.event => l10n.homeRailEventsTitle,
+      PromotionEntityType.exhibition => l10n.homeRailExhibitionsTitle,
     };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2314,9 +2315,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               imageHeight: compactScreen ? 100 : 108,
               profileAvatarRadius: compactScreen ? 24 : 28,
               placeholderIconBuilder: _iconForRailItem,
-              profileFallbackLabel: AppLocalizations.of(context)
-                      ?.desktopHomeCreatorFallbackName ??
-                  'Creator',
+              profileFallbackLabel: l10n.desktopHomeCreatorFallbackName,
               subtitleBuilder: (context, item) =>
                   _buildHomeRailCardSubtitle(item, scheme),
               onItemTap: (item) {
@@ -2346,8 +2345,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       final creatorIdentity = resolveArtworkHomeRailCreator(
         item,
         fallbackLabel:
-            AppLocalizations.of(context)?.desktopHomeCreatorFallbackName ??
-                'Creator',
+            AppLocalizations.of(context)!.desktopHomeCreatorFallbackName,
       );
       if (creatorIdentity == null) return null;
 

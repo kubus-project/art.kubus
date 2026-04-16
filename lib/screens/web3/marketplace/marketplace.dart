@@ -189,7 +189,7 @@ class _MarketplaceState extends State<Marketplace>
                 },
                 activeThumbColor: themeProvider.accentColor,
                 title: Text(
-                  'Show AR-only collections',
+                  l10n.marketplaceSettingsShowArOnlyTitle,
                   style: KubusTypography.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -197,7 +197,7 @@ class _MarketplaceState extends State<Marketplace>
                   ),
                 ),
                 subtitle: Text(
-                  'Filter collections that require AR interaction.',
+                  l10n.marketplaceSettingsShowArOnlyDescription,
                   style: KubusTypography.inter(
                     fontSize: 11,
                     color: colorScheme.onSurface.withValues(alpha: 0.7),
@@ -356,11 +356,27 @@ class _MarketplaceState extends State<Marketplace>
       ),
       child: Row(
         children: [
-          Expanded(child: _buildTabButton('Featured', Icons.star, 0)),
-          Expanded(child: _buildTabButton('Trending', Icons.trending_up, 1)),
           Expanded(
-              child: _buildTabButton(
-                  'My Listings', Icons.account_balance_wallet, 2)),
+            child: _buildTabButton(
+              AppLocalizations.of(context)!.marketplaceFeaturedTab,
+              Icons.star,
+              0,
+            ),
+          ),
+          Expanded(
+            child: _buildTabButton(
+              AppLocalizations.of(context)!.marketplaceTrendingTab,
+              Icons.trending_up,
+              1,
+            ),
+          ),
+          Expanded(
+            child: _buildTabButton(
+              AppLocalizations.of(context)!.marketplaceMyListingsTab,
+              Icons.account_balance_wallet,
+              2,
+            ),
+          ),
         ],
       ),
     );
@@ -416,6 +432,7 @@ class _MarketplaceState extends State<Marketplace>
   Widget _buildFeaturedNFTs() {
     return Consumer2<CollectiblesProvider, ThemeProvider>(
       builder: (context, collectiblesProvider, themeProvider, child) {
+        final l10n = AppLocalizations.of(context)!;
         var featuredEntries =
             collectiblesProvider.getFeaturedMarketplaceEntries();
         if (_showArOnly) {
@@ -430,16 +447,33 @@ class _MarketplaceState extends State<Marketplace>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: Text(
-                      'Featured Collections',
-                      style: KubusTypography.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                      overflow: TextOverflow.ellipsis,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.marketplaceFeaturedCollectionsTitle,
+                          style: KubusTypography.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: KubusSpacing.xs),
+                        Text(
+                          l10n.marketplaceFeaturedCollectionsSubtitle,
+                          style: KubusTypography.inter(
+                            fontSize: 12,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.68),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -482,9 +516,8 @@ class _MarketplaceState extends State<Marketplace>
                   padding: const EdgeInsets.all(8.0),
                   child: EmptyStateCard(
                     icon: Icons.storefront_outlined,
-                    title: 'No minted NFTs available yet',
-                    description:
-                        'Marketplace listings appear once an artwork has a real NFT mint.',
+                    title: l10n.marketplaceNoMintedNftsTitle,
+                    description: l10n.marketplaceNoMintedNftsDescription,
                     showAction: false,
                   ),
                 )
@@ -500,8 +533,8 @@ class _MarketplaceState extends State<Marketplace>
                       physics: const NeverScrollableScrollPhysics(),
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: crossAxisCount,
-                        crossAxisSpacing: 8,
-                        mainAxisSpacing: 8,
+                        crossAxisSpacing: KubusSpacing.md,
+                        mainAxisSpacing: KubusSpacing.md,
                         childAspectRatio: childAspectRatio,
                       ),
                       itemCount: featuredEntries.length,
@@ -522,6 +555,7 @@ class _MarketplaceState extends State<Marketplace>
   Widget _buildTrendingNFTs() {
     return Consumer2<CollectiblesProvider, ThemeProvider>(
       builder: (context, collectiblesProvider, themeProvider, child) {
+        final l10n = AppLocalizations.of(context)!;
         var trendingEntries =
             collectiblesProvider.getTrendingMarketplaceEntries();
         if (_showArOnly) {
@@ -535,13 +569,29 @@ class _MarketplaceState extends State<Marketplace>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Trending This Week',
-                style: KubusTypography.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.marketplaceTrendingThisWeekTitle,
+                    style: KubusTypography.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: KubusSpacing.xs),
+                  Text(
+                    l10n.marketplaceTrendingThisWeekSubtitle,
+                    style: KubusTypography.inter(
+                      fontSize: 12,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.68),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               if (trendingEntries.isEmpty)
@@ -549,9 +599,8 @@ class _MarketplaceState extends State<Marketplace>
                   padding: const EdgeInsets.all(8.0),
                   child: EmptyStateCard(
                     icon: Icons.trending_up,
-                    title: 'No trending NFTs yet',
-                    description:
-                        'Check back later as minted artwork activity picks up.',
+                    title: l10n.marketplaceNoTrendingNftsTitle,
+                    description: l10n.marketplaceNoTrendingNftsDescription,
                     showAction: false,
                   ),
                 )
@@ -567,8 +616,8 @@ class _MarketplaceState extends State<Marketplace>
                       physics: const NeverScrollableScrollPhysics(),
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: crossAxisCount,
-                        crossAxisSpacing: 8,
-                        mainAxisSpacing: 8,
+                        crossAxisSpacing: KubusSpacing.md,
+                        mainAxisSpacing: KubusSpacing.md,
                         childAspectRatio: childAspectRatio,
                       ),
                       itemCount: trendingEntries.length,
@@ -590,6 +639,7 @@ class _MarketplaceState extends State<Marketplace>
     return Consumer3<CollectiblesProvider, Web3Provider, ThemeProvider>(
       builder:
           (context, collectiblesProvider, web3Provider, themeProvider, child) {
+        final l10n = AppLocalizations.of(context)!;
         final profileProvider = context.watch<ProfileProvider>();
         final walletProvider = context.watch<WalletProvider>();
         final access = WalletSessionAccessSnapshot.fromProviders(
@@ -690,9 +740,8 @@ class _MarketplaceState extends State<Marketplace>
                   margin: const EdgeInsets.only(bottom: KubusSpacing.md),
                   padding: const EdgeInsets.all(KubusSpacing.md),
                   decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .surfaceContainerHighest,
+                    color:
+                        Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(KubusRadius.md),
                     border: Border.all(
                       color: Theme.of(context)
@@ -725,7 +774,8 @@ class _MarketplaceState extends State<Marketplace>
                             walletProvider: walletProvider,
                           );
                         },
-                        child: Text(AppLocalizations.of(context)!.commonReconnect),
+                        child:
+                            Text(AppLocalizations.of(context)!.commonReconnect),
                       ),
                     ],
                   ),
@@ -734,7 +784,7 @@ class _MarketplaceState extends State<Marketplace>
                 children: [
                   Expanded(
                     child: Text(
-                      'My NFT Collection',
+                      l10n.marketplaceMyCollectionTitle,
                       style: KubusTypography.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -755,7 +805,9 @@ class _MarketplaceState extends State<Marketplace>
                           color: AppColorUtils.amberAccent, width: 1),
                     ),
                     child: Text(
-                      '${myCollectibles.length} NFTs',
+                      l10n.marketplaceMyCollectionCount(
+                        myCollectibles.length,
+                      ),
                       style: KubusTypography.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
@@ -770,7 +822,7 @@ class _MarketplaceState extends State<Marketplace>
               // Listed for sale section
               if (myCollectiblesForSale.isNotEmpty) ...[
                 Text(
-                  'Listed for Sale',
+                  l10n.marketplaceListedForSaleTitle,
                   style: KubusTypography.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -814,8 +866,8 @@ class _MarketplaceState extends State<Marketplace>
                     physics: const NeverScrollableScrollPhysics(),
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: crossAxisCount,
-                      crossAxisSpacing: 8,
-                      mainAxisSpacing: 8,
+                      crossAxisSpacing: KubusSpacing.md,
+                      mainAxisSpacing: KubusSpacing.md,
                       childAspectRatio: childAspectRatio,
                     ),
                     itemCount: myCollectibles.length,
@@ -1133,7 +1185,11 @@ class _MarketplaceState extends State<Marketplace>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Owned NFT ${collectible.isForSale ? '• Listed for Sale' : ''}',
+                    collectible.isForSale
+                        ? AppLocalizations.of(context)!
+                            .marketplaceOwnedNftListedStatus
+                        : AppLocalizations.of(context)!
+                            .marketplaceOwnedNftStatus,
                     textAlign: TextAlign.center,
                     style: KubusTypography.inter(
                       fontSize: 14,
@@ -1209,7 +1265,7 @@ class _MarketplaceState extends State<Marketplace>
 
                     // Details
                     Text(
-                      'Details',
+                      AppLocalizations.of(context)!.commonDetails,
                       style: KubusTypography.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -1218,11 +1274,24 @@ class _MarketplaceState extends State<Marketplace>
                     ),
                     const SizedBox(height: 12),
                     if (series != null)
-                      _buildDetailRow('Collection', series.name),
-                    _buildDetailRow('Artwork', entry.artwork.title),
-                    _buildDetailRow('Token ID', '#${collectible.tokenId}'),
+                      _buildDetailRow(
+                        AppLocalizations.of(context)!
+                            .marketplaceDetailCollectionLabel,
+                        series.name,
+                      ),
                     _buildDetailRow(
-                        'Minted', _formatDate(collectible.mintedAt)),
+                      AppLocalizations.of(context)!
+                          .marketplaceDetailArtworkLabel,
+                      entry.artwork.title,
+                    ),
+                    _buildDetailRow(
+                      AppLocalizations.of(context)!.marketplaceTokenIdLabel,
+                      '#${collectible.tokenId}',
+                    ),
+                    _buildDetailRow(
+                      AppLocalizations.of(context)!.marketplaceMintedLabel,
+                      _formatDate(collectible.mintedAt),
+                    ),
                     if (collectibleValue != null)
                       _buildDetailRow(
                         collectibleValue.label,
@@ -1231,7 +1300,9 @@ class _MarketplaceState extends State<Marketplace>
                         ),
                       ),
                     _buildDetailRow(
-                        'Status', collectible.status.name.toUpperCase()),
+                      AppLocalizations.of(context)!.commonStatus,
+                      collectible.status.name.toUpperCase(),
+                    ),
                     const SizedBox(height: 24),
                   ],
                 ),
@@ -1299,7 +1370,7 @@ class _MarketplaceState extends State<Marketplace>
           borderRadius: BorderRadius.circular(KubusRadius.lg),
         ),
         title: Text(
-          'List NFT for Sale',
+          AppLocalizations.of(context)!.marketplaceListNftForSaleTitle,
           style: KubusTypography.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
@@ -1323,7 +1394,8 @@ class _MarketplaceState extends State<Marketplace>
               style: KubusTypography.inter(
                   color: Theme.of(context).colorScheme.onPrimary),
               decoration: InputDecoration(
-                labelText: 'Price (KUB8)',
+                labelText:
+                    AppLocalizations.of(context)!.marketplacePriceKub8Label,
                 labelStyle: KubusTypography.inter(
                     color: Theme.of(context)
                         .colorScheme
@@ -1719,7 +1791,8 @@ class _MarketplaceState extends State<Marketplace>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                value?.label ?? 'Status',
+                                value?.label ??
+                                    AppLocalizations.of(context)!.commonStatus,
                                 style: KubusTypography.inter(
                                   fontSize: 7,
                                   color: Theme.of(context)
@@ -1912,7 +1985,8 @@ class _MarketplaceState extends State<Marketplace>
                         children: [
                           Expanded(
                             child: _buildStatCard(
-                              'Total Supply',
+                              AppLocalizations.of(context)!
+                                  .marketplaceTotalSupplyLabel,
                               '${series.totalSupply}',
                               icon: Icons.layers_outlined,
                             ),
@@ -1920,7 +1994,8 @@ class _MarketplaceState extends State<Marketplace>
                           const SizedBox(width: 12),
                           Expanded(
                             child: _buildStatCard(
-                              'Minted',
+                              AppLocalizations.of(context)!
+                                  .marketplaceMintedLabel,
                               '${series.mintedCount}',
                               icon: Icons.check_circle_outline,
                             ),
@@ -1928,7 +2003,7 @@ class _MarketplaceState extends State<Marketplace>
                           const SizedBox(width: 12),
                           Expanded(
                             child: _buildStatCard(
-                              'Available',
+                              AppLocalizations.of(context)!.commonAvailable,
                               '${series.totalSupply - series.mintedCount}',
                               icon: Icons.storefront_outlined,
                             ),
@@ -1942,7 +2017,8 @@ class _MarketplaceState extends State<Marketplace>
                       children: [
                         Expanded(
                           child: _buildStatCard(
-                            entry.displayValue?.label ?? 'Status',
+                            entry.displayValue?.label ??
+                                AppLocalizations.of(context)!.commonStatus,
                             MarketplaceValueFormatter.formatDisplayValue(
                               entry.displayValue,
                             ),
@@ -1952,7 +2028,8 @@ class _MarketplaceState extends State<Marketplace>
                         const SizedBox(width: 12),
                         Expanded(
                           child: _buildStatCard(
-                            'Rarity',
+                            AppLocalizations.of(context)!
+                                .marketplaceRarityLabel,
                             entry.rarity?.name.toUpperCase() ?? 'NFT',
                             icon: Icons.auto_awesome_outlined,
                           ),

@@ -40,6 +40,21 @@ class GovernanceHub extends StatefulWidget {
 
 class _GovernanceHubState extends State<GovernanceHub>
     with TickerProviderStateMixin {
+  static const String _categoryPlatformUpdate = 'Platform Update';
+  static const String _categoryNewFeature = 'New Feature';
+  static const String _categoryPolicyChange = 'Policy Change';
+  static const String _categoryTreasuryAllocation = 'Treasury Allocation';
+  static const String _categoryCommunityInitiative = 'Community Initiative';
+  static const String _categoryTechnicalImprovement = 'Technical Improvement';
+  static const List<String> _proposalCategories = [
+    _categoryPlatformUpdate,
+    _categoryNewFeature,
+    _categoryPolicyChange,
+    _categoryTreasuryAllocation,
+    _categoryCommunityInitiative,
+    _categoryTechnicalImprovement,
+  ];
+
   int _selectedIndex = 0;
   int? _hoveredTabIndex;
   late AnimationController _animationController;
@@ -51,7 +66,7 @@ class _GovernanceHubState extends State<GovernanceHub>
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _categoryController = TextEditingController();
-  String _selectedCategory = 'Platform Update';
+  String _selectedCategory = _categoryPlatformUpdate;
   final _votingPeriodController = TextEditingController();
 
   KubusColorRoles get _roles => KubusColorRoles.of(context);
@@ -1571,15 +1586,6 @@ class _GovernanceHubState extends State<GovernanceHub>
   Widget _buildCategorySelector() {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final categories = [
-      'Platform Update',
-      'New Feature',
-      'Policy Change',
-      'Treasury Allocation',
-      'Community Initiative',
-      'Technical Improvement',
-    ];
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1603,7 +1609,7 @@ class _GovernanceHubState extends State<GovernanceHub>
             underline: const SizedBox(),
             dropdownColor: scheme.surfaceContainerHighest,
             style: TextStyle(color: scheme.onSurface),
-            items: categories.map((category) {
+            items: _proposalCategories.map((category) {
               return DropdownMenuItem<String>(
                 value: category,
                 child: Text(_categoryDisplayLabel(category, l10n)),
@@ -1622,17 +1628,17 @@ class _GovernanceHubState extends State<GovernanceHub>
 
   String _categoryDisplayLabel(String category, AppLocalizations l10n) {
     switch (category) {
-      case 'Platform Update':
+      case _categoryPlatformUpdate:
         return l10n.daoCategoryPlatformUpdate;
-      case 'New Feature':
+      case _categoryNewFeature:
         return l10n.daoCategoryNewFeature;
-      case 'Policy Change':
+      case _categoryPolicyChange:
         return l10n.daoCategoryPolicyChange;
-      case 'Treasury Allocation':
+      case _categoryTreasuryAllocation:
         return l10n.daoCategoryTreasuryAllocation;
-      case 'Community Initiative':
+      case _categoryCommunityInitiative:
         return l10n.daoCategoryCommunityInitiative;
-      case 'Technical Improvement':
+      case _categoryTechnicalImprovement:
         return l10n.daoCategoryTechnicalImprovement;
       default:
         return category;
@@ -1800,7 +1806,7 @@ class _GovernanceHubState extends State<GovernanceHub>
     _descriptionController.clear();
     _votingPeriodController.clear();
     setState(() {
-      _selectedCategory = 'Platform Update';
+      _selectedCategory = _categoryPlatformUpdate;
     });
   }
 

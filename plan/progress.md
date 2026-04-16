@@ -57,32 +57,40 @@ Finish the previously planned UI/UX hierarchy, spacing, alignment, distribution,
 - `lib/l10n/app_en.arb`, `lib/l10n/app_sl.arb`, `lib/l10n/app_localizations.dart`, `lib/l10n/app_localizations_en.dart`, `lib/l10n/app_localizations_sl.dart`: add the localization keys required by touched UI.
 
 # TODO Checklist
-- [ ] `community_screen.dart`: add groups directory header with localized title/subtitle and tokenized spacing.
-- [ ] `community_screen.dart`: localize composer tag label, tag hint, mention label, and mention hint.
-- [ ] `community_screen.dart`: localize group picker title, no-joined-groups toast, and no-description fallback.
-- [ ] `community_screen.dart`: replace audited magic spacing in groups/art feed sections with `KubusSpacing` tokens.
-- [ ] `wallet_home.dart`: add shared section header helper and apply it to quick actions, tokens, and recent transactions.
-- [ ] `wallet_home.dart`: make quick actions a restrained grouped control with stable action button dimensions and aligned gutters.
-- [ ] `wallet_home.dart`: add localized empty token state and replace mojibake approximate-value copy.
-- [ ] `marketplace.dart`: localize settings AR-only switch title/subtitle, tab labels, featured/trending titles, and empty states.
-- [ ] `marketplace.dart`: add browsing subtitles and tokenized grid spacing for featured/trending listings.
-- [ ] `institution_hub.dart`: localize institution cross-role blocked title/description strings.
-- [ ] `institution_hub.dart`: localize application sheet title, submit action, and failed submission copy.
-- [ ] `messages_screen.dart`: add localized conversation list header/action row above non-empty conversation lists.
-- [ ] `home_screen.dart`: replace hardcoded discovery rail warming and creator fallback strings with localization.
-- [ ] `governance_hub.dart`: localize proposal category display labels while preserving stable internal category values.
-- [ ] `lib/l10n/*`: update English and Slovenian localization sources and generated localization accessors for all added keys.
-- [ ] Verification: run formatting on touched Dart files.
-- [ ] Verification: run `flutter analyze` or record blocker.
-- [ ] Verification: re-open every touched file and mark checklist status accurately.
+- [x] `community_screen.dart`: add groups directory header with localized title/subtitle and tokenized spacing.
+- [x] `community_screen.dart`: localize composer tag label, tag hint, mention label, and mention hint.
+- [x] `community_screen.dart`: localize group picker title, no-joined-groups toast, and no-description fallback.
+- [x] `community_screen.dart`: replace audited magic spacing in groups/art feed sections with `KubusSpacing` tokens.
+- [x] `wallet_home.dart`: add shared section header helper and apply it to quick actions, tokens, and recent transactions.
+- [x] `wallet_home.dart`: make quick actions a restrained grouped control with stable action button dimensions and aligned gutters.
+- [x] `wallet_home.dart`: add localized empty token state and replace mojibake approximate-value copy.
+- [x] `marketplace.dart`: localize settings AR-only switch title/subtitle, tab labels, featured/trending titles, and empty states.
+- [x] `marketplace.dart`: add browsing subtitles and tokenized grid spacing for featured/trending listings.
+- [x] `institution_hub.dart`: localize institution cross-role blocked title/description strings.
+- [x] `institution_hub.dart`: localize application sheet title, submit action, and failed submission copy.
+- [x] `messages_screen.dart`: add localized conversation list header/action row above non-empty conversation lists.
+- [x] `home_screen.dart`: replace hardcoded discovery rail warming and creator fallback strings with localization.
+- [x] `governance_hub.dart`: localize proposal category display labels while preserving stable internal category values.
+- [x] `lib/l10n/*`: update English and Slovenian localization sources and generated localization accessors for all added keys.
+- [x] Verification: run formatting on touched Dart files.
+- [x] Verification: run `flutter analyze` or record blocker.
+- [x] Verification: re-open every touched file and mark checklist status accurately.
 
 # Progress Log
 - 2026-04-16: Completed preflight by reading all repo `AGENTS.md` files and `docs/SCREENS.md`.
 - 2026-04-16: Completed initial audit. Desktop shell/navigation and desktop hub wrappers are already complete; remaining planned work is concentrated in mobile/shared community, wallet, marketplace, institution, messages, and localization files.
 - 2026-04-16: Amended locked plan after the audit subagent reported concrete primary-file localization gaps in `home_screen.dart` and `governance_hub.dart`.
+- 2026-04-16: Implemented the mobile/shared pass: community group hierarchy and composer localization, wallet dashboard section hierarchy, marketplace browse hierarchy/localization, institution application localization, messages list header, home rail fallbacks, and governance category display cleanup.
+- 2026-04-16: QA subagent found three completion-gate localization gaps in community post actions, marketplace collectible stat/detail labels, and institution review-state copy. Patched those gaps and regenerated localization accessors.
+- 2026-04-16: Re-ran formatting, localization generation, static analysis, ARB validation, targeted hardcoded-string scans, and `git diff --check`.
 
 # Verification
-- Pending.
+- Checklist status: DONE 18 / PARTIAL 0 / NOT DONE 0.
+- `C:\dev\flutter\bin\flutter.bat gen-l10n` completed successfully.
+- `C:\dev\flutter\bin\cache\dart-sdk\bin\dart.exe format` completed on touched Dart and generated localization files.
+- `C:\dev\flutter\bin\flutter.bat analyze` completed with no issues.
+- `lib/l10n/app_en.arb` and `lib/l10n/app_sl.arb` both parsed successfully as JSON.
+- Targeted scans no longer find the QA-blocking visible hardcoded strings in `community_screen.dart`, `marketplace.dart`, or `institution_hub.dart`.
+- `git diff --check` reported no whitespace errors; it only emitted existing line-ending normalization warnings for touched files.
 
 # Remaining Gaps
-- Pending implementation.

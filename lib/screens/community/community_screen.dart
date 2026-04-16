@@ -1109,8 +1109,8 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   @override
   Widget build(BuildContext context) {
-    final composerOpenNonce =
-        context.select<CommunityHubProvider, int>((hub) => hub.composerOpenNonce);
+    final composerOpenNonce = context
+        .select<CommunityHubProvider, int>((hub) => hub.composerOpenNonce);
     _maybeHandleComposerOpenRequest(composerOpenNonce);
 
     return Scaffold(
@@ -1688,13 +1688,15 @@ class _CommunityScreenState extends State<CommunityScreen>
             KubusSpacing.lg + KubusLayout.mainBottomNavBarHeight,
           ),
           children: [
+            _buildGroupDirectoryHeader(),
+            const SizedBox(height: KubusSpacing.md),
             _buildGroupSearchField(hub),
             const SizedBox(height: KubusSpacing.md),
             if (hub.groupsError != null)
               _buildGroupErrorBanner(hub.groupsError!),
             if (!hasGroups)
               Padding(
-                padding: const EdgeInsets.only(top: 48),
+                padding: const EdgeInsets.only(top: KubusSpacing.xl),
                 child: EmptyStateCard(
                   icon: Icons.groups_outlined,
                   title: l10n.communityGroupsEmptyTitle,
@@ -1708,7 +1710,9 @@ class _CommunityScreenState extends State<CommunityScreen>
             if (hasGroups) ...hub.groups.map((group) => _buildGroupCard(group)),
             if (hub.groupsLoading && hasGroups)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
+                padding: const EdgeInsets.symmetric(
+                  vertical: KubusSpacing.lg,
+                ),
                 child: InlineLoading(
                   expand: false,
                   shape: BoxShape.circle,
@@ -1720,7 +1724,7 @@ class _CommunityScreenState extends State<CommunityScreen>
               ),
             if (!hub.groupsLoading && hasGroups && !hub.hasMoreGroups)
               Padding(
-                padding: const EdgeInsets.only(top: 16),
+                padding: const EdgeInsets.only(top: KubusSpacing.md),
                 child: Center(
                   child: Text(
                     l10n.communityGroupsEndOfDirectory,
@@ -1755,6 +1759,54 @@ class _CommunityScreenState extends State<CommunityScreen>
           ),
         );
       },
+    );
+  }
+
+  Widget _buildGroupDirectoryHeader() {
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+
+    return Container(
+      padding: const EdgeInsets.all(KubusSpacing.lg),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.48),
+        borderRadius: KubusRadius.circular(KubusRadius.lg),
+        border: Border.all(
+          color: scheme.outline.withValues(alpha: 0.16),
+          width: KubusSizes.hairline,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.groups_2_outlined,
+            color: scheme.primary,
+            size: KubusHeaderMetrics.actionIcon,
+          ),
+          const SizedBox(width: KubusSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.communityGroupsDirectoryTitle,
+                  style: KubusTextStyles.sectionTitle.copyWith(
+                    color: scheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: KubusSpacing.xs),
+                Text(
+                  l10n.communityGroupsDirectoryDescription,
+                  style: KubusTextStyles.sectionSubtitle.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.72),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1838,9 +1890,8 @@ class _CommunityScreenState extends State<CommunityScreen>
           Provider.of<ThemeProvider>(context, listen: false).accentColor,
       variant: CommunityGroupCardVariant.mobile,
       onOpenGroupFeed: () => _openGroupFeed(group),
-      onToggleMembership: group.isOwner
-          ? null
-          : () => _handleGroupMembershipToggle(group),
+      onToggleMembership:
+          group.isOwner ? null : () => _handleGroupMembershipToggle(group),
       isMembershipActionInFlight: _groupActionsInFlight.contains(group.id),
       timeAgoBuilder: _getTimeAgo,
     );
@@ -1869,7 +1920,7 @@ class _CommunityScreenState extends State<CommunityScreen>
           ),
           children: [
             _buildArtFeedHeader(),
-            const SizedBox(height: 16),
+            const SizedBox(height: KubusSpacing.md),
             if (_artFeedError != null && filteredPosts.isEmpty && !hasQuery)
               _buildArtStatusCard(
                 icon: Icons.location_off_outlined,
@@ -1899,7 +1950,9 @@ class _CommunityScreenState extends State<CommunityScreen>
             ...filteredPosts.map(_buildArtPostCard),
             if (_isLoadingArtFeed && filteredPosts.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 32),
+                padding: const EdgeInsets.symmetric(
+                  vertical: KubusSpacing.xl,
+                ),
                 child: Center(
                   child: InlineLoading(
                     expand: false,
@@ -2132,11 +2185,10 @@ class _CommunityScreenState extends State<CommunityScreen>
               onPressed: () {
                 ShareService().showShareSheet(
                   context,
-                  target:
-                      share_types.ShareTarget.post(
-                        postId: post.id,
-                        title: post.content,
-                      ),
+                  target: share_types.ShareTarget.post(
+                    postId: post.id,
+                    title: post.content,
+                  ),
                   sourceScreen: 'community_art_feed',
                 );
               },
@@ -2772,8 +2824,10 @@ class _CommunityScreenState extends State<CommunityScreen>
                       _buildComposerLocationSection(draft, setModalState),
                       const SizedBox(height: 16),
                       _buildChipEditor(
-                        label: 'Tags',
-                        hint: 'Add topic (e.g. kub8, spatial)',
+                        label: AppLocalizations.of(context)!
+                            .communityComposerTagsLabel,
+                        hint: AppLocalizations.of(context)!
+                            .communityComposerTagsHint,
                         values: draft.tags,
                         controller: tagController,
                         prefix: '#',
@@ -2785,8 +2839,10 @@ class _CommunityScreenState extends State<CommunityScreen>
                       ),
                       const SizedBox(height: 16),
                       _buildChipEditor(
-                        label: 'Mentions',
-                        hint: 'Add @handle',
+                        label: AppLocalizations.of(context)!
+                            .communityComposerMentionsLabel,
+                        hint: AppLocalizations.of(context)!
+                            .communityComposerMentionsHint,
                         values: draft.mentions,
                         controller: mentionController,
                         prefix: '@',
@@ -2821,7 +2877,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                             switchOutCurve: context.animationTheme.fadeCurve,
                             child: _isPostingNew
                                 ? SizedBox(
-                                    key: const ValueKey('composer_posting_spinner'),
+                                    key: const ValueKey(
+                                        'composer_posting_spinner'),
                                     width: 20,
                                     height: 20,
                                     child: InlineLoading(
@@ -2830,8 +2887,9 @@ class _CommunityScreenState extends State<CommunityScreen>
                                       tileSize: 3.5,
                                     ),
                                   )
-                                : const Text(
-                                    'Post',
+                                : Text(
+                                    AppLocalizations.of(context)!
+                                        .communityComposerSubmitPostButton,
                                     key: ValueKey('composer_post_label'),
                                   ),
                           ),
@@ -3360,8 +3418,9 @@ class _CommunityScreenState extends State<CommunityScreen>
     final scheme = Theme.of(context).colorScheme;
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final animationTheme = context.animationTheme;
-    final isMentions = label.toLowerCase() == 'mentions';
-    final isTags = label.toLowerCase() == 'tags';
+    final l10n = AppLocalizations.of(context)!;
+    final isMentions = prefix == '@';
+    final isTags = prefix == '#';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -3379,10 +3438,10 @@ class _CommunityScreenState extends State<CommunityScreen>
             TextButton.icon(
               onPressed: () => _showSearchPicker(
                 title: isMentions
-                    ? 'Search Users'
+                    ? l10n.communitySearchUsersTitle
                     : isTags
-                        ? 'Popular Tags'
-                        : 'Search',
+                        ? l10n.communityPopularTagsTitle
+                        : l10n.commonSearch,
                 searchType: isMentions
                     ? 'profiles'
                     : isTags
@@ -3798,7 +3857,9 @@ class _CommunityScreenState extends State<CommunityScreen>
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Text(
-              searchType == 'tags' ? 'Popular Tags' : 'Suggestions',
+              searchType == 'tags'
+                  ? AppLocalizations.of(context)!.communityPopularTagsTitle
+                  : AppLocalizations.of(context)!.communitySuggestionsTitle,
               style: KubusTypography.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -4025,7 +4086,7 @@ class _CommunityScreenState extends State<CommunityScreen>
           overflow: TextOverflow.ellipsis,
         ),
         subtitle: Text(
-          'Open screen',
+          AppLocalizations.of(context)!.communityOpenScreenSubtitle,
           style: KubusTypography.inter(
             fontSize: 12,
             color: scheme.onSurface.withValues(alpha: 0.6),
@@ -4041,9 +4102,11 @@ class _CommunityScreenState extends State<CommunityScreen>
       final author = (result['authorName'] ??
               result['author_name'] ??
               result['author'] ??
-              'Post')
+              AppLocalizations.of(context)!.communityComposerCategoryPostLabel)
           .toString();
-      final snippet = content.trim().isNotEmpty ? content.trim() : 'Open post';
+      final snippet = content.trim().isNotEmpty
+          ? content.trim()
+          : AppLocalizations.of(context)!.communityViewPostButton;
 
       return ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
@@ -4091,7 +4154,9 @@ class _CommunityScreenState extends State<CommunityScreen>
     final joined = hub.groups.where((g) => g.isMember || g.isOwner).toList();
     if (joined.isEmpty) {
       if (!mounted) return null;
-      _showSnack('Join a group to target your drop.');
+      _showSnack(
+        AppLocalizations.of(context)!.communityGroupPickerJoinFirstToast,
+      );
       return null;
     }
     return showModalBottomSheet<CommunityGroupSummary>(
@@ -4106,14 +4171,14 @@ class _CommunityScreenState extends State<CommunityScreen>
           ),
         ),
         child: CommunityGroupPickerContent(
-          title: 'Select group',
+          title: AppLocalizations.of(context)!.communityGroupPickerTitle,
           groups: joined,
           showHandle: true,
           headerPadding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
           listPadding: const EdgeInsets.symmetric(horizontal: 16),
           subtitleBuilder: (group) => group.description?.isNotEmpty == true
               ? group.description!
-              : 'No description yet',
+              : AppLocalizations.of(context)!.communityGroupNoDescription,
           onSelect: (group) => Navigator.of(ctx).pop(group),
           headerTrailing: const SizedBox.shrink(),
         ),
@@ -4184,7 +4249,8 @@ class _CommunityScreenState extends State<CommunityScreen>
       }
       final api = BackendApiService();
       await api.restoreExistingSession(allowRefresh: false);
-      final currentAuthWallet = (api.getCurrentAuthWalletAddress() ?? '').trim();
+      final currentAuthWallet =
+          (api.getCurrentAuthWalletAddress() ?? '').trim();
       final hasMatchingSession = (api.getAuthToken() ?? '').trim().isNotEmpty &&
           WalletUtils.equals(currentAuthWallet, walletAddress);
       if (!hasMatchingSession) {
@@ -6037,17 +6103,18 @@ class _CommunityScreenState extends State<CommunityScreen>
   String _getTimeAgo(DateTime timestamp) {
     final now = DateTime.now();
     final difference = now.difference(timestamp);
+    final l10n = AppLocalizations.of(context)!;
 
     if (difference.inDays > 7) {
-      return '${(difference.inDays / 7).floor()}w ago';
+      return l10n.commonTimeAgoWeeks((difference.inDays / 7).floor());
     } else if (difference.inDays > 0) {
-      return '${difference.inDays}d ago';
+      return l10n.commonTimeAgoDays(difference.inDays);
     } else if (difference.inHours > 0) {
-      return '${difference.inHours}h ago';
+      return l10n.commonTimeAgoHours(difference.inHours);
     } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m ago';
+      return l10n.commonTimeAgoMinutes(difference.inMinutes);
     } else {
-      return 'Just now';
+      return l10n.commonTimeAgoJustNow;
     }
   }
 }

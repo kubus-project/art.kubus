@@ -62,7 +62,8 @@ import 'app_localizations_sl.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale)
+      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -70,7 +71,8 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate =
+      _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -82,7 +84,8 @@ abstract class AppLocalizations {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
+      <LocalizationsDelegate<dynamic>>[
     delegate,
     GlobalMaterialLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
@@ -3309,7 +3312,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Account: {accountStatus} · Wallet: {walletStatus} · Signing: {signerStatus}'**
-  String walletSessionStatusSummary(Object accountStatus, Object walletStatus, Object signerStatus);
+  String walletSessionStatusSummary(
+      Object accountStatus, Object walletStatus, Object signerStatus);
 
   /// No description provided for @walletActionSignInRequiredToast.
   ///
@@ -5567,6 +5571,204 @@ abstract class AppLocalizations {
   /// **'Apply for review'**
   String get institutionHubApplyForReviewAction;
 
+  /// No description provided for @institutionHubArtistBadgeActiveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist badge active'**
+  String get institutionHubArtistBadgeActiveTitle;
+
+  /// No description provided for @institutionHubArtistBadgeActiveDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist wallets unlock creation tooling. Institution flows need a dedicated wallet without creator approvals.'**
+  String get institutionHubArtistBadgeActiveDescription;
+
+  /// No description provided for @institutionHubArtistReviewInProgressTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist review in progress'**
+  String get institutionHubArtistReviewInProgressTitle;
+
+  /// No description provided for @institutionHubArtistReviewInProgressDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'You have an active artist application. Wait for that decision or reset it before continuing as an institution.'**
+  String get institutionHubArtistReviewInProgressDescription;
+
+  /// No description provided for @institutionHubApplicationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution application'**
+  String get institutionHubApplicationTitle;
+
+  /// No description provided for @institutionHubApplicationSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Share your mission, programming focus, and how you plan to collaborate with the DAO.'**
+  String get institutionHubApplicationSubtitle;
+
+  /// No description provided for @institutionHubApplicationOrganizationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Organization name'**
+  String get institutionHubApplicationOrganizationLabel;
+
+  /// No description provided for @institutionHubApplicationContactLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Website or contact email'**
+  String get institutionHubApplicationContactLabel;
+
+  /// No description provided for @institutionHubApplicationFocusLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Curation focus'**
+  String get institutionHubApplicationFocusLabel;
+
+  /// No description provided for @institutionHubApplicationMissionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Mission and goals'**
+  String get institutionHubApplicationMissionLabel;
+
+  /// No description provided for @institutionHubApplicationOrganizationRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please provide your organization name.'**
+  String get institutionHubApplicationOrganizationRequired;
+
+  /// No description provided for @institutionHubApplicationContactRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Share a website or contact email.'**
+  String get institutionHubApplicationContactRequired;
+
+  /// No description provided for @institutionHubApplicationFocusRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Let us know your programming focus.'**
+  String get institutionHubApplicationFocusRequired;
+
+  /// No description provided for @institutionHubApplicationMissionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe your mission in at least 20 characters.'**
+  String get institutionHubApplicationMissionRequired;
+
+  /// No description provided for @institutionHubApplicationWalletRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect your wallet before submitting.'**
+  String get institutionHubApplicationWalletRequired;
+
+  /// No description provided for @institutionHubApplicationSubmittedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Application submitted to DAO reviewers.'**
+  String get institutionHubApplicationSubmittedToast;
+
+  /// No description provided for @institutionHubApplicationSubmitUnavailableToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to submit application right now.'**
+  String get institutionHubApplicationSubmitUnavailableToast;
+
+  /// No description provided for @institutionHubApplicationSubmitFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Submission failed: {error}'**
+  String institutionHubApplicationSubmitFailedToast(Object error);
+
+  /// No description provided for @institutionHubApplicationSubmitButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit application'**
+  String get institutionHubApplicationSubmitButton;
+
+  /// No description provided for @institutionHubCrossRoleConflictTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Role conflict detected'**
+  String get institutionHubCrossRoleConflictTitle;
+
+  /// No description provided for @institutionHubArtistWalletSwitchDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist wallets are optimized for creation tooling. Switch to a dedicated institutional wallet before applying for curation tools.'**
+  String get institutionHubArtistWalletSwitchDescription;
+
+  /// No description provided for @institutionHubArtistReviewPendingResetDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'You currently have an artist application pending. Finish that review or request a reset prior to submitting an institution application.'**
+  String get institutionHubArtistReviewPendingResetDescription;
+
+  /// No description provided for @institutionHubArtistSubmissionConflictDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'We detected an artist submission for this wallet. Clear it from settings before continuing as an institution.'**
+  String get institutionHubArtistSubmissionConflictDescription;
+
+  /// No description provided for @institutionHubApplicationCardSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit your organization for DAO review and unlock institutional tooling.'**
+  String get institutionHubApplicationCardSubtitle;
+
+  /// No description provided for @institutionHubDaoStatusApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'APPROVED'**
+  String get institutionHubDaoStatusApproved;
+
+  /// No description provided for @institutionHubDaoStatusNotApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'NOT APPLIED'**
+  String get institutionHubDaoStatusNotApplied;
+
+  /// No description provided for @institutionHubCtaApprovedByDao.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved by DAO'**
+  String get institutionHubCtaApprovedByDao;
+
+  /// No description provided for @institutionHubCtaPendingDaoReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending DAO review'**
+  String get institutionHubCtaPendingDaoReview;
+
+  /// No description provided for @institutionHubCtaConnectWalletToApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect wallet to apply'**
+  String get institutionHubCtaConnectWalletToApply;
+
+  /// No description provided for @institutionHubDaoStatusSyncedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Status synced from DAO'**
+  String get institutionHubDaoStatusSyncedLabel;
+
+  /// No description provided for @institutionHubDaoReviewQueueMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Your submission is in the DAO review queue.'**
+  String get institutionHubDaoReviewQueueMessage;
+
+  /// No description provided for @institutionHubApprovedToolsMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Congratulations! Approved for institution tools.'**
+  String get institutionHubApprovedToolsMessage;
+
+  /// No description provided for @institutionHubRejectedResubmitMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Your last submission was rejected. You can resubmit with updates.'**
+  String get institutionHubRejectedResubmitMessage;
+
   /// No description provided for @web3MarketplaceP1Title.
   ///
   /// In en, this message translates to:
@@ -7559,6 +7761,18 @@ abstract class AppLocalizations {
   /// **'Start a chat'**
   String get messagesEmptyStartChatAction;
 
+  /// No description provided for @messagesListHeaderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversations'**
+  String get messagesListHeaderTitle;
+
+  /// No description provided for @messagesListHeaderDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick up direct chats and group threads with artists, collectors, and institutions.'**
+  String get messagesListHeaderDescription;
+
   /// No description provided for @messagesFallbackGroupTitle.
   ///
   /// In en, this message translates to:
@@ -9443,17 +9657,59 @@ abstract class AppLocalizations {
   /// **'NFTs'**
   String get walletHomeActionNfts;
 
+  /// No description provided for @walletHomeQuickActionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet actions'**
+  String get walletHomeQuickActionsTitle;
+
+  /// No description provided for @walletHomeQuickActionsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Send, receive, swap, or open collectibles from one place.'**
+  String get walletHomeQuickActionsSubtitle;
+
   /// No description provided for @walletHomeYourTokensTitle.
   ///
   /// In en, this message translates to:
   /// **'Your tokens'**
   String get walletHomeYourTokensTitle;
 
+  /// No description provided for @walletHomeYourTokensSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Balances currently associated with this wallet.'**
+  String get walletHomeYourTokensSubtitle;
+
+  /// No description provided for @walletHomeNoTokensTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No tokens yet'**
+  String get walletHomeNoTokensTitle;
+
+  /// No description provided for @walletHomeNoTokensDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Token balances will appear after the wallet receives assets.'**
+  String get walletHomeNoTokensDescription;
+
   /// No description provided for @walletHomeRecentTransactionsTitle.
   ///
   /// In en, this message translates to:
   /// **'Recent transactions'**
   String get walletHomeRecentTransactionsTitle;
+
+  /// No description provided for @walletHomeRecentTransactionsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest wallet activity and confirmations.'**
+  String get walletHomeRecentTransactionsSubtitle;
+
+  /// No description provided for @walletHomeApproxTotalValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Approx. {value}'**
+  String walletHomeApproxTotalValue(Object value);
 
   /// No description provided for @walletHomeTimeAgoDays.
   ///
@@ -11201,6 +11457,162 @@ abstract class AppLocalizations {
   /// **'Connect a Solana wallet to view your collectibles (NFT).'**
   String get marketplaceConnectWalletDescription;
 
+  /// No description provided for @marketplaceSettingsShowArOnlyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show AR-only collections'**
+  String get marketplaceSettingsShowArOnlyTitle;
+
+  /// No description provided for @marketplaceSettingsShowArOnlyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter collections that require AR interaction.'**
+  String get marketplaceSettingsShowArOnlyDescription;
+
+  /// No description provided for @marketplaceFeaturedTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Featured'**
+  String get marketplaceFeaturedTab;
+
+  /// No description provided for @marketplaceTrendingTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Trending'**
+  String get marketplaceTrendingTab;
+
+  /// No description provided for @marketplaceMyListingsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'My listings'**
+  String get marketplaceMyListingsTab;
+
+  /// No description provided for @marketplaceFeaturedCollectionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Featured collections'**
+  String get marketplaceFeaturedCollectionsTitle;
+
+  /// No description provided for @marketplaceFeaturedCollectionsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Curated mints and AR-ready series from the community.'**
+  String get marketplaceFeaturedCollectionsSubtitle;
+
+  /// No description provided for @marketplaceNoMintedNftsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No minted NFTs available yet'**
+  String get marketplaceNoMintedNftsTitle;
+
+  /// No description provided for @marketplaceNoMintedNftsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Marketplace listings appear once an artwork has a real NFT mint.'**
+  String get marketplaceNoMintedNftsDescription;
+
+  /// No description provided for @marketplaceTrendingThisWeekTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Trending this week'**
+  String get marketplaceTrendingThisWeekTitle;
+
+  /// No description provided for @marketplaceTrendingThisWeekSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Listings with the strongest collector activity right now.'**
+  String get marketplaceTrendingThisWeekSubtitle;
+
+  /// No description provided for @marketplaceNoTrendingNftsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No trending NFTs yet'**
+  String get marketplaceNoTrendingNftsTitle;
+
+  /// No description provided for @marketplaceNoTrendingNftsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Check back later as minted artwork activity picks up.'**
+  String get marketplaceNoTrendingNftsDescription;
+
+  /// No description provided for @marketplaceMyCollectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My NFT collection'**
+  String get marketplaceMyCollectionTitle;
+
+  /// No description provided for @marketplaceMyCollectionCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} NFTs'**
+  String marketplaceMyCollectionCount(Object count);
+
+  /// No description provided for @marketplaceListedForSaleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Listed for sale'**
+  String get marketplaceListedForSaleTitle;
+
+  /// No description provided for @marketplaceListNftForSaleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'List NFT for sale'**
+  String get marketplaceListNftForSaleTitle;
+
+  /// No description provided for @marketplacePriceKub8Label.
+  ///
+  /// In en, this message translates to:
+  /// **'Price (KUB8)'**
+  String get marketplacePriceKub8Label;
+
+  /// No description provided for @marketplaceDetailCollectionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Collection'**
+  String get marketplaceDetailCollectionLabel;
+
+  /// No description provided for @marketplaceDetailArtworkLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork'**
+  String get marketplaceDetailArtworkLabel;
+
+  /// No description provided for @marketplaceTokenIdLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Token ID'**
+  String get marketplaceTokenIdLabel;
+
+  /// No description provided for @marketplaceMintedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Minted'**
+  String get marketplaceMintedLabel;
+
+  /// No description provided for @marketplaceTotalSupplyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Total supply'**
+  String get marketplaceTotalSupplyLabel;
+
+  /// No description provided for @marketplaceRarityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Rarity'**
+  String get marketplaceRarityLabel;
+
+  /// No description provided for @marketplaceOwnedNftStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Owned NFT'**
+  String get marketplaceOwnedNftStatus;
+
+  /// No description provided for @marketplaceOwnedNftListedStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Owned NFT • Listed for sale'**
+  String get marketplaceOwnedNftListedStatus;
+
   /// No description provided for @marketplaceEmptyCollectionTitle.
   ///
   /// In en, this message translates to:
@@ -11871,7 +12283,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Are you sure you want to delegate your {votingPower} voting power to {delegateName}?'**
-  String daoDelegateVotingPowerDialogBody(Object votingPower, Object delegateName);
+  String daoDelegateVotingPowerDialogBody(
+      Object votingPower, Object delegateName);
 
   /// No description provided for @daoDelegationBenefitsTitle.
   ///
@@ -12539,6 +12952,18 @@ abstract class AppLocalizations {
   /// **'Search community groups'**
   String get communityGroupsSearchHint;
 
+  /// No description provided for @communityGroupsDirectoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Group directory'**
+  String get communityGroupsDirectoryTitle;
+
+  /// No description provided for @communityGroupsDirectoryDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Find focused spaces for critiques, drops, events, and collaborations.'**
+  String get communityGroupsDirectoryDescription;
+
   /// No description provided for @communityClearSearchTooltip.
   ///
   /// In en, this message translates to:
@@ -12743,6 +13168,24 @@ abstract class AppLocalizations {
   /// **'Search…'**
   String get communitySearchSheetHintDefault;
 
+  /// No description provided for @communitySearchUsersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Search users'**
+  String get communitySearchUsersTitle;
+
+  /// No description provided for @communityPopularTagsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Popular tags'**
+  String get communityPopularTagsTitle;
+
+  /// No description provided for @communitySuggestionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggestions'**
+  String get communitySuggestionsTitle;
+
   /// No description provided for @communityComposerTitle.
   ///
   /// In en, this message translates to:
@@ -12754,6 +13197,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Share what you’re making, discovering, or working on…'**
   String get communityComposerTextHint;
+
+  /// No description provided for @communityComposerTagsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Tags'**
+  String get communityComposerTagsLabel;
+
+  /// No description provided for @communityComposerTagsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add topic (e.g. kub8, spatial)'**
+  String get communityComposerTagsHint;
+
+  /// No description provided for @communityComposerMentionsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Mentions'**
+  String get communityComposerMentionsLabel;
+
+  /// No description provided for @communityComposerMentionsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add @handle'**
+  String get communityComposerMentionsHint;
 
   /// No description provided for @communityComposerTargetGroupLabel.
   ///
@@ -12820,6 +13287,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Remove location'**
   String get communityComposerRemoveLocationTooltip;
+
+  /// No description provided for @communityComposerSubmitPostButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Post'**
+  String get communityComposerSubmitPostButton;
+
+  /// No description provided for @communityOpenScreenSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Open screen'**
+  String get communityOpenScreenSubtitle;
 
   /// No description provided for @communityBookmarkAddedToast.
   ///
@@ -13036,6 +13515,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'this group'**
   String get communityGroupFallbackName;
+
+  /// No description provided for @communityGroupPickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select group'**
+  String get communityGroupPickerTitle;
+
+  /// No description provided for @communityGroupPickerJoinFirstToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Join a group to target your drop.'**
+  String get communityGroupPickerJoinFirstToast;
 
   /// No description provided for @communityComposerPostCreatedToast.
   ///
@@ -13756,6 +14247,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Creator'**
   String get desktopHomeCreatorFallbackName;
+
+  /// No description provided for @homeRailsUnavailableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Home rails unavailable'**
+  String get homeRailsUnavailableTitle;
+
+  /// No description provided for @homeRailsUnavailableDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not load ranked home rails right now.'**
+  String get homeRailsUnavailableDescription;
+
+  /// No description provided for @homeRailsWarmingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discovery rails are warming up'**
+  String get homeRailsWarmingTitle;
+
+  /// No description provided for @homeRailsWarmingDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Featured artworks, artists, institutions, events, and exhibitions will appear here once ranked content is available.'**
+  String get homeRailsWarmingDescription;
+
+  /// No description provided for @homeRailArtworksTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Artworks'**
+  String get homeRailArtworksTitle;
+
+  /// No description provided for @homeRailArtistsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Artists'**
+  String get homeRailArtistsTitle;
+
+  /// No description provided for @homeRailInstitutionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Institutions'**
+  String get homeRailInstitutionsTitle;
+
+  /// No description provided for @homeRailEventsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Events'**
+  String get homeRailEventsTitle;
+
+  /// No description provided for @homeRailExhibitionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Exhibitions'**
+  String get homeRailExhibitionsTitle;
 
   /// No description provided for @desktopHomePostsCount.
   ///
@@ -17775,7 +18320,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Activity was recorded on {activeBuckets} of {totalBuckets} buckets.'**
-  String analyticsRecommendationConsistencyDescription(Object activeBuckets, Object totalBuckets);
+  String analyticsRecommendationConsistencyDescription(
+      Object activeBuckets, Object totalBuckets);
 
   /// No description provided for @analyticsRecommendationReverseDecline.
   ///
@@ -18099,7 +18645,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{totalVotes} votes • {supportPct}% support'**
-  String daoProposalVotesSupportSummaryLabel(Object totalVotes, Object supportPct);
+  String daoProposalVotesSupportSummaryLabel(
+      Object totalVotes, Object supportPct);
 
   /// No description provided for @commonSearchHint.
   ///
@@ -18510,7 +19057,8 @@ abstract class AppLocalizations {
   String promotionBuilderGuaranteedSlots(num count);
 }
 
-class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate
+    extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -18519,25 +19067,25 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
   }
 
   @override
-  bool isSupported(Locale locale) => <String>['en', 'sl'].contains(locale.languageCode);
+  bool isSupported(Locale locale) =>
+      <String>['en', 'sl'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
-
-
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en': return AppLocalizationsEn();
-    case 'sl': return AppLocalizationsSl();
+    case 'en':
+      return AppLocalizationsEn();
+    case 'sl':
+      return AppLocalizationsSl();
   }
 
   throw FlutterError(
-    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-    'an issue with the localizations generation tool. Please file an issue '
-    'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.'
-  );
+      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+      'an issue with the localizations generation tool. Please file an issue '
+      'on GitHub with a reproducible sample app and the gen-l10n configuration '
+      'that was used.');
 }
