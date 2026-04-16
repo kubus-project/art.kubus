@@ -337,19 +337,17 @@ class AuthMethodsPanelMethodDivider extends StatelessWidget {
             height: 1,
           ),
         ),
-        Flexible(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.sm),
-            child: Text(
-              resolvedLabel,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.56),
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
+          child: Text(
+            resolvedLabel,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.56),
+                  fontWeight: FontWeight.w600,
+                ),
           ),
         ),
         Expanded(

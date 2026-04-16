@@ -3316,6 +3316,11 @@ class _OnboardingAuthModeButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
+        splashFactory: NoSplash.splashFactory,
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        hoverColor: Colors.transparent,
+        overlayColor: const WidgetStatePropertyAll<Color>(Colors.transparent),
         onTap: onTap,
         child: Padding(
           padding: EdgeInsets.symmetric(

@@ -264,6 +264,7 @@ class _EmailRegistrationFormState extends State<EmailRegistrationForm> {
       suffixIcon: suffixIcon,
       filled: true,
       fillColor: colorScheme.surface.withValues(alpha: 0.54),
+      hoverColor: colorScheme.surface.withValues(alpha: 0.62),
       contentPadding: EdgeInsets.symmetric(
         horizontal: KubusSpacing.md,
         vertical: compact ? 14 : 18,

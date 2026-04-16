@@ -108,6 +108,7 @@ class KubusButton extends StatelessWidget {
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.transparent,
         foregroundColor: effectiveForeground,
+        overlayColor: effectiveForeground.withValues(alpha: isDark ? 0.10 : 0.08),
         shadowColor: Colors.transparent,
         disabledBackgroundColor: Colors.transparent,
         disabledForegroundColor: effectiveForeground.withValues(alpha: 0.55),
@@ -241,6 +242,7 @@ class KubusOutlineButton extends StatelessWidget {
           style: OutlinedButton.styleFrom(
             foregroundColor: contentColor,
             backgroundColor: Colors.transparent,
+            overlayColor: contentColor.withValues(alpha: isDark ? 0.10 : 0.08),
             shadowColor: Colors.transparent,
             side: BorderSide.none,
             padding: const EdgeInsets.symmetric(

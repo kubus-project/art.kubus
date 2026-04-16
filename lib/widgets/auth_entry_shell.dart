@@ -112,7 +112,6 @@ class AuthEntryShell extends StatelessWidget {
                                               CrossAxisAlignment.start,
                                           children: [
                                             Expanded(
-                                              flex: 7,
                                               child: _HeroColumn(
                                                 title: title,
                                                 subtitle: subtitle,
@@ -126,22 +125,12 @@ class AuthEntryShell extends StatelessWidget {
                                             ),
                                             const SizedBox(
                                                 width: KubusSpacing.xl),
-                                            Expanded(
-                                              flex: 6,
-                                              child: Align(
-                                                alignment: Alignment.topCenter,
-                                                child: ConstrainedBox(
-                                                  constraints:
-                                                      const BoxConstraints(
-                                                    maxWidth: 500,
-                                                    minWidth: 380,
-                                                  ),
-                                                  child: _FormSurface(
-                                                    footer: footer,
-                                                    compact: compactSurface,
-                                                    child: form,
-                                                  ),
-                                                ),
+                                            SizedBox(
+                                              width: 440,
+                                              child: _FormSurface(
+                                                footer: footer,
+                                                compact: compactSurface,
+                                                child: form,
                                               ),
                                             ),
                                           ],

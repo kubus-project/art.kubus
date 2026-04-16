@@ -22,6 +22,26 @@ Widget _buildHarness({
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  Future<void> openWalletEntryMenuIfNeeded(WidgetTester tester) async {
+    final connectWallet = find.text('Connect wallet');
+    if (connectWallet.evaluate().isNotEmpty) {
+      await tester.tap(connectWallet.first);
+      await tester.pumpAndSettle();
+      return;
+    }
+
+    final showOtherOptions = find.text('Show other options');
+    if (showOtherOptions.evaluate().isNotEmpty) {
+      await tester.tap(showOtherOptions.first);
+      await tester.pumpAndSettle();
+    }
+
+    final revealedConnectWallet = find.text('Connect wallet');
+    expect(revealedConnectWallet, findsWidgets);
+    await tester.tap(revealedConnectWallet.first);
+    await tester.pumpAndSettle();
+  }
+
   testWidgets(
       'sign-in wallet menu shows the three wallet entry options on mobile',
       (tester) async {
@@ -33,8 +53,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Connect wallet').first);
-    await tester.pumpAndSettle();
+    await openWalletEntryMenuIfNeeded(tester);
 
     expect(find.text('Connect external wallet'), findsOneWidget);
     expect(find.text('Create a new wallet'), findsOneWidget);
@@ -53,8 +72,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Connect wallet').first);
-    await tester.pumpAndSettle();
+    await openWalletEntryMenuIfNeeded(tester);
 
     expect(find.text('Connect external wallet'), findsOneWidget);
     expect(find.text('Create a new wallet'), findsOneWidget);

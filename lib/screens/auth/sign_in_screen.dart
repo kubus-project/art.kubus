@@ -1281,19 +1281,17 @@ class _SignInScreenState extends State<SignInScreen> {
             height: 1,
           ),
         ),
-        Flexible(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.sm),
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.56),
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.56),
+                  fontWeight: FontWeight.w600,
+                ),
           ),
         ),
         Expanded(
@@ -1324,6 +1322,7 @@ class _SignInScreenState extends State<SignInScreen> {
       suffixIcon: suffixIcon,
       filled: true,
       fillColor: scheme.surface.withValues(alpha: 0.54),
+      hoverColor: scheme.surface.withValues(alpha: 0.62),
       contentPadding: EdgeInsets.symmetric(
         horizontal: KubusSpacing.md,
         vertical: compact ? 14 : 18,
