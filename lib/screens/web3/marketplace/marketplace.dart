@@ -496,7 +496,7 @@ class _MarketplaceState extends State<Marketplace>
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          'AR',
+                          l10n.marketplaceArBadgeLabel,
                           style: KubusTypography.inter(
                             fontSize: 10,
                             fontWeight: FontWeight.w500,
@@ -893,6 +893,7 @@ class _MarketplaceState extends State<Marketplace>
   Widget _buildCollectibleCard(
       Collectible collectible, MarketplaceArtworkEntry entry,
       {bool isForSale = false}) {
+    final l10n = AppLocalizations.of(context)!;
     final roles = KubusColorRoles.of(context);
     final series = entry.series;
     final coverUrl = entry.coverUrl;
@@ -962,7 +963,7 @@ class _MarketplaceState extends State<Marketplace>
                             borderRadius: BorderRadius.circular(KubusRadius.md),
                           ),
                           child: Text(
-                            'FOR SALE',
+                            l10n.commonForSale,
                             style: KubusTypography.inter(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
@@ -1019,7 +1020,7 @@ class _MarketplaceState extends State<Marketplace>
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Token #${collectible.tokenId}',
+                      l10n.marketplaceTokenNumberLabel(collectible.tokenId),
                       style: KubusTypography.inter(
                         fontSize: 10,
                         color: Theme.of(context)
@@ -1041,7 +1042,7 @@ class _MarketplaceState extends State<Marketplace>
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Listed for',
+                                  l10n.marketplaceListedForLabel,
                                   style: KubusTypography.inter(
                                     fontSize: 9,
                                     color: Theme.of(context)
@@ -1090,7 +1091,7 @@ class _MarketplaceState extends State<Marketplace>
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  value?.label ?? 'Owned',
+                                  value?.label ?? l10n.marketplaceOwnedLabel,
                                   style: KubusTypography.inter(
                                     fontSize: 9,
                                     color: AppColorUtils.amberAccent,
@@ -1211,7 +1212,8 @@ class _MarketplaceState extends State<Marketplace>
                     // Properties
                     if (collectible.properties.isNotEmpty) ...[
                       Text(
-                        'Properties',
+                        AppLocalizations.of(context)!
+                            .marketplacePropertiesTitle,
                         style: KubusTypography.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -1561,6 +1563,7 @@ class _MarketplaceState extends State<Marketplace>
   }
 
   Widget _buildMarketplaceEntryCard(MarketplaceArtworkEntry entry) {
+    final l10n = AppLocalizations.of(context)!;
     final series = entry.series;
     final progress = entry.mintProgress ?? 0;
     final progressPercentage = (progress * 100).toInt();
@@ -1635,7 +1638,7 @@ class _MarketplaceState extends State<Marketplace>
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                'AR',
+                                l10n.marketplaceArBadgeLabel,
                                 style: KubusTypography.inter(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
@@ -1659,7 +1662,7 @@ class _MarketplaceState extends State<Marketplace>
                             borderRadius: BorderRadius.circular(KubusRadius.md),
                           ),
                           child: Text(
-                            'SOLD OUT',
+                            l10n.marketplaceSoldOutBadgeLabel,
                             style: KubusTypography.inter(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
@@ -1717,7 +1720,7 @@ class _MarketplaceState extends State<Marketplace>
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'by ${entry.artistName}',
+                      l10n.commonByArtist(entry.artistName),
                       style: KubusTypography.inter(
                         fontSize: 9,
                         color: Theme.of(context)
@@ -1833,10 +1836,10 @@ class _MarketplaceState extends State<Marketplace>
                           ),
                           child: Text(
                             entry.isListed
-                                ? 'Listed'
+                                ? l10n.marketplaceCardActionListed
                                 : (series != null && !entry.isSoldOut
-                                    ? 'Mint'
-                                    : 'View'),
+                                    ? l10n.marketplaceCardActionMint
+                                    : l10n.marketplaceCardActionView),
                             style: KubusTypography.inter(
                               fontSize: 8,
                               fontWeight: FontWeight.w600,
@@ -1900,6 +1903,7 @@ class _MarketplaceState extends State<Marketplace>
   void _showNFTSeriesDetails(MarketplaceArtworkEntry entry) {
     final series = entry.series;
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final l10n = AppLocalizations.of(context)!;
 
     showModalBottomSheet(
       context: context,
@@ -1940,7 +1944,9 @@ class _MarketplaceState extends State<Marketplace>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'NFT Artwork${entry.requiresArInteraction ? ' • AR Enabled' : ''}',
+                    entry.requiresArInteraction
+                        ? l10n.marketplaceNftArtworkStatusArEnabled
+                        : l10n.marketplaceNftArtworkStatus,
                     textAlign: TextAlign.center,
                     style: KubusTypography.inter(
                       fontSize: 14,
@@ -1960,7 +1966,7 @@ class _MarketplaceState extends State<Marketplace>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Description',
+                      l10n.commonDescription,
                       style: KubusTypography.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -2061,10 +2067,10 @@ class _MarketplaceState extends State<Marketplace>
                             ),
                             child: Text(
                               series == null
-                                  ? 'Mint unavailable'
+                                  ? l10n.marketplaceMintUnavailableLabel
                                   : (series.isSoldOut
-                                      ? 'Sold Out'
-                                      : 'Mint NFT'),
+                                      ? l10n.marketplaceSoldOutLabel
+                                      : l10n.marketplaceMintNftButtonLabel),
                               style: KubusTypography.inter(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -2137,6 +2143,7 @@ class _MarketplaceState extends State<Marketplace>
 
   Future<void> _mintNFT(CollectibleSeries series) async {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final l10n = AppLocalizations.of(context)!;
     final profileProvider = context.read<ProfileProvider>();
     final walletProvider = context.read<WalletProvider>();
 
@@ -2165,7 +2172,7 @@ class _MarketplaceState extends State<Marketplace>
               ),
               const SizedBox(width: 8),
               Text(
-                'AR Required',
+                l10n.marketplaceArRequiredTitle,
                 style: KubusTypography.inter(
                   color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.bold,
@@ -2174,7 +2181,7 @@ class _MarketplaceState extends State<Marketplace>
             ],
           ),
           content: Text(
-            'This NFT requires AR interaction with the physical artwork. Please visit the artwork location and use the AR scanner to mint your NFT.',
+            l10n.marketplaceArRequiredDescription,
             style: KubusTypography.inter(
               color: Theme.of(context)
                   .colorScheme
@@ -2187,7 +2194,7 @@ class _MarketplaceState extends State<Marketplace>
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
-                'Cancel',
+                l10n.commonCancel,
                 style: KubusTypography.inter(
                   color: Theme.of(context)
                       .colorScheme
@@ -2207,7 +2214,7 @@ class _MarketplaceState extends State<Marketplace>
                 foregroundColor: Theme.of(context).colorScheme.onPrimary,
               ),
               child: Text(
-                'Go to AR',
+                l10n.marketplaceGoToArButton,
                 style: KubusTypography.inter(
                   fontWeight: FontWeight.w600,
                 ),
@@ -2223,6 +2230,7 @@ class _MarketplaceState extends State<Marketplace>
   }
 
   void _showMintDialog(CollectibleSeries series) {
+    final l10n = AppLocalizations.of(context)!;
     showKubusDialog(
       context: context,
       builder: (context) => KubusAlertDialog(
@@ -2231,7 +2239,7 @@ class _MarketplaceState extends State<Marketplace>
           borderRadius: BorderRadius.circular(KubusRadius.lg),
         ),
         title: Text(
-          'Mint NFT',
+          l10n.marketplaceMintDialogTitle,
           style: KubusTypography.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
@@ -2242,7 +2250,7 @@ class _MarketplaceState extends State<Marketplace>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'You are about to mint an NFT from "${series.name}" collection.',
+              l10n.marketplaceMintConfirmCollectionDescription(series.name),
               style: KubusTypography.inter(
                 color: Colors.grey[300],
                 height: 1.5,
@@ -2259,7 +2267,7 @@ class _MarketplaceState extends State<Marketplace>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Mint Price:',
+                    l10n.marketplaceMintPriceLabel,
                     style: KubusTypography.inter(
                       color: Theme.of(context)
                           .colorScheme
@@ -2283,7 +2291,7 @@ class _MarketplaceState extends State<Marketplace>
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: Text(
-              'Cancel',
+              l10n.commonCancel,
               style: KubusTypography.inter(
                 color: Theme.of(context)
                     .colorScheme
@@ -2303,7 +2311,7 @@ class _MarketplaceState extends State<Marketplace>
                 foregroundColor: Theme.of(context).colorScheme.onPrimary,
               ),
               child: Text(
-                'Confirm Mint',
+                l10n.marketplaceConfirmMintButton,
                 style: KubusTypography.inter(
                   fontWeight: FontWeight.w600,
                 ),

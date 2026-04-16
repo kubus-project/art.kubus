@@ -62,8 +62,7 @@ import 'app_localizations_sl.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale)
-      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -71,8 +70,7 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate =
-      _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -84,8 +82,7 @@ abstract class AppLocalizations {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
-      <LocalizationsDelegate<dynamic>>[
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
     delegate,
     GlobalMaterialLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
@@ -3312,8 +3309,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Account: {accountStatus} · Wallet: {walletStatus} · Signing: {signerStatus}'**
-  String walletSessionStatusSummary(
-      Object accountStatus, Object walletStatus, Object signerStatus);
+  String walletSessionStatusSummary(Object accountStatus, Object walletStatus, Object signerStatus);
 
   /// No description provided for @walletActionSignInRequiredToast.
   ///
@@ -11709,6 +11705,138 @@ abstract class AppLocalizations {
   /// **'Unable to create a collectible (NFT) right now. Please try again.'**
   String get marketplaceMintFailedDescription;
 
+  /// No description provided for @marketplaceArBadgeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'AR'**
+  String get marketplaceArBadgeLabel;
+
+  /// No description provided for @marketplaceListedForLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Listed for'**
+  String get marketplaceListedForLabel;
+
+  /// No description provided for @marketplaceOwnedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Owned'**
+  String get marketplaceOwnedLabel;
+
+  /// No description provided for @marketplacePropertiesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Properties'**
+  String get marketplacePropertiesTitle;
+
+  /// No description provided for @marketplaceSoldOutBadgeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'SOLD OUT'**
+  String get marketplaceSoldOutBadgeLabel;
+
+  /// No description provided for @marketplaceCardActionListed.
+  ///
+  /// In en, this message translates to:
+  /// **'Listed'**
+  String get marketplaceCardActionListed;
+
+  /// No description provided for @marketplaceCardActionMint.
+  ///
+  /// In en, this message translates to:
+  /// **'Mint'**
+  String get marketplaceCardActionMint;
+
+  /// No description provided for @marketplaceCardActionView.
+  ///
+  /// In en, this message translates to:
+  /// **'View'**
+  String get marketplaceCardActionView;
+
+  /// No description provided for @marketplaceNftArtworkStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'NFT Artwork'**
+  String get marketplaceNftArtworkStatus;
+
+  /// No description provided for @marketplaceNftArtworkStatusArEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'NFT Artwork • AR Enabled'**
+  String get marketplaceNftArtworkStatusArEnabled;
+
+  /// No description provided for @marketplaceMintUnavailableLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Mint unavailable'**
+  String get marketplaceMintUnavailableLabel;
+
+  /// No description provided for @marketplaceSoldOutLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sold out'**
+  String get marketplaceSoldOutLabel;
+
+  /// No description provided for @marketplaceMintNftButtonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Mint NFT'**
+  String get marketplaceMintNftButtonLabel;
+
+  /// No description provided for @marketplaceArRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'AR Required'**
+  String get marketplaceArRequiredTitle;
+
+  /// No description provided for @marketplaceArRequiredDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This NFT requires AR interaction with the physical artwork. Please visit the artwork location and use the AR scanner to mint your NFT.'**
+  String get marketplaceArRequiredDescription;
+
+  /// No description provided for @marketplaceGoToArButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to AR'**
+  String get marketplaceGoToArButton;
+
+  /// No description provided for @marketplaceMintDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Mint NFT'**
+  String get marketplaceMintDialogTitle;
+
+  /// No description provided for @marketplaceMintConfirmCollectionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'You are about to mint an NFT from \"{collection}\" collection.'**
+  String marketplaceMintConfirmCollectionDescription(Object collection);
+
+  /// No description provided for @marketplaceMintPriceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Mint price:'**
+  String get marketplaceMintPriceLabel;
+
+  /// No description provided for @marketplaceConfirmMintButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Mint'**
+  String get marketplaceConfirmMintButton;
+
+  /// No description provided for @marketplaceTokenNumberLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Token #{tokenId}'**
+  String marketplaceTokenNumberLabel(String tokenId);
+
+  /// No description provided for @communityPostingFeatureLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Posting'**
+  String get communityPostingFeatureLabel;
+
   /// No description provided for @daoModerationApproveLabel.
   ///
   /// In en, this message translates to:
@@ -12283,8 +12411,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Are you sure you want to delegate your {votingPower} voting power to {delegateName}?'**
-  String daoDelegateVotingPowerDialogBody(
-      Object votingPower, Object delegateName);
+  String daoDelegateVotingPowerDialogBody(Object votingPower, Object delegateName);
 
   /// No description provided for @daoDelegationBenefitsTitle.
   ///
@@ -18320,8 +18447,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Activity was recorded on {activeBuckets} of {totalBuckets} buckets.'**
-  String analyticsRecommendationConsistencyDescription(
-      Object activeBuckets, Object totalBuckets);
+  String analyticsRecommendationConsistencyDescription(Object activeBuckets, Object totalBuckets);
 
   /// No description provided for @analyticsRecommendationReverseDecline.
   ///
@@ -18645,8 +18771,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{totalVotes} votes • {supportPct}% support'**
-  String daoProposalVotesSupportSummaryLabel(
-      Object totalVotes, Object supportPct);
+  String daoProposalVotesSupportSummaryLabel(Object totalVotes, Object supportPct);
 
   /// No description provided for @commonSearchHint.
   ///
@@ -19057,8 +19182,7 @@ abstract class AppLocalizations {
   String promotionBuilderGuaranteedSlots(num count);
 }
 
-class _AppLocalizationsDelegate
-    extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -19067,25 +19191,25 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['en', 'sl'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['en', 'sl'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
+
+
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en':
-      return AppLocalizationsEn();
-    case 'sl':
-      return AppLocalizationsSl();
+    case 'en': return AppLocalizationsEn();
+    case 'sl': return AppLocalizationsSl();
   }
 
   throw FlutterError(
-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-      'an issue with the localizations generation tool. Please file an issue '
-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
-      'that was used.');
+    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.'
+  );
 }

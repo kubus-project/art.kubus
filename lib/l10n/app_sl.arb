@@ -2656,6 +2656,40 @@
   "marketplaceViewInWalletButton": "Ogled v denarnici",
   "marketplaceMintFailedTitle": "Ustvarjanje ni uspelo",
   "marketplaceMintFailedDescription": "Zbirateljskega predmeta (NFT) trenutno ni mogoče ustvariti. Poskusi znova.",
+  "marketplaceArBadgeLabel": "AR",
+  "marketplaceListedForLabel": "Objavljeno za",
+  "marketplaceOwnedLabel": "V lasti",
+  "marketplacePropertiesTitle": "Lastnosti",
+  "marketplaceSoldOutBadgeLabel": "RAZPRODANO",
+  "marketplaceCardActionListed": "Objavljeno",
+  "marketplaceCardActionMint": "Kuj",
+  "marketplaceCardActionView": "Poglej",
+  "marketplaceNftArtworkStatus": "NFT umetnina",
+  "marketplaceNftArtworkStatusArEnabled": "NFT umetnina • AR omogočeno",
+  "marketplaceMintUnavailableLabel": "Kovanje ni na voljo",
+  "marketplaceSoldOutLabel": "Razprodano",
+  "marketplaceMintNftButtonLabel": "Kuj NFT",
+  "marketplaceArRequiredTitle": "AR je obvezen",
+  "marketplaceArRequiredDescription": "Ta NFT zahteva AR interakcijo s fizično umetnino. Obišči lokacijo umetnine in uporabi AR skener za kovanje NFT-ja.",
+  "marketplaceGoToArButton": "Pojdi na AR",
+  "marketplaceMintDialogTitle": "Kuj NFT",
+  "marketplaceMintConfirmCollectionDescription": "Kmalu boš skoval/-a NFT iz zbirke \"{collection}\".",
+  "@marketplaceMintConfirmCollectionDescription": {
+    "placeholders": {
+      "collection": {}
+    }
+  },
+  "marketplaceMintPriceLabel": "Cena kovanja:",
+  "marketplaceConfirmMintButton": "Potrdi kovanje",
+  "marketplaceTokenNumberLabel": "Žeton #{tokenId}",
+  "@marketplaceTokenNumberLabel": {
+    "placeholders": {
+      "tokenId": {
+        "type": "String"
+      }
+    }
+  },
+  "communityPostingFeatureLabel": "Objavljanje",
   "daoModerationApproveLabel": "Odobri",
   "daoModerationRejectLabel": "Zavrni",
   "daoModerationSetPendingLabel": "Nastavi kot čakajoče",

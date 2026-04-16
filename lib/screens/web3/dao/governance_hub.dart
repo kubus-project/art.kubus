@@ -40,12 +40,12 @@ class GovernanceHub extends StatefulWidget {
 
 class _GovernanceHubState extends State<GovernanceHub>
     with TickerProviderStateMixin {
-  static const String _categoryPlatformUpdate = 'Platform Update';
-  static const String _categoryNewFeature = 'New Feature';
-  static const String _categoryPolicyChange = 'Policy Change';
-  static const String _categoryTreasuryAllocation = 'Treasury Allocation';
-  static const String _categoryCommunityInitiative = 'Community Initiative';
-  static const String _categoryTechnicalImprovement = 'Technical Improvement';
+  static const String _categoryPlatformUpdate = 'platform_update';
+  static const String _categoryNewFeature = 'new_feature';
+  static const String _categoryPolicyChange = 'policy_change';
+  static const String _categoryTreasuryAllocation = 'treasury_allocation';
+  static const String _categoryCommunityInitiative = 'community_initiative';
+  static const String _categoryTechnicalImprovement = 'technical_improvement';
   static const List<String> _proposalCategories = [
     _categoryPlatformUpdate,
     _categoryNewFeature,
@@ -1748,18 +1748,17 @@ class _GovernanceHubState extends State<GovernanceHub>
     }
 
     final selectedType = () {
-      switch (_selectedCategory.toLowerCase()) {
-        case 'platform update':
+      switch (_selectedCategory) {
+        case _categoryPlatformUpdate:
           return ProposalType.platformUpdate;
-        case 'new feature':
-        case 'technical improvement':
+        case _categoryNewFeature:
+        case _categoryTechnicalImprovement:
           return ProposalType.featureRequest;
-        case 'treasury allocation':
-        case 'community fund allocation':
+        case _categoryTreasuryAllocation:
           return ProposalType.rewards;
-        case 'policy change':
-        case 'governance':
+        case _categoryPolicyChange:
           return ProposalType.governance;
+        case _categoryCommunityInitiative:
         default:
           return ProposalType.community;
       }

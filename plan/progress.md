@@ -40,21 +40,17 @@ Finish the previously planned UI/UX hierarchy, spacing, alignment, distribution,
 - `lib/widgets/auth_entry_shell.dart` - COMPLETE. Shared auth entry shell already has desktop/mobile composition and highlight grouping. Missing: no concrete scoped edit found.
 - `lib/screens/onboarding/onboarding_flow_screen.dart` - COMPLETE. Structured onboarding, account mode switch, welcome choices, permissions, wallet backup, and role flow are already implemented with localization. Missing: no concrete scoped edit found.
 
-# Locked Plan
-- `lib/screens/community/community_screen.dart`: add a composed groups directory header above search/results to establish hierarchy and distribution.
-- `lib/screens/community/community_screen.dart`: replace hardcoded composer tag/mention labels and hints with localization keys.
-- `lib/screens/community/community_screen.dart`: replace hardcoded group picker empty/join/select copy with localization keys.
-- `lib/screens/community/community_screen.dart`: normalize group/art tab gutters to tokenized spacing where the audited section still uses magic constants.
-- `lib/screens/web3/wallet/wallet_home.dart`: introduce shared section headers for actions, tokens, and transactions so the wallet dashboard reads as balance -> custody -> actions -> assets -> history.
-- `lib/screens/web3/wallet/wallet_home.dart`: restyle quick actions into a compact functional group with consistent gutters instead of a competing full card.
-- `lib/screens/web3/wallet/wallet_home.dart`: add an explicit localized empty token state and fix the mojibake approximate-value label.
-- `lib/screens/web3/marketplace/marketplace.dart`: replace hardcoded settings labels, tab labels, featured/trending section titles, and empty states with localization keys.
-- `lib/screens/web3/marketplace/marketplace.dart`: add section subtitles and tokenized grid gutters so browsing hierarchy is clearer.
-- `lib/screens/web3/institution/institution_hub.dart`: replace hardcoded cross-role blocked copy and application sheet title/action/error copy with localization keys.
-- `lib/screens/community/messages_screen.dart`: add a localized conversation list intro/action header before conversation rows when conversations exist.
-- `lib/screens/home_screen.dart`: replace hardcoded discovery rail warming and creator fallback copy with existing/new localization keys.
-- `lib/screens/web3/dao/governance_hub.dart`: move proposal category IDs to stable internal keys and localize displayed proposal category labels.
-- `lib/l10n/app_en.arb`, `lib/l10n/app_sl.arb`, `lib/l10n/app_localizations.dart`, `lib/l10n/app_localizations_en.dart`, `lib/l10n/app_localizations_sl.dart`: add the localization keys required by touched UI.
+## Reopened Gaps
+- ✅ `lib/screens/web3/marketplace/marketplace.dart`: resolved. All reopened visible hardcoded English UI strings in the audited flows were localized (`AR`, `FOR SALE`, `Listed for`, `Owned`, `Properties`, `SOLD OUT`, `by {artist}`, `Description`, card action labels, and mint/AR dialog copy).
+- ✅ `lib/screens/web3/dao/governance_hub.dart`: resolved. Proposal categories now use stable internal IDs (`platform_update`, `new_feature`, etc.) while display labels remain localized.
+- ✅ `lib/screens/community/community_screen.dart`: resolved. `unavailableMessageFor('Posting')` now uses localized `l10n.communityPostingFeatureLabel`.
+
+## Finishing Plan
+- ✅ `lib/screens/web3/marketplace/marketplace.dart`: localized remaining visible hardcoded English copy in cards/details/mint dialogs with no hierarchy/spacing regressions.
+- ✅ `lib/screens/web3/dao/governance_hub.dart`: switched proposal categories to stable internal keys and preserved localized display labels + proposal-type mapping.
+- ✅ `lib/screens/community/community_screen.dart`: replaced hardcoded `'Posting'` app-mode label with localized copy.
+- ✅ `lib/l10n/app_en.arb` + `lib/l10n/app_sl.arb`: added required keys for marketplace/governance/community updates.
+- ✅ Regenerated l10n, formatted touched files, ran analyzer, and ran targeted hardcoded-string verification scans.
 
 # TODO Checklist
 - [x] `community_screen.dart`: add groups directory header with localized title/subtitle and tokenized spacing.
@@ -64,13 +60,14 @@ Finish the previously planned UI/UX hierarchy, spacing, alignment, distribution,
 - [x] `wallet_home.dart`: add shared section header helper and apply it to quick actions, tokens, and recent transactions.
 - [x] `wallet_home.dart`: make quick actions a restrained grouped control with stable action button dimensions and aligned gutters.
 - [x] `wallet_home.dart`: add localized empty token state and replace mojibake approximate-value copy.
-- [x] `marketplace.dart`: localize settings AR-only switch title/subtitle, tab labels, featured/trending titles, and empty states.
+- [x] `marketplace.dart`: localize all remaining visible hardcoded strings in cards/details/mint and AR-required dialogs.
 - [x] `marketplace.dart`: add browsing subtitles and tokenized grid spacing for featured/trending listings.
 - [x] `institution_hub.dart`: localize institution cross-role blocked title/description strings.
 - [x] `institution_hub.dart`: localize application sheet title, submit action, and failed submission copy.
 - [x] `messages_screen.dart`: add localized conversation list header/action row above non-empty conversation lists.
 - [x] `home_screen.dart`: replace hardcoded discovery rail warming and creator fallback strings with localization.
 - [x] `governance_hub.dart`: localize proposal category display labels while preserving stable internal category values.
+- [x] `community_screen.dart`: replace app-mode unavailable `'Posting'` label path with localized copy.
 - [x] `lib/l10n/*`: update English and Slovenian localization sources and generated localization accessors for all added keys.
 - [x] Verification: run formatting on touched Dart files.
 - [x] Verification: run `flutter analyze` or record blocker.
@@ -83,14 +80,21 @@ Finish the previously planned UI/UX hierarchy, spacing, alignment, distribution,
 - 2026-04-16: Implemented the mobile/shared pass: community group hierarchy and composer localization, wallet dashboard section hierarchy, marketplace browse hierarchy/localization, institution application localization, messages list header, home rail fallbacks, and governance category display cleanup.
 - 2026-04-16: QA subagent found three completion-gate localization gaps in community post actions, marketplace collectible stat/detail labels, and institution review-state copy. Patched those gaps and regenerated localization accessors.
 - 2026-04-16: Re-ran formatting, localization generation, static analysis, ARB validation, targeted hardcoded-string scans, and `git diff --check`.
+- 2026-04-16: Re-audited mandatory files against this plan and reopened false-complete gaps in marketplace copy, governance category IDs, and community posting unavailable label flow.
+- 2026-04-16: Implemented final marketplace localization pass for remaining card/detail/mint/AR dialog hardcoded strings and added required EN/SL ARB keys.
+- 2026-04-16: Replaced governance category values with stable internal identifiers and updated proposal type mapping to use those IDs.
+- 2026-04-16: Localized community unavailable posting feature label and completed final completion-gate QA review.
 
 # Verification
-- Checklist status: DONE 18 / PARTIAL 0 / NOT DONE 0.
-- `C:\dev\flutter\bin\flutter.bat gen-l10n` completed successfully.
-- `C:\dev\flutter\bin\cache\dart-sdk\bin\dart.exe format` completed on touched Dart and generated localization files.
-- `C:\dev\flutter\bin\flutter.bat analyze` completed with no issues.
-- `lib/l10n/app_en.arb` and `lib/l10n/app_sl.arb` both parsed successfully as JSON.
-- Targeted scans no longer find the QA-blocking visible hardcoded strings in `community_screen.dart`, `marketplace.dart`, or `institution_hub.dart`.
-- `git diff --check` reported no whitespace errors; it only emitted existing line-ending normalization warnings for touched files.
+- Checklist status: DONE 19 / PARTIAL 0 / NOT DONE 0.
+- `flutter gen-l10n` completed successfully after ARB updates.
+- `dart format lib/screens/web3/marketplace/marketplace.dart lib/screens/web3/dao/governance_hub.dart lib/screens/community/community_screen.dart` completed (3 files checked, 1 reformatted).
+- `flutter analyze` completed with no issues.
+- Targeted scans confirm the reopened strict blockers are no longer present in:
+	- `lib/screens/web3/marketplace/marketplace.dart`
+	- `lib/screens/web3/dao/governance_hub.dart`
+	- `lib/screens/community/community_screen.dart`
+- QA completion-gate subagent review: PASS across marketplace hardcoded-copy gate, governance stable-ID gate, community localized-posting-label gate, and EN/SL key parity gate.
 
 # Remaining Gaps
+- None.

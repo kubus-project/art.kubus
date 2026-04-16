@@ -4399,7 +4399,11 @@ class _CommunityScreenState extends State<CommunityScreen>
     if (appModeProvider?.isIpfsFallbackMode ?? false) {
       messenger.showKubusSnackBar(
         SnackBar(
-          content: Text(appModeProvider!.unavailableMessageFor('Posting')),
+          content: Text(
+            appModeProvider!.unavailableMessageFor(
+              l10n.communityPostingFeatureLabel,
+            ),
+          ),
         ),
       );
       return;

@@ -2695,6 +2695,40 @@
   "marketplaceViewInWalletButton": "View in wallet",
   "marketplaceMintFailedTitle": "Creation failed",
   "marketplaceMintFailedDescription": "Unable to create a collectible (NFT) right now. Please try again.",
+  "marketplaceArBadgeLabel": "AR",
+  "marketplaceListedForLabel": "Listed for",
+  "marketplaceOwnedLabel": "Owned",
+  "marketplacePropertiesTitle": "Properties",
+  "marketplaceSoldOutBadgeLabel": "SOLD OUT",
+  "marketplaceCardActionListed": "Listed",
+  "marketplaceCardActionMint": "Mint",
+  "marketplaceCardActionView": "View",
+  "marketplaceNftArtworkStatus": "NFT Artwork",
+  "marketplaceNftArtworkStatusArEnabled": "NFT Artwork • AR Enabled",
+  "marketplaceMintUnavailableLabel": "Mint unavailable",
+  "marketplaceSoldOutLabel": "Sold out",
+  "marketplaceMintNftButtonLabel": "Mint NFT",
+  "marketplaceArRequiredTitle": "AR Required",
+  "marketplaceArRequiredDescription": "This NFT requires AR interaction with the physical artwork. Please visit the artwork location and use the AR scanner to mint your NFT.",
+  "marketplaceGoToArButton": "Go to AR",
+  "marketplaceMintDialogTitle": "Mint NFT",
+  "marketplaceMintConfirmCollectionDescription": "You are about to mint an NFT from \"{collection}\" collection.",
+  "@marketplaceMintConfirmCollectionDescription": {
+    "placeholders": {
+      "collection": {}
+    }
+  },
+  "marketplaceMintPriceLabel": "Mint price:",
+  "marketplaceConfirmMintButton": "Confirm Mint",
+  "marketplaceTokenNumberLabel": "Token #{tokenId}",
+  "@marketplaceTokenNumberLabel": {
+    "placeholders": {
+      "tokenId": {
+        "type": "String"
+      }
+    }
+  },
+  "communityPostingFeatureLabel": "Posting",
   "daoModerationApproveLabel": "Approve",
   "daoModerationRejectLabel": "Reject",
   "daoModerationSetPendingLabel": "Set pending",
