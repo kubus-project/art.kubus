@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import '../../config/config.dart';
@@ -7,6 +7,7 @@ import '../../utils/design_tokens.dart';
 import '../../widgets/avatar_widget.dart';
 import 'package:provider/provider.dart';
 import '../../l10n/app_localizations.dart';
+import '../../models/artwork.dart';
 import '../../providers/artwork_provider.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/wallet_provider.dart';
@@ -15,6 +16,7 @@ import '../../providers/platform_provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/user_service.dart';
 import '../../utils/artwork_navigation.dart';
+import '../../utils/artwork_media_resolver.dart';
 import '../../utils/creator_display_format.dart';
 import '../../utils/search_suggestions.dart';
 import '../../utils/user_profile_navigation.dart';
@@ -1313,6 +1315,105 @@ class _ArtworksBottomSheet extends StatelessWidget {
 
   const _ArtworksBottomSheet({required this.walletAddress});
 
+  Widget _buildArtworkCover({
+    required BuildContext context,
+    required ThemeData theme,
+    required Artwork artwork,
+  }) {
+    final l10n = AppLocalizations.of(context)!;
+    final imageUrl = ArtworkMediaResolver.resolveCover(
+      artwork: artwork,
+      metadata: artwork.metadata,
+      additionalUrls: artwork.galleryUrls,
+    );
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(
+        top: Radius.circular(KubusRadius.lg),
+      ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHigh,
+          border: Border.all(
+            color: theme.colorScheme.outline.withValues(alpha: 0.12),
+          ),
+        ),
+        child: imageUrl == null
+            ? _buildArtworkCoverFallback(theme, l10n)
+            : Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+                errorBuilder: (context, error, stackTrace) {
+                  return _buildArtworkCoverFallback(theme, l10n);
+                },
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      _buildArtworkCoverFallback(theme, l10n),
+                      Center(
+                        child: SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+      ),
+    );
+  }
+
+  Widget _buildArtworkCoverFallback(
+    ThemeData theme,
+    AppLocalizations l10n,
+  ) {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      padding: const EdgeInsets.all(KubusSpacing.sm),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.95),
+            theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.82),
+          ],
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.image_not_supported_outlined,
+            size: 32,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.58),
+          ),
+          const SizedBox(height: KubusSpacing.xs),
+          Text(
+            l10n.commonNotAvailable,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: KubusTypography.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.68),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -1409,39 +1510,10 @@ class _ArtworksBottomSheet extends StatelessWidget {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Expanded(
-                                          child: DecoratedBox(
-                                            decoration: BoxDecoration(
-                                              borderRadius:
-                                                  const BorderRadius.vertical(
-                                                top: Radius.circular(
-                                                    KubusRadius.lg),
-                                              ),
-                                              gradient: LinearGradient(
-                                                begin: Alignment.topLeft,
-                                                end: Alignment.bottomRight,
-                                                colors: [
-                                                  theme.colorScheme
-                                                      .primaryContainer
-                                                      .withValues(alpha: 0.34),
-                                                  theme.colorScheme
-                                                      .surfaceContainerHigh
-                                                      .withValues(alpha: 0.18),
-                                                ],
-                                              ),
-                                              border: Border.all(
-                                                color: theme.colorScheme.outline
-                                                    .withValues(alpha: 0.12),
-                                              ),
-                                            ),
-                                            child: Center(
-                                              child: Icon(
-                                                Icons.image_outlined,
-                                                size: 32,
-                                                color: theme
-                                                    .colorScheme.onSurface
-                                                    .withValues(alpha: 0.58),
-                                              ),
-                                            ),
+                                          child: _buildArtworkCover(
+                                            context: context,
+                                            theme: theme,
+                                            artwork: artwork,
                                           ),
                                         ),
                                         Padding(
