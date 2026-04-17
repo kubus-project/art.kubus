@@ -54,6 +54,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonSavedToast => 'Saved';
 
   @override
+  String get supportTicketSubmittedToast => 'Support request sent.';
+
+  @override
+  String get supportTicketReceiptEmailToast => 'Support request sent. We\'ll email a receipt to the address you provided.';
+
+  @override
   String get commonActionFailedToast => 'Something went wrong. Please try again.';
 
   @override
@@ -512,6 +518,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authEmailNotVerifiedToast => 'Email not verified. Check your inbox to continue.';
+
+  @override
+  String get authEmailNotVerifiedBadge => 'Email not verified';
 
   @override
   String get authForgotPasswordLink => 'Forgot password?';

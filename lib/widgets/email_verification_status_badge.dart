@@ -1,4 +1,5 @@
 import 'package:art_kubus/config/config.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -75,7 +76,7 @@ class _EmailVerificationStatusBadgeState
           border: Border.all(color: scheme.error.withValues(alpha: 0.35)),
         ),
         child: Text(
-          'Email not verified',
+          AppLocalizations.of(context)!.authEmailNotVerifiedBadge,
           style: KubusTextStyles.compactBadge.copyWith(
             fontSize: dense
                 ? KubusChromeMetrics.navBadgeLabel + 2

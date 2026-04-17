@@ -54,6 +54,12 @@ class AppLocalizationsSl extends AppLocalizations {
   String get commonSavedToast => 'Shranjeno';
 
   @override
+  String get supportTicketSubmittedToast => 'Zahteva za podporo je poslana.';
+
+  @override
+  String get supportTicketReceiptEmailToast => 'Zahteva za podporo je poslana. Potrdilo bomo poslali na vneseni e-poštni naslov.';
+
+  @override
   String get commonActionFailedToast => 'Nekaj je šlo narobe. Poskusi znova.';
 
   @override
@@ -512,6 +518,9 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get authEmailNotVerifiedToast => 'E-pošta ni potrjena. Preveri prejeto pošto.';
+
+  @override
+  String get authEmailNotVerifiedBadge => 'E-pošta ni potrjena';
 
   @override
   String get authForgotPasswordLink => 'Ste pozabili geslo?';

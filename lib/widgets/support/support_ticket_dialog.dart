@@ -64,7 +64,16 @@ class _SupportTicketDialogState extends State<SupportTicketDialog> {
 
       if (!mounted) return;
       navigator.pop(true);
-      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonSavedToast)));
+      final hasEmail = _emailController.text.trim().isNotEmpty;
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(
+            hasEmail
+                ? l10n.supportTicketReceiptEmailToast
+                : l10n.supportTicketSubmittedToast,
+          ),
+        ),
+      );
     } catch (_) {
       if (!mounted) return;
       messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));

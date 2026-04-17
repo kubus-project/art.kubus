@@ -185,6 +185,18 @@ abstract class AppLocalizations {
   /// **'Saved'**
   String get commonSavedToast;
 
+  /// No description provided for @supportTicketSubmittedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Support request sent.'**
+  String get supportTicketSubmittedToast;
+
+  /// No description provided for @supportTicketReceiptEmailToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Support request sent. We'll email a receipt to the address you provided.'**
+  String get supportTicketReceiptEmailToast;
+
   /// No description provided for @commonActionFailedToast.
   ///
   /// In en, this message translates to:
@@ -1096,6 +1108,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Email not verified. Check your inbox to continue.'**
   String get authEmailNotVerifiedToast;
+
+  /// No description provided for @authEmailNotVerifiedBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Email not verified'**
+  String get authEmailNotVerifiedBadge;
 
   /// No description provided for @authForgotPasswordLink.
   ///
