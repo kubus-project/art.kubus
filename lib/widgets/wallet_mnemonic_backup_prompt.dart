@@ -16,8 +16,11 @@ Future<bool> showWalletMnemonicBackupPrompt({
   final isDesktop = DesktopBreakpoints.isDesktop(context);
   final confirmController = TextEditingController();
   bool confirmed = false;
-  final shortAddress =
-      '${address.substring(0, 8)}...${address.substring(address.length - 6)}';
+  final trimmedAddress = address.trim();
+  final shortAddress = trimmedAddress.length <= 14
+      ? trimmedAddress
+      : '${trimmedAddress.substring(0, 8)}...'
+          '${trimmedAddress.substring(trimmedAddress.length - 6)}';
 
   Widget buildMnemonicContent(
     BuildContext innerContext,

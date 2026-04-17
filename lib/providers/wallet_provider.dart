@@ -898,7 +898,8 @@ class WalletProvider extends ChangeNotifier {
       if (WalletUtils.equals(_currentWalletAddress, targetWallet) &&
           canTransact) {
         if (refreshBackendSession) {
-          await ensureBackendSessionForActiveSigner(walletAddress: targetWallet);
+          await ensureBackendSessionForActiveSigner(
+              walletAddress: targetWallet);
         }
         _clearLastError();
         return ManagedWalletReconnectOutcome.signerRestored;
@@ -935,7 +936,8 @@ class WalletProvider extends ChangeNotifier {
       if (WalletUtils.equals(_currentWalletAddress, targetWallet) &&
           canTransact) {
         if (refreshBackendSession) {
-          await ensureBackendSessionForActiveSigner(walletAddress: targetWallet);
+          await ensureBackendSessionForActiveSigner(
+              walletAddress: targetWallet);
         }
         _clearLastError();
         return ManagedWalletReconnectOutcome.signerRestored;
@@ -2341,15 +2343,19 @@ class WalletProvider extends ChangeNotifier {
       _walletLog('failed to set active keypair for new wallet: $e');
     }
 
-    _currentWalletAddress = keyPair.publicKey;
+    final address = keyPair.publicKey.trim();
+    if (address.isEmpty) {
+      throw StateError('Generated wallet did not include a public address.');
+    }
+
+    _currentWalletAddress = address;
     await clearExternalSigner(notify: false);
     _setEncryptedWalletBackupDefinition(null);
-    SolanaWalletConnectService.instance
-        .updateActiveWalletAddress(_currentWalletAddress);
+    SolanaWalletConnectService.instance.updateActiveWalletAddress(address);
     // Persist address for other providers/screens
     try {
-      await _persistWalletIdentity(_currentWalletAddress!);
-      _apiService.setPreferredWalletAddress(_currentWalletAddress);
+      await _persistWalletIdentity(address);
+      _apiService.setPreferredWalletAddress(address);
     } catch (e) {
       _walletLog('failed to persist wallet address: $e');
     }
@@ -2361,7 +2367,7 @@ class WalletProvider extends ChangeNotifier {
       _walletLog('createWallet: loadData failed: $e');
     }
     try {
-      await _syncBackendData(_currentWalletAddress!);
+      await _syncBackendData(address);
     } catch (e) {
       _walletLog('createWallet: sync backend failed: $e');
     }
@@ -2373,7 +2379,7 @@ class WalletProvider extends ChangeNotifier {
     try {
       await setMnemonicBackupRequired(
         required: true,
-        walletAddress: _currentWalletAddress,
+        walletAddress: address,
       );
     } catch (e) {
       _walletLog('createWallet: failed to persist backup-required flag: $e');
@@ -2384,7 +2390,7 @@ class WalletProvider extends ChangeNotifier {
 
     return {
       'mnemonic': mnemonic,
-      'address': _currentWalletAddress!,
+      'address': address,
     };
   }
 

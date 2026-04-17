@@ -72,11 +72,12 @@ class _MnemonicRevealScreenState extends State<MnemonicRevealScreen> {
   }
 
   Future<void> _copyToClipboard() async {
-    if (_mnemonic == null) return;
+    final mnemonic = _mnemonic?.trim();
+    if (mnemonic == null || mnemonic.isEmpty) return;
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await Clipboard.setData(ClipboardData(text: _mnemonic!));
+      await Clipboard.setData(ClipboardData(text: mnemonic));
       if (!mounted) return;
       messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.mnemonicRevealCopiedToast)),
@@ -114,13 +115,14 @@ class _MnemonicRevealScreenState extends State<MnemonicRevealScreen> {
     if (_mnemonic == null || _masked) return;
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
     final wallet = Provider.of<WalletProvider>(context, listen: false);
     await wallet.markMnemonicBackedUp();
     if (!mounted) return;
     messenger.showKubusSnackBar(
       SnackBar(content: Text(l10n.walletBackupMarkedCompleteToast)),
     );
-    Navigator.of(context).pop(true);
+    navigator.pop(true);
   }
 
   @override

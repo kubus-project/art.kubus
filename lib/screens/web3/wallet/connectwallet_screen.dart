@@ -211,8 +211,6 @@ class _ConnectWalletState extends State<ConnectWallet>
 
   bool get _isAuthEntryFlow => _normalizedAuthFlow() != null;
 
-
-
   void _emitProfileUpdate(ProfileProvider profileProvider) {
     final currentUser = profileProvider.currentUser;
     if (currentUser == null) return;
@@ -858,8 +856,9 @@ class _ConnectWalletState extends State<ConnectWallet>
               icon: const Icon(Icons.paste),
               onPressed: () async {
                 final clipboardData = await Clipboard.getData('text/plain');
-                if (clipboardData?.text == null) return;
-                setState(() => _wcUriController.text = clipboardData!.text!);
+                final text = clipboardData?.text?.trim();
+                if (text == null || text.isEmpty || !mounted) return;
+                setState(() => _wcUriController.text = text);
               },
             ),
           ),
@@ -1974,11 +1973,11 @@ class _ConnectWalletState extends State<ConnectWallet>
                     onPressed: () async {
                       final clipboardData =
                           await Clipboard.getData('text/plain');
-                      if (clipboardData?.text != null) {
-                        setState(() {
-                          _wcUriController.text = clipboardData!.text!;
-                        });
-                      }
+                      final text = clipboardData?.text?.trim();
+                      if (text == null || text.isEmpty || !mounted) return;
+                      setState(() {
+                        _wcUriController.text = text;
+                      });
                     },
                   ),
                 ),
@@ -2328,13 +2327,19 @@ class _ConnectWalletState extends State<ConnectWallet>
       }
 
       final result = await walletProvider.createWallet();
+      final mnemonic = (result['mnemonic'] ?? '').trim();
+      final address = (result['address'] ?? '').trim();
+
+      if (mnemonic.isEmpty || address.isEmpty) {
+        throw StateError('Created wallet is missing backup details.');
+      }
 
       // Show the mnemonic to the user
       if (mounted) {
         final didConfirmMnemonic = await showWalletMnemonicBackupPrompt(
           context: context,
-          mnemonic: result['mnemonic']!,
-          address: result['address']!,
+          mnemonic: mnemonic,
+          address: address,
         );
         if (!mounted) return;
         if (!didConfirmMnemonic) {
@@ -2346,13 +2351,12 @@ class _ConnectWalletState extends State<ConnectWallet>
 
         await const WalletSessionSyncService().bindAuthenticatedWallet(
           context: context,
-          walletAddress: result['address']!,
+          walletAddress: address,
           warmUp: false,
           loadProfile: false,
         );
 
         if (mounted) {
-          final address = result['address']!;
           await _ensureWalletAccountAndProfile(
             address: address,
             profileProvider: profileProvider,
@@ -2362,7 +2366,7 @@ class _ConnectWalletState extends State<ConnectWallet>
 
         if (mounted) {
           try {
-            await _runPostWalletConnectRefresh(result['address']!);
+            await _runPostWalletConnectRefresh(address);
           } catch (_) {}
           final hasAuth =
               (BackendApiService().getAuthToken() ?? '').trim().isNotEmpty;
