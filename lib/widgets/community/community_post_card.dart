@@ -42,6 +42,8 @@ class CommunityPostCard extends StatelessWidget {
     this.onOpenLocation,
     this.onOpenGroup,
     this.onOpenSubject,
+    this.commentsExpanded = false,
+    this.inlineComments,
   });
 
   final CommunityPost post;
@@ -66,6 +68,8 @@ class CommunityPostCard extends StatelessWidget {
   final ValueChanged<CommunityLocation>? onOpenLocation;
   final ValueChanged<CommunityGroupReference>? onOpenGroup;
   final ValueChanged<CommunitySubjectPreview>? onOpenSubject;
+  final bool commentsExpanded;
+  final Widget? inlineComments;
 
   @override
   Widget build(BuildContext context) {
@@ -82,27 +86,22 @@ class CommunityPostCard extends StatelessWidget {
 
         return Container(
           margin: const EdgeInsets.only(bottom: KubusChromeMetrics.cardPadding),
-          child: MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: GestureDetector(
-              behavior: HitTestBehavior.deferToChild,
-              onTap: () => onOpenPostDetail(post),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: radius,
-                  border: Border.all(
-                    color: scheme.outline.withValues(alpha: 0.18),
-                  ),
-                ),
-                child: LiquidGlassPanel(
-                  padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
-                  margin: EdgeInsets.zero,
-                  borderRadius: radius,
-                  showBorder: false,
-                  backgroundColor: glassTint,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: radius,
+              border: Border.all(
+                color: scheme.outline.withValues(alpha: 0.18),
+              ),
+            ),
+            child: LiquidGlassPanel(
+              padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
+              margin: EdgeInsets.zero,
+              borderRadius: radius,
+              showBorder: false,
+              backgroundColor: glassTint,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                       Row(
                         children: [
                           Expanded(
@@ -203,12 +202,15 @@ class CommunityPostCard extends StatelessWidget {
                           post.content.isNotEmpty) ...[
                         const SizedBox(
                             height: KubusSpacing.xs + KubusSpacing.xxs),
-                        Text(
-                          post.content,
-                          style: KubusTextStyles.detailBody.copyWith(
-                            fontSize: isSmallScreen ? 13 : 15,
-                            height: 1.5,
-                            color: scheme.onSurface,
+                        _OpenPostSurface(
+                          onTap: () => onOpenPostDetail(post),
+                          child: Text(
+                            post.content,
+                            style: KubusTextStyles.detailBody.copyWith(
+                              fontSize: isSmallScreen ? 13 : 15,
+                              height: 1.5,
+                              color: scheme.onSurface,
+                            ),
                           ),
                         ),
                         const SizedBox(height: KubusSpacing.sm),
@@ -257,18 +259,21 @@ class CommunityPostCard extends StatelessWidget {
                           onOpenPostDetail: onOpenPostDetail,
                         ),
                       ] else ...[
-                        Text(
-                          post.content,
-                          style: KubusTextStyles.detailBody.copyWith(
-                            fontSize: isSmallScreen ? 13 : 15,
-                            height: 1.5,
-                            color: scheme.onSurface,
+                        _OpenPostSurface(
+                          onTap: () => onOpenPostDetail(post),
+                          child: Text(
+                            post.content,
+                            style: KubusTextStyles.detailBody.copyWith(
+                              fontSize: isSmallScreen ? 13 : 15,
+                              height: 1.5,
+                              color: scheme.onSurface,
+                            ),
                           ),
                         ),
                       ],
                       if (_hasPrimaryImage(post)) ...[
                         const SizedBox(height: KubusSpacing.md),
-                        GestureDetector(
+                        _OpenPostSurface(
                           onTap: () =>
                               onOpenPostDetail(_primaryImagePost(post)),
                           child: ClipRRect(
@@ -374,6 +379,7 @@ class CommunityPostCard extends StatelessWidget {
                               icon: Icons.comment_outlined,
                               label: '${post.commentCount}',
                               onTap: onOpenComments,
+                              isActive: commentsExpanded,
                               accentColor: accentColor,
                             ),
                           ),
@@ -410,13 +416,15 @@ class CommunityPostCard extends StatelessWidget {
                           ),
                         ],
                       ),
+                      if (inlineComments != null) ...[
+                        const SizedBox(height: KubusSpacing.sm),
+                        inlineComments!,
+                      ],
                     ],
                   ),
-                ),
               ),
             ),
-          ),
-        );
+          );
       },
     );
   }
@@ -446,6 +454,28 @@ class CommunityPostCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _OpenPostSurface extends StatelessWidget {
+  const _OpenPostSurface({
+    required this.child,
+    required this.onTap,
+  });
+
+  final Widget child;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: SizedBox(width: double.infinity, child: child),
       ),
     );
   }

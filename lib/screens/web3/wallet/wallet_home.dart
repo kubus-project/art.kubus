@@ -444,13 +444,20 @@ class _WalletHomeState extends State<WalletHome> {
                                 .outline
                                 .withValues(alpha: 0.3)),
                       ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: _buildActionButton(
+                      child: LayoutBuilder(
+                        builder: (context, actionConstraints) {
+                          final columns =
+                              actionConstraints.maxWidth < 420 ? 2 : 4;
+                          final spacing =
+                              isSmallScreen ? KubusSpacing.sm : KubusSpacing.md;
+                          final itemWidth = (actionConstraints.maxWidth -
+                                  spacing * (columns - 1)) /
+                              columns;
+                          final actions = <Widget>[
+                            _buildActionButton(
                               l10n.walletHomeActionSend,
                               Icons.arrow_upward,
-                              AppColorUtils.coralAccent, // Send
+                              AppColorUtils.coralAccent,
                               () {
                                 if (!canTransact) {
                                   _handleReadOnlyReconnect(walletProvider);
@@ -467,14 +474,10 @@ class _WalletHomeState extends State<WalletHome> {
                               buttonKey: const Key('wallet_home_action_send'),
                               enabled: canTransact,
                             ),
-                          ),
-                          const SizedBox(
-                              width: KubusSpacing.sm + KubusSpacing.xs),
-                          Expanded(
-                            child: _buildActionButton(
+                            _buildActionButton(
                               l10n.walletHomeActionReceive,
                               Icons.arrow_downward,
-                              AppColorUtils.indigoAccent, // Receive
+                              AppColorUtils.indigoAccent,
                               () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -485,14 +488,10 @@ class _WalletHomeState extends State<WalletHome> {
                               buttonKey:
                                   const Key('wallet_home_action_receive'),
                             ),
-                          ),
-                          const SizedBox(
-                              width: KubusSpacing.sm + KubusSpacing.xs),
-                          Expanded(
-                            child: _buildActionButton(
+                            _buildActionButton(
                               l10n.walletHomeActionSwap,
                               Icons.swap_horiz,
-                              AppColorUtils.greenAccent, // Swap
+                              AppColorUtils.greenAccent,
                               () {
                                 if (!canTransact) {
                                   _handleReadOnlyReconnect(walletProvider);
@@ -508,14 +507,10 @@ class _WalletHomeState extends State<WalletHome> {
                               buttonKey: const Key('wallet_home_action_swap'),
                               enabled: canTransact,
                             ),
-                          ),
-                          const SizedBox(
-                              width: KubusSpacing.sm + KubusSpacing.xs),
-                          Expanded(
-                            child: _buildActionButton(
+                            _buildActionButton(
                               l10n.walletHomeActionNfts,
                               Icons.image,
-                              AppColorUtils.tealAccent, // NFTs
+                              AppColorUtils.tealAccent,
                               () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -524,8 +519,16 @@ class _WalletHomeState extends State<WalletHome> {
                               isSmallScreen,
                               buttonKey: const Key('wallet_home_action_nfts'),
                             ),
-                          ),
-                        ],
+                          ];
+                          return Wrap(
+                            spacing: spacing,
+                            runSpacing: spacing,
+                            children: [
+                              for (final action in actions)
+                                SizedBox(width: itemWidth, child: action),
+                            ],
+                          );
+                        },
                       ),
                     ),
 
@@ -1015,7 +1018,7 @@ class _WalletHomeState extends State<WalletHome> {
       case TransactionType.unstake:
         return AppColorUtils.orangeAccent;
       case TransactionType.governanceVote:
-        return AppColorUtils.purpleAccent;
+        return Theme.of(context).colorScheme.primary;
     }
   }
 

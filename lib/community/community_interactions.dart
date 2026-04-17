@@ -258,6 +258,117 @@ class CommunityLikeUser {
   });
 }
 
+class CommunityEntityInteractionState {
+  final String id;
+  final bool isLiked;
+  final int? likeCount;
+  final int? commentCount;
+  final bool? isBookmarked;
+
+  const CommunityEntityInteractionState({
+    required this.id,
+    required this.isLiked,
+    this.likeCount,
+    this.commentCount,
+    this.isBookmarked,
+  });
+
+  factory CommunityEntityInteractionState.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    int? intValue(dynamic raw) {
+      if (raw == null) return null;
+      if (raw is int) return raw;
+      if (raw is num) return raw.toInt();
+      return int.tryParse(raw.toString());
+    }
+
+    final id = (json['id'] ?? json['targetId'] ?? json['target_id'] ?? '')
+        .toString()
+        .trim();
+    return CommunityEntityInteractionState(
+      id: id,
+      isLiked: communityBool(
+        json['isLiked'] ??
+            json['is_liked'] ??
+            json['isLikedByCurrentUser'] ??
+            json['is_liked_by_current_user'],
+      ),
+      likeCount: intValue(
+        json['likesCount'] ??
+            json['likes_count'] ??
+            json['likeCount'] ??
+            json['likes'],
+      ),
+      commentCount: intValue(
+        json['commentsCount'] ??
+            json['comments_count'] ??
+            json['commentCount'] ??
+            json['comments'],
+      ),
+      isBookmarked: json.containsKey('isBookmarked') ||
+              json.containsKey('is_bookmarked') ||
+              json.containsKey('isSaved') ||
+              json.containsKey('is_saved')
+          ? communityBool(
+              json['isBookmarked'] ??
+                  json['is_bookmarked'] ??
+                  json['isSaved'] ??
+                  json['is_saved'],
+            )
+          : null,
+    );
+  }
+}
+
+class CommunityInteractionStateBatch {
+  final Map<String, CommunityEntityInteractionState> posts;
+  final Map<String, CommunityEntityInteractionState> comments;
+  final Map<String, CommunityEntityInteractionState> artworks;
+
+  const CommunityInteractionStateBatch({
+    this.posts = const {},
+    this.comments = const {},
+    this.artworks = const {},
+  });
+
+  factory CommunityInteractionStateBatch.fromJson(Map<String, dynamic> json) {
+    Map<String, CommunityEntityInteractionState> parseStates(dynamic raw) {
+      if (raw is Map) {
+        final out = <String, CommunityEntityInteractionState>{};
+        raw.forEach((key, value) {
+          if (value is Map) {
+            final state = CommunityEntityInteractionState.fromJson({
+              'id': key.toString(),
+              ...Map<String, dynamic>.from(value),
+            });
+            if (state.id.isNotEmpty) out[state.id] = state;
+          }
+        });
+        return out;
+      }
+      if (raw is List) {
+        final out = <String, CommunityEntityInteractionState>{};
+        for (final entry in raw) {
+          if (entry is! Map) continue;
+          final state = CommunityEntityInteractionState.fromJson(
+            Map<String, dynamic>.from(entry),
+          );
+          if (state.id.isNotEmpty) out[state.id] = state;
+        }
+        return out;
+      }
+      return const <String, CommunityEntityInteractionState>{};
+    }
+
+    return CommunityInteractionStateBatch(
+      posts: parseStates(json['posts']),
+      comments: parseStates(json['comments']),
+      artworks: parseStates(json['artworks']),
+    );
+  }
+}
+
 class CommunityLocation {
   final String? name;
   final double? lat;
@@ -577,12 +688,12 @@ class CommunityService {
   }
 
   // Load saved interactions
-  static Future<void> loadSavedInteractions(List<CommunityPost> posts,
-      {String? walletAddress}) async {
+  static Future<void> loadSavedInteractions(
+    List<CommunityPost> posts,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
     final bookmarkedPosts = prefs.getStringList(_bookmarksKey) ?? [];
     final followedUsers = prefs.getStringList(_followsKey) ?? [];
-    final likedPosts = _loadLikedPostIds(prefs, walletAddress: walletAddress);
 
     for (final post in posts) {
       // Load bookmarks
@@ -590,32 +701,6 @@ class CommunityService {
 
       // Load follows
       post.isFollowing = followedUsers.contains(post.authorId);
-
-      // Load likes
-      post.isLiked = likedPosts.contains(post.id) || post.isLiked;
-
-      // Load comments
-      final commentsData =
-          prefs.getStringList('${_commentsKey}_${post.id}') ?? [];
-      final loadedComments = <Comment>[];
-
-      for (final commentString in commentsData) {
-        final parts = commentString.split('|');
-        if (parts.length >= 4) {
-          final comment = Comment(
-            id: parts[0],
-            authorId: 'saved_user',
-            authorName: parts[1],
-            content: parts[2],
-            timestamp: DateTime.fromMillisecondsSinceEpoch(int.parse(parts[3])),
-          );
-
-          loadedComments.add(comment);
-        }
-      }
-
-      post.comments = [...post.comments, ...loadedComments];
-      post.commentCount = post.comments.length;
     }
   }
 

@@ -340,6 +340,45 @@ class CollectiblesProvider with ChangeNotifier {
     }
   }
 
+  Future<void> removeCollectibleFromSale({
+    required String collectibleId,
+  }) async {
+    _setLoading(true);
+
+    try {
+      final collectibleIndex =
+          _collectibles.indexWhere((c) => c.id == collectibleId);
+      if (collectibleIndex == -1) {
+        throw Exception('Collectible not found');
+      }
+
+      final collectible = _collectibles[collectibleIndex];
+      final updatedCollectible = Collectible(
+        id: collectible.id,
+        seriesId: collectible.seriesId,
+        tokenId: collectible.tokenId,
+        ownerAddress: collectible.ownerAddress,
+        status: CollectibleStatus.minted,
+        mintedAt: collectible.mintedAt,
+        lastSalePrice: collectible.lastSalePrice,
+        lastSaleAt: collectible.lastSaleAt,
+        properties: collectible.properties,
+        transactionHash: collectible.transactionHash,
+        isAuthentic: collectible.isAuthentic,
+        lastTransferAt: collectible.lastTransferAt,
+      );
+
+      _collectibles[collectibleIndex] = updatedCollectible;
+      notifyListeners();
+      await _persist();
+    } catch (e) {
+      _setError('Failed to remove collectible from sale: $e');
+      rethrow;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   // Purchase collectible
   Future<void> purchaseCollectible({
     required String collectibleId,

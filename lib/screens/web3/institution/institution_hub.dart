@@ -514,7 +514,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
     final statusLabel = isApprovedInstitution
         ? l10n.institutionHubDaoStatusApproved
         : review != null
-            ? status.toUpperCase()
+            ? _institutionReviewStatusLabel(status, l10n)
             : l10n.institutionHubDaoStatusNotApplied;
     final statusColor = isApprovedInstitution
         ? roles.positiveAction
@@ -686,6 +686,19 @@ class _InstitutionHubState extends State<InstitutionHub> {
         ),
       ),
     );
+  }
+
+  String _institutionReviewStatusLabel(String status, AppLocalizations l10n) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return l10n.institutionHubDaoStatusPending;
+      case 'rejected':
+        return l10n.institutionHubDaoStatusRejected;
+      case 'approved':
+        return l10n.institutionHubDaoStatusApproved;
+      default:
+        return l10n.institutionHubDaoStatusInReview;
+    }
   }
 
   Widget _buildNavigationTabs(bool enabled) {

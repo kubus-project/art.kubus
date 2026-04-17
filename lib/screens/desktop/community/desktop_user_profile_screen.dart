@@ -25,6 +25,7 @@ import '../../../providers/dao_provider.dart';
 import '../../../providers/stats_provider.dart';
 import '../../../providers/app_refresh_provider.dart';
 import '../../../providers/artwork_provider.dart';
+import '../../../providers/community_interactions_provider.dart';
 import '../../../core/conversation_navigator.dart';
 import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/user_activity_status_line.dart';
@@ -208,8 +209,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   void _onWalletChanged() async {
     try {
       if (_posts.isNotEmpty) {
-        await CommunityService.loadSavedInteractions(_posts,
-            walletAddress: _currentWalletAddress());
+        final interactionsProvider =
+            context.read<CommunityInteractionsProvider>();
+        await CommunityService.loadSavedInteractions(_posts);
+        await interactionsProvider.refreshPostStates(_posts, force: true);
         if (!mounted) return;
         setState(() {});
       }
@@ -1927,8 +1930,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       );
 
       try {
-        await CommunityService.loadSavedInteractions(posts,
-            walletAddress: _currentWalletAddress());
+        await CommunityService.loadSavedInteractions(posts);
+        if (mounted) {
+          context
+              .read<CommunityInteractionsProvider>()
+              .hydratePostsFromServer(posts);
+        }
       } catch (_) {}
 
       setState(() {
@@ -1970,8 +1977,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       );
 
       try {
-        await CommunityService.loadSavedInteractions(more,
-            walletAddress: _currentWalletAddress());
+        await CommunityService.loadSavedInteractions(more);
+        if (mounted) {
+          context
+              .read<CommunityInteractionsProvider>()
+              .hydratePostsFromServer(more);
+        }
       } catch (_) {}
 
       setState(() {

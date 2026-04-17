@@ -652,7 +652,9 @@ class _GovernanceHubState extends State<GovernanceHub>
                 : votingDisabledOverride
                     ? l10n.daoReviewVotingDisabledSubmissionHelper
                     : l10n.daoReviewVotingOpensAfterReviewHelper)
-            : l10n.daoReviewDecisionRecordedHelper(review.status.toUpperCase());
+            : l10n.daoReviewDecisionRecordedHelper(
+                _daoReviewStatusLabel(review.status, l10n),
+              );
     final isPending = normalizedStatus == 'pending';
     final canModerate = moderationEnabled && !isOwnSubmission && isPending;
     final isActionInFlight = _reviewActionId == review.id;
@@ -712,7 +714,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  review.status.toUpperCase(),
+                  _daoReviewStatusLabel(review.status, l10n),
                   style: KubusTextStyles.compactBadge.copyWith(
                     color: statusColor,
                   ),
@@ -1154,7 +1156,7 @@ class _GovernanceHubState extends State<GovernanceHub>
                   border: Border.all(color: color.withValues(alpha: 0.6)),
                 ),
                 child: Text(
-                  proposal.type.name.toUpperCase(),
+                  _proposalTypeLabel(proposal.type, l10n),
                   style: KubusTextStyles.compactBadge.copyWith(
                     color: color,
                   ),
@@ -1305,6 +1307,34 @@ class _GovernanceHubState extends State<GovernanceHub>
         ],
       ),
     );
+  }
+
+  String _proposalTypeLabel(ProposalType type, AppLocalizations l10n) {
+    switch (type) {
+      case ProposalType.platformUpdate:
+        return l10n.daoProposalTypePlatformUpdate;
+      case ProposalType.rewards:
+        return l10n.daoProposalTypeRewards;
+      case ProposalType.featureRequest:
+        return l10n.daoProposalTypeFeatureRequest;
+      case ProposalType.governance:
+        return l10n.daoProposalTypeGovernance;
+      case ProposalType.community:
+        return l10n.daoProposalTypeCommunity;
+    }
+  }
+
+  String _daoReviewStatusLabel(String status, AppLocalizations l10n) {
+    switch (status.toLowerCase()) {
+      case 'approved':
+        return l10n.daoReviewStatusApproved;
+      case 'rejected':
+        return l10n.daoReviewStatusRejected;
+      case 'pending':
+        return l10n.daoReviewStatusPending;
+      default:
+        return l10n.daoReviewStatusInReview;
+    }
   }
 
   Widget _buildVotingHistory() {

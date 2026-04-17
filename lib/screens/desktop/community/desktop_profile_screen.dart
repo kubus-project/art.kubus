@@ -10,6 +10,7 @@ import '../../../providers/dao_provider.dart';
 import '../../../providers/task_provider.dart';
 import '../../../providers/artwork_provider.dart';
 import '../../../providers/stats_provider.dart';
+import '../../../providers/community_interactions_provider.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
@@ -2218,8 +2219,12 @@ class _ProfileScreenState extends State<ProfileScreen>
         limit: 50,
         authorWallet: wallet,
       );
-      await CommunityService.loadSavedInteractions(posts,
-          walletAddress: wallet);
+      await CommunityService.loadSavedInteractions(posts);
+      if (mounted) {
+        context
+            .read<CommunityInteractionsProvider>()
+            .hydratePostsFromServer(posts);
+      }
       return posts;
     } catch (e) {
       debugPrint('Error loading user posts: $e');

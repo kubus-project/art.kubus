@@ -18,6 +18,7 @@ import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../providers/app_refresh_provider.dart';
 import '../../providers/community_comments_provider.dart';
+import '../../providers/community_interactions_provider.dart';
 import '../../providers/community_subject_provider.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/wallet_provider.dart';
@@ -102,6 +103,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         try {
           context.read<CommunitySubjectProvider>().primeFromPosts([post]);
         } catch (_) {}
+        try {
+          context.read<CommunityInteractionsProvider>().hydratePostsFromServer([post]);
+          unawaited(context
+              .read<CommunityInteractionsProvider>()
+              .refreshPostStates([post], force: true));
+        } catch (_) {}
         context
             .read<CommunityCommentsProvider>()
             .loadComments(post.id, force: true);
@@ -155,12 +162,17 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       try {
         await CommunityService.loadSavedInteractions(
           [post],
-          walletAddress: _currentWalletAddress(),
         );
       } catch (_) {}
       if (mounted) {
         try {
           context.read<CommunitySubjectProvider>().primeFromPosts([post]);
+        } catch (_) {}
+        try {
+          context.read<CommunityInteractionsProvider>().hydratePostsFromServer([post]);
+          unawaited(context
+              .read<CommunityInteractionsProvider>()
+              .refreshPostStates([post], force: true));
         } catch (_) {}
       }
       if (!mounted) return;
@@ -236,10 +248,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     if (_post == null) return;
     final l10n = AppLocalizations.of(context)!;
     try {
-      await CommunityService.togglePostLike(
-        _post!,
-        currentUserWallet: _currentWalletAddress(),
-      );
+      await context
+          .read<CommunityInteractionsProvider>()
+          .togglePostLike(_post!);
       if (!mounted) return;
       setState(() {});
 
@@ -257,10 +268,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             textColor: roles.likeAction,
             onPressed: () async {
               try {
-                await CommunityService.togglePostLike(
-                  _post!,
-                  currentUserWallet: _currentWalletAddress(),
-                );
+                await context
+                    .read<CommunityInteractionsProvider>()
+                    .togglePostLike(_post!);
                 if (!mounted) return;
                 setState(() {});
               } catch (e) {
@@ -293,10 +303,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             textColor: retryRoles.likeAction,
             onPressed: () async {
               try {
-                await CommunityService.togglePostLike(
-                  _post!,
-                  currentUserWallet: _currentWalletAddress(),
-                );
+                await context
+                    .read<CommunityInteractionsProvider>()
+                    .togglePostLike(_post!);
                 if (!mounted) return;
                 setState(() {});
               } catch (e) {
@@ -354,7 +363,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     if (!mounted) return;
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final future = BackendApiService().getCommentLikes(commentId);
+    final future =
+        context.read<CommunityInteractionsProvider>().loadCommentLikes(commentId);
 
     showModalBottomSheet(
       context: context,
@@ -488,7 +498,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     final loader = widget.postLikesLoader;
     final future = loader != null
         ? loader(post.id)
-        : BackendApiService().getPostLikes(post.id);
+        : context.read<CommunityInteractionsProvider>().loadPostLikes(post.id);
 
     showModalBottomSheet(
       context: context,
@@ -1634,7 +1644,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     final l10n = AppLocalizations.of(context)!;
     final themeProvider = Provider.of<ThemeProvider>(context);
     return Scaffold(
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
         automaticallyImplyLeading: false,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -1643,13 +1658,15 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         title: Text(l10n.commonPost,
             style: KubusTypography.inter(fontWeight: FontWeight.bold)),
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? Center(child: Text(_error!, style: KubusTypography.inter()))
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(KubusSpacing.md),
-                  child: Column(
+      body: SafeArea(
+        bottom: false,
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+                ? Center(child: Text(_error!, style: KubusTypography.inter()))
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.all(KubusSpacing.md),
+                    child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       CommunityPostCard(
@@ -2040,28 +2057,21 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                                 final messenger =
                                                     ScaffoldMessenger.of(
                                                         context);
-                                                final prevLiked = c.isLiked;
-                                                final prevCount = c.likeCount;
-                                                setState(() {
-                                                  c.isLiked = !c.isLiked;
-                                                  c.likeCount = (c.likeCount +
-                                                          (c.isLiked ? 1 : -1))
-                                                      .clamp(0, 1 << 30);
-                                                });
                                                 try {
-                                                  await CommunityService
+                                                  await context
+                                                      .read<
+                                                          CommunityInteractionsProvider>()
                                                       .toggleCommentLike(
-                                                          c, post.id);
+                                                        postId: post.id,
+                                                        comment: c,
+                                                      );
+                                                  if (mounted) setState(() {});
                                                 } catch (e) {
                                                   if (kDebugMode) {
                                                     debugPrint(
                                                         'PostDetailScreen: toggle comment like failed: $e');
                                                   }
                                                   if (!mounted) return;
-                                                  setState(() {
-                                                    c.isLiked = prevLiked;
-                                                    c.likeCount = prevCount;
-                                                  });
                                                   messenger.showKubusSnackBar(
                                                     SnackBar(
                                                         content: Text(l10n
@@ -2229,6 +2239,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     ],
                   ),
                 ),
+      ),
     );
   }
 }

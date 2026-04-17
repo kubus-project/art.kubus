@@ -1,21 +1,33 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../community/community_interactions.dart' show Comment;
 import '../services/backend_api_service.dart';
+import 'wallet_provider.dart';
 
 class CommunityCommentsProvider extends ChangeNotifier {
-  CommunityCommentsProvider({BackendApiService? api}) : _api = api ?? BackendApiService();
+  CommunityCommentsProvider({BackendApiService? api})
+      : _api = api ?? BackendApiService();
 
   final BackendApiService _api;
+  WalletProvider? _walletProvider;
+  String? _boundWallet;
+  Timer? _walletDebounce;
+  int _authEpoch = 0;
 
-  final Map<String, List<Comment>> _commentsByPostId = <String, List<Comment>>{};
+  final Map<String, List<Comment>> _commentsByPostId =
+      <String, List<Comment>>{};
   final Map<String, bool> _loadingByPostId = <String, bool>{};
   final Map<String, String?> _errorByPostId = <String, String?>{};
 
   bool isLoading(String postId) => _loadingByPostId[postId] ?? false;
   String? errorForPost(String postId) => _errorByPostId[postId];
+  bool hasLoadedComments(String postId) =>
+      _commentsByPostId.containsKey(postId);
 
-  List<Comment> commentsForPost(String postId) => List.unmodifiable(_commentsByPostId[postId] ?? const <Comment>[]);
+  List<Comment> commentsForPost(String postId) =>
+      List.unmodifiable(_commentsByPostId[postId] ?? const <Comment>[]);
 
   int totalCountForPost(String postId) {
     final roots = _commentsByPostId[postId];
@@ -23,18 +35,46 @@ class CommunityCommentsProvider extends ChangeNotifier {
     return _countWithReplies(roots);
   }
 
-  Future<void> loadComments(String postId, {bool force = false, int page = 1, int limit = 200}) async {
+  void bindWalletProvider(WalletProvider? walletProvider) {
+    if (_walletProvider == walletProvider) {
+      _handleWalletMaybeChanged();
+      return;
+    }
+    _walletProvider?.removeListener(_handleWalletMaybeChanged);
+    _walletProvider = walletProvider;
+    _boundWallet = _normalizedWallet(walletProvider?.currentWalletAddress);
+    walletProvider?.addListener(_handleWalletMaybeChanged);
+  }
+
+  @override
+  void dispose() {
+    _walletDebounce?.cancel();
+    _walletProvider?.removeListener(_handleWalletMaybeChanged);
+    super.dispose();
+  }
+
+  Future<void> loadComments(
+    String postId, {
+    bool force = false,
+    int page = 1,
+    int limit = 200,
+  }) async {
     if (postId.trim().isEmpty) return;
     if (!force && isLoading(postId)) return;
+    if (!force && _commentsByPostId.containsKey(postId)) return;
 
     _loadingByPostId[postId] = true;
     _errorByPostId[postId] = null;
     notifyListeners();
 
+    final requestEpoch = _authEpoch;
     try {
-      final comments = await _api.getComments(postId: postId, page: page, limit: limit);
+      final comments =
+          await _api.getComments(postId: postId, page: page, limit: limit);
+      if (requestEpoch != _authEpoch) return;
       _commentsByPostId[postId] = comments;
     } catch (e) {
+      if (requestEpoch != _authEpoch) return;
       _errorByPostId[postId] = e.toString();
     } finally {
       _loadingByPostId[postId] = false;
@@ -54,7 +94,8 @@ class CommunityCommentsProvider extends ChangeNotifier {
       await _api.createComment(
         postId: postId,
         content: content.trim(),
-        parentCommentId: (parentCommentId != null && parentCommentId.trim().isNotEmpty)
+        parentCommentId:
+            (parentCommentId != null && parentCommentId.trim().isNotEmpty)
             ? parentCommentId.trim()
             : null,
       );
@@ -103,5 +144,25 @@ class CommunityCommentsProvider extends ChangeNotifier {
       }
     }
     return total;
+  }
+
+  void _handleWalletMaybeChanged() {
+    _walletDebounce?.cancel();
+    _walletDebounce = Timer(const Duration(milliseconds: 120), () {
+      final nextWallet =
+          _normalizedWallet(_walletProvider?.currentWalletAddress);
+      if (nextWallet == _boundWallet) return;
+      _boundWallet = nextWallet;
+      _authEpoch += 1;
+      _commentsByPostId.clear();
+      _errorByPostId.clear();
+      notifyListeners();
+    });
+  }
+
+  String? _normalizedWallet(String? wallet) {
+    final trimmed = wallet?.trim();
+    if (trimmed == null || trimmed.isEmpty) return null;
+    return trimmed.toLowerCase();
   }
 }

@@ -24,6 +24,7 @@ import '../../providers/dao_provider.dart';
 import '../../providers/stats_provider.dart';
 import '../../providers/app_refresh_provider.dart';
 import '../../providers/artwork_provider.dart';
+import '../../providers/community_interactions_provider.dart';
 import '../../core/conversation_navigator.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/user_activity_status_line.dart';
@@ -32,6 +33,7 @@ import '../../widgets/institution_badge.dart';
 import '../../widgets/community/community_author_role_badges.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/profile_artist_info_fields.dart';
+import '../../widgets/common/kubus_stat_card.dart';
 import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/detail/shared_section_widgets.dart';
@@ -83,15 +85,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   List<Map<String, dynamic>> _artistCollections = [];
   List<Map<String, dynamic>> _artistEvents = [];
   String? _failedCoverImageUrl;
-
-  String? _currentWalletAddress() {
-    try {
-      return Provider.of<WalletProvider>(context, listen: false)
-          .currentWalletAddress;
-    } catch (_) {
-      return null;
-    }
-  }
 
   @override
   void initState() {
@@ -178,10 +171,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   void _onWalletChanged() async {
     try {
       if (_posts.isNotEmpty) {
+        final interactionsProvider =
+            context.read<CommunityInteractionsProvider>();
         await CommunityService.loadSavedInteractions(
           _posts,
-          walletAddress: _currentWalletAddress(),
         );
+        await interactionsProvider.refreshPostStates(_posts, force: true);
         if (!mounted) return;
         setState(() {});
       }
@@ -334,6 +329,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   Future<void> _loadPosts() async {
     if (user == null) return;
     final l10n = AppLocalizations.of(context)!;
+    final interactionsProvider = context.read<CommunityInteractionsProvider>();
     setState(() {
       _postsLoading = true;
       _postsError = null;
@@ -348,8 +344,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       try {
         await CommunityService.loadSavedInteractions(
           posts,
-          walletAddress: _currentWalletAddress(),
         );
+        interactionsProvider.hydratePostsFromServer(posts);
       } catch (_) {}
       setState(() {
         _posts = posts;
@@ -376,6 +372,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   Future<void> _loadMorePosts() async {
     if (user == null || _isLastPage || _loadingMore) return;
     final l10n = AppLocalizations.of(context)!;
+    final interactionsProvider = context.read<CommunityInteractionsProvider>();
     setState(() {
       _loadingMore = true;
       _currentPage += 1;
@@ -388,8 +385,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       try {
         await CommunityService.loadSavedInteractions(
           more,
-          walletAddress: _currentWalletAddress(),
         );
+        interactionsProvider.hydratePostsFromServer(more);
       } catch (_) {}
       setState(() {
         _posts.addAll(more);
@@ -940,103 +937,100 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         .artworksForWallet(user!.id)
         .length;
 
-    return LiquidGlassCard(
-      margin: EdgeInsets.zero,
-      borderRadius: BorderRadius.circular(KubusRadius.lg),
-      padding: const EdgeInsets.symmetric(
-        horizontal: KubusSpacing.lg,
-        vertical: KubusSpacing.md,
-      ),
-      child: Row(
-        children: [
-          _buildInlineStat(
-              label: l10n.userProfilePostsStatLabel,
-              value: _formatCount(user!.postsCount)),
-          Container(
-            width: 1,
-            height: 40,
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
-          ),
-          _buildInlineStat(
-              label: l10n.userProfileFollowersStatLabel,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 360;
+        return GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 2,
+          mainAxisSpacing: KubusSpacing.md,
+          crossAxisSpacing: KubusSpacing.md,
+          childAspectRatio: compact ? 1.12 : 1.28,
+          children: [
+            _buildProfileStatCard(
+              title: l10n.userProfilePostsStatLabel,
+              value: _formatCount(user!.postsCount),
+              icon: Icons.article_outlined,
+            ),
+            _buildProfileStatCard(
+              title: l10n.userProfileFollowersStatLabel,
               value: _formatCount(user!.followersCount),
+              icon: Icons.people_outline,
               onTap: () {
                 ProfileScreenMethods.showFollowers(
                   context,
                   walletAddress: user!.id,
                 );
-              }),
-          Container(
-            width: 1,
-            height: 40,
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
-          ),
-          _buildInlineStat(
-              label: l10n.userProfileFollowingStatLabel,
+              },
+            ),
+            _buildProfileStatCard(
+              title: l10n.userProfileFollowingStatLabel,
               value: _formatCount(user!.followingCount),
+              icon: Icons.person_add_alt_outlined,
               onTap: () {
                 ProfileScreenMethods.showFollowing(
                   context,
                   walletAddress: user!.id,
                 );
-              }),
-          Container(
-            width: 1,
-            height: 40,
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
-          ),
-          _buildInlineStat(
-              label: l10n.userProfileArtworksTitle,
+              },
+            ),
+            _buildProfileStatCard(
+              title: l10n.userProfileArtworksTitle,
               value: _formatCount(artworksCount),
+              icon: Icons.palette_outlined,
               onTap: () {
                 ProfileScreenMethods.showArtworks(
                   context,
                   walletAddress: user!.id,
                 );
-              }),
-        ],
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildProfileStatCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    VoidCallback? onTap,
+  }) {
+    final accent = _accentForProfileStat(icon);
+    return KubusStatCard(
+      title: title,
+      value: value,
+      icon: icon,
+      accent: accent,
+      layout: KubusStatCardLayout.centered,
+      minHeight: 86,
+      padding: const EdgeInsets.all(KubusSpacing.md),
+      titleMaxLines: 2,
+      centeredWatermarkScale: 0.86,
+      onTap: onTap,
+      titleStyle: KubusTextStyles.detailCaption.copyWith(
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+        fontSize: 11.5,
+      ),
+      valueStyle: KubusTextStyles.detailCardTitle.copyWith(
+        color: Theme.of(context).colorScheme.onSurface,
+        fontSize: 16,
+        fontWeight: FontWeight.w700,
       ),
     );
   }
 
-  Widget _buildInlineStat({
-    required String label,
-    required String value,
-    VoidCallback? onTap,
-  }) {
-    final content = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          value,
-          style: KubusTextStyles.statValue.copyWith(
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: KubusTextStyles.statLabel.copyWith(
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-          ),
-        ),
-      ],
-    );
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6),
-          child: content,
-        ),
-      ),
-    );
+  Color _accentForProfileStat(IconData icon) {
+    final scheme = Theme.of(context).colorScheme;
+    if (icon == Icons.people_outline || icon == Icons.person_add_alt_outlined) {
+      return scheme.tertiary;
+    }
+    if (icon == Icons.palette_outlined || icon == Icons.streetview) {
+      return scheme.primary;
+    }
+    return scheme.secondary;
   }
 
   Widget _buildActionButtons(
@@ -1178,68 +1172,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   }
 
   Widget _buildAddedPublicArtSection(AppLocalizations l10n) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 0),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(KubusRadius.xl),
-        border: Border.all(
-          color:
-              Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: Provider.of<ThemeProvider>(context, listen: false)
-                  .accentColor
-                  .withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-            ),
-            child: Icon(
-              Icons.streetview,
-              color: Provider.of<ThemeProvider>(context, listen: false)
-                  .accentColor,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.profilePerformancePublicStreetArtAddedTitle,
-                  style: KubusTextStyles.sectionTitle.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  l10n.userProfileArtistHighlightsSubtitle(user!.name),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: KubusTextStyles.sectionSubtitle.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            _formatCount(_publicStreetArtAddedCount),
-            style: KubusTextStyles.statValue.copyWith(
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-        ],
-      ),
+    return _buildProfileStatCard(
+      title: l10n.profilePerformancePublicStreetArtAddedTitle,
+      value: _formatCount(_publicStreetArtAddedCount),
+      icon: Icons.streetview,
     );
   }
 

@@ -37,6 +37,7 @@ import 'providers/cache_provider.dart';
 import 'providers/saved_items_provider.dart';
 import 'providers/community_hub_provider.dart';
 import 'providers/community_comments_provider.dart';
+import 'providers/community_interactions_provider.dart';
 import 'providers/community_subject_provider.dart';
 import 'providers/presence_provider.dart';
 import 'providers/locale_provider.dart';
@@ -550,8 +551,26 @@ class _AppLauncherState extends State<AppLauncher> {
                   return provider;
                 },
               ),
-              ChangeNotifierProvider(
-                  create: (context) => CommunityCommentsProvider()),
+              ChangeNotifierProxyProvider<WalletProvider,
+                  CommunityInteractionsProvider>(
+                create: (context) => CommunityInteractionsProvider(),
+                update: (context, walletProvider, interactionsProvider) {
+                  final provider =
+                      interactionsProvider ?? CommunityInteractionsProvider();
+                  provider.bindWalletProvider(walletProvider);
+                  return provider;
+                },
+              ),
+              ChangeNotifierProxyProvider<WalletProvider,
+                  CommunityCommentsProvider>(
+                create: (context) => CommunityCommentsProvider(),
+                update: (context, walletProvider, commentsProvider) {
+                  final provider =
+                      commentsProvider ?? CommunityCommentsProvider();
+                  provider.bindWalletProvider(walletProvider);
+                  return provider;
+                },
+              ),
               ChangeNotifierProvider(
                 lazy: false,
                 create: (context) => DeepLinkProvider(),

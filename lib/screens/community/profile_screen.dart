@@ -15,6 +15,8 @@ import '../../providers/dao_provider.dart';
 import '../../providers/task_provider.dart';
 import '../../providers/artwork_provider.dart';
 import '../../providers/stats_provider.dart';
+import '../../providers/saved_items_provider.dart';
+import '../../providers/community_interactions_provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
@@ -28,6 +30,7 @@ import 'profile_screen_methods.dart';
 import '../activity/view_history_screen.dart';
 import '../collab/invites_inbox_screen.dart';
 import '../../models/achievement_progress.dart';
+import '../../models/artwork.dart';
 import '../../services/achievement_service.dart' as achievement_svc;
 import 'profile_edit_screen.dart';
 import '../../widgets/avatar_widget.dart';
@@ -221,6 +224,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                       _buildStatsSection(),
                       const SliverToBoxAdapter(
                           child: SizedBox(height: DetailSpacing.xxl)),
+                      SliverToBoxAdapter(child: _buildSavedArtworksSection()),
+                      const SliverToBoxAdapter(
+                          child: SizedBox(height: DetailSpacing.xl)),
                       if (isArtist) ...[
                         SliverToBoxAdapter(child: _buildArtistHighlightsGrid()),
                         const SliverToBoxAdapter(
@@ -900,76 +906,58 @@ class _ProfileScreenState extends State<ProfileScreen>
           final isSmallScreen = constraints.maxWidth < 360;
           final walletAddress = profileProvider.currentWalletAddress;
 
-          return LiquidGlassCard(
-            margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24),
-            padding: EdgeInsets.all(
-              isSmallScreen
-                  ? KubusChromeMetrics.cardPadding - KubusSpacing.xxs
-                  : KubusChromeMetrics.cardPadding + KubusSpacing.xs,
-            ),
-            borderRadius: BorderRadius.circular(KubusRadius.xl),
-            child: Column(
+          return Padding(
+            padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24),
+            child: GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: isSmallScreen ? 2 : 3,
+              mainAxisSpacing: KubusSpacing.md,
+              crossAxisSpacing: KubusSpacing.md,
+              childAspectRatio: isSmallScreen ? 1.14 : 1.26,
               children: [
-                Row(
-                  children: [
-                    _buildInlineStat(
-                      label: AppLocalizations.of(context)!
-                          .userProfilePostsStatLabel,
-                      value: profileProvider.formattedPostsCount,
-                      isCompact: isSmallScreen,
-                    ),
-                    _buildInlineStat(
-                      label: AppLocalizations.of(context)!
-                          .userProfileFollowersStatLabel,
-                      value: profileProvider.formattedFollowersCount,
-                      isCompact: isSmallScreen,
-                      onTap: () => ProfileScreenMethods.showFollowers(
-                        context,
-                        walletAddress: walletAddress,
-                      ),
-                    ),
-                    _buildInlineStat(
-                      label: AppLocalizations.of(context)!
-                          .userProfileFollowingStatLabel,
-                      value: profileProvider.formattedFollowingCount,
-                      isCompact: isSmallScreen,
-                      onTap: () => ProfileScreenMethods.showFollowing(
-                        context,
-                        walletAddress: walletAddress,
-                      ),
-                    ),
-                  ],
+                _buildStatCard(
+                  AppLocalizations.of(context)!.userProfilePostsStatLabel,
+                  profileProvider.formattedPostsCount,
+                  Icons.article_outlined,
+                  isSmallScreen: isSmallScreen,
                 ),
-                SizedBox(
-                  height: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg,
+                _buildStatCard(
+                  AppLocalizations.of(context)!.userProfileFollowersStatLabel,
+                  profileProvider.formattedFollowersCount,
+                  Icons.people_outline,
+                  isSmallScreen: isSmallScreen,
+                  onTap: () => ProfileScreenMethods.showFollowers(
+                    context,
+                    walletAddress: walletAddress,
+                  ),
                 ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildStatCard(
-                        AppLocalizations.of(context)!.userProfileArtworksTitle,
-                        profileProvider.formattedArtworksCount,
-                        Icons.palette,
-                        isSmallScreen: isSmallScreen,
-                        onTap: () => ProfileScreenMethods.showArtworks(
-                          context,
-                          walletAddress: walletAddress,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildStatCard(
-                        AppLocalizations.of(context)!
-                            .userProfileCollectionsTitle,
-                        profileProvider.formattedCollectionsCount,
-                        Icons.collections,
-                        isSmallScreen: isSmallScreen,
-                        onTap: () =>
-                            ProfileScreenMethods.showCollections(context),
-                      ),
-                    ),
-                  ],
+                _buildStatCard(
+                  AppLocalizations.of(context)!.userProfileFollowingStatLabel,
+                  profileProvider.formattedFollowingCount,
+                  Icons.person_add_alt_outlined,
+                  isSmallScreen: isSmallScreen,
+                  onTap: () => ProfileScreenMethods.showFollowing(
+                    context,
+                    walletAddress: walletAddress,
+                  ),
+                ),
+                _buildStatCard(
+                  AppLocalizations.of(context)!.userProfileArtworksTitle,
+                  profileProvider.formattedArtworksCount,
+                  Icons.palette,
+                  isSmallScreen: isSmallScreen,
+                  onTap: () => ProfileScreenMethods.showArtworks(
+                    context,
+                    walletAddress: walletAddress,
+                  ),
+                ),
+                _buildStatCard(
+                  AppLocalizations.of(context)!.userProfileCollectionsTitle,
+                  profileProvider.formattedCollectionsCount,
+                  Icons.collections,
+                  isSmallScreen: isSmallScreen,
+                  onTap: () => ProfileScreenMethods.showCollections(context),
                 ),
               ],
             ),
@@ -1010,44 +998,6 @@ class _ProfileScreenState extends State<ProfileScreen>
         color: Theme.of(context).colorScheme.onSurface,
         fontSize: isSmallScreen ? 14 : 15,
         fontWeight: FontWeight.w700,
-      ),
-    );
-  }
-
-  Widget _buildInlineStat({
-    required String label,
-    required String value,
-    bool isCompact = false,
-    VoidCallback? onTap,
-  }) {
-    final scheme = Theme.of(context).colorScheme;
-    final content = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          value,
-          style: DetailTypography.cardTitle(context)
-              .copyWith(fontSize: isCompact ? 16 : 18),
-        ),
-        const SizedBox(height: DetailSpacing.xs),
-        Text(
-          label,
-          style: KubusTextStyles.detailCaption.copyWith(
-            fontSize: isCompact ? 12 : 13,
-            color: scheme.onSurface.withValues(alpha: 0.68),
-          ),
-        ),
-      ],
-    );
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: content,
-        ),
       ),
     );
   }
@@ -1121,8 +1071,12 @@ class _ProfileScreenState extends State<ProfileScreen>
       );
       await CommunityService.loadSavedInteractions(
         posts,
-        walletAddress: wallet,
       );
+      if (mounted) {
+        context
+            .read<CommunityInteractionsProvider>()
+            .hydratePostsFromServer(posts);
+      }
       return posts;
     } catch (e) {
       debugPrint('Error loading user posts: $e');
@@ -1266,6 +1220,87 @@ class _ProfileScreenState extends State<ProfileScreen>
       showAction: showAction,
       actionLabel: showAction ? effectiveActionLabel : null,
       onAction: onActionTap != null ? () => onActionTap() : null,
+    );
+  }
+
+  Widget _buildSavedArtworksSection() {
+    final l10n = AppLocalizations.of(context)!;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: DetailSpacing.lg),
+      child: Consumer2<SavedItemsProvider, ArtworkProvider>(
+        builder: (context, savedProvider, artworkProvider, _) {
+          final savedIds = savedProvider.getSortedSavedIds(type: 'artwork');
+          final savedArtworks = savedIds
+              .map(artworkProvider.getArtworkById)
+              .whereType<Artwork>()
+              .take(6)
+              .toList(growable: false);
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              KubusHeaderText(
+                title: 'Saved artworks',
+                subtitle: savedIds.isEmpty
+                    ? 'Saved artworks will appear here.'
+                    : '${_formatCount(savedIds.length)} saved',
+                kind: KubusHeaderKind.section,
+              ),
+              const SizedBox(height: KubusSpacing.md),
+              if (savedIds.isEmpty)
+                EmptyStateCard(
+                  icon: Icons.bookmark_border,
+                  title: 'No saved artworks yet',
+                  description: 'Saved artworks will appear here.',
+                  showAction: true,
+                  actionLabel: l10n.profileMenuSavedItemsTitle,
+                  onAction: _navigateToSavedItems,
+                )
+              else if (savedArtworks.isEmpty)
+                KubusStatCard(
+                  title: 'Saved artworks',
+                  value: _formatCount(savedIds.length),
+                  icon: Icons.bookmarks_outlined,
+                  layout: KubusStatCardLayout.centered,
+                  onTap: _navigateToSavedItems,
+                  minHeight: 96,
+                )
+              else
+                SharedShowcaseSection<Artwork>(
+                  title: l10n.profileMenuSavedItemsTitle,
+                  items: savedArtworks,
+                  itemBuilder: (context, artwork) => GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => openArtwork(
+                      context,
+                      artwork.id,
+                      source: 'profile_saved_artworks',
+                    ),
+                    child: SharedShowcaseCard(
+                      imageUrl: artwork.imageUrl,
+                      title: artwork.title,
+                      subtitle: artwork.artist,
+                      footer: l10n.userProfileLikesLabel(artwork.likesCount),
+                    ),
+                  ),
+                  emptyTitle: 'No saved artworks yet',
+                  emptyDescription: 'Saved artworks will appear here.',
+                  emptyIcon: Icons.bookmark_border,
+                  listHeight: 210,
+                ),
+              const SizedBox(height: KubusSpacing.sm),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: _navigateToSavedItems,
+                  icon: const Icon(Icons.bookmarks_outlined),
+                  label: const Text('View all saved'),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 

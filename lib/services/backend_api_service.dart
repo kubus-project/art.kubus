@@ -3929,6 +3929,10 @@ class BackendApiService
     bool includePrivateForWallet = false,
   }) async {
     try {
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
+
       final queryParams = <String, String>{
         'page': page.toString(),
         'limit': limit.toString(),
@@ -3950,7 +3954,7 @@ class BackendApiService
             candidateBaseUrl,
             '/api/artworks',
             queryParameters: queryParams,
-            includeAuth: includePrivateForWallet && hasWalletFilter,
+            includeAuth: true,
             allowOrbitFallback: true,
           );
           final dynamic listCandidate =
@@ -4995,6 +4999,71 @@ class BackendApiService
       );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.getCommunityPostById failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Batch-hydrate interaction state for visible community entities.
+  /// The backend-authenticated result is authoritative; callers may keep a
+  /// short-lived optimistic overlay while the request is in flight.
+  Future<CommunityInteractionStateBatch> getCommunityInteractionStates({
+    Iterable<String> postIds = const <String>[],
+    Iterable<String> commentIds = const <String>[],
+    Iterable<String> artworkIds = const <String>[],
+  }) async {
+    final normalizedPostIds = postIds
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .take(100)
+        .toList(growable: false);
+    final normalizedCommentIds = commentIds
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .take(100)
+        .toList(growable: false);
+    final normalizedArtworkIds = artworkIds
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .take(100)
+        .toList(growable: false);
+
+    if (normalizedPostIds.isEmpty &&
+        normalizedCommentIds.isEmpty &&
+        normalizedArtworkIds.isEmpty) {
+      return const CommunityInteractionStateBatch();
+    }
+
+    try {
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
+
+      final queryParams = <String, String>{
+        if (normalizedPostIds.isNotEmpty)
+          'postIds': normalizedPostIds.join(','),
+        if (normalizedCommentIds.isNotEmpty)
+          'commentIds': normalizedCommentIds.join(','),
+        if (normalizedArtworkIds.isNotEmpty)
+          'artworkIds': normalizedArtworkIds.join(','),
+      };
+
+      final data = await _fetchJson(
+        Uri.parse('$baseUrl/api/community/interactions/state')
+            .replace(queryParameters: queryParams),
+        includeAuth: true,
+      );
+      final payload = data['data'] ?? data;
+      if (payload is Map<String, dynamic>) {
+        return CommunityInteractionStateBatch.fromJson(payload);
+      }
+      return const CommunityInteractionStateBatch();
+    } catch (e) {
+      AppConfig.debugPrint(
+        'BackendApiService.getCommunityInteractionStates failed: $e',
+      );
       rethrow;
     }
   }

@@ -37,6 +37,7 @@ import '../../providers/wallet_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/community_hub_provider.dart';
 import '../../providers/community_comments_provider.dart';
+import '../../providers/community_interactions_provider.dart';
 import '../../providers/community_subject_provider.dart';
 import '../../models/community_group.dart';
 import '../../services/backend_api_service.dart';
@@ -117,6 +118,10 @@ class _CommunityScreenState extends State<CommunityScreen>
   List<CommunityPost> _followingFeedPosts = [];
   List<CommunityPost> _discoverFeedPosts = [];
   List<CommunityPost> _artFeedPosts = [];
+  final Set<String> _expandedCommentPostIds = <String>{};
+  final Map<String, TextEditingController> _inlineCommentControllers =
+      <String, TextEditingController>{};
+  final Map<String, String?> _inlineReplyToCommentIds = <String, String?>{};
   // How many posts to prefetch comments for (make configurable)
   final int _commentPrefetchCount = 8;
   final int _prefetchConcurrencyLimit = 3;
@@ -350,7 +355,6 @@ class _CommunityScreenState extends State<CommunityScreen>
   Future<List<CommunityPost>> _fetchCommunityFeed({
     required bool followingOnly,
     String sort = 'hybrid',
-    String? walletAddress,
   }) async {
     final backendApi = BackendApiService();
     final subjectProvider =
@@ -364,10 +368,19 @@ class _CommunityScreenState extends State<CommunityScreen>
     );
     await CommunityService.loadSavedInteractions(
       posts,
-      walletAddress: walletAddress,
     );
     if (mounted) {
       subjectProvider.primeFromPosts(posts);
+      final interactionsProvider =
+          Provider.of<CommunityInteractionsProvider>(context, listen: false);
+      final commentsProvider =
+          Provider.of<CommunityCommentsProvider>(context, listen: false);
+      interactionsProvider.hydratePostsFromServer(posts);
+      unawaited(interactionsProvider.prefetchForPosts(
+        posts,
+        commentsProvider: commentsProvider,
+        commentsLimit: _commentPrefetchCount,
+      ));
     }
 
     final blocked = await BlockListService().loadBlockedWallets();
@@ -404,7 +417,6 @@ class _CommunityScreenState extends State<CommunityScreen>
         try {
           followingPosts = await _fetchCommunityFeed(
             followingOnly: true,
-            walletAddress: resolvedWallet,
           );
           debugPrint(
               '📥 Loaded ${followingPosts?.length ?? 0} following posts');
@@ -416,7 +428,6 @@ class _CommunityScreenState extends State<CommunityScreen>
         try {
           discoverPosts = await _fetchCommunityFeed(
             followingOnly: false,
-            walletAddress: resolvedWallet,
           );
           debugPrint('📥 Loaded ${discoverPosts?.length ?? 0} discover posts');
         } catch (e) {
@@ -520,7 +531,6 @@ class _CommunityScreenState extends State<CommunityScreen>
     try {
       posts = await _fetchCommunityFeed(
         followingOnly: targetFollowing,
-        walletAddress: walletAddress,
       );
       debugPrint(
           '📥 Loaded ${posts.length} ${targetFollowing ? 'following' : 'discover'} posts');
@@ -606,6 +616,8 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   Future<void> _prefetchComments() async {
     try {
+      final commentsProvider =
+          Provider.of<CommunityCommentsProvider>(context, listen: false);
       final prefetchCount =
           math.min(_commentPrefetchCount, _communityPosts.length);
       final concurrency = _prefetchConcurrencyLimit;
@@ -616,10 +628,8 @@ class _CommunityScreenState extends State<CommunityScreen>
           int attempt = 0;
           while (attempt < _prefetchMaxRetries) {
             try {
-              final comments =
-                  await BackendApiService().getComments(postId: post.id);
-              post.comments = comments;
-              post.commentCount = post.comments.length;
+              await commentsProvider.loadComments(post.id);
+              post.commentCount = commentsProvider.totalCountForPost(post.id);
               if (mounted) setState(() {});
               break;
             } catch (e) {
@@ -954,6 +964,9 @@ class _CommunityScreenState extends State<CommunityScreen>
       ..dispose();
     _composerTagController?.dispose();
     _composerMentionController?.dispose();
+    for (final controller in _inlineCommentControllers.values) {
+      controller.dispose();
+    }
     _tabController.dispose();
     super.dispose();
   }
@@ -1097,7 +1110,6 @@ class _CommunityScreenState extends State<CommunityScreen>
       if (_communityPosts.isNotEmpty) {
         await CommunityService.loadSavedInteractions(
           _communityPosts,
-          walletAddress: normalized.isEmpty ? null : normalized,
         );
         if (!mounted) return;
         setState(() {});
@@ -2177,7 +2189,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                   ?.copyWith(fontWeight: FontWeight.w700),
             ),
             subtitle: Text(
-              '${_getTimeAgo(post.timestamp)} � ${post.category}',
+              '${_getTimeAgo(post.timestamp)} - ${post.category}',
               style: KubusTypography.textTheme.labelSmall,
             ),
             trailing: IconButton(
@@ -2263,7 +2275,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                 ? l10n.commonDistanceKmAway(
                                     post.distanceKm!.toStringAsFixed(1))
                                 : null,
-                          ].whereType<String>().join(' � '),
+                          ].whereType<String>().join(' - '),
                           style: KubusTypography.textTheme.labelSmall?.copyWith(
                             color: scheme.onSurface.withValues(alpha: 0.6),
                           ),
@@ -2348,10 +2360,18 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   Widget _buildPostCard(int index) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    Provider.of<CommunityInteractionsProvider>(context);
+    final commentsProvider = Provider.of<CommunityCommentsProvider>(context);
     if (index >= _communityPosts.length) {
       return const SizedBox.shrink();
     }
     final post = _communityPosts[index];
+    final hydratedCommentCount = commentsProvider.totalCountForPost(post.id);
+    if (commentsProvider.hasLoadedComments(post.id) &&
+        post.commentCount != hydratedCommentCount) {
+      post.commentCount = hydratedCommentCount;
+    }
+    final commentsExpanded = _expandedCommentPostIds.contains(post.id);
     return CommunityPostCard(
       post: post,
       accentColor: themeProvider.accentColor,
@@ -2364,7 +2384,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       },
       onOpenAuthorProfile: () => _viewUserProfile(post.authorId),
       onToggleLike: () => _toggleLike(index),
-      onOpenComments: () => _showComments(index),
+      onOpenComments: () => _toggleInlineComments(index),
       onRepost: () {
         final walletProvider =
             Provider.of<WalletProvider>(context, listen: false);
@@ -2389,6 +2409,297 @@ class _CommunityScreenState extends State<CommunityScreen>
         subject: preview.ref,
         titleOverride: preview.title,
       ),
+      commentsExpanded: commentsExpanded,
+      inlineComments:
+          commentsExpanded ? _buildInlineComments(post) : null,
+    );
+  }
+
+  void _toggleInlineComments(int index) {
+    if (index >= _communityPosts.length) return;
+    final post = _communityPosts[index];
+    final willExpand = !_expandedCommentPostIds.contains(post.id);
+    setState(() {
+      if (willExpand) {
+        _expandedCommentPostIds.add(post.id);
+      } else {
+        _expandedCommentPostIds.remove(post.id);
+      }
+    });
+    if (willExpand) {
+      unawaited(context
+          .read<CommunityCommentsProvider>()
+          .loadComments(post.id));
+      unawaited(context
+          .read<CommunityInteractionsProvider>()
+          .loadPostLikes(post.id));
+    }
+  }
+
+  Widget _buildInlineComments(CommunityPost post) {
+    final l10n = AppLocalizations.of(context)!;
+    final controller = _inlineCommentControllers.putIfAbsent(
+      post.id,
+      () => TextEditingController(),
+    );
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    Future<void> submitInlineComment() async {
+      final text = controller.text.trim();
+      if (text.isEmpty) return;
+      final messenger = ScaffoldMessenger.of(context);
+      final commentsProvider = context.read<CommunityCommentsProvider>();
+      final parentId = _inlineReplyToCommentIds[post.id];
+      try {
+        await commentsProvider.addComment(
+          postId: post.id,
+          content: text,
+          parentCommentId:
+              parentId != null && parentId.isNotEmpty ? parentId : null,
+        );
+        post.commentCount = commentsProvider.totalCountForPost(post.id);
+        controller.clear();
+        if (!mounted) return;
+        setState(() {
+          _inlineReplyToCommentIds.remove(post.id);
+        });
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('CommunityScreen: inline comment failed: $e');
+        }
+        if (!mounted) return;
+        messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.postDetailAddCommentFailedToast)),
+        );
+      }
+    }
+
+    Widget buildComment(Comment comment, {required int depth}) {
+      final isReply = depth > 0;
+      final leftInset = (depth * 22.0).clamp(0.0, 44.0);
+      return Padding(
+        padding: EdgeInsets.only(left: leftInset, bottom: KubusSpacing.sm),
+        child: LiquidGlassCard(
+          margin: EdgeInsets.zero,
+          padding: const EdgeInsets.all(KubusSpacing.sm),
+          borderRadius: BorderRadius.circular(KubusRadius.md),
+          backgroundColor:
+              scheme.surface.withValues(alpha: isReply ? 0.08 : 0.12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AvatarWidget(
+                wallet: comment.authorWallet ?? comment.authorId,
+                avatarUrl: comment.authorAvatar,
+                radius: isReply ? 12 : 14,
+                allowFabricatedFallback: true,
+              ),
+              const SizedBox(width: KubusSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      comment.authorName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: KubusTextStyles.actionTileTitle.copyWith(
+                        fontSize: isReply ? 12 : 13,
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: KubusSpacing.xxs),
+                    Text(
+                      comment.content,
+                      style: KubusTextStyles.sectionSubtitle.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.82),
+                      ),
+                    ),
+                    const SizedBox(height: KubusSpacing.xs),
+                    Row(
+                      children: [
+                        InkWell(
+                          borderRadius: BorderRadius.circular(KubusRadius.sm),
+                          onTap: () async {
+                            try {
+                              await context
+                                  .read<CommunityInteractionsProvider>()
+                                  .toggleCommentLike(
+                                    postId: post.id,
+                                    comment: comment,
+                                  );
+                              if (mounted) setState(() {});
+                            } catch (_) {
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showKubusSnackBar(
+                                SnackBar(
+                                  content: Text(l10n
+                                      .postDetailUpdateCommentLikeFailedToast),
+                                ),
+                              );
+                            }
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: KubusSpacing.xs,
+                              vertical: KubusSpacing.xxs,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  comment.isLiked
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  size: 15,
+                                  color: comment.isLiked
+                                      ? KubusColorRoles.of(context).likeAction
+                                      : scheme.onSurface
+                                          .withValues(alpha: 0.56),
+                                ),
+                                const SizedBox(width: KubusSpacing.xs),
+                                Text(
+                                  '${comment.likeCount}',
+                                  style: KubusTextStyles.compactBadge.copyWith(
+                                    color: scheme.onSurface
+                                        .withValues(alpha: 0.66),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: KubusSpacing.sm),
+                        TextButton(
+                          style: TextButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: KubusSpacing.sm,
+                            ),
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _inlineReplyToCommentIds[post.id] = comment.id;
+                              controller.text = '@${comment.authorName} ';
+                              controller.selection = TextSelection.collapsed(
+                                offset: controller.text.length,
+                              );
+                            });
+                          },
+                          child: Text(l10n.commonReply),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    List<Widget> buildTree(Comment comment, {required int depth}) {
+      return <Widget>[
+        buildComment(comment, depth: depth),
+        for (final reply in comment.replies)
+          ...buildTree(reply, depth: depth + 1),
+      ];
+    }
+
+    return Consumer<CommunityCommentsProvider>(
+      builder: (context, commentsProvider, _) {
+        final comments = commentsProvider.commentsForPost(post.id);
+        final loading = commentsProvider.isLoading(post.id);
+        final error = commentsProvider.errorForPost(post.id);
+        final replyTarget = _inlineReplyToCommentIds[post.id];
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Divider(color: scheme.outline.withValues(alpha: 0.18)),
+            if (loading && comments.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: KubusSpacing.md),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (error != null && comments.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
+                child: Text(
+                  error,
+                  style: KubusTextStyles.sectionSubtitle.copyWith(
+                    color: scheme.error,
+                  ),
+                ),
+              )
+            else if (comments.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
+                child: Text(
+                  l10n.postDetailNoCommentsDescription,
+                  style: KubusTextStyles.sectionSubtitle.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.62),
+                  ),
+                ),
+              )
+            else
+              ...comments.expand((comment) => buildTree(comment, depth: 0)),
+            if (replyTarget != null) ...[
+              const SizedBox(height: KubusSpacing.xs),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      l10n.communityReplyingToCommentLabel,
+                      style: KubusTextStyles.compactBadge.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.62),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () {
+                      setState(() {
+                        _inlineReplyToCommentIds.remove(post.id);
+                        controller.clear();
+                      });
+                    },
+                    icon: const Icon(Icons.close, size: 18),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: KubusSpacing.sm),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: controller,
+                    minLines: 1,
+                    maxLines: 3,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => submitInlineComment(),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      hintText: l10n.postDetailWriteCommentHint,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(KubusRadius.md),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: KubusSpacing.sm),
+                IconButton.filledTonal(
+                  onPressed: submitInlineComment,
+                  icon: const Icon(Icons.send_outlined, size: 18),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -3470,7 +3781,7 @@ class _CommunityScreenState extends State<CommunityScreen>
               icon: Icon(Icons.search,
                   size: 18, color: themeProvider.accentColor),
               label: Text(
-                'Search',
+                l10n.commonSearch,
                 style: KubusTypography.inter(
                   fontSize: 13,
                   color: themeProvider.accentColor,
@@ -3500,7 +3811,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                   }).toList(),
                 )
               : Text(
-                  'No $label yet',
+                  l10n.communityComposerNoChipsYet(label),
                   key: ValueKey('${label}_chips_empty'),
                   style: KubusTypography.inter(
                     fontSize: 12,
@@ -3912,7 +4223,9 @@ class _CommunityScreenState extends State<CommunityScreen>
   }) {
     if (searchType == 'tags') {
       final tag = result['tag'] ?? result['name'] ?? '';
-      final count = result['count'] ?? result['search_count'] ?? 0;
+      final rawCount = result['count'] ?? result['search_count'] ?? 0;
+      final count =
+          rawCount is num ? rawCount : num.tryParse(rawCount.toString()) ?? 0;
       final isCustom = result['isCustom'] == true;
 
       return ListTile(
@@ -3936,7 +4249,7 @@ class _CommunityScreenState extends State<CommunityScreen>
         ),
         subtitle: isCustom
             ? Text(
-                'Add as new tag',
+                AppLocalizations.of(context)!.communitySearchAddNewTag,
                 style: KubusTypography.inter(
                   fontSize: 12,
                   color: scheme.onSurface.withValues(alpha: 0.6),
@@ -3944,7 +4257,7 @@ class _CommunityScreenState extends State<CommunityScreen>
               )
             : count > 0
                 ? Text(
-                    '$count uses',
+                    AppLocalizations.of(context)!.communitySearchTagUses(count),
                     style: KubusTypography.inter(
                       fontSize: 12,
                       color: scheme.onSurface.withValues(alpha: 0.6),
@@ -3957,8 +4270,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     } else if (searchType == 'profiles') {
       final identity = ProfileIdentityData.fromProfileMap(
         result,
-        fallbackLabel: AppLocalizations.of(context)?.commonUnknownArtist ??
-            'Unknown artist',
+        fallbackLabel: AppLocalizations.of(context)!.commonUnknownArtist,
       );
 
       return ListTile(
@@ -3978,8 +4290,11 @@ class _CommunityScreenState extends State<CommunityScreen>
         onTap: onTap,
       );
     } else if (searchType == 'artworks') {
-      final title = result['title'] ?? 'Untitled';
-      final artist = result['artist_name'] ?? result['artistName'] ?? 'Unknown';
+      final title =
+          result['title'] ?? AppLocalizations.of(context)!.commonUntitled;
+      final artist = result['artist_name'] ??
+          result['artistName'] ??
+          AppLocalizations.of(context)!.commonUnknown;
       final image =
           result['image_url'] ?? result['imageUrl'] ?? result['thumbnailUrl'];
 
@@ -4017,7 +4332,7 @@ class _CommunityScreenState extends State<CommunityScreen>
           overflow: TextOverflow.ellipsis,
         ),
         subtitle: Text(
-          'by $artist',
+          AppLocalizations.of(context)!.commonByArtist(artist.toString()),
           style: KubusTypography.inter(
             fontSize: 12,
             color: scheme.onSurface.withValues(alpha: 0.6),
@@ -4027,7 +4342,9 @@ class _CommunityScreenState extends State<CommunityScreen>
         onTap: onTap,
       );
     } else if (searchType == 'institutions') {
-      final name = result['name'] ?? result['title'] ?? 'Institution';
+      final name = result['name'] ??
+          result['title'] ??
+          AppLocalizations.of(context)!.communitySearchFallbackInstitution;
       final type = result['type'] ?? '';
       final address = result['address'] ?? '';
 
@@ -4054,7 +4371,7 @@ class _CommunityScreenState extends State<CommunityScreen>
         subtitle: Text(
           [type, address]
               .where((e) => e.toString().trim().isNotEmpty)
-              .join(' � '),
+              .join(' - '),
           style: KubusTypography.inter(
             fontSize: 12,
             color: scheme.onSurface.withValues(alpha: 0.6),
@@ -4066,7 +4383,8 @@ class _CommunityScreenState extends State<CommunityScreen>
         onTap: onTap,
       );
     } else if (searchType == 'screens') {
-      final name = result['name'] ?? 'Screen';
+      final name = result['name'] ??
+          AppLocalizations.of(context)!.communitySearchFallbackScreen;
       final icon = result['icon'] as IconData? ?? Icons.open_in_new;
 
       return ListTile(
@@ -4188,13 +4506,17 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   Future<void> _captureDraftLocation(StateSetter setModalState) async {
     final hub = Provider.of<CommunityHubProvider>(context, listen: false);
+    final l10n = AppLocalizations.of(context)!;
     final locationData = await _obtainCurrentLocation();
     if (locationData == null) return;
     final lat = locationData.latitude;
     final lng = locationData.longitude;
     final label = (lat != null && lng != null)
-        ? 'Drop @ ${lat.toStringAsFixed(3)}, ${lng.toStringAsFixed(3)}'
-        : 'Current location';
+        ? l10n.communityComposerLocationDropLabel(
+            lat.toStringAsFixed(3),
+            lng.toStringAsFixed(3),
+          )
+        : l10n.communityComposerCurrentLocationLabel;
     hub.setDraftLocation(
       CommunityLocation(name: label, lat: lat, lng: lng),
       label: label,
@@ -4524,15 +4846,10 @@ class _CommunityScreenState extends State<CommunityScreen>
     final post = _communityPosts[index];
     final wasLiked = post.isLiked;
     final l10n = AppLocalizations.of(context)!;
-    final walletAddress = Provider.of<WalletProvider>(context, listen: false)
-        .currentWalletAddress;
 
     try {
-      // Let the service perform the toggle and persistence; it mutates `post` synchronously
-      await CommunityService.togglePostLike(
-        post,
-        currentUserWallet: walletAddress,
-      );
+      await Provider.of<CommunityInteractionsProvider>(context, listen: false)
+          .togglePostLike(post);
 
       if (!mounted) return;
       // Rebuild UI to reflect the updated post state
@@ -4568,7 +4885,8 @@ class _CommunityScreenState extends State<CommunityScreen>
     final l10n = AppLocalizations.of(context)!;
     _showLikesDialog(
       title: l10n.communityPostLikesTitle,
-      loader: () => BackendApiService().getPostLikes(postId),
+      loader: () =>
+          context.read<CommunityInteractionsProvider>().loadPostLikes(postId),
     );
   }
 
@@ -4576,7 +4894,9 @@ class _CommunityScreenState extends State<CommunityScreen>
     final l10n = AppLocalizations.of(context)!;
     _showLikesDialog(
       title: l10n.communityCommentLikesTitle,
-      loader: () => BackendApiService().getCommentLikes(commentId),
+      loader: () => context
+          .read<CommunityInteractionsProvider>()
+          .loadCommentLikes(commentId),
     );
   }
 
@@ -5059,20 +5379,16 @@ class _CommunityScreenState extends State<CommunityScreen>
                                                   alpha: 0.6),
                                         ),
                                         onPressed: () async {
-                                          // Optimistic toggle
-                                          setModalState(() {
-                                            c.isLiked = !c.isLiked;
-                                            c.likeCount += c.isLiked ? 1 : -1;
-                                          });
                                           try {
-                                            await CommunityService
-                                                .toggleCommentLike(c, post.id);
+                                            await context
+                                                .read<
+                                                    CommunityInteractionsProvider>()
+                                                .toggleCommentLike(
+                                                  postId: post.id,
+                                                  comment: c,
+                                                );
+                                            setModalState(() {});
                                           } catch (_) {
-                                            // rollback on error
-                                            setModalState(() {
-                                              c.isLiked = !c.isLiked;
-                                              c.likeCount += c.isLiked ? 1 : -1;
-                                            });
                                             if (context.mounted) {
                                               ScaffoldMessenger.of(context)
                                                   .showKubusSnackBar(
