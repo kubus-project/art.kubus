@@ -1,78 +1,85 @@
-# Email System Overhaul Todo
+# Email/System Notification Overhaul Todo
 
 ## 1. Audit and evidence
 - [x] Read all repo `AGENTS.md` files before code changes.
-- [x] Create or refresh `plan/progress.md` and `plan/todo.md` for this task.
-- [x] Audit backend email services, template helpers, and direct mailer usage.
-- [x] Audit backend routes/jobs/triggers that send email.
-- [x] Audit preference gates and notification settings that affect email delivery.
-- [x] Audit app-side UX surfaces for verification, password reset, account security, settings, and email preferences.
-- [x] Record confirmed current state and acceptance criteria in `plan/progress.md`.
-- [x] Fill this todo with atomic implementation tasks before major implementation begins.
+- [x] Confirm current Git branch and working tree state.
+- [x] Audit backend transactional email service and active sender methods.
+- [x] Audit backend routes/jobs/triggers that send verification, reset, notification, account security, wallet/passkey, promotion, DAO, support, and moderation emails.
+- [x] Audit admin moderation entities for safe recipient resolution.
+- [x] Audit app-side UX surfaces for verification, resend, password reset, account security, support receipt copy, settings, and email preferences.
+- [x] Record confirmed current state and remaining gaps in `plan/progress.md`.
+- [x] Populate this todo with atomic tasks before additional implementation.
 
-## 2. Shared email architecture
-- [x] Identify current shared email primitives and gaps.
-- [x] Add shared render helpers inside the transactional email service.
-- [x] Build one reusable transactional email shell for all system emails.
-- [x] Add branded logo/header, consistent typography, teal CTA, fallback link block, help/safety footer, and email-safe HTML.
-- [x] Ensure plaintext rendering remains sensible.
-- [x] Make wrapper methods call the shell directly instead of composing divergent templates.
-- [x] Make the API easy for future email types to add.
+## 2. Work tracking setup
+- [x] Ensure `plan/progress.md` exists with the required sections.
+- [x] Ensure `plan/todo.md` exists with the required phase groups.
+- [x] Keep `plan/progress.md` current while implementing remaining gaps.
+- [x] Keep this todo current while implementing remaining gaps.
 
-## 3. Template migration
-- [x] Migrate email verification to the shared shell.
-- [x] Migrate password reset to the shared shell.
-- [x] Migrate generic notification emails to the shared shell.
-- [x] Migrate account security emails to the shared shell without wrapping a divergent generic template.
-- [x] Migrate wallet backup/passkey security events to the shared shell.
-- [x] Migrate promotion lifecycle emails to the shared shell.
-- [x] Migrate DAO decision emails to the shared shell.
-- [x] Migrate support receipt/update emails to the shared shell.
-- [x] Migrate moderation outcome emails to the shared shell.
-- [x] Remove or disconnect old divergent live templates.
+## 3. Backend email completion
+- [x] Confirm active transactional email families use the shared shell.
+- [x] Confirm CTA styling is unified on teal `#0f8f8c`.
+- [x] Confirm old active green/blue CTA fragments are not present in `transactionalEmailService.js`.
+- [x] Confirm plaintext rendering exists for shared shell output.
+- [x] Confirm verification emails use the shared shell.
+- [x] Confirm password reset emails use the shared shell.
+- [x] Confirm generic notification emails use the shared shell.
+- [x] Confirm account security, wallet backup, and passkey security emails use the shared shell through `sendAccountSecurityEmail`.
+- [x] Confirm promotion lifecycle emails use the shared shell.
+- [x] Confirm DAO submission receipt and DAO decision pathways use the shared email/notification system.
+- [x] Confirm support receipt and support update pathways use the shared shell.
+- [x] Complete missing moderation/account-standing sender coverage where safe recipients are available.
 
-## 4. Missing email flows
-- [x] Implement DAO submission receipt email from `POST /api/dao/reviews`.
-- [x] Implement support ticket receipt email from `POST /api/support/tickets`.
-- [x] Implement support ticket update/resolution emails from `PATCH /api/admin/tickets/:id`.
-- [x] Implement moderation outcome email helper for owned content.
-- [x] Send moderation outcome emails for community posts where owner can be resolved.
-- [x] Send moderation outcome emails for comments where owner can be resolved.
-- [x] Send moderation outcome emails for artworks where owner can be resolved.
-- [x] Send moderation outcome emails for collections where owner can be resolved.
-- [!] Moderation outcome emails for groups are blocked in this pass because the route updates visibility but the ownership/audience model can include group owners and members; adding recipient logic needs a dedicated group-notification policy.
-- [!] Moderation outcome emails for art markers and AR markers are blocked in this pass because the route does not consistently expose a verified creator wallet without resolving marker data, linked artwork ownership, and AR-marker linkage rules together.
-- [!] Moderation outcome emails for events and exhibitions are blocked in this pass because ownership is collaboration/member based and the admin route only updates status without resolving a single safe recipient.
-- [x] Document blockers for any high-value flow that cannot be completed cleanly.
+## 4. Missing flow wiring
+- [x] Confirm DAO submission receipt wiring in `POST /api/dao/reviews`.
+- [x] Confirm DAO decision email pathway through DAO decision notifications.
+- [x] Confirm support ticket receipt wiring in support ticket creation.
+- [x] Confirm support ticket update/resolution wiring in admin ticket updates.
+- [x] Confirm moderation outcome emails for users/account-standing changes.
+- [x] Confirm moderation outcome emails for groups.
+- [x] Confirm moderation outcome emails for community posts.
+- [x] Confirm moderation outcome emails for comments.
+- [x] Confirm moderation outcome emails for artworks.
+- [x] Confirm moderation outcome emails for collections.
+- [x] Confirm moderation outcome emails for art markers when linked artwork ownership resolves.
+- [x] Confirm moderation outcome emails for AR markers when linked art marker/artwork ownership resolves.
+- [x] Confirm moderation outcome emails for events to collaboration owners.
+- [x] Confirm moderation outcome emails for exhibitions to collaboration owners.
+- [x] Document justified non-send cases: no email is sent when there is no verified email audience, no linked artwork owner, no group owner, or no event/exhibition collaboration owner.
 
 ## 5. App-side UX alignment
-- [x] Align verification sent and resend expectations.
-- [x] Align password reset expectations.
-- [x] Align account security messaging.
-- [x] Align settings and email preference labels/grouping.
-- [x] Align UI copy that promises or depends on backend email delivery.
-- [x] Localize the email verification status badge.
-- [x] Update support ticket success copy to mention the emailed receipt when an email was provided.
+- [x] Confirm verification sent and resend expectations align with backend delivery responses.
+- [x] Confirm password reset expectations align with safe backend responses.
+- [x] Confirm account security messaging aligns with security mail behavior.
+- [x] Confirm settings and email preference labels/grouping align with backend preference categories.
+- [x] Confirm support ticket success copy mentions receipt email when the user provided an email.
+- [x] Confirm email verification badge is localized.
+- [x] Re-check app-side files after backend completion; no additional copy changes were needed.
 
 ## 6. Tests and validation
-- [x] Add or update tests for verification flow.
-- [x] Add or update tests for resend verification flow.
-- [x] Add or update tests for password reset flow.
-- [x] Add or update tests for account security flow.
-- [x] Add or update tests for promotion flow.
-- [x] Add or update tests for DAO decision flow.
-- [x] Add tests for DAO submission receipt email.
-- [x] Add tests for support ticket receipt and update emails.
-- [x] Add tests for moderation outcome emails.
-- [x] Add tests that shared shell output uses the teal CTA and branded shell.
-- [x] Run targeted backend tests or document blockers.
-- [!] Run targeted frontend validation or document blockers. Blocked because `dart` and `flutter` are not available on PATH in this sandbox; manual localization key and widget reference checks were completed with `rg`.
+- [x] Existing targeted backend tests cover verification flow.
+- [x] Existing targeted backend tests cover resend verification flow.
+- [x] Existing targeted backend tests cover password reset flow.
+- [x] Existing targeted backend tests cover account security flow.
+- [x] Existing targeted backend tests cover promotion flow.
+- [x] Existing targeted backend tests cover DAO submission receipt flow.
+- [x] Existing targeted backend tests cover DAO decision flow.
+- [x] Existing targeted backend tests cover support receipt flow.
+- [x] Existing targeted backend tests cover support update flow.
+- [x] Existing targeted backend tests cover shared shell teal CTA/branded output.
+- [x] Add/update moderation tests for newly wired entity types.
+- [x] Run `node --check` on changed backend files.
+- [x] Run targeted backend Jest tests.
+- [x] Run backend drift checks for direct mailer usage and old CTA colors.
+- [!] Run targeted frontend CLI validation. Blocked because `dart` and `flutter` are not available on PATH in this sandbox; manual localization key and widget reference checks were completed with `rg`.
 
 ## 7. Final self-audit and cleanup
+- [x] Verify `plan/progress.md` is current.
+- [x] Verify `plan/todo.md` has no stale `[~]` items.
 - [x] Verify no active email family uses the old plain/minimal template.
 - [x] Verify shared teal CTA styling across live email families.
 - [x] Verify EN/SL compatibility where relevant.
-- [x] Update `plan/progress.md` with final files changed and validation log.
-- [x] Update `plan/todo.md` so every item is `[x]` or `[!]` with accurate reasons.
-- [x] Confirm acceptance criteria one by one.
+- [x] Verify app-side UX alignment was not skipped.
+- [x] Verify missing flow coverage is complete or explicitly justified.
+- [x] Confirm acceptance criteria one by one in `plan/progress.md`.
 - [x] State final status without overclaiming.

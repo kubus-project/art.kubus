@@ -1,104 +1,91 @@
 # Objective
-Finish the incomplete email-system overhaul so every active transactional/system email uses one branded art.kubus email system with consistent hierarchy, teal CTA styling, EN/SL-aware copy where relevant, sensible plaintext, and no live mixed old/new email UIs.
+Finish the email/system notification overhaul so backend transactional/system mail and relevant app-side UX are coherent, validated, and accurately documented.
 
 # Scope
-- Audit backend email senders, templates, triggers, preference gates, tests, and app-side UX surfaces that set user expectations for email delivery.
-- Build or complete one shared transactional email shell/base system.
-- Migrate active email families onto that shared system.
-- Add trust-critical missing flows where the backend supports them cleanly.
-- Tighten app-side copy where it affects email trust and clarity.
-- Validate the updated flows and keep this worklog accurate.
+- Backend transactional email rendering and active sender methods.
+- Backend flows for verification, resend verification, password reset, generic notifications, account security, wallet backup/passkey security, promotion lifecycle, DAO submission/decision, support ticket receipt/update, and moderation outcomes.
+- App UX copy/status surfaces for email verification/resend/reset/security/settings/support receipts.
+- Plan tracking files required by the task.
 
 # Confirmed current state
-- Preflight read completed for all repo `AGENTS.md` files found under root, `backend/**`, and `lib/**`.
-- Existing `plan/progress.md` was from a previous UI/localization task and did not reflect this email overhaul.
-- `plan/todo.md` was missing at the start of this task.
-- `backend/src/services/transactionalEmailService.js` is the central SMTP sender. It has a branded verification template only; password reset and generic notification templates are still minimal inline HTML. CTA colors are mixed and include green `#1db854` and blue link styling.
-- `sendAccountSecurityEmail` and `sendPromotionAlertEmail` currently call `sendNotificationEmail`, so account security, wallet backup/passkey, password-reset-completed, and promotion lifecycle emails inherit the generic minimal notification UI.
-- Email verification is sent from `backend/src/routes/auth.js` through `sendEmailVerification`.
-- Password reset is sent from `backend/src/routes/auth.js` through `sendPasswordReset`.
-- Generic notification emails are sent from `backend/src/routes/notifications.js` through `sendNotificationEmail`.
-- Account security/wallet backup/passkey events are defined in `backend/src/services/accountSecurityMailService.js` and triggered from auth and wallet backup routes.
-- Promotion lifecycle emails are defined in `backend/src/services/promotionAlertService.js` and triggered from promotion admin/app routes and the promotion alert poller.
-- DAO decision emails are sent as notification emails through `createDaoDecisionNotification`.
-- DAO submission receipts are not currently emailed when `POST /api/dao/reviews` succeeds.
-- Support ticket receipts are not currently emailed when `POST /api/support/tickets` succeeds.
-- Support ticket update/resolution emails are not currently sent by `backend/src/routes/adminTickets.js`.
-- Moderation outcome emails for creator-impacting admin changes are not currently sent by `backend/src/routes/adminModeration.js`; DAO decisions are the existing exception.
-- App-side verification, resend verification, password reset, settings email preferences, support ticket dialog, and email verification badge surfaces exist and need minor copy/status alignment.
+- Preflight read completed for all repo `AGENTS.md` files found under root, `lib/**`, and `backend/**`.
+- `plan/progress.md` and `plan/todo.md` already existed when this turn started, but `plan/todo.md` did not use the exact required phase group names. It has now been normalized.
+- `git -c safe.directory=G:/WorkingDATA/art.kubus/art.kubus branch --show-current` reports `master`, not `public-server-setup`.
+- `git -c safe.directory=G:/WorkingDATA/art.kubus/art.kubus status --short` reported a clean working tree before this turn's edits.
+- `backend/src/services/transactionalEmailService.js` contains one shared transactional renderer with branded art.kubus logo/header, teal primary CTA `#0f8f8c`, fallback link block, safety/help footer, HTML, and plaintext output.
+- Email verification, password reset, generic notifications, account security, wallet backup/passkey security events, promotion lifecycle alerts, DAO submission receipts, support ticket receipts, support ticket updates, and moderation outcome emails all call the shared transactional renderer through service methods.
+- DAO submission receipt wiring exists in `backend/src/routes/dao.js`.
+- DAO decision mail path exists through `createDaoDecisionNotification`.
+- Support ticket receipt wiring exists in `backend/src/routes/supportTickets.js`.
+- Support ticket update/resolution wiring exists in `backend/src/routes/adminTickets.js`.
+- Moderation outcome wiring already existed for community posts, comments, artworks, and collections.
+- This turn completed the remaining admin moderation/account-standing wiring for users, groups, art markers, AR markers, events, and exhibitions.
+- App-side audit found verification/resend/reset/security/settings copy aligned; support ticket success copy already mentions an emailed receipt when an email is provided, and the email verification badge is localized.
+
+# Remaining gaps
+- No code coverage gaps remain for the requested overhaul in the current checkout.
+- Frontend formatter/analyzer validation could not be run because `dart` and `flutter` are not available on PATH in this sandbox.
+- Operational SMTP delivery from a deployed container was not tested; this pass validates code paths and rendered payloads, not live SMTP provider delivery.
 
 # Acceptance criteria
-- One shared transactional email shell exists in code.
-- Verification, password reset, and generic notification emails use that shared shell.
-- Account security emails use that shared shell.
-- Promotion emails use that shared shell.
-- CTA styling is unified and teal.
-- Old divergent active templates are removed or no longer used.
-- Missing high-value flows in scope are implemented or explicitly blocked and documented.
-- App-side UX/copy is aligned where needed.
-- `plan/progress.md` exists and is current.
-- `plan/todo.md` exists and is current.
-- Final self-audit confirms no mixed old/new system remains in active use.
+- `plan/progress.md` exists and reflects the real final state. Confirmed.
+- `plan/todo.md` exists and reflects the real final state. Confirmed.
+- One shared transactional email shell is the active system. Confirmed in `transactionalEmailService.js`.
+- Verification, password reset, generic notifications, account security, and promotion emails all use that shared shell. Confirmed by route/service audit and targeted tests.
+- DAO submission receipt and support receipt/update flows are wired and working in code. Confirmed by audit and targeted tests.
+- Moderation outcome emails are wired for all relevant moderated entity types discovered in audit, with safe-recipient exclusions documented. Confirmed for users, groups, community posts, comments, artworks, collections, art markers, AR markers, events, and exhibitions.
+- App-side UX/copy is aligned where needed with actual email behavior. Confirmed by audit of verification/resend/reset/security/settings/support surfaces.
+- Tests or validation coverage were added/performed and logged. Confirmed.
+- Final self-audit confirms no major remaining gaps. Confirmed, subject to the environment notes above.
 
 # Phases
 1. Audit and evidence
-2. Shared email architecture
-3. Template migration
-4. Missing email flows
+2. Work tracking setup
+3. Backend email completion
+4. Missing flow wiring
 5. App-side UX alignment
 6. Tests and validation
 7. Final self-audit and cleanup
 
 # Current phase
-Phase 7: Final self-audit and cleanup
+Phase 7: Final self-audit and cleanup complete
 
 # Files audited
 - `AGENTS.md`
+- `lib/AGENTS.md`
+- `lib/providers/AGENTS.md`
+- `lib/services/AGENTS.md`
+- `lib/screens/AGENTS.md`
+- `lib/screens/desktop/AGENTS.md`
 - `backend/AGENTS.md`
 - `backend/src/AGENTS.md`
 - `backend/src/middleware/AGENTS.md`
 - `backend/src/routes/AGENTS.md`
 - `backend/src/services/AGENTS.md`
-- `lib/AGENTS.md`
-- `lib/providers/AGENTS.md`
-- `lib/screens/AGENTS.md`
-- `lib/screens/desktop/AGENTS.md`
-- `lib/services/AGENTS.md`
 - `plan/progress.md`
+- `plan/todo.md`
 - `backend/src/services/transactionalEmailService.js`
-- `backend/src/routes/supportTickets.js`
-- `backend/src/routes/adminTickets.js`
-- `backend/src/routes/dao.js`
-- `backend/src/routes/adminModeration.js`
-- `backend/__tests__/transactionalEmailService.test.js`
-- `backend/__tests__/supportTicketsRoutes.test.js`
-- `backend/__tests__/adminModerationReportsTicketsRoutes.test.js`
-- `backend/__tests__/daoReviewsRoutes.test.js`
-- `lib/widgets/email_verification_status_badge.dart`
-- `lib/widgets/support/support_ticket_dialog.dart`
-- `lib/l10n/app_en.arb`
-- `lib/l10n/app_sl.arb`
-- `lib/l10n/app_localizations.dart`
-- `lib/l10n/app_localizations_en.dart`
-- `lib/l10n/app_localizations_sl.dart`
 - `backend/src/services/accountSecurityMailService.js`
 - `backend/src/services/promotionAlertService.js`
 - `backend/src/routes/auth.js`
 - `backend/src/routes/notifications.js`
 - `backend/src/routes/supportTickets.js`
 - `backend/src/routes/adminTickets.js`
-- `backend/src/routes/adminModeration.js`
 - `backend/src/routes/dao.js`
+- `backend/src/routes/adminModeration.js`
+- `backend/src/routes/walletBackups.js`
 - `backend/src/utils/emailDeliveryPolicy.js`
 - `backend/src/utils/emailPreferences.js`
+- `backend/src/db/schema.sql`
+- `backend/src/db/schema_complete.sql`
 - `backend/__tests__/transactionalEmailService.test.js`
 - `backend/__tests__/authEmailLifecycle.test.js`
 - `backend/__tests__/notificationsRoutesAuth.test.js`
 - `backend/__tests__/promotionAlertService.test.js`
 - `backend/__tests__/supportTicketsRoutes.test.js`
-- `backend/__tests__/adminModerationReportsTicketsRoutes.test.js`
 - `backend/__tests__/daoReviewsRoutes.test.js`
 - `backend/__tests__/walletBackupsRoutes.test.js`
+- `backend/__tests__/adminModerationReportsTicketsRoutes.test.js`
 - `lib/screens/auth/verify_email_screen.dart`
 - `lib/screens/auth/forgot_password_screen.dart`
 - `lib/screens/auth/reset_password_screen.dart`
@@ -112,53 +99,41 @@ Phase 7: Final self-audit and cleanup
 - `lib/screens/desktop/desktop_settings_screen.dart`
 - `lib/l10n/app_en.arb`
 - `lib/l10n/app_sl.arb`
-
-# Files changed
-- `plan/progress.md`
-- `plan/todo.md`
-- `backend/src/services/transactionalEmailService.js`
-- `backend/src/routes/supportTickets.js`
-- `backend/src/routes/adminTickets.js`
-- `backend/src/routes/dao.js`
-- `backend/src/routes/adminModeration.js`
-- `backend/__tests__/transactionalEmailService.test.js`
-- `backend/__tests__/supportTicketsRoutes.test.js`
-- `backend/__tests__/adminModerationReportsTicketsRoutes.test.js`
-- `backend/__tests__/daoReviewsRoutes.test.js`
-- `lib/widgets/email_verification_status_badge.dart`
-- `lib/widgets/support/support_ticket_dialog.dart`
-- `lib/l10n/app_en.arb`
-- `lib/l10n/app_sl.arb`
 - `lib/l10n/app_localizations.dart`
 - `lib/l10n/app_localizations_en.dart`
 - `lib/l10n/app_localizations_sl.dart`
 
+# Files changed
+- `plan/progress.md`
+- `plan/todo.md`
+- `backend/src/routes/adminModeration.js`
+- `backend/src/services/transactionalEmailService.js`
+- `backend/__tests__/adminModerationReportsTicketsRoutes.test.js`
+
 # Validation log
-- Preflight AGENTS review completed.
-- `plan/progress.md` updated for this task.
-- `plan/todo.md` created for this task.
-- `git status --short` was initially blocked by Git dubious ownership for the sandbox user; future non-destructive Git checks will use per-command safe-directory config.
-- Phase 1 audit completed with `rg` and direct file reads across backend senders, routes, tests, and app UX surfaces.
-- Phase 2 shared architecture verified in code: `transactionalEmailService.js` now has one shared renderer with branded header/logo, teal CTA `#0f8f8c`, fallback links, help/safety footer, and plaintext output.
-- Phase 3 migration verified in code for verification, password reset, generic notifications, account security/wallet/passkey events, promotion lifecycle emails, and DAO decision emails through the shared transactional shell. `rg` found no old `#1db854` or `#1a73e8` CTA styling in the transactional email service.
-- Phase 4 implemented DAO submission receipts, support ticket receipts, support ticket update/resolution emails, and creator-impacting moderation outcome emails for community posts, comments, artworks, and collections where owner wallets are available.
-- Phase 5 aligned app-side support receipt copy and localized the email verification status badge; existing verification/resend, password reset, account security, and email preference copy already matched the backend delivery expectations after audit.
-- `node --check` passed for `transactionalEmailService.js`, `supportTickets.js`, `adminTickets.js`, `dao.js`, and `adminModeration.js`.
-- `npm.cmd test -- --runInBand --runTestsByPath __tests__/transactionalEmailService.test.js __tests__/supportTicketsRoutes.test.js __tests__/adminModerationReportsTicketsRoutes.test.js __tests__/daoReviewsRoutes.test.js __tests__/promotionAlertService.test.js __tests__/notificationsRoutesAuth.test.js __tests__/walletBackupsRoutes.test.js __tests__/authEmailLifecycle.test.js` passed: 8 suites, 61 tests.
-- `npm.cmd test -- --runInBand --runTestsByPath __tests__/transactionalEmailService.test.js` passed after Slovenian copy cleanup: 1 suite, 4 tests.
-- `npm.cmd test -- --runInBand --runTestsByPath __tests__/adminModerationReportsTicketsRoutes.test.js` passed after comment action-link cleanup: 1 suite, 11 tests.
-- `npm test` through PowerShell was blocked by execution policy for `npm.ps1`; rerun with `npm.cmd` succeeded.
-- Jest parallel worker startup was blocked by `spawn EPERM`; rerun with `--runInBand` succeeded.
-- `dart format` and `flutter --version` were blocked because `dart` and `flutter` are not available on PATH in this sandbox.
-- `rg` checks confirmed app localization keys are present in ARB and generated localization files, the badge no longer hardcodes English, and the transactional service no longer contains old `#1db854` or `#1a73e8` CTA styling.
-- Final self-audit `rg` found no old green/blue CTA colors or old minimal password-reset/notification template fragments in active backend email code.
-- Acceptance criteria checked: one shared shell exists; verification, password reset, generic notification, account security, promotion, DAO decision, support, and moderation emails use it; CTA color is unified teal; old divergent templates are disconnected; missing high-value flows were implemented where ownership is safe and blockers documented where not; app copy was aligned; both plan files are current.
+- Read all `AGENTS.md` files required by repo preflight.
+- Confirmed `git branch --show-current` reports `master`; this is recorded as a branch mismatch because the prompt named `public-server-setup`.
+- Confirmed initial working tree was clean with per-command `safe.directory` Git option.
+- Used `rg` and direct file reads to audit active backend email sender methods, route wiring, moderation route entity coverage, app UX surfaces, schema ownership columns, and existing tests.
+- Confirmed shared shell CTA color in `transactionalEmailService.js` is `#0f8f8c`.
+- Confirmed `rg` found no `#1db854` or `#1a73e8` in `backend/src/services/transactionalEmailService.js` or active backend route code.
+- Confirmed direct SMTP/nodemailer usage is limited to `backend/src/services/transactionalEmailService.js`.
+- Confirmed active sender methods route through `sendEmailVerification`, `sendPasswordReset`, `sendNotificationEmail`, `sendAccountSecurityEmail`, `sendPromotionAlertEmail`, `sendDaoSubmissionReceiptEmail`, `sendSupportTicketReceiptEmail`, `sendSupportTicketUpdateEmail`, and `sendModerationOutcomeEmail`.
+- Added moderation tests for users, group owners, art marker owners, AR marker owners, event collaboration owners, and exhibition collaboration owners; extended user deletion coverage for account removal mail.
+- `node --check backend/src/routes/adminModeration.js` passed.
+- `node --check backend/src/services/transactionalEmailService.js` passed.
+- `node --check backend/__tests__/adminModerationReportsTicketsRoutes.test.js` passed.
+- `npm.cmd test -- --runInBand --runTestsByPath __tests__/adminModerationReportsTicketsRoutes.test.js` passed: 1 suite, 17 tests.
+- `npm.cmd test -- --runInBand --runTestsByPath __tests__/transactionalEmailService.test.js __tests__/supportTicketsRoutes.test.js __tests__/adminModerationReportsTicketsRoutes.test.js __tests__/daoReviewsRoutes.test.js __tests__/promotionAlertService.test.js __tests__/notificationsRoutesAuth.test.js __tests__/walletBackupsRoutes.test.js __tests__/authEmailLifecycle.test.js` passed: 8 suites, 67 tests.
+- `dart --version` failed because `dart` is not available on PATH.
+- `flutter --version` failed because `flutter` is not available on PATH.
+- Manual app-side `rg` checks confirmed support receipt copy exists in EN/SL, the support dialog uses that copy when email is provided, settings expose the relevant email preference groups on mobile and desktop, and verification/reset screens use the backend email flows.
 
 # Remaining issues
-- Frontend formatter/analyzer validation remains blocked by missing Dart/Flutter CLI.
-- Moderation outcome emails for groups are blocked in this pass because the route updates group visibility but recipient policy may involve group owners and/or members.
-- Moderation outcome emails for art markers and AR markers are blocked in this pass because owner resolution needs marker data, linked artwork ownership, and AR-marker linkage rules resolved together.
-- Moderation outcome emails for events and exhibitions are blocked in this pass because ownership is collaboration/member based and the admin route does not resolve a single safe recipient.
+- Local branch mismatch: the checkout reports `master`, while the prompt says `public-server-setup`. I did not switch branches because the task forbids destructive git operations and the current checkout already contained the audited overhaul work.
+- Frontend CLI validation is blocked by missing `dart`/`flutter` binaries on PATH.
+- Live SMTP delivery was not exercised against a real provider/container.
+- Justified non-send cases: no moderation email is sent when the owner/audience cannot be resolved safely, the email is unverified, a marker has no linked artwork owner, or an event/exhibition has no collaboration owner.
 
 # Final status
-Implemented with documented blockers for owner-ambiguous moderation entities and blocked frontend CLI validation. Backend email overhaul acceptance criteria are satisfied for active email families.
+Complete in the current checkout. The email/system notification overhaul is fully implemented in code with targeted backend validation passing; the only remaining notes are environment validation limits and the branch-name mismatch documented above.
