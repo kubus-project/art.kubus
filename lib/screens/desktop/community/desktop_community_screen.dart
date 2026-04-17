@@ -857,13 +857,17 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         final post = route.post;
         child = post == null
             ? const SizedBox.shrink()
-            : _buildPostDetailPane(post, initialAction: route.initialAction);
+            : _buildPostDetailPane(
+                post,
+                themeProvider: themeProvider,
+                initialAction: route.initialAction,
+              );
         break;
       case _PaneViewType.conversation:
         final conversation = route.conversation;
         child = conversation == null
             ? const SizedBox.shrink()
-            : _buildConversationPane(conversation);
+            : _buildConversationPane(conversation, themeProvider);
         break;
     }
     return KeyedSubtree(
@@ -882,6 +886,19 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     });
   }
 
+  Color _paneBackdropColor(ThemeProvider themeProvider) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final tintedSurface = Color.lerp(
+          scheme.surface,
+          themeProvider.accentColor,
+          isDark ? 0.05 : 0.025,
+        ) ??
+        scheme.surface;
+    return tintedSurface.withValues(alpha: isDark ? 0.96 : 0.92);
+  }
+
   Widget _buildTagFeedPane(String tag, ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
@@ -889,7 +906,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     if (sanitized == null) {
       return Container(
         key: const ValueKey('tag-pane-invalid'),
-        color: scheme.surface,
+        color: _paneBackdropColor(themeProvider),
         child: Column(
           children: [
             _buildTagFeedHeader(
@@ -1047,7 +1064,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
     return Container(
       key: ValueKey('tag-pane-$tagKey'),
-      color: scheme.surface,
+      color: _paneBackdropColor(themeProvider),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1202,11 +1219,12 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
   Widget _buildPostDetailPane(
     CommunityPost post, {
+    required ThemeProvider themeProvider,
     PostDetailInitialAction? initialAction,
   }) {
     return Container(
       key: ValueKey('post-pane-${post.id}'),
-      color: Theme.of(context).colorScheme.surface,
+      color: _paneBackdropColor(themeProvider),
       child: PostDetailScreen(
         post: post,
         initialAction: initialAction,
@@ -1215,10 +1233,13 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     );
   }
 
-  Widget _buildConversationPane(Conversation conversation) {
+  Widget _buildConversationPane(
+    Conversation conversation,
+    ThemeProvider themeProvider,
+  ) {
     return Container(
       key: ValueKey('conversation-pane-${conversation.id}'),
-      color: Theme.of(context).colorScheme.surface,
+      color: _paneBackdropColor(themeProvider),
       child: ConversationScreen(
         conversation: conversation,
         onClose: _popPane,

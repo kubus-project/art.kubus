@@ -589,7 +589,7 @@ class _AppInitializerState extends State<AppInitializer> {
         : _serverVersion!.trim();
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: Colors.transparent,
       body: AppLoading(
         appVersion: AppInfo.fullVersion,
         serverVersion: serverVersion,

@@ -1,5 +1,5 @@
 import 'package:art_kubus/widgets/art_map_view.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -86,5 +86,15 @@ void main() {
       ),
       true,
     );
+  });
+
+  test('ArtMapView unresolved style backdrop is opaque and non-white', () {
+    final light = ArtMapView.mapLoadingBackdropColorForTest(isDarkMode: false);
+    final dark = ArtMapView.mapLoadingBackdropColorForTest(isDarkMode: true);
+
+    expect(light, isNot(Colors.white));
+    expect(light.toARGB32() >> 24, 0xFF);
+    expect(dark, isNot(Colors.white));
+    expect(dark.toARGB32() >> 24, 0xFF);
   });
 }

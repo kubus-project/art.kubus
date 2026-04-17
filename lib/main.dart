@@ -440,7 +440,10 @@ class _AppLauncherState extends State<AppLauncher> {
                   child: child ?? const SizedBox.shrink(),
                 );
               },
-              home: Scaffold(body: const AppLoading()),
+              home: const Scaffold(
+                backgroundColor: Colors.transparent,
+                body: AppLoading(),
+              ),
             );
           }
 

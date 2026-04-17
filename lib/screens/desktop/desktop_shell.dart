@@ -452,6 +452,15 @@ class _DesktopShellState extends State<DesktopShell>
     );
   }
 
+  Color _fallbackBackdropColorForRoute(BuildContext context, String route) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final accent = _activeScreenAccent(context, route: route);
+    final base =
+        isDark ? KubusColors.backgroundDark : KubusColors.backgroundLight;
+    return Color.lerp(base, accent, isDark ? 0.10 : 0.05) ?? base;
+  }
+
   List<Color> _blendAccentIntoAnimatedBase({
     required List<Color> base,
     required Color accent,
@@ -659,6 +668,14 @@ class _DesktopShellState extends State<DesktopShell>
 
               return Stack(
                 children: [
+                  Positioned.fill(
+                    child: ColoredBox(
+                      key: const ValueKey<String>(
+                          'desktop-shell-fallback-backdrop'),
+                      color: _fallbackBackdropColorForRoute(
+                          context, effectiveRoute),
+                    ),
+                  ),
                   if (!(kIsWeb && effectiveRoute == '/explore'))
                     Positioned.fill(
                       child: AnimatedGradientBackground(

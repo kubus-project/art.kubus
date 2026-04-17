@@ -131,6 +131,8 @@ class _GeneralBackgroundState extends State<GeneralBackground>
         );
         final gradientAlpha =
             widget.showMapLayer ? (isDark ? 0.85 : 0.88) : 1.0;
+        final fallbackColor =
+            _resolveFallbackBackdropColor(theme, effectivePalette);
         final gradientPalette = effectivePalette
             .map((color) => color.withValues(alpha: gradientAlpha))
             .toList(growable: false);
@@ -138,6 +140,10 @@ class _GeneralBackgroundState extends State<GeneralBackground>
         return Stack(
           fit: StackFit.expand,
           children: [
+            ColoredBox(
+              key: const ValueKey<String>('general-background-fallback'),
+              color: fallbackColor,
+            ),
             if (widget.showMapLayer) _buildStaticMapLayer(context),
             DecoratedBox(
               decoration: BoxDecoration(
@@ -235,6 +241,19 @@ class _GeneralBackgroundState extends State<GeneralBackground>
           : KubusGradients.animatedLightColors;
     }
     return colors;
+  }
+
+  Color _resolveFallbackBackdropColor(
+    ThemeData theme,
+    List<Color> effectivePalette,
+  ) {
+    final isDark = theme.brightness == Brightness.dark;
+    final base =
+        isDark ? KubusColors.backgroundDark : KubusColors.backgroundLight;
+    final seed = effectivePalette.isEmpty
+        ? base
+        : effectivePalette[effectivePalette.length ~/ 2];
+    return Color.lerp(base, seed, isDark ? 0.32 : 0.24) ?? base;
   }
 
   static bool _listEquals(List<Color>? a, List<Color>? b) {

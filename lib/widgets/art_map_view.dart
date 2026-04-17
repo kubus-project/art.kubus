@@ -109,6 +109,25 @@ class ArtMapView extends StatefulWidget {
     return !isMobileWeb;
   }
 
+  @visibleForTesting
+  static Color mapLoadingBackdropColorForTest({required bool isDarkMode}) {
+    if (isDarkMode) {
+      return Color.lerp(
+            KubusColors.backgroundDark,
+            KubusColors.primaryVariantDark,
+            0.10,
+          ) ??
+          KubusColors.backgroundDark;
+    }
+
+    return Color.lerp(
+          KubusColors.backgroundLight,
+          KubusGradients.animatedLightColors[2],
+          0.55,
+        ) ??
+        KubusColors.backgroundLight;
+  }
+
   @override
   State<ArtMapView> createState() => _ArtMapViewState();
 }
@@ -489,8 +508,9 @@ class _ArtMapViewState extends State<ArtMapView> {
     // MapLibre is a platform view; in a loose Stack it can end up with a 0-size
     // layout. SizedBox.expand guarantees fullscreen rendering for our map screens.
     if (resolved == null) {
-      return const SizedBox.expand(
-          child: ColoredBox(color: Colors.transparent));
+      return SizedBox.expand(
+        child: ColoredBox(color: _mapLoadingBackdropColor()),
+      );
     }
 
     return LayoutBuilder(
@@ -661,6 +681,12 @@ class _ArtMapViewState extends State<ArtMapView> {
           ),
         );
       },
+    );
+  }
+
+  Color _mapLoadingBackdropColor() {
+    return ArtMapView.mapLoadingBackdropColorForTest(
+      isDarkMode: widget.isDarkMode,
     );
   }
 }
