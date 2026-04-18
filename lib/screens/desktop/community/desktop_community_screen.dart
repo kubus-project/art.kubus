@@ -2206,9 +2206,15 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     return FloatingActionButton.extended(
       heroTag: 'desktop_comm_fab_$tabIndex',
       onPressed: single.onTap,
-      backgroundColor: themeProvider.accentColor,
+      backgroundColor: scheme.primaryContainer,
+      foregroundColor: scheme.onPrimaryContainer,
       icon: Icon(single.icon, color: scheme.onSurface),
-      label: Text(single.label, style: KubusTextStyles.navLabel),
+      label: Text(
+        single.label,
+        style: KubusTextStyles.navLabel.copyWith(
+          color: scheme.onPrimaryContainer,
+        ),
+      ),
     );
   }
 
