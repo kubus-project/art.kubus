@@ -41,9 +41,10 @@ class UserProfileNavigation {
     final trimmed = userId.trim();
     if (trimmed.isEmpty) return;
     // Best-effort warmup: this populates UserService cache so profile screens
-    // can render immediately (cache-first) without waiting for the network.
+    // can render immediately while a backend-authoritative profile refresh is
+    // already in flight.
     try {
-      unawaited(UserService.getUserById(trimmed, forceRefresh: false));
+      unawaited(UserService.getUserById(trimmed, forceRefresh: true));
     } catch (_) {}
   }
 

@@ -114,4 +114,105 @@ void main() {
       reason: 'Own profile can fetch self-only achievements when available.',
     );
   });
+
+  test('Public profile follow state uses backend status over stale local list',
+      () async {
+    const myWallet = '4Nd1mYbF7kYgU7kD3bcd1q2w4gS7y8Z9xKLMNPQRSTU';
+    const otherWallet = '6Nd1mYbF7kYgU7kD3bcd1q2w4gS7y8Z9xKLMNPQRSTV';
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(PreferenceKeys.walletAddress, myWallet);
+    await prefs.setString('following_users', jsonEncode(<String>[otherWallet]));
+
+    final requests = <http.Request>[];
+    final api = BackendApiService();
+    api.setHttpClient(MockClient((request) async {
+      requests.add(request);
+
+      if (request.url.path.contains('/api/profiles/')) {
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'data': <String, Object?>{
+              'walletAddress': otherWallet,
+              'username': 'someone',
+              'displayName': 'Someone Else',
+              'bio': '',
+            },
+          }),
+          200,
+          headers: const <String, String>{'content-type': 'application/json'},
+        );
+      }
+
+      if (request.url.path == '/api/community/follow/$otherWallet/status') {
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'success': true,
+            'isFollowing': false,
+          }),
+          200,
+          headers: const <String, String>{'content-type': 'application/json'},
+        );
+      }
+
+      return http.Response('Not found', 404);
+    }));
+
+    final user = await UserService.getUserById(otherWallet, forceRefresh: true);
+
+    expect(user, isNotNull);
+    expect(user!.isFollowing, isFalse);
+    expect(
+      requests.any((r) => r.url.path.endsWith('/follow/$otherWallet/status')),
+      isTrue,
+      reason:
+          'Profile hydration must ask the backend for viewer-specific follow state.',
+    );
+  });
+
+  test(
+      'Public profile follow state hydrates true from backend on fresh session',
+      () async {
+    const myWallet = '4Nd1mYbF7kYgU7kD3bcd1q2w4gS7y8Z9xKLMNPQRSTU';
+    const otherWallet = '6Nd1mYbF7kYgU7kD3bcd1q2w4gS7y8Z9xKLMNPQRSTV';
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(PreferenceKeys.walletAddress, myWallet);
+
+    final api = BackendApiService();
+    api.setHttpClient(MockClient((request) async {
+      if (request.url.path.contains('/api/profiles/')) {
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'data': <String, Object?>{
+              'walletAddress': otherWallet,
+              'username': 'someone',
+              'displayName': 'Someone Else',
+              'bio': '',
+            },
+          }),
+          200,
+          headers: const <String, String>{'content-type': 'application/json'},
+        );
+      }
+
+      if (request.url.path == '/api/community/follow/$otherWallet/status') {
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'success': true,
+            'isFollowing': true,
+          }),
+          200,
+          headers: const <String, String>{'content-type': 'application/json'},
+        );
+      }
+
+      return http.Response('Not found', 404);
+    }));
+
+    final user = await UserService.getUserById(otherWallet, forceRefresh: true);
+
+    expect(user, isNotNull);
+    expect(user!.isFollowing, isTrue);
+  });
 }

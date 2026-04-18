@@ -176,6 +176,58 @@ class UserService {
     }
   }
 
+  static Future<String> _activeWalletAddressFromPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return WalletUtils.canonical(
+        prefs.getString(PreferenceKeys.walletAddress) ??
+            prefs.getString('wallet_address') ??
+            prefs.getString('wallet') ??
+            prefs.getString('walletAddress') ??
+            '',
+      );
+    } catch (_) {
+      return '';
+    }
+  }
+
+  static String _followingKeyForWallet(String walletAddress) {
+    final canonical = WalletUtils.canonical(walletAddress);
+    return canonical.isEmpty ? _followingKey : '${_followingKey}_$canonical';
+  }
+
+  static Future<bool> _fetchAuthoritativeFollowState(
+    String walletAddress, {
+    bool fallbackToLocalOverlay = false,
+  }) async {
+    final targetWallet = WalletUtils.canonical(walletAddress);
+    if (targetWallet.isEmpty) return false;
+    if (await _isCurrentUserWallet(targetWallet)) return false;
+
+    try {
+      return await BackendApiService().isFollowing(targetWallet);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint(
+            'UserService._fetchAuthoritativeFollowState: failed for $targetWallet: $e');
+      }
+      if (!fallbackToLocalOverlay) return false;
+      final local = await _loadFollowingUsersFromPrefs();
+      return local.map(WalletUtils.canonical).contains(targetWallet);
+    }
+  }
+
+  static void _updateCachedFollowState(String walletAddress, bool isFollowing) {
+    final targetWallet = WalletUtils.canonical(walletAddress);
+    if (targetWallet.isEmpty) return;
+    final existing = _cache[targetWallet];
+    if (existing == null || existing.isFollowing == isFollowing) return;
+    _cache[targetWallet] = existing.copyWith(isFollowing: isFollowing);
+    try {
+      _persistCache();
+    } catch (_) {}
+  }
+
   static Future<User?> getUserById(String userId,
       {bool forceRefresh = false}) async {
     try {
@@ -216,8 +268,6 @@ class UserService {
         } catch (_) {}
       }
 
-      final followingList = await getFollowingUsers();
-      final isFollowing = followingList.contains(userId);
       final isArtist =
           (profile['isArtist'] == true) || (profile['is_artist'] == true);
       final isInstitution = (profile['isInstitution'] == true) ||
@@ -231,6 +281,7 @@ class UserService {
                 userId)
             .toString(),
       );
+      final isFollowing = await _fetchAuthoritativeFollowState(resolvedWallet);
       // Try to parse embedded stats if the profile payload contains them
       int followersFromProfile = 0;
       int followingFromProfile = 0;
@@ -754,7 +805,6 @@ class UserService {
           ?.toString());
       if (wallet.isEmpty) return null;
 
-      final followingList = await getFollowingUsers();
       final stats = profile['stats'];
       int followers = 0;
       int following = 0;
@@ -816,7 +866,7 @@ class UserService {
         followersCount: followers,
         followingCount: following,
         postsCount: 0,
-        isFollowing: followingList.contains(wallet),
+        isFollowing: await _fetchAuthoritativeFollowState(wallet),
         isVerified: profile['isVerified'] == true,
         isArtist: isArtist,
         isInstitution: isInstitution,
@@ -847,35 +897,96 @@ class UserService {
     }
   }
 
-  static Future<List<String>> getFollowingUsers() async {
+  static Future<List<String>> _loadFollowingUsersFromPrefs({
+    String? walletAddress,
+  }) async {
+    final activeWallet = WalletUtils.canonical(
+        walletAddress ?? await _activeWalletAddressFromPrefs());
+    if (activeWallet.isEmpty) return <String>[];
     final prefs = await SharedPreferences.getInstance();
-    final followingJson = prefs.getString(_followingKey);
+    final followingJson = prefs.getString(_followingKeyForWallet(activeWallet));
     if (followingJson == null || followingJson.isEmpty) return <String>[];
     try {
-      return List<String>.from(json.decode(followingJson));
+      return List<String>.from(json.decode(followingJson))
+          .map(WalletUtils.canonical)
+          .where((wallet) => wallet.isNotEmpty)
+          .toSet()
+          .toList(growable: false);
     } catch (_) {
       return <String>[];
     }
   }
 
-  static Future<void> _saveFollowingUsers(List<String> wallets) async {
+  static Future<List<String>> getFollowingUsers({
+    String? walletAddress,
+    bool forceRefresh = false,
+  }) async {
+    final activeWallet = WalletUtils.canonical(
+        walletAddress ?? await _activeWalletAddressFromPrefs());
+    if (activeWallet.isEmpty) return <String>[];
+
+    try {
+      final rows = await BackendApiService().getFollowing(
+        walletAddress: activeWallet,
+        limit: 200,
+      );
+      final wallets = rows
+          .map((row) => WalletUtils.canonical(
+                row['walletAddress'] ??
+                    row['wallet_address'] ??
+                    row['wallet'] ??
+                    row['id'] ??
+                    '',
+              ))
+          .where((wallet) => wallet.isNotEmpty)
+          .toSet()
+          .toList(growable: false);
+      await _saveFollowingUsers(wallets, walletAddress: activeWallet);
+      return wallets;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('UserService.getFollowingUsers: backend refresh failed: $e');
+      }
+      return _loadFollowingUsersFromPrefs(walletAddress: activeWallet);
+    }
+  }
+
+  static Future<void> _saveFollowingUsers(
+    List<String> wallets, {
+    String? walletAddress,
+  }) async {
+    final activeWallet = WalletUtils.canonical(
+        walletAddress ?? await _activeWalletAddressFromPrefs());
+    if (activeWallet.isEmpty) return;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_followingKey, json.encode(wallets));
+    final canonicalWallets = wallets
+        .map(WalletUtils.canonical)
+        .where((wallet) => wallet.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+    await prefs.setString(
+      _followingKeyForWallet(activeWallet),
+      json.encode(canonicalWallets),
+    );
   }
 
   static Future<void> followUser(String walletAddress) async {
     if (walletAddress.isEmpty) return;
-    final followingList = await getFollowingUsers();
-    if (!followingList.contains(walletAddress)) {
-      followingList.add(walletAddress);
+    final targetWallet = WalletUtils.canonical(walletAddress);
+    if (targetWallet.isEmpty) return;
+    final followingList = await _loadFollowingUsersFromPrefs();
+    if (!followingList.contains(targetWallet)) {
+      followingList.add(targetWallet);
       await _saveFollowingUsers(followingList);
     }
   }
 
   static Future<void> unfollowUser(String walletAddress) async {
     if (walletAddress.isEmpty) return;
-    final followingList = await getFollowingUsers();
-    followingList.remove(walletAddress);
+    final targetWallet = WalletUtils.canonical(walletAddress);
+    if (targetWallet.isEmpty) return;
+    final followingList = await _loadFollowingUsersFromPrefs();
+    followingList.remove(targetWallet);
     await _saveFollowingUsers(followingList);
   }
 
@@ -887,21 +998,31 @@ class UserService {
   }) async {
     if (walletAddress.isEmpty) return false;
 
-    final followingList = await getFollowingUsers();
-    final isCurrentlyFollowing = followingList.contains(walletAddress);
+    final targetWallet = WalletUtils.canonical(walletAddress);
+    if (targetWallet.isEmpty) return false;
+
+    final isCurrentlyFollowing = await _fetchAuthoritativeFollowState(
+      targetWallet,
+      fallbackToLocalOverlay: true,
+    );
+    final followingList = await _loadFollowingUsersFromPrefs();
     final backendApi = BackendApiService();
 
     if (isCurrentlyFollowing) {
-      await backendApi.unfollowUser(walletAddress);
-      followingList.remove(walletAddress);
+      await backendApi.unfollowUser(targetWallet);
+      followingList.remove(targetWallet);
       await _saveFollowingUsers(followingList);
+      _updateCachedFollowState(targetWallet, false);
       return false;
     } else {
-      await backendApi.followUser(walletAddress);
-      followingList.add(walletAddress);
+      await backendApi.followUser(targetWallet);
+      if (!followingList.contains(targetWallet)) {
+        followingList.add(targetWallet);
+      }
       await _saveFollowingUsers(followingList);
+      _updateCachedFollowState(targetWallet, true);
       UserActionLogger.logFollow(
-        walletAddress: walletAddress,
+        walletAddress: targetWallet,
         displayName: displayName,
         username: username,
         avatarUrl: avatarUrl,
@@ -1087,7 +1208,7 @@ class UserService {
       final posts = snapshot.counters['posts'] ?? 0;
 
       final existing = _cache[walletAddress];
-      final isFollowing = (await getFollowingUsers()).contains(walletAddress);
+      final isFollowing = await _fetchAuthoritativeFollowState(walletAddress);
 
       final updated = existing != null
           ? existing.copyWith(
@@ -1131,6 +1252,8 @@ class UserService {
     final results = <User>[];
     final clean = wallets.where((w) => w.isNotEmpty).toSet().toList();
     if (clean.isEmpty) return results;
+    final followingSet =
+        (await getFollowingUsers()).map(WalletUtils.canonical).toSet();
     // If caller asked for fresh data (forceRefresh) or there are many wallets,
     // attempt the backend batch endpoint first to get the freshest data.
     if (forceRefresh || wallets.length >= batchFirstThreshold) {
@@ -1191,7 +1314,7 @@ class UserService {
                 followersCount: 0,
                 followingCount: 0,
                 postsCount: 0,
-                isFollowing: false,
+                isFollowing: followingSet.contains(wallet),
                 isVerified: profile['isVerified'] ?? false,
                 isArtist:
                     profile['isArtist'] == true || profile['is_artist'] == true,
@@ -1239,7 +1362,9 @@ class UserService {
           if (found.containsKey(w)) {
             results.add(found[w]!);
           } else if (_cache.containsKey(w)) {
-            results.add(_cache[w]!);
+            results.add(_cache[w]!.copyWith(
+              isFollowing: followingSet.contains(WalletUtils.canonical(w)),
+            ));
           } else {
             results.add(User(
               id: w,
@@ -1249,7 +1374,7 @@ class UserService {
               followersCount: 0,
               followingCount: 0,
               postsCount: 0,
-              isFollowing: false,
+              isFollowing: followingSet.contains(WalletUtils.canonical(w)),
               isVerified: false,
               isArtist: false,
               isInstitution: false,
@@ -1295,8 +1420,11 @@ class UserService {
     if (missing.isEmpty) {
       for (final w in wallets) {
         if (w.isEmpty) continue;
-        results.add(orderedCache[w]!);
+        results.add(orderedCache[w]!.copyWith(
+          isFollowing: followingSet.contains(WalletUtils.canonical(w)),
+        ));
       }
+      return results;
     }
 
     // For missing wallets, call batch endpoint and merge with cached entries
@@ -1357,7 +1485,7 @@ class UserService {
               followersCount: 0,
               followingCount: 0,
               postsCount: 0,
-              isFollowing: false,
+              isFollowing: followingSet.contains(wallet),
               isVerified: profile['isVerified'] ?? false,
               isArtist:
                   profile['isArtist'] == true || profile['is_artist'] == true,
@@ -1401,7 +1529,9 @@ class UserService {
       for (final w in wallets) {
         if (w.isEmpty) continue;
         if (orderedCache.containsKey(w)) {
-          results.add(orderedCache[w]!);
+          results.add(orderedCache[w]!.copyWith(
+            isFollowing: followingSet.contains(WalletUtils.canonical(w)),
+          ));
         } else if (found.containsKey(w)) {
           results.add(found[w]!);
         } else {
@@ -1413,7 +1543,7 @@ class UserService {
             followersCount: 0,
             followingCount: 0,
             postsCount: 0,
-            isFollowing: false,
+            isFollowing: followingSet.contains(WalletUtils.canonical(w)),
             isVerified: false,
             isArtist: false,
             isInstitution: false,

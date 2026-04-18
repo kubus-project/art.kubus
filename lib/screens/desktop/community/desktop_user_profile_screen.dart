@@ -18,6 +18,7 @@ import '../../../services/share/share_types.dart';
 import '../../../services/block_list_service.dart';
 import '../../../utils/artwork_navigation.dart';
 import '../../../utils/media_url_resolver.dart';
+import '../../../utils/profile_showcase_normalizer.dart';
 import '../../../community/community_interactions.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/chat_provider.dart';
@@ -1275,24 +1276,20 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
   Widget _buildArtworkShowcaseCard(
       Map<String, dynamic> data, AppLocalizations l10n) {
-    final imageUrl = _extractImageUrl(
-        data, ['imageUrl', 'image', 'previewUrl', 'coverImage', 'mediaUrl']);
-    final title =
-        (data['title'] ?? data['name'] ?? l10n.commonUntitled).toString();
-    final category =
-        (data['category'] ?? data['medium'] ?? l10n.commonArtwork).toString();
-    final artworkId =
-        (data['id'] ?? data['artwork_id'] ?? data['artworkId'])?.toString();
-    final likesCount = data['likesCount'] ?? data['likes'] ?? 0;
+    final card = ProfileArtworkShowcaseData.fromMap(
+      data,
+      fallbackTitle: l10n.commonUntitled,
+      fallbackSubtitle: l10n.commonArtwork,
+    );
 
     return SharedShowcaseCard(
-      imageUrl: imageUrl,
-      title: title,
-      subtitle: category,
-      footer: '$likesCount',
-      onTap: artworkId != null
+      imageUrl: card.imageUrl,
+      title: card.title,
+      subtitle: card.subtitle,
+      footer: l10n.userProfileLikesLabel(card.likesCount),
+      onTap: card.id != null
           ? () {
-              openArtwork(context, artworkId, source: 'desktop_user_profile');
+              openArtwork(context, card.id!, source: 'desktop_user_profile');
             }
           : null,
       width: 220,
@@ -1315,32 +1312,20 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
   Widget _buildCollectionShowcaseCard(
       Map<String, dynamic> data, AppLocalizations l10n) {
-    final imageUrl = _extractImageUrl(data, [
-      'thumbnailUrl',
-      'coverImage',
-      'coverImageUrl',
-      'cover_image_url',
-      'coverUrl',
-      'cover_url',
-      'image',
-    ]);
-    final title =
-        (data['name'] ?? l10n.userProfileCollectionFallbackTitle).toString();
-    final count = data['artworksCount'] ?? data['artworks_count'] ?? 0;
-    final description = (data['description'] ?? '').toString();
-    final collectionId =
-        (data['id'] ?? data['collection_id'] ?? data['collectionId'])
-            ?.toString();
+    final card = ProfileCollectionShowcaseData.fromMap(
+      data,
+      fallbackTitle: l10n.userProfileCollectionFallbackTitle,
+    );
 
     return SharedShowcaseCard(
-      imageUrl: imageUrl,
-      title: title,
-      subtitle: l10n.userProfileArtworksCountLabel(count as int),
-      footer: description.isNotEmpty ? description : null,
-      onTap: (collectionId != null && collectionId.isNotEmpty)
+      imageUrl: card.imageUrl,
+      title: card.title,
+      subtitle: l10n.userProfileArtworksCountLabel(card.artworkCount),
+      footer: card.description,
+      onTap: (card.id != null && card.id!.isNotEmpty)
           ? () {
               _openDesktopShellAwareScreen(
-                CollectionDetailScreen(collectionId: collectionId),
+                CollectionDetailScreen(collectionId: card.id!),
               );
             }
           : null,
@@ -1873,7 +1858,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       } else {
         loadedUser = await UserService.getUserById(
           targetId,
-          forceRefresh: false,
+          forceRefresh: true,
         );
       }
     } catch (e) {
@@ -2425,14 +2410,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     } finally {
       if (mounted) setState(() => _artistDataLoading = false);
     }
-  }
-
-  String? _extractImageUrl(Map<String, dynamic> data, List<String> keys) {
-    for (final key in keys) {
-      final value = data[key];
-      if (value is String && value.isNotEmpty) return value;
-    }
-    return null;
   }
 
   String? _normalizeMediaUrl(String? url) {

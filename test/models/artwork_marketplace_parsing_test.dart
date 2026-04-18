@@ -1,4 +1,5 @@
 import 'package:art_kubus/services/backend_api_service.dart';
+import 'package:art_kubus/utils/profile_showcase_normalizer.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -56,5 +57,33 @@ void main() {
     expect(artwork.isNft, isTrue);
     expect(artwork.nftMintAddress, isNull);
     expect(artwork.nftMetadataUri, isNull);
+  });
+
+  test('profile showcase artwork uses canonical nested stats like count', () {
+    final payload = <String, dynamic>{
+      'id': 'art-profile-1',
+      'title': 'Profile Artwork',
+      'description': 'Shown on a profile',
+      'imageUrl': '/uploads/profile-art.png',
+      'category': 'AR',
+      'stats': <String, dynamic>{
+        'viewsCount': 12,
+        'likesCount': 37,
+        'commentsCount': 4,
+      },
+      'createdAt': '2025-01-03T00:00:00.000Z',
+    };
+
+    final parsed = parseArtworkFromBackendJson(payload);
+    final showcase = ProfileArtworkShowcaseData.fromMap(
+      payload,
+      fallbackTitle: 'Untitled',
+      fallbackSubtitle: 'Artwork',
+    );
+
+    expect(parsed.likesCount, 37);
+    expect(showcase.likesCount, 37);
+    expect(showcase.title, 'Profile Artwork');
+    expect(showcase.subtitle, 'AR');
   });
 }

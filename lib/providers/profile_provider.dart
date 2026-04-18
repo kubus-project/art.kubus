@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart' as foundation;
 import 'package:http/http.dart' as http;
@@ -13,6 +14,7 @@ import '../services/user_service.dart';
 import '../services/event_bus.dart';
 import '../models/dao.dart';
 import '../utils/media_url_resolver.dart';
+import '../utils/wallet_utils.dart';
 import 'wallet_provider.dart';
 
 class ProfileProvider extends foundation.ChangeNotifier {
@@ -35,6 +37,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
   bool _hasHydratedProfile = false;
   WalletProvider? _walletProvider;
   foundation.VoidCallback? _walletProviderListener;
+  String? _boundWalletAddress;
+  int _profileLoadEpoch = 0;
 
   ProfileProvider({ProfileBackendApi? apiService})
       : _apiService = apiService ?? BackendApiService();
@@ -46,9 +50,44 @@ class ProfileProvider extends foundation.ChangeNotifier {
       _walletProvider!.removeListener(listener);
     }
     _walletProvider = walletProvider;
-    _walletProviderListener = notifyListeners;
+    _boundWalletAddress =
+        WalletUtils.canonical(walletProvider.currentWalletAddress);
+    _walletProviderListener = _handleWalletProviderChanged;
     walletProvider.addListener(_walletProviderListener!);
     notifyListeners();
+  }
+
+  void _handleWalletProviderChanged() {
+    final nextWallet =
+        WalletUtils.canonical(_walletProvider?.currentWalletAddress);
+    if (nextWallet == _boundWalletAddress) {
+      notifyListeners();
+      return;
+    }
+
+    _boundWalletAddress = nextWallet;
+    _profileLoadEpoch += 1;
+    _clearProfileState();
+
+    if (nextWallet.isNotEmpty) {
+      unawaited(loadProfile(nextWallet));
+    }
+    notifyListeners();
+  }
+
+  void _clearProfileState() {
+    _currentUser = null;
+    _followingUsers.clear();
+    _followers.clear();
+    _collectionsCount = 0;
+    _realFollowersCount = 0;
+    _realFollowingCount = 0;
+    _realPostsCount = 0;
+    _cachedPreferences = null;
+    _hasHydratedProfile = false;
+    _isLoading = false;
+    _isSignedIn = false;
+    _error = null;
   }
 
   Future<SharedPreferences> _ensurePrefs() async {
@@ -560,6 +599,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
   /// Load profile by wallet address
   Future<void> loadProfile(String walletAddress) async {
+    final requestEpoch = ++_profileLoadEpoch;
+    bool isCurrentLoad() => requestEpoch == _profileLoadEpoch;
     _isLoading = true;
     _error = null;
     _hasHydratedProfile = false;
@@ -586,6 +627,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
       // Prefer cached user service profile to avoid extra backend calls
       try {
         final user = await UserService.getUserById(walletAddress);
+        if (!isCurrentLoad()) return;
         if (user != null) {
           // Normalize username coming from UserService: strip leading '@' if present
           final normalized = user.username.replaceFirst(RegExp(r'^@+'), '');
@@ -615,11 +657,13 @@ class ProfileProvider extends foundation.ChangeNotifier {
           try {
             final profileData =
                 await _apiService.getProfileByWallet(walletAddress);
+            if (!isCurrentLoad()) return;
             _currentUser = UserProfile.fromJson(profileData);
           } catch (_) {}
         } else {
           final profileData =
               await _apiService.getProfileByWallet(walletAddress);
+          if (!isCurrentLoad()) return;
           try {
             debugPrint(
                 'ProfileProvider.loadProfile: profileData keys = ${profileData.keys}');
@@ -650,6 +694,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
         }
         // If profile missing role flags but DAO review approved, promote accordingly
         await _applyDaoReviewRoles(walletAddress);
+        if (!isCurrentLoad()) return;
         // Ensure avatar URL is rasterized and absolute
         try {
           final av = _currentUser?.avatar ?? '';
@@ -668,6 +713,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
         // Load additional stats (collections, followers, following)
         await _loadBackendStats(walletAddress);
+        if (!isCurrentLoad()) return;
       } catch (e) {
         final lowerError = e.toString().toLowerCase();
         final shouldAutoRegister =
@@ -690,11 +736,13 @@ class ProfileProvider extends foundation.ChangeNotifier {
             walletAddress: walletAddress,
             username: 'user_${walletAddress.substring(0, 8)}',
           );
+          if (!isCurrentLoad()) return;
           debugPrint(
               'ProfileProvider: Auto-registration (auth) response: $reg');
 
           // After registration, prefer cached UserService or fetch profile
           final user = await UserService.getUserById(walletAddress);
+          if (!isCurrentLoad()) return;
           if (user != null) {
             final normalized = user.username.replaceFirst(RegExp(r'^@+'), '');
             _currentUser = UserProfile(
@@ -720,11 +768,13 @@ class ProfileProvider extends foundation.ChangeNotifier {
             try {
               final profileData =
                   await _apiService.getProfileByWallet(walletAddress);
+              if (!isCurrentLoad()) return;
               _currentUser = UserProfile.fromJson(profileData);
             } catch (_) {}
           } else {
             final profileData =
                 await _apiService.getProfileByWallet(walletAddress);
+            if (!isCurrentLoad()) return;
             _currentUser = UserProfile.fromJson(profileData);
             // If profile missing artist flag but DAO review approved, promote to artist
             try {
@@ -763,6 +813,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
 
       // Save wallet address
       await _loadBackendStats(walletAddress);
+      if (!isCurrentLoad()) return;
       try {
         final prefs = await _ensurePrefs();
         await prefs.setString('wallet_address', walletAddress);
@@ -1521,10 +1572,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
   }
 
   void signOut() {
-    _currentUser = null;
-    _followingUsers.clear();
-    _followers.clear();
-    _isSignedIn = false;
+    _profileLoadEpoch += 1;
+    _clearProfileState();
+    unawaited(UserService.clearCache());
     notifyListeners();
   }
 

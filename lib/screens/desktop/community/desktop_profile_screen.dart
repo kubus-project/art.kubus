@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../utils/wallet_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/web3provider.dart';
@@ -16,6 +15,7 @@ import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
 import '../../../utils/artwork_navigation.dart';
 import '../../../utils/media_url_resolver.dart';
+import '../../../utils/profile_showcase_normalizer.dart';
 import '../../../community/community_interactions.dart';
 import '../../web3/achievements/achievements_page.dart';
 import '../desktop_settings_screen.dart';
@@ -1387,23 +1387,20 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildArtworkShowcaseCard(Map<String, dynamic> data) {
-    final imageUrl = _extractImageUrl(
-        data, ['imageUrl', 'image', 'previewUrl', 'coverImage', 'mediaUrl']);
-    final title = (data['title'] ?? data['name'] ?? 'Untitled').toString();
-    final category =
-        (data['category'] ?? data['medium'] ?? 'Artwork').toString();
-    final artworkId =
-        (data['id'] ?? data['artwork_id'] ?? data['artworkId'])?.toString();
-    final likesCount = data['likesCount'] ?? data['likes'] ?? 0;
+    final card = ProfileArtworkShowcaseData.fromMap(
+      data,
+      fallbackTitle: 'Untitled',
+      fallbackSubtitle: 'Artwork',
+    );
 
     return GestureDetector(
-      onTap: artworkId != null
+      onTap: card.id != null
           ? () {
-              openArtwork(context, artworkId, source: 'desktop_profile');
+              openArtwork(context, card.id!, source: 'desktop_profile');
             }
           : null,
       child: MouseRegion(
-        cursor: artworkId != null
+        cursor: card.id != null
             ? SystemMouseCursors.click
             : SystemMouseCursors.basic,
         child: SizedBox(
@@ -1418,9 +1415,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(KubusRadius.lg),
                   ),
-                  child: imageUrl != null
+                  child: card.imageUrl != null
                       ? Image.network(
-                          _normalizeMediaUrl(imageUrl) ?? '',
+                          _normalizeMediaUrl(card.imageUrl) ?? '',
                           height: 180,
                           width: double.infinity,
                           fit: BoxFit.cover,
@@ -1435,7 +1432,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        title,
+                        card.title,
                         style: KubusTextStyles.detailCardTitle.copyWith(
                           color: Theme.of(context).colorScheme.onSurface,
                         ),
@@ -1444,7 +1441,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                       const SizedBox(height: KubusSpacing.xs),
                       Text(
-                        category,
+                        card.subtitle,
                         style: KubusTextStyles.detailCaption.copyWith(
                           color: Theme.of(context)
                               .colorScheme
@@ -1465,7 +1462,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                           ),
                           const SizedBox(width: KubusSpacing.xs),
                           Text(
-                            '$likesCount',
+                            '${card.likesCount}',
                             style: KubusTextStyles.detailCaption.copyWith(
                               color: Theme.of(context)
                                   .colorScheme
@@ -1487,31 +1484,20 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildCollectionShowcaseCard(Map<String, dynamic> data) {
-    final imageUrl = _extractImageUrl(data, [
-      'thumbnailUrl',
-      'coverImage',
-      'coverImageUrl',
-      'cover_image_url',
-      'coverUrl',
-      'cover_url',
-      'image',
-    ]);
-    final title = (data['name'] ?? 'Collection').toString();
-    final count = data['artworksCount'] ?? data['artworks_count'] ?? 0;
-    final description = (data['description'] ?? '').toString();
-    final collectionId =
-        (data['id'] ?? data['collection_id'] ?? data['collectionId'])
-            ?.toString();
+    final card = ProfileCollectionShowcaseData.fromMap(
+      data,
+      fallbackTitle: 'Collection',
+    );
 
     return SizedBox(
       width: 220,
       child: DesktopCard(
         padding: EdgeInsets.zero,
         enableHover: true,
-        onTap: (collectionId != null && collectionId.isNotEmpty)
+        onTap: (card.id != null && card.id!.isNotEmpty)
             ? () {
                 _openDesktopShellAwareScreen(
-                  CollectionDetailScreen(collectionId: collectionId),
+                  CollectionDetailScreen(collectionId: card.id!),
                 );
               }
             : null,
@@ -1522,9 +1508,9 @@ class _ProfileScreenState extends State<ProfileScreen>
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(KubusRadius.lg),
               ),
-              child: imageUrl != null
+              child: card.imageUrl != null
                   ? Image.network(
-                      _normalizeMediaUrl(imageUrl) ?? '',
+                      _normalizeMediaUrl(card.imageUrl) ?? '',
                       height: 140,
                       width: double.infinity,
                       fit: BoxFit.cover,
@@ -1539,7 +1525,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title,
+                    card.title,
                     style: KubusTextStyles.detailCardTitle.copyWith(
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
@@ -1548,7 +1534,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ),
                   const SizedBox(height: KubusSpacing.xs),
                   Text(
-                    '$count artworks',
+                    '${card.artworkCount} artworks',
                     style: KubusTextStyles.detailCaption.copyWith(
                       color: Theme.of(context)
                           .colorScheme
@@ -1556,10 +1542,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                           .withValues(alpha: 0.66),
                     ),
                   ),
-                  if (description.isNotEmpty) ...[
+                  if ((card.description ?? '').isNotEmpty) ...[
                     const SizedBox(height: KubusSpacing.xs),
                     Text(
-                      description,
+                      card.description!,
                       style: KubusTextStyles.detailCaption.copyWith(
                         color: Theme.of(context)
                             .colorScheme
@@ -1581,31 +1567,22 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildEventShowcaseCard(Map<String, dynamic> data,
       {bool isInstitution = false}) {
-    final imageUrl = _extractImageUrl(data, [
-      'coverUrl',
-      'cover_url',
-      'bannerUrl',
-      'banner_url',
-      'image',
-    ]);
-    final title = (data['title'] ?? 'Event').toString();
-    final location =
-        (data['locationName'] ?? data['location'] ?? 'TBA').toString();
-    final startDate =
-        data['startsAt'] ?? data['startDate'] ?? data['start_date'];
-    final dateLabel = _formatEventDate(startDate);
-    final eventId =
-        (data['id'] ?? data['event_id'] ?? data['eventId'])?.toString();
+    final card = ProfileEventShowcaseData.fromMap(
+      data,
+      fallbackTitle: 'Event',
+      fallbackLocation: 'TBA',
+    );
+    final dateLabel = _formatEventDate(card.startDate);
 
     return SizedBox(
       width: isInstitution ? 280 : 240,
       child: DesktopCard(
         padding: EdgeInsets.zero,
         enableHover: true,
-        onTap: (eventId != null && eventId.isNotEmpty)
+        onTap: (card.id != null && card.id!.isNotEmpty)
             ? () {
                 _openDesktopShellAwareScreen(
-                  EventDetailScreen(eventId: eventId),
+                  EventDetailScreen(eventId: card.id!),
                 );
               }
             : null,
@@ -1615,9 +1592,9 @@ class _ProfileScreenState extends State<ProfileScreen>
             ClipRRect(
               borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(DetailRadius.lg)),
-              child: imageUrl != null
+              child: card.imageUrl != null
                   ? Image.network(
-                      _normalizeMediaUrl(imageUrl) ?? '',
+                      _normalizeMediaUrl(card.imageUrl) ?? '',
                       height: isInstitution ? 160 : 140,
                       width: double.infinity,
                       fit: BoxFit.cover,
@@ -1633,7 +1610,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title,
+                    card.title,
                     style: DetailTypography.cardTitle(context).copyWith(
                       fontSize: 14,
                     ),
@@ -1674,7 +1651,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       const SizedBox(width: DetailSpacing.xs),
                       Expanded(
                         child: Text(
-                          location,
+                          card.location ?? 'TBA',
                           style: DetailTypography.caption(context).copyWith(
                             fontSize: 12,
                           ),
@@ -2265,21 +2242,8 @@ class _ProfileScreenState extends State<ProfileScreen>
       final collections =
           await api.getCollections(walletAddress: walletAddress, limit: 6);
       final eventsResponse = await api.listEvents(limit: 100);
-      final normalizedWallet = WalletUtils.normalize(walletAddress);
       final filteredEvents = eventsResponse
-          .where((event) {
-            final createdBy = WalletUtils.normalize(
-                (event['createdBy'] ?? event['created_by'] ?? '').toString());
-            final artistIdsDynamic =
-                event['artistIds'] ?? event['artist_ids'] ?? [];
-            final artistIds = artistIdsDynamic is List
-                ? artistIdsDynamic
-                    .map((e) => WalletUtils.normalize(e.toString()))
-                    .toList()
-                : <String>[];
-            return createdBy == normalizedWallet ||
-                artistIds.contains(normalizedWallet);
-          })
+          .where((event) => profileEventBelongsToWallet(event, walletAddress))
           .take(6)
           .map((e) => Map<String, dynamic>.from(e))
           .toList();
@@ -2397,14 +2361,6 @@ class _ProfileScreenState extends State<ProfileScreen>
       context,
       MaterialPageRoute(builder: (_) => screen),
     );
-  }
-
-  String? _extractImageUrl(Map<String, dynamic> data, List<String> keys) {
-    for (final key in keys) {
-      final value = data[key];
-      if (value is String && value.isNotEmpty) return value;
-    }
-    return null;
   }
 
   String? _normalizeMediaUrl(String? url) {

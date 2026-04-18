@@ -17,6 +17,7 @@ import '../../services/share/share_types.dart';
 import '../../utils/category_accent_color.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/media_url_resolver.dart';
+import '../../utils/profile_showcase_normalizer.dart';
 import '../../community/community_interactions.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/chat_provider.dart';
@@ -283,7 +284,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       } else {
         loadedUser = await UserService.getUserById(
           targetId,
-          forceRefresh: false,
+          forceRefresh: true,
         );
       }
     } catch (e) {
@@ -1834,111 +1835,84 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   }
 
   Widget _buildArtworkCard(Map<String, dynamic> data) {
-    final imageUrl = _extractImageUrl(
-        data, ['imageUrl', 'image', 'previewUrl', 'coverImage']);
     final l10n = AppLocalizations.of(context)!;
-    final title =
-        (data['title'] ?? data['name'] ?? l10n.commonUntitled).toString();
-    final medium =
-        (data['medium'] ?? data['category'] ?? l10n.commonDigital).toString();
-    final likes = data['likesCount'] ?? data['likes'] ?? 0;
-    final likesCount = int.tryParse(likes.toString()) ?? 0;
-    final artworkId =
-        (data['id'] ?? data['artwork_id'] ?? data['artworkId'])?.toString();
+    final card = ProfileArtworkShowcaseData.fromMap(
+      data,
+      fallbackTitle: l10n.commonUntitled,
+      fallbackSubtitle: l10n.commonDigital,
+    );
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: artworkId != null
+      onTap: card.id != null
           ? () {
-              openArtwork(context, artworkId, source: 'user_profile');
+              openArtwork(context, card.id!, source: 'user_profile');
             }
           : null,
       child: _buildShowcaseCard(
-        imageUrl: imageUrl,
-        title: title,
-        subtitle: medium,
-        footer: l10n.userProfileLikesLabel(likesCount),
+        imageUrl: card.imageUrl,
+        title: card.title,
+        subtitle: card.subtitle,
+        footer: l10n.userProfileLikesLabel(card.likesCount),
       ),
     );
   }
 
   Widget _buildCollectionCard(Map<String, dynamic> data) {
     final l10n = AppLocalizations.of(context)!;
-    final imageUrl = _extractImageUrl(data, [
-      'thumbnailUrl',
-      'coverImage',
-      'coverImageUrl',
-      'cover_image_url',
-      'coverUrl',
-      'cover_url',
-      'image',
-    ]);
-    final title =
-        (data['name'] ?? l10n.userProfileCollectionFallbackTitle).toString();
-    final count = data['artworksCount'] ?? data['artworks_count'] ?? 0;
-    final artworksCount = int.tryParse(count.toString()) ?? 0;
-    final collectionId =
-        (data['id'] ?? data['collection_id'] ?? data['collectionId'])
-            ?.toString();
+    final card = ProfileCollectionShowcaseData.fromMap(
+      data,
+      fallbackTitle: l10n.userProfileCollectionFallbackTitle,
+    );
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: (collectionId != null && collectionId.isNotEmpty)
+      onTap: (card.id != null && card.id!.isNotEmpty)
           ? () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) =>
-                      CollectionDetailScreen(collectionId: collectionId),
+                      CollectionDetailScreen(collectionId: card.id!),
                 ),
               );
             }
           : null,
       child: _buildShowcaseCard(
-        imageUrl: imageUrl,
-        title: title,
-        subtitle: l10n.userProfileArtworksCountLabel(artworksCount),
-        footer:
-            (data['description'] ?? l10n.userProfileCuratedByLabel(user!.name))
-                .toString(),
+        imageUrl: card.imageUrl,
+        title: card.title,
+        subtitle: l10n.userProfileArtworksCountLabel(card.artworkCount),
+        footer: card.description ?? l10n.userProfileCuratedByLabel(user!.name),
       ),
     );
   }
 
   Widget _buildEventCard(Map<String, dynamic> data) {
     final l10n = AppLocalizations.of(context)!;
-    final imageUrl = _extractImageUrl(data, [
-      'coverUrl',
-      'cover_url',
-      'bannerUrl',
-      'banner_url',
-      'image',
-    ]);
-    final title =
-        (data['title'] ?? l10n.userProfileEventFallbackTitle).toString();
-    final dateLabel =
-        _formatDateLabel(l10n, data['startDate'] ?? data['start_date']);
-    final location = (data['location'] ?? l10n.commonTba).toString();
-    final eventId =
-        (data['id'] ?? data['event_id'] ?? data['eventId'])?.toString();
+    final card = ProfileEventShowcaseData.fromMap(
+      data,
+      fallbackTitle: l10n.userProfileEventFallbackTitle,
+      fallbackLocation: l10n.commonTba,
+    );
+    final dateLabel = _formatDateLabel(l10n, card.startDate);
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: (eventId != null && eventId.isNotEmpty)
+      onTap: (card.id != null && card.id!.isNotEmpty)
           ? () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => EventDetailScreen(eventId: eventId),
+                  builder: (context) => EventDetailScreen(eventId: card.id!),
                 ),
               );
             }
           : null,
       child: _buildShowcaseCard(
-        imageUrl: imageUrl,
-        title: title,
+        imageUrl: card.imageUrl,
+        title: card.title,
         subtitle: dateLabel,
-        footer: location,
+        footer: card.location ?? l10n.commonTba,
       ),
     );
   }
@@ -1957,23 +1931,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       width: 200,
       imageHeight: 110,
     );
-  }
-
-  String? _extractImageUrl(Map<String, dynamic> data, List<String> keys) {
-    for (final key in keys) {
-      final value = data[key];
-      if (value is String && value.isNotEmpty) {
-        return value;
-      }
-    }
-    final images = data['imageUrls'] ?? data['image_urls'] ?? data['images'];
-    if (images is List && images.isNotEmpty) {
-      final first = images.first;
-      if (first is String && first.isNotEmpty) {
-        return first;
-      }
-    }
-    return null;
   }
 
   String? _normalizeMediaUrl(String? url) {
@@ -2042,21 +1999,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       final collections =
           await api.getCollections(walletAddress: walletAddress, limit: 6);
       final eventsResponse = await api.listEvents(limit: 100);
-      final normalizedWallet = WalletUtils.normalize(walletAddress);
       final filteredEvents = eventsResponse
-          .where((event) {
-            final createdBy = WalletUtils.normalize(
-                (event['createdBy'] ?? event['created_by'] ?? '').toString());
-            final artistIdsRaw =
-                event['artistIds'] ?? event['artist_ids'] ?? [];
-            final artistIds = artistIdsRaw is List
-                ? artistIdsRaw
-                    .map((id) => WalletUtils.normalize(id.toString()))
-                    .toList()
-                : <String>[];
-            return createdBy == normalizedWallet ||
-                artistIds.contains(normalizedWallet);
-          })
+          .where((event) => profileEventBelongsToWallet(event, walletAddress))
           .take(6)
           .map((e) => Map<String, dynamic>.from(e))
           .toList();
