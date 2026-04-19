@@ -1,21 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../screens/map_screen.dart';
-import '../screens/art/ar_screen.dart';
-import '../screens/community/community_screen.dart';
-import '../screens/community/profile_screen.dart';
-import '../screens/web3/marketplace/marketplace.dart';
-import '../screens/web3/wallet/wallet_home.dart';
-import '../screens/settings_screen.dart';
-import '../screens/activity/advanced_analytics_screen.dart';
-import '../screens/activity/advanced_stats_screen.dart';
-import '../screens/web3/achievements/achievements_page.dart';
-import '../screens/web3/dao/governance_hub.dart';
-import '../screens/web3/artist/artist_studio.dart';
-import '../screens/web3/institution/institution_hub.dart';
+import '../utils/home/home_quick_action_executor.dart';
+import '../utils/home/home_quick_action_registry.dart';
 import '../utils/kubus_labs_feature.dart';
-import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 @immutable
 class ScreenDefinition {
@@ -339,69 +326,16 @@ class NavigationProvider with ChangeNotifier {
     }).toList();
   }
 
-  void navigateToScreen(BuildContext context, String screenKey) {
-    trackScreenVisit(screenKey);
+  bool isKnownQuickActionKey(String key) {
+    return HomeQuickActionRegistry.contains(key);
+  }
 
-    Widget? destination;
-    switch (screenKey) {
-      case 'map':
-        destination = const MapScreen();
-        break;
-      case 'ar':
-        destination = const ARScreen();
-        break;
-      case 'community':
-        destination = const CommunityScreen();
-        break;
-      case 'profile':
-        destination = const ProfileScreen();
-        break;
-      case 'marketplace':
-        destination = const Marketplace();
-        break;
-      case 'wallet':
-        destination = const WalletHome();
-        break;
-      case 'settings':
-        destination = const SettingsScreen();
-        break;
-      case 'analytics':
-        destination = const AdvancedAnalyticsScreen(statType: 'Engagement');
-        break;
-      case 'stats':
-        destination = const AdvancedStatsScreen(statType: 'Engagement');
-        break;
-      case 'achievements':
-        destination = AchievementsPage();
-        break;
-      case 'dao_hub':
-        destination = const GovernanceHub();
-        break;
-      case 'studio':
-        destination = const ArtistStudio();
-        break;
-      case 'institution_hub':
-        destination = const InstitutionHub();
-        break;
-    }
-
-    if (destination != null) {
-      Navigator.of(context)
-          .push(MaterialPageRoute(builder: (_) => destination!));
-      return;
-    }
-
-    final definition = screenDefinitions[screenKey];
-    if (definition == null) return;
-    final l10n = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(context).showKubusSnackBar(
-      SnackBar(
-        content: Text(
-          l10n.navigationUnableToNavigateToScreen(
-            definition.labelKey.resolve(l10n),
-          ),
-        ),
-      ),
+  @Deprecated('Use HomeQuickActionExecutor.execute instead.')
+  Future<bool> navigateToScreen(BuildContext context, String screenKey) {
+    return HomeQuickActionExecutor.execute(
+      context,
+      screenKey,
+      source: HomeQuickActionSurface.legacyProvider,
     );
   }
 }
