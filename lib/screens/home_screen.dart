@@ -56,6 +56,9 @@ import '../utils/institution_navigation.dart';
 import '../utils/user_profile_navigation.dart';
 import '../utils/home_search_destination.dart';
 import '../utils/home_header_display_name.dart';
+import '../utils/home/home_quick_action_executor.dart';
+import '../utils/home/home_quick_action_registry.dart';
+import '../utils/home/home_quick_action_suggestions.dart';
 import '../widgets/staggered_fade_slide.dart';
 import '../utils/artwork_navigation.dart';
 import '../utils/home_rail_creator_identity.dart';
@@ -1292,10 +1295,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             navigationProvider.getQuickActionScreens(maxItems: 12);
         const sectionHeaderGap = KubusSpacing.sm + KubusSpacing.xs;
         const sectionBlockGap = KubusSpacing.md;
-        final suggestedKeys = _suggestedQuickActionKeys(persona, currentUser)
-            .where(
-                (key) => NavigationProvider.screenDefinitions.containsKey(key))
-            .toList(growable: false);
+        final suggestedKeys =
+            resolveSuggestedQuickActionKeys(persona, currentUser)
+                .where(HomeQuickActionRegistry.contains)
+                .toList(growable: false);
         final isCompactLayout = constraints.maxWidth < 640;
         final compactCardWidth =
             ((constraints.maxWidth - KubusSpacing.sm) / 2).clamp(140.0, 220.0);
@@ -1390,10 +1393,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 roles: KubusColorRoles.of(context),
                               ),
                               isCompactLayout,
-                              onTap: () => navigationProvider.navigateToScreen(
-                                context,
-                                key,
-                              ),
+                              onTap: () {
+                                unawaited(HomeQuickActionExecutor.execute(
+                                  context,
+                                  key,
+                                  source: HomeQuickActionSurface.mobileHome,
+                                ));
+                              },
                               visitCount: 0,
                             ),
                           ),
@@ -1421,8 +1427,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           roles: KubusColorRoles.of(context),
                         ),
                         isCompactLayout,
-                        onTap: () => navigationProvider.navigateToScreen(
-                            context, screen.key),
+                        onTap: () {
+                          unawaited(HomeQuickActionExecutor.execute(
+                            context,
+                            screen.key,
+                            source: HomeQuickActionSurface.mobileHome,
+                          ));
+                        },
                         visitCount: screen.visitCount,
                       ),
                     ),
@@ -1433,46 +1444,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         );
       },
     );
-  }
-
-  List<String> _suggestedQuickActionKeys(
-      UserPersona? persona, UserProfile? currentUser) {
-    // Base suggestions by persona
-    List<String> suggestions;
-    switch (persona) {
-      case UserPersona.lover:
-        suggestions = const ['map', 'community', 'marketplace'];
-        break;
-      case UserPersona.creator:
-        suggestions = const ['studio', 'ar', 'map'];
-        break;
-      case UserPersona.institution:
-        suggestions = const ['institution_hub', 'map', 'community'];
-        break;
-      case null:
-        suggestions = const ['map', 'studio', 'institution_hub'];
-        break;
-    }
-
-    // If user has both badges, hide the one not currently active
-    // If only one badge is active, show it; if both active, show the first one they earned
-    final isArtist = currentUser?.isArtist ?? false;
-    final isInstitution = currentUser?.isInstitution ?? false;
-
-    if (isArtist && isInstitution) {
-      // Both badges are active - hide institution_hub, keep studio
-      suggestions =
-          suggestions.where((key) => key != 'institution_hub').toList();
-    } else if (isInstitution && !isArtist) {
-      // Only institution badge is active - hide studio
-      suggestions = suggestions.where((key) => key != 'studio').toList();
-    } else if (isArtist && !isInstitution) {
-      // Only artist badge is active - hide institution_hub
-      suggestions =
-          suggestions.where((key) => key != 'institution_hub').toList();
-    }
-
-    return suggestions;
   }
 
   Widget _buildActionCard(
