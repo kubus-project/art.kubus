@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
@@ -23,6 +25,8 @@ import '../../../utils/app_color_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/kubus_labs_feature.dart';
 import '../../../utils/design_tokens.dart';
+import '../../../utils/home/home_quick_action_executor.dart';
+import '../../../utils/home/home_quick_action_models.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -2485,9 +2489,14 @@ class _MarketplaceState extends State<Marketplace>
               builder: (context, themeProvider, _) => ElevatedButton(
                 onPressed: () {
                   Navigator.of(context).pop();
-                  context
-                      .read<NavigationProvider>()
-                      .navigateToScreen(context, 'wallet');
+                  if (!mounted) return;
+                  unawaited(
+                    HomeQuickActionExecutor.execute(
+                      this.context,
+                      'wallet',
+                      source: HomeQuickActionSurface.legacyProvider,
+                    ),
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: themeProvider.accentColor,

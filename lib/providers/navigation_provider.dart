@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import '../utils/home/home_quick_action_executor.dart';
+import '../utils/home/home_quick_action_models.dart';
 import '../utils/home/home_quick_action_registry.dart';
 import '../utils/kubus_labs_feature.dart';
 

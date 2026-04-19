@@ -14,7 +14,6 @@ import '../../../providers/chat_provider.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../providers/app_mode_provider.dart';
 import '../../../providers/app_refresh_provider.dart';
-import '../../../providers/navigation_provider.dart';
 import '../../../providers/community_subject_provider.dart';
 import '../../../community/community_interactions.dart';
 import '../../../models/community_group.dart';
@@ -37,6 +36,8 @@ import '../../../utils/app_color_utils.dart';
 import '../../../utils/artwork_navigation.dart';
 import '../../../utils/community_screen_utils.dart';
 import '../../../utils/design_tokens.dart';
+import '../../../utils/home/home_quick_action_executor.dart';
+import '../../../utils/home/home_quick_action_models.dart';
 import '../../../utils/institution_navigation.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../utils/kubus_color_roles.dart';
@@ -1818,8 +1819,13 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           await PostDetailScreen.openById(context, postId);
         }
       },
-      onScreen: (screenKey) =>
-          context.read<NavigationProvider>().navigateToScreen(context, screenKey),
+      onScreen: (screenKey) => unawaited(
+        HomeQuickActionExecutor.execute(
+          context,
+          screenKey,
+          source: HomeQuickActionSurface.desktopHome,
+        ),
+      ),
       onInstitution: ({
         required String institutionId,
         required String? profileTargetId,

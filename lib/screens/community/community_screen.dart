@@ -61,6 +61,8 @@ import '../../utils/app_animations.dart';
 import '../../utils/activity_navigation.dart';
 import '../../utils/artwork_navigation.dart';
 import '../../utils/community_screen_utils.dart';
+import '../../utils/home/home_quick_action_executor.dart';
+import '../../utils/home/home_quick_action_models.dart';
 import '../../utils/institution_navigation.dart';
 import '../../widgets/community/community_composer_controls.dart';
 import '../../widgets/community/community_composer_layout.dart';
@@ -1384,10 +1386,13 @@ class _CommunityScreenState extends State<CommunityScreen>
       onArtwork: (artworkId) =>
           openArtwork(context, artworkId, source: 'community_search'),
       onPost: (postId) => PostDetailScreen.openById(context, postId),
-      onScreen: (screenKey) => Provider.of<NavigationProvider>(
-        context,
-        listen: false,
-      ).navigateToScreen(context, screenKey),
+      onScreen: (screenKey) => unawaited(
+        HomeQuickActionExecutor.execute(
+          context,
+          screenKey,
+          source: HomeQuickActionSurface.legacyProvider,
+        ),
+      ),
       onInstitution: ({
         required String institutionId,
         required String? profileTargetId,

@@ -43,6 +43,7 @@ import '../../utils/home_header_display_name.dart';
 import '../../utils/home_rail_creator_identity.dart';
 import '../../utils/home_activity_cards.dart';
 import '../../utils/home/home_quick_action_executor.dart';
+import '../../utils/home/home_quick_action_models.dart';
 import '../../utils/home/home_quick_action_registry.dart';
 import '../../utils/home/home_quick_action_suggestions.dart';
 import '../../utils/institution_navigation.dart';
