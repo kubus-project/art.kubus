@@ -1,6 +1,8 @@
 import 'package:flutter/widgets.dart';
 
 import '../main_app.dart';
+import '../services/share/share_deep_link_parser.dart';
+import '../services/share/share_types.dart';
 import 'shell_entry_screen.dart';
 
 /// Canonical shell entry routes.
@@ -28,6 +30,15 @@ class ShellRoutes {
     return uri.queryParameters.isEmpty && initializerWrapped.contains(uri.path);
   }
 
+  static bool isInternalShellAlias(String path) {
+    final normalized = path.trim();
+    return normalized == main || normalized == map;
+  }
+
+  static String internalShellEntryForTarget(ShareDeepLinkTarget target) {
+    return target.type == ShareEntityType.marker ? map : main;
+  }
+
   /// Resolve which shell route the app should land on after initialization.
   static String resolvePreferredShellRoute(String? preferred) {
     final normalized = (preferred ?? '').trim();
@@ -47,9 +58,8 @@ class ShellRoutes {
   /// Shell entry route builders.
   static final Map<String, WidgetBuilder> builders = <String, WidgetBuilder>{
     main: (_) => const MainApp(),
-    // Alias for telemetry/URL semantics: marker deep links land here so
-    // the browser URL becomes /map (not /main), while still rendering
-    // the full shell.
+    // Internal alias for marker-oriented shell entry. Public marker links keep
+    // their canonical `/m/<id>` route identity.
     map: (_) => const ShellEntryScreen.map(),
   };
 }

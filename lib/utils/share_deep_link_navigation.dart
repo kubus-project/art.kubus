@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/app_navigator.dart';
+import '../core/shell_routes.dart';
 import '../providers/deferred_onboarding_provider.dart';
 import '../providers/main_tab_provider.dart';
 import '../providers/map_deep_link_provider.dart';
@@ -67,13 +68,19 @@ class ShareDeepLinkNavigation {
     // shell and then replay the deep link.
     if (ensureShell && tabs == null) {
       final navigator = Navigator.of(context);
-      try {
-        navigator.pushNamedAndRemoveUntil('/main', (route) => false);
-      } catch (_) {
-        try {
-          navigator.pushReplacementNamed('/main');
-        } catch (_) {}
-      }
+      final shellEntry = ShellRoutes.internalShellEntryForTarget(target);
+      final canonicalPath =
+          const ShareDeepLinkCodec().canonicalPathForTarget(target);
+      final shellBuilder = ShellRoutes.builders[shellEntry] ??
+          ShellRoutes.builders[ShellRoutes.main]!;
+
+      navigator.pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: shellBuilder,
+          settings: RouteSettings(name: canonicalPath),
+        ),
+        (route) => false,
+      );
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final shellContext = appNavigatorKey.currentContext;

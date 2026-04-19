@@ -1,5 +1,7 @@
 import 'package:art_kubus/providers/main_tab_provider.dart';
 import 'package:art_kubus/providers/map_deep_link_provider.dart';
+import 'package:art_kubus/screens/desktop/desktop_map_screen.dart';
+import 'package:art_kubus/screens/desktop/desktop_shell_scope.dart';
 import 'package:art_kubus/services/share/share_deep_link_parser.dart';
 import 'package:art_kubus/services/share/share_types.dart';
 import 'package:art_kubus/utils/share_deep_link_navigation.dart';
@@ -43,5 +45,50 @@ void main() {
     expect(tabs.index, 0);
     expect(mapIntents.pending?.markerId, 'm1');
   });
-}
 
+  testWidgets('marker deep link uses desktop shell explore route',
+      (tester) async {
+    String? navigatedRoute;
+    Widget? pushedScreen;
+    const target = ShareDeepLinkTarget(type: ShareEntityType.marker, id: 'm1');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: DesktopShellScope(
+          pushScreen: (screen) => pushedScreen = screen,
+          popScreen: () {},
+          navigateToRoute: (route) => navigatedRoute = route,
+          openNotifications: () {},
+          openFunctionsPanel: (_, {content}) {},
+          setFunctionsPanelContent: (_) {},
+          closeFunctionsPanel: () {},
+          canPop: false,
+          child: Builder(
+            builder: (context) {
+              return Center(
+                child: TextButton(
+                  onPressed: () {
+                    // ignore: discarded_futures
+                    ShareDeepLinkNavigation.open(context, target);
+                  },
+                  child: const Text('open desktop'),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open desktop'));
+    await tester.pump();
+
+    expect(navigatedRoute, '/explore');
+    expect(pushedScreen, isA<DesktopSubScreen>());
+    final subScreen = pushedScreen! as DesktopSubScreen;
+    expect(subScreen.child, isA<DesktopMapScreen>());
+    final mapScreen = subScreen.child as DesktopMapScreen;
+    expect(mapScreen.initialMarkerId, 'm1');
+    expect(mapScreen.autoFollow, isFalse);
+  });
+}
