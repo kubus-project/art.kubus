@@ -6,12 +6,16 @@ import '../services/share/share_types.dart';
 @immutable
 class DeepLinkStartupDecision {
   const DeepLinkStartupDecision({
-    required this.route,
-    this.arguments,
+    required this.canonicalPath,
+    required this.preferredShellRoute,
+    this.requiresSignIn = false,
+    this.signInArguments,
   });
 
-  final String route;
-  final Object? arguments;
+  final String canonicalPath;
+  final String preferredShellRoute;
+  final bool requiresSignIn;
+  final Map<String, Object?>? signInArguments;
 }
 
 class DeepLinkStartupRouting {
@@ -24,24 +28,24 @@ class DeepLinkStartupRouting {
   }) {
     if (pending == null) return null;
 
-    final destination = pending.type == ShareEntityType.marker ? '/map' : '/main';
+    final preferredShellRoute =
+        pending.type == ShareEntityType.marker ? '/map' : '/main';
     final canonicalPath = _codec.canonicalPathForTarget(pending);
 
     if (shouldShowSignIn) {
       return DeepLinkStartupDecision(
-        route: '/sign-in',
-        arguments: {
+        canonicalPath: canonicalPath,
+        preferredShellRoute: preferredShellRoute,
+        requiresSignIn: true,
+        signInArguments: {
           'redirectRoute': canonicalPath,
         },
       );
     }
 
     return DeepLinkStartupDecision(
-      route: destination,
-      arguments: {
-        'canonicalPath': canonicalPath,
-      },
+      canonicalPath: canonicalPath,
+      preferredShellRoute: preferredShellRoute,
     );
   }
 }
-

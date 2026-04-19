@@ -1,6 +1,5 @@
 // NOTE: use_build_context_synchronously lint handled per-instance; avoid file-level ignore
 
-import 'package:art_kubus/services/share/share_types.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 // NOTE: use_build_context_synchronously lint handled per-instance; avoid file-level ignore
 import 'dart:async';
@@ -35,7 +34,6 @@ import 'deep_link_startup_routing.dart';
 import '../main_app.dart';
 import 'shell_entry_screen.dart';
 import 'shell_routes.dart';
-import '../services/share/share_deep_link_parser.dart';
 
 class AppInitializer extends StatefulWidget {
   const AppInitializer({
@@ -50,7 +48,6 @@ class AppInitializer extends StatefulWidget {
 }
 
 class _AppInitializerState extends State<AppInitializer> {
-  static const ShareDeepLinkCodec _deepLinkCodec = ShareDeepLinkCodec();
   static const String _serverVersionOfflineLabel = 'offline';
   String? initializationError;
   Completer<void>? _initCompleter;
@@ -455,12 +452,12 @@ class _AppInitializerState extends State<AppInitializer> {
         );
         if (decision == null) return;
 
-        if (decision.route == '/sign-in') {
+        if (decision.requiresSignIn) {
           if (!mounted) return;
           _didNavigate = true;
           navigator.pushReplacementNamed(
-            decision.route,
-            arguments: decision.arguments,
+            '/sign-in',
+            arguments: decision.signInArguments,
           );
           return;
         }
@@ -471,15 +468,13 @@ class _AppInitializerState extends State<AppInitializer> {
         if (!mounted) return;
         _didNavigate = true;
 
-        final canonicalPath =
-            _deepLinkCodec.canonicalPathForTarget(pendingDeepLink);
-        final destination = pendingDeepLink.type == ShareEntityType.marker
+        final destination = decision.preferredShellRoute == ShellRoutes.map
             ? const ShellEntryScreen.map()
             : const MainApp();
         navigator.pushReplacement(
           MaterialPageRoute(
             builder: (_) => destination,
-            settings: RouteSettings(name: canonicalPath),
+            settings: RouteSettings(name: decision.canonicalPath),
           ),
         );
         return;
