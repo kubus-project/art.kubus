@@ -1,6 +1,8 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/main_tab_provider.dart';
 import 'package:art_kubus/providers/navigation_provider.dart';
+import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/activity/advanced_analytics_screen.dart';
 import 'package:art_kubus/screens/desktop/desktop_settings_screen.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell_scope.dart';
@@ -15,6 +17,8 @@ Widget _localizedApp({
   required Widget home,
   required NavigationProvider navigationProvider,
   MainTabProvider? tabProvider,
+  ProfileProvider? profileProvider,
+  WalletProvider? walletProvider,
 }) {
   return MultiProvider(
     providers: [
@@ -23,6 +27,10 @@ Widget _localizedApp({
       ),
       if (tabProvider != null)
         ChangeNotifierProvider<MainTabProvider>.value(value: tabProvider),
+      if (profileProvider != null)
+        ChangeNotifierProvider<ProfileProvider>.value(value: profileProvider),
+      if (walletProvider != null)
+        ChangeNotifierProvider<WalletProvider>.value(value: walletProvider),
     ],
     child: MaterialApp(
       locale: const Locale('en'),
@@ -74,11 +82,14 @@ void main() {
   testWidgets('desktop settings and stats use shell subscreens',
       (tester) async {
     final navigationProvider = NavigationProvider();
+    final walletProvider = WalletProvider(deferInit: true)
+      ..setCurrentWalletAddressForTesting('wallet-1');
     final pushedScreens = <Widget>[];
 
     await tester.pumpWidget(
       _localizedApp(
         navigationProvider: navigationProvider,
+        walletProvider: walletProvider,
         home: DesktopShellScope(
           pushScreen: pushedScreens.add,
           popScreen: () {},

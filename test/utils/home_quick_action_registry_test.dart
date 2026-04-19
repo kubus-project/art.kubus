@@ -42,6 +42,46 @@ void main() {
     );
   });
 
+  test('restricted actions declare capability requirements', () {
+    expect(
+      HomeQuickActionRegistry.of('ar').capabilities,
+      contains(HomeQuickActionCapability.arSupportedOnDevice),
+    );
+    expect(
+      HomeQuickActionRegistry.of('profile').capabilities,
+      contains(HomeQuickActionCapability.signedIn),
+    );
+    expect(
+      HomeQuickActionRegistry.of('analytics').capabilities,
+      contains(HomeQuickActionCapability.walletConnected),
+    );
+    expect(
+      HomeQuickActionRegistry.of('stats').capabilities,
+      contains(HomeQuickActionCapability.walletConnected),
+    );
+    expect(
+      HomeQuickActionRegistry.of('achievements').capabilities,
+      containsAll(<HomeQuickActionCapability>{
+        HomeQuickActionCapability.signedIn,
+        HomeQuickActionCapability.walletConnected,
+      }),
+    );
+  });
+
+  test('setup and public entry actions remain ungated', () {
+    for (final key in <String>[
+      'map',
+      'community',
+      'marketplace',
+      'wallet',
+      'dao_hub',
+      'studio',
+      'institution_hub',
+    ]) {
+      expect(HomeQuickActionRegistry.of(key).capabilities, isEmpty);
+    }
+  });
+
   test('canonical entity links stay separate from internal shell aliases', () {
     const target = ShareDeepLinkTarget(type: ShareEntityType.artwork, id: 'a1');
 

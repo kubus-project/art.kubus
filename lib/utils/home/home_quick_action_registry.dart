@@ -28,6 +28,9 @@ class HomeQuickActionRegistry {
       key: 'ar',
       labelKey: NavigationScreenLabelKey.createAr,
       icon: Icons.add_box,
+      capabilities: const <HomeQuickActionCapability>{
+        HomeQuickActionCapability.arSupportedOnDevice,
+      },
       mobileTarget: HomeQuickActionTarget(
         type: HomeQuickActionTargetType.pushScreen,
         screenBuilder: _buildArScreen,
@@ -69,6 +72,9 @@ class HomeQuickActionRegistry {
       key: 'profile',
       labelKey: NavigationScreenLabelKey.profile,
       icon: Icons.person,
+      capabilities: const <HomeQuickActionCapability>{
+        HomeQuickActionCapability.signedIn,
+      },
       mobileTarget: HomeQuickActionTarget(
         type: HomeQuickActionTargetType.pushScreen,
         screenBuilder: _buildProfileScreen,
@@ -110,6 +116,9 @@ class HomeQuickActionRegistry {
       key: 'analytics',
       labelKey: NavigationScreenLabelKey.analytics,
       icon: Icons.analytics,
+      capabilities: const <HomeQuickActionCapability>{
+        HomeQuickActionCapability.walletConnected,
+      },
       mobileTarget: HomeQuickActionTarget(
         type: HomeQuickActionTargetType.pushScreen,
         screenBuilder: _buildAnalyticsScreen,
@@ -138,6 +147,9 @@ class HomeQuickActionRegistry {
       key: 'stats',
       labelKey: NavigationScreenLabelKey.myStats,
       icon: Icons.bar_chart,
+      capabilities: const <HomeQuickActionCapability>{
+        HomeQuickActionCapability.walletConnected,
+      },
       mobileTarget: HomeQuickActionTarget(
         type: HomeQuickActionTargetType.pushScreen,
         screenBuilder: _buildStatsScreen,
@@ -152,6 +164,10 @@ class HomeQuickActionRegistry {
       key: 'achievements',
       labelKey: NavigationScreenLabelKey.achievements,
       icon: Icons.emoji_events,
+      capabilities: const <HomeQuickActionCapability>{
+        HomeQuickActionCapability.signedIn,
+        HomeQuickActionCapability.walletConnected,
+      },
       mobileTarget: HomeQuickActionTarget(
         type: HomeQuickActionTargetType.pushScreen,
         screenBuilder: _buildAchievementsPage,
