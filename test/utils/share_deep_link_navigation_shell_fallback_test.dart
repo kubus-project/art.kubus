@@ -15,30 +15,37 @@ class _RecordingNavigatorObserver extends NavigatorObserver {
 }
 
 void main() {
-  testWidgets('outside-shell artwork replay keeps canonical route identity',
+  for (final entry in <ShareDeepLinkTarget, String>{
+    const ShareDeepLinkTarget(type: ShareEntityType.artwork, id: 'a1'): '/a/a1',
+    const ShareDeepLinkTarget(type: ShareEntityType.profile, id: 'u1'): '/u/u1',
+    const ShareDeepLinkTarget(type: ShareEntityType.marker, id: 'm1'): '/m/m1',
+  }.entries) {
+    testWidgets(
+      'outside-shell ${entry.key.type.name} replay keeps canonical route '
+      'identity',
       (tester) async {
-    final observer = _RecordingNavigatorObserver();
-    late BuildContext outsideShellContext;
-    const target =
-        ShareDeepLinkTarget(type: ShareEntityType.artwork, id: 'a1');
+        final observer = _RecordingNavigatorObserver();
+        late BuildContext outsideShellContext;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        navigatorObservers: [observer],
-        home: Builder(
-          builder: (context) {
-            outsideShellContext = context;
-            return const SizedBox.shrink();
-          },
-        ),
-      ),
+        await tester.pumpWidget(
+          MaterialApp(
+            navigatorObservers: [observer],
+            home: Builder(
+              builder: (context) {
+                outsideShellContext = context;
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        );
+
+        observer.pushedNames.clear();
+        await ShareDeepLinkNavigation.open(outsideShellContext, entry.key);
+
+        expect(observer.pushedNames, isNotEmpty);
+        expect(observer.pushedNames.last, entry.value);
+        expect(observer.pushedNames, isNot(contains('/main')));
+      },
     );
-
-    observer.pushedNames.clear();
-    await ShareDeepLinkNavigation.open(outsideShellContext, target);
-
-    expect(observer.pushedNames, isNotEmpty);
-    expect(observer.pushedNames.last, '/a/a1');
-    expect(observer.pushedNames, isNot(contains('/main')));
-  });
+  }
 }
