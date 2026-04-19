@@ -4,11 +4,13 @@ import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/main_tab_provider.dart';
 import 'package:art_kubus/providers/navigation_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
+import 'package:art_kubus/models/user_profile.dart';
 import 'package:art_kubus/screens/activity/advanced_analytics_screen.dart';
 import 'package:art_kubus/screens/desktop/desktop_settings_screen.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell_scope.dart';
 import 'package:art_kubus/utils/home/home_quick_action_executor.dart';
 import 'package:art_kubus/utils/home/home_quick_action_models.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -41,6 +43,19 @@ Widget _localizedApp({
       routes: routes ?? const <String, WidgetBuilder>{},
       home: home,
     ),
+  );
+}
+
+UserProfile _testUserProfile() {
+  return UserProfile(
+    id: 'user-1',
+    walletAddress: 'wallet-1',
+    username: 'artist',
+    displayName: 'Artist',
+    bio: '',
+    avatar: '',
+    createdAt: DateTime.utc(2026, 4, 19),
+    updatedAt: DateTime.utc(2026, 4, 19),
   );
 }
 
@@ -148,35 +163,153 @@ void main() {
     expect(navigationProvider.visitCounts['stats'], 1);
   });
 
-  testWidgets('desktop AR info is explicit and not visit-tracked',
+  testWidgets('unsupported AR action is explicit and not visit-tracked',
       (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    try {
+      final navigationProvider = NavigationProvider();
+      bool? result;
+
+      await tester.pumpWidget(
+        _localizedApp(
+          navigationProvider: navigationProvider,
+          home: Builder(
+            builder: (context) => TextButton(
+              onPressed: () async {
+                result = await HomeQuickActionExecutor.execute(
+                  context,
+                  'ar',
+                  source: HomeQuickActionSurface.mobileHome,
+                );
+              },
+              child: const Text('ar'),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('ar'));
+      await tester.pump();
+
+      expect(result, isFalse);
+      expect(find.text('AR experience'), findsOneWidget);
+      expect(navigationProvider.visitCounts.containsKey('ar'), isFalse);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('signed-in capability blocks profile when unmet', (tester) async {
     final navigationProvider = NavigationProvider();
+    final profileProvider = ProfileProvider();
     bool? result;
 
     await tester.pumpWidget(
       _localizedApp(
         navigationProvider: navigationProvider,
-        home: Builder(
-          builder: (context) => TextButton(
-            onPressed: () async {
-              result = await HomeQuickActionExecutor.execute(
-                context,
-                'ar',
-                source: HomeQuickActionSurface.desktopHome,
-              );
-            },
-            child: const Text('ar'),
+        profileProvider: profileProvider,
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () async {
+                result = await HomeQuickActionExecutor.execute(
+                  context,
+                  'profile',
+                  source: HomeQuickActionSurface.desktopHome,
+                );
+              },
+              child: const Text('profile'),
+            ),
           ),
         ),
       ),
     );
 
-    await tester.tap(find.text('ar'));
+    await tester.tap(find.text('profile'));
     await tester.pump();
 
     expect(result, isFalse);
-    expect(find.text('AR experience'), findsOneWidget);
-    expect(navigationProvider.visitCounts.containsKey('ar'), isFalse);
+    expect(find.text('Sign in to continue.'), findsOneWidget);
+    expect(navigationProvider.visitCounts.containsKey('profile'), isFalse);
+  });
+
+  testWidgets('wallet capability blocks analytics when unmet', (tester) async {
+    final navigationProvider = NavigationProvider();
+    final walletProvider = WalletProvider(deferInit: true);
+    bool? result;
+
+    await tester.pumpWidget(
+      _localizedApp(
+        navigationProvider: navigationProvider,
+        walletProvider: walletProvider,
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () async {
+                result = await HomeQuickActionExecutor.execute(
+                  context,
+                  'analytics',
+                  source: HomeQuickActionSurface.desktopHome,
+                );
+              },
+              child: const Text('analytics'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('analytics'));
+    await tester.pump();
+
+    expect(result, isFalse);
+    expect(find.text('Connect your wallet to continue.'), findsOneWidget);
+    expect(navigationProvider.visitCounts.containsKey('analytics'), isFalse);
+  });
+
+  testWidgets('satisfied signed-in capability tracks successful action',
+      (tester) async {
+    final navigationProvider = NavigationProvider();
+    final profileProvider = ProfileProvider()
+      ..setCurrentUser(_testUserProfile());
+    final pushedScreens = <Widget>[];
+    bool? result;
+
+    await tester.pumpWidget(
+      _localizedApp(
+        navigationProvider: navigationProvider,
+        profileProvider: profileProvider,
+        home: DesktopShellScope(
+          pushScreen: pushedScreens.add,
+          popScreen: () {},
+          navigateToRoute: (_) {},
+          openNotifications: () {},
+          openFunctionsPanel: (_, {content}) {},
+          setFunctionsPanelContent: (_) {},
+          closeFunctionsPanel: () {},
+          canPop: false,
+          child: Builder(
+            builder: (context) => TextButton(
+              onPressed: () async {
+                result = await HomeQuickActionExecutor.execute(
+                  context,
+                  'profile',
+                  source: HomeQuickActionSurface.desktopHome,
+                );
+              },
+              child: const Text('profile success'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('profile success'));
+    await tester.pump();
+
+    expect(result, isTrue);
+    expect(pushedScreens, hasLength(1));
+    expect(navigationProvider.visitCounts['profile'], 1);
   });
 
   for (final entry in <String, String>{
