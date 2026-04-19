@@ -42,17 +42,18 @@ import '../../utils/home_search_destination.dart';
 import '../../utils/home_header_display_name.dart';
 import '../../utils/home_rail_creator_identity.dart';
 import '../../utils/home_activity_cards.dart';
+import '../../utils/home/home_quick_action_executor.dart';
+import '../../utils/home/home_quick_action_registry.dart';
+import '../../utils/home/home_quick_action_suggestions.dart';
 import '../../utils/institution_navigation.dart';
 import '../../utils/map_navigation.dart';
 import '../../utils/user_profile_navigation.dart';
 import 'components/desktop_widgets.dart';
 import 'components/desktop_notifications_panel.dart';
 import '../web3/wallet/connectwallet_screen.dart';
-import 'web3/desktop_wallet_screen.dart';
 import '../onboarding/web3/web3_onboarding.dart' as web3;
 import '../onboarding/web3/onboarding_data.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
-import 'community/desktop_profile_screen.dart';
 import 'desktop_shell.dart';
 import '../activity/advanced_analytics_screen.dart';
 import '../home_screen.dart' show ActivityScreen;
@@ -1196,9 +1197,9 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     final l10n = AppLocalizations.of(context)!;
     final quickScreens = navigationProvider.getQuickActionScreens(maxItems: 12);
     final suggestedKeys =
-      _suggestedQuickActionKeys(persona, currentUser)
-        .where((key) => NavigationProvider.screenDefinitions.containsKey(key))
-        .toList(growable: false);
+        resolveSuggestedQuickActionKeys(persona, currentUser)
+            .where(HomeQuickActionRegistry.contains)
+            .toList(growable: false);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1293,139 +1294,13 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     );
   }
 
-  List<String> _suggestedQuickActionKeys(
-      UserPersona? persona, UserProfile? currentUser) {
-    // Base suggestions by persona
-    List<String> suggestions;
-    switch (persona) {
-      case UserPersona.lover:
-        suggestions = const ['map', 'community', 'marketplace'];
-        break;
-      case UserPersona.creator:
-        suggestions = const ['studio', 'ar', 'map'];
-        break;
-      case UserPersona.institution:
-        suggestions = const ['institution_hub', 'map', 'community'];
-        break;
-      case null:
-        suggestions = const ['map', 'studio', 'institution_hub'];
-        break;
-    }
-
-    // If user has both badges, hide the one not currently active
-    // If only one badge is active, show it; if both active, show the first one they earned
-    final isArtist = currentUser?.isArtist ?? false;
-    final isInstitution = currentUser?.isInstitution ?? false;
-
-    if (isArtist && isInstitution) {
-      // Both badges are active - hide institution_hub, keep studio
-      suggestions =
-          suggestions.where((key) => key != 'institution_hub').toList();
-    } else if (isInstitution && !isArtist) {
-      // Only institution badge is active - hide studio
-      suggestions = suggestions.where((key) => key != 'studio').toList();
-    } else if (isArtist && !isInstitution) {
-      // Only artist badge is active - hide institution_hub
-      suggestions =
-          suggestions.where((key) => key != 'institution_hub').toList();
-    }
-
-    return suggestions;
-  }
-
   void _handleQuickAction(String screenKey) {
     if (screenKey.isEmpty) return;
-    final navigationProvider =
-        Provider.of<NavigationProvider>(context, listen: false);
-
-    switch (screenKey) {
-      case 'map':
-        _openShellTab(1); // Explore
-        return;
-      case 'community':
-        _openShellTab(2); // Connect
-        return;
-      case 'studio':
-        _openShellTab(3); // Create (Artist Studio)
-        return;
-      case 'institution_hub':
-        _openShellTab(4); // Organize (Institution)
-        return;
-      case 'dao_hub':
-        _openShellTab(5); // Govern (DAO)
-        return;
-      case 'marketplace':
-        _openShellTab(6); // Trade
-        return;
-      case 'wallet':
-        navigationProvider.trackScreenVisit('wallet');
-        final shellScope = DesktopShellScope.of(context);
-        if (shellScope != null) {
-          shellScope.navigateToRoute('/wallet');
-        } else {
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => const DesktopWalletScreen(),
-          ));
-        }
-        return;
-      case 'profile':
-        _pushScreen(const ProfileScreen(), screenKey);
-        return;
-      case 'analytics':
-        final shellScope = DesktopShellScope.of(context);
-        Provider.of<NavigationProvider>(context, listen: false)
-            .trackScreenVisit(screenKey);
-        if (shellScope != null) {
-          shellScope.pushSubScreen(
-            title: _screenKeyToTitle(screenKey),
-            child: const AdvancedAnalyticsScreen(
-              statType: 'Engagement',
-              embedded: true,
-            ),
-          );
-        } else {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const AdvancedAnalyticsScreen(
-                statType: 'Engagement',
-              ),
-            ),
-          );
-        }
-        return;
-      case 'achievements':
-        // Reuse onboarding to surface achievements context
-        final l10n = AppLocalizations.of(context)!;
-        final screen = web3.Web3OnboardingScreen(
-          featureKey: 'Achievements',
-          featureTitle: l10n.userProfileAchievementsTitle,
-          pages: _getWeb3OnboardingPages(l10n),
-          onComplete: () {},
-        );
-        _pushScreen(screen, screenKey);
-        return;
-      case 'ar':
-        _showARInfo();
-        return;
-      default:
-        navigationProvider.navigateToScreen(context, screenKey);
-        return;
-    }
-  }
-
-  void _pushScreen(Widget screen, String screenKey) {
-    Provider.of<NavigationProvider>(context, listen: false)
-        .trackScreenVisit(screenKey);
-    // Use in-shell navigation if available, otherwise fallback to fullscreen
-    final shellScope = DesktopShellScope.of(context);
-    if (shellScope != null) {
-      shellScope.pushSubScreen(
-        title: _screenKeyToTitle(screenKey),
-        child: screen,
-      );
-    } else {
-      Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
-    }
+    unawaited(HomeQuickActionExecutor.execute(
+      context,
+      screenKey,
+      source: HomeQuickActionSurface.desktopHome,
+    ));
   }
 
   void _pushDesktopSubScreen(String title, Widget screen) {
@@ -1434,25 +1309,6 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       shellScope.pushSubScreen(title: title, child: screen);
     } else {
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
-    }
-  }
-
-  String _screenKeyToTitle(String key) {
-    switch (key) {
-      case 'profile':
-        return AppLocalizations.of(context)!.navigationScreenProfile;
-      case 'analytics':
-        return 'Analytics';
-      case 'achievements':
-        return 'Achievements';
-      case 'wallet':
-        return 'Wallet';
-      default:
-        return key
-            .split('_')
-            .map((w) =>
-                w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : w)
-            .join(' ');
     }
   }
 
@@ -1542,53 +1398,6 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       key,
       scheme,
       roles: KubusColorRoles.of(context),
-    );
-  }
-
-  void _showARInfo() {
-    final l10n = AppLocalizations.of(context)!;
-    showKubusDialog(
-      context: context,
-      builder: (context) => KubusAlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(DetailRadius.xl),
-        ),
-        title: Row(
-          children: [
-            Icon(Icons.view_in_ar,
-                color: Theme.of(context).colorScheme.tertiary),
-            const SizedBox(width: DetailSpacing.md),
-            Text(
-              l10n.arWebFallbackFeature,
-              style: DetailTypography.cardTitle(context).copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.arWebFallbackDescription,
-              style: DetailTypography.body(context).copyWith(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.6),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.commonGotIt),
-          ),
-        ],
-      ),
     );
   }
 
