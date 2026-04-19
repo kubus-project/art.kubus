@@ -18,12 +18,14 @@ class ShellRoutes {
 
   static const String main = '/main';
   static const String map = '/map';
+  static const String community = '/community';
 
   /// Routes that should go through [AppInitializer] on cold start so providers
   /// hydrate before the shell renders.
   static const Set<String> initializerWrapped = <String>{
     main,
     map,
+    community,
   };
 
   static bool shouldWrapInitialUri(Uri uri) {
@@ -32,7 +34,7 @@ class ShellRoutes {
 
   static bool isInternalShellAlias(String path) {
     final normalized = path.trim();
-    return normalized == main || normalized == map;
+    return normalized == main || normalized == map || normalized == community;
   }
 
   static String internalShellEntryForTarget(ShareDeepLinkTarget target) {
@@ -43,13 +45,14 @@ class ShellRoutes {
   static String resolvePreferredShellRoute(String? preferred) {
     final normalized = (preferred ?? '').trim();
     if (normalized == map) return map;
+    if (normalized == community) return community;
     return main;
   }
 
   /// Build redirect arguments for sign-in flows that should return to the shell.
   static Map<String, String>? signInRedirectArguments(String? preferred) {
     final normalized = (preferred ?? '').trim();
-    if (normalized == map || normalized == main) {
+    if (normalized == map || normalized == main || normalized == community) {
       return <String, String>{'redirectRoute': normalized};
     }
     return null;
@@ -61,5 +64,6 @@ class ShellRoutes {
     // Internal alias for marker-oriented shell entry. Public marker links keep
     // their canonical `/m/<id>` route identity.
     map: (_) => const ShellEntryScreen.map(),
+    community: (_) => const ShellEntryScreen.community(),
   };
 }

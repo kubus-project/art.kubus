@@ -5,6 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/mobile_shell_registry.dart';
+import '../../core/shell_entry_screen.dart';
+import '../../core/shell_routes.dart';
 import '../../providers/main_tab_provider.dart';
 import '../../providers/navigation_provider.dart';
 import '../../providers/profile_provider.dart';
@@ -67,7 +70,7 @@ class HomeQuickActionExecutor {
           context.read<MainTabProvider>().setIndex(index);
           return true;
         } catch (_) {
-          return _pushScreenTarget(context, definition, target);
+          return _openMobileShellTab(context, index);
         }
       case HomeQuickActionTargetType.desktopShellRoute:
         final route = target.desktopShellRoute;
@@ -153,6 +156,65 @@ class HomeQuickActionExecutor {
       ),
     );
     return true;
+  }
+
+  static bool _openMobileShellTab(BuildContext context, int tabIndex) {
+    final shellContext = MobileShellRegistry.instance.context;
+    if (shellContext != null) {
+      try {
+        shellContext.read<MainTabProvider>().setIndex(tabIndex);
+        return true;
+      } catch (_) {}
+    }
+
+    final routeName = _mobileShellRouteForTab(tabIndex);
+    final navigator = Navigator.of(context);
+    if (routeName != null) {
+      try {
+        unawaited(
+          navigator.pushNamedAndRemoveUntil(routeName, (route) => false),
+        );
+        return true;
+      } catch (_) {}
+    }
+
+    unawaited(
+      navigator.pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => ShellEntryScreen(
+            mobileTabIndex: tabIndex,
+            desktopInitialIndex: _desktopIndexForMobileTab(tabIndex),
+          ),
+          settings: RouteSettings(
+            name: routeName ?? ShellRoutes.main,
+          ),
+        ),
+        (route) => false,
+      ),
+    );
+    return true;
+  }
+
+  static String? _mobileShellRouteForTab(int tabIndex) {
+    switch (tabIndex) {
+      case 0:
+        return ShellRoutes.map;
+      case 2:
+        return ShellRoutes.community;
+      default:
+        return null;
+    }
+  }
+
+  static int _desktopIndexForMobileTab(int tabIndex) {
+    switch (tabIndex) {
+      case 0:
+        return 1;
+      case 2:
+        return 2;
+      default:
+        return 0;
+    }
   }
 
   static int _desktopIndexForRoute(String route) {

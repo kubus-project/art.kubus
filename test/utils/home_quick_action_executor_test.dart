@@ -1,4 +1,5 @@
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:art_kubus/core/shell_routes.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/main_tab_provider.dart';
 import 'package:art_kubus/providers/navigation_provider.dart';
@@ -19,6 +20,7 @@ Widget _localizedApp({
   MainTabProvider? tabProvider,
   ProfileProvider? profileProvider,
   WalletProvider? walletProvider,
+  Map<String, WidgetBuilder>? routes,
 }) {
   return MultiProvider(
     providers: [
@@ -36,6 +38,7 @@ Widget _localizedApp({
       locale: const Locale('en'),
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
+      routes: routes ?? const <String, WidgetBuilder>{},
       home: home,
     ),
   );
@@ -175,4 +178,49 @@ void main() {
     expect(find.text('AR experience'), findsOneWidget);
     expect(navigationProvider.visitCounts.containsKey('ar'), isFalse);
   });
+
+  for (final entry in <String, String>{
+    'map': ShellRoutes.map,
+    'community': ShellRoutes.community,
+  }.entries) {
+    testWidgets(
+      'legacy wrapper routes ${entry.key} tab action through shell alias '
+      'without a local MainTabProvider',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(500, 800));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        final navigationProvider = NavigationProvider();
+        bool? result;
+
+        await tester.pumpWidget(
+          _localizedApp(
+            navigationProvider: navigationProvider,
+            routes: <String, WidgetBuilder>{
+              entry.value: (_) => Scaffold(body: Text('${entry.key} shell')),
+            },
+            home: Builder(
+              builder: (context) => TextButton(
+                onPressed: () async {
+                  // ignore: deprecated_member_use_from_same_package
+                  result = await navigationProvider.navigateToScreen(
+                    context,
+                    entry.key,
+                  );
+                },
+                child: Text('run ${entry.key}'),
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('run ${entry.key}'));
+        await tester.pumpAndSettle();
+
+        expect(result, isTrue);
+        expect(find.text('${entry.key} shell'), findsOneWidget);
+        expect(navigationProvider.visitCounts[entry.key], 1);
+      },
+    );
+  }
 }

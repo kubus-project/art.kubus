@@ -332,7 +332,10 @@ class NavigationProvider with ChangeNotifier {
     return HomeQuickActionRegistry.contains(key);
   }
 
-  @Deprecated('Use HomeQuickActionExecutor.execute instead.')
+  @Deprecated(
+    'Use HomeQuickActionExecutor.execute instead; legacy calls now route tab '
+    'actions through shell entry aliases when needed.',
+  )
   Future<bool> navigateToScreen(BuildContext context, String screenKey) {
     return HomeQuickActionExecutor.execute(
       context,

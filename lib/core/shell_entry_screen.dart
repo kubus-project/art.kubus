@@ -18,6 +18,10 @@ class ShellEntryScreen extends StatefulWidget {
       : mobileTabIndex = 0,
         desktopInitialIndex = 1;
 
+  const ShellEntryScreen.community({super.key})
+      : mobileTabIndex = 2,
+        desktopInitialIndex = 2;
+
   final int mobileTabIndex;
   final int desktopInitialIndex;
 
