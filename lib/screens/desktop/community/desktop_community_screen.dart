@@ -4703,7 +4703,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           AppLocalizations.of(context)!
                               .desktopCommunityCreatePostTitle,
                           style: KubusTextStyles.detailCardTitle.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface,
+                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
                           ),
                         ),
                       ),
