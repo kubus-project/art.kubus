@@ -4998,6 +4998,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         AppLocalizations.of(context)!.commonPost,
                         style: KubusTextStyles.navLabel.copyWith(
                           fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.surfaceContainerHighest,
                         ),
                       ),
               ),
@@ -6417,6 +6418,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           AppLocalizations.of(context)!.commonPost,
                           style: KubusTextStyles.navLabel.copyWith(
                             fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.surfaceContainerHighest
                           ),
                         ),
                 ),
