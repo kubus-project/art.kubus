@@ -457,3 +457,26 @@ Future<Map<String, dynamic>> _backendApiRenameConversationImpl(
     throw Exception('Failed to rename conversation: $e');
   }
 }
+
+Future<Map<String, dynamic>> _backendApiDeleteConversationImpl(
+  BackendApiService service,
+  String conversationId,
+) async {
+  try {
+    final response = await service._delete(
+      Uri.parse('${service.baseUrl}/api/messages/$conversationId'),
+      headers: service._getHeaders(),
+      isIdempotent: true,
+    );
+    if (response.statusCode == 200 || response.statusCode == 204) {
+      if ((response.body).trim().isEmpty) {
+        return {'success': true};
+      }
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    return {'success': false, 'status': response.statusCode};
+  } catch (e) {
+    AppConfig.debugPrint('BackendApiService.deleteConversation failed: $e');
+    return {'success': false, 'error': e.toString()};
+  }
+}

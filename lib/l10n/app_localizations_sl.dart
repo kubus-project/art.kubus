@@ -4471,6 +4471,27 @@ class AppLocalizationsSl extends AppLocalizations {
   String get messagesMenuChangeGroupAvatar => 'Spremeni avatar skupine';
 
   @override
+  String get messagesMenuDeleteConversation => 'Izbriši pogovor';
+
+  @override
+  String get messagesMessageCopiedToClipboardToast =>
+      'Sporočilo je kopirano v odložišče';
+
+  @override
+  String get messagesDeleteConversationTitle => 'Izbriši pogovor';
+
+  @override
+  String get messagesDeleteConversationBody =>
+      'Ali res želiš izbrisati ta pogovor? To ga odstrani s tvojega seznama pogovorov.';
+
+  @override
+  String get messagesDeleteConversationSuccessToast => 'Pogovor je izbrisan.';
+
+  @override
+  String get messagesDeleteConversationFailedToast =>
+      'Pogovora trenutno ni mogoče izbrisati.';
+
+  @override
   String get messagesAttachmentDefaultFilename => 'priloga';
 
   @override

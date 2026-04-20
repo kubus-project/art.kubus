@@ -4427,6 +4427,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get messagesMenuChangeGroupAvatar => 'Change group avatar';
 
   @override
+  String get messagesMenuDeleteConversation => 'Delete conversation';
+
+  @override
+  String get messagesMessageCopiedToClipboardToast =>
+      'Message copied to clipboard';
+
+  @override
+  String get messagesDeleteConversationTitle => 'Delete conversation';
+
+  @override
+  String get messagesDeleteConversationBody =>
+      'Are you sure you want to delete this conversation? This removes it from your conversations list.';
+
+  @override
+  String get messagesDeleteConversationSuccessToast => 'Conversation deleted.';
+
+  @override
+  String get messagesDeleteConversationFailedToast =>
+      'Unable to delete conversation right now.';
+
+  @override
   String get messagesAttachmentDefaultFilename => 'attachment';
 
   @override

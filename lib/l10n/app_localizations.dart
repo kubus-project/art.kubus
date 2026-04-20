@@ -7905,6 +7905,42 @@ abstract class AppLocalizations {
   /// **'Change group avatar'**
   String get messagesMenuChangeGroupAvatar;
 
+  /// No description provided for @messagesMenuDeleteConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete conversation'**
+  String get messagesMenuDeleteConversation;
+
+  /// No description provided for @messagesMessageCopiedToClipboardToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Message copied to clipboard'**
+  String get messagesMessageCopiedToClipboardToast;
+
+  /// No description provided for @messagesDeleteConversationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete conversation'**
+  String get messagesDeleteConversationTitle;
+
+  /// No description provided for @messagesDeleteConversationBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this conversation? This removes it from your conversations list.'**
+  String get messagesDeleteConversationBody;
+
+  /// No description provided for @messagesDeleteConversationSuccessToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversation deleted.'**
+  String get messagesDeleteConversationSuccessToast;
+
+  /// No description provided for @messagesDeleteConversationFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to delete conversation right now.'**
+  String get messagesDeleteConversationFailedToast;
+
   /// No description provided for @messagesAttachmentDefaultFilename.
   ///
   /// In en, this message translates to:

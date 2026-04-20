@@ -2642,6 +2642,9 @@ class BackendApiService
           String conversationId, String newTitle) =>
       _backendApiRenameConversationImpl(this, conversationId, newTitle);
 
+    Future<Map<String, dynamic>> deleteConversation(String conversationId) =>
+      _backendApiDeleteConversationImpl(this, conversationId);
+
   /// Update user profile (preferences / metadata)
   /// POST /api/profiles
   @override

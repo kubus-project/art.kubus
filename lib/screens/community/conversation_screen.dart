@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../utils/design_tokens.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -74,6 +75,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
   final List<String> _readQueue = [];
   final int _readQueueDelayMs = 150; // milliseconds between queued read sends
   String? _conversationAvatar;
+  String? _conversationTitleOverride;
   List<String> _conversationMembers = [];
   String _normWallet(String? w) => WalletUtils.normalize(w);
   // Removed UserService cache listener usage; we now fetch user profiles directly.
@@ -91,6 +93,11 @@ class _ConversationScreenState extends State<ConversationScreen> {
     // Instead, we fetch profiles directly via UserService.getUsersByWallets or
     // UserService.getUserById as needed in background and update local caches.
     if (!mounted) return;
+
+    final initialTitle = widget.conversation.title?.trim();
+    if (initialTitle != null && initialTitle.isNotEmpty) {
+      _conversationTitleOverride = initialTitle;
+    }
 
     _seedFromConversationMetadata();
 
@@ -1087,8 +1094,16 @@ class _ConversationScreenState extends State<ConversationScreen> {
       children: reactionCounts.entries.map((entry) {
         final isSelected = myReactions.contains(entry.key);
         return GestureDetector(
-          onTap: () => _chatProvider.toggleReaction(
-              widget.conversation.id, message.id, entry.key),
+          onTap: () async {
+            try {
+              await _chatProvider.toggleReaction(
+                  widget.conversation.id, message.id, entry.key);
+            } catch (e) {
+              if (kDebugMode) {
+                debugPrint('ConversationScreen: reaction tap failed: $e');
+              }
+            }
+          },
           child: Container(
             padding: const EdgeInsets.symmetric(
               horizontal: KubusSpacing.sm,
@@ -1142,10 +1157,17 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   '\u{1F621}',
                 ].map((emoji) {
                   return GestureDetector(
-                    onTap: () {
+                    onTap: () async {
                       Navigator.pop(context);
-                      _chatProvider.toggleReaction(
-                          widget.conversation.id, message.id, emoji);
+                      try {
+                        await _chatProvider.toggleReaction(
+                            widget.conversation.id, message.id, emoji);
+                      } catch (e) {
+                        if (kDebugMode) {
+                          debugPrint(
+                              'ConversationScreen: reaction toggle failed: $e');
+                        }
+                      }
                     },
                     child: Text(emoji, style: const TextStyle(fontSize: 32)),
                   );
@@ -1170,9 +1192,21 @@ class _ConversationScreenState extends State<ConversationScreen> {
             ListTile(
               leading: const Icon(Icons.copy),
               title: Text(l10n.commonCopy),
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
-                // Clipboard implementation would go here
+                try {
+                  await Clipboard.setData(ClipboardData(text: message.message));
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(this.context).showKubusSnackBar(
+                    SnackBar(
+                        content:
+                            Text(l10n.messagesMessageCopiedToClipboardToast)),
+                  );
+                } catch (e) {
+                  if (kDebugMode) {
+                    debugPrint('ConversationScreen: copy failed: $e');
+                  }
+                }
               },
             ),
           ],
@@ -1243,7 +1277,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
   Widget _buildHeaderTitle() {
     final l10n = AppLocalizations.of(context)!;
     final isGroup = widget.conversation.isGroup;
-    final title = widget.conversation.title?.trim().isNotEmpty == true
+    final title = _conversationTitleOverride?.trim().isNotEmpty == true
+      ? _conversationTitleOverride!.trim()
+      : widget.conversation.title?.trim().isNotEmpty == true
         ? widget.conversation.title!.trim()
         : _conversationMembers.isNotEmpty
             ? _displayNameCache[_conversationMembers.first] ??
@@ -1318,7 +1354,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   String _headerInitials() {
     final l10n = AppLocalizations.of(context)!;
-    final name = widget.conversation.title?.trim().isNotEmpty == true
+    final name = _conversationTitleOverride?.trim().isNotEmpty == true
+      ? _conversationTitleOverride!.trim()
+      : widget.conversation.title?.trim().isNotEmpty == true
         ? widget.conversation.title!.trim()
         : _conversationMembers.isNotEmpty
             ? _displayNameCache[_conversationMembers.first] ??
@@ -1369,6 +1407,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
                       (m['walletAddress'] as String?) ??
                       (m['id'] as String?) ??
                       '';
+                  final usernameFromPayload =
+                    (m['username'] as String?) ??
+                      (m['userName'] as String?) ??
+                      (m['handle'] as String?);
                   final displayNameFromPayload =
                       (m['displayName'] as String?) ??
                           (m['display_name'] as String?) ??
@@ -1388,6 +1430,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                     'user': matchedUser,
                     'role': m['role'] as String? ?? '',
                     'wallet': wallet,
+                    'username': usernameFromPayload,
                     'displayName': displayNameFromPayload,
                     'avatar': avatarFromPayload,
                   };
@@ -1442,6 +1485,37 @@ class _ConversationScreenState extends State<ConversationScreen> {
                     'ConversationScreen: add member via menu failed: $e');
               }
               break;
+            case 'rename':
+              try {
+                final currentTitle = (_conversationTitleOverride ??
+                        widget.conversation.title ??
+                        '')
+                    .trim();
+                final newTitle = await showKubusDialog<String?>(
+                  context: context,
+                  builder: (ctx) =>
+                      _RenameConversationDialog(currentTitle: currentTitle),
+                );
+                if (!context.mounted) return;
+                if (newTitle == null) return;
+                final trimmed = newTitle.trim();
+                if (trimmed.isEmpty || trimmed == currentTitle) return;
+
+                await _chatProvider.renameConversation(
+                    widget.conversation.id, trimmed);
+                if (!mounted) return;
+
+                setState(() {
+                  _conversationTitleOverride = trimmed;
+                });
+
+                await _load();
+              } catch (e) {
+                if (kDebugMode) {
+                  debugPrint('ConversationScreen: rename failed: $e');
+                }
+              }
+              break;
             case 'change_group_avatar':
               try {
                 final result = await FilePicker.platform.pickFiles(
@@ -1488,6 +1562,48 @@ class _ConversationScreenState extends State<ConversationScreen> {
                     content: Text(l10n.messagesUpdateAvatarFailedToast)));
               }
               break;
+            case 'delete_conversation':
+              try {
+                final confirmed = await showKubusDialog<bool>(
+                  context: context,
+                  builder: (dialogCtx) => KubusAlertDialog(
+                    title: Text(l10n.messagesDeleteConversationTitle),
+                    content: Text(l10n.messagesDeleteConversationBody),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(dialogCtx).pop(false),
+                        child: Text(l10n.commonCancel),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(dialogCtx).pop(true),
+                        child: Text(
+                          l10n.commonDelete,
+                          style: TextStyle(
+                              color: Theme.of(dialogCtx).colorScheme.error),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+                if (!mounted) return;
+                if (confirmed != true) break;
+
+                await _chatProvider.deleteConversation(widget.conversation.id);
+                if (!mounted) return;
+                scaffold.showKubusSnackBar(SnackBar(
+                    content: Text(l10n.messagesDeleteConversationSuccessToast)));
+                if (!mounted) return;
+                await navigator.maybePop();
+              } catch (e) {
+                if (kDebugMode) {
+                  debugPrint(
+                      'ConversationScreen: delete conversation failed: $e');
+                }
+                if (!mounted) return;
+                scaffold.showKubusSnackBar(SnackBar(
+                    content: Text(l10n.messagesDeleteConversationFailedToast)));
+              }
+              break;
             case 'messages_overlay':
               if (!mounted) break;
               showGeneralDialog(
@@ -1519,6 +1635,20 @@ class _ConversationScreenState extends State<ConversationScreen> {
           PopupMenuItem(
               value: 'change_group_avatar',
               child: Text(l10n.messagesMenuChangeGroupAvatar)),
+          PopupMenuItem(
+            value: 'delete_conversation',
+            child: Row(
+              children: [
+                Icon(Icons.delete_outline,
+                    color: Theme.of(ctx).colorScheme.error),
+                const SizedBox(width: KubusSpacing.sm),
+                Text(
+                  l10n.messagesMenuDeleteConversation,
+                  style: TextStyle(color: Theme.of(ctx).colorScheme.error),
+                ),
+              ],
+            ),
+          ),
         ],
         icon: Icon(
           Icons.more_vert,
@@ -1632,8 +1762,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
       constraints: BoxConstraints(maxWidth: bubbleMaxWidth),
       child: LiquidGlassPanel(
         padding: const EdgeInsets.symmetric(
-          horizontal: KubusSpacing.md,
-          vertical: KubusSpacing.sm + KubusSpacing.xxs,
+          horizontal: KubusSpacing.md + KubusSpacing.xs,
+          vertical: KubusSpacing.sm + KubusSpacing.xs,
         ),
         borderRadius: BorderRadius.circular(KubusRadius.lg),
         backgroundColor: isMe
@@ -1649,7 +1779,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 displayName != null &&
                 displayName.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(bottom: 2),
+                padding: const EdgeInsets.only(bottom: KubusSpacing.xxs),
                 child: Text(
                   displayName,
                   style: KubusTextStyles.navMetaLabel.copyWith(
@@ -1661,10 +1791,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 ),
               ),
             _buildMessageContent(message, isMe),
-            const SizedBox(height: 4),
+            const SizedBox(height: KubusSpacing.xs),
             _buildMessageMeta(message, isMe),
             if (message.reactions.isNotEmpty) ...[
-              const SizedBox(height: 4),
+              const SizedBox(height: KubusSpacing.xs),
               _buildMessageReactions(message, isMe),
             ],
           ],
@@ -1805,7 +1935,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   Widget _buildMessageContent(ChatMessage message, bool isMe) {
     final scheme = Theme.of(context).colorScheme;
-    final textColor = isMe ? scheme.onPrimary : scheme.onTertiaryContainer;
+    final textColor = isMe ? scheme.onPrimary : scheme.onSurface;
     final attachment = message.data?['attachment'] as Map<String, dynamic>?;
     final hasAttachment = attachment != null &&
         ((attachment['url'] ?? attachment['remoteUrl'] ?? '')
@@ -2167,7 +2297,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
       String buildSig(List<ChatMessage> list) {
         try {
           return list
-              .map((m) => '${m.id}:${m.readersCount}:${m.readByCurrent}')
+              .map((m) =>
+                  '${m.id}:${m.readersCount}:${m.readByCurrent}:${m.reactions.map((r) => '${r.emoji}:${r.count}:${r.reactors.length}').join(',')}')
               .join('|');
         } catch (_) {
           return '';
@@ -2549,22 +2680,31 @@ class MembersDialog extends StatelessWidget {
             final wallet = (member['wallet'] as String?) ?? (user?.id ?? '');
             final displayName =
                 (member['displayName'] as String?) ?? user?.name ?? wallet;
+            final username =
+                (member['username'] as String?) ?? user?.username ?? '';
             final avatarUrl =
                 (member['avatar'] as String?) ?? user?.profileImageUrl;
             final effectiveAvatar =
                 (avatarUrl != null && avatarUrl.isNotEmpty) ? avatarUrl : null;
+            final formatted = CreatorDisplayFormat.format(
+              fallbackLabel: l10n.commonUnknown,
+              displayName: displayName,
+              username: username,
+              wallet: wallet,
+            );
+            final secondary = formatted.secondary;
 
             return ListTile(
               leading: AvatarWidget(
                   avatarUrl: effectiveAvatar,
                   wallet: wallet,
                   allowFabricatedFallback: false),
-              title: Text(displayName),
-              subtitle: Text(role.isNotEmpty
-                  ? role
-                  : wallet.isNotEmpty
-                      ? wallet
-                      : l10n.messagesMemberLabel),
+              title: Text(formatted.primary),
+              subtitle: Text(
+                secondary?.isNotEmpty == true
+                    ? secondary!
+                    : (role.isNotEmpty ? role : l10n.messagesMemberLabel),
+              ),
               trailing: PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert),
                 onSelected: (choice) async {

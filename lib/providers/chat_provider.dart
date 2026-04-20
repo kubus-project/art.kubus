@@ -1975,6 +1975,31 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> deleteConversation(String conversationId) async {
+    try {
+      final result = await _api.deleteConversation(conversationId);
+      if (result['success'] == true) {
+        _conversations.removeWhere((c) => c.id == conversationId);
+        _messages.remove(conversationId);
+        _unreadCounts.remove(conversationId);
+        _membersCache.remove(conversationId);
+        _membersRequests.remove(conversationId);
+        _messageCacheTouchMs.remove(conversationId);
+        _membersCacheTouchMs.remove(conversationId);
+        if (_openConversationId == conversationId) {
+          _openConversationId = null;
+        }
+        _safeNotifyListeners(force: true);
+        await refreshConversations();
+        return;
+      }
+      throw Exception(result['error'] ?? 'Delete conversation failed');
+    } catch (e) {
+      debugPrint('ChatProvider.deleteConversation error: $e');
+      rethrow;
+    }
+  }
+
   Future<Map<String, dynamic>> transferOwnership(
       String conversationId, String newOwnerWallet) async {
     try {
