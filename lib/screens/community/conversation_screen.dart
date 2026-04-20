@@ -27,11 +27,11 @@ import '../../utils/creator_display_format.dart';
 import '../../utils/wallet_utils.dart';
 import '../../utils/search_suggestions.dart';
 import '../../utils/media_url_resolver.dart';
-import '../../utils/app_color_utils.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/topbar_icon.dart';
+import '../../providers/themeprovider.dart';
 
 // Use AvatarWidget from widgets to render avatars safely
 
@@ -873,14 +873,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   Color _readIndicatorColor(BuildContext context,
       {required bool isMine, required bool isRead}) {
-    final scheme = Theme.of(context).colorScheme;
-    final Color contrast =
-        isMine ? scheme.onPrimary : scheme.onPrimaryContainer;
-    if (!isRead) {
-      return contrast.withValues(alpha: 0.72);
-    }
-    return contrast;
-  }
+    final accent =
+        Provider.of<ThemeProvider>(context, listen: false).accentColor;
+    return isRead ? accent : accent.withValues(alpha: 0.72);
+  } 
 
   Widget _wrapWithAnimation(Widget child, bool shouldAnimate,
       {required String messageId}) {
@@ -1217,15 +1213,11 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Auto-scroll behavior: when messages are present and user is near the bottom,
-    // keep the viewport anchored to the latest message. We use a reversed ListView
-    // so the newest message is at the bottom (scroll offset 0).
     if (_messages.isNotEmpty && _scrollController.hasClients) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!_scrollController.hasClients) return;
         try {
           final pos = _scrollController.position;
-          // If user is near the bottom (small scroll offset), auto-scroll to bottom (0)
           if (pos.pixels <= 100) {
             _scrollController.animateTo(
               0.0,
@@ -1237,39 +1229,35 @@ class _ConversationScreenState extends State<ConversationScreen> {
       });
     }
 
-    return AnimatedGradientBackground(
-      intensity: 0.18,
-      child: Scaffold(
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          automaticallyImplyLeading: false,
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          flexibleSpace:
-              const KubusGlassAppBarBackdrop(showBottomDivider: true),
-          leadingWidth: KubusHeaderMetrics.actionHitArea + KubusSpacing.md,
-          leading: Padding(
-            padding: const EdgeInsets.only(left: KubusSpacing.sm),
-            child: TopBarIcon(
-              icon: Icon(
-                Icons.arrow_back,
-                color: Theme.of(context).colorScheme.onSurface,
-                size: KubusHeaderMetrics.actionIcon,
-              ),
-              onPressed:
-                  widget.onClose ?? () => Navigator.of(context).maybePop(),
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        flexibleSpace: const KubusGlassAppBarBackdrop(showBottomDivider: true),
+        leadingWidth: KubusHeaderMetrics.actionHitArea + KubusSpacing.md,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: KubusSpacing.sm),
+          child: TopBarIcon(
+            icon: Icon(
+              Icons.arrow_back,
+              color: Theme.of(context).colorScheme.onSurface,
+              size: KubusHeaderMetrics.actionIcon,
             ),
+            onPressed: widget.onClose ?? () => Navigator.of(context).maybePop(),
           ),
-          title: _buildHeaderTitle(),
-          actions: _buildHeaderActions(),
         ),
-        body: Column(
-          children: [
-            Expanded(child: _buildMessagesList()),
-            _buildMessageInput(),
-            if (_isUploading) const LinearProgressIndicator(),
-          ],
-        ),
+        title: _buildHeaderTitle(),
+        actions: _buildHeaderActions(),
+      ),
+      body: Column(
+        children: [
+          Expanded(child: _buildMessagesList()),
+          _buildMessageInput(),
+          if (_isUploading) const LinearProgressIndicator(),
+        ],
       ),
     );
   }
@@ -1713,7 +1701,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
           Timer(const Duration(milliseconds: 150), _checkVisibleMessages);
     }
   }
-
+  
   Widget _buildMessageItem(ChatMessage message, bool isMe, bool showAvatar,
       {int? chronoIndex, int? chronoLength}) {
     final bool isFirst = (chronoIndex != null && chronoLength != null)
@@ -1722,6 +1710,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final bool isLast = (chronoIndex != null && chronoLength != null)
         ? chronoIndex == (chronoLength - 1)
         : (_messages.isNotEmpty ? message == _messages.last : false);
+
     String? avatarUrl;
     String? displayName;
     if (!isMe) {
@@ -1754,22 +1743,58 @@ class _ConversationScreenState extends State<ConversationScreen> {
         }
       }
     }
+
     final double avatarRadius = 16;
-    final bubbleMaxWidth = MediaQuery.of(context).size.width * 0.78;
+    final double bubbleMaxWidth = MediaQuery.of(context).size.width * 0.72;
     final scheme = Theme.of(context).colorScheme;
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final accent = themeProvider.accentColor;
+
+    final bubbleColor = isMe
+        ? Color.lerp(
+            scheme.surfaceContainerHigh,
+            accent,
+            0.14,
+          )!
+            .withValues(alpha: 0.92)
+        : scheme.surfaceContainerHighest.withValues(alpha: 0.88);
+
+    final senderLabelColor = scheme.onSurface.withValues(alpha: 0.92);
+
+    final reactionBar = message.reactions.isNotEmpty
+        ? Positioned(
+            bottom: -10,
+            left: isMe ? null : 14,
+            right: isMe ? 14 : null,
+            child: _buildMessageReactions(message, isMe),
+          )
+        : null;
 
     final bubble = ConstrainedBox(
       constraints: BoxConstraints(maxWidth: bubbleMaxWidth),
-      child: LiquidGlassPanel(
-        padding: const EdgeInsets.symmetric(
-          horizontal: KubusSpacing.md + KubusSpacing.xs,
-          vertical: KubusSpacing.sm + KubusSpacing.xs,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(
+          KubusSpacing.md + KubusSpacing.xs,
+          KubusSpacing.md,
+          KubusSpacing.md + KubusSpacing.xs,
+          KubusSpacing.md + KubusSpacing.sm,
         ),
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
-        backgroundColor: isMe
-            ? scheme.primary.withValues(alpha: 0.92)
-            : scheme.surface.withValues(alpha: 0.84),
-        enableBlur: !kIsWeb,
+        decoration: BoxDecoration(
+          color: bubbleColor,
+          borderRadius: BorderRadius.circular(KubusRadius.xl),
+          border: Border.all(
+            color: isMe
+                ? accent.withValues(alpha: 0.28)
+                : scheme.outlineVariant.withValues(alpha: 0.55),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: scheme.shadow.withValues(alpha: 0.12),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
         child: Column(
           crossAxisAlignment:
               isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
@@ -1783,20 +1808,14 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 child: Text(
                   displayName,
                   style: KubusTextStyles.navMetaLabel.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: isMe
-                        ? scheme.onPrimary
-                        : scheme.onSurface.withValues(alpha: 0.76),
+                    fontWeight: FontWeight.w700,
+                    color: senderLabelColor,
                   ),
                 ),
               ),
             _buildMessageContent(message, isMe),
             const SizedBox(height: KubusSpacing.xs),
             _buildMessageMeta(message, isMe),
-            if (message.reactions.isNotEmpty) ...[
-              const SizedBox(height: KubusSpacing.xs),
-              _buildMessageReactions(message, isMe),
-            ],
           ],
         ),
       ),
@@ -1807,28 +1826,36 @@ class _ConversationScreenState extends State<ConversationScreen> {
       child: Padding(
         padding: EdgeInsets.only(
           top: isFirst ? KubusSpacing.sm + KubusSpacing.xs : KubusSpacing.sm,
-          bottom: isLast ? KubusSpacing.sm + KubusSpacing.xs : KubusSpacing.xs,
+          bottom:
+              (isLast ? KubusSpacing.md + KubusSpacing.xs : KubusSpacing.sm) +
+                  (message.reactions.isNotEmpty ? KubusSpacing.sm : 0),
           left: KubusSpacing.sm,
           right: KubusSpacing.sm,
         ),
         child: Align(
           alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Stack(
+            clipBehavior: Clip.none,
             children: [
-              if (!isMe) ...[
-                SizedBox(
-                  width: avatarRadius * 2,
-                  height: avatarRadius * 2,
-                  child: showAvatar
-                      ? _buildAvatar(avatarUrl, message.senderWallet,
-                          radius: avatarRadius)
-                      : const SizedBox.shrink(),
-                ),
-                const SizedBox(width: KubusSpacing.sm),
-              ],
-              bubble,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (!isMe) ...[
+                    SizedBox(
+                      width: avatarRadius * 2,
+                      height: avatarRadius * 2,
+                      child: showAvatar
+                          ? _buildAvatar(avatarUrl, message.senderWallet,
+                              radius: avatarRadius)
+                          : const SizedBox.shrink(),
+                    ),
+                    const SizedBox(width: KubusSpacing.sm),
+                  ],
+                  bubble,
+                ],
+              ),
+              if (reactionBar != null) reactionBar,
             ],
           ),
         ),
@@ -1837,10 +1864,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
   }
 
   Widget _buildMessageMeta(ChatMessage message, bool isMe) {
-    final timeColor = isMe
-        ? Theme.of(context).colorScheme.onPrimaryContainer
-        : Theme.of(context).colorScheme.onSurfaceVariant;
+    final accent =
+        Provider.of<ThemeProvider>(context, listen: false).accentColor;
     final isRead = _hasReceivedRead(message.readers, message.senderWallet);
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1848,7 +1875,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
           _formatTimeAgo(message.createdAt),
           style: KubusTextStyles.navMetaLabel.copyWith(
             fontSize: 10,
-            color: timeColor,
+            color: accent.withValues(alpha: 0.88),
+            fontWeight: FontWeight.w600,
           ),
         ),
         if (isMe) ...[
@@ -1869,21 +1897,23 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final l10n = AppLocalizations.of(context)!;
     final reply = message.replyTo!;
     final scheme = Theme.of(context).colorScheme;
+    final accent =
+        Provider.of<ThemeProvider>(context, listen: false).accentColor;
+
     final senderWallet = reply.senderWallet;
     final fallbackName = reply.senderDisplayName ?? reply.messageId;
     final nameSource = reply.senderDisplayName ??
         _displayNameCache[senderWallet] ??
         _cacheProvider.getDisplayName(senderWallet) ??
         fallbackName;
+
     final resolvedName = nameSource.trim();
     final localizedName =
-      resolvedName.isNotEmpty ? resolvedName : l10n.commonUser;
+        resolvedName.isNotEmpty ? resolvedName : l10n.commonUser;
+
     final overlayBase = isMe
-        ? scheme.primaryContainer.withValues(alpha: 0.4)
-        : scheme.surfaceContainerHighest;
-    final accent = scheme.primary;
-    final textColor =
-        isMe ? scheme.onPrimaryContainer : scheme.onSurfaceVariant;
+        ? accent.withValues(alpha: 0.12)
+        : scheme.surfaceContainerHighest.withValues(alpha: 0.82);
 
     return Container(
       padding: const EdgeInsets.all(10),
@@ -1925,7 +1955,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 12,
-              color: textColor,
+              color: scheme.onSurface,
             ),
           ),
         ],
@@ -1935,7 +1965,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   Widget _buildMessageContent(ChatMessage message, bool isMe) {
     final scheme = Theme.of(context).colorScheme;
-    final textColor = isMe ? scheme.onPrimary : scheme.onSurface;
+    final textColor = scheme.onSurface;
     final attachment = message.data?['attachment'] as Map<String, dynamic>?;
     final hasAttachment = attachment != null &&
         ((attachment['url'] ?? attachment['remoteUrl'] ?? '')
@@ -1954,6 +1984,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
             style: TextStyle(
               color: textColor,
               fontSize: 14,
+              height: 1.42,
+              letterSpacing: 0.1,
             ),
             showCursor: true,
             cursorWidth: 2,
@@ -2235,6 +2267,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   Widget _buildMessageInput() {
     final l10n = AppLocalizations.of(context)!;
+    final accent =
+        Provider.of<ThemeProvider>(context, listen: false).accentColor;
+
     return Column(
       children: [
         _buildReplyPreview(),
@@ -2277,7 +2312,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.send, color: AppColorUtils.tealAccent),
+                  icon: Icon(Icons.send, color: accent),
                   onPressed: _send,
                 ),
               ],
