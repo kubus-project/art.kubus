@@ -4998,7 +4998,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         AppLocalizations.of(context)!.commonPost,
                         style: KubusTextStyles.navLabel.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.surfaceContainerHighest,
                         ),
                       ),
               ),
@@ -6371,7 +6370,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   AppLocalizations.of(context)!
                       .desktopCommunityCreatePostTitle,
                   style: KubusTextStyles.sectionTitle.copyWith(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 leading: IconButton(
@@ -6418,7 +6417,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           AppLocalizations.of(context)!.commonPost,
                           style: KubusTextStyles.navLabel.copyWith(
                             fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.surfaceContainerHighest
                           ),
                         ),
                 ),
