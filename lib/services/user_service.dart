@@ -10,6 +10,37 @@ import 'achievement_service.dart' as achievement_svc;
 import '../utils/wallet_utils.dart';
 import 'user_action_logger.dart';
 
+class UserFollowMutationResult {
+  const UserFollowMutationResult({
+    required this.isFollowing,
+    required this.targetWallet,
+    this.followersCount,
+    this.followingCount,
+    this.actorFollowingCount,
+    this.changed,
+    this.followCreated,
+    this.unfollowed,
+    this.removed,
+    this.hasCanonicalPayload = false,
+  });
+
+  final bool isFollowing;
+  final String targetWallet;
+  final int? followersCount;
+  final int? followingCount;
+  final int? actorFollowingCount;
+  final bool? changed;
+  final bool? followCreated;
+  final bool? unfollowed;
+  final bool? removed;
+  final bool hasCanonicalPayload;
+
+  bool get hasCanonicalCounters =>
+      followersCount != null ||
+      followingCount != null ||
+      actorFollowingCount != null;
+}
+
 class UserService {
   static const String _followingKey = 'following_users';
   static const String _cachePrefsKey = 'user_cache_v1';
@@ -217,12 +248,43 @@ class UserService {
     }
   }
 
-  static void _updateCachedFollowState(String walletAddress, bool isFollowing) {
-    final targetWallet = WalletUtils.canonical(walletAddress);
-    if (targetWallet.isEmpty) return;
-    final existing = _cache[targetWallet];
-    if (existing == null || existing.isFollowing == isFollowing) return;
-    _cache[targetWallet] = existing.copyWith(isFollowing: isFollowing);
+  static void _reconcileFollowMutationCache({
+    required String targetWallet,
+    required bool isFollowing,
+    FollowMutationRecord? mutation,
+    String? actorWallet,
+    int? actorFollowingCount,
+  }) {
+    final canonicalTarget = WalletUtils.canonical(targetWallet);
+    if (canonicalTarget.isEmpty) return;
+
+    final targetExisting = _cache[canonicalTarget];
+    if (targetExisting != null) {
+      final nextFollowersCount = mutation?.followersCount ??
+          (() {
+            final current = targetExisting.followersCount;
+            if (isFollowing) return current + 1;
+            return current > 0 ? current - 1 : 0;
+          })();
+      final nextFollowingCount =
+          mutation?.followingCount ?? targetExisting.followingCount;
+      _cache[canonicalTarget] = targetExisting.copyWith(
+        isFollowing: isFollowing,
+        followersCount: nextFollowersCount,
+        followingCount: nextFollowingCount,
+      );
+    }
+
+    final canonicalActor = WalletUtils.canonical(actorWallet);
+    if (canonicalActor.isNotEmpty) {
+      final actorExisting = _cache[canonicalActor];
+      if (actorExisting != null) {
+        _cache[canonicalActor] = actorExisting.copyWith(
+          followingCount: actorFollowingCount ?? actorExisting.followingCount,
+        );
+      }
+    }
+
     try {
       _persistCache();
     } catch (_) {}
@@ -273,7 +335,9 @@ class UserService {
       final isInstitution = (profile['isInstitution'] == true) ||
           (profile['is_institution'] == true);
       final resolvedWallet = WalletUtils.canonical(
-        (profile['walletAddress'] ??
+        (profile['targetWallet'] ??
+                profile['target_wallet'] ??
+                profile['walletAddress'] ??
                 profile['wallet'] ??
                 profile['wallet_address'] ??
                 profile['publicKey'] ??
@@ -281,21 +345,45 @@ class UserService {
                 userId)
             .toString(),
       );
-      final isFollowing = await _fetchAuthoritativeFollowState(resolvedWallet);
+      final profileIsFollowing = profile['isFollowing'] == true ||
+          profile['is_following'] == true;
+      final hasTopLevelFollowers = profile.containsKey('followersCount') ||
+          profile.containsKey('followers_count') ||
+          profile.containsKey('followers');
+      final hasTopLevelFollowing = profile.containsKey('followingCount') ||
+          profile.containsKey('following_count') ||
+          profile.containsKey('following');
+      final topLevelFollowers = hasTopLevelFollowers
+          ? _parseInt(profile['followersCount'] ??
+              profile['followers_count'] ??
+              profile['followers'])
+          : 0;
+      final topLevelFollowing = hasTopLevelFollowing
+          ? _parseInt(profile['followingCount'] ??
+              profile['following_count'] ??
+              profile['following'])
+          : 0;
+      final isFollowing = profileIsFollowing
+          ? true
+          : await _fetchAuthoritativeFollowState(resolvedWallet);
       // Try to parse embedded stats if the profile payload contains them
-      int followersFromProfile = 0;
-      int followingFromProfile = 0;
+      int followersFromProfile = topLevelFollowers;
+      int followingFromProfile = topLevelFollowing;
       int postsFromProfile = 0;
       try {
         final stats =
             profile['stats'] ?? profile['statistics'] ?? profile['meta'];
         if (stats is Map<String, dynamic>) {
-          followersFromProfile = _parseInt(stats['followers'] ??
-              stats['followersCount'] ??
-              stats['followers_count']);
-          followingFromProfile = _parseInt(stats['following'] ??
-              stats['followingCount'] ??
-              stats['following_count']);
+          followersFromProfile = hasTopLevelFollowers
+              ? followersFromProfile
+              : _parseInt(stats['followers'] ??
+                  stats['followersCount'] ??
+                  stats['followers_count']);
+          followingFromProfile = hasTopLevelFollowing
+              ? followingFromProfile
+              : _parseInt(stats['following'] ??
+                  stats['followingCount'] ??
+                  stats['following_count']);
           postsFromProfile = _parseInt(
               stats['posts'] ?? stats['postsCount'] ?? stats['posts_count']);
         }
@@ -990,45 +1078,166 @@ class UserService {
     await _saveFollowingUsers(followingList);
   }
 
+  static Future<UserFollowMutationResult> setFollowState(
+    String walletAddress, {
+    required bool shouldFollow,
+    String? displayName,
+    String? username,
+    String? avatarUrl,
+  }) async {
+    if (walletAddress.isEmpty) {
+      return const UserFollowMutationResult(
+        isFollowing: false,
+        targetWallet: '',
+      );
+    }
+
+    final targetWallet = WalletUtils.canonical(walletAddress);
+    if (targetWallet.isEmpty) {
+      return const UserFollowMutationResult(
+        isFollowing: false,
+        targetWallet: '',
+      );
+    }
+
+    final actorWallet = await _activeWalletAddressFromPrefs();
+    final backendApi = BackendApiService();
+
+    FollowMutationRecord? mutation;
+    if (shouldFollow) {
+      mutation = await backendApi.followUserWithResponse(targetWallet);
+    } else {
+      mutation = await backendApi.unfollowUserWithResponse(targetWallet);
+    }
+
+    final mutationTargetWallet =
+        WalletUtils.canonical(mutation?.targetWallet ?? targetWallet);
+    final resolvedTargetWallet =
+        mutationTargetWallet.isEmpty ? targetWallet : mutationTargetWallet;
+    final resolvedIsFollowing = mutation?.isFollowing ?? shouldFollow;
+
+    final followingList = await _loadFollowingUsersFromPrefs();
+    final wasFollowingLocally = followingList.contains(resolvedTargetWallet);
+    if (resolvedIsFollowing) {
+      if (!followingList.contains(resolvedTargetWallet)) {
+        followingList.add(resolvedTargetWallet);
+      }
+    } else {
+      followingList.remove(resolvedTargetWallet);
+    }
+
+    final resolvedActorFollowingCount =
+        mutation?.actorFollowingCount ?? followingList.length;
+
+    try {
+      await _saveFollowingUsers(followingList);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('UserService.setFollowState: save following failed: $e');
+      }
+    }
+
+    try {
+      _reconcileFollowMutationCache(
+        targetWallet: resolvedTargetWallet,
+        isFollowing: resolvedIsFollowing,
+        mutation: mutation,
+        actorWallet: actorWallet,
+        actorFollowingCount: resolvedActorFollowingCount,
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('UserService.setFollowState: cache reconcile failed: $e');
+      }
+    }
+
+    final resolvedChanged =
+        mutation?.changed ?? (resolvedIsFollowing != wasFollowingLocally);
+    final resolvedFollowCreated = mutation?.followCreated ??
+        (resolvedIsFollowing && !wasFollowingLocally);
+    final resolvedUnfollowed =
+        mutation?.unfollowed ?? (!resolvedIsFollowing && wasFollowingLocally);
+    final resolvedRemoved = mutation?.removed ?? resolvedUnfollowed;
+
+    final shouldLogFollow =
+        resolvedIsFollowing && (resolvedFollowCreated || resolvedChanged);
+    if (shouldLogFollow) {
+      try {
+        await UserActionLogger.logFollow(
+          walletAddress: resolvedTargetWallet,
+          displayName: displayName,
+          username: username,
+          avatarUrl: avatarUrl,
+        );
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('UserService.setFollowState: follow action log failed: $e');
+        }
+      }
+    }
+
+    return UserFollowMutationResult(
+      isFollowing: resolvedIsFollowing,
+      targetWallet: resolvedTargetWallet,
+      followersCount: mutation?.followersCount,
+      followingCount: mutation?.followingCount,
+      actorFollowingCount: resolvedActorFollowingCount,
+      changed: resolvedChanged,
+      followCreated: resolvedFollowCreated,
+      unfollowed: resolvedUnfollowed,
+      removed: resolvedRemoved,
+      hasCanonicalPayload: mutation?.hasCanonicalPayload ?? false,
+    );
+  }
+
+  static Future<UserFollowMutationResult> toggleFollowWithResult(
+    String walletAddress, {
+    String? displayName,
+    String? username,
+    String? avatarUrl,
+  }) async {
+    if (walletAddress.isEmpty) {
+      return const UserFollowMutationResult(
+        isFollowing: false,
+        targetWallet: '',
+      );
+    }
+
+    final targetWallet = WalletUtils.canonical(walletAddress);
+    if (targetWallet.isEmpty) {
+      return const UserFollowMutationResult(
+        isFollowing: false,
+        targetWallet: '',
+      );
+    }
+
+    final isCurrentlyFollowing = await _fetchAuthoritativeFollowState(
+      targetWallet,
+      fallbackToLocalOverlay: true,
+    );
+
+    return setFollowState(
+      targetWallet,
+      shouldFollow: !isCurrentlyFollowing,
+      displayName: displayName,
+      username: username,
+      avatarUrl: avatarUrl,
+    );
+  }
+
   static Future<bool> toggleFollow(
     String walletAddress, {
     String? displayName,
     String? username,
     String? avatarUrl,
   }) async {
-    if (walletAddress.isEmpty) return false;
-
-    final targetWallet = WalletUtils.canonical(walletAddress);
-    if (targetWallet.isEmpty) return false;
-
-    final isCurrentlyFollowing = await _fetchAuthoritativeFollowState(
-      targetWallet,
-      fallbackToLocalOverlay: true,
+    final mutation = await toggleFollowWithResult(
+      walletAddress,
+      displayName: displayName,
+      username: username,
+      avatarUrl: avatarUrl,
     );
-    final followingList = await _loadFollowingUsersFromPrefs();
-    final backendApi = BackendApiService();
-
-    if (isCurrentlyFollowing) {
-      await backendApi.unfollowUser(targetWallet);
-      followingList.remove(targetWallet);
-      await _saveFollowingUsers(followingList);
-      _updateCachedFollowState(targetWallet, false);
-      return false;
-    } else {
-      await backendApi.followUser(targetWallet);
-      if (!followingList.contains(targetWallet)) {
-        followingList.add(targetWallet);
-      }
-      await _saveFollowingUsers(followingList);
-      _updateCachedFollowState(targetWallet, true);
-      UserActionLogger.logFollow(
-        walletAddress: targetWallet,
-        displayName: displayName,
-        username: username,
-        avatarUrl: avatarUrl,
-      );
-      return true;
-    }
+    return mutation.isFollowing;
   }
 
   static Future<List<User>> getFollowingUsersList() async {
@@ -1276,6 +1485,24 @@ class UserService {
                     .toString(),
               );
               if (wallet.isEmpty) continue;
+              final hasTopLevelFollowers = profile.containsKey('followersCount') ||
+                  profile.containsKey('followers_count') ||
+                  profile.containsKey('followers');
+              final hasTopLevelFollowing = profile.containsKey('followingCount') ||
+                  profile.containsKey('following_count') ||
+                  profile.containsKey('following');
+              final followersCount = hasTopLevelFollowers
+                  ? _parseInt(profile['followersCount'] ??
+                      profile['followers_count'] ??
+                      profile['followers'])
+                  : 0;
+              final followingCount = hasTopLevelFollowing
+                  ? _parseInt(profile['followingCount'] ??
+                      profile['following_count'] ??
+                      profile['following'])
+                  : 0;
+              final profileIsFollowing = profile['isFollowing'] == true ||
+                  profile['is_following'] == true;
               final user = User(
                 id: wallet,
                 name: ((profile['displayName'] ?? '')
@@ -1311,10 +1538,11 @@ class UserService {
                         .trim()
                     : '',
                 bio: profile['bio'] ?? '',
-                followersCount: 0,
-                followingCount: 0,
+                followersCount: followersCount,
+                followingCount: followingCount,
                 postsCount: 0,
-                isFollowing: followingSet.contains(wallet),
+                isFollowing:
+                    profileIsFollowing || followingSet.contains(wallet),
                 isVerified: profile['isVerified'] ?? false,
                 isArtist:
                     profile['isArtist'] == true || profile['is_artist'] == true,
@@ -1447,6 +1675,24 @@ class UserService {
                   .toString(),
             );
             if (wallet.isEmpty) continue;
+            final hasTopLevelFollowers = profile.containsKey('followersCount') ||
+                profile.containsKey('followers_count') ||
+                profile.containsKey('followers');
+            final hasTopLevelFollowing = profile.containsKey('followingCount') ||
+                profile.containsKey('following_count') ||
+                profile.containsKey('following');
+            final followersCount = hasTopLevelFollowers
+                ? _parseInt(profile['followersCount'] ??
+                    profile['followers_count'] ??
+                    profile['followers'])
+                : 0;
+            final followingCount = hasTopLevelFollowing
+                ? _parseInt(profile['followingCount'] ??
+                    profile['following_count'] ??
+                    profile['following'])
+                : 0;
+            final profileIsFollowing = profile['isFollowing'] == true ||
+                profile['is_following'] == true;
             final user = User(
               id: wallet,
               name: ((profile['displayName'] ?? '')
@@ -1482,10 +1728,11 @@ class UserService {
                       .trim()
                   : '',
               bio: profile['bio'] ?? '',
-              followersCount: 0,
-              followingCount: 0,
+              followersCount: followersCount,
+              followingCount: followingCount,
               postsCount: 0,
-              isFollowing: followingSet.contains(wallet),
+              isFollowing:
+                  profileIsFollowing || followingSet.contains(wallet),
               isVerified: profile['isVerified'] ?? false,
               isArtist:
                   profile['isArtist'] == true || profile['is_artist'] == true,

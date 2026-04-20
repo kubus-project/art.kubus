@@ -6219,13 +6219,28 @@ class BackendApiService
 
   // ==================== Follow Endpoints ====================
 
+  FollowMutationRecord _followMutationRecordFromResponse(
+    http.Response? response, {
+    required bool fallbackIsFollowing,
+    String? fallbackTargetWallet,
+  }) {
+    final decoded = _backendApiDecodeJsonMap(response?.body);
+    return FollowMutationRecord.fromJson(
+      decoded,
+      fallbackIsFollowing: fallbackIsFollowing,
+      fallbackTargetWallet: fallbackTargetWallet,
+    );
+  }
+
   /// Follow a user
   /// POST /api/community/follow/:walletAddress
-  @override
-  Future<void> followUser(String walletAddress) async {
+  Future<FollowMutationRecord?> followUserWithResponse(
+    String walletAddress,
+  ) async {
     final encoded = Uri.encodeComponent(walletAddress);
+    final canonicalTarget = WalletUtils.canonical(walletAddress);
     try {
-      await _sendQueueablePublicAction(
+      final response = await _sendQueueablePublicAction(
         method: 'POST',
         path: '/api/community/follow/$encoded',
         actionType: 'follow',
@@ -6233,19 +6248,37 @@ class BackendApiService
         entityId: walletAddress,
         isIdempotent: true,
       );
+      if (response == null) {
+        return FollowMutationRecord.fallback(
+          isFollowing: true,
+          targetWallet: canonicalTarget,
+        );
+      }
+      return _followMutationRecordFromResponse(
+        response,
+        fallbackIsFollowing: true,
+        fallbackTargetWallet: canonicalTarget,
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.followUser failed: $e');
       rethrow;
     }
   }
 
+  @override
+  Future<void> followUser(String walletAddress) async {
+    await followUserWithResponse(walletAddress);
+  }
+
   /// Unfollow a user
   /// DELETE /api/community/follow/:walletAddress
-  @override
-  Future<void> unfollowUser(String walletAddress) async {
+  Future<FollowMutationRecord?> unfollowUserWithResponse(
+    String walletAddress,
+  ) async {
     final encoded = Uri.encodeComponent(walletAddress);
+    final canonicalTarget = WalletUtils.canonical(walletAddress);
     try {
-      await _sendQueueablePublicAction(
+      final response = await _sendQueueablePublicAction(
         method: 'DELETE',
         path: '/api/community/follow/$encoded',
         actionType: 'unfollow',
@@ -6253,10 +6286,26 @@ class BackendApiService
         entityId: walletAddress,
         isIdempotent: true,
       );
+      if (response == null) {
+        return FollowMutationRecord.fallback(
+          isFollowing: false,
+          targetWallet: canonicalTarget,
+        );
+      }
+      return _followMutationRecordFromResponse(
+        response,
+        fallbackIsFollowing: false,
+        fallbackTargetWallet: canonicalTarget,
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.unfollowUser failed: $e');
       rethrow;
     }
+  }
+
+  @override
+  Future<void> unfollowUser(String walletAddress) async {
+    await unfollowUserWithResponse(walletAddress);
   }
 
   /// Get user's followers
@@ -6358,8 +6407,19 @@ class BackendApiService
       final response = await _get(uri, headers: _getHeaders());
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return data['isFollowing'] as bool? ?? false;
+        final decoded = _backendApiDecodeJsonMap(response.body);
+        if (decoded == null) {
+          final normalized = response.body.trim().toLowerCase();
+          if (normalized == 'true') return true;
+          if (normalized == 'false') return false;
+          return false;
+        }
+        final followRecord = FollowMutationRecord.fromJson(
+          decoded,
+          fallbackIsFollowing: false,
+          fallbackTargetWallet: WalletUtils.canonical(walletAddress),
+        );
+        return followRecord.isFollowing;
       }
 
       if (response.statusCode == 404) {

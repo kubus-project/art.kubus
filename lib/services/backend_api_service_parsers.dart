@@ -1,5 +1,239 @@
 part of 'backend_api_service.dart';
 
+class FollowMutationRecord {
+  const FollowMutationRecord({
+    required this.isFollowing,
+    this.targetWallet,
+    this.followersCount,
+    this.followingCount,
+    this.actorFollowingCount,
+    this.changed,
+    this.followCreated,
+    this.unfollowed,
+    this.removed,
+    this.message,
+    this.success,
+    this.fromFallback = false,
+  });
+
+  final bool isFollowing;
+  final String? targetWallet;
+  final int? followersCount;
+  final int? followingCount;
+  final int? actorFollowingCount;
+  final bool? changed;
+  final bool? followCreated;
+  final bool? unfollowed;
+  final bool? removed;
+  final String? message;
+  final bool? success;
+  final bool fromFallback;
+
+  bool get hasCanonicalCounters =>
+      followersCount != null ||
+      followingCount != null ||
+      actorFollowingCount != null;
+
+  bool get hasCanonicalMutationFlags =>
+      changed != null ||
+      followCreated != null ||
+      unfollowed != null ||
+      removed != null;
+
+  bool get hasCanonicalPayload => !fromFallback;
+
+  factory FollowMutationRecord.fallback({
+    required bool isFollowing,
+    String? targetWallet,
+  }) {
+    final normalizedTarget = _backendApiNormalizeWalletValue(targetWallet);
+    return FollowMutationRecord(
+      isFollowing: isFollowing,
+      targetWallet: normalizedTarget,
+      fromFallback: true,
+    );
+  }
+
+  factory FollowMutationRecord.fromJson(
+    Map<String, dynamic>? body, {
+    required bool fallbackIsFollowing,
+    String? fallbackTargetWallet,
+  }) {
+    final candidates = _backendApiFollowMutationCandidates(body).toList();
+    bool? parsedIsFollowing;
+    int? parsedFollowersCount;
+    int? parsedFollowingCount;
+    int? parsedActorFollowingCount;
+    bool? parsedChanged;
+    bool? parsedFollowCreated;
+    bool? parsedUnfollowed;
+    bool? parsedRemoved;
+    String? parsedTargetWallet;
+    String? parsedMessage;
+    bool? parsedSuccess;
+
+    for (final candidate in candidates) {
+      parsedIsFollowing ??= _backendApiParseFollowBool(
+        candidate['isFollowing'] ??
+            candidate['is_following'] ??
+            candidate['following'] ??
+            candidate['followed'] ??
+            candidate['followingState'] ??
+            candidate['followState'],
+      );
+      parsedFollowersCount ??= _backendApiParseFollowInt(
+        candidate['followersCount'] ??
+            candidate['followers_count'] ??
+            candidate['followers'] ??
+            candidate['followerCount'] ??
+            candidate['follower_count'],
+      );
+      parsedFollowingCount ??= _backendApiParseFollowInt(
+        candidate['followingCount'] ??
+            candidate['following_count'] ??
+            candidate['following'] ??
+            candidate['followingTotal'] ??
+            candidate['following_total'],
+      );
+      parsedActorFollowingCount ??= _backendApiParseFollowInt(
+        candidate['actorFollowingCount'] ??
+            candidate['actor_following_count'] ??
+            candidate['viewerFollowingCount'] ??
+            candidate['viewer_following_count'],
+      );
+      parsedChanged ??= _backendApiParseFollowBool(
+        candidate['changed'] ??
+            candidate['isChanged'] ??
+            candidate['is_changed'],
+      );
+      parsedFollowCreated ??= _backendApiParseFollowBool(
+        candidate['followCreated'] ??
+            candidate['follow_created'] ??
+            candidate['created'],
+      );
+      parsedUnfollowed ??= _backendApiParseFollowBool(
+        candidate['unfollowed'] ??
+            candidate['isUnfollowed'] ??
+            candidate['is_unfollowed'],
+      );
+      parsedRemoved ??= _backendApiParseFollowBool(
+        candidate['removed'] ??
+            candidate['isRemoved'] ??
+            candidate['is_removed'],
+      );
+      parsedTargetWallet ??= _backendApiNormalizeWalletValue(
+        candidate['targetWallet'] ??
+            candidate['target_wallet'] ??
+            candidate['walletAddress'] ??
+            candidate['wallet_address'] ??
+            candidate['wallet'] ??
+            candidate['target'],
+      );
+      parsedMessage ??= _backendApiParseFollowString(
+        candidate['message'] ?? candidate['detail'] ?? candidate['error'],
+      );
+      parsedSuccess ??= _backendApiParseFollowBool(candidate['success']);
+    }
+
+    return FollowMutationRecord(
+      isFollowing: parsedIsFollowing ?? fallbackIsFollowing,
+      targetWallet: parsedTargetWallet?.isNotEmpty == true
+          ? parsedTargetWallet
+          : _backendApiNormalizeWalletValue(fallbackTargetWallet),
+      followersCount: parsedFollowersCount,
+      followingCount: parsedFollowingCount,
+      actorFollowingCount: parsedActorFollowingCount,
+      changed: parsedChanged,
+      followCreated: parsedFollowCreated,
+      unfollowed: parsedUnfollowed,
+      removed: parsedRemoved,
+      message: parsedMessage,
+      success: parsedSuccess,
+      fromFallback: false,
+    );
+  }
+}
+
+Map<String, dynamic>? _backendApiDecodeJsonMap(String? raw) {
+  final trimmed = (raw ?? '').trim();
+  if (trimmed.isEmpty) return null;
+  try {
+    final decoded = jsonDecode(trimmed);
+    if (decoded is Map<String, dynamic>) return decoded;
+    if (decoded is Map) {
+      return Map<String, dynamic>.from(decoded);
+    }
+  } catch (_) {}
+  return null;
+}
+
+String? _backendApiNormalizeWalletValue(Object? value) {
+  final canonical = WalletUtils.canonical(value?.toString());
+  return canonical.isEmpty ? null : canonical;
+}
+
+bool? _backendApiParseFollowBool(Object? value) {
+  if (value is bool) return value;
+  if (value is num) return value.toInt() != 0;
+  if (value == null) return null;
+  final normalized = value.toString().trim().toLowerCase();
+  if (normalized.isEmpty) return null;
+  if (['true', '1', 'yes', 'y', 'on', 'following'].contains(normalized)) {
+    return true;
+  }
+  if (['false', '0', 'no', 'n', 'off', 'unfollowed'].contains(normalized)) {
+    return false;
+  }
+  return null;
+}
+
+int? _backendApiParseFollowInt(Object? value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value == null) return null;
+  return int.tryParse(value.toString());
+}
+
+String? _backendApiParseFollowString(Object? value) {
+  if (value == null) return null;
+  final normalized = value.toString().trim();
+  return normalized.isEmpty ? null : normalized;
+}
+
+Iterable<Map<String, dynamic>> _backendApiFollowMutationCandidates(
+  Map<String, dynamic>? body,
+) sync* {
+  if (body == null) return;
+
+  final seen = <int>{};
+  final queue = <Map<String, dynamic>>[body];
+
+  while (queue.isNotEmpty) {
+    final current = queue.removeAt(0);
+    final identity = identityHashCode(current);
+    if (!seen.add(identity)) {
+      continue;
+    }
+    yield current;
+
+    for (final key in const <String>[
+      'data',
+      'result',
+      'payload',
+      'user',
+      'profile',
+      'target',
+      'targetUser',
+      'actor',
+    ]) {
+      final nested = _backendApiMapOrNull(current[key]);
+      if (nested != null) {
+        queue.add(nested);
+      }
+    }
+  }
+}
+
 CommunityLikeUser _backendApiCommunityLikeUserFromBackendJson(
   Map<String, dynamic> json,
 ) {
