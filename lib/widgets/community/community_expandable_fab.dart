@@ -140,9 +140,13 @@ class CommunityExpandableFab extends StatelessWidget {
                                   onExpandedChanged(false);
                                   option.onTap();
                                 },
-                                backgroundColor: scheme.primaryContainer,
-                                foregroundColor: scheme.onSurface,
-                                child: Icon(option.icon, size: 20),
+                                backgroundColor: accentColor,
+                                foregroundColor: scheme.onPrimary,
+                                child: Icon(
+                                  option.icon,
+                                  size: 20,
+                                  color: scheme.onPrimary,
+                                ),
                               ),
                             ],
                           ),

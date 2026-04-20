@@ -206,6 +206,7 @@ class CommunityComposerAttachmentCard extends StatelessWidget {
                       style: KubusTextStyles.sectionTitle.copyWith(
                         fontSize: KubusChromeMetrics.navLabel + 1,
                         fontWeight: FontWeight.w600,
+                        color: scheme.onSurface,
                       ),
                       maxLines: titleMaxLines,
                       overflow: TextOverflow.ellipsis,

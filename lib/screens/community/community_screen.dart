@@ -3255,20 +3255,25 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 
   Widget _buildPostOption(IconData icon, String label, {VoidCallback? onTap}) {
+    final scheme = Theme.of(context).colorScheme;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(KubusSpacing.md),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primaryContainer,
+          color: scheme.surfaceContainerHighest.withValues(alpha: 0.28),
           borderRadius: BorderRadius.circular(KubusRadius.md),
-          border: Border.all(color: Theme.of(context).colorScheme.outline),
+          border: Border.all(
+            color: scheme.outline.withValues(alpha: 0.32),
+          ),
         ),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               icon,
-              color: Theme.of(context).colorScheme.onPrimaryContainer,
+              color: scheme.onSurface,
               size: 24,
             ),
             const SizedBox(height: 8),
@@ -3276,7 +3281,8 @@ class _CommunityScreenState extends State<CommunityScreen>
               label,
               style: KubusTypography.inter(
                 fontSize: 12,
-                color: Theme.of(context).colorScheme.onPrimaryContainer,
+                fontWeight: FontWeight.w500,
+                color: scheme.onSurface,
               ),
               textAlign: TextAlign.center,
             ),
@@ -3545,7 +3551,10 @@ class _CommunityScreenState extends State<CommunityScreen>
               onPressed: () => hub.setDraftGroup(null),
               icon: const Icon(Icons.close),
             )
-          : const Icon(Icons.chevron_right),
+          : Icon(
+              Icons.chevron_right,
+              color: scheme.onSurface.withValues(alpha: 0.68),
+            ),
       backgroundColor: hasGroup
           ? scheme.primaryContainer.withValues(alpha: 0.25)
           : scheme.surfaceContainerHighest,
@@ -3635,7 +3644,10 @@ class _CommunityScreenState extends State<CommunityScreen>
               },
               icon: const Icon(Icons.close),
             )
-          : const Icon(Icons.chevron_right),
+          : Icon(
+              Icons.chevron_right,
+              color: scheme.onSurface.withValues(alpha: 0.68),
+            ),
       backgroundColor: hasSubject
           ? scheme.primaryContainer.withValues(alpha: 0.25)
           : scheme.surfaceContainerHighest,

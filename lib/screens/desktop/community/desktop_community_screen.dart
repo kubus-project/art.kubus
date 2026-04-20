@@ -2281,20 +2281,24 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       );
     }
 
-    final single = options.first;
-    return FloatingActionButton.extended(
-      heroTag: 'desktop_comm_fab_$tabIndex',
-      onPressed: single.onTap,
-      backgroundColor: scheme.primaryContainer,
-      foregroundColor: scheme.onPrimaryContainer,
-      icon: Icon(single.icon, color: scheme.onSurface),
-      label: Text(
-        single.label,
-        style: KubusTextStyles.navLabel.copyWith(
-          color: scheme.onPrimaryContainer,
-        ),
+  final single = options.first;
+  return FloatingActionButton.extended(
+    heroTag: 'desktop_comm_fab_$tabIndex',
+    onPressed: single.onTap,
+    backgroundColor: themeProvider.accentColor,
+    foregroundColor: scheme.onPrimary,
+    icon: Icon(
+      single.icon,
+      color: scheme.onPrimary,
+    ),
+    label: Text(
+      single.label,
+      style: KubusTextStyles.navLabel.copyWith(
+        color: scheme.onPrimary,
+        fontWeight: FontWeight.w600,
       ),
-    );
+    ),
+  );
   }
 
   List<CommunityFabOption> _getFabOptions(
