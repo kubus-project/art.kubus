@@ -206,27 +206,39 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       );
       if (!mounted) return;
       setState(() {
+        final currentUser = user ?? profile;
         final counters = snapshot?.counters ?? const <String, int>{};
-        final fetchedPosts = counters['posts'] ?? 0;
-        final fetchedFollowers = counters['followers'] ?? 0;
-        final fetchedFollowing = counters['following'] ?? 0;
-        final fetchedStreetArtAdded = counters['publicStreetArtAdded'] ?? 0;
 
-        var resolvedFollowers = fetchedFollowers;
-        var resolvedFollowing = fetchedFollowing;
-        // If caller asked to skip overwriting follower/following counts (e.g., immediately after a follow/unfollow),
-        // preserve optimistic local value if it exists to avoid flashing back to stale backend values.
-        if (skipFollowersOverwrite && user != null) {
-          resolvedFollowers = user!.followersCount;
-          resolvedFollowing = user!.followingCount;
+        final hasPosts = counters.containsKey('posts');
+        final hasFollowers = counters.containsKey('followers');
+        final hasFollowing = counters.containsKey('following');
+        final hasStreetArtAdded = counters.containsKey('publicStreetArtAdded');
+
+        final resolvedPosts =
+            hasPosts ? (counters['posts'] ?? 0) : currentUser.postsCount;
+
+        var resolvedFollowers = hasFollowers
+            ? (counters['followers'] ?? 0)
+            : currentUser.followersCount;
+
+        var resolvedFollowing = hasFollowing
+            ? (counters['following'] ?? 0)
+            : currentUser.followingCount;
+
+        if (skipFollowersOverwrite) {
+          resolvedFollowers = currentUser.followersCount;
+          resolvedFollowing = currentUser.followingCount;
         }
 
-        user = profile.copyWith(
-          postsCount: fetchedPosts,
+        user = currentUser.copyWith(
+          postsCount: resolvedPosts,
           followersCount: resolvedFollowers,
           followingCount: resolvedFollowing,
         );
-        _publicStreetArtAddedCount = fetchedStreetArtAdded;
+
+        if (hasStreetArtAdded) {
+          _publicStreetArtAddedCount = counters['publicStreetArtAdded'] ?? 0;
+        }
       });
     } catch (e) {
       if (kDebugMode) {
@@ -415,31 +427,36 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   }
 
   Future<void> _toggleFollow() async {
-    if (user == null) return;
+    final profile = user;
+    if (profile == null) return;
 
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final theme = Theme.of(context);
 
     _followButtonController.forward().then((_) {
-      _followButtonController.reverse();
+      if (mounted) {
+        _followButtonController.reverse();
+      }
     });
 
-    bool newFollowState;
+    UserFollowMutationResult mutation;
     try {
-      newFollowState = await UserService.toggleFollow(
-        user!.id,
-        displayName: user!.name,
-        username: user!.username,
-        avatarUrl: user!.profileImageUrl,
+      mutation = await UserService.toggleFollowWithResult(
+        profile.id,
+        displayName: profile.name,
+        username: profile.username,
+        avatarUrl: profile.profileImageUrl,
       );
     } catch (e) {
       debugPrint(
-          'UserProfileScreen: failed to toggle follow for ${user!.id}: $e');
+          'UserProfileScreen: failed to toggle follow for ${profile.id}: $e');
       if (!mounted) return;
+
       final message = e.toString().contains('401')
           ? l10n.userProfileSignInToFollowToast
           : l10n.userProfileFollowUpdateFailedToast;
+
       messenger.showKubusSnackBar(
         SnackBar(
           content: Text(message),
@@ -447,42 +464,50 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           backgroundColor: theme.colorScheme.error,
         ),
       );
-      await _loadUserStats(skipFollowersOverwrite: true);
+
+      await _refreshFollowStateFromServer();
+      await _loadUserStats(skipFollowersOverwrite: true, forceRefresh: true);
       return;
     }
 
+    if (!mounted) return;
+
+    final currentUser = user ?? profile;
+
     setState(() {
-      final currentFollowers = user!.followersCount;
-      final updatedFollowers = newFollowState
-          ? currentFollowers + 1
-          : (currentFollowers > 0 ? currentFollowers - 1 : 0);
-      user = user!.copyWith(
-        isFollowing: newFollowState,
-        followersCount: updatedFollowers,
+      user = currentUser.copyWith(
+        isFollowing: mutation.isFollowing,
+        followersCount: mutation.followersCount ?? currentUser.followersCount,
+        followingCount: mutation.followingCount ?? currentUser.followingCount,
       );
     });
 
-    // Show feedback
-    if (mounted) {
-      messenger.showKubusSnackBar(
-        SnackBar(
-          content: Text(
-            newFollowState
-                ? l10n.userProfileNowFollowingToast(user!.name)
-                : l10n.userProfileUnfollowedToast(user!.name),
-          ),
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      try {
-        context.read<AppRefreshProvider>().triggerCommunity();
-        context.read<AppRefreshProvider>().triggerProfile();
-      } catch (_) {}
+    if (!mutation.hasCanonicalCounters) {
+      await _refreshFollowStateFromServer();
     }
+
+    if (!mounted) return;
+
+    messenger.showKubusSnackBar(
+      SnackBar(
+        content: Text(
+          (user?.isFollowing ?? mutation.isFollowing)
+              ? l10n.userProfileNowFollowingToast(user!.name)
+              : l10n.userProfileUnfollowedToast(user!.name),
+        ),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+
+    try {
+      context.read<AppRefreshProvider>().triggerCommunity();
+      context.read<AppRefreshProvider>().triggerProfile();
+    } catch (_) {}
 
     await _loadUserStats(forceRefresh: true);
     if (!mounted) return;
+
     try {
       unawaited(ProfileScreenMethods.prefetchOtherUserProfileData(
         context,
@@ -491,22 +516,34 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         prefetchStatsSnapshot: false,
       ));
     } catch (_) {}
-    // Persist updated user in cache so other screens see immediate change
+
     try {
       if (user != null) UserService.setUsersInCache([user!]);
     } catch (_) {}
-    // After toggling follow, schedule a deferred authoritative refresh to pick up backend changes
+  }
+
+  Future<void> _refreshFollowStateFromServer() async {
+    final current = user;
+    if (current == null) return;
+
     try {
-      Future.delayed(const Duration(seconds: 3), () async {
-        try {
-          if (!mounted) return;
-          await _loadUserStats();
-          try {
-            if (user != null) UserService.setUsersInCache([user!]);
-          } catch (_) {}
-        } catch (_) {}
+      final fresh = await UserService.getUserById(
+        current.id,
+        forceRefresh: true,
+      );
+      if (!mounted || fresh == null) return;
+
+      setState(() {
+        final latest = user ?? current;
+        user = latest.copyWith(
+          isFollowing: fresh.isFollowing,
+        );
       });
-    } catch (_) {}
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('UserProfileScreen._refreshFollowStateFromServer: $e');
+      }
+    }
   }
 
   @override
@@ -1449,7 +1486,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final post = _posts[index];
-                final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+                final themeProvider =
+                    Provider.of<ThemeProvider>(context, listen: false);
                 return CommunityPostCard(
                   post: post,
                   accentColor: themeProvider.accentColor,
@@ -1894,7 +1932,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       ),
     );
   }
-
 
   Widget _buildReportOption(BuildContext dialogContext, String reason) {
     return ListTile(

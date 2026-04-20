@@ -1830,6 +1830,8 @@ class _CommunityScreenState extends State<CommunityScreen>
   Widget _buildGroupSearchField(CommunityHubProvider hub) {
     final l10n = AppLocalizations.of(context)!;
     final query = hub.currentGroupSearchQuery;
+    final scheme = Theme.of(context).colorScheme;
+
     if (_groupSearchController.text != query) {
       _groupSearchController.value = TextEditingValue(
         text: query,
@@ -1840,6 +1842,9 @@ class _CommunityScreenState extends State<CommunityScreen>
     return TextField(
       controller: _groupSearchController,
       onChanged: _onGroupSearchChanged,
+      style: KubusTypography.inter(
+        color: scheme.onSurface,
+      ),
       decoration: InputDecoration(
         prefixIcon: const Icon(Icons.search),
         suffixIcon: query.isNotEmpty
@@ -1853,17 +1858,19 @@ class _CommunityScreenState extends State<CommunityScreen>
               )
             : null,
         hintText: l10n.communityGroupsSearchHint,
+        hintStyle: KubusTypography.inter(
+          color: scheme.onSurface.withValues(alpha: 0.56),
+        ),
         filled: true,
-        fillColor: Theme.of(context)
-            .colorScheme
-            .surfaceContainerHighest
-            .withValues(alpha: 0.4),
+        fillColor: scheme.surfaceContainerHighest.withValues(alpha: 0.4),
         border: OutlineInputBorder(
           borderRadius: KubusRadius.circular(KubusRadius.lg),
           borderSide: BorderSide.none,
         ),
         contentPadding: const EdgeInsets.symmetric(
-            horizontal: KubusSpacing.md, vertical: 0),
+          horizontal: KubusSpacing.md,
+          vertical: 0,
+        ),
       ),
     );
   }
@@ -2047,7 +2054,7 @@ class _CommunityScreenState extends State<CommunityScreen>
             l10n.communityArtFeedHeaderTitle,
             style: KubusTypography.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w700,
-              color: scheme.onSurface,
+              color: scheme.onPrimaryContainer,
             ),
           ),
           const SizedBox(height: 6),
@@ -2056,14 +2063,14 @@ class _CommunityScreenState extends State<CommunityScreen>
               l10n.commonDistanceKm(radiusKm.toStringAsFixed(1)),
             ),
             style: KubusTypography.textTheme.bodySmall?.copyWith(
-              color: scheme.onSurface.withValues(alpha: 0.7),
+              color: scheme.onPrimaryContainer.withValues(alpha: 0.78),
             ),
           ),
           const SizedBox(height: 4),
           Text(
             subtitle,
             style: KubusTypography.textTheme.labelSmall?.copyWith(
-              color: scheme.onSurface.withValues(alpha: 0.6),
+              color: scheme.onPrimaryContainer.withValues(alpha: 0.68),
             ),
           ),
           const SizedBox(height: 12),
@@ -2145,8 +2152,8 @@ class _CommunityScreenState extends State<CommunityScreen>
             style: KubusTypography.textTheme.bodySmall?.copyWith(
               color: Theme.of(context)
                   .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.7),
+                  .onPrimaryContainer
+                  .withValues(alpha: 0.78),
             ),
           ),
           if (actionLabel != null && onAction != null) ...[
@@ -2191,11 +2198,14 @@ class _CommunityScreenState extends State<CommunityScreen>
             title: Text(
               post.authorName,
               style: KubusTypography.textTheme.titleSmall
-                  ?.copyWith(fontWeight: FontWeight.w700),
+                  ?.copyWith(fontWeight: FontWeight.w700,
+                  color: scheme.onPrimaryContainer),
             ),
             subtitle: Text(
               '${_getTimeAgo(post.timestamp)} - ${post.category}',
-              style: KubusTypography.textTheme.labelSmall,
+              style:  KubusTypography.textTheme.labelSmall?.copyWith(
+                color: scheme.onPrimaryContainer.withValues(alpha: 0.72),
+              ),
             ),
             trailing: IconButton(
               tooltip: l10n.commonShare,
@@ -2282,7 +2292,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                 : null,
                           ].whereType<String>().join(' - '),
                           style: KubusTypography.textTheme.labelSmall?.copyWith(
-                            color: scheme.onSurface.withValues(alpha: 0.6),
+                            color: scheme.onPrimaryContainer.withValues(alpha: 0.68),
                           ),
                         ),
                       ),
@@ -2415,8 +2425,7 @@ class _CommunityScreenState extends State<CommunityScreen>
         titleOverride: preview.title,
       ),
       commentsExpanded: commentsExpanded,
-      inlineComments:
-          commentsExpanded ? _buildInlineComments(post) : null,
+      inlineComments: commentsExpanded ? _buildInlineComments(post) : null,
     );
   }
 
@@ -2432,12 +2441,10 @@ class _CommunityScreenState extends State<CommunityScreen>
       }
     });
     if (willExpand) {
-      unawaited(context
-          .read<CommunityCommentsProvider>()
-          .loadComments(post.id));
-      unawaited(context
-          .read<CommunityInteractionsProvider>()
-          .loadPostLikes(post.id));
+      unawaited(
+          context.read<CommunityCommentsProvider>().loadComments(post.id));
+      unawaited(
+          context.read<CommunityInteractionsProvider>().loadPostLikes(post.id));
     }
   }
 
@@ -2686,9 +2693,15 @@ class _CommunityScreenState extends State<CommunityScreen>
                     maxLines: 3,
                     textInputAction: TextInputAction.send,
                     onSubmitted: (_) => submitInlineComment(),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                     decoration: InputDecoration(
                       isDense: true,
                       hintText: l10n.postDetailWriteCommentHint,
+                        hintStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.56),
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(KubusRadius.md),
                       ),
@@ -2894,34 +2907,40 @@ class _CommunityScreenState extends State<CommunityScreen>
                         children: [
                           TextField(
                             controller: nameController,
+                            style: TextStyle(
+                              color: scheme.onSurface,
+                            ),
                             decoration: InputDecoration(
                               labelText: l10n.communityCreateGroupNameLabel,
                               hintText: l10n.communityCreateGroupNameHint,
+                              hintStyle: TextStyle(
+                                color: scheme.onSurface.withValues(alpha: 0.56),
+                              ),
                               border: OutlineInputBorder(
-                                borderRadius:
-                                    KubusRadius.circular(KubusRadius.md),
+                                borderRadius: KubusRadius.circular(KubusRadius.md),
                               ),
                               filled: true,
-                              fillColor: scheme.primaryContainer
-                                  .withValues(alpha: 0.4),
+                              fillColor: scheme.primaryContainer.withValues(alpha: 0.4),
                             ),
                           ),
                           const SizedBox(height: 16),
                           TextField(
                             controller: descriptionController,
                             maxLines: 3,
+                            style: TextStyle(
+                              color: scheme.onSurface,
+                            ),
                             decoration: InputDecoration(
-                              labelText:
-                                  l10n.communityCreateGroupDescriptionLabel,
-                              hintText:
-                                  l10n.communityCreateGroupDescriptionHint,
+                              labelText: l10n.communityCreateGroupDescriptionLabel,
+                              hintText: l10n.communityCreateGroupDescriptionHint,
+                              hintStyle: TextStyle(
+                                color: scheme.onSurface.withValues(alpha: 0.56),
+                              ),
                               border: OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.circular(KubusRadius.md),
+                                borderRadius: BorderRadius.circular(KubusRadius.md),
                               ),
                               filled: true,
-                              fillColor: scheme.primaryContainer
-                                  .withValues(alpha: 0.4),
+                              fillColor: scheme.primaryContainer.withValues(alpha: 0.4),
                             ),
                           ),
                           const SizedBox(height: 20),
@@ -3249,7 +3268,7 @@ class _CommunityScreenState extends State<CommunityScreen>
           children: [
             Icon(
               icon,
-              color: Theme.of(context).colorScheme.onSurface,
+              color: Theme.of(context).colorScheme.onPrimaryContainer,
               size: 24,
             ),
             const SizedBox(height: 8),
@@ -3257,7 +3276,7 @@ class _CommunityScreenState extends State<CommunityScreen>
               label,
               style: KubusTypography.inter(
                 fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface,
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
               ),
               textAlign: TextAlign.center,
             ),
@@ -3291,13 +3310,17 @@ class _CommunityScreenState extends State<CommunityScreen>
     final scheme = Theme.of(context).colorScheme;
     final isCompact = MediaQuery.of(context).size.width < 400;
     final l10n = AppLocalizations.of(context)!;
+
     return TextField(
       controller: _newPostController,
       minLines: 3,
       maxLines: null,
       decoration: InputDecoration(
         hintText: l10n.communityComposerTextHint,
-        hintStyle: KubusTypography.inter(fontSize: isCompact ? 14 : 16),
+        hintStyle: KubusTypography.inter(
+          fontSize: isCompact ? 14 : 16,
+          color: scheme.onSurface.withValues(alpha: 0.56),
+        ),
         filled: true,
         fillColor: scheme.primaryContainer.withValues(alpha: 0.4),
         border: OutlineInputBorder(
@@ -3309,7 +3332,11 @@ class _CommunityScreenState extends State<CommunityScreen>
           vertical: isCompact ? 12 : 18,
         ),
       ),
-      style: KubusTypography.inter(fontSize: isCompact ? 14 : 16, height: 1.4),
+      style: KubusTypography.inter(
+        fontSize: isCompact ? 14 : 16,
+        height: 1.4,
+        color: scheme.onSurface,
+      ),
       textInputAction: TextInputAction.newline,
     );
   }
@@ -3828,8 +3855,14 @@ class _CommunityScreenState extends State<CommunityScreen>
         TextField(
           controller: controller,
           textInputAction: TextInputAction.done,
+          style: KubusTypography.inter(
+            color: scheme.onSurface,
+          ),
           decoration: InputDecoration(
             hintText: hint,
+            hintStyle: KubusTypography.inter(
+              color: scheme.onSurface.withValues(alpha: 0.56),
+            ),
             suffixIcon: IconButton(
               icon: const Icon(Icons.add),
               onPressed: () {
@@ -3962,6 +3995,9 @@ class _CommunityScreenState extends State<CommunityScreen>
                     child: TextField(
                       controller: searchController,
                       autofocus: true,
+                      style: KubusTypography.inter(
+                        color: scheme.onSurface,
+                      ),
                       decoration: InputDecoration(
                         hintText: searchType == 'tags'
                             ? l10n.communitySearchSheetHintTags
@@ -3970,6 +4006,9 @@ class _CommunityScreenState extends State<CommunityScreen>
                                 : searchType == 'artworks'
                                     ? l10n.communitySearchSheetHintArtworks
                                     : l10n.communitySearchSheetHintDefault,
+                        hintStyle: KubusTypography.inter(
+                          color: scheme.onSurface.withValues(alpha: 0.56),
+                        ),
                         prefixIcon: const Icon(Icons.search),
                         suffixIcon: searchController.text.isNotEmpty
                             ? IconButton(
@@ -3988,8 +4027,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                           borderSide: BorderSide.none,
                         ),
                         filled: true,
-                        fillColor:
-                            scheme.primaryContainer.withValues(alpha: 0.4),
+                        fillColor: scheme.primaryContainer.withValues(alpha: 0.4),
                       ),
                       onChanged: (query) async {
                         final q = query.trim();
@@ -4013,24 +4051,17 @@ class _CommunityScreenState extends State<CommunityScreen>
                           final list = <Map<String, dynamic>>[];
                           if (response['success'] == true) {
                             if (searchType == 'profiles') {
-                              final profiles =
-                                  _extractSearchResults(response, 'profiles');
+                              final profiles = _extractSearchResults(response, 'profiles');
                               list.addAll(profiles);
                             } else if (searchType == 'artworks') {
-                              final artworks =
-                                  _extractSearchResults(response, 'artworks');
+                              final artworks = _extractSearchResults(response, 'artworks');
                               list.addAll(artworks);
                             } else if (searchType == 'tags') {
-                              // For tags, generate suggestions from query
-                              list.add(
-                                  {'tag': q, 'count': 0, 'isCustom': true});
-                              // Also check for tag matches in results
-                              final tags =
-                                  _extractSearchResults(response, 'tags');
+                              list.add({'tag': q, 'count': 0, 'isCustom': true});
+                              final tags = _extractSearchResults(response, 'tags');
                               list.addAll(tags);
                             } else {
-                              final all =
-                                  _extractSearchResults(response, 'all');
+                              final all = _extractSearchResults(response, 'all');
                               list.addAll(all);
                             }
                           }

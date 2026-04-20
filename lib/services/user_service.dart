@@ -801,8 +801,8 @@ class UserService {
             isArtist: (v['isArtist'] == true),
             isInstitution: (v['isInstitution'] == true),
             showAchievements: v['showAchievements'] is bool
-              ? v['showAchievements'] as bool
-              : true,
+                ? v['showAchievements'] as bool
+                : true,
             joinedDate: v['joinedDate']?.toString() ?? 'Joined recently',
             achievementProgress: [],
             profileImageUrl: v['profileImageUrl']?.toString(),
@@ -1442,19 +1442,38 @@ class UserService {
   /// background (non-blocking) to avoid slowing down profile fetch paths.
   static Future<void> fetchAndUpdateUserStats(String walletAddress) async {
     if (walletAddress.isEmpty) return;
+
+    final normalizedWallet = WalletUtils.canonical(walletAddress);
+    if (normalizedWallet.isEmpty) return;
+
     try {
       final snapshot = await StatsApiService().fetchSnapshot(
         entityType: 'user',
-        entityId: walletAddress,
+        entityId: normalizedWallet,
         metrics: const ['followers', 'following', 'posts'],
         scope: 'public',
       );
-      final followers = snapshot.counters['followers'] ?? 0;
-      final following = snapshot.counters['following'] ?? 0;
-      final posts = snapshot.counters['posts'] ?? 0;
 
-      final existing = _cache[walletAddress];
-      final isFollowing = await _fetchAuthoritativeFollowState(walletAddress);
+      final counters = snapshot.counters;
+      final existing = _cache[normalizedWallet] ?? _cache[walletAddress];
+
+      final hasFollowers = counters.containsKey('followers');
+      final hasFollowing = counters.containsKey('following');
+      final hasPosts = counters.containsKey('posts');
+
+      final followers = hasFollowers
+          ? (counters['followers'] ?? 0)
+          : (existing?.followersCount ?? 0);
+
+      final following = hasFollowing
+          ? (counters['following'] ?? 0)
+          : (existing?.followingCount ?? 0);
+
+      final posts =
+          hasPosts ? (counters['posts'] ?? 0) : (existing?.postsCount ?? 0);
+
+      final isFollowing =
+          await _fetchAuthoritativeFollowState(normalizedWallet);
 
       final updated = existing != null
           ? existing.copyWith(
@@ -1464,7 +1483,7 @@ class UserService {
               isFollowing: isFollowing,
             )
           : User(
-              id: walletAddress,
+              id: normalizedWallet,
               name: 'Unknown artist',
               username: '',
               bio: '',
@@ -1587,7 +1606,7 @@ class UserService {
                     profile['isArtist'] == true || profile['is_artist'] == true,
                 isInstitution: profile['isInstitution'] == true ||
                     profile['is_institution'] == true,
-                  showAchievements: _extractShowAchievements(profile),
+                showAchievements: _extractShowAchievements(profile),
                 joinedDate: profile['createdAt'] != null
                     ? 'Joined ${DateTime.parse(profile['createdAt']).month}/${DateTime.parse(profile['createdAt']).year}'
                     : 'Joined recently',
@@ -1779,7 +1798,7 @@ class UserService {
                   profile['isArtist'] == true || profile['is_artist'] == true,
               isInstitution: profile['isInstitution'] == true ||
                   profile['is_institution'] == true,
-                showAchievements: _extractShowAchievements(profile),
+              showAchievements: _extractShowAchievements(profile),
               joinedDate: profile['createdAt'] != null
                   ? 'Joined ${DateTime.parse(profile['createdAt']).month}/${DateTime.parse(profile['createdAt']).year}'
                   : 'Joined recently',

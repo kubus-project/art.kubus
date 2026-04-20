@@ -3540,7 +3540,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             ),
             child: Text(
               l10n.communityUnrepostAction,
-              style: KubusTextStyles.navLabel,
+              style: KubusTextStyles.navLabel.copyWith(
+              color: Theme.of(dialogContext).colorScheme.onSurface,
+            ),
             ),
           ),
         ],
@@ -4035,7 +4037,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                 minHeight: 40,
                               ),
                             ),
-                            style: KubusTextStyles.navLabel,
+                            style: KubusTextStyles.navLabel.copyWith(
+                              color: scheme.onSurface,
+                            ),
                           ),
                         ),
                       ),
@@ -4733,9 +4737,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         secondChild: Text(
                           AppLocalizations.of(context)!
                               .desktopCommunityCreatePostTitle,
-                          style: KubusTextStyles.detailCardTitle.copyWith(
-                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                          ),
+                        style: KubusTextStyles.detailCardTitle.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                         ),
                       ),
                     ),

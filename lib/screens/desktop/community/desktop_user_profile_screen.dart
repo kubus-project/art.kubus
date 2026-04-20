@@ -1950,26 +1950,39 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       if (!mounted) return;
 
       setState(() {
+        final currentUser = user ?? profile;
         final counters = snapshot?.counters ?? const <String, int>{};
-        final fetchedPosts = counters['posts'] ?? 0;
-        final fetchedFollowers = counters['followers'] ?? 0;
-        final fetchedFollowing = counters['following'] ?? 0;
-        final fetchedStreetArtAdded = counters['publicStreetArtAdded'] ?? 0;
 
-        var resolvedFollowers = fetchedFollowers;
-        var resolvedFollowing = fetchedFollowing;
+        final hasPosts = counters.containsKey('posts');
+        final hasFollowers = counters.containsKey('followers');
+        final hasFollowing = counters.containsKey('following');
+        final hasStreetArtAdded = counters.containsKey('publicStreetArtAdded');
 
-        if (skipFollowersOverwrite && user != null) {
-          resolvedFollowers = user!.followersCount;
-          resolvedFollowing = user!.followingCount;
+        final resolvedPosts =
+            hasPosts ? (counters['posts'] ?? 0) : currentUser.postsCount;
+
+        var resolvedFollowers = hasFollowers
+            ? (counters['followers'] ?? 0)
+            : currentUser.followersCount;
+
+        var resolvedFollowing = hasFollowing
+            ? (counters['following'] ?? 0)
+            : currentUser.followingCount;
+
+        if (skipFollowersOverwrite) {
+          resolvedFollowers = currentUser.followersCount;
+          resolvedFollowing = currentUser.followingCount;
         }
 
-        user = profile.copyWith(
-          postsCount: fetchedPosts,
+        user = currentUser.copyWith(
+          postsCount: resolvedPosts,
           followersCount: resolvedFollowers,
           followingCount: resolvedFollowing,
         );
-        _publicStreetArtAddedCount = fetchedStreetArtAdded;
+
+        if (hasStreetArtAdded) {
+          _publicStreetArtAddedCount = counters['publicStreetArtAdded'] ?? 0;
+        }
       });
     } catch (e) {
       if (kDebugMode) {
@@ -1985,19 +1998,19 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final theme = Theme.of(context);
-    final shouldFollow = !profile.isFollowing;
 
     setState(() => _isFollowMutationInFlight = true);
 
     _followButtonController.forward().then((_) {
-      _followButtonController.reverse();
+      if (mounted) {
+        _followButtonController.reverse();
+      }
     });
 
     UserFollowMutationResult mutation;
     try {
-      mutation = await UserService.setFollowState(
+      mutation = await UserService.toggleFollowWithResult(
         profile.id,
-        shouldFollow: shouldFollow,
         displayName: profile.name,
         username: profile.username,
         avatarUrl: profile.profileImageUrl,
@@ -2005,6 +2018,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     } catch (e) {
       debugPrint('Failed to toggle follow: $e');
       if (!mounted) return;
+
       messenger.showKubusSnackBar(
         SnackBar(
           content: Text(
@@ -2015,8 +2029,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           backgroundColor: theme.colorScheme.error,
         ),
       );
+
       await _refreshFollowStateFromServer();
       await _loadUserStats(skipFollowersOverwrite: true, forceRefresh: true);
+
       if (mounted) {
         setState(() => _isFollowMutationInFlight = false);
       }
@@ -2025,22 +2041,22 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
     if (!mounted) return;
 
-    if (mutation.hasCanonicalCounters) {
-      setState(() {
-        user = user!.copyWith(
-          isFollowing: mutation.isFollowing,
-          followersCount: mutation.followersCount ?? user!.followersCount,
-          followingCount: mutation.followingCount ?? user!.followingCount,
-        );
-      });
-    } else {
-      setState(() {
-        user = user!.copyWith(isFollowing: mutation.isFollowing);
-      });
+    final currentUser = user ?? profile;
+
+    setState(() {
+      user = currentUser.copyWith(
+        isFollowing: mutation.isFollowing,
+        followersCount: mutation.followersCount ?? currentUser.followersCount,
+        followingCount: mutation.followingCount ?? currentUser.followingCount,
+      );
+    });
+
+    if (!mutation.hasCanonicalCounters) {
       await _refreshFollowStateFromServer();
     }
 
     if (!mounted) return;
+
     final effectiveFollowState = user?.isFollowing ?? mutation.isFollowing;
 
     messenger.showKubusSnackBar(
@@ -2053,6 +2069,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         duration: const Duration(seconds: 2),
       ),
     );
+
     try {
       context.read<AppRefreshProvider>().triggerCommunity();
       context.read<AppRefreshProvider>().triggerProfile();
@@ -2060,6 +2077,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
     await _loadUserStats(forceRefresh: true);
     if (!mounted) return;
+
     try {
       unawaited(ProfileScreenMethods.prefetchOtherUserProfileData(
         context,
@@ -2068,6 +2086,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         prefetchStatsSnapshot: false,
       ));
     } catch (_) {}
+
     try {
       if (user != null) UserService.setUsersInCache([user!]);
     } catch (_) {}
@@ -2089,10 +2108,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       if (!mounted || fresh == null) return;
 
       setState(() {
-        user = user!.copyWith(
+        final latest = user ?? current;
+        user = latest.copyWith(
           isFollowing: fresh.isFollowing,
-          followersCount: fresh.followersCount,
-          followingCount: fresh.followingCount,
         );
       });
     } catch (e) {
@@ -2404,7 +2422,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   String? _normalizeMediaUrl(String? url) {
     return MediaUrlResolver.resolve(url);
   }
-
 
   String _formatCount(int count) {
     if (count >= 1000000) return '${(count / 1000000).toStringAsFixed(1)}M';
