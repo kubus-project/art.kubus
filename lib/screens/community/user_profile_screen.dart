@@ -31,7 +31,7 @@ import '../../widgets/avatar_widget.dart';
 import '../../widgets/user_activity_status_line.dart';
 import '../../widgets/artist_badge.dart';
 import '../../widgets/institution_badge.dart';
-import '../../widgets/community/community_author_role_badges.dart';
+import '../../widgets/community/community_post_card.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/profile_artist_info_fields.dart';
 import '../../widgets/common/kubus_stat_card.dart';
@@ -1449,160 +1449,18 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final post = _posts[index];
-                return GestureDetector(
-                  onTap: () {
+                final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+                return CommunityPostCard(
+                  post: post,
+                  accentColor: themeProvider.accentColor,
+                  onOpenPostDetail: (target) {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (context) => PostDetailScreen(post: post)),
+                        builder: (context) => PostDetailScreen(post: target),
+                      ),
                     );
                   },
-                  child: Container(
-                    padding: const EdgeInsets.all(KubusSpacing.md),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(KubusRadius.lg),
-                      border: Border.all(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.06)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            AvatarWidget(
-                                wallet: post.authorId,
-                                avatarUrl: post.authorAvatar,
-                                radius: 18,
-                                enableProfileNavigation: false),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Flexible(
-                                        fit: FlexFit.loose,
-                                        child: Text(
-                                          post.authorName,
-                                          style: KubusTextStyles.sectionTitle,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                      CommunityAuthorRoleBadges(
-                                        post: post,
-                                        fontSize: 8,
-                                        iconOnly: true,
-                                        spacing: 6,
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    _formatPostTime(l10n, post.timestamp),
-                                    style: KubusTextStyles.sectionSubtitle
-                                        .copyWith(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withValues(alpha: 0.5),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(post.content,
-                            style: KubusTextStyles.sectionSubtitle,
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis),
-                        if (post.imageUrl != null &&
-                            post.imageUrl!.isNotEmpty) ...[
-                          const SizedBox(height: 8),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(KubusRadius.sm),
-                            child: Image.network(
-                              MediaUrlResolver.resolveDisplayUrl(
-                                      post.imageUrl) ??
-                                  post.imageUrl!,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                final scheme = Theme.of(context).colorScheme;
-                                return Container(
-                                  color: scheme.surfaceContainerHighest,
-                                  alignment: Alignment.center,
-                                  child: Icon(
-                                    Icons.image_not_supported_outlined,
-                                    color: scheme.onSurfaceVariant,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Icon(
-                                post.isLiked
-                                    ? Icons.favorite
-                                    : Icons.favorite_border,
-                                size: 16,
-                                color: post.isLiked
-                                    ? Provider.of<ThemeProvider>(context)
-                                        .accentColor
-                                    : Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.6)),
-                            const SizedBox(width: 6),
-                            Text(
-                              '${post.likeCount}',
-                              style: KubusTextStyles.compactBadge.copyWith(
-                                color: post.isLiked
-                                    ? Provider.of<ThemeProvider>(context)
-                                        .accentColor
-                                    : Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.6),
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Icon(Icons.comment_outlined,
-                                size: 16,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.6)),
-                            const SizedBox(width: 6),
-                            Text(
-                              '${post.commentCount}',
-                              style: KubusTextStyles.compactBadge.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.6),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
                 );
               },
             ),
@@ -2037,15 +1895,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     );
   }
 
-  String _formatPostTime(AppLocalizations l10n, DateTime timestamp) {
-    final now = DateTime.now();
-    final diff = now.difference(timestamp);
-    if (diff.inDays > 7) return l10n.commonWeeksAgo((diff.inDays / 7).floor());
-    if (diff.inDays > 0) return l10n.commonDaysAgo(diff.inDays);
-    if (diff.inHours > 0) return l10n.commonHoursAgo(diff.inHours);
-    if (diff.inMinutes > 0) return l10n.commonMinutesAgo(diff.inMinutes);
-    return l10n.commonJustNow;
-  }
 
   Widget _buildReportOption(BuildContext dialogContext, String reason) {
     return ListTile(

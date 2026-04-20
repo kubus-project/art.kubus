@@ -1088,8 +1088,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
 
     return Wrap(
-      spacing: 4,
-      runSpacing: 4,
+      spacing: 6,
+      runSpacing: 6,
       alignment: isMe ? WrapAlignment.end : WrapAlignment.start,
       children: reactionCounts.entries.map((entry) {
         final isSelected = myReactions.contains(entry.key);
@@ -1106,18 +1106,18 @@ class _ConversationScreenState extends State<ConversationScreen> {
           },
           child: Container(
             padding: const EdgeInsets.symmetric(
-              horizontal: KubusSpacing.sm,
-              vertical: KubusSpacing.xs,
+              horizontal: KubusSpacing.sm + KubusSpacing.xxs,
+              vertical: KubusSpacing.xxs,
             ),
             decoration: BoxDecoration(
               color: isSelected
                   ? Theme.of(context).colorScheme.primaryContainer
                   : Theme.of(context).colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(KubusRadius.md),
+              borderRadius: BorderRadius.circular(KubusRadius.xl),
               border: Border.all(
                 color: isSelected
                     ? Theme.of(context).colorScheme.primary
-                    : Colors.transparent,
+                    : Theme.of(context).colorScheme.outlineVariant,
                 width: 1,
               ),
             ),
@@ -1127,7 +1127,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 fontSize: KubusChromeMetrics.navMetaLabel,
                 color: isSelected
                     ? Theme.of(context).colorScheme.onPrimaryContainer
-                    : Theme.of(context).colorScheme.onSurfaceVariant,
+                    : Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ),
@@ -1217,6 +1217,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     // Auto-scroll behavior: when messages are present and user is near the bottom,
     // keep the viewport anchored to the latest message. We use a reversed ListView
     // so the newest message is at the bottom (scroll offset 0).
@@ -1237,33 +1238,38 @@ class _ConversationScreenState extends State<ConversationScreen> {
       });
     }
 
-    return AnimatedGradientBackground(
-      intensity: 0.18,
-      child: Scaffold(
+    return Scaffold(
+      backgroundColor: scheme.surface,
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          automaticallyImplyLeading: false,
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          flexibleSpace:
-              const KubusGlassAppBarBackdrop(showBottomDivider: true),
-          leadingWidth: KubusHeaderMetrics.actionHitArea + KubusSpacing.md,
-          leading: Padding(
-            padding: const EdgeInsets.only(left: KubusSpacing.sm),
-            child: TopBarIcon(
-              icon: Icon(
-                Icons.arrow_back,
-                color: Theme.of(context).colorScheme.onSurface,
-                size: KubusHeaderMetrics.actionIcon,
-              ),
-              onPressed:
-                  widget.onClose ?? () => Navigator.of(context).maybePop(),
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        flexibleSpace: const KubusGlassAppBarBackdrop(showBottomDivider: true),
+        leadingWidth: KubusHeaderMetrics.actionHitArea + KubusSpacing.md,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: KubusSpacing.sm),
+          child: TopBarIcon(
+            icon: Icon(
+              Icons.arrow_back,
+              color: scheme.onSurface,
+              size: KubusHeaderMetrics.actionIcon,
             ),
+            onPressed: widget.onClose ?? () => Navigator.of(context).maybePop(),
           ),
-          title: _buildHeaderTitle(),
-          actions: _buildHeaderActions(),
         ),
-        body: Column(
+        title: _buildHeaderTitle(),
+        actions: _buildHeaderActions(),
+      ),
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [scheme.surface, scheme.surfaceContainerLowest],
+          ),
+        ),
+        child: Column(
           children: [
             Expanded(child: _buildMessagesList()),
             _buildMessageInput(),
@@ -1755,21 +1761,46 @@ class _ConversationScreenState extends State<ConversationScreen> {
       }
     }
     final double avatarRadius = 16;
-    final bubbleMaxWidth = MediaQuery.of(context).size.width * 0.78;
+    final bubbleMaxWidth = MediaQuery.of(context).size.width * 0.72;
     final scheme = Theme.of(context).colorScheme;
+    final bubbleColor = isMe
+        ? scheme.primaryContainer.withValues(alpha: 0.94)
+        : scheme.surfaceContainerHighest.withValues(alpha: 0.94);
+    final bubbleTextColor = isMe ? scheme.onPrimaryContainer : scheme.onSurface;
+    final reactionBar = message.reactions.isNotEmpty
+        ? Positioned(
+            bottom: -10,
+            left: isMe ? null : 14,
+            right: isMe ? 14 : null,
+            child: _buildMessageReactions(message, isMe),
+          )
+        : null;
 
     final bubble = ConstrainedBox(
       constraints: BoxConstraints(maxWidth: bubbleMaxWidth),
-      child: LiquidGlassPanel(
-        padding: const EdgeInsets.symmetric(
-          horizontal: KubusSpacing.md + KubusSpacing.xs,
-          vertical: KubusSpacing.sm + KubusSpacing.xs,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(
+          KubusSpacing.md + KubusSpacing.xs,
+          KubusSpacing.md,
+          KubusSpacing.md + KubusSpacing.xs,
+          KubusSpacing.md + KubusSpacing.sm,
         ),
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
-        backgroundColor: isMe
-            ? scheme.primary.withValues(alpha: 0.92)
-            : scheme.surface.withValues(alpha: 0.84),
-        enableBlur: !kIsWeb,
+        decoration: BoxDecoration(
+          color: bubbleColor,
+          borderRadius: BorderRadius.circular(KubusRadius.xl),
+          border: Border.all(
+            color: isMe
+                ? scheme.primary.withValues(alpha: 0.16)
+                : scheme.outlineVariant.withValues(alpha: 0.7),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.10),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
         child: Column(
           crossAxisAlignment:
               isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
@@ -1783,20 +1814,14 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 child: Text(
                   displayName,
                   style: KubusTextStyles.navMetaLabel.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: isMe
-                        ? scheme.onPrimary
-                        : scheme.onSurface.withValues(alpha: 0.76),
+                    fontWeight: FontWeight.w700,
+                    color: bubbleTextColor,
                   ),
                 ),
               ),
             _buildMessageContent(message, isMe),
             const SizedBox(height: KubusSpacing.xs),
             _buildMessageMeta(message, isMe),
-            if (message.reactions.isNotEmpty) ...[
-              const SizedBox(height: KubusSpacing.xs),
-              _buildMessageReactions(message, isMe),
-            ],
           ],
         ),
       ),
@@ -1807,28 +1832,35 @@ class _ConversationScreenState extends State<ConversationScreen> {
       child: Padding(
         padding: EdgeInsets.only(
           top: isFirst ? KubusSpacing.sm + KubusSpacing.xs : KubusSpacing.sm,
-          bottom: isLast ? KubusSpacing.sm + KubusSpacing.xs : KubusSpacing.xs,
+          bottom: (isLast ? KubusSpacing.md + KubusSpacing.xs : KubusSpacing.sm) +
+              (message.reactions.isNotEmpty ? KubusSpacing.sm : 0),
           left: KubusSpacing.sm,
           right: KubusSpacing.sm,
         ),
         child: Align(
           alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Stack(
+            clipBehavior: Clip.none,
             children: [
-              if (!isMe) ...[
-                SizedBox(
-                  width: avatarRadius * 2,
-                  height: avatarRadius * 2,
-                  child: showAvatar
-                      ? _buildAvatar(avatarUrl, message.senderWallet,
-                          radius: avatarRadius)
-                      : const SizedBox.shrink(),
-                ),
-                const SizedBox(width: KubusSpacing.sm),
-              ],
-              bubble,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (!isMe) ...[
+                    SizedBox(
+                      width: avatarRadius * 2,
+                      height: avatarRadius * 2,
+                      child: showAvatar
+                          ? _buildAvatar(avatarUrl, message.senderWallet,
+                              radius: avatarRadius)
+                          : const SizedBox.shrink(),
+                    ),
+                    const SizedBox(width: KubusSpacing.sm),
+                  ],
+                  bubble,
+                ],
+              ),
+              if (reactionBar != null) reactionBar,
             ],
           ),
         ),
@@ -1838,8 +1870,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   Widget _buildMessageMeta(ChatMessage message, bool isMe) {
     final timeColor = isMe
-        ? Theme.of(context).colorScheme.onPrimaryContainer
-        : Theme.of(context).colorScheme.onSurfaceVariant;
+      ? Theme.of(context).colorScheme.onPrimaryContainer
+      : Theme.of(context).colorScheme.onSurfaceVariant;
     final isRead = _hasReceivedRead(message.readers, message.senderWallet);
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -1935,7 +1967,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   Widget _buildMessageContent(ChatMessage message, bool isMe) {
     final scheme = Theme.of(context).colorScheme;
-    final textColor = isMe ? scheme.onPrimary : scheme.onSurface;
+    final textColor = isMe ? scheme.onPrimaryContainer : scheme.onSurface;
     final attachment = message.data?['attachment'] as Map<String, dynamic>?;
     final hasAttachment = attachment != null &&
         ((attachment['url'] ?? attachment['remoteUrl'] ?? '')
@@ -1954,6 +1986,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
             style: TextStyle(
               color: textColor,
               fontSize: 14,
+              height: 1.42,
+              letterSpacing: 0.1,
             ),
             showCursor: true,
             cursorWidth: 2,

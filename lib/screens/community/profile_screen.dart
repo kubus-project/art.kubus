@@ -1,3 +1,4 @@
+import 'package:art_kubus/widgets/community/community_post_card.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../l10n/app_localizations.dart';
@@ -38,6 +39,7 @@ import '../../widgets/avatar_widget.dart';
 import '../../widgets/user_activity_status_line.dart';
 import '../../widgets/topbar_icon.dart';
 import '../../widgets/common/kubus_glass_icon_button.dart';
+import '../../widgets/common/kubus_social_link_chip.dart';
 import '../../widgets/common/kubus_screen_header.dart';
 import '../../widgets/common/kubus_stat_card.dart';
 import '../../widgets/empty_state_card.dart';
@@ -50,7 +52,6 @@ import '../art/collection_detail_screen.dart';
 import '../events/event_detail_screen.dart';
 import '../../widgets/artist_badge.dart';
 import '../../widgets/institution_badge.dart';
-import '../../widgets/community/community_author_role_badges.dart';
 import '../../widgets/email_verification_status_badge.dart';
 import '../../widgets/secure_account_banner_card.dart';
 import '../../widgets/wallet_backup_banner_card.dart';
@@ -334,6 +335,36 @@ class _ProfileScreenState extends State<ProfileScreen>
           final identitySubtitleColor = hasCoverImage
               ? Colors.white.withValues(alpha: 0.82)
               : scheme.onSurface.withValues(alpha: 0.70);
+          final topActionGap = isSmallScreen
+              ? KubusSpacing.xs + KubusSpacing.xxs
+              : KubusSpacing.sm;
+          final topActionHitArea = isSmallScreen
+              ? KubusHeaderMetrics.actionHitArea - KubusSpacing.xs
+              : KubusHeaderMetrics.actionHitArea;
+          final topActionIconSize = isSmallScreen
+              ? KubusHeaderMetrics.actionIcon
+              : KubusHeaderMetrics.actionIcon + 1;
+
+          Widget buildTopActionIcon({
+            required IconData icon,
+            required VoidCallback onPressed,
+            required String tooltip,
+            Color? color,
+          }) {
+            return TopBarIcon(
+              size: topActionHitArea,
+              icon: Icon(
+                icon,
+                color: color ??
+                    (hasCoverImage
+                        ? Colors.white
+                        : Theme.of(context).colorScheme.onSurface),
+                size: topActionIconSize,
+              ),
+              onPressed: onPressed,
+              tooltip: tooltip,
+            );
+          }
 
           return Column(
             children: [
@@ -459,31 +490,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    TopBarIcon(
-                                      icon: Icon(
-                                        Icons.share_outlined,
-                                        color: hasCoverImage
-                                            ? Colors.white
-                                            : Theme.of(context)
-                                                .colorScheme
-                                                .onSurface,
-                                        size: isSmallScreen ? 22 : 24,
-                                      ),
+                                    buildTopActionIcon(
+                                      icon: Icons.share_outlined,
                                       onPressed: () => _shareProfile(),
                                       tooltip: AppLocalizations.of(context)!
                                           .commonShare,
                                     ),
-                                    const SizedBox(width: 8),
-                                    TopBarIcon(
-                                      icon: Icon(
-                                        Icons.inbox_outlined,
-                                        color: hasCoverImage
-                                            ? Colors.white
-                                            : Theme.of(context)
-                                                .colorScheme
-                                                .onSurface,
-                                        size: isSmallScreen ? 22 : 24,
-                                      ),
+                                    SizedBox(width: topActionGap),
+                                    buildTopActionIcon(
+                                      icon: Icons.inbox_outlined,
                                       onPressed: () {
                                         Navigator.push(
                                           context,
@@ -495,18 +510,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                                       tooltip: AppLocalizations.of(context)!
                                           .profileInvitesTooltip,
                                     ),
-                                    const SizedBox(width: 8),
+                                    SizedBox(width: topActionGap),
                                     if (AppConfig.isFeatureEnabled(
                                         'analytics')) ...[
-                                      TopBarIcon(
-                                        icon: Icon(
-                                          Icons.analytics_outlined,
-                                          color: hasCoverImage
-                                              ? Colors.white
-                                              : KubusColorRoles.of(context)
-                                                  .statAmber,
-                                          size: isSmallScreen ? 22 : 24,
-                                        ),
+                                      buildTopActionIcon(
+                                        icon: Icons.analytics_outlined,
                                         onPressed: () {
                                           final wallet = profileProvider
                                                   .currentUser?.walletAddress ??
@@ -534,29 +542,20 @@ class _ProfileScreenState extends State<ProfileScreen>
                                         },
                                         tooltip: AppLocalizations.of(context)!
                                             .navigationScreenAnalytics,
-                                      ),
-                                      const SizedBox(width: 8),
-                                    ],
-                                    TopBarIcon(
-                                      icon: Icon(
-                                        Icons.settings_outlined,
                                         color: hasCoverImage
                                             ? Colors.white
-                                            : Theme.of(context)
-                                                .colorScheme
-                                                .onSurface,
-                                        size: isSmallScreen ? 22 : 24,
+                                            : KubusColorRoles.of(context)
+                                                .statAmber,
                                       ),
+                                      SizedBox(width: topActionGap),
+                                    ],
+                                    buildTopActionIcon(
+                                      icon: Icons.edit_outlined,
                                       onPressed: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                              builder: (context) =>
-                                                  const SettingsScreen()),
-                                        );
+                                        _editProfile();
                                       },
                                       tooltip: AppLocalizations.of(context)!
-                                          .navigationScreenSettings,
+                                          .settingsEditProfileTileTitle,
                                     ),
                                   ],
                                 ),
@@ -741,23 +740,44 @@ class _ProfileScreenState extends State<ProfileScreen>
                     SizedBox(height: isSmallScreen ? 12 : 16),
                     if (profileProvider.currentUser?.bio != null &&
                         profileProvider.currentUser!.bio.isNotEmpty)
-                      Text(
-                        profileProvider.currentUser!.bio,
-                        textAlign: TextAlign.center,
-                        style: KubusTypography.inter(
-                          fontSize: isVerySmallScreen
-                              ? 14
-                              : isSmallScreen
-                                  ? 15
-                                  : 16,
-                          height: 1.5,
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 12 : 14,
+                          vertical: isSmallScreen ? 10 : 12,
+                        ),
+                        decoration: BoxDecoration(
                           color: Theme.of(context)
                               .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.8),
+                              .surfaceContainerHighest
+                              .withValues(alpha: 0.24),
+                          borderRadius: BorderRadius.circular(KubusRadius.md),
+                          border: Border.all(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .outline
+                                .withValues(alpha: 0.12),
+                            width: KubusSizes.hairline,
+                          ),
                         ),
-                        maxLines: isSmallScreen ? 3 : 4,
-                        overflow: TextOverflow.ellipsis,
+                        child: Text(
+                          profileProvider.currentUser!.bio,
+                          textAlign: TextAlign.center,
+                          style: KubusTypography.inter(
+                            fontSize: isVerySmallScreen
+                                ? 14
+                                : isSmallScreen
+                                    ? 15
+                                    : 16,
+                            height: 1.5,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.82),
+                          ),
+                          maxLines: isSmallScreen ? 3 : 4,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       )
                     else
                       Center(
@@ -774,48 +794,44 @@ class _ProfileScreenState extends State<ProfileScreen>
                         ),
                       ),
                     const SizedBox(height: 12),
-                    ProfileArtistInfoFields(
-                      fieldOfWork:
-                          profileProvider.currentUser?.artistInfo?.specialty ??
-                              const <String>[],
-                      yearsActive: profileProvider
-                              .currentUser?.artistInfo?.yearsActive ??
-                          0,
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: KubusSpacing.sm,
+                        vertical: KubusSpacing.sm,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest
+                            .withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(KubusRadius.md),
+                        border: Border.all(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .outline
+                              .withValues(alpha: 0.1),
+                          width: KubusSizes.hairline,
+                        ),
+                      ),
+                      child: ProfileArtistInfoFields(
+                        fieldOfWork: profileProvider
+                                .currentUser?.artistInfo?.specialty ??
+                            const <String>[],
+                        yearsActive: profileProvider
+                                .currentUser?.artistInfo?.yearsActive ??
+                            0,
+                      ),
                     ),
+                    if (profileProvider.currentUser?.social.isNotEmpty ==
+                        true) ...[
+                      const SizedBox(height: KubusSpacing.sm),
+                      _buildSocialLinks(profileProvider.currentUser!.social),
+                    ],
                     SizedBox(height: isSmallScreen ? 20 : 24),
                     isSmallScreen
                         ? Column(
                             children: [
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    _editProfile();
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: themeProvider.accentColor,
-                                    foregroundColor: Colors.white,
-                                    padding: EdgeInsets.symmetric(
-                                        vertical: isVerySmallScreen ? 14 : 16),
-                                    elevation: 2,
-                                    shadowColor: themeProvider.accentColor
-                                        .withValues(alpha: 0.3),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(KubusRadius.md),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    AppLocalizations.of(context)!
-                                        .settingsEditProfileTileTitle,
-                                    style: KubusTypography.inter(
-                                      fontSize: isVerySmallScreen ? 14 : 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
                               Container(
                                 width: double.infinity,
                                 decoration: BoxDecoration(
@@ -847,57 +863,36 @@ class _ProfileScreenState extends State<ProfileScreen>
                               ),
                             ],
                           )
-                        : Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    _editProfile();
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: themeProvider.accentColor,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 16),
-                                    elevation: 2,
-                                    shadowColor: themeProvider.accentColor
-                                        .withValues(alpha: 0.3),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(KubusRadius.md),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    AppLocalizations.of(context)!
-                                        .settingsEditProfileTileTitle,
-                                    style: KubusTypography.inter(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
+                        : Container(
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: themeProvider.accentColor,
+                                width: 1.5,
+                              ),
+                              borderRadius:
+                                  BorderRadius.circular(KubusRadius.md),
+                            ),
+                            child: TextButton.icon(
+                              onPressed: _showMoreOptions,
+                              icon: Icon(
+                                Icons.more_horiz,
+                                color: themeProvider.accentColor,
+                              ),
+                              label: Text(
+                                AppLocalizations.of(context)!
+                                    .profileMoreOptionsTitle,
+                                style: KubusTypography.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: themeProvider.accentColor,
                                 ),
                               ),
-                              const SizedBox(width: 16),
-                              Container(
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: themeProvider.accentColor,
-                                    width: 1.5,
-                                  ),
-                                  borderRadius:
-                                      BorderRadius.circular(KubusRadius.md),
-                                ),
-                                child: IconButton(
-                                  onPressed: () {
-                                    _showMoreOptions();
-                                  },
-                                  icon: Icon(
-                                    Icons.more_horiz,
-                                    color: themeProvider.accentColor,
-                                  ),
-                                ),
+                              style: TextButton.styleFrom(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
                               ),
-                            ],
+                            ),
                           ),
                   ],
                 ),
@@ -1317,161 +1312,16 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildPostCard(CommunityPost post) {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-    return GestureDetector(
-      onTap: () {
+    return CommunityPostCard(
+      post: post,
+      accentColor: themeProvider.accentColor,
+      onOpenPostDetail: (target) {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => PostDetailScreen(post: post)),
+          MaterialPageRoute(
+              builder: (context) => PostDetailScreen(post: target)),
         );
       },
-      child: LiquidGlassCard(
-        padding: const EdgeInsets.all(KubusSpacing.md),
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                AvatarWidget(
-                  wallet: post.authorId,
-                  avatarUrl: post.authorAvatar,
-                  radius: 18,
-                  enableProfileNavigation: false,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            fit: FlexFit.loose,
-                            child: Text(
-                              post.authorName,
-                              style: KubusTypography.inter(
-                                fontWeight: FontWeight.w600,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          CommunityAuthorRoleBadges(
-                            post: post,
-                            fontSize: 8,
-                            iconOnly: true,
-                            spacing: 6,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        _formatRelativeTime(post.timestamp),
-                        style: KubusTypography.inter(
-                          fontSize: 12,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.6),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              post.content,
-              style: KubusTypography.inter(
-                fontSize: 14,
-                height: 1.4,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            if (post.imageUrl != null && post.imageUrl!.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(KubusRadius.md),
-                child: Image.network(
-                  MediaUrlResolver.resolveDisplayUrl(post.imageUrl) ??
-                      post.imageUrl!,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    final scheme = Theme.of(context).colorScheme;
-                    return DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            scheme.primaryContainer.withValues(alpha: 0.26),
-                            scheme.surfaceContainerHigh.withValues(alpha: 0.18),
-                          ],
-                        ),
-                      ),
-                      child: Center(
-                        child: Icon(
-                          Icons.image_not_supported_outlined,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(
-                  post.isLiked ? Icons.favorite : Icons.favorite_border,
-                  size: 18,
-                  color: post.isLiked
-                      ? themeProvider.accentColor
-                      : Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  post.likeCount.toString(),
-                  style: KubusTypography.inter(
-                    fontSize: 13,
-                    color: post.isLiked
-                        ? themeProvider.accentColor
-                        : Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.6),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Icon(
-                  Icons.comment_outlined,
-                  size: 18,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.6),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  post.commentCount.toString(),
-                  style: KubusTypography.inter(
-                    fontSize: 13,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -1805,23 +1655,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
   }
 
-  String _formatRelativeTime(DateTime timestamp) {
-    final l10n = AppLocalizations.of(context)!;
-    final now = DateTime.now();
-    final difference = now.difference(timestamp);
-
-    if (difference.inDays >= 7) {
-      return l10n.commonWeeksAgo((difference.inDays / 7).floor());
-    } else if (difference.inDays > 0) {
-      return l10n.commonDaysAgo(difference.inDays);
-    } else if (difference.inHours > 0) {
-      return l10n.commonHoursAgo(difference.inHours);
-    } else if (difference.inMinutes > 0) {
-      return l10n.commonMinutesAgo(difference.inMinutes);
-    }
-    return l10n.commonTimeAgoJustNow;
-  }
-
   String _formatCount(num value) {
     final locale = Localizations.localeOf(context).toLanguageTag();
     return NumberFormat.compact(locale: locale).format(value);
@@ -1932,8 +1765,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 value: progressLabel,
                                 icon: AchievementUi.iconFor(achievement),
                                 layout: KubusStatCardLayout.centered,
-                                accent:
-                                  AchievementUi.accentFor(context, achievement),
+                                accent: AchievementUi.accentFor(
+                                    context, achievement),
                                 centeredWatermarkAlignment: Alignment.center,
                                 centeredWatermarkScale: 0.84,
                                 minHeight: 96,
@@ -2334,6 +2167,17 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
               child: Column(
                 children: [
+                  _buildOptionItem(Icons.settings,
+                      AppLocalizations.of(context)!.navigationScreenSettings,
+                      () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SettingsScreen(),
+                      ),
+                    );
+                  }),
                   _buildOptionItem(Icons.bookmark,
                       AppLocalizations.of(context)!.profileMenuSavedItemsTitle,
                       () {
@@ -2601,6 +2445,75 @@ class _ProfileScreenState extends State<ProfileScreen>
         ),
       ],
     );
+  }
+
+  Widget _buildSocialLinks(Map<String, String> social) {
+    final links = <Widget>[];
+
+    if (social['twitter']?.isNotEmpty == true) {
+      final handle = social['twitter']!.trim().replaceFirst('@', '');
+      links.add(
+        KubusSocialLinkChip(
+          icon: Icons.alternate_email,
+          label: '@$handle',
+          color: const Color(0xFF1DA1F2),
+          onTap: () => _openSocialUrl('https://x.com/$handle'),
+        ),
+      );
+    }
+
+    if (social['instagram']?.isNotEmpty == true) {
+      final handle = social['instagram']!.trim().replaceFirst('@', '');
+      links.add(
+        KubusSocialLinkChip(
+          icon: Icons.camera_alt_outlined,
+          label: '@$handle',
+          color: const Color(0xFFE4405F),
+          onTap: () => _openSocialUrl('https://instagram.com/$handle'),
+        ),
+      );
+    }
+
+    if (social['website']?.isNotEmpty == true) {
+      final rawWebsite = social['website']!.trim();
+      final hasScheme =
+          rawWebsite.startsWith('http://') || rawWebsite.startsWith('https://');
+      final url = hasScheme ? rawWebsite : 'https://$rawWebsite';
+      final displayUrl = rawWebsite
+          .replaceAll(RegExp(r'^https?://'), '')
+          .replaceAll(RegExp(r'/$'), '');
+      links.add(
+        KubusSocialLinkChip(
+          icon: Icons.language,
+          label: displayUrl,
+          color: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+          onTap: () => _openSocialUrl(url),
+        ),
+      );
+    }
+
+    if (links.isEmpty) return const SizedBox.shrink();
+
+    return Wrap(
+      spacing: KubusSpacing.sm + KubusSpacing.xxs,
+      runSpacing: KubusSpacing.xs + KubusSpacing.xxs,
+      alignment: WrapAlignment.center,
+      children: links,
+    );
+  }
+
+  Future<void> _openSocialUrl(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.commonActionFailedToast),
+        ),
+      );
+    }
   }
 
   void _showReportBugDialog() {

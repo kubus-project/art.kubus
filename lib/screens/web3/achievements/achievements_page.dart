@@ -1,11 +1,14 @@
 import 'package:art_kubus/config/config.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/achievement_progress.dart';
 import 'package:art_kubus/providers/task_provider.dart';
 import 'package:art_kubus/services/achievement_service.dart' as achievement_svc;
 import 'package:art_kubus/utils/achievement_ui.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
-import 'package:art_kubus/widgets/inline_loading.dart';
+import 'package:art_kubus/widgets/common/kubus_stat_card.dart';
+import 'package:art_kubus/widgets/detail/shared_section_widgets.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -46,6 +49,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final taskProvider = context.watch<TaskProvider>();
     final progressById = <String, AchievementProgress>{
       for (final progress in taskProvider.achievementProgress)
@@ -54,7 +58,44 @@ class _AchievementsPageState extends State<AchievementsPage> {
 
     final achievements = achievement_svc
         .AchievementService.achievementDefinitions.values
-        .toList();
+        .toList(growable: false);
+
+    final completedCount = achievements.where((achievement) {
+      final progress = progressById[achievement.id];
+      if (progress == null) return false;
+      final required =
+          achievement.requiredCount > 0 ? achievement.requiredCount : 1;
+      return progress.isCompleted || progress.currentProgress >= required;
+    }).length;
+
+    int maxProgressForTypes(Set<achievement_svc.AchievementType> types) {
+      var maxProgress = 0;
+      for (final achievement in achievements) {
+        if (!types.contains(achievement.type)) continue;
+        final progress = progressById[achievement.id]?.currentProgress ?? 0;
+        if (progress > maxProgress) {
+          maxProgress = progress;
+        }
+      }
+      return maxProgress;
+    }
+
+    final discoveryCount = maxProgressForTypes({
+      achievement_svc.AchievementType.firstDiscovery,
+      achievement_svc.AchievementType.artExplorer,
+      achievement_svc.AchievementType.artMaster,
+      achievement_svc.AchievementType.artLegend,
+    });
+    final arViews = maxProgressForTypes({
+      achievement_svc.AchievementType.firstARView,
+      achievement_svc.AchievementType.arEnthusiast,
+      achievement_svc.AchievementType.arPro,
+    });
+    final eventCount = maxProgressForTypes({
+      achievement_svc.AchievementType.eventAttendee,
+      achievement_svc.AchievementType.galleryVisitor,
+      achievement_svc.AchievementType.workshopParticipant,
+    });
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -64,285 +105,236 @@ class _AchievementsPageState extends State<AchievementsPage> {
         surfaceTintColor: Colors.transparent,
         scrolledUnderElevation: 0,
         title: Text(
-          'Achievements & POAPs',
+          l10n.userProfileAchievementsTitle,
           style: KubusTextStyles.mobileAppBarTitle.copyWith(
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ),
-      body: Column(
-        children: [
-          _buildStatsHeader(achievements, progressById),
-          Expanded(
-            child: _buildAchievementsList(achievements, progressById),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatsHeader(
-    List<achievement_svc.AchievementDefinition> achievements,
-    Map<String, AchievementProgress> progressById,
-  ) {
-    final completedCount = achievements.where((achievement) {
-      final progress = progressById[achievement.id];
-      final required =
-          achievement.requiredCount > 0 ? achievement.requiredCount : 1;
-      final ratio =
-          ((progress?.currentProgress ?? 0) / required).clamp(0.0, 1.0);
-      return (progress?.isCompleted ?? false) || ratio >= 1.0;
-    }).length;
-    final completionPercentage = achievements.isEmpty
-        ? 0.0
-        : (completedCount / achievements.length * 100);
-
-    final roles = KubusColorRoles.of(context);
-    final scheme = Theme.of(context).colorScheme;
-    final accentPrimary = roles.achievementGold;
-    final accentSecondary =
-        Color.lerp(accentPrimary, scheme.primary, 0.25) ?? scheme.primary;
-
-    return Container(
-      margin: const EdgeInsets.all(KubusSpacing.lg),
-      padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [accentPrimary, accentSecondary],
-        ),
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: scheme.surface.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: Icon(
-                  Icons.emoji_events,
-                  color: scheme.onPrimary,
-                  size: 30,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Your Achievements',
-                      style: KubusTextStyles.heroTitle
-                          .copyWith(color: scheme.onPrimary),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Collect POAPs and unlock KUB8 rewards',
-                      style: KubusTextStyles.heroSubtitle.copyWith(
-                        color: scheme.onPrimary.withValues(alpha: 0.85),
+      body: RefreshIndicator(
+        onRefresh: _loadTokenBalance,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1680),
+            child: ListView(
+              padding: const EdgeInsets.all(KubusSpacing.lg),
+              children: [
+                LiquidGlassCard(
+                  padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
+                  borderRadius: BorderRadius.circular(KubusRadius.lg),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SharedSectionHeader(
+                        title: l10n.userProfileAchievementsTitle,
+                        subtitle: l10n.userProfileAchievementsProgressLabel(
+                          completedCount,
+                          achievements.length,
+                        ),
+                        icon: Icons.emoji_events_outlined,
+                        iconColor: KubusColorRoles.of(context).achievementGold,
+                        padding: EdgeInsets.zero,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: KubusSpacing.md),
+                      _buildStatsHeader(
+                        l10n: l10n,
+                        discoveryCount: discoveryCount,
+                        arViews: arViews,
+                        eventCount: eventCount,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: KubusSpacing.xl),
+                _buildAchievementsList(
+                  l10n: l10n,
+                  achievements: achievements,
+                  progressById: progressById,
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildHeaderStat(
-                  label: 'Completed',
-                  value: '$completedCount/${achievements.length}',
-                ),
-              ),
-              Expanded(
-                child: _buildHeaderStat(
-                  label: 'KUB8',
-                  value: _isLoadingTokens ? '…' : '$_totalTokens',
-                ),
-              ),
-              Expanded(
-                child: _buildHeaderStat(
-                  label: 'Progress',
-                  value: '${completionPercentage.toInt()}%',
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildHeaderStat({
-    required String label,
-    required String value,
+  Widget _buildStatsHeader({
+    required AppLocalizations l10n,
+    required int discoveryCount,
+    required int arViews,
+    required int eventCount,
   }) {
-    final scheme = Theme.of(context).colorScheme;
-    return Column(
-      children: [
-        Text(
-          value,
-          style: KubusTextStyles.statValue.copyWith(color: scheme.onPrimary),
-        ),
-        Text(
-          label,
-          style: KubusTextStyles.statLabel.copyWith(
-            color: scheme.onPrimary.withValues(alpha: 0.85),
-          ),
-        ),
-      ],
-    );
-  }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardWidth = constraints.maxWidth >= 900
+            ? (constraints.maxWidth - (KubusSpacing.md * 3)) / 4
+            : (constraints.maxWidth - KubusSpacing.md) / 2;
 
-  Widget _buildAchievementsList(
-    List<achievement_svc.AchievementDefinition> achievements,
-    Map<String, AchievementProgress> progressById,
-  ) {
-    return GridView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: 0.85,
-      ),
-      itemCount: achievements.length,
-      itemBuilder: (context, index) {
-        final achievement = achievements[index];
-        final progress = progressById[achievement.id] ??
-            AchievementProgress(
-              achievementId: achievement.id,
-              currentProgress: 0,
-              isCompleted: false,
-            );
-        return _buildAchievementCard(achievement, progress);
+        return Wrap(
+          spacing: KubusSpacing.md,
+          runSpacing: KubusSpacing.md,
+          children: [
+            SizedBox(
+              width: cardWidth,
+              child: KubusStatCard(
+                title: l10n.desktopSettingsAchievementsStatArtworksDiscovered,
+                value: discoveryCount.toString(),
+                icon: Icons.explore_outlined,
+                layout: KubusStatCardLayout.centered,
+                accent: KubusColorRoles.of(context).statBlue,
+                centeredWatermarkAlignment: Alignment.center,
+                centeredWatermarkScale: 0.84,
+                minHeight: 0,
+              ),
+            ),
+            SizedBox(
+              width: cardWidth,
+              child: KubusStatCard(
+                title: l10n.desktopSettingsAchievementsStatArViews,
+                value: arViews.toString(),
+                icon: Icons.view_in_ar,
+                layout: KubusStatCardLayout.centered,
+                accent: KubusColorRoles.of(context).statTeal,
+                centeredWatermarkAlignment: Alignment.center,
+                centeredWatermarkScale: 0.84,
+                minHeight: 0,
+              ),
+            ),
+            SizedBox(
+              width: cardWidth,
+              child: KubusStatCard(
+                title: l10n.desktopSettingsAchievementsStatEventsAttended,
+                value: eventCount.toString(),
+                icon: Icons.event_available,
+                layout: KubusStatCardLayout.centered,
+                accent: KubusColorRoles.of(context).web3InstitutionAccent,
+                centeredWatermarkAlignment: Alignment.center,
+                centeredWatermarkScale: 0.84,
+                minHeight: 0,
+              ),
+            ),
+            SizedBox(
+              width: cardWidth,
+              child: KubusStatCard(
+                title: l10n.desktopSettingsAchievementsStatKub8PointsEarned,
+                value: _isLoadingTokens ? '…' : _totalTokens.toString(),
+                icon: Icons.token,
+                layout: KubusStatCardLayout.centered,
+                accent: KubusColorRoles.of(context).web3MarketplaceAccent,
+                centeredWatermarkAlignment: Alignment.center,
+                centeredWatermarkScale: 0.84,
+                minHeight: 0,
+              ),
+            ),
+          ],
+        );
       },
     );
   }
 
-  Widget _buildAchievementCard(
-    achievement_svc.AchievementDefinition achievement,
-    AchievementProgress progress,
-  ) {
+  Widget _buildAchievementsList({
+    required AppLocalizations l10n,
+    required List<achievement_svc.AchievementDefinition> achievements,
+    required Map<String, AchievementProgress> progressById,
+  }) {
+    if (achievements.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+      final crossAxisCount = width >= 1780
+        ? 6
+        : width >= 1480
+          ? 5
+          : width >= 1160
+            ? 4
+            : width >= 860
+              ? 3
+              : width >= 520
+                ? 2
+                : 1;
+      final crossSpacing =
+        width >= 1480 ? KubusSpacing.lg : KubusSpacing.md;
+      final mainSpacing =
+        width >= 1480 ? KubusSpacing.lg : KubusSpacing.md;
+      final cardWidth =
+        (width - (crossSpacing * (crossAxisCount - 1))) / crossAxisCount;
+      final childAspectRatio = crossAxisCount == 1
+        ? 2.45
+        : (cardWidth >= 280 ? 1.12 : 1.22);
+
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+        crossAxisSpacing: crossSpacing,
+        mainAxisSpacing: mainSpacing,
+        childAspectRatio: childAspectRatio,
+          ),
+          itemCount: achievements.length,
+          itemBuilder: (context, index) {
+            final achievement = achievements[index];
+            final progress = progressById[achievement.id] ??
+                AchievementProgress(
+                  achievementId: achievement.id,
+                  currentProgress: 0,
+                  isCompleted: false,
+                );
+            return _buildAchievementCard(
+              achievement: achievement,
+              progress: progress,
+              cardWidth: cardWidth,
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildAchievementCard({
+    required achievement_svc.AchievementDefinition achievement,
+    required AchievementProgress progress,
+    required double cardWidth,
+  }) {
     final required =
         achievement.requiredCount > 0 ? achievement.requiredCount : 1;
-    final progressPercent =
-        (progress.currentProgress / required).clamp(0.0, 1.0);
-    final isUnlocked = progress.isCompleted || progressPercent >= 1.0;
-    final scheme = Theme.of(context).colorScheme;
+    final isUnlocked = progress.isCompleted || progress.currentProgress >= required;
+    final progressLabel = isUnlocked
+        ? '+${achievement.tokenReward} KUB8'
+        : '${progress.currentProgress}/$required';
     final accent = AchievementUi.accentFor(context, achievement);
+    final roomyCard = cardWidth >= 280;
+    final compactCard = cardWidth < 220;
 
-    return Container(
-      padding: const EdgeInsets.all(KubusSpacing.md),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
-        border: Border.all(color: isUnlocked ? accent : scheme.outline),
+    return KubusStatCard(
+      title: achievement.title,
+      value: progressLabel,
+      icon: AchievementUi.iconFor(achievement),
+      layout: KubusStatCardLayout.centered,
+      accent: accent,
+      centeredWatermarkAlignment: Alignment.center,
+      centeredWatermarkScale: compactCard ? 0.80 : 0.84,
+      minHeight: 0,
+      padding: EdgeInsets.all(
+        roomyCard ? KubusChromeMetrics.cardPadding : KubusSpacing.md,
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: isUnlocked
-                  ? accent.withValues(alpha: 0.12)
-                  : scheme.surfaceContainerHighest.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(30),
-            ),
-            child: Icon(
-              AchievementUi.iconFor(achievement),
-              color:
-                  isUnlocked ? accent : scheme.onSurface.withValues(alpha: 0.4),
-              size: 30,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Flexible(
-            child: Text(
-              achievement.title,
-              style: KubusTextStyles.sectionTitle.copyWith(
-                color: scheme.onSurface,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Flexible(
-            child: Text(
-              achievement.description,
-              style: KubusTextStyles.sectionSubtitle.copyWith(
-                color:
-                    scheme.onSurface.withValues(alpha: isUnlocked ? 0.8 : 0.6),
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(height: 8),
-          if (!isUnlocked && required > 1) ...[
-            Text(
-              '${progress.currentProgress}/$required',
-              style: KubusTextStyles.compactBadge.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.6),
-              ),
-            ),
-            const SizedBox(height: 4),
-            SizedBox(
-              height: 6,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: InlineLoading(
-                  progress: progressPercent,
-                  tileSize: 6.0,
-                  color: accent,
-                  duration: const Duration(milliseconds: 700),
-                ),
-              ),
-            ),
-          ],
-          if (isUnlocked) ...[
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(KubusRadius.md),
-              ),
-              child: Text(
-                achievement.isPOAP ? 'POAP' : 'UNLOCKED',
-                style: KubusTextStyles.compactBadge.copyWith(
-                  color: accent,
-                ),
-              ),
-            ),
-          ],
-          const SizedBox(height: 6),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.monetization_on, size: 12, color: accent),
-              const SizedBox(width: 2),
-              Text(
-                '${achievement.tokenReward}',
-                style: KubusTextStyles.compactBadge.copyWith(color: accent),
-              ),
-            ],
-          ),
-        ],
+      titleMaxLines: roomyCard ? 3 : 2,
+      titleStyle: KubusTextStyles.detailCaption.copyWith(
+        fontWeight: FontWeight.w600,
+        fontSize: roomyCard ? 13 : 12,
+        color: Theme.of(context)
+            .colorScheme
+            .onSurface
+            .withValues(alpha: isUnlocked ? 0.84 : 0.7),
+      ),
+      valueStyle: KubusTextStyles.detailCardTitle.copyWith(
+        color: Theme.of(context).colorScheme.onSurface,
+        fontSize: roomyCard ? 15 : 14,
+        fontWeight: FontWeight.w700,
       ),
     );
   }

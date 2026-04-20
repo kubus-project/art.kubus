@@ -129,46 +129,54 @@ class UserProfileNavigation {
           ),
           child: ColoredBox(
             color: scheme.scrim.withValues(alpha: 0.32),
-            child: SafeArea(
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(KubusSpacing.lg),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      minWidth: 520,
-                      maxWidth: 980,
-                      maxHeight: 900,
-                    ),
-                    child: Material(
-                      color: scheme.surface.withValues(
-                        alpha: isDark ? 0.78 : 0.92,
-                      ),
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: scheme.surface.withValues(
-                            alpha: isDark ? 0.82 : 0.94,
-                          ),
-                          borderRadius: radius,
-                          border: Border.all(
-                            color: scheme.outline.withValues(alpha: 0.14),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: scheme.shadow.withValues(alpha: 0.24),
-                              blurRadius: 32,
-                              offset: const Offset(0, 18),
-                            ),
-                          ],
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => Navigator.of(dialogContext).maybePop(),
+              child: SafeArea(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(KubusSpacing.lg),
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.deferToChild,
+                      onTap: () {},
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          minWidth: 520,
+                          maxWidth: 980,
+                          maxHeight: 900,
                         ),
-                        child: ClipRRect(
-                          borderRadius: radius,
-                          child: DesktopProfilePresentationScope(
-                            presentation:
-                                DesktopProfilePresentation.communityOverlay,
-                            child: desktop.UserProfileScreen(
-                              userId: userId,
-                              username: username,
-                              heroTag: heroTag,
+                        child: Material(
+                          color: scheme.surface.withValues(
+                            alpha: isDark ? 0.78 : 0.92,
+                          ),
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: scheme.surface.withValues(
+                                alpha: isDark ? 0.82 : 0.94,
+                              ),
+                              borderRadius: radius,
+                              border: Border.all(
+                                color: scheme.outline.withValues(alpha: 0.14),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: scheme.shadow.withValues(alpha: 0.24),
+                                  blurRadius: 32,
+                                  offset: const Offset(0, 18),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: radius,
+                              child: DesktopProfilePresentationScope(
+                                presentation:
+                                    DesktopProfilePresentation.communityOverlay,
+                                child: desktop.UserProfileScreen(
+                                  userId: userId,
+                                  username: username,
+                                  heroTag: heroTag,
+                                ),
+                              ),
                             ),
                           ),
                         ),

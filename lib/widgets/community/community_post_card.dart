@@ -28,12 +28,12 @@ class CommunityPostCard extends StatelessWidget {
     required this.post,
     required this.accentColor,
     required this.onOpenPostDetail,
-    required this.onOpenAuthorProfile,
-    required this.onToggleLike,
-    required this.onOpenComments,
-    required this.onRepost,
-    required this.onShare,
-    required this.onToggleBookmark,
+    this.onOpenAuthorProfile,
+    this.onToggleLike,
+    this.onOpenComments,
+    this.onRepost,
+    this.onShare,
+    this.onToggleBookmark,
     this.onMoreOptions,
     this.onShowLikes,
     this.onShowReposts,
@@ -50,13 +50,13 @@ class CommunityPostCard extends StatelessWidget {
   final Color accentColor;
 
   final ValueChanged<CommunityPost> onOpenPostDetail;
-  final VoidCallback onOpenAuthorProfile;
+  final VoidCallback? onOpenAuthorProfile;
 
-  final VoidCallback onToggleLike;
-  final VoidCallback onOpenComments;
-  final VoidCallback onRepost;
-  final VoidCallback onShare;
-  final VoidCallback onToggleBookmark;
+  final VoidCallback? onToggleLike;
+  final VoidCallback? onOpenComments;
+  final VoidCallback? onRepost;
+  final VoidCallback? onShare;
+  final VoidCallback? onToggleBookmark;
 
   final VoidCallback? onMoreOptions;
 

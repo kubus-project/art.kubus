@@ -50,7 +50,10 @@ import '../../../utils/kubus_color_roles.dart';
 import '../../activity/advanced_analytics_screen.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import '../../../widgets/common/kubus_stat_card.dart';
-import '../../../widgets/community/community_author_role_badges.dart';
+import '../../../widgets/common/kubus_glass_icon_button.dart';
+import '../../../widgets/common/kubus_social_link_chip.dart';
+import '../../../widgets/community/community_post_card.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Desktop profile screen with clean card-based layout
 /// Features: Profile header, stats cards, achievements, posts feed
@@ -310,6 +313,8 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildHeader({required bool showNavigationChrome}) {
     final l10n = AppLocalizations.of(context)!;
+    final inDesktopShell = DesktopShellScope.of(context) != null;
+    final canShowBackButton = Navigator.of(context).canPop() && !inDesktopShell;
 
     Widget buildActions() {
       return Row(
@@ -396,7 +401,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       children: [
         Row(
           children: [
-            if (Navigator.of(context).canPop())
+            if (canShowBackButton)
               IconButton(
                 onPressed: () => Navigator.of(context).pop(),
                 icon: Icon(
@@ -405,8 +410,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
                 tooltip: l10n.commonBack,
               ),
-            if (Navigator.of(context).canPop())
-              const SizedBox(width: DetailSpacing.sm),
+            if (canShowBackButton) const SizedBox(width: DetailSpacing.sm),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -620,6 +624,21 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
               ),
               Positioned(
+                top: KubusSpacing.md,
+                right: KubusSpacing.md,
+                child: KubusGlassIconButton(
+                  icon: Icons.edit_outlined,
+                  tooltip: AppLocalizations.of(context)!
+                      .settingsEditProfileTileTitle,
+                  size: KubusHeaderMetrics.actionHitArea,
+                  borderRadius: KubusRadius.md,
+                  iconColor: hasCoverImage ? Colors.white : scheme.onSurface,
+                  tooltipPreferBelow: true,
+                  tooltipVerticalOffset: KubusSpacing.sm,
+                  onPressed: _editProfile,
+                ),
+              ),
+              Positioned(
                 left: KubusSpacing.lg,
                 right: KubusSpacing.lg,
                 bottom: KubusSpacing.lg,
@@ -761,36 +780,58 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ],
                 if (user?.bio.isNotEmpty == true) ...[
                   const SizedBox(height: KubusSpacing.md),
-                  Text(
-                    user!.bio,
-                    style: KubusTextStyles.detailBody.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.78),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: KubusSpacing.md,
+                      vertical: KubusSpacing.sm,
                     ),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
+                    decoration: BoxDecoration(
+                      color:
+                          scheme.surfaceContainerHighest.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(KubusRadius.md),
+                      border: Border.all(
+                        color: scheme.outline.withValues(alpha: 0.1),
+                        width: KubusSizes.hairline,
+                      ),
+                    ),
+                    child: Text(
+                      user!.bio,
+                      style: KubusTextStyles.detailBody.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.78),
+                      ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
                 const SizedBox(height: KubusSpacing.md),
-                ProfileArtistInfoFields(
-                  fieldOfWork: user?.artistInfo?.specialty ?? const <String>[],
-                  yearsActive: user?.artistInfo?.yearsActive ?? 0,
-                  textAlign: TextAlign.left,
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: KubusSpacing.sm,
+                    vertical: KubusSpacing.sm,
+                  ),
+                  decoration: BoxDecoration(
+                    color:
+                        scheme.surfaceContainerHighest.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(KubusRadius.md),
+                    border: Border.all(
+                      color: scheme.outline.withValues(alpha: 0.08),
+                      width: KubusSizes.hairline,
+                    ),
+                  ),
+                  child: ProfileArtistInfoFields(
+                    fieldOfWork:
+                        user?.artistInfo?.specialty ?? const <String>[],
+                    yearsActive: user?.artistInfo?.yearsActive ?? 0,
+                    textAlign: TextAlign.left,
+                  ),
                 ),
                 if (user?.social.isNotEmpty == true) ...[
                   const SizedBox(height: KubusSpacing.md),
                   _buildSocialLinks(user!.social, themeProvider),
                 ],
-                const SizedBox(height: KubusSpacing.lg),
-                SizedBox(
-                  width: 260,
-                  child: DesktopActionButton(
-                    label: AppLocalizations.of(context)!
-                        .settingsEditProfileTileTitle,
-                    icon: Icons.edit_outlined,
-                    onPressed: _editProfile,
-                    isPrimary: true,
-                  ),
-                ),
               ],
             ),
           ),
@@ -1918,138 +1959,12 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildPostCard(CommunityPost post, ThemeProvider themeProvider) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: DesktopCard(
-        enableHover: true,
-        onTap: () {
-          _openDesktopShellAwareScreen(PostDetailScreen(post: post));
-        },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                AvatarWidget(
-                  wallet: post.authorId,
-                  avatarUrl: post.authorAvatar,
-                  radius: 20,
-                  enableProfileNavigation: false,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            fit: FlexFit.loose,
-                            child: Text(
-                              post.authorName,
-                              style: KubusTypography.inter(
-                                fontWeight: FontWeight.w600,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          CommunityAuthorRoleBadges(
-                            post: post,
-                            fontSize: 9,
-                            iconOnly: true,
-                            spacing: 8,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _formatRelativeTime(post.timestamp),
-                        style: KubusTypography.inter(
-                          fontSize: 12,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.5),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              post.content,
-              style: KubusTypography.inter(
-                fontSize: 14,
-                height: 1.5,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            if (post.imageUrl != null && post.imageUrl!.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(KubusRadius.md),
-                child: Image.network(
-                  MediaUrlResolver.resolveDisplayUrl(post.imageUrl) ??
-                      post.imageUrl!,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                ),
-              ),
-            ],
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Icon(
-                  post.isLiked ? Icons.favorite : Icons.favorite_border,
-                  size: 20,
-                  color: post.isLiked
-                      ? themeProvider.accentColor
-                      : Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  post.likeCount.toString(),
-                  style: KubusTypography.inter(
-                    fontSize: 14,
-                    color: post.isLiked
-                        ? themeProvider.accentColor
-                        : Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.6),
-                  ),
-                ),
-                const SizedBox(width: 24),
-                Icon(
-                  Icons.comment_outlined,
-                  size: 20,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.6),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  post.commentCount.toString(),
-                  style: KubusTypography.inter(
-                    fontSize: 14,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+    return CommunityPostCard(
+      post: post,
+      accentColor: themeProvider.accentColor,
+      onOpenPostDetail: (target) {
+        _openDesktopShellAwareScreen(PostDetailScreen(post: target));
+      },
     );
   }
 
@@ -2268,18 +2183,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     return MediaUrlResolver.resolve(url);
   }
 
-  String _formatRelativeTime(DateTime timestamp) {
-    final now = DateTime.now();
-    final difference = now.difference(timestamp);
-    if (difference.inDays >= 7) {
-      return '${(difference.inDays / 7).floor()}w ago';
-    }
-    if (difference.inDays > 0) return '${difference.inDays}d ago';
-    if (difference.inHours > 0) return '${difference.inHours}h ago';
-    if (difference.inMinutes > 0) return '${difference.inMinutes}m ago';
-    return 'Just now';
-  }
-
   String _formatStatCount(int count) {
     if (count >= 1000000) return '${(count / 1000000).toStringAsFixed(1)}M';
     if (count >= 1000) return '${(count / 1000).toStringAsFixed(1)}K';
@@ -2320,29 +2223,37 @@ class _ProfileScreenState extends State<ProfileScreen>
     final links = <Widget>[];
 
     if (social['twitter']?.isNotEmpty == true) {
-      links.add(_buildSocialChip(
+      final handle = social['twitter']!.trim().replaceFirst('@', '');
+      links.add(KubusSocialLinkChip(
         icon: Icons.alternate_email,
-        label: '@${social['twitter']}',
+        label: '@$handle',
         color: const Color(0xFF1DA1F2),
+        onTap: () => _openSocialUrl('https://x.com/$handle'),
       ));
     }
     if (social['instagram']?.isNotEmpty == true) {
-      links.add(_buildSocialChip(
+      final handle = social['instagram']!.trim().replaceFirst('@', '');
+      links.add(KubusSocialLinkChip(
         icon: Icons.camera_alt_outlined,
-        label: '@${social['instagram']}',
+        label: '@$handle',
         color: const Color(0xFFE4405F),
+        onTap: () => _openSocialUrl('https://instagram.com/$handle'),
       ));
     }
     if (social['website']?.isNotEmpty == true) {
       final website = social['website'] ?? '';
       if (website.isNotEmpty) {
+        final hasScheme =
+            website.startsWith('http://') || website.startsWith('https://');
+        final url = hasScheme ? website : 'https://$website';
         final displayUrl = website
             .replaceAll(RegExp(r'^https?://'), '')
             .replaceAll(RegExp(r'/$'), '');
-        links.add(_buildSocialChip(
+        links.add(KubusSocialLinkChip(
           icon: Icons.language,
           label: displayUrl,
           color: themeProvider.accentColor,
+          onTap: () => _openSocialUrl(url),
         ));
       }
     }
@@ -2350,36 +2261,25 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (links.isEmpty) return const SizedBox.shrink();
 
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+      spacing: KubusSpacing.sm + KubusSpacing.xxs,
+      runSpacing: KubusSpacing.xs + KubusSpacing.xxs,
+      alignment: WrapAlignment.start,
       children: links,
     );
   }
 
-  Widget _buildSocialChip(
-      {required IconData icon, required String label, required Color color}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(KubusRadius.xl),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: KubusTypography.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
+  Future<void> _openSocialUrl(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.commonActionFailedToast),
+        ),
+      );
+    }
   }
 }
