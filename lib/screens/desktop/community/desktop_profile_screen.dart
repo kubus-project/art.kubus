@@ -13,6 +13,7 @@ import '../../../providers/community_interactions_provider.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
+import '../../../utils/achievement_ui.dart';
 import '../../../utils/artwork_navigation.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../utils/profile_showcase_normalizer.dart';
@@ -538,13 +539,23 @@ class _ProfileScreenState extends State<ProfileScreen>
       radius: avatarRadius + avatarRingPadding,
       cornerRadiusFactor: avatarCornerRadiusFactor,
     );
+    final scheme = Theme.of(context).colorScheme;
+    final displayName = user?.displayName ?? user?.username ?? 'Art Enthusiast';
+    final username = user?.username.trim() ?? '';
+    final usernameLabel = username.isEmpty
+        ? ''
+        : (username.startsWith('@') ? username : '@$username');
+    final titleColor = hasCoverImage ? Colors.white : scheme.onSurface;
+    final subtitleColor = hasCoverImage
+        ? Colors.white.withValues(alpha: 0.78)
+        : scheme.onSurface.withValues(alpha: 0.62);
 
     return DesktopCard(
       padding: EdgeInsets.zero,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Stack(
-            clipBehavior: Clip.none,
             children: [
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(
@@ -589,222 +600,198 @@ class _ProfileScreenState extends State<ProfileScreen>
                       : null,
                 ),
               ),
-              if (hasCoverImage)
-                Positioned.fill(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(KubusRadius.lg),
-                      ),
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withValues(alpha: 0.18),
-                          Colors.transparent,
-                          Colors.black.withValues(alpha: 0.32),
-                        ],
-                      ),
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(KubusRadius.lg),
+                    ),
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black
+                            .withValues(alpha: hasCoverImage ? 0.12 : 0),
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.26),
+                      ],
                     ),
                   ),
                 ),
+              ),
+              Positioned(
+                left: KubusSpacing.lg,
+                right: KubusSpacing.lg,
+                bottom: KubusSpacing.lg,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: scheme.surface.withValues(alpha: 0.94),
+                        borderRadius: BorderRadius.circular(
+                          avatarRingShapeRadius,
+                        ),
+                        border: Border.all(
+                          color: scheme.outline.withValues(alpha: 0.24),
+                          width: KubusSizes.hairline + 0.2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Theme.of(context)
+                                .shadowColor
+                                .withValues(alpha: 0.12),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(avatarRingPadding),
+                        child: AvatarWidget(
+                          wallet: user?.walletAddress ?? '',
+                          avatarUrl: user?.avatar,
+                          radius: avatarRadius,
+                          borderWidth: 0,
+                          borderColor: Colors.transparent,
+                          cornerRadiusFactor: avatarCornerRadiusFactor,
+                          enableProfileNavigation: false,
+                          showStatusIndicator: _showActivityStatus,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: KubusSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  displayName,
+                                  style: KubusTextStyles.screenTitle.copyWith(
+                                    color: titleColor,
+                                    letterSpacing: -0.2,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (isArtist) ...[
+                                const SizedBox(
+                                  width: KubusSpacing.sm + KubusSpacing.xs,
+                                ),
+                                const ArtistBadge(),
+                              ],
+                              if (isInstitution) ...[
+                                const SizedBox(
+                                  width: KubusSpacing.sm + KubusSpacing.xs,
+                                ),
+                                const InstitutionBadge(),
+                              ],
+                            ],
+                          ),
+                          if (usernameLabel.isNotEmpty) ...[
+                            const SizedBox(height: KubusSpacing.xs),
+                            Text(
+                              usernameLabel,
+                              style: KubusTextStyles.profileHandle.copyWith(
+                                color: subtitleColor,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
-          // Compact horizontal layout for profile info
-          Padding(
-            padding: const EdgeInsets.all(KubusSpacing.md),
-            child: LiquidGlassCard(
-              margin: EdgeInsets.zero,
-              borderRadius: BorderRadius.circular(KubusRadius.lg),
-              padding: const EdgeInsets.all(KubusSpacing.md),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Avatar
-                  DecoratedBox(
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(
+                  color: scheme.outline.withValues(alpha: 0.08),
+                  width: KubusSizes.hairline,
+                ),
+              ),
+            ),
+            padding: const EdgeInsets.all(KubusChromeMetrics.cardPadding),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const EmailVerificationStatusBadge(
+                  dense: true,
+                  alignment: Alignment.centerLeft,
+                  topSpacing: 0,
+                ),
+                const SizedBox(height: KubusSpacing.sm),
+                UserActivityStatusLine(
+                  walletAddress: user?.walletAddress ?? '',
+                  textAlign: TextAlign.start,
+                  textStyle: KubusTextStyles.detailCaption.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.62),
+                  ),
+                ),
+                if (web3Provider.isConnected) ...[
+                  const SizedBox(height: KubusSpacing.sm),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: KubusSpacing.md,
+                      vertical: KubusSpacing.sm,
+                    ),
                     decoration: BoxDecoration(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .surface
-                          .withValues(alpha: 0.9),
-                      borderRadius:
-                          BorderRadius.circular(avatarRingShapeRadius),
+                      color: themeProvider.accentColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(KubusRadius.xl),
                       border: Border.all(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .outline
-                            .withValues(alpha: 0.28),
-                        width: 1.2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Theme.of(context)
-                              .shadowColor
-                              .withValues(alpha: 0.1),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(avatarRingPadding),
-                      child: AvatarWidget(
-                        wallet: user?.walletAddress ?? '',
-                        avatarUrl: user?.avatar,
-                        radius: avatarRadius,
-                        borderWidth: 0,
-                        borderColor: Colors.transparent,
-                        cornerRadiusFactor: avatarCornerRadiusFactor,
-                        enableProfileNavigation: false,
-                        showStatusIndicator: _showActivityStatus,
+                        color: themeProvider.accentColor.withValues(alpha: 0.3),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: KubusSpacing.md),
-                  // Name, username, bio
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                user?.displayName ??
-                                    user?.username ??
-                                    'Art Enthusiast',
-                                style: KubusTextStyles.screenTitle.copyWith(
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            if (isArtist) ...[
-                              const SizedBox(
-                                  width: KubusSpacing.sm + KubusSpacing.xs),
-                              const ArtistBadge(),
-                            ],
-                            if (isInstitution) ...[
-                              const SizedBox(
-                                  width: KubusSpacing.sm + KubusSpacing.xs),
-                              const InstitutionBadge(),
-                            ],
-                          ],
-                        ),
-                        if (user?.username != null &&
-                            user?.displayName != null) ...[
-                          const SizedBox(
-                              height: KubusSpacing.xs +
-                                  KubusSpacing.xs +
-                                  KubusSpacing.xxs),
-                          Text(
-                            '@${user!.username}',
-                            style: KubusTextStyles.profileHandle.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.6),
-                            ),
-                          ),
-                        ],
-                        const EmailVerificationStatusBadge(
-                          dense: true,
-                          alignment: Alignment.centerLeft,
-                          topSpacing: KubusSpacing.sm,
-                        ),
-                        const SizedBox(
-                            height: KubusSpacing.xs +
-                                KubusSpacing.xs +
-                                KubusSpacing.xxs),
-                        UserActivityStatusLine(
-                          walletAddress: user?.walletAddress ?? '',
-                          textAlign: TextAlign.start,
-                          textStyle: KubusTextStyles.detailCaption.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.6),
-                          ),
-                        ),
-                        const SizedBox(height: KubusSpacing.md),
-                        if (web3Provider.isConnected) ...[
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: KubusSpacing.md,
-                              vertical: KubusSpacing.sm,
-                            ),
-                            decoration: BoxDecoration(
-                              color: themeProvider.accentColor
-                                  .withValues(alpha: 0.1),
-                              borderRadius:
-                                  BorderRadius.circular(KubusRadius.xl),
-                              border: Border.all(
-                                color: themeProvider.accentColor
-                                    .withValues(alpha: 0.3),
-                              ),
-                            ),
-                            child: Text(
-                              web3Provider
-                                  .formatAddress(web3Provider.walletAddress),
-                              style: KubusTextStyles.detailLabel.copyWith(
-                                color: themeProvider.accentColor,
-                              ),
-                            ),
-                          ),
-                        ],
-                        if (user?.bio != null && user!.bio.isNotEmpty) ...[
-                          const SizedBox(height: KubusSpacing.md),
-                          Text(
-                            user.bio,
-                            style: KubusTextStyles.detailBody.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.8),
-                            ),
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                        const SizedBox(height: KubusSpacing.md),
-                        ProfileArtistInfoFields(
-                          fieldOfWork:
-                              user?.artistInfo?.specialty ?? const <String>[],
-                          yearsActive: user?.artistInfo?.yearsActive ?? 0,
-                          textAlign: TextAlign.left,
-                        ),
-                        // Social links
-                        if (user?.social.isNotEmpty == true) ...[
-                          const SizedBox(height: KubusSpacing.md),
-                          _buildSocialLinks(user!.social, themeProvider),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: KubusSpacing.lg),
-                  ElevatedButton.icon(
-                    onPressed: _editProfile,
-                    icon: const Icon(
-                      Icons.edit_outlined,
-                      size: KubusHeaderMetrics.actionIcon,
-                    ),
-                    label: Text(AppLocalizations.of(context)!
-                        .settingsEditProfileTileTitle),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: themeProvider.accentColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: KubusSpacing.lg,
-                        vertical: KubusSpacing.md - KubusSpacing.xxs,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(KubusRadius.md),
+                    child: Text(
+                      web3Provider.formatAddress(web3Provider.walletAddress),
+                      style: KubusTextStyles.detailLabel.copyWith(
+                        color: themeProvider.accentColor,
                       ),
                     ),
                   ),
                 ],
-              ),
+                if (user?.bio.isNotEmpty == true) ...[
+                  const SizedBox(height: KubusSpacing.md),
+                  Text(
+                    user!.bio,
+                    style: KubusTextStyles.detailBody.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.78),
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                const SizedBox(height: KubusSpacing.md),
+                ProfileArtistInfoFields(
+                  fieldOfWork: user?.artistInfo?.specialty ?? const <String>[],
+                  yearsActive: user?.artistInfo?.yearsActive ?? 0,
+                  textAlign: TextAlign.left,
+                ),
+                if (user?.social.isNotEmpty == true) ...[
+                  const SizedBox(height: KubusSpacing.md),
+                  _buildSocialLinks(user!.social, themeProvider),
+                ],
+                const SizedBox(height: KubusSpacing.lg),
+                SizedBox(
+                  width: 260,
+                  child: DesktopActionButton(
+                    label: AppLocalizations.of(context)!
+                        .settingsEditProfileTileTitle,
+                    icon: Icons.edit_outlined,
+                    onPressed: _editProfile,
+                    isPrimary: true,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -1716,6 +1703,11 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildAchievementsSection() {
+    final profileProvider = Provider.of<ProfileProvider>(context);
+    if (!profileProvider.preferences.showAchievements) {
+      return const SizedBox.shrink();
+    }
+
     return Consumer<TaskProvider>(
       builder: (context, taskProvider, _) {
         final l10n = AppLocalizations.of(context)!;
@@ -1784,9 +1776,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                   return KubusStatCard(
                     title: achievement.title,
                     value: progressLabel,
-                    icon: _iconForAchievement(achievement),
+                    icon: AchievementUi.iconFor(achievement),
                     layout: KubusStatCardLayout.centered,
-                    accent: _achievementAccentForDefinition(achievement),
+                    accent: AchievementUi.accentFor(context, achievement),
                     centeredWatermarkAlignment: Alignment.center,
                     centeredWatermarkScale: 0.84,
                     minHeight: 0,
@@ -1862,97 +1854,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
 
     return Theme.of(context).colorScheme.primary;
-  }
-
-  Color _achievementAccentForDefinition(
-      achievement_svc.AchievementDefinition def) {
-    final roles = KubusColorRoles.of(context);
-
-    switch (def.type) {
-      case achievement_svc.AchievementType.firstDiscovery:
-      case achievement_svc.AchievementType.artExplorer:
-      case achievement_svc.AchievementType.artMaster:
-      case achievement_svc.AchievementType.artLegend:
-        return roles.statBlue;
-      case achievement_svc.AchievementType.firstARView:
-      case achievement_svc.AchievementType.arEnthusiast:
-      case achievement_svc.AchievementType.arPro:
-        return roles.statTeal;
-      case achievement_svc.AchievementType.firstNFTMint:
-      case achievement_svc.AchievementType.nftCollector:
-      case achievement_svc.AchievementType.nftTrader:
-      case achievement_svc.AchievementType.firstTrade:
-      case achievement_svc.AchievementType.smartTrader:
-      case achievement_svc.AchievementType.marketMaster:
-        return roles.web3MarketplaceAccent;
-      case achievement_svc.AchievementType.firstPost:
-      case achievement_svc.AchievementType.influencer:
-      case achievement_svc.AchievementType.communityBuilder:
-      case achievement_svc.AchievementType.firstLike:
-      case achievement_svc.AchievementType.popularCreator:
-      case achievement_svc.AchievementType.firstComment:
-      case achievement_svc.AchievementType.commentator:
-        return roles.statCoral;
-      case achievement_svc.AchievementType.eventAttendee:
-      case achievement_svc.AchievementType.galleryVisitor:
-      case achievement_svc.AchievementType.workshopParticipant:
-        return roles.web3InstitutionAccent;
-      case achievement_svc.AchievementType.streetArtSpotter:
-      case achievement_svc.AchievementType.streetArtScout:
-      case achievement_svc.AchievementType.streetArtCurator:
-      case achievement_svc.AchievementType.streetArtPatron:
-        return roles.statAmber;
-      case achievement_svc.AchievementType.earlyAdopter:
-      case achievement_svc.AchievementType.betaTester:
-      case achievement_svc.AchievementType.artSupporter:
-        return roles.web3DaoAccent;
-    }
-  }
-
-  IconData _iconForAchievement(achievement_svc.AchievementDefinition def) {
-    if (def.isPOAP) return Icons.verified;
-    switch (def.type) {
-      case achievement_svc.AchievementType.firstDiscovery:
-      case achievement_svc.AchievementType.artExplorer:
-      case achievement_svc.AchievementType.artMaster:
-      case achievement_svc.AchievementType.artLegend:
-        return Icons.explore_outlined;
-      case achievement_svc.AchievementType.firstARView:
-      case achievement_svc.AchievementType.arEnthusiast:
-      case achievement_svc.AchievementType.arPro:
-        return Icons.view_in_ar;
-      case achievement_svc.AchievementType.firstNFTMint:
-      case achievement_svc.AchievementType.nftCollector:
-      case achievement_svc.AchievementType.nftTrader:
-        return Icons.token;
-      case achievement_svc.AchievementType.firstPost:
-      case achievement_svc.AchievementType.influencer:
-      case achievement_svc.AchievementType.communityBuilder:
-        return Icons.forum_outlined;
-      case achievement_svc.AchievementType.firstLike:
-      case achievement_svc.AchievementType.popularCreator:
-        return Icons.favorite_border;
-      case achievement_svc.AchievementType.firstComment:
-      case achievement_svc.AchievementType.commentator:
-        return Icons.chat_bubble_outline;
-      case achievement_svc.AchievementType.firstTrade:
-      case achievement_svc.AchievementType.smartTrader:
-      case achievement_svc.AchievementType.marketMaster:
-        return Icons.swap_horiz;
-      case achievement_svc.AchievementType.earlyAdopter:
-      case achievement_svc.AchievementType.betaTester:
-      case achievement_svc.AchievementType.artSupporter:
-        return Icons.auto_awesome;
-      case achievement_svc.AchievementType.eventAttendee:
-      case achievement_svc.AchievementType.galleryVisitor:
-      case achievement_svc.AchievementType.workshopParticipant:
-        return Icons.event_available;
-      case achievement_svc.AchievementType.streetArtSpotter:
-      case achievement_svc.AchievementType.streetArtScout:
-      case achievement_svc.AchievementType.streetArtCurator:
-      case achievement_svc.AchievementType.streetArtPatron:
-        return Icons.streetview;
-    }
   }
 
   Widget _buildPostsSection(ThemeProvider themeProvider) {

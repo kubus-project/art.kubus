@@ -207,6 +207,7 @@ class ProfilePreferences {
   final NotificationPreferenceSettings notificationPreferences;
   final String theme;
   final bool showActivityStatus;
+  final bool showAchievements;
   final bool shareLastVisitedLocation;
   final bool showCollection;
   final bool allowMessages;
@@ -221,6 +222,7 @@ class ProfilePreferences {
     this.notificationPreferences = const NotificationPreferenceSettings(),
     this.theme = 'auto',
     this.showActivityStatus = true,
+    this.showAchievements = true,
     this.shareLastVisitedLocation = false,
     this.showCollection = true,
     this.allowMessages = true,
@@ -233,6 +235,7 @@ class ProfilePreferences {
     NotificationPreferenceSettings? notificationPreferences,
     String? theme,
     bool? showActivityStatus,
+    bool? showAchievements,
     bool? shareLastVisitedLocation,
     bool? showCollection,
     bool? allowMessages,
@@ -245,6 +248,7 @@ class ProfilePreferences {
           notificationPreferences ?? this.notificationPreferences,
       theme: theme ?? this.theme,
       showActivityStatus: showActivityStatus ?? this.showActivityStatus,
+        showAchievements: showAchievements ?? this.showAchievements,
       shareLastVisitedLocation: shareLastVisitedLocation ?? this.shareLastVisitedLocation,
       showCollection: showCollection ?? this.showCollection,
       allowMessages: allowMessages ?? this.allowMessages,
@@ -265,6 +269,7 @@ class ProfilePreferences {
       ),
       theme: json['theme'] ?? 'auto',
       showActivityStatus: json['showActivityStatus'] ?? json['show_activity_status'] ?? true,
+      showAchievements: json['showAchievements'] ?? json['show_achievements'] ?? true,
       shareLastVisitedLocation: json['shareLastVisitedLocation'] ?? json['share_last_visited_location'] ?? false,
       showCollection: json['showCollection'] ?? json['show_collection'] ?? true,
       allowMessages: json['allowMessages'] ?? json['allow_messages'] ?? true,
@@ -279,6 +284,7 @@ class ProfilePreferences {
       'notificationPreferences': notificationPreferences.toJson(),
       'theme': theme,
       'showActivityStatus': showActivityStatus,
+      'showAchievements': showAchievements,
       'shareLastVisitedLocation': shareLastVisitedLocation,
       'showCollection': showCollection,
       'allowMessages': allowMessages,

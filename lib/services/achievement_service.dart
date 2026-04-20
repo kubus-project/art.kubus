@@ -12,38 +12,38 @@ enum AchievementType {
   artExplorer,
   artMaster,
   artLegend,
-  
+
   // AR achievements
   firstARView,
   arEnthusiast,
   arPro,
-  
+
   // NFT achievements
   firstNFTMint,
   nftCollector,
   nftTrader,
-  
+
   // Community achievements
   firstPost,
   influencer,
   communityBuilder,
-  
+
   // Social achievements
   firstLike,
   popularCreator,
   firstComment,
   commentator,
-  
+
   // Trading achievements
   firstTrade,
   smartTrader,
   marketMaster,
-  
+
   // Special achievements
   earlyAdopter,
   betaTester,
   artSupporter,
-  
+
   // Event achievements (POAPs)
   eventAttendee,
   galleryVisitor,
@@ -88,10 +88,12 @@ class AchievementService {
   AchievementService._internal();
 
   final BackendApiService _backendApi = BackendApiService();
-  final PushNotificationService _notificationService = PushNotificationService();
+  final PushNotificationService _notificationService =
+      PushNotificationService();
 
   // Achievement definitions
-  static const Map<AchievementType, AchievementDefinition> achievementDefinitions = {
+  static const Map<AchievementType, AchievementDefinition>
+      achievementDefinitions = {
     // Discovery achievements
     AchievementType.firstDiscovery: AchievementDefinition(
       type: AchievementType.firstDiscovery,
@@ -440,9 +442,10 @@ class AchievementService {
   }
 
   /// Check discovery achievements
-  Future<void> _checkDiscoveryAchievements(String userId, Map<String, dynamic>? data) async {
+  Future<void> _checkDiscoveryAchievements(
+      String userId, Map<String, dynamic>? data) async {
     final count = data?['discoverCount'] as int? ?? 0;
-    
+
     if (count == 1) {
       await _unlockAchievement(userId, AchievementType.firstDiscovery);
     } else if (count == 10) {
@@ -455,14 +458,15 @@ class AchievementService {
   }
 
   /// Check AR view achievements
-  Future<void> _checkARViewAchievements(String userId, Map<String, dynamic>? data) async {
+  Future<void> _checkARViewAchievements(
+      String userId, Map<String, dynamic>? data) async {
     final raw = data?['viewCount'] ?? data?['arViewCount'];
     final count = raw is int
         ? raw
         : raw is num
             ? raw.toInt()
             : int.tryParse(raw?.toString() ?? '') ?? 0;
-    
+
     if (count == 1) {
       await _unlockAchievement(userId, AchievementType.firstARView);
     } else if (count == 25) {
@@ -473,28 +477,31 @@ class AchievementService {
   }
 
   /// Check NFT minting achievements
-  Future<void> _checkNFTMintAchievements(String userId, Map<String, dynamic>? data) async {
+  Future<void> _checkNFTMintAchievements(
+      String userId, Map<String, dynamic>? data) async {
     final count = data?['mintCount'] as int? ?? 0;
-    
+
     if (count == 1) {
       await _unlockAchievement(userId, AchievementType.firstNFTMint);
     }
   }
 
   /// Check NFT collection achievements
-  Future<void> _checkNFTCollectionAchievements(String userId, Map<String, dynamic>? data) async {
+  Future<void> _checkNFTCollectionAchievements(
+      String userId, Map<String, dynamic>? data) async {
     final count = data?['nftCount'] as int? ?? 0;
-    
+
     if (count == 10) {
       await _unlockAchievement(userId, AchievementType.nftCollector);
     }
   }
 
   /// Check trading achievements
-  Future<void> _checkTradingAchievements(String userId, Map<String, dynamic>? data) async {
+  Future<void> _checkTradingAchievements(
+      String userId, Map<String, dynamic>? data) async {
     final count = data?['tradeCount'] as int? ?? 0;
     final profitCount = data?['profitableTradeCount'] as int? ?? 0;
-    
+
     if (count == 1) {
       await _unlockAchievement(userId, AchievementType.firstTrade);
     } else if (count == 5) {
@@ -502,48 +509,52 @@ class AchievementService {
     } else if (count == 100) {
       await _unlockAchievement(userId, AchievementType.marketMaster);
     }
-    
+
     if (profitCount == 10) {
       await _unlockAchievement(userId, AchievementType.smartTrader);
     }
   }
 
   /// Check community achievements
-  Future<void> _checkCommunityAchievements(String userId, Map<String, dynamic>? data) async {
+  Future<void> _checkCommunityAchievements(
+      String userId, Map<String, dynamic>? data) async {
     final count = data?['postCount'] as int? ?? 0;
-    
+
     if (count == 1) {
       await _unlockAchievement(userId, AchievementType.firstPost);
     }
   }
 
   /// Check influencer achievements
-  Future<void> _checkInfluencerAchievements(String userId, Map<String, dynamic>? data) async {
+  Future<void> _checkInfluencerAchievements(
+      String userId, Map<String, dynamic>? data) async {
     final totalLikes = data?['totalLikes'] as int? ?? 0;
     final postLikes = data?['postLikes'] as int? ?? 0;
-    
+
     if (totalLikes == 100) {
       await _unlockAchievement(userId, AchievementType.influencer);
     }
-    
+
     if (postLikes >= 50) {
       await _unlockAchievement(userId, AchievementType.popularCreator);
     }
   }
 
   /// Check follower achievements
-  Future<void> _checkFollowerAchievements(String userId, Map<String, dynamic>? data) async {
+  Future<void> _checkFollowerAchievements(
+      String userId, Map<String, dynamic>? data) async {
     final count = data?['followerCount'] as int? ?? 0;
-    
+
     if (count == 50) {
       await _unlockAchievement(userId, AchievementType.communityBuilder);
     }
   }
 
   /// Check comment achievements
-  Future<void> _checkCommentAchievements(String userId, Map<String, dynamic>? data) async {
+  Future<void> _checkCommentAchievements(
+      String userId, Map<String, dynamic>? data) async {
     final count = data?['commentCount'] as int? ?? 0;
-    
+
     if (count == 1) {
       await _unlockAchievement(userId, AchievementType.firstComment);
     } else if (count == 50) {
@@ -552,34 +563,42 @@ class AchievementService {
   }
 
   /// Check social achievements
-  Future<void> _checkSocialAchievements(String userId, Map<String, dynamic>? data) async {
+  Future<void> _checkSocialAchievements(
+      String userId, Map<String, dynamic>? data) async {
     final count = data?['likeCount'] as int? ?? 0;
-    
+
     if (count == 1) {
       await _unlockAchievement(userId, AchievementType.firstLike);
     }
   }
 
   /// Check event (POAP) achievements
-  Future<void> _checkEventAchievements(String userId, Map<String, dynamic>? data) async {
+  Future<void> _checkEventAchievements(
+      String userId, Map<String, dynamic>? data) async {
     final eventType = data?['eventType'] as String?;
-    
+
     switch (eventType) {
       case 'general_event':
-        await _unlockAchievement(userId, AchievementType.eventAttendee, eventData: data);
+        await _unlockAchievement(userId, AchievementType.eventAttendee,
+            eventData: data);
         break;
       case 'gallery_visit':
-        await _unlockAchievement(userId, AchievementType.galleryVisitor, eventData: data);
+        await _unlockAchievement(userId, AchievementType.galleryVisitor,
+            eventData: data);
         break;
       case 'workshop':
-        await _unlockAchievement(userId, AchievementType.workshopParticipant, eventData: data);
+        await _unlockAchievement(userId, AchievementType.workshopParticipant,
+            eventData: data);
         break;
     }
   }
 
   /// Check public street art contribution achievements
-  Future<void> _checkStreetArtAchievements(String userId, Map<String, dynamic>? data) async {
-    final raw = data?['streetArtCount'] ?? data?['publicStreetArtCount'] ?? data?['count'];
+  Future<void> _checkStreetArtAchievements(
+      String userId, Map<String, dynamic>? data) async {
+    final raw = data?['streetArtCount'] ??
+        data?['publicStreetArtCount'] ??
+        data?['count'];
     final count = raw is int
         ? raw
         : raw is num
@@ -663,19 +682,32 @@ class AchievementService {
   }
 
   /// Get user's unlocked achievements
-  Future<List<AchievementDefinition>> getUnlockedAchievements(String userId) async {
+  Future<List<AchievementDefinition>> getUnlockedAchievements(
+      String userId) async {
     try {
       final data = await _backendApi.getUserAchievements(userId);
-      final unlockedRaw = data['unlocked'] as List<dynamic>? ?? const <dynamic>[];
+      final unlockedRaw =
+          data['unlocked'] as List<dynamic>? ?? const <dynamic>[];
+      final knownIds = achievementDefinitions.values.map((a) => a.id).toSet();
       final unlockedIds = <String>{};
+
       for (final item in unlockedRaw) {
         if (item is String) {
-          unlockedIds.add(item);
+          final resolved = _resolveAchievementId(item, knownIds);
+          if (resolved != null) unlockedIds.add(resolved);
         } else if (item is Map) {
-          final id = (item['achievementId'] ?? item['achievement_id'] ?? item['id'])
-              ?.toString()
-              .trim();
-          if (id != null && id.isNotEmpty) unlockedIds.add(id);
+          final resolved = _resolveAchievementId(
+                item['type'] ??
+                    item['code'] ??
+                    item['achievementType'] ??
+                    item['achievement_type'],
+                knownIds,
+              ) ??
+              _resolveAchievementId(
+                item['achievementId'] ?? item['achievement_id'] ?? item['id'],
+                knownIds,
+              );
+          if (resolved != null) unlockedIds.add(resolved);
         }
       }
 
@@ -683,7 +715,8 @@ class AchievementService {
           .where((achievement) => unlockedIds.contains(achievement.id))
           .toList();
     } catch (e) {
-      AppConfig.debugPrint('AchievementService: getUnlockedAchievements failed: $e');
+      AppConfig.debugPrint(
+          'AchievementService: getUnlockedAchievements failed: $e');
       return [];
     }
   }
@@ -705,7 +738,8 @@ class AchievementService {
       if (raw is num) return raw.toInt();
       return int.tryParse(raw.toString()) ?? 0;
     } catch (e) {
-      AppConfig.debugPrint('AchievementService: getTotalEarnedTokens failed: $e');
+      AppConfig.debugPrint(
+          'AchievementService: getTotalEarnedTokens failed: $e');
       return 0;
     }
   }
@@ -715,19 +749,39 @@ class AchievementService {
     try {
       final data = await _backendApi.getUserAchievements(userId);
       final progressList = data['progress'] as List<dynamic>? ?? [];
-      
+      final knownIds = achievementDefinitions.values.map((a) => a.id).toSet();
+
       final progressMap = <String, int>{};
       for (final item in progressList) {
-        final achievementId = item['achievement_id'] as String?;
-        final currentProgress = item['current_progress'] as int? ?? 0;
+        if (item is! Map) continue;
+
+        final achievementId = _resolveAchievementId(
+              item['type'] ??
+                  item['code'] ??
+                  item['achievementType'] ??
+                  item['achievement_type'],
+              knownIds,
+            ) ??
+            _resolveAchievementId(
+              item['achievementId'] ?? item['achievement_id'] ?? item['id'],
+              knownIds,
+            );
+
+        final currentProgress = _parseProgressValue(
+          item['currentProgress'] ??
+              item['current_progress'] ??
+              item['progress'],
+        );
+
         if (achievementId != null) {
           progressMap[achievementId] = currentProgress;
         }
       }
-      
+
       return progressMap;
     } catch (e) {
-      AppConfig.debugPrint('AchievementService: getAchievementProgress failed: $e');
+      AppConfig.debugPrint(
+          'AchievementService: getAchievementProgress failed: $e');
       return {};
     }
   }
@@ -745,5 +799,20 @@ class AchievementService {
       AppConfig.debugPrint('AchievementService: getAllAchievements failed: $e');
       return achievementDefinitions.values.toList();
     }
+  }
+
+  String? _resolveAchievementId(dynamic rawValue, Set<String> knownIds) {
+    if (rawValue == null) return null;
+    final value = rawValue.toString().trim();
+    if (value.isEmpty) return null;
+    if (!knownIds.contains(value)) return null;
+    return value;
+  }
+
+  int _parseProgressValue(dynamic rawValue) {
+    if (rawValue == null) return 0;
+    if (rawValue is int) return rawValue;
+    if (rawValue is num) return rawValue.toInt();
+    return int.tryParse(rawValue.toString()) ?? 0;
   }
 }

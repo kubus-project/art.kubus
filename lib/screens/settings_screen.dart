@@ -3796,9 +3796,11 @@ class _SettingsScreenState extends State<SettingsScreen>
 
     bool privateProfile = initialPrefs.privacy.toLowerCase() == 'private';
     bool showActivityStatus = initialPrefs.showActivityStatus;
+    bool showAchievements = initialPrefs.showAchievements;
     bool shareLastVisitedLocation = initialPrefs.shareLastVisitedLocation;
     bool showCollection = initialPrefs.showCollection;
     bool allowMessages = initialPrefs.allowMessages;
+    bool showFriends = _showFriends;
 
     showKubusDialog(
       context: context,
@@ -3907,6 +3909,20 @@ class _SettingsScreenState extends State<SettingsScreen>
                     tileKey: const Key('settings_privacy_show_collection'),
                   ),
                   _buildSwitchTile(
+                    l10n.desktopSettingsShowAchievementsTitle,
+                    l10n.desktopSettingsShowAchievementsSubtitle,
+                    showAchievements,
+                    (value) => setDialogState(() => showAchievements = value),
+                    tileKey: const Key('settings_privacy_show_achievements'),
+                  ),
+                  _buildSwitchTile(
+                    l10n.desktopSettingsShowFriendsTitle,
+                    l10n.desktopSettingsShowFriendsSubtitle,
+                    showFriends,
+                    (value) => setDialogState(() => showFriends = value),
+                    tileKey: const Key('settings_privacy_show_friends'),
+                  ),
+                  _buildSwitchTile(
                     l10n.settingsAllowMessagesTitle,
                     l10n.settingsAllowMessagesSubtitle,
                     allowMessages,
@@ -3939,10 +3955,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                 setState(() {
                   _allowMessages = allowMessages;
                   _publicProfile = !privateProfile;
+                  _showAchievements = showAchievements;
+                  _showFriends = showFriends;
                 });
                 await profileProvider.updatePreferences(
                   privateProfile: privateProfile,
                   showActivityStatus: showActivityStatus,
+                  showAchievements: showAchievements,
                   shareLastVisitedLocation: shareLastVisitedLocation,
                   showCollection: showCollection,
                   allowMessages: allowMessages,

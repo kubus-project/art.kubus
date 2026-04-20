@@ -19,6 +19,7 @@ import '../../providers/community_interactions_provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
+import '../../utils/achievement_ui.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/profile_showcase_normalizer.dart';
 import '../../community/community_interactions.dart';
@@ -299,7 +300,6 @@ class _ProfileScreenState extends State<ProfileScreen>
           const avatarRadius = 44.0;
           const avatarCornerRadiusFactor =
               AvatarWidget.defaultCornerRadiusFactor;
-          const avatarSpacingBelowCover = KubusSpacing.md + KubusSpacing.xs;
           const avatarShadowAlpha = 0.10;
           const avatarShadowBlur = 8.0;
           const avatarShadowOffsetY = 2.0;
@@ -321,6 +321,19 @@ class _ProfileScreenState extends State<ProfileScreen>
           final dpr = MediaQuery.of(context).devicePixelRatio;
           final cacheWidth = (constraints.maxWidth * dpr).round();
           final cacheHeight = (coverHeight * dpr).round();
+          final scheme = Theme.of(context).colorScheme;
+          final displayName = profileProvider.currentUser?.displayName ??
+              profileProvider.currentUser?.username ??
+              AppLocalizations.of(context)!.profilePersonaArtEnthusiast;
+          final username = profileProvider.currentUser?.username.trim() ?? '';
+          final usernameLabel = username.isEmpty
+              ? ''
+              : (username.startsWith('@') ? username : '@$username');
+          final identityTitleColor =
+              hasCoverImage ? Colors.white : scheme.onSurface;
+          final identitySubtitleColor = hasCoverImage
+              ? Colors.white.withValues(alpha: 0.82)
+              : scheme.onSurface.withValues(alpha: 0.70);
 
           return Column(
             children: [
@@ -551,56 +564,108 @@ class _ProfileScreenState extends State<ProfileScreen>
                             ),
                           ),
                         ),
+                        Positioned(
+                          left: isSmallScreen ? 12 : 16,
+                          right: isSmallScreen ? 12 : 16,
+                          bottom: isSmallScreen ? 12 : 16,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: scheme.surface.withValues(alpha: 0.94),
+                                  borderRadius: BorderRadius.circular(
+                                    avatarRingShapeRadius,
+                                  ),
+                                  border: Border.all(
+                                    color:
+                                        scheme.outline.withValues(alpha: 0.24),
+                                    width: KubusSizes.hairline + 0.2,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Theme.of(context)
+                                          .shadowColor
+                                          .withValues(alpha: avatarShadowAlpha),
+                                      blurRadius: avatarShadowBlur,
+                                      offset:
+                                          const Offset(0, avatarShadowOffsetY),
+                                    ),
+                                  ],
+                                ),
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsets.all(avatarRingPadding),
+                                  child: AvatarWidget(
+                                    wallet: profileProvider
+                                            .currentUser?.walletAddress ??
+                                        '',
+                                    avatarUrl:
+                                        profileProvider.currentUser?.avatar,
+                                    radius: avatarRadius,
+                                    borderWidth: 0,
+                                    borderColor: Colors.transparent,
+                                    cornerRadiusFactor:
+                                        avatarCornerRadiusFactor,
+                                    enableProfileNavigation: false,
+                                    showStatusIndicator: _showActivityStatus,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: KubusSpacing.md),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            displayName,
+                                            style: KubusTextStyles.screenTitle
+                                                .copyWith(
+                                              color: identityTitleColor,
+                                              letterSpacing: -0.2,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        if (isArtist) ...[
+                                          const SizedBox(
+                                              width: KubusSpacing.sm),
+                                          const ArtistBadge(),
+                                        ],
+                                        if (isInstitution) ...[
+                                          const SizedBox(
+                                              width: KubusSpacing.sm),
+                                          const InstitutionBadge(),
+                                        ],
+                                      ],
+                                    ),
+                                    if (usernameLabel.isNotEmpty) ...[
+                                      const SizedBox(height: KubusSpacing.xs),
+                                      Text(
+                                        usernameLabel,
+                                        style: KubusTextStyles.profileHandle
+                                            .copyWith(
+                                          color: identitySubtitleColor,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: KubusSpacing.md),
-              Center(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .surface
-                        .withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(
-                      avatarRingShapeRadius,
-                    ),
-                    border: Border.all(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .outline
-                          .withValues(alpha: 0.28),
-                      width: 1.2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Theme.of(context)
-                            .shadowColor
-                            .withValues(alpha: avatarShadowAlpha),
-                        blurRadius: avatarShadowBlur,
-                        offset: const Offset(0, avatarShadowOffsetY),
-                      ),
-                    ],
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(avatarRingPadding),
-                    child: AvatarWidget(
-                      wallet: profileProvider.currentUser?.walletAddress ?? '',
-                      avatarUrl: profileProvider.currentUser?.avatar,
-                      radius: avatarRadius,
-                      borderWidth: 0,
-                      borderColor: Colors.transparent,
-                      cornerRadiusFactor: avatarCornerRadiusFactor,
-                      enableProfileNavigation: false,
-                      showStatusIndicator: _showActivityStatus,
-                    ),
-                  ),
-                ),
-              ),
-              // Spacing after avatar
-              SizedBox(height: avatarSpacingBelowCover),
               // Rest of profile content
               LiquidGlassCard(
                 margin:
@@ -612,60 +677,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
                 child: Column(
                   children: [
-                    Align(
-                      alignment: Alignment.center,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              profileProvider.currentUser?.displayName ??
-                                  profileProvider.currentUser?.username ??
-                                  AppLocalizations.of(context)!
-                                      .profilePersonaArtEnthusiast,
-                              style: KubusTypography.inter(
-                                fontSize: isVerySmallScreen
-                                    ? 20
-                                    : isSmallScreen
-                                        ? 22
-                                        : 24,
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                              textAlign: TextAlign.center,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (isArtist) ...[
-                            SizedBox(width: isSmallScreen ? 6 : 8),
-                            const ArtistBadge(),
-                          ],
-                          if (isInstitution) ...[
-                            SizedBox(width: isSmallScreen ? 6 : 8),
-                            const InstitutionBadge(),
-                          ],
-                        ],
-                      ),
-                    ),
-                    if (profileProvider.currentUser?.username != null &&
-                        profileProvider.currentUser?.displayName != null) ...[
-                      SizedBox(height: isSmallScreen ? 4 : 6),
-                      Text(
-                        '@${profileProvider.currentUser!.username}',
-                        style: KubusTypography.inter(
-                          fontSize: isVerySmallScreen
-                              ? 14
-                              : isSmallScreen
-                                  ? 15
-                                  : 16,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.6),
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
                     const EmailVerificationStatusBadge(
                       dense: true,
                       alignment: Alignment.center,
@@ -1817,6 +1828,11 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildAchievementsSection() {
+    final profileProvider = Provider.of<ProfileProvider>(context);
+    if (!profileProvider.preferences.showAchievements) {
+      return const SizedBox.shrink();
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Consumer<TaskProvider>(
@@ -1824,52 +1840,6 @@ class _ProfileScreenState extends State<ProfileScreen>
           final themeProvider =
               Provider.of<ThemeProvider>(context, listen: false);
           final accent = themeProvider.accentColor;
-
-          IconData iconFor(achievement_svc.AchievementDefinition def) {
-            if (def.isPOAP) return Icons.verified;
-            switch (def.type) {
-              case achievement_svc.AchievementType.firstDiscovery:
-              case achievement_svc.AchievementType.artExplorer:
-              case achievement_svc.AchievementType.artMaster:
-              case achievement_svc.AchievementType.artLegend:
-                return Icons.explore_outlined;
-              case achievement_svc.AchievementType.firstARView:
-              case achievement_svc.AchievementType.arEnthusiast:
-              case achievement_svc.AchievementType.arPro:
-                return Icons.view_in_ar;
-              case achievement_svc.AchievementType.firstNFTMint:
-              case achievement_svc.AchievementType.nftCollector:
-              case achievement_svc.AchievementType.nftTrader:
-                return Icons.token;
-              case achievement_svc.AchievementType.firstPost:
-              case achievement_svc.AchievementType.influencer:
-              case achievement_svc.AchievementType.communityBuilder:
-                return Icons.forum_outlined;
-              case achievement_svc.AchievementType.firstLike:
-              case achievement_svc.AchievementType.popularCreator:
-                return Icons.favorite_border;
-              case achievement_svc.AchievementType.firstComment:
-              case achievement_svc.AchievementType.commentator:
-                return Icons.chat_bubble_outline;
-              case achievement_svc.AchievementType.firstTrade:
-              case achievement_svc.AchievementType.smartTrader:
-              case achievement_svc.AchievementType.marketMaster:
-                return Icons.swap_horiz;
-              case achievement_svc.AchievementType.earlyAdopter:
-              case achievement_svc.AchievementType.betaTester:
-              case achievement_svc.AchievementType.artSupporter:
-                return Icons.auto_awesome;
-              case achievement_svc.AchievementType.eventAttendee:
-              case achievement_svc.AchievementType.galleryVisitor:
-              case achievement_svc.AchievementType.workshopParticipant:
-                return Icons.event_available;
-              case achievement_svc.AchievementType.streetArtSpotter:
-              case achievement_svc.AchievementType.streetArtScout:
-              case achievement_svc.AchievementType.streetArtCurator:
-              case achievement_svc.AchievementType.streetArtPatron:
-                return Icons.streetview;
-            }
-          }
 
           final achievements = taskProvider.achievementProgress;
           final progressById = <String, AchievementProgress>{
@@ -1960,10 +1930,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                               child: KubusStatCard(
                                 title: achievement.title,
                                 value: progressLabel,
-                                icon: iconFor(achievement),
+                                icon: AchievementUi.iconFor(achievement),
                                 layout: KubusStatCardLayout.centered,
-                                accent: _achievementAccentForDefinition(
-                                    achievement),
+                                accent:
+                                  AchievementUi.accentFor(context, achievement),
                                 centeredWatermarkAlignment: Alignment.center,
                                 centeredWatermarkScale: 0.84,
                                 minHeight: 96,
@@ -2292,51 +2262,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
 
     return Theme.of(context).colorScheme.primary;
-  }
-
-  Color _achievementAccentForDefinition(
-      achievement_svc.AchievementDefinition def) {
-    final roles = KubusColorRoles.of(context);
-
-    switch (def.type) {
-      case achievement_svc.AchievementType.firstDiscovery:
-      case achievement_svc.AchievementType.artExplorer:
-      case achievement_svc.AchievementType.artMaster:
-      case achievement_svc.AchievementType.artLegend:
-        return roles.statBlue;
-      case achievement_svc.AchievementType.firstARView:
-      case achievement_svc.AchievementType.arEnthusiast:
-      case achievement_svc.AchievementType.arPro:
-        return roles.statTeal;
-      case achievement_svc.AchievementType.firstNFTMint:
-      case achievement_svc.AchievementType.nftCollector:
-      case achievement_svc.AchievementType.nftTrader:
-      case achievement_svc.AchievementType.firstTrade:
-      case achievement_svc.AchievementType.smartTrader:
-      case achievement_svc.AchievementType.marketMaster:
-        return roles.web3MarketplaceAccent;
-      case achievement_svc.AchievementType.firstPost:
-      case achievement_svc.AchievementType.influencer:
-      case achievement_svc.AchievementType.communityBuilder:
-      case achievement_svc.AchievementType.firstLike:
-      case achievement_svc.AchievementType.popularCreator:
-      case achievement_svc.AchievementType.firstComment:
-      case achievement_svc.AchievementType.commentator:
-        return roles.statCoral;
-      case achievement_svc.AchievementType.eventAttendee:
-      case achievement_svc.AchievementType.galleryVisitor:
-      case achievement_svc.AchievementType.workshopParticipant:
-        return roles.web3InstitutionAccent;
-      case achievement_svc.AchievementType.streetArtSpotter:
-      case achievement_svc.AchievementType.streetArtScout:
-      case achievement_svc.AchievementType.streetArtCurator:
-      case achievement_svc.AchievementType.streetArtPatron:
-        return roles.statAmber;
-      case achievement_svc.AchievementType.earlyAdopter:
-      case achievement_svc.AchievementType.betaTester:
-      case achievement_svc.AchievementType.artSupporter:
-        return roles.web3DaoAccent;
-    }
   }
 
   // Navigation and interaction methods

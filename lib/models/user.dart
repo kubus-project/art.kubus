@@ -20,6 +20,7 @@ class User {
   final bool isVerified;
   final bool isArtist;
   final bool isInstitution;
+  final bool showAchievements;
   final String joinedDate;
   final List<AchievementProgress> achievementProgress;
 
@@ -39,6 +40,7 @@ class User {
     required this.isVerified,
     this.isArtist = false,
     this.isInstitution = false,
+    this.showAchievements = true,
     required this.joinedDate,
     this.achievementProgress = const [],
   });
@@ -59,6 +61,7 @@ class User {
     bool? isVerified,
     bool? isArtist,
     bool? isInstitution,
+    bool? showAchievements,
     String? joinedDate,
     List<AchievementProgress>? achievementProgress,
   }) {
@@ -78,6 +81,7 @@ class User {
       isVerified: isVerified ?? this.isVerified,
       isArtist: isArtist ?? this.isArtist,
       isInstitution: isInstitution ?? this.isInstitution,
+      showAchievements: showAchievements ?? this.showAchievements,
       joinedDate: joinedDate ?? this.joinedDate,
       achievementProgress: achievementProgress ?? this.achievementProgress,
     );

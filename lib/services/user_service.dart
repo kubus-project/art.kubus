@@ -345,8 +345,8 @@ class UserService {
                 userId)
             .toString(),
       );
-      final profileIsFollowing = profile['isFollowing'] == true ||
-          profile['is_following'] == true;
+      final profileIsFollowing =
+          profile['isFollowing'] == true || profile['is_following'] == true;
       final hasTopLevelFollowers = profile.containsKey('followersCount') ||
           profile.containsKey('followers_count') ||
           profile.containsKey('followers');
@@ -476,6 +476,7 @@ class UserService {
         isVerified: profile['isVerified'] ?? false,
         isArtist: isArtist,
         isInstitution: isInstitution,
+        showAchievements: _extractShowAchievements(profile),
         fieldOfWork: fieldOfWork,
         yearsActive: yearsActive,
         joinedDate: profile['createdAt'] != null
@@ -601,6 +602,29 @@ class UserService {
     }
   }
 
+  static bool _extractShowAchievements(dynamic rawProfile) {
+    try {
+      if (rawProfile is! Map) return true;
+      final preferences = rawProfile['preferences'];
+      if (preferences is Map<String, dynamic>) {
+        final direct = preferences['showAchievements'];
+        if (direct is bool) return direct;
+        final legacy = preferences['show_achievements'];
+        if (legacy is bool) return legacy;
+      } else if (preferences is Map) {
+        final direct = preferences['showAchievements'];
+        if (direct is bool) return direct;
+        final legacy = preferences['show_achievements'];
+        if (legacy is bool) return legacy;
+      }
+      final directTopLevel = rawProfile['showAchievements'];
+      if (directTopLevel is bool) return directTopLevel;
+      final legacyTopLevel = rawProfile['show_achievements'];
+      if (legacyTopLevel is bool) return legacyTopLevel;
+    } catch (_) {}
+    return true;
+  }
+
   /// Populate UserService internal cache with a list of users
   // By default, do not attempt to perform global cache-based UI notifications; callers should
   // explicitly trigger UI updates (e.g., call provider refresh methods) if they want to
@@ -641,6 +665,7 @@ class UserService {
             isVerified: u.isVerified,
             isArtist: u.isArtist,
             isInstitution: u.isInstitution,
+            showAchievements: u.showAchievements,
             joinedDate: u.joinedDate,
             achievementProgress: u.achievementProgress.isNotEmpty
                 ? u.achievementProgress
@@ -690,6 +715,7 @@ class UserService {
             'isVerified': u.isVerified,
             'isArtist': u.isArtist,
             'isInstitution': u.isInstitution,
+            'showAchievements': u.showAchievements,
             'joinedDate': u.joinedDate,
             'profileImageUrl': u.profileImageUrl,
             'coverImageUrl': u.coverImageUrl,
@@ -712,6 +738,7 @@ class UserService {
             'isVerified': u.isVerified,
             'isArtist': u.isArtist,
             'isInstitution': u.isInstitution,
+            'showAchievements': u.showAchievements,
             'joinedDate': u.joinedDate,
             'profileImageUrl': u.profileImageUrl,
             'coverImageUrl': u.coverImageUrl,
@@ -773,6 +800,9 @@ class UserService {
             isVerified: (v['isVerified'] == true),
             isArtist: (v['isArtist'] == true),
             isInstitution: (v['isInstitution'] == true),
+            showAchievements: v['showAchievements'] is bool
+              ? v['showAchievements'] as bool
+              : true,
             joinedDate: v['joinedDate']?.toString() ?? 'Joined recently',
             achievementProgress: [],
             profileImageUrl: v['profileImageUrl']?.toString(),
@@ -958,6 +988,7 @@ class UserService {
         isVerified: profile['isVerified'] == true,
         isArtist: isArtist,
         isInstitution: isInstitution,
+        showAchievements: _extractShowAchievements(profile),
         joinedDate: joinedDate,
         achievementProgress: achievementProgress,
         profileImageUrl: _extractAvatarCandidate(avatarCandidate, wallet),
@@ -1171,7 +1202,8 @@ class UserService {
         );
       } catch (e) {
         if (kDebugMode) {
-          debugPrint('UserService.setFollowState: follow action log failed: $e');
+          debugPrint(
+              'UserService.setFollowState: follow action log failed: $e');
         }
       }
     }
@@ -1323,8 +1355,13 @@ class UserService {
       void addOrUpdate(Map<String, dynamic>? item,
           {bool forceCompleted = false}) {
         if (item == null) return;
-        final idRaw =
-            item['achievementId'] ?? item['achievement_id'] ?? item['id'];
+        final idRaw = item['type'] ??
+            item['code'] ??
+            item['achievementType'] ??
+            item['achievement_type'] ??
+            item['achievementId'] ??
+            item['achievement_id'] ??
+            item['id'];
         if (idRaw == null) return;
         final id = idRaw.toString();
         if (id.isEmpty) return;
@@ -1485,12 +1522,14 @@ class UserService {
                     .toString(),
               );
               if (wallet.isEmpty) continue;
-              final hasTopLevelFollowers = profile.containsKey('followersCount') ||
-                  profile.containsKey('followers_count') ||
-                  profile.containsKey('followers');
-              final hasTopLevelFollowing = profile.containsKey('followingCount') ||
-                  profile.containsKey('following_count') ||
-                  profile.containsKey('following');
+              final hasTopLevelFollowers =
+                  profile.containsKey('followersCount') ||
+                      profile.containsKey('followers_count') ||
+                      profile.containsKey('followers');
+              final hasTopLevelFollowing =
+                  profile.containsKey('followingCount') ||
+                      profile.containsKey('following_count') ||
+                      profile.containsKey('following');
               final followersCount = hasTopLevelFollowers
                   ? _parseInt(profile['followersCount'] ??
                       profile['followers_count'] ??
@@ -1548,6 +1587,7 @@ class UserService {
                     profile['isArtist'] == true || profile['is_artist'] == true,
                 isInstitution: profile['isInstitution'] == true ||
                     profile['is_institution'] == true,
+                  showAchievements: _extractShowAchievements(profile),
                 joinedDate: profile['createdAt'] != null
                     ? 'Joined ${DateTime.parse(profile['createdAt']).month}/${DateTime.parse(profile['createdAt']).year}'
                     : 'Joined recently',
@@ -1675,12 +1715,14 @@ class UserService {
                   .toString(),
             );
             if (wallet.isEmpty) continue;
-            final hasTopLevelFollowers = profile.containsKey('followersCount') ||
-                profile.containsKey('followers_count') ||
-                profile.containsKey('followers');
-            final hasTopLevelFollowing = profile.containsKey('followingCount') ||
-                profile.containsKey('following_count') ||
-                profile.containsKey('following');
+            final hasTopLevelFollowers =
+                profile.containsKey('followersCount') ||
+                    profile.containsKey('followers_count') ||
+                    profile.containsKey('followers');
+            final hasTopLevelFollowing =
+                profile.containsKey('followingCount') ||
+                    profile.containsKey('following_count') ||
+                    profile.containsKey('following');
             final followersCount = hasTopLevelFollowers
                 ? _parseInt(profile['followersCount'] ??
                     profile['followers_count'] ??
@@ -1731,13 +1773,13 @@ class UserService {
               followersCount: followersCount,
               followingCount: followingCount,
               postsCount: 0,
-              isFollowing:
-                  profileIsFollowing || followingSet.contains(wallet),
+              isFollowing: profileIsFollowing || followingSet.contains(wallet),
               isVerified: profile['isVerified'] ?? false,
               isArtist:
                   profile['isArtist'] == true || profile['is_artist'] == true,
               isInstitution: profile['isInstitution'] == true ||
                   profile['is_institution'] == true,
+                showAchievements: _extractShowAchievements(profile),
               joinedDate: profile['createdAt'] != null
                   ? 'Joined ${DateTime.parse(profile['createdAt']).month}/${DateTime.parse(profile['createdAt']).year}'
                   : 'Joined recently',

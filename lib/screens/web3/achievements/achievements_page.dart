@@ -1,9 +1,8 @@
 import 'package:art_kubus/config/config.dart';
-import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/models/achievement_progress.dart';
 import 'package:art_kubus/providers/task_provider.dart';
 import 'package:art_kubus/services/achievement_service.dart' as achievement_svc;
-import 'package:art_kubus/utils/category_accent_color.dart';
+import 'package:art_kubus/utils/achievement_ui.dart';
 import 'package:art_kubus/utils/kubus_color_roles.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:art_kubus/widgets/inline_loading.dart';
@@ -229,98 +228,6 @@ class _AchievementsPageState extends State<AchievementsPage> {
     );
   }
 
-  String _categoryFor(achievement_svc.AchievementDefinition achievement) {
-    if (achievement.isPOAP) return 'Events';
-    switch (achievement.type) {
-      case achievement_svc.AchievementType.firstDiscovery:
-      case achievement_svc.AchievementType.artExplorer:
-      case achievement_svc.AchievementType.artMaster:
-      case achievement_svc.AchievementType.artLegend:
-        return 'Discovery';
-      case achievement_svc.AchievementType.firstARView:
-      case achievement_svc.AchievementType.arEnthusiast:
-      case achievement_svc.AchievementType.arPro:
-        return 'AR';
-      case achievement_svc.AchievementType.firstNFTMint:
-      case achievement_svc.AchievementType.nftCollector:
-      case achievement_svc.AchievementType.nftTrader:
-        return 'NFT';
-      case achievement_svc.AchievementType.firstPost:
-      case achievement_svc.AchievementType.influencer:
-      case achievement_svc.AchievementType.communityBuilder:
-        return 'Community';
-      case achievement_svc.AchievementType.firstLike:
-      case achievement_svc.AchievementType.popularCreator:
-      case achievement_svc.AchievementType.firstComment:
-      case achievement_svc.AchievementType.commentator:
-        return 'Social';
-      case achievement_svc.AchievementType.firstTrade:
-      case achievement_svc.AchievementType.smartTrader:
-      case achievement_svc.AchievementType.marketMaster:
-        return 'Trading';
-      case achievement_svc.AchievementType.earlyAdopter:
-      case achievement_svc.AchievementType.betaTester:
-      case achievement_svc.AchievementType.artSupporter:
-        return 'Special';
-      case achievement_svc.AchievementType.eventAttendee:
-      case achievement_svc.AchievementType.galleryVisitor:
-      case achievement_svc.AchievementType.workshopParticipant:
-        return 'Events';
-      case achievement_svc.AchievementType.streetArtSpotter:
-      case achievement_svc.AchievementType.streetArtScout:
-      case achievement_svc.AchievementType.streetArtCurator:
-      case achievement_svc.AchievementType.streetArtPatron:
-        return AppLocalizations.of(context)!
-            .userProfileAchievementCategoryStreetArt;
-    }
-  }
-
-  IconData _iconFor(achievement_svc.AchievementDefinition achievement) {
-    if (achievement.isPOAP) return Icons.verified;
-    switch (achievement.type) {
-      case achievement_svc.AchievementType.firstDiscovery:
-      case achievement_svc.AchievementType.artExplorer:
-      case achievement_svc.AchievementType.artMaster:
-      case achievement_svc.AchievementType.artLegend:
-        return Icons.explore_outlined;
-      case achievement_svc.AchievementType.firstARView:
-      case achievement_svc.AchievementType.arEnthusiast:
-      case achievement_svc.AchievementType.arPro:
-        return Icons.view_in_ar;
-      case achievement_svc.AchievementType.firstNFTMint:
-      case achievement_svc.AchievementType.nftCollector:
-      case achievement_svc.AchievementType.nftTrader:
-        return Icons.token;
-      case achievement_svc.AchievementType.firstPost:
-      case achievement_svc.AchievementType.influencer:
-      case achievement_svc.AchievementType.communityBuilder:
-        return Icons.forum_outlined;
-      case achievement_svc.AchievementType.firstLike:
-      case achievement_svc.AchievementType.popularCreator:
-        return Icons.favorite_border;
-      case achievement_svc.AchievementType.firstComment:
-      case achievement_svc.AchievementType.commentator:
-        return Icons.chat_bubble_outline;
-      case achievement_svc.AchievementType.firstTrade:
-      case achievement_svc.AchievementType.smartTrader:
-      case achievement_svc.AchievementType.marketMaster:
-        return Icons.swap_horiz;
-      case achievement_svc.AchievementType.earlyAdopter:
-      case achievement_svc.AchievementType.betaTester:
-      case achievement_svc.AchievementType.artSupporter:
-        return Icons.auto_awesome;
-      case achievement_svc.AchievementType.eventAttendee:
-      case achievement_svc.AchievementType.galleryVisitor:
-      case achievement_svc.AchievementType.workshopParticipant:
-        return Icons.event_available;
-      case achievement_svc.AchievementType.streetArtSpotter:
-      case achievement_svc.AchievementType.streetArtScout:
-      case achievement_svc.AchievementType.streetArtCurator:
-      case achievement_svc.AchievementType.streetArtPatron:
-        return Icons.streetview;
-    }
-  }
-
   Widget _buildAchievementCard(
     achievement_svc.AchievementDefinition achievement,
     AchievementProgress progress,
@@ -331,8 +238,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
         (progress.currentProgress / required).clamp(0.0, 1.0);
     final isUnlocked = progress.isCompleted || progressPercent >= 1.0;
     final scheme = Theme.of(context).colorScheme;
-    final category = _categoryFor(achievement);
-    final accent = CategoryAccentColor.resolve(context, category);
+    final accent = AchievementUi.accentFor(context, achievement);
 
     return Container(
       padding: const EdgeInsets.all(KubusSpacing.md),
@@ -355,7 +261,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
               borderRadius: BorderRadius.circular(30),
             ),
             child: Icon(
-              _iconFor(achievement),
+              AchievementUi.iconFor(achievement),
               color:
                   isUnlocked ? accent : scheme.onSurface.withValues(alpha: 0.4),
               size: 30,

@@ -1270,6 +1270,10 @@ class ProfileProvider extends foundation.ChangeNotifier {
       final bool isPrivate = prefs.getBool('private_profile') ?? false;
       final bool showActivityStatus =
           prefs.getBool('show_activity_status') ?? true;
+        final bool showAchievements =
+          prefs.getBool('show_achievements') ??
+            prefs.getBool('showAchievements') ??
+            true;
       final bool shareLastVisitedLocation =
           prefs.getBool('share_last_visited_location') ?? false;
       final bool showCollection = prefs.getBool('show_collection') ?? true;
@@ -1325,6 +1329,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
         notificationPreferences: notificationPreferences,
         theme: 'auto',
         showActivityStatus: showActivityStatus,
+        showAchievements: showAchievements,
         shareLastVisitedLocation: shareLastVisitedLocation,
         showCollection: showCollection,
         allowMessages: allowMessages,
@@ -1418,6 +1423,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
           'private_profile', preferences.privacy.toLowerCase() == 'private');
       await prefs.setBool(
           'show_activity_status', preferences.showActivityStatus);
+        await prefs.setBool('show_achievements', preferences.showAchievements);
+        await prefs.setBool('showAchievements', preferences.showAchievements);
       await prefs.setBool(
           'share_last_visited_location', preferences.shareLastVisitedLocation);
       await prefs.setBool('show_collection', preferences.showCollection);
@@ -1501,6 +1508,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
     bool? notificationsEnabled,
     NotificationPreferenceSettings? notificationPreferences,
     bool? showActivityStatus,
+    bool? showAchievements,
     bool? shareLastVisitedLocation,
     bool? showCollection,
     bool? allowMessages,
@@ -1522,6 +1530,7 @@ class ProfileProvider extends foundation.ChangeNotifier {
               existing.notificationPreferences.enabled,
         ),
         showActivityStatus: showActivityStatus ?? existing.showActivityStatus,
+        showAchievements: showAchievements ?? existing.showAchievements,
         shareLastVisitedLocation:
             shareLastVisitedLocation ?? existing.shareLastVisitedLocation,
         showCollection: showCollection ?? existing.showCollection,

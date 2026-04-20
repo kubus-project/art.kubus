@@ -2896,8 +2896,13 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   l10n.desktopSettingsShowAchievementsTitle,
                   l10n.desktopSettingsShowAchievementsSubtitle,
                   _showAchievements,
-                  onChanged: (value) =>
-                      setState(() => _showAchievements = value),
+                  onChanged: (value) {
+                    setState(() => _showAchievements = value);
+                    unawaited(
+                      profileProvider
+                          .updatePreferences(showAchievements: value),
+                    );
+                  },
                 ),
                 const Divider(height: 32),
                 _buildToggleSetting(

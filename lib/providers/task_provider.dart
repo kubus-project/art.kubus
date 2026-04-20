@@ -166,7 +166,8 @@ class TaskProvider extends ChangeNotifier {
 
   void _checkForUnlockedTasks() {
     final availableTasks = getAvailableTasks();
-    final currentTaskIds = _taskProgress.map((progress) => progress.taskId).toSet();
+    final currentTaskIds =
+        _taskProgress.map((progress) => progress.taskId).toSet();
 
     for (final task in availableTasks) {
       if (currentTaskIds.contains(task.id)) continue;
@@ -190,7 +191,8 @@ class TaskProvider extends ChangeNotifier {
   }) {
     final def = definitionFor(achievementId);
     final required = def?.requiredCount ?? 1;
-    final completed = required > 0 ? currentProgress >= required : currentProgress > 0;
+    final completed =
+        required > 0 ? currentProgress >= required : currentProgress > 0;
 
     final updated = AchievementProgress(
       achievementId: achievementId,
@@ -220,7 +222,8 @@ class TaskProvider extends ChangeNotifier {
       return;
     }
 
-    final existingIds = _achievementProgress.map((p) => p.achievementId).toSet();
+    final existingIds =
+        _achievementProgress.map((p) => p.achievementId).toSet();
     for (final def in _definitionsById.values) {
       if (existingIds.contains(def.id)) continue;
       _achievementProgress.add(
@@ -254,6 +257,12 @@ class TaskProvider extends ChangeNotifier {
       );
 
       for (final entry in progressData.entries) {
+        if (definitionFor(entry.key) == null) {
+          AppConfig.debugPrint(
+            'TaskProvider: skipping unknown achievement id from backend: ${entry.key}',
+          );
+          continue;
+        }
         _setAchievementProgress(
           achievementId: entry.key,
           currentProgress: entry.value,

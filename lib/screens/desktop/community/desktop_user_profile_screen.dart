@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
-import '../../../utils/category_accent_color.dart';
+import '../../../utils/achievement_ui.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../widgets/app_loading.dart';
@@ -337,8 +337,13 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
-                                  child: _buildStatsCards(
-                                      themeProvider, isLarge, l10n)),
+                                child: _buildStatsCards(
+                                  themeProvider,
+                                  isLarge,
+                                  l10n,
+                                  isCommunityOverlay: isCommunityOverlay,
+                                ),
+                              ),
                               const SizedBox(width: KubusSpacing.lg),
                               SizedBox(
                                 width: 320,
@@ -347,7 +352,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                             ],
                           )
                         else ...[
-                          _buildStatsCards(themeProvider, isLarge, l10n),
+                          _buildStatsCards(
+                            themeProvider,
+                            isLarge,
+                            l10n,
+                            isCommunityOverlay: isCommunityOverlay,
+                          ),
                           const SizedBox(height: KubusSpacing.md),
                           _buildActionButtons(themeProvider, l10n),
                         ],
@@ -387,6 +397,28 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     required bool isInstitution,
     required AppLocalizations l10n,
   }) {
+    final showAchievements = user?.showAchievements ?? true;
+
+    if (!showAchievements) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildAddedPublicArtSection(themeProvider, l10n),
+          const SizedBox(height: KubusSpacing.md),
+          if (isArtist) ...[
+            _buildArtistPortfolioSection(themeProvider, l10n),
+            const SizedBox(height: KubusSpacing.md),
+            _buildArtistCollectionsSection(themeProvider, l10n),
+            const SizedBox(height: KubusSpacing.md),
+          ] else if (isInstitution) ...[
+            _buildInstitutionHighlightsSection(themeProvider, l10n),
+            const SizedBox(height: KubusSpacing.md),
+          ],
+          _buildPostsSection(themeProvider, l10n),
+        ],
+      );
+    }
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -427,6 +459,8 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     required bool isInstitution,
     required AppLocalizations l10n,
   }) {
+    final showAchievements = user?.showAchievements ?? true;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -441,8 +475,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           _buildInstitutionHighlightsSection(themeProvider, l10n),
           const SizedBox(height: KubusSpacing.md),
         ],
-        _buildAchievementsSection(themeProvider, l10n),
-        const SizedBox(height: KubusSpacing.md),
+        if (showAchievements) ...[
+          _buildAchievementsSection(themeProvider, l10n),
+          const SizedBox(height: KubusSpacing.md),
+        ],
         _buildPostsSection(themeProvider, l10n),
       ],
     );
@@ -985,9 +1021,13 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   }
 
   Widget _buildStatsCards(
-      ThemeProvider themeProvider, bool isLarge, AppLocalizations l10n) {
+    ThemeProvider themeProvider,
+    bool isLarge,
+    AppLocalizations l10n, {
+    bool isCommunityOverlay = false,
+  }) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final maxCols = screenWidth >= 1400 ? 4 : (isLarge ? 4 : 2);
+    final maxCols = isCommunityOverlay ? 2 : (screenWidth >= 1400 ? 4 : (isLarge ? 4 : 2));
     final artworksCount = Provider.of<ArtworkProvider>(context, listen: true)
         .artworksForWallet(user!.id)
         .length;
@@ -995,7 +1035,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     return DesktopGrid(
       minCrossAxisCount: 2,
       maxCrossAxisCount: maxCols,
-      childAspectRatio: screenWidth >= 1400 ? 2.8 : 2.5,
+      childAspectRatio: isCommunityOverlay ? 2.3 : (screenWidth >= 1400 ? 2.8 : 2.5),
       spacing: KubusSpacing.md,
       children: [
         DesktopStatCard(
@@ -1427,6 +1467,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
   Widget _buildAchievementsSection(
       ThemeProvider themeProvider, AppLocalizations l10n) {
+    if (!(user?.showAchievements ?? true)) {
+      return const SizedBox.shrink();
+    }
+
     final progress = user?.achievementProgress ?? [];
     final achievementsToShow = achievement_svc
         .AchievementService.achievementDefinitions.values
@@ -1486,98 +1530,6 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     );
   }
 
-  String _categoryForAchievement(achievement_svc.AchievementDefinition def) {
-    if (def.isPOAP) return 'Events';
-    switch (def.type) {
-      case achievement_svc.AchievementType.firstDiscovery:
-      case achievement_svc.AchievementType.artExplorer:
-      case achievement_svc.AchievementType.artMaster:
-      case achievement_svc.AchievementType.artLegend:
-        return 'Discovery';
-      case achievement_svc.AchievementType.firstARView:
-      case achievement_svc.AchievementType.arEnthusiast:
-      case achievement_svc.AchievementType.arPro:
-        return 'AR';
-      case achievement_svc.AchievementType.firstNFTMint:
-      case achievement_svc.AchievementType.nftCollector:
-      case achievement_svc.AchievementType.nftTrader:
-        return 'NFT';
-      case achievement_svc.AchievementType.firstPost:
-      case achievement_svc.AchievementType.influencer:
-      case achievement_svc.AchievementType.communityBuilder:
-        return 'Community';
-      case achievement_svc.AchievementType.firstLike:
-      case achievement_svc.AchievementType.popularCreator:
-      case achievement_svc.AchievementType.firstComment:
-      case achievement_svc.AchievementType.commentator:
-        return 'Social';
-      case achievement_svc.AchievementType.firstTrade:
-      case achievement_svc.AchievementType.smartTrader:
-      case achievement_svc.AchievementType.marketMaster:
-        return 'Trading';
-      case achievement_svc.AchievementType.earlyAdopter:
-      case achievement_svc.AchievementType.betaTester:
-      case achievement_svc.AchievementType.artSupporter:
-        return 'Special';
-      case achievement_svc.AchievementType.eventAttendee:
-      case achievement_svc.AchievementType.galleryVisitor:
-      case achievement_svc.AchievementType.workshopParticipant:
-        return 'Events';
-      case achievement_svc.AchievementType.streetArtSpotter:
-      case achievement_svc.AchievementType.streetArtScout:
-      case achievement_svc.AchievementType.streetArtCurator:
-      case achievement_svc.AchievementType.streetArtPatron:
-        return AppLocalizations.of(context)!
-            .userProfileAchievementCategoryStreetArt;
-    }
-  }
-
-  IconData _iconForAchievement(achievement_svc.AchievementDefinition def) {
-    if (def.isPOAP) return Icons.verified;
-    switch (def.type) {
-      case achievement_svc.AchievementType.firstDiscovery:
-      case achievement_svc.AchievementType.artExplorer:
-      case achievement_svc.AchievementType.artMaster:
-      case achievement_svc.AchievementType.artLegend:
-        return Icons.explore_outlined;
-      case achievement_svc.AchievementType.firstARView:
-      case achievement_svc.AchievementType.arEnthusiast:
-      case achievement_svc.AchievementType.arPro:
-        return Icons.view_in_ar;
-      case achievement_svc.AchievementType.firstNFTMint:
-      case achievement_svc.AchievementType.nftCollector:
-      case achievement_svc.AchievementType.nftTrader:
-        return Icons.token;
-      case achievement_svc.AchievementType.firstPost:
-      case achievement_svc.AchievementType.influencer:
-      case achievement_svc.AchievementType.communityBuilder:
-        return Icons.forum_outlined;
-      case achievement_svc.AchievementType.firstLike:
-      case achievement_svc.AchievementType.popularCreator:
-        return Icons.favorite_border;
-      case achievement_svc.AchievementType.firstComment:
-      case achievement_svc.AchievementType.commentator:
-        return Icons.chat_bubble_outline;
-      case achievement_svc.AchievementType.firstTrade:
-      case achievement_svc.AchievementType.smartTrader:
-      case achievement_svc.AchievementType.marketMaster:
-        return Icons.swap_horiz;
-      case achievement_svc.AchievementType.earlyAdopter:
-      case achievement_svc.AchievementType.betaTester:
-      case achievement_svc.AchievementType.artSupporter:
-        return Icons.auto_awesome;
-      case achievement_svc.AchievementType.eventAttendee:
-      case achievement_svc.AchievementType.galleryVisitor:
-      case achievement_svc.AchievementType.workshopParticipant:
-        return Icons.event_available;
-      case achievement_svc.AchievementType.streetArtSpotter:
-      case achievement_svc.AchievementType.streetArtScout:
-      case achievement_svc.AchievementType.streetArtCurator:
-      case achievement_svc.AchievementType.streetArtPatron:
-        return Icons.streetview;
-    }
-  }
-
   Widget _buildAchievementCard(
     achievement_svc.AchievementDefinition achievement,
     AchievementProgress progress,
@@ -1588,10 +1540,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
         achievement.requiredCount > 0 ? achievement.requiredCount : 1;
     final ratio = (progress.currentProgress / required).clamp(0.0, 1.0);
     final isCompleted = progress.isCompleted || ratio >= 1.0;
-    final accent = CategoryAccentColor.resolve(
-      context,
-      _categoryForAchievement(achievement),
-    );
+    final accent = AchievementUi.accentFor(context, achievement);
 
     return DesktopCard(
       child: Column(
@@ -1606,7 +1555,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                   color: accent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(KubusRadius.md),
                 ),
-                child: Icon(_iconForAchievement(achievement),
+                child: Icon(AchievementUi.iconFor(achievement),
                     color: accent, size: 24),
               ),
               const Spacer(),
