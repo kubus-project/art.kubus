@@ -37,6 +37,7 @@ import 'telemetry/kubus_client_context.dart';
 part 'backend_api_service_auth_helpers.dart';
 part 'backend_api_service_auth_account_helpers.dart';
 part 'backend_api_service_auth_transport.dart';
+part 'backend_api_service_domain_transports.dart';
 part 'backend_api_service_recovery_transport.dart';
 part 'backend_api_service_public_object_transport.dart';
 part 'backend_api_service_signed_action_transport.dart';
@@ -817,9 +818,11 @@ class BackendApiService
     }
   }
 
-  /// Restores an existing authenticated session without issuing a new account
-  /// token for an arbitrary wallet. This is safe to use for warm-up and
-  /// provider bootstrap paths that should only run for already-signed-in users.
+  /// Loads a stored backend account session without issuing a new account token
+  /// for an arbitrary wallet.
+  ///
+  /// This never restores signer authority. Callers that need wallet-proofed
+  /// authority must upgrade through ensureSessionForActiveSigner.
   Future<bool> restoreExistingSession({bool allowRefresh = true}) async {
     try {
       await loadAuthToken();
@@ -2192,7 +2195,10 @@ class BackendApiService
         message: message,
       );
 
-  /// Register with email + password
+  /// Register with email + password.
+  ///
+  /// Any walletAddress included here is advisory only. Email auth establishes a
+  /// backend account session, not signer authority.
   /// POST /api/auth/register/email
   Future<Map<String, dynamic>> registerWithEmail({
     required String email,
@@ -2212,7 +2218,10 @@ class BackendApiService
         includeAuth: includeAuth,
       );
 
-  /// Login with email + password
+  /// Login with email + password.
+  ///
+  /// This restores backend account state only. Wallet-signed authority still
+  /// requires ensureSessionForActiveSigner.
   /// POST /api/auth/login/email
   Future<Map<String, dynamic>> loginWithEmail({
     required String email,
@@ -2300,7 +2309,10 @@ class BackendApiService
         newPassword: newPassword,
       );
 
-  /// Login with Google idToken (verified server-side)
+  /// Login with Google idToken (verified server-side).
+  ///
+  /// Google auth is a linked backend account method. It must not be treated as
+  /// signer restoration or wallet-proofed authority.
   /// POST /api/auth/login/google
   Future<Map<String, dynamic>> loginWithGoogle({
     String? idToken,
@@ -2320,6 +2332,10 @@ class BackendApiService
         displayName: displayName,
       );
 
+  /// Deprecated compatibility bridge.
+  ///
+  /// This surface is intentionally no longer the canonical way to link wallet
+  /// identity. Prefer challenge/sign/login for any wallet-proofed session.
   Future<Map<String, dynamic>> bindAuthenticatedWallet(String walletAddress) =>
       _backendApiBindAuthenticatedWallet(this, walletAddress);
 

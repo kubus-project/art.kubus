@@ -363,7 +363,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         desiredUsername: username,
       ).timeout(const Duration(seconds: 20));
       if ((provisionalWalletAddress ?? '').trim().isEmpty) {
-        throw Exception('Signer-backed wallet provisioning failed');
+        throw Exception(l10n.authSignerProvisioningFailed);
       }
       final api = BackendApiService();
       await api

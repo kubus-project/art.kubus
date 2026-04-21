@@ -487,6 +487,15 @@ class AppLocalizationsSl extends AppLocalizations {
   String get authGoogleSignInDisabled => 'Prijava z Googlom je onemogočena.';
 
   @override
+  String get authGoogleUnavailableError => 'Prijava z Googlom je bila preklicana ali trenutno ni na voljo.';
+
+  @override
+  String get authGoogleConnectingLabel => 'Povezovanje…';
+
+  @override
+  String get authContinueWithGoogleLabel => 'Nadaljuj z Googlom';
+
+  @override
   String get authWalletConnectionDisabled => 'Povezava denarnice je trenutno onemogočena.';
 
   @override
@@ -620,6 +629,9 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get authGoogleSignInFailed => 'Prijava z Googlom ni uspela. Poskusi znova.';
+
+  @override
+  String get authSignerProvisioningFailed => 'Priprava denarnice s podpisnikom ni uspela.';
 
   @override
   String authGoogleRateLimitedRetryIn(Object duration) {
@@ -1662,6 +1674,18 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletActionConnectWalletRequiredToast => 'Za nadaljevanje poveži denarnico.';
 
   @override
+  String get walletActionAccountShellNeedsWalletToast => 'Račun je prijavljen, vendar je treba na tej napravi še obnoviti ali povezati denarnico, preden lahko to dejanje nadaljuje.';
+
+  @override
+  String get walletActionEncryptedBackupRestoreToast => 'Na voljo je šifrirana varnostna kopija. Pred nadaljevanjem na tej napravi obnovi podpisnik.';
+
+  @override
+  String get walletActionRecoveryNeededToast => 'Pred nadaljevanjem na tej napravi obnovi podpisnik denarnice.';
+
+  @override
+  String get walletActionReadOnlyReconnectToast => 'Pred nadaljevanjem se znova poveži s ponudnikom denarnice ali na tej napravi obnovi podpisnik.';
+
+  @override
   String get settingsNetworkTileTitle => 'Omrežje';
 
   @override
@@ -1700,6 +1724,9 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get settingsBackupStatusReadOnly => 'Na tej napravi je seja denarnice samo za branje';
+
+  @override
+  String get settingsBackupStatusEncryptedBackupRestoreAvailable => 'Šifrirana kopija je na voljo za obnovitev podpisovanja na tej napravi';
 
   @override
   String get settingsExportRecoveryPhraseTileTitle => 'Izvozi obnovitveno frazo';
@@ -4873,6 +4900,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get connectWalletCreateDescription => 'Na tej napravi bomo ustvarili novo neskrbniško denarnico za tvoj račun art.kubus. Obnovitveno frazo shrani takoj, da zaščitiš dolgoročni dostop.';
 
   @override
+  String get connectWalletCreateMissingBackupError => 'Ustvarjeni denarnici manjkajo podatki za varnostno kopijo.';
+
+  @override
   String get connectWalletCreateInfoTitle => 'Pomembno';
 
   @override
@@ -5071,10 +5101,34 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletHomeNoWalletDescription => 'Za začetek poveži ali obnovi denarnico svojega računa.';
 
   @override
+  String get walletHomeSignedOutTitle => 'Denarnica ni povezana';
+
+  @override
+  String get walletHomeSignedOutDescription => 'Prijavi se ter poveži ali obnovi denarnico, da vidiš stanja, zbirke in dejanja, zaščitena z denarnico.';
+
+  @override
+  String get walletHomeAccountShellTitle => 'Račun je prijavljen, denarnica ni obnovljena';
+
+  @override
+  String get walletHomeAccountShellDescription => 'Seja računa je na voljo, vendar je treba na tej napravi še obnoviti ali povezati denarnico, preden se lahko nadaljuje dejavnost denarnice.';
+
+  @override
+  String get walletHomeRestoreWalletAction => 'Obnovi denarnico';
+
+  @override
+  String get walletHomeCreateWalletAction => 'Ustvari denarnico';
+
+  @override
+  String get walletHomeImportWalletAction => 'Uvozi denarnico';
+
+  @override
   String get walletHomeAlreadyConnectedToast => 'Denarnica je že povezana.';
 
   @override
   String get walletHomeTotalBalanceLabel => 'Skupno stanje';
+
+  @override
+  String get walletHomeDesktopSurfaceLabel => 'Namizna denarnica';
 
   @override
   String walletHomeAddressLabel(Object address) {
@@ -5103,6 +5157,30 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletHomeQuickActionsSubtitle => 'Poslji, prejmi, zamenjaj ali odpri zbirateljske predmete.';
 
   @override
+  String get walletHomeSendAction => 'Pošlji';
+
+  @override
+  String get walletHomeReceiveAction => 'Prejmi';
+
+  @override
+  String get walletHomeSwapAction => 'Zamenjaj';
+
+  @override
+  String get walletHomeBuyAction => 'Kupi kripto';
+
+  @override
+  String get walletHomeDesktopSendSubtitle => 'Prenesi žetone';
+
+  @override
+  String get walletHomeDesktopReceiveSubtitle => 'Pridobi svoj naslov';
+
+  @override
+  String get walletHomeDesktopSwapSubtitle => 'Zamenjaj žetone';
+
+  @override
+  String get walletHomeDesktopBuySubtitle => 'Dodaj sredstva';
+
+  @override
   String get walletHomeYourTokensTitle => 'Tvoji žetoni';
 
   @override
@@ -5119,6 +5197,52 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get walletHomeRecentTransactionsSubtitle => 'Najnovejsa aktivnost denarnice in potrditve.';
+
+  @override
+  String get walletHomeDesktopRecentActivityTitle => 'Nedavna dejavnost';
+
+  @override
+  String get walletHomeDesktopTabAssets => 'Sredstva';
+
+  @override
+  String get walletHomeDesktopTabActivity => 'Dejavnost';
+
+  @override
+  String get walletHomeDesktopTabNfts => 'NFT-ji';
+
+  @override
+  String get walletHomeDesktopTabStaking => 'Zastavljanje';
+
+  @override
+  String get walletHomeNftLoadFailedTitle => 'NFT-jev ni bilo mogoče naložiti';
+
+  @override
+  String get walletHomeNoCollectiblesDescription => 'Mintaj ali kupi NFT-je, da se prikažejo tukaj.';
+
+  @override
+  String walletHomeCollectibleByline(Object creator) {
+    return 'avtor: $creator';
+  }
+
+  @override
+  String get walletHomeRewardsTitle => 'Nagrade KUB8';
+
+  @override
+  String walletHomeRewardsDescription(Object balance) {
+    return '$balance KUB8 je na voljo iz dosežkov';
+  }
+
+  @override
+  String get walletHomeStakeTitle => 'Zastavi SOL za prihranek pri provizijah';
+
+  @override
+  String get walletHomeStakeDescription => 'Zakleni SOL za kritje prihodnjih stroškov transakcij in ohrani gladko objavljanje svoje galerije.';
+
+  @override
+  String get walletHomeStakeAction => 'Zastavi zdaj';
+
+  @override
+  String get walletHomeRefreshRatesAction => 'Osveži tečaje';
 
   @override
   String walletHomeApproxTotalValue(Object value) {
@@ -8007,6 +8131,12 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletBackupProtectionEncryptedBody => 'Obnovitveno geslo za šifrirano kopijo hrani ločeno od obnovitvene fraze, da obe poti za obnovitev ostaneta uporabni.';
 
   @override
+  String get walletBackupProtectionEncryptedRestoreHeadline => 'Šifrirana kopija je na voljo, vendar podpisovanje na tej napravi ni obnovljeno.';
+
+  @override
+  String get walletBackupProtectionEncryptedRestoreBody => 'S šifrirano kopijo obnovi dostop za podpisovanje na tej napravi, preden uporabiš prenose in druga dejanja, zaščitena z denarnico.';
+
+  @override
   String get walletBackupProtectionPasskeyHeadline => 'Šifrirana strežniška kopija, zaščitena s passkeyem, je nastavljena.';
 
   @override
@@ -8300,6 +8430,123 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get walletReconnectManualRequiredToast => 'Za podpisovanje se znova poveži prek ponudnika denarnice.';
+
+  @override
+  String get walletSwapTitle => 'Zamenjava žetonov';
+
+  @override
+  String get walletSwapSwitchTokensTooltip => 'Zamenjaj žetona';
+
+  @override
+  String get walletSwapNoTokensTitle => 'Trenutno še ni žetonov za zamenjavo';
+
+  @override
+  String get walletSwapNoTokensDescription => 'Dodaj sredstva ali prejmi žetone, da omogočiš zamenjave. Ko boš imel podprta sredstva, se bodo tukaj prikazala samodejno.';
+
+  @override
+  String get walletSwapYouPayLabel => 'Plačaš';
+
+  @override
+  String get walletSwapYouReceiveLabel => 'Prejmeš';
+
+  @override
+  String get walletSwapMaxAction => 'MAKS';
+
+  @override
+  String get walletSwapAmountPlaceholder => '0.0';
+
+  @override
+  String get walletSwapSelectTokenAction => 'Izberi';
+
+  @override
+  String walletSwapBalanceLabel(Object balance) {
+    return 'Stanje: $balance';
+  }
+
+  @override
+  String get walletSwapInvalidAmountTitle => 'Neveljaven znesek';
+
+  @override
+  String get walletSwapRouteUnavailableTitle => 'Poti ni bilo mogoče pridobiti';
+
+  @override
+  String get walletSwapSearchingRouteLabel => 'Iščem najboljšo pot na Jupiterju…';
+
+  @override
+  String get walletSwapEnterAmountTitle => 'Vnesi znesek';
+
+  @override
+  String get walletSwapEnterAmountDescription => 'Ko vneseš znesek, bomo pridobili žive ponudbe s provizijami in minimalnim prejemom.';
+
+  @override
+  String get walletSwapQuotePreviewTitle => 'Predogled ponudbe';
+
+  @override
+  String get walletSwapEstimatedOutputLabel => 'Ocenjen izhod';
+
+  @override
+  String get walletSwapMinReceivedLabel => 'Najmanj prejeto (po zdrsu)';
+
+  @override
+  String get walletSwapPriceImpactLabel => 'Vpliv na ceno';
+
+  @override
+  String get walletSwapSlippageLabel => 'Zdrs';
+
+  @override
+  String get walletSwapProtocolFeeLabel => 'Provizija protokola';
+
+  @override
+  String walletSwapProtocolFeeValue(Object percent) {
+    return '$percent% se uporabi za izhodni žeton';
+  }
+
+  @override
+  String get walletSwapRouteFallbackLabel => 'Pot';
+
+  @override
+  String get walletSwapSlippageToleranceLabel => 'Toleranca zdrsa';
+
+  @override
+  String get walletSwapEnterAmountCta => 'Vnesi znesek';
+
+  @override
+  String walletSwapSubmitLabel(Object fromToken, Object toToken) {
+    return 'Zamenjaj $fromToken → $toToken';
+  }
+
+  @override
+  String get walletSwapNoHistoryTitle => 'Zamenjav še ni';
+
+  @override
+  String get walletSwapNoHistoryDescription => 'Izvedene zamenjave se bodo tukaj prikazale s podrobnim stanjem, ko bodo zaključene.';
+
+  @override
+  String get walletSwapPositiveAmountError => 'Vnesi pozitiven znesek';
+
+  @override
+  String get walletSwapPositiveAmountDetailedError => 'Vnesi znesek, večji od nič';
+
+  @override
+  String get walletSwapSelectTokensError => 'Za nadaljevanje izberi oba žetona';
+
+  @override
+  String get walletSwapDifferentTokensError => 'Izberi dva različna žetona';
+
+  @override
+  String walletSwapSubmittedToast(Object fromToken, Object toToken) {
+    return 'Zamenjava oddana: $fromToken → $toToken';
+  }
+
+  @override
+  String walletSwapFailedToast(Object message) {
+    return 'Zamenjava ni uspela: $message';
+  }
+
+  @override
+  String walletSwapTokenOptionSubtitle(Object symbol, Object balance) {
+    return '$symbol • Stanje $balance';
+  }
 
   @override
   String get manageMarkersTitle => 'Upravljaj označevalnike';

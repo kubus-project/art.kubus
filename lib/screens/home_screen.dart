@@ -761,7 +761,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   isArtist: isArtist,
                                   isInstitution: isInstitution,
                                   compact: true,
-                                  footer: web3Provider.isConnected
+                                  footer: web3Provider.hasWalletIdentity
                                       ? Wrap(
                                           spacing: KubusSpacing.sm,
                                           runSpacing: KubusSpacing.xxs,
@@ -1158,7 +1158,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ? KubusSpacing.md
                     : KubusChromeMetrics.cardPadding,
               ),
-              if (web3Provider.isConnected) ...[
+              if (web3Provider.hasWalletIdentity) ...[
                 Consumer<WalletProvider>(
                   builder: (context, walletProvider, child) {
                     // Get KUB8 balance
@@ -1995,7 +1995,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         final l10n = AppLocalizations.of(context)!;
         final profileProvider = context.watch<ProfileProvider>();
         // Show as connected if wallet is connected (mock or real)
-        final bool isEffectivelyConnected = web3Provider.isConnected;
+        final bool hasWalletIdentity = web3Provider.hasWalletIdentity;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2009,7 +2009,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
-                if (!isEffectivelyConnected)
+                if (!hasWalletIdentity)
                   Builder(
                     builder: (context) {
                       final roles = KubusColorRoles.of(context);
@@ -2046,7 +2046,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
             const SizedBox(height: 16),
             HomeWeb3CardStrip(
-              isEffectivelyConnected: isEffectivelyConnected,
+              isEffectivelyConnected: hasWalletIdentity,
               persona: profileProvider.userPersona,
               isArtist: profileProvider.currentUser?.isArtist ?? false,
               isInstitution:

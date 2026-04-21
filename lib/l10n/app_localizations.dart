@@ -1043,6 +1043,12 @@ abstract class AppLocalizations {
   /// **'Google sign-in is disabled.'**
   String get authGoogleSignInDisabled;
 
+  String get authGoogleUnavailableError;
+
+  String get authGoogleConnectingLabel;
+
+  String get authContinueWithGoogleLabel;
+
   /// No description provided for @authWalletConnectionDisabled.
   ///
   /// In en, this message translates to:
@@ -1312,6 +1318,8 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Google sign-in failed. Please try again.'**
   String get authGoogleSignInFailed;
+
+  String get authSignerProvisioningFailed;
 
   /// No description provided for @authGoogleRateLimitedRetryIn.
   ///
@@ -3341,6 +3349,14 @@ abstract class AppLocalizations {
   /// **'Connect your wallet to continue.'**
   String get walletActionConnectWalletRequiredToast;
 
+  String get walletActionAccountShellNeedsWalletToast;
+
+  String get walletActionEncryptedBackupRestoreToast;
+
+  String get walletActionRecoveryNeededToast;
+
+  String get walletActionReadOnlyReconnectToast;
+
   /// No description provided for @settingsNetworkTileTitle.
   ///
   /// In en, this message translates to:
@@ -3412,6 +3428,8 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Read-only wallet session on this device'**
   String get settingsBackupStatusReadOnly;
+
+  String get settingsBackupStatusEncryptedBackupRestoreAvailable;
 
   /// No description provided for @settingsExportRecoveryPhraseTileTitle.
   ///
@@ -9371,6 +9389,8 @@ abstract class AppLocalizations {
   /// **'We will create a new non-custodial wallet on this device for your art.kubus account. Back up the recovery phrase right away to protect long-term access.'**
   String get connectWalletCreateDescription;
 
+  String get connectWalletCreateMissingBackupError;
+
   /// No description provided for @connectWalletCreateInfoTitle.
   ///
   /// In en, this message translates to:
@@ -9755,6 +9775,20 @@ abstract class AppLocalizations {
   /// **'Connect or restore your account wallet to get started.'**
   String get walletHomeNoWalletDescription;
 
+  String get walletHomeSignedOutTitle;
+
+  String get walletHomeSignedOutDescription;
+
+  String get walletHomeAccountShellTitle;
+
+  String get walletHomeAccountShellDescription;
+
+  String get walletHomeRestoreWalletAction;
+
+  String get walletHomeCreateWalletAction;
+
+  String get walletHomeImportWalletAction;
+
   /// No description provided for @walletHomeAlreadyConnectedToast.
   ///
   /// In en, this message translates to:
@@ -9766,6 +9800,8 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Total balance'**
   String get walletHomeTotalBalanceLabel;
+
+  String get walletHomeDesktopSurfaceLabel;
 
   /// No description provided for @walletHomeAddressLabel.
   ///
@@ -9815,6 +9851,22 @@ abstract class AppLocalizations {
   /// **'Send, receive, swap, or open collectibles from one place.'**
   String get walletHomeQuickActionsSubtitle;
 
+  String get walletHomeSendAction;
+
+  String get walletHomeReceiveAction;
+
+  String get walletHomeSwapAction;
+
+  String get walletHomeBuyAction;
+
+  String get walletHomeDesktopSendSubtitle;
+
+  String get walletHomeDesktopReceiveSubtitle;
+
+  String get walletHomeDesktopSwapSubtitle;
+
+  String get walletHomeDesktopBuySubtitle;
+
   /// No description provided for @walletHomeYourTokensTitle.
   ///
   /// In en, this message translates to:
@@ -9850,6 +9902,34 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Latest wallet activity and confirmations.'**
   String get walletHomeRecentTransactionsSubtitle;
+
+  String get walletHomeDesktopRecentActivityTitle;
+
+  String get walletHomeDesktopTabAssets;
+
+  String get walletHomeDesktopTabActivity;
+
+  String get walletHomeDesktopTabNfts;
+
+  String get walletHomeDesktopTabStaking;
+
+  String get walletHomeNftLoadFailedTitle;
+
+  String get walletHomeNoCollectiblesDescription;
+
+  String walletHomeCollectibleByline(Object creator);
+
+  String get walletHomeRewardsTitle;
+
+  String walletHomeRewardsDescription(Object balance);
+
+  String get walletHomeStakeTitle;
+
+  String get walletHomeStakeDescription;
+
+  String get walletHomeStakeAction;
+
+  String get walletHomeRefreshRatesAction;
 
   /// No description provided for @walletHomeApproxTotalValue.
   ///
@@ -15215,6 +15295,10 @@ abstract class AppLocalizations {
   /// **'Keep the encrypted backup recovery password stored separately from the recovery phrase so both recovery paths remain usable.'**
   String get walletBackupProtectionEncryptedBody;
 
+  String get walletBackupProtectionEncryptedRestoreHeadline;
+
+  String get walletBackupProtectionEncryptedRestoreBody;
+
   /// No description provided for @walletBackupProtectionPasskeyHeadline.
   ///
   /// In en, this message translates to:
@@ -15772,6 +15856,76 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reconnect with your wallet provider to enable signing.'**
   String get walletReconnectManualRequiredToast;
+
+  String get walletSwapTitle;
+
+  String get walletSwapSwitchTokensTooltip;
+
+  String get walletSwapNoTokensTitle;
+
+  String get walletSwapNoTokensDescription;
+
+  String get walletSwapYouPayLabel;
+
+  String get walletSwapYouReceiveLabel;
+
+  String get walletSwapMaxAction;
+
+  String get walletSwapAmountPlaceholder;
+
+  String get walletSwapSelectTokenAction;
+
+  String walletSwapBalanceLabel(Object balance);
+
+  String get walletSwapInvalidAmountTitle;
+
+  String get walletSwapRouteUnavailableTitle;
+
+  String get walletSwapSearchingRouteLabel;
+
+  String get walletSwapEnterAmountTitle;
+
+  String get walletSwapEnterAmountDescription;
+
+  String get walletSwapQuotePreviewTitle;
+
+  String get walletSwapEstimatedOutputLabel;
+
+  String get walletSwapMinReceivedLabel;
+
+  String get walletSwapPriceImpactLabel;
+
+  String get walletSwapSlippageLabel;
+
+  String get walletSwapProtocolFeeLabel;
+
+  String walletSwapProtocolFeeValue(Object percent);
+
+  String get walletSwapRouteFallbackLabel;
+
+  String get walletSwapSlippageToleranceLabel;
+
+  String get walletSwapEnterAmountCta;
+
+  String walletSwapSubmitLabel(Object fromToken, Object toToken);
+
+  String get walletSwapNoHistoryTitle;
+
+  String get walletSwapNoHistoryDescription;
+
+  String get walletSwapPositiveAmountError;
+
+  String get walletSwapPositiveAmountDetailedError;
+
+  String get walletSwapSelectTokensError;
+
+  String get walletSwapDifferentTokensError;
+
+  String walletSwapSubmittedToast(Object fromToken, Object toToken);
+
+  String walletSwapFailedToast(Object message);
+
+  String walletSwapTokenOptionSubtitle(Object symbol, Object balance);
 
   /// No description provided for @manageMarkersTitle.
   ///

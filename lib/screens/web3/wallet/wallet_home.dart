@@ -57,6 +57,7 @@ class _WalletHomeState extends State<WalletHome> {
         final isLoading = walletProvider.isLoading;
         final isReadOnlySession = walletProvider.isReadOnlySession;
         final canTransact = walletProvider.canTransact;
+        final authority = walletProvider.authority;
 
         // Show loading indicator while wallet is loading
         if (isLoading) {
@@ -96,8 +97,10 @@ class _WalletHomeState extends State<WalletHome> {
           );
         }
 
-        // Show empty state if no wallet data AND no address
-        if (wallet == null && walletAddress == null) {
+        // Show empty state when there is no wallet identity on this device.
+        if (!authority.hasWalletIdentity) {
+          final isAccountShellOnly =
+              authority.state == WalletAuthorityState.accountShellOnly;
           return Scaffold(
             backgroundColor: Colors.transparent,
             appBar: AppBar(
@@ -127,10 +130,16 @@ class _WalletHomeState extends State<WalletHome> {
                   width: double.infinity,
                   child: EmptyStateCard(
                     icon: Icons.account_balance_wallet_outlined,
-                    title: l10n.settingsNoWalletConnected,
-                    description: l10n.walletHomeNoWalletDescription,
+                    title: isAccountShellOnly
+                        ? l10n.walletHomeAccountShellTitle
+                        : l10n.walletHomeSignedOutTitle,
+                    description: isAccountShellOnly
+                        ? l10n.walletHomeAccountShellDescription
+                        : l10n.walletHomeSignedOutDescription,
                     showAction: true,
-                    actionLabel: l10n.authConnectWalletButton,
+                    actionLabel: isAccountShellOnly
+                        ? l10n.walletHomeRestoreWalletAction
+                        : l10n.authConnectWalletButton,
                     onAction: () {
                       final walletProvider =
                           Provider.of<WalletProvider>(context, listen: false);
@@ -402,14 +411,12 @@ class _WalletHomeState extends State<WalletHome> {
                     ),
 
                     WalletCustodyStatusPanel(
-                      authority: walletProvider.authority,
+                      authority: authority,
                       compact: isSmallScreen,
-                      onRestoreSigner:
-                          walletProvider.authority.canRestoreFromEncryptedBackup
+                      onRestoreSigner: authority.canRestoreFromEncryptedBackup
                               ? () => _handleReadOnlyReconnect(walletProvider)
                               : null,
-                      onConnectExternalWallet: !walletProvider
-                              .authority.canTransact
+                      onConnectExternalWallet: !authority.canTransact
                           ? () =>
                               Navigator.of(context).pushNamed('/connect-wallet')
                           : null,

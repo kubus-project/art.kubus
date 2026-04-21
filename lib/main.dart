@@ -703,7 +703,7 @@ class _AppLauncherState extends State<AppLauncher> {
                     attendanceProvider) {
                   final provider = attendanceProvider ?? AttendanceProvider();
                   provider.bindAuthContext(
-                    isSignedIn: walletProvider.authority.canUseAccount,
+                    isSignedIn: walletProvider.authority.hasAccountSession,
                     walletAddress: walletProvider.currentWalletAddress,
                   );
                   return provider;
@@ -719,7 +719,7 @@ class _AppLauncherState extends State<AppLauncher> {
                   provider.bindAuthContext(
                     profileProvider: profileProvider,
                     walletAddress: walletProvider.currentWalletAddress,
-                    isSignedIn: walletProvider.authority.canUseAccount,
+                    isSignedIn: walletProvider.authority.hasAccountSession,
                   );
                   return provider;
                 },

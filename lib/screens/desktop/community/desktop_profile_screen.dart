@@ -870,7 +870,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     color: scheme.onSurface.withValues(alpha: 0.62),
                   ),
                 ),
-                if (web3Provider.isConnected) ...[
+                if (web3Provider.hasWalletIdentity) ...[
                   const SizedBox(height: KubusSpacing.sm),
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -2210,7 +2210,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         Provider.of<ProfileProvider>(context, listen: false);
     final web3Provider = Provider.of<Web3Provider>(context, listen: false);
     final wallet = web3Provider.walletAddress.trim();
-    if (!web3Provider.isConnected || wallet.isEmpty) {
+    if (!web3Provider.hasWalletIdentity || wallet.isEmpty) {
       return;
     }
 

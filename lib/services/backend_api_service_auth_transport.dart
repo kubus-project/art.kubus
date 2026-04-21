@@ -113,8 +113,10 @@ extension BackendApiAuthTransport on BackendApiService {
     await restoreExistingSession(allowRefresh: false);
     final token = (_authToken ?? '').trim();
     final currentWallet = (getCurrentAuthWalletAddress() ?? '').trim();
+    final authLevel = getCurrentAuthLevel();
     if (token.isNotEmpty &&
-        WalletUtils.equals(currentWallet, normalizedWallet)) {
+        WalletUtils.equals(currentWallet, normalizedWallet) &&
+        authLevel == BackendAuthLevel.walletSigned) {
       return AuthSessionPayload(
         token: token,
         walletAddress: currentWallet,

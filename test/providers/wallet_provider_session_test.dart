@@ -102,7 +102,7 @@ void main() {
     final walletProvider = WalletProvider(deferInit: true);
 
     expect(walletProvider.authority.state, WalletAuthorityState.signedOut);
-    expect(walletProvider.authority.canUseAccount, isFalse);
+    expect(walletProvider.authority.hasAccountSession, isFalse);
     expect(walletProvider.authority.canReadWallet, isFalse);
     expect(walletProvider.authority.canTransact, isFalse);
   });

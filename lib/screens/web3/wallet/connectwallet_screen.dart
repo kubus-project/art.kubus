@@ -335,21 +335,15 @@ class _ConnectWalletState extends State<ConnectWallet>
       }
     }
 
-    final currentAuthWallet =
-        (backendApiService.getCurrentAuthWalletAddress() ?? '')
-            .trim()
-            .toLowerCase();
-    final hasAuthToken =
-        (backendApiService.getAuthToken() ?? '').trim().isNotEmpty;
-    final needsWalletAuth =
-        !hasAuthToken || currentAuthWallet != address.trim().toLowerCase();
+    final needsWalletAuth = !backendApiService.signedActions
+        .hasWalletSignedSessionFor(address);
 
     if (needsWalletAuth) {
       final signerReady = walletProvider != null &&
           walletProvider.canTransact &&
           WalletUtils.equals(walletProvider.currentWalletAddress, address);
       if (signerReady) {
-        await backendApiService.ensureSessionForActiveSigner(
+        await backendApiService.signedActions.ensureWalletSignedSession(
           walletAddress: address,
           signMessage: walletProvider.signMessage,
         );
@@ -2418,6 +2412,7 @@ class _ConnectWalletState extends State<ConnectWallet>
     });
 
     try {
+      final l10n = AppLocalizations.of(context)!;
       final walletProvider =
           Provider.of<WalletProvider?>(context, listen: false);
       final gate = Provider.of<SecurityGateProvider?>(context, listen: false);
@@ -2443,7 +2438,7 @@ class _ConnectWalletState extends State<ConnectWallet>
       final address = (result['address'] ?? '').trim();
 
       if (mnemonic.isEmpty || address.isEmpty) {
-        throw StateError('Created wallet is missing backup details.');
+        throw StateError(l10n.connectWalletCreateMissingBackupError);
       }
 
       // Show the mnemonic to the user

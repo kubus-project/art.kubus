@@ -10,6 +10,7 @@ import '../../../models/wallet.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/design_tokens.dart';
+import '../../../widgets/wallet_custody_status_panel.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/utils/wallet_reconnect_action.dart';
 
@@ -74,8 +75,9 @@ class _TokenSwapState extends State<TokenSwap> {
     final l10n = AppLocalizations.of(context)!;
     const swapColor = AppColorUtils.greenAccent;
     final walletProvider = context.watch<WalletProvider>();
-    if (walletProvider.hasWalletIdentity && !walletProvider.canTransact) {
-      return _buildReadOnlyState(theme, swapColor, l10n);
+    final authority = walletProvider.authority;
+    if (!authority.canTransact) {
+      return _buildAuthorityState(theme, swapColor, l10n, authority);
     }
     final tokens = _availableTokens(walletProvider);
     final hasTokens = tokens.isNotEmpty;
@@ -101,7 +103,7 @@ class _TokenSwapState extends State<TokenSwap> {
         elevation: 0,
         scrolledUnderElevation: 0,
         title: Text(
-          'Token Swap',
+          l10n.walletSwapTitle,
           style: KubusTypography.inter(
             fontSize: KubusHeaderMetrics.screenTitle,
             fontWeight: FontWeight.bold,
@@ -114,7 +116,7 @@ class _TokenSwapState extends State<TokenSwap> {
         ),
         actions: [
           IconButton(
-            tooltip: 'Switch tokens',
+            tooltip: l10n.walletSwapSwitchTokensTooltip,
             icon: Icon(Icons.swap_vert, color: theme.colorScheme.onSurface),
             onPressed: canFlip ? _swapDirection : null,
           ),
@@ -151,16 +153,45 @@ class _TokenSwapState extends State<TokenSwap> {
                   );
                 },
               )
-            : _buildEmptyState(theme, swapColor),
+            : _buildEmptyState(theme, swapColor, l10n),
       ),
     );
   }
 
-  Widget _buildReadOnlyState(
+  Widget _buildAuthorityState(
     ThemeData theme,
     Color swapColor,
     AppLocalizations l10n,
+    WalletAuthoritySnapshot authority,
   ) {
+    final canRestore = authority.canRestoreFromEncryptedBackup;
+    final title = switch (authority.state) {
+      WalletAuthorityState.signedOut => l10n.walletHomeSignedOutTitle,
+      WalletAuthorityState.accountShellOnly => l10n.walletHomeAccountShellTitle,
+      WalletAuthorityState.walletReadOnly => l10n.walletSessionStateWalletReadOnly,
+      WalletAuthorityState.localSignerReady => l10n.walletSessionStateLocalSignerReady,
+      WalletAuthorityState.externalWalletReady =>
+        l10n.walletSessionStateExternalWalletReady,
+      WalletAuthorityState.encryptedBackupAvailableSignerMissing =>
+        l10n.walletSessionStateEncryptedBackupAvailable,
+      WalletAuthorityState.recoveryNeeded => l10n.walletSessionStateRecoveryNeeded,
+    };
+    final body = switch (authority.state) {
+      WalletAuthorityState.signedOut => l10n.walletActionSignInRequiredToast,
+      WalletAuthorityState.accountShellOnly =>
+        l10n.walletActionAccountShellNeedsWalletToast,
+      WalletAuthorityState.walletReadOnly =>
+        l10n.walletActionReadOnlyReconnectToast,
+      WalletAuthorityState.localSignerReady =>
+        l10n.walletSecurityLocalSignerReadyValue,
+      WalletAuthorityState.externalWalletReady =>
+        l10n.walletSecuritySignerExternalReadyValue,
+      WalletAuthorityState.encryptedBackupAvailableSignerMissing =>
+        l10n.walletActionEncryptedBackupRestoreToast,
+      WalletAuthorityState.recoveryNeeded =>
+        l10n.walletActionRecoveryNeededToast,
+    };
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
@@ -169,7 +200,7 @@ class _TokenSwapState extends State<TokenSwap> {
         elevation: 0,
         scrolledUnderElevation: 0,
         title: Text(
-          'Token Swap',
+          l10n.walletSwapTitle,
           style: KubusTypography.inter(
             fontSize: 22,
             fontWeight: FontWeight.bold,
@@ -191,7 +222,7 @@ class _TokenSwapState extends State<TokenSwap> {
                 Icon(Icons.lock_clock, size: 64, color: swapColor),
                 const SizedBox(height: KubusSpacing.lg),
                 Text(
-                  l10n.settingsBackupStatusReadOnly,
+                  title,
                   style: KubusTypography.inter(
                     fontSize: KubusHeaderMetrics.screenTitle,
                     fontWeight: FontWeight.w700,
@@ -200,20 +231,45 @@ class _TokenSwapState extends State<TokenSwap> {
                 ),
                 const SizedBox(height: KubusSpacing.md),
                 Text(
-                  l10n.walletReconnectManualRequiredToast,
+                  body,
                   textAlign: TextAlign.center,
                   style: KubusTypography.inter(
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
                 const SizedBox(height: KubusSpacing.lg),
+                WalletCustodyStatusPanel(
+                  authority: authority,
+                  compact: true,
+                  onRestoreSigner: canRestore ? _handleReadOnlyReconnect : null,
+                  onConnectExternalWallet: authority.hasWalletIdentity
+                      ? () => Navigator.of(context).pushNamed('/connect-wallet')
+                      : null,
+                ),
+                const SizedBox(height: KubusSpacing.lg),
                 ElevatedButton(
-                  onPressed: _handleReadOnlyReconnect,
+                  onPressed: () {
+                    if (canRestore) {
+                      _handleReadOnlyReconnect();
+                      return;
+                    }
+                    Navigator.of(context).pushNamed(
+                      authority.state == WalletAuthorityState.signedOut
+                          ? '/sign-in'
+                          : '/connect-wallet',
+                    );
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: swapColor,
                     foregroundColor: theme.colorScheme.onPrimary,
                   ),
-                  child: Text(l10n.commonReconnect),
+                  child: Text(
+                    canRestore
+                        ? l10n.commonReconnect
+                        : authority.state == WalletAuthorityState.signedOut
+                            ? l10n.commonContinue
+                            : l10n.walletSecurityConnectExternalAction,
+                  ),
                 ),
               ],
             ),
@@ -223,7 +279,11 @@ class _TokenSwapState extends State<TokenSwap> {
     );
   }
 
-  Widget _buildEmptyState(ThemeData theme, Color swapColor) {
+  Widget _buildEmptyState(
+    ThemeData theme,
+    Color swapColor,
+    AppLocalizations l10n,
+  ) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(KubusSpacing.xl),
@@ -234,7 +294,7 @@ class _TokenSwapState extends State<TokenSwap> {
                 size: 64, color: swapColor),
             const SizedBox(height: KubusSpacing.lg),
             Text(
-              'No tradable tokens yet',
+              l10n.walletSwapNoTokensTitle,
               style: KubusTypography.inter(
                 fontSize: KubusHeaderMetrics.screenTitle,
                 fontWeight: FontWeight.w600,
@@ -243,7 +303,7 @@ class _TokenSwapState extends State<TokenSwap> {
             ),
             const SizedBox(height: KubusSpacing.md),
             Text(
-              'Add funds or receive tokens to enable swaps. Once you hold supported assets they will appear here automatically.',
+              l10n.walletSwapNoTokensDescription,
               textAlign: TextAlign.center,
               style: KubusTypography.inter(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
@@ -261,6 +321,7 @@ class _TokenSwapState extends State<TokenSwap> {
     WalletProvider walletProvider,
     List<Token> tokens,
   ) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(KubusSpacing.lg),
       decoration: BoxDecoration(
@@ -279,7 +340,7 @@ class _TokenSwapState extends State<TokenSwap> {
       child: Column(
         children: [
           _buildTokenInput(
-            label: 'You pay',
+            label: l10n.walletSwapYouPayLabel,
             isFrom: true,
             theme: theme,
             swapColor: swapColor,
@@ -288,7 +349,7 @@ class _TokenSwapState extends State<TokenSwap> {
           ),
           const SizedBox(height: 16),
           _buildTokenInput(
-            label: 'You receive',
+            label: l10n.walletSwapYouReceiveLabel,
             isFrom: false,
             theme: theme,
             swapColor: swapColor,
@@ -308,6 +369,7 @@ class _TokenSwapState extends State<TokenSwap> {
     required WalletProvider walletProvider,
     required List<Token> tokens,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     final symbol = isFrom ? _fromTokenSymbol : _toTokenSymbol;
     final controller = isFrom ? _fromController : _toController;
     final balance = symbol != null
@@ -340,7 +402,7 @@ class _TokenSwapState extends State<TokenSwap> {
               if (isFrom)
                 TextButton(
                   onPressed: token == null ? null : () => _fillMax(token),
-                  child: const Text('MAX'),
+                  child: Text(l10n.walletSwapMaxAction),
                 ),
             ],
           ),
@@ -362,7 +424,7 @@ class _TokenSwapState extends State<TokenSwap> {
                     color: theme.colorScheme.onSurface,
                   ),
                   decoration: InputDecoration(
-                    hintText: '0.0',
+                    hintText: l10n.walletSwapAmountPlaceholder,
                     hintStyle: KubusTypography.inter(
                       fontSize: 28,
                       fontWeight: FontWeight.w600,
@@ -390,7 +452,7 @@ class _TokenSwapState extends State<TokenSwap> {
                           symbol: symbol, token: token, swapColor: swapColor),
                       const SizedBox(width: 8),
                       Text(
-                        symbol ?? 'Select',
+                        symbol ?? l10n.walletSwapSelectTokenAction,
                         style: KubusTypography.inter(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
@@ -411,7 +473,7 @@ class _TokenSwapState extends State<TokenSwap> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Balance: $balance',
+                l10n.walletSwapBalanceLabel(balance),
                 style: KubusTypography.inter(
                   fontSize: 13,
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -433,13 +495,14 @@ class _TokenSwapState extends State<TokenSwap> {
   }
 
   Widget _buildQuoteDetails(ThemeData theme, Color swapColor) {
+    final l10n = AppLocalizations.of(context)!;
     if (_amountError != null) {
       return _infoCard(
         theme,
         swapColor,
         icon: Icons.info_outline,
         iconColor: theme.colorScheme.error,
-        title: 'Invalid amount',
+        title: l10n.walletSwapInvalidAmountTitle,
         subtitle: _amountError!,
       );
     }
@@ -449,7 +512,7 @@ class _TokenSwapState extends State<TokenSwap> {
         swapColor,
         icon: Icons.error_outline,
         iconColor: theme.colorScheme.error,
-        title: 'Unable to fetch route',
+        title: l10n.walletSwapRouteUnavailableTitle,
         subtitle: _quoteError!,
       );
     }
@@ -468,7 +531,7 @@ class _TokenSwapState extends State<TokenSwap> {
             ),
             const SizedBox(width: 12),
             Text(
-              'Searching best route on Jupiter…',
+              l10n.walletSwapSearchingRouteLabel,
               style: KubusTypography.inter(color: theme.colorScheme.onSurface),
             ),
           ],
@@ -480,9 +543,8 @@ class _TokenSwapState extends State<TokenSwap> {
         theme,
         swapColor,
         icon: Icons.route,
-        title: 'Enter an amount',
-        subtitle:
-            'We will fetch live quotes with fees and min received once you type an amount.',
+        title: l10n.walletSwapEnterAmountTitle,
+        subtitle: l10n.walletSwapEnterAmountDescription,
       );
     }
 
@@ -505,7 +567,7 @@ class _TokenSwapState extends State<TokenSwap> {
               Icon(Icons.swap_horiz, color: swapColor),
               const SizedBox(width: 10),
               Text(
-                'Quote preview',
+                l10n.walletSwapQuotePreviewTitle,
                 style: KubusTypography.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -515,25 +577,29 @@ class _TokenSwapState extends State<TokenSwap> {
             ],
           ),
           const SizedBox(height: 16),
-          _quoteMetric(
-              theme, 'Estimated output', '$output ${_toTokenSymbol ?? ''}'),
+          _quoteMetric(theme, l10n.walletSwapEstimatedOutputLabel,
+              '$output ${_toTokenSymbol ?? ''}'),
           const SizedBox(height: 8),
-          _quoteMetric(theme, 'Min received (after slippage)',
+          _quoteMetric(theme, l10n.walletSwapMinReceivedLabel,
               '$minReceived ${_toTokenSymbol ?? ''}'),
           const SizedBox(height: 8),
-          _quoteMetric(theme, 'Price impact', '$priceImpact%'),
+          _quoteMetric(theme, l10n.walletSwapPriceImpactLabel, '$priceImpact%'),
           const SizedBox(height: 8),
-          _quoteMetric(theme, 'Slippage', '$slippage%'),
+          _quoteMetric(theme, l10n.walletSwapSlippageLabel, '$slippage%'),
           const SizedBox(height: 8),
-          _quoteMetric(theme, 'Protocol fee',
-              '$protocolFeePct% applied to output token'),
+          _quoteMetric(
+            theme,
+            l10n.walletSwapProtocolFeeLabel,
+            l10n.walletSwapProtocolFeeValue(protocolFeePct),
+          ),
           if (_quote!.routePlan.isNotEmpty) ...[
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: _quote!.routePlan.map((step) {
-                final label = step['label']?.toString() ?? 'Route';
+                final label =
+                    step['label']?.toString() ?? l10n.walletSwapRouteFallbackLabel;
                 return Chip(
                   label:
                       Text(label, style: KubusTypography.inter(fontSize: 12)),
@@ -620,6 +686,7 @@ class _TokenSwapState extends State<TokenSwap> {
   }
 
   Widget _buildSlippageSelector(ThemeData theme, Color swapColor) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: _infoDecoration(theme),
@@ -630,7 +697,7 @@ class _TokenSwapState extends State<TokenSwap> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Slippage tolerance',
+                l10n.walletSwapSlippageToleranceLabel,
                 style: KubusTypography.inter(
                     fontWeight: FontWeight.w600,
                     color: theme.colorScheme.onSurface),
@@ -658,6 +725,7 @@ class _TokenSwapState extends State<TokenSwap> {
 
   Widget _buildSwapButton(
       ThemeData theme, Color swapColor, WalletProvider walletProvider) {
+    final l10n = AppLocalizations.of(context)!;
     final isDisabled = _isSubmitting ||
         _fromTokenSymbol == null ||
         _toTokenSymbol == null ||
@@ -684,8 +752,11 @@ class _TokenSwapState extends State<TokenSwap> {
               )
             : Text(
                 _quote == null
-                    ? 'Enter amount'
-                    : 'Swap ${_fromTokenSymbol ?? ''} → ${_toTokenSymbol ?? ''}',
+                    ? l10n.walletSwapEnterAmountCta
+                    : l10n.walletSwapSubmitLabel(
+                        _fromTokenSymbol ?? '',
+                        _toTokenSymbol ?? '',
+                      ),
                 style: KubusTypography.inter(fontWeight: FontWeight.w600),
               ),
       ),
@@ -693,15 +764,15 @@ class _TokenSwapState extends State<TokenSwap> {
   }
 
   Widget _buildRecentSwaps(ThemeData theme, WalletProvider walletProvider) {
+    final l10n = AppLocalizations.of(context)!;
     final swaps = walletProvider.getTransactionsByType(TransactionType.swap);
     if (swaps.isEmpty) {
       return _infoCard(
         theme,
         theme.colorScheme.primary,
         icon: Icons.history,
-        title: 'No swaps yet',
-        subtitle:
-            'Executed swaps will appear here with detailed status once completed.',
+        title: l10n.walletSwapNoHistoryTitle,
+        subtitle: l10n.walletSwapNoHistoryDescription,
       );
     }
 
@@ -776,11 +847,12 @@ class _TokenSwapState extends State<TokenSwap> {
   }
 
   Future<void> _requestQuote() async {
+    final l10n = AppLocalizations.of(context)!;
     final walletProvider = context.read<WalletProvider>();
     final amount = double.tryParse(_fromController.text.trim());
     if (amount == null || amount <= 0) {
       setState(() {
-        _amountError = 'Enter a positive amount';
+        _amountError = l10n.walletSwapPositiveAmountError;
         _quote = null;
         _quoteError = null;
       });
@@ -788,12 +860,12 @@ class _TokenSwapState extends State<TokenSwap> {
     }
 
     if (_fromTokenSymbol == null || _toTokenSymbol == null) {
-      setState(() => _amountError = 'Select both tokens to continue');
+      setState(() => _amountError = l10n.walletSwapSelectTokensError);
       return;
     }
 
     if (_fromTokenSymbol == _toTokenSymbol) {
-      setState(() => _amountError = 'Choose two different tokens');
+      setState(() => _amountError = l10n.walletSwapDifferentTokensError);
       return;
     }
 
@@ -828,15 +900,16 @@ class _TokenSwapState extends State<TokenSwap> {
   }
 
   Future<void> _handleSwap(WalletProvider walletProvider) async {
+    final l10n = AppLocalizations.of(context)!;
     final amount = double.tryParse(_fromController.text.trim()) ?? 0;
     if (amount <= 0) {
-      setState(() => _amountError = 'Enter an amount greater than zero');
+      setState(() => _amountError = l10n.walletSwapPositiveAmountDetailedError);
       return;
     }
     if (_fromTokenSymbol == null ||
         _toTokenSymbol == null ||
         _fromTokenSymbol == _toTokenSymbol) {
-      setState(() => _amountError = 'Select two different tokens');
+      setState(() => _amountError = l10n.walletSwapDifferentTokensError);
       return;
     }
 
@@ -854,7 +927,7 @@ class _TokenSwapState extends State<TokenSwap> {
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content:
-              Text('Swap submitted: ${_fromTokenSymbol!} → ${_toTokenSymbol!}'),
+              Text(l10n.walletSwapSubmittedToast(_fromTokenSymbol!, _toTokenSymbol!)),
           backgroundColor: Theme.of(context).colorScheme.tertiary,
         ),
       );
@@ -863,8 +936,11 @@ class _TokenSwapState extends State<TokenSwap> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
-          content:
-              Text(e.toString().replaceFirst('Exception: ', 'Swap failed: ')),
+          content: Text(
+            l10n.walletSwapFailedToast(
+              e.toString().replaceFirst('Exception: ', ''),
+            ),
+          ),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -909,7 +985,10 @@ class _TokenSwapState extends State<TokenSwap> {
                       style:
                           KubusTypography.inter(fontWeight: FontWeight.w600)),
                   subtitle: Text(
-                      '${token.symbol} • Balance ${token.balance.toStringAsFixed(4)}'),
+                      AppLocalizations.of(context)!.walletSwapTokenOptionSubtitle(
+                    token.symbol,
+                    token.balance.toStringAsFixed(4),
+                  )),
                   trailing: token.symbol == currentSymbol
                       ? Icon(Icons.check,
                           color: Theme.of(context).colorScheme.primary)

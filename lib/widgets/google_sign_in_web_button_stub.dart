@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../services/google_auth_service.dart';
 import 'google_sign_in_button.dart';
 
@@ -27,10 +28,11 @@ class GoogleSignInWebButton extends StatelessWidget {
       isLoading: isLoading,
       colorScheme: colorScheme,
       onPressed: () async {
+        final l10n = AppLocalizations.of(context)!;
         try {
           final result = await GoogleAuthService().signIn();
           if (result == null) {
-            throw StateError('Google sign-in cancelled or unavailable.');
+            throw StateError(l10n.authGoogleUnavailableError);
           }
           await onAuthResult(result);
         } catch (error) {

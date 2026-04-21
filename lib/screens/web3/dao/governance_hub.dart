@@ -1702,7 +1702,9 @@ class _GovernanceHubState extends State<GovernanceHub>
           ),
           const SizedBox(height: 12),
           _buildRequirementItem(l10n.daoProposalRequirementWalletConnected,
-              Provider.of<Web3Provider>(context, listen: false).canTransact),
+              Provider.of<WalletProvider>(context, listen: false)
+                  .authority
+                  .canTransact),
           _buildRequirementItem(
               l10n.daoProposalRequirementClearlyDefined, true),
           _buildRequirementItem(l10n.daoProposalRequirementVotingPeriod, true),

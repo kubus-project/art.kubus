@@ -180,6 +180,9 @@
   "authEmailSignInDisabled": "Prijava z e-pošto je onemogočena.",
   "authEmailRegistrationDisabled": "Registracija z e-pošto je onemogočena.",
   "authGoogleSignInDisabled": "Prijava z Googlom je onemogočena.",
+  "authGoogleUnavailableError": "Prijava z Googlom je bila preklicana ali trenutno ni na voljo.",
+  "authGoogleConnectingLabel": "Povezovanje…",
+  "authContinueWithGoogleLabel": "Nadaljuj z Googlom",
   "authWalletConnectionDisabled": "Povezava denarnice je trenutno onemogočena.",
   "authEnterValidEmailPassword": "Vnesi veljavno e-pošto in geslo (vsaj 8 znakov).",
   "authEnterValidEmailInline": "Vnesi veljaven e-poštni naslov.",
@@ -225,6 +228,7 @@
   "authResetPasswordSuccessToast": "Geslo posodobljeno. Zdaj se lahko prijaviš.",
   "authResetPasswordFailedInline": "Ponastavitev ni uspela. Povezava je morda neveljavna ali potekla.",
   "authGoogleSignInFailed": "Prijava z Googlom ni uspela. Poskusi znova.",
+  "authSignerProvisioningFailed": "Priprava denarnice s podpisnikom ni uspela.",
   "authGoogleRateLimitedRetryIn": "Prijava z Googlom je začasno omejena. Poskusi znova čez ~{duration}.",
   "@authGoogleRateLimitedRetryIn": {
     "placeholders": {
@@ -634,6 +638,10 @@
   },
   "walletActionSignInRequiredToast": "Za nadaljevanje se prijavi.",
   "walletActionConnectWalletRequiredToast": "Za nadaljevanje poveži denarnico.",
+  "walletActionAccountShellNeedsWalletToast": "Račun je prijavljen, vendar je treba na tej napravi še obnoviti ali povezati denarnico, preden lahko to dejanje nadaljuje.",
+  "walletActionEncryptedBackupRestoreToast": "Na voljo je šifrirana varnostna kopija. Pred nadaljevanjem na tej napravi obnovi podpisnik.",
+  "walletActionRecoveryNeededToast": "Pred nadaljevanjem na tej napravi obnovi podpisnik denarnice.",
+  "walletActionReadOnlyReconnectToast": "Pred nadaljevanjem se znova poveži s ponudnikom denarnice ali na tej napravi obnovi podpisnik.",
   "settingsNetworkTileTitle": "Omrežje",
   "settingsCurrentNetworkValue": "Trenutno: {network}",
   "@settingsCurrentNetworkValue": {
@@ -656,6 +664,7 @@
   "settingsBackupStatusEncryptedServerBackup": "Šifrirana strežniška varnostna kopija je nastavljena",
   "settingsBackupStatusPasskeyProtection": "Šifrirana strežniška varnostna kopija je zaščitena s passkeyem",
   "settingsBackupStatusReadOnly": "Na tej napravi je seja denarnice samo za branje",
+  "settingsBackupStatusEncryptedBackupRestoreAvailable": "Šifrirana kopija je na voljo za obnovitev podpisovanja na tej napravi",
   "settingsExportRecoveryPhraseTileTitle": "Izvozi obnovitveno frazo",
   "settingsExportRecoveryPhraseTileSubtitle": "Varnostno kopiraj denarnico (občutljivo)",
   "settingsImportWalletTileTitle": "Uvozi obstoječo denarnico (napredno)",
@@ -2084,6 +2093,7 @@
   "connectWalletImportFailedToast": "Uvoz denarnice ni uspel. Poskusi znova.",
   "connectWalletCreateTitle": "Ustvari novo denarnico",
   "connectWalletCreateDescription": "Na tej napravi bomo ustvarili novo neskrbniško denarnico za tvoj račun art.kubus. Obnovitveno frazo shrani takoj, da zaščitiš dolgoročni dostop.",
+  "connectWalletCreateMissingBackupError": "Ustvarjeni denarnici manjkajo podatki za varnostno kopijo.",
   "connectWalletCreateInfoTitle": "Pomembno",
   "connectWalletCreateInfoBody": "Obnovitveno frazo zapiši in jo varno shrani brez povezave. Potrebuješ jo za obnovitev te denarnice, mi pa je ne moremo obnoviti namesto tebe.",
   "connectWalletCreateWarning": "Z nadaljevanjem potrjuješ, da razumeš, kako pomembna je obnovitvena fraza.",
@@ -2163,8 +2173,16 @@
   "walletHomeTitle": "Moja denarnica",
   "walletHomeLoadingLabel": "Nalaganje denarnice…",
   "walletHomeNoWalletDescription": "Za začetek poveži ali obnovi denarnico svojega računa.",
+  "walletHomeSignedOutTitle": "Denarnica ni povezana",
+  "walletHomeSignedOutDescription": "Prijavi se ter poveži ali obnovi denarnico, da vidiš stanja, zbirke in dejanja, zaščitena z denarnico.",
+  "walletHomeAccountShellTitle": "Račun je prijavljen, denarnica ni obnovljena",
+  "walletHomeAccountShellDescription": "Seja računa je na voljo, vendar je treba na tej napravi še obnoviti ali povezati denarnico, preden se lahko nadaljuje dejavnost denarnice.",
+  "walletHomeRestoreWalletAction": "Obnovi denarnico",
+  "walletHomeCreateWalletAction": "Ustvari denarnico",
+  "walletHomeImportWalletAction": "Uvozi denarnico",
   "walletHomeAlreadyConnectedToast": "Denarnica je že povezana.",
   "walletHomeTotalBalanceLabel": "Skupno stanje",
+  "walletHomeDesktopSurfaceLabel": "Namizna denarnica",
   "walletHomeAddressLabel": "Naslov: {address}",
   "@walletHomeAddressLabel": {
     "placeholders": {
@@ -2179,11 +2197,43 @@
   "walletHomeYourTokensTitle": "Tvoji žetoni",
   "walletHomeQuickActionsTitle": "Dejanja denarnice",
   "walletHomeQuickActionsSubtitle": "Poslji, prejmi, zamenjaj ali odpri zbirateljske predmete.",
+  "walletHomeSendAction": "Pošlji",
+  "walletHomeReceiveAction": "Prejmi",
+  "walletHomeSwapAction": "Zamenjaj",
+  "walletHomeBuyAction": "Kupi kripto",
+  "walletHomeDesktopSendSubtitle": "Prenesi žetone",
+  "walletHomeDesktopReceiveSubtitle": "Pridobi svoj naslov",
+  "walletHomeDesktopSwapSubtitle": "Zamenjaj žetone",
+  "walletHomeDesktopBuySubtitle": "Dodaj sredstva",
   "walletHomeYourTokensSubtitle": "Stanja, trenutno povezana s to denarnico.",
   "walletHomeNoTokensTitle": "Zetonov se ni",
   "walletHomeNoTokensDescription": "Stanja zetonov se prikazejo, ko denarnica prejme sredstva.",
   "walletHomeRecentTransactionsTitle": "Nedavne transakcije",
   "walletHomeRecentTransactionsSubtitle": "Najnovejsa aktivnost denarnice in potrditve.",
+  "walletHomeDesktopRecentActivityTitle": "Nedavna dejavnost",
+  "walletHomeDesktopTabAssets": "Sredstva",
+  "walletHomeDesktopTabActivity": "Dejavnost",
+  "walletHomeDesktopTabNfts": "NFT-ji",
+  "walletHomeDesktopTabStaking": "Zastavljanje",
+  "walletHomeNftLoadFailedTitle": "NFT-jev ni bilo mogoče naložiti",
+  "walletHomeNoCollectiblesDescription": "Mintaj ali kupi NFT-je, da se prikažejo tukaj.",
+  "walletHomeCollectibleByline": "avtor: {creator}",
+  "@walletHomeCollectibleByline": {
+    "placeholders": {
+      "creator": {}
+    }
+  },
+  "walletHomeRewardsTitle": "Nagrade KUB8",
+  "walletHomeRewardsDescription": "{balance} KUB8 je na voljo iz dosežkov",
+  "@walletHomeRewardsDescription": {
+    "placeholders": {
+      "balance": {}
+    }
+  },
+  "walletHomeStakeTitle": "Zastavi SOL za prihranek pri provizijah",
+  "walletHomeStakeDescription": "Zakleni SOL za kritje prihodnjih stroškov transakcij in ohrani gladko objavljanje svoje galerije.",
+  "walletHomeStakeAction": "Zastavi zdaj",
+  "walletHomeRefreshRatesAction": "Osveži tečaje",
   "walletHomeApproxTotalValue": "Pribl. {value}",
   "@walletHomeApproxTotalValue": {
     "placeholders": {
@@ -3458,6 +3508,8 @@
   "walletBackupProtectionRecoveryPhraseBody": "Obnovitveno frazo shrani brez povezave, da ne izgubiš te denarnice, kontinuitete računa ter zbirk, točk in prihodnjih pravic, vezanih nanjo.",
   "walletBackupProtectionEncryptedHeadline": "Šifrirana strežniška varnostna kopija je nastavljena.",
   "walletBackupProtectionEncryptedBody": "Obnovitveno geslo za šifrirano kopijo hrani ločeno od obnovitvene fraze, da obe poti za obnovitev ostaneta uporabni.",
+  "walletBackupProtectionEncryptedRestoreHeadline": "Šifrirana kopija je na voljo, vendar podpisovanje na tej napravi ni obnovljeno.",
+  "walletBackupProtectionEncryptedRestoreBody": "S šifrirano kopijo obnovi dostop za podpisovanje na tej napravi, preden uporabiš prenose in druga dejanja, zaščitena z denarnico.",
   "walletBackupProtectionPasskeyHeadline": "Šifrirana strežniška kopija, zaščitena s passkeyem, je nastavljena.",
   "walletBackupProtectionPasskeyBody": "Ta šifrirana strežniška kopija je na spletu zaščitena s passkeyem. Obnovitveno geslo še vedno shrani ločeno od obnovitvene fraze.",
   "walletBackupProtectionReadOnlyHeadline": "Ta naprava ima do denarnice dostop samo za branje.",
@@ -3591,6 +3643,74 @@
   "walletReconnectSuccessToast": "Seja denarnice je obnovljena.",
   "walletReconnectReadOnlyToast": "Seja je osvežena. Podpisovanje v tej napravi še vedno ni na voljo.",
   "walletReconnectManualRequiredToast": "Za podpisovanje se znova poveži prek ponudnika denarnice.",
+  "walletSwapTitle": "Zamenjava žetonov",
+  "walletSwapSwitchTokensTooltip": "Zamenjaj žetona",
+  "walletSwapNoTokensTitle": "Trenutno še ni žetonov za zamenjavo",
+  "walletSwapNoTokensDescription": "Dodaj sredstva ali prejmi žetone, da omogočiš zamenjave. Ko boš imel podprta sredstva, se bodo tukaj prikazala samodejno.",
+  "walletSwapYouPayLabel": "Plačaš",
+  "walletSwapYouReceiveLabel": "Prejmeš",
+  "walletSwapMaxAction": "MAKS",
+  "walletSwapAmountPlaceholder": "0.0",
+  "walletSwapSelectTokenAction": "Izberi",
+  "walletSwapBalanceLabel": "Stanje: {balance}",
+  "@walletSwapBalanceLabel": {
+    "placeholders": {
+      "balance": {}
+    }
+  },
+  "walletSwapInvalidAmountTitle": "Neveljaven znesek",
+  "walletSwapRouteUnavailableTitle": "Poti ni bilo mogoče pridobiti",
+  "walletSwapSearchingRouteLabel": "Iščem najboljšo pot na Jupiterju…",
+  "walletSwapEnterAmountTitle": "Vnesi znesek",
+  "walletSwapEnterAmountDescription": "Ko vneseš znesek, bomo pridobili žive ponudbe s provizijami in minimalnim prejemom.",
+  "walletSwapQuotePreviewTitle": "Predogled ponudbe",
+  "walletSwapEstimatedOutputLabel": "Ocenjen izhod",
+  "walletSwapMinReceivedLabel": "Najmanj prejeto (po zdrsu)",
+  "walletSwapPriceImpactLabel": "Vpliv na ceno",
+  "walletSwapSlippageLabel": "Zdrs",
+  "walletSwapProtocolFeeLabel": "Provizija protokola",
+  "walletSwapProtocolFeeValue": "{percent}% se uporabi za izhodni žeton",
+  "@walletSwapProtocolFeeValue": {
+    "placeholders": {
+      "percent": {}
+    }
+  },
+  "walletSwapRouteFallbackLabel": "Pot",
+  "walletSwapSlippageToleranceLabel": "Toleranca zdrsa",
+  "walletSwapEnterAmountCta": "Vnesi znesek",
+  "walletSwapSubmitLabel": "Zamenjaj {fromToken} → {toToken}",
+  "@walletSwapSubmitLabel": {
+    "placeholders": {
+      "fromToken": {},
+      "toToken": {}
+    }
+  },
+  "walletSwapNoHistoryTitle": "Zamenjav še ni",
+  "walletSwapNoHistoryDescription": "Izvedene zamenjave se bodo tukaj prikazale s podrobnim stanjem, ko bodo zaključene.",
+  "walletSwapPositiveAmountError": "Vnesi pozitiven znesek",
+  "walletSwapPositiveAmountDetailedError": "Vnesi znesek, večji od nič",
+  "walletSwapSelectTokensError": "Za nadaljevanje izberi oba žetona",
+  "walletSwapDifferentTokensError": "Izberi dva različna žetona",
+  "walletSwapSubmittedToast": "Zamenjava oddana: {fromToken} → {toToken}",
+  "@walletSwapSubmittedToast": {
+    "placeholders": {
+      "fromToken": {},
+      "toToken": {}
+    }
+  },
+  "walletSwapFailedToast": "Zamenjava ni uspela: {message}",
+  "@walletSwapFailedToast": {
+    "placeholders": {
+      "message": {}
+    }
+  },
+  "walletSwapTokenOptionSubtitle": "{symbol} • Stanje {balance}",
+  "@walletSwapTokenOptionSubtitle": {
+    "placeholders": {
+      "symbol": {},
+      "balance": {}
+    }
+  },
   "settingsProfilePrivacySectionTitle": "Zasebnost profila",
   "settingsPrivateProfileTitle": "Zasebni profil",
   "settingsPrivateProfileSubtitle": "Samo odobreni sledilci lahko vidijo tvoje objave",

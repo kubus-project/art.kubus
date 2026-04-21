@@ -17,6 +17,8 @@ class WalletSessionAccessSnapshot {
     required this.isSignedIn,
     required this.hasWalletIdentity,
     required this.hasSigner,
+    required this.authorityState,
+    required this.canRestoreFromEncryptedBackup,
   });
 
   factory WalletSessionAccessSnapshot.fromProviders({
@@ -28,12 +30,17 @@ class WalletSessionAccessSnapshot {
       isSignedIn: authority.accountSignedIn,
       hasWalletIdentity: authority.hasWalletIdentity,
       hasSigner: authority.canTransact,
+      authorityState: authority.state,
+      canRestoreFromEncryptedBackup:
+          authority.canRestoreFromEncryptedBackup,
     );
   }
 
   final bool isSignedIn;
   final bool hasWalletIdentity;
   final bool hasSigner;
+  final WalletAuthorityState authorityState;
+  final bool canRestoreFromEncryptedBackup;
 
   bool get canTransact => hasWalletIdentity && hasSigner;
   bool get isReadOnlySession => hasWalletIdentity && !hasSigner;
@@ -90,9 +97,24 @@ class WalletSessionAccessSnapshot {
       case WalletSignerActionBlock.signInRequired:
         return l10n.walletActionSignInRequiredToast;
       case WalletSignerActionBlock.walletRequired:
+        if (authorityState == WalletAuthorityState.accountShellOnly) {
+          return l10n.walletActionAccountShellNeedsWalletToast;
+        }
         return l10n.walletActionConnectWalletRequiredToast;
       case WalletSignerActionBlock.signerRequired:
-        return l10n.walletReconnectManualRequiredToast;
+        switch (authorityState) {
+          case WalletAuthorityState.encryptedBackupAvailableSignerMissing:
+            return l10n.walletActionEncryptedBackupRestoreToast;
+          case WalletAuthorityState.recoveryNeeded:
+            return l10n.walletActionRecoveryNeededToast;
+          case WalletAuthorityState.walletReadOnly:
+            return l10n.walletActionReadOnlyReconnectToast;
+          case WalletAuthorityState.localSignerReady:
+          case WalletAuthorityState.externalWalletReady:
+          case WalletAuthorityState.accountShellOnly:
+          case WalletAuthorityState.signedOut:
+            return l10n.walletReconnectManualRequiredToast;
+        }
     }
   }
 }

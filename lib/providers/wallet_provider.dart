@@ -95,7 +95,7 @@ class WalletAuthoritySnapshot {
   final bool recoveryNeeded;
 
   bool get hasWalletIdentity => (walletAddress ?? '').trim().isNotEmpty;
-  bool get canUseAccount => accountSignedIn;
+  bool get hasAccountSession => accountSignedIn;
   bool get canReadWallet => hasWalletIdentity;
   bool get canTransact =>
       hasWalletIdentity && (hasLocalSigner || hasExternalSigner);
@@ -667,7 +667,7 @@ class WalletProvider extends ChangeNotifier {
   bool get hasSigner => hasLocalSigner || hasExternalSigner;
   bool get isReadOnlySession => authority.isReadOnlyWallet;
   bool get canTransact => authority.canTransact;
-  bool get isConnected => hasWalletIdentity;
+  bool get isConnected => canTransact;
   bool get hasActiveKeyPair => hasLocalSigner;
   String? get externalSignerAddress => _externalSignerAddress;
   String? get externalSignerName => _externalSignerName;
@@ -887,7 +887,8 @@ class WalletProvider extends ChangeNotifier {
     try {
       if (refreshBackendSession) {
         await _apiService
-            .restoreExistingSession(allowRefresh: false)
+            .session
+            .restoreStoredSession(allowRefresh: false)
             .timeout(const Duration(seconds: 4));
       }
 
@@ -1060,7 +1061,7 @@ class WalletProvider extends ChangeNotifier {
     }
 
     try {
-      final definition = await _apiService.getEncryptedWalletBackup(
+      final definition = await _apiService.recovery.getEncryptedWalletBackup(
         walletAddress: targetWallet,
       );
       _setEncryptedWalletBackupDefinition(definition);
@@ -1136,9 +1137,8 @@ class WalletProvider extends ChangeNotifier {
         mnemonic: effectiveMnemonic,
         recoveryPassword: recoveryPassword,
       );
-      final savedDefinition = await _apiService.putEncryptedWalletBackup(
-        definition,
-      );
+      final savedDefinition =
+          await _apiService.recovery.putEncryptedWalletBackup(definition);
       _setEncryptedWalletBackupDefinition(savedDefinition);
       return savedDefinition;
     } catch (e) {
@@ -1169,7 +1169,7 @@ class WalletProvider extends ChangeNotifier {
     required String eventType,
   }) async {
     try {
-      await _apiService.emitWalletBackupEvent(
+      await _apiService.recovery.emitBackupEvent(
         walletAddress: walletAddress,
         eventType: eventType,
       );
@@ -1244,8 +1244,9 @@ class WalletProvider extends ChangeNotifier {
     _encryptedWalletBackupError = null;
     notifyListeners();
     try {
-      await _apiService.deleteEncryptedWalletBackup(
-          walletAddress: targetWallet);
+      await _apiService.recovery.deleteEncryptedWalletBackup(
+        walletAddress: targetWallet,
+      );
       if (_encryptedWalletBackupDefinition != null &&
           WalletUtils.equals(
             _encryptedWalletBackupDefinition!.walletAddress,
@@ -1297,11 +1298,11 @@ class WalletProvider extends ChangeNotifier {
       );
     }
 
-    final options = await _apiService.getWalletBackupPasskeyAuthOptions(
+    final options = await _apiService.recovery.getPasskeyAuthOptions(
       walletAddress: targetWallet,
     );
     final assertion = await getWalletBackupPasskeyAssertion(options);
-    await _apiService.verifyWalletBackupPasskeyAuth(
+    await _apiService.recovery.verifyPasskeyAuth(
       walletAddress: targetWallet,
       responsePayload: assertion,
     );
@@ -1337,13 +1338,12 @@ class WalletProvider extends ChangeNotifier {
       );
     }
 
-    final options = await _apiService.getWalletBackupPasskeyRegistrationOptions(
+    final options = await _apiService.recovery.getPasskeyRegistrationOptions(
       walletAddress: targetWallet,
       nickname: nickname,
     );
     final credential = await createWalletBackupPasskeyCredential(options);
-    final verifyResponse =
-        await _apiService.verifyWalletBackupPasskeyRegistration(
+    final verifyResponse = await _apiService.recovery.verifyPasskeyRegistration(
       walletAddress: targetWallet,
       nickname: nickname,
       responsePayload: credential,
@@ -1427,16 +1427,14 @@ class WalletProvider extends ChangeNotifier {
     bool allowRefresh = true,
     bool loadWalletData = true,
   }) async {
-    final restored = await _apiService.restoreExistingSession(
+    final restored = await _apiService.session.restoreStoredSession(
       allowRefresh: allowRefresh,
     );
-    final token = (_apiService.getAuthToken() ?? '').trim();
-    _accountSignedIn = restored || token.isNotEmpty;
-    _accountSignInMethod = await _apiService.resolveLastSignInMethod();
-    _accountEmail = _apiService.getCurrentAuthEmail();
+    _accountSignedIn = restored.hasBackendSession;
+    _accountSignInMethod = restored.signInMethod;
+    _accountEmail = restored.email;
 
-    final accountWallet =
-        (_apiService.getCurrentAuthWalletAddress() ?? '').trim();
+    final accountWallet = (restored.walletAddress ?? '').trim();
     if (accountWallet.isNotEmpty) {
       await setReadOnlyWalletIdentity(
         accountWallet,
@@ -1760,7 +1758,7 @@ class WalletProvider extends ChangeNotifier {
           } catch (e) {
             if (e.toString().contains('Profile not found')) {
               try {
-                final reg = await _apiService.registerWallet(
+                final reg = await _apiService.session.registerWalletBootstrap(
                   walletAddress: address,
                   username: 'user_${address.substring(0, 6)}',
                 );
@@ -2082,7 +2080,7 @@ class WalletProvider extends ChangeNotifier {
 
     try {
       _apiService.setPreferredWalletAddress(targetWallet);
-      await _apiService.ensureSessionForActiveSigner(
+      await _apiService.signedActions.ensureWalletSignedSession(
         walletAddress: targetWallet,
         signMessage: signMessage,
       );

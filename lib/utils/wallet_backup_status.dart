@@ -43,6 +43,9 @@ class WalletBackupStatusSnapshot {
     if (!hasWalletIdentity) {
       return _WalletBackupStatusKind.noWallet;
     }
+    if (needsSignerRestore && hasEncryptedServerBackup) {
+      return _WalletBackupStatusKind.encryptedBackupRestoreAvailable;
+    }
     if (needsSignerRestore) {
       return _WalletBackupStatusKind.readOnly;
     }
@@ -62,6 +65,8 @@ class WalletBackupStatusSnapshot {
     switch (_statusKind) {
       case _WalletBackupStatusKind.noWallet:
         return l10n.settingsBackupStatusNoWallet;
+      case _WalletBackupStatusKind.encryptedBackupRestoreAvailable:
+        return l10n.settingsBackupStatusEncryptedBackupRestoreAvailable;
       case _WalletBackupStatusKind.readOnly:
         return l10n.settingsBackupStatusReadOnly;
       case _WalletBackupStatusKind.recoveryPhraseRequired:
@@ -79,6 +84,8 @@ class WalletBackupStatusSnapshot {
     switch (_statusKind) {
       case _WalletBackupStatusKind.noWallet:
         return l10n.walletBackupProtectionNoWalletHeadline;
+      case _WalletBackupStatusKind.encryptedBackupRestoreAvailable:
+        return l10n.walletBackupProtectionEncryptedRestoreHeadline;
       case _WalletBackupStatusKind.readOnly:
         return l10n.walletBackupProtectionReadOnlyHeadline;
       case _WalletBackupStatusKind.recoveryPhraseRequired:
@@ -96,6 +103,8 @@ class WalletBackupStatusSnapshot {
     switch (_statusKind) {
       case _WalletBackupStatusKind.noWallet:
         return l10n.walletBackupProtectionNoWalletBody;
+      case _WalletBackupStatusKind.encryptedBackupRestoreAvailable:
+        return l10n.walletBackupProtectionEncryptedRestoreBody;
       case _WalletBackupStatusKind.readOnly:
         return l10n.walletBackupProtectionReadOnlyBody;
       case _WalletBackupStatusKind.recoveryPhraseRequired:
@@ -112,6 +121,7 @@ class WalletBackupStatusSnapshot {
 
 enum _WalletBackupStatusKind {
   noWallet,
+  encryptedBackupRestoreAvailable,
   readOnly,
   recoveryPhraseRequired,
   passkeyProtection,

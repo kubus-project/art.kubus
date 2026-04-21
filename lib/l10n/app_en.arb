@@ -180,6 +180,9 @@
   "authEmailSignInDisabled": "Email sign-in is disabled.",
   "authEmailRegistrationDisabled": "Email registration is disabled.",
   "authGoogleSignInDisabled": "Google sign-in is disabled.",
+  "authGoogleUnavailableError": "Google sign-in was cancelled or is unavailable right now.",
+  "authGoogleConnectingLabel": "Connecting…",
+  "authContinueWithGoogleLabel": "Continue with Google",
   "authWalletConnectionDisabled": "Wallet connection is disabled right now.",
   "authEnterValidEmailPassword": "Enter a valid email and an 8+ character password.",
   "authEnterValidEmailInline": "Enter a valid email address.",
@@ -225,6 +228,7 @@
   "authResetPasswordSuccessToast": "Password updated. You can now sign in.",
   "authResetPasswordFailedInline": "Could not reset your password. The link may be invalid or expired.",
   "authGoogleSignInFailed": "Google sign-in failed. Please try again.",
+  "authSignerProvisioningFailed": "Signer-backed wallet provisioning failed.",
   "authGoogleRateLimitedRetryIn": "Google sign-in is temporarily rate limited. Retry in ~{duration}.",
   "@authGoogleRateLimitedRetryIn": {
     "placeholders": {
@@ -634,6 +638,10 @@
   },
   "walletActionSignInRequiredToast": "Sign in to continue.",
   "walletActionConnectWalletRequiredToast": "Connect your wallet to continue.",
+  "walletActionAccountShellNeedsWalletToast": "Your account is signed in, but this device still needs the wallet restored or connected before this action can continue.",
+  "walletActionEncryptedBackupRestoreToast": "An encrypted backup is available. Restore the signer on this device before continuing.",
+  "walletActionRecoveryNeededToast": "Restore your wallet signer on this device before continuing.",
+  "walletActionReadOnlyReconnectToast": "Reconnect with your wallet provider or restore the signer on this device before continuing.",
   "settingsNetworkTileTitle": "Network",
   "settingsCurrentNetworkValue": "Current: {network}",
   "@settingsCurrentNetworkValue": {
@@ -656,6 +664,7 @@
   "settingsBackupStatusEncryptedServerBackup": "Encrypted server backup configured",
   "settingsBackupStatusPasskeyProtection": "Passkey-protected server backup configured",
   "settingsBackupStatusReadOnly": "Read-only wallet session on this device",
+  "settingsBackupStatusEncryptedBackupRestoreAvailable": "Encrypted backup available to restore signing on this device",
   "settingsExportRecoveryPhraseTileTitle": "Export recovery phrase",
   "settingsExportRecoveryPhraseTileSubtitle": "Back up your wallet (sensitive)",
   "settingsImportWalletTileTitle": "Import existing wallet (advanced)",
@@ -2122,6 +2131,7 @@
   "connectWalletImportFailedToast": "Wallet import failed. Please try again.",
   "connectWalletCreateTitle": "Create a new wallet",
   "connectWalletCreateDescription": "We will create a new non-custodial wallet on this device for your art.kubus account. Back up the recovery phrase right away to protect long-term access.",
+  "connectWalletCreateMissingBackupError": "Created wallet is missing backup details.",
   "connectWalletCreateInfoTitle": "Important",
   "connectWalletCreateInfoBody": "Write down the recovery phrase and store it safely offline. It is essential for restoring this wallet, and we cannot recover it for you.",
   "connectWalletCreateWarning": "By continuing, you confirm that you understand how important the recovery phrase is.",
@@ -2201,8 +2211,16 @@
   "walletHomeTitle": "My wallet",
   "walletHomeLoadingLabel": "Loading your wallet…",
   "walletHomeNoWalletDescription": "Connect or restore your account wallet to get started.",
+  "walletHomeSignedOutTitle": "No wallet connected",
+  "walletHomeSignedOutDescription": "Sign in and connect or restore your wallet to view balances, collectibles, and wallet-protected actions.",
+  "walletHomeAccountShellTitle": "Account signed in, wallet not restored",
+  "walletHomeAccountShellDescription": "Your account session is available, but this device still needs the wallet restored or connected before wallet activity can continue.",
+  "walletHomeRestoreWalletAction": "Restore wallet",
+  "walletHomeCreateWalletAction": "Create wallet",
+  "walletHomeImportWalletAction": "Import wallet",
   "walletHomeAlreadyConnectedToast": "Wallet is already connected.",
   "walletHomeTotalBalanceLabel": "Total balance",
+  "walletHomeDesktopSurfaceLabel": "Desktop wallet",
   "walletHomeAddressLabel": "Address: {address}",
   "@walletHomeAddressLabel": {
     "placeholders": {
@@ -2216,12 +2234,44 @@
   "walletHomeActionNfts": "NFTs",
   "walletHomeQuickActionsTitle": "Wallet actions",
   "walletHomeQuickActionsSubtitle": "Send, receive, swap, or open collectibles from one place.",
+  "walletHomeSendAction": "Send",
+  "walletHomeReceiveAction": "Receive",
+  "walletHomeSwapAction": "Swap",
+  "walletHomeBuyAction": "Buy crypto",
+  "walletHomeDesktopSendSubtitle": "Transfer tokens",
+  "walletHomeDesktopReceiveSubtitle": "Get your address",
+  "walletHomeDesktopSwapSubtitle": "Exchange tokens",
+  "walletHomeDesktopBuySubtitle": "Add funds",
   "walletHomeYourTokensTitle": "Your tokens",
   "walletHomeYourTokensSubtitle": "Balances currently associated with this wallet.",
   "walletHomeNoTokensTitle": "No tokens yet",
   "walletHomeNoTokensDescription": "Token balances will appear after the wallet receives assets.",
   "walletHomeRecentTransactionsTitle": "Recent transactions",
   "walletHomeRecentTransactionsSubtitle": "Latest wallet activity and confirmations.",
+  "walletHomeDesktopRecentActivityTitle": "Recent activity",
+  "walletHomeDesktopTabAssets": "Assets",
+  "walletHomeDesktopTabActivity": "Activity",
+  "walletHomeDesktopTabNfts": "NFTs",
+  "walletHomeDesktopTabStaking": "Staking",
+  "walletHomeNftLoadFailedTitle": "Could not load NFTs",
+  "walletHomeNoCollectiblesDescription": "Mint or purchase NFTs to see them here.",
+  "walletHomeCollectibleByline": "by {creator}",
+  "@walletHomeCollectibleByline": {
+    "placeholders": {
+      "creator": {}
+    }
+  },
+  "walletHomeRewardsTitle": "KUB8 rewards",
+  "walletHomeRewardsDescription": "{balance} KUB8 available from achievements",
+  "@walletHomeRewardsDescription": {
+    "placeholders": {
+      "balance": {}
+    }
+  },
+  "walletHomeStakeTitle": "Stake SOL for gas savings",
+  "walletHomeStakeDescription": "Lock SOL to cover future transaction fees and keep your gallery publishing smooth.",
+  "walletHomeStakeAction": "Stake now",
+  "walletHomeRefreshRatesAction": "Refresh rates",
   "walletHomeApproxTotalValue": "Approx. {value}",
   "@walletHomeApproxTotalValue": {
     "placeholders": {
@@ -3514,6 +3564,8 @@
   "walletBackupProtectionRecoveryPhraseBody": "Store the recovery phrase offline so you do not lose access to this wallet, your account continuity, and the collectibles, points, and future rights tied to it.",
   "walletBackupProtectionEncryptedHeadline": "Encrypted server backup is configured.",
   "walletBackupProtectionEncryptedBody": "Keep the encrypted backup recovery password stored separately from the recovery phrase so both recovery paths remain usable.",
+  "walletBackupProtectionEncryptedRestoreHeadline": "Encrypted backup is available, but signing is not restored on this device.",
+  "walletBackupProtectionEncryptedRestoreBody": "Use the encrypted backup to restore signer access on this device before transfers and other wallet-protected actions.",
   "walletBackupProtectionPasskeyHeadline": "Passkey-protected server backup is configured.",
   "walletBackupProtectionPasskeyBody": "This encrypted server backup is protected with a passkey on web. Keep the recovery password stored separately from the recovery phrase.",
   "walletBackupProtectionReadOnlyHeadline": "This device has read-only wallet access.",
@@ -3647,6 +3699,74 @@
   "walletReconnectSuccessToast": "Wallet session restored.",
   "walletReconnectReadOnlyToast": "Session refreshed. Signing is still unavailable on this device.",
   "walletReconnectManualRequiredToast": "Reconnect with your wallet provider to enable signing.",
+  "walletSwapTitle": "Token swap",
+  "walletSwapSwitchTokensTooltip": "Switch tokens",
+  "walletSwapNoTokensTitle": "No tradable tokens yet",
+  "walletSwapNoTokensDescription": "Add funds or receive tokens to enable swaps. Once you hold supported assets they will appear here automatically.",
+  "walletSwapYouPayLabel": "You pay",
+  "walletSwapYouReceiveLabel": "You receive",
+  "walletSwapMaxAction": "MAX",
+  "walletSwapAmountPlaceholder": "0.0",
+  "walletSwapSelectTokenAction": "Select",
+  "walletSwapBalanceLabel": "Balance: {balance}",
+  "@walletSwapBalanceLabel": {
+    "placeholders": {
+      "balance": {}
+    }
+  },
+  "walletSwapInvalidAmountTitle": "Invalid amount",
+  "walletSwapRouteUnavailableTitle": "Unable to fetch route",
+  "walletSwapSearchingRouteLabel": "Searching best route on Jupiter…",
+  "walletSwapEnterAmountTitle": "Enter an amount",
+  "walletSwapEnterAmountDescription": "We will fetch live quotes with fees and minimum received once you type an amount.",
+  "walletSwapQuotePreviewTitle": "Quote preview",
+  "walletSwapEstimatedOutputLabel": "Estimated output",
+  "walletSwapMinReceivedLabel": "Min received (after slippage)",
+  "walletSwapPriceImpactLabel": "Price impact",
+  "walletSwapSlippageLabel": "Slippage",
+  "walletSwapProtocolFeeLabel": "Protocol fee",
+  "walletSwapProtocolFeeValue": "{percent}% applied to output token",
+  "@walletSwapProtocolFeeValue": {
+    "placeholders": {
+      "percent": {}
+    }
+  },
+  "walletSwapRouteFallbackLabel": "Route",
+  "walletSwapSlippageToleranceLabel": "Slippage tolerance",
+  "walletSwapEnterAmountCta": "Enter amount",
+  "walletSwapSubmitLabel": "Swap {fromToken} → {toToken}",
+  "@walletSwapSubmitLabel": {
+    "placeholders": {
+      "fromToken": {},
+      "toToken": {}
+    }
+  },
+  "walletSwapNoHistoryTitle": "No swaps yet",
+  "walletSwapNoHistoryDescription": "Executed swaps will appear here with detailed status once completed.",
+  "walletSwapPositiveAmountError": "Enter a positive amount",
+  "walletSwapPositiveAmountDetailedError": "Enter an amount greater than zero",
+  "walletSwapSelectTokensError": "Select both tokens to continue",
+  "walletSwapDifferentTokensError": "Choose two different tokens",
+  "walletSwapSubmittedToast": "Swap submitted: {fromToken} → {toToken}",
+  "@walletSwapSubmittedToast": {
+    "placeholders": {
+      "fromToken": {},
+      "toToken": {}
+    }
+  },
+  "walletSwapFailedToast": "Swap failed: {message}",
+  "@walletSwapFailedToast": {
+    "placeholders": {
+      "message": {}
+    }
+  },
+  "walletSwapTokenOptionSubtitle": "{symbol} • Balance {balance}",
+  "@walletSwapTokenOptionSubtitle": {
+    "placeholders": {
+      "symbol": {},
+      "balance": {}
+    }
+  },
   "manageMarkersTitle": "Manage markers",
   "manageMarkersCardSubtitle": "Create, publish, and edit your map markers",
   "manageMarkersQuickActionSubtitle": "Create, publish, and edit markers",

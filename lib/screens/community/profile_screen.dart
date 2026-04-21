@@ -699,7 +699,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                     ),
                     SizedBox(height: isSmallScreen ? 6 : 8),
-                    if (web3Provider.isConnected) ...[
+                    if (web3Provider.hasWalletIdentity) ...[
                       Container(
                         padding: EdgeInsets.symmetric(
                             horizontal: isSmallScreen ? 12 : 16,
@@ -2133,7 +2133,8 @@ class _ProfileScreenState extends State<ProfileScreen>
       final profileProvider =
           Provider.of<ProfileProvider>(context, listen: false);
       final web3Provider = Provider.of<Web3Provider>(context, listen: false);
-      if (web3Provider.isConnected && web3Provider.walletAddress.isNotEmpty) {
+      if (web3Provider.hasWalletIdentity &&
+          web3Provider.walletAddress.isNotEmpty) {
         await profileProvider.loadProfile(web3Provider.walletAddress);
         // Refresh artist data after profile edit
         setState(() {

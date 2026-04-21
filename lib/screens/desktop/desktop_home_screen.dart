@@ -722,7 +722,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                             color: Theme.of(context).colorScheme.onSurface,
                           ),
                           compact: false,
-                          footer: web3Provider.isConnected
+                          footer: web3Provider.hasWalletIdentity
                               ? Wrap(
                                   spacing: KubusSpacing.sm,
                                   runSpacing: KubusSpacing.xxs,
@@ -898,7 +898,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     ),
                   ),
                   const SizedBox(height: DetailSpacing.xl),
-                  if (web3Provider.isConnected)
+                  if (web3Provider.hasWalletIdentity)
                     _buildWalletBalances()
                   else
                     ElevatedButton.icon(

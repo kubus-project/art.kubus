@@ -487,6 +487,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authGoogleSignInDisabled => 'Google sign-in is disabled.';
 
   @override
+  String get authGoogleUnavailableError => 'Google sign-in was cancelled or is unavailable right now.';
+
+  @override
+  String get authGoogleConnectingLabel => 'Connecting…';
+
+  @override
+  String get authContinueWithGoogleLabel => 'Continue with Google';
+
+  @override
   String get authWalletConnectionDisabled => 'Wallet connection is disabled right now.';
 
   @override
@@ -620,6 +629,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authGoogleSignInFailed => 'Google sign-in failed. Please try again.';
+
+  @override
+  String get authSignerProvisioningFailed => 'Signer-backed wallet provisioning failed.';
 
   @override
   String authGoogleRateLimitedRetryIn(Object duration) {
@@ -1662,6 +1674,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletActionConnectWalletRequiredToast => 'Connect your wallet to continue.';
 
   @override
+  String get walletActionAccountShellNeedsWalletToast => 'Your account is signed in, but this device still needs the wallet restored or connected before this action can continue.';
+
+  @override
+  String get walletActionEncryptedBackupRestoreToast => 'An encrypted backup is available. Restore the signer on this device before continuing.';
+
+  @override
+  String get walletActionRecoveryNeededToast => 'Restore your wallet signer on this device before continuing.';
+
+  @override
+  String get walletActionReadOnlyReconnectToast => 'Reconnect with your wallet provider or restore the signer on this device before continuing.';
+
+  @override
   String get settingsNetworkTileTitle => 'Network';
 
   @override
@@ -1700,6 +1724,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsBackupStatusReadOnly => 'Read-only wallet session on this device';
+
+  @override
+  String get settingsBackupStatusEncryptedBackupRestoreAvailable => 'Encrypted backup available to restore signing on this device';
 
   @override
   String get settingsExportRecoveryPhraseTileTitle => 'Export recovery phrase';
@@ -4859,6 +4886,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletCreateDescription => 'We will create a new non-custodial wallet on this device for your art.kubus account. Back up the recovery phrase right away to protect long-term access.';
 
   @override
+  String get connectWalletCreateMissingBackupError => 'Created wallet is missing backup details.';
+
+  @override
   String get connectWalletCreateInfoTitle => 'Important';
 
   @override
@@ -5057,10 +5087,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeNoWalletDescription => 'Connect or restore your account wallet to get started.';
 
   @override
+  String get walletHomeSignedOutTitle => 'No wallet connected';
+
+  @override
+  String get walletHomeSignedOutDescription => 'Sign in and connect or restore your wallet to view balances, collectibles, and wallet-protected actions.';
+
+  @override
+  String get walletHomeAccountShellTitle => 'Account signed in, wallet not restored';
+
+  @override
+  String get walletHomeAccountShellDescription => 'Your account session is available, but this device still needs the wallet restored or connected before wallet activity can continue.';
+
+  @override
+  String get walletHomeRestoreWalletAction => 'Restore wallet';
+
+  @override
+  String get walletHomeCreateWalletAction => 'Create wallet';
+
+  @override
+  String get walletHomeImportWalletAction => 'Import wallet';
+
+  @override
   String get walletHomeAlreadyConnectedToast => 'Wallet is already connected.';
 
   @override
   String get walletHomeTotalBalanceLabel => 'Total balance';
+
+  @override
+  String get walletHomeDesktopSurfaceLabel => 'Desktop wallet';
 
   @override
   String walletHomeAddressLabel(Object address) {
@@ -5089,6 +5143,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeQuickActionsSubtitle => 'Send, receive, swap, or open collectibles from one place.';
 
   @override
+  String get walletHomeSendAction => 'Send';
+
+  @override
+  String get walletHomeReceiveAction => 'Receive';
+
+  @override
+  String get walletHomeSwapAction => 'Swap';
+
+  @override
+  String get walletHomeBuyAction => 'Buy crypto';
+
+  @override
+  String get walletHomeDesktopSendSubtitle => 'Transfer tokens';
+
+  @override
+  String get walletHomeDesktopReceiveSubtitle => 'Get your address';
+
+  @override
+  String get walletHomeDesktopSwapSubtitle => 'Exchange tokens';
+
+  @override
+  String get walletHomeDesktopBuySubtitle => 'Add funds';
+
+  @override
   String get walletHomeYourTokensTitle => 'Your tokens';
 
   @override
@@ -5105,6 +5183,52 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletHomeRecentTransactionsSubtitle => 'Latest wallet activity and confirmations.';
+
+  @override
+  String get walletHomeDesktopRecentActivityTitle => 'Recent activity';
+
+  @override
+  String get walletHomeDesktopTabAssets => 'Assets';
+
+  @override
+  String get walletHomeDesktopTabActivity => 'Activity';
+
+  @override
+  String get walletHomeDesktopTabNfts => 'NFTs';
+
+  @override
+  String get walletHomeDesktopTabStaking => 'Staking';
+
+  @override
+  String get walletHomeNftLoadFailedTitle => 'Could not load NFTs';
+
+  @override
+  String get walletHomeNoCollectiblesDescription => 'Mint or purchase NFTs to see them here.';
+
+  @override
+  String walletHomeCollectibleByline(Object creator) {
+    return 'by $creator';
+  }
+
+  @override
+  String get walletHomeRewardsTitle => 'KUB8 rewards';
+
+  @override
+  String walletHomeRewardsDescription(Object balance) {
+    return '$balance KUB8 available from achievements';
+  }
+
+  @override
+  String get walletHomeStakeTitle => 'Stake SOL for gas savings';
+
+  @override
+  String get walletHomeStakeDescription => 'Lock SOL to cover future transaction fees and keep your gallery publishing smooth.';
+
+  @override
+  String get walletHomeStakeAction => 'Stake now';
+
+  @override
+  String get walletHomeRefreshRatesAction => 'Refresh rates';
 
   @override
   String walletHomeApproxTotalValue(Object value) {
@@ -7985,6 +8109,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletBackupProtectionEncryptedBody => 'Keep the encrypted backup recovery password stored separately from the recovery phrase so both recovery paths remain usable.';
 
   @override
+  String get walletBackupProtectionEncryptedRestoreHeadline => 'Encrypted backup is available, but signing is not restored on this device.';
+
+  @override
+  String get walletBackupProtectionEncryptedRestoreBody => 'Use the encrypted backup to restore signer access on this device before transfers and other wallet-protected actions.';
+
+  @override
   String get walletBackupProtectionPasskeyHeadline => 'Passkey-protected server backup is configured.';
 
   @override
@@ -8278,6 +8408,123 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletReconnectManualRequiredToast => 'Reconnect with your wallet provider to enable signing.';
+
+  @override
+  String get walletSwapTitle => 'Token swap';
+
+  @override
+  String get walletSwapSwitchTokensTooltip => 'Switch tokens';
+
+  @override
+  String get walletSwapNoTokensTitle => 'No tradable tokens yet';
+
+  @override
+  String get walletSwapNoTokensDescription => 'Add funds or receive tokens to enable swaps. Once you hold supported assets they will appear here automatically.';
+
+  @override
+  String get walletSwapYouPayLabel => 'You pay';
+
+  @override
+  String get walletSwapYouReceiveLabel => 'You receive';
+
+  @override
+  String get walletSwapMaxAction => 'MAX';
+
+  @override
+  String get walletSwapAmountPlaceholder => '0.0';
+
+  @override
+  String get walletSwapSelectTokenAction => 'Select';
+
+  @override
+  String walletSwapBalanceLabel(Object balance) {
+    return 'Balance: $balance';
+  }
+
+  @override
+  String get walletSwapInvalidAmountTitle => 'Invalid amount';
+
+  @override
+  String get walletSwapRouteUnavailableTitle => 'Unable to fetch route';
+
+  @override
+  String get walletSwapSearchingRouteLabel => 'Searching best route on Jupiter…';
+
+  @override
+  String get walletSwapEnterAmountTitle => 'Enter an amount';
+
+  @override
+  String get walletSwapEnterAmountDescription => 'We will fetch live quotes with fees and minimum received once you type an amount.';
+
+  @override
+  String get walletSwapQuotePreviewTitle => 'Quote preview';
+
+  @override
+  String get walletSwapEstimatedOutputLabel => 'Estimated output';
+
+  @override
+  String get walletSwapMinReceivedLabel => 'Min received (after slippage)';
+
+  @override
+  String get walletSwapPriceImpactLabel => 'Price impact';
+
+  @override
+  String get walletSwapSlippageLabel => 'Slippage';
+
+  @override
+  String get walletSwapProtocolFeeLabel => 'Protocol fee';
+
+  @override
+  String walletSwapProtocolFeeValue(Object percent) {
+    return '$percent% applied to output token';
+  }
+
+  @override
+  String get walletSwapRouteFallbackLabel => 'Route';
+
+  @override
+  String get walletSwapSlippageToleranceLabel => 'Slippage tolerance';
+
+  @override
+  String get walletSwapEnterAmountCta => 'Enter amount';
+
+  @override
+  String walletSwapSubmitLabel(Object fromToken, Object toToken) {
+    return 'Swap $fromToken → $toToken';
+  }
+
+  @override
+  String get walletSwapNoHistoryTitle => 'No swaps yet';
+
+  @override
+  String get walletSwapNoHistoryDescription => 'Executed swaps will appear here with detailed status once completed.';
+
+  @override
+  String get walletSwapPositiveAmountError => 'Enter a positive amount';
+
+  @override
+  String get walletSwapPositiveAmountDetailedError => 'Enter an amount greater than zero';
+
+  @override
+  String get walletSwapSelectTokensError => 'Select both tokens to continue';
+
+  @override
+  String get walletSwapDifferentTokensError => 'Choose two different tokens';
+
+  @override
+  String walletSwapSubmittedToast(Object fromToken, Object toToken) {
+    return 'Swap submitted: $fromToken → $toToken';
+  }
+
+  @override
+  String walletSwapFailedToast(Object message) {
+    return 'Swap failed: $message';
+  }
+
+  @override
+  String walletSwapTokenOptionSubtitle(Object symbol, Object balance) {
+    return '$symbol • Balance $balance';
+  }
 
   @override
   String get manageMarkersTitle => 'Manage markers';

@@ -4,13 +4,16 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:solana/solana.dart' show Ed25519HDPublicKey;
 import '../../../utils/design_tokens.dart';
+import '../../../providers/profile_provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../providers/platform_provider.dart';
 import '../../../widgets/inline_loading.dart';
+import '../../../widgets/wallet_custody_status_panel.dart';
 import '../../../config/api_keys.dart';
 import '../../../models/qr_scan_result.dart';
 import '../../../models/wallet.dart';
+import '../../../utils/wallet_action_guard.dart';
 import 'qr_scanner_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
@@ -63,6 +66,8 @@ class _SendTokenScreenState extends State<SendTokenScreen>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final walletProvider = context.watch<WalletProvider>();
+    final authority = walletProvider.authority;
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
@@ -106,6 +111,9 @@ class _SendTokenScreenState extends State<SendTokenScreen>
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
+          if (authority.hasWalletIdentity && !authority.canTransact) {
+            return _buildSignerRequiredState(walletProvider, l10n);
+          }
           final isTablet =
               constraints.maxWidth > 600 && constraints.maxWidth <= 800;
           final isWideScreen = constraints.maxWidth > 800;
@@ -164,6 +172,53 @@ class _SendTokenScreenState extends State<SendTokenScreen>
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildSignerRequiredState(
+    WalletProvider walletProvider,
+    AppLocalizations l10n,
+  ) {
+    return SafeArea(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(KubusSpacing.xl),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                WalletCustodyStatusPanel(
+                  authority: walletProvider.authority,
+                  onRestoreSigner:
+                      walletProvider.authority.canRestoreFromEncryptedBackup
+                          ? () => WalletActionGuard.ensureSignerAccess(
+                                context: context,
+                                profileProvider:
+                                    context.read<ProfileProvider>(),
+                                walletProvider: walletProvider,
+                              )
+                          : null,
+                  onConnectExternalWallet: !walletProvider.canTransact
+                      ? () => Navigator.of(context).pushNamed('/connect-wallet')
+                      : null,
+                ),
+                const SizedBox(height: KubusSpacing.lg),
+                FilledButton.icon(
+                  onPressed: () => WalletActionGuard.ensureSignerAccess(
+                    context: context,
+                    profileProvider: context.read<ProfileProvider>(),
+                    walletProvider: walletProvider,
+                  ),
+                  icon: const Icon(Icons.lock_open_outlined),
+                  label: Text(l10n.commonReconnect),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -648,8 +703,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
             _amountController.text.isNotEmpty &&
             _addressError.isEmpty &&
             _amountError.isEmpty &&
-            walletProvider.isConnected &&
-            walletProvider.hasActiveKeyPair;
+            walletProvider.canTransact;
 
         return SizedBox(
           width: double.infinity,
@@ -982,6 +1036,16 @@ class _SendTokenScreenState extends State<SendTokenScreen>
     try {
       final walletProvider =
           Provider.of<WalletProvider>(context, listen: false);
+      final profileProvider =
+          Provider.of<ProfileProvider>(context, listen: false);
+      final canProceed = await WalletActionGuard.ensureSignerAccess(
+        context: context,
+        profileProvider: profileProvider,
+        walletProvider: walletProvider,
+      );
+      if (!mounted || !canProceed) {
+        return;
+      }
       final amount = double.tryParse(_amountController.text.trim()) ?? 0;
       final toAddress = _addressController.text.trim();
 

@@ -38,7 +38,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
   late AnimationController _animationController;
   late TabController _tabController;
 
-  final List<String> _tabs = ['Assets', 'Activity', 'NFTs', 'Staking'];
+  final List<String> _tabs = ['assets', 'activity', 'nfts', 'staking'];
   List<Map<String, dynamic>> _nfts = [];
   bool _isLoadingNfts = false;
   String? _nftError;
@@ -210,6 +210,12 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
   }
 
   Widget _buildConnectWalletView(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
+    final walletProvider = context.watch<WalletProvider>();
+    final authority = walletProvider.authority;
+    final isAccountShellOnly =
+        authority.state == WalletAuthorityState.accountShellOnly;
+
     return Center(
       child: Container(
         constraints: const BoxConstraints(maxWidth: 520),
@@ -232,12 +238,16 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             ),
             SizedBox(height: DetailSpacing.xxl),
             Text(
-              'Connect Your Wallet',
+              isAccountShellOnly
+                  ? l10n.walletHomeAccountShellTitle
+                  : l10n.walletHomeSignedOutTitle,
               style: DetailTypography.screenTitle(context),
             ),
             SizedBox(height: DetailSpacing.md),
             Text(
-              'Connect your Solana wallet to access your assets, send & receive tokens, and interact with the marketplace.',
+              isAccountShellOnly
+                  ? l10n.walletHomeAccountShellDescription
+                  : l10n.walletHomeSignedOutDescription,
               textAlign: TextAlign.center,
               style: DetailTypography.body(context).copyWith(height: 1.7),
             ),
@@ -250,7 +260,11 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                     Navigator.of(context).pushNamed('/connect-wallet');
                   },
                   icon: const Icon(Icons.add),
-                  label: const Text('Create Wallet'),
+                  label: Text(
+                    isAccountShellOnly
+                        ? l10n.walletHomeRestoreWalletAction
+                        : l10n.walletHomeCreateWalletAction,
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: themeProvider.accentColor,
                     foregroundColor: Colors.white,
@@ -269,7 +283,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                     Navigator.of(context).pushNamed('/import-wallet');
                   },
                   icon: const Icon(Icons.download),
-                  label: const Text('Import Wallet'),
+                  label: Text(l10n.walletHomeImportWalletAction),
                   style: OutlinedButton.styleFrom(
                     padding: EdgeInsets.symmetric(
                       horizontal: KubusSpacing.xxl,
@@ -300,7 +314,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                 );
               },
               icon: const Icon(Icons.account_balance_wallet_outlined, size: 20),
-              label: const Text('Connect external wallet'),
+              label: Text(l10n.walletSecurityConnectExternalAction),
             ),
           ],
         ),
@@ -445,6 +459,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     ThemeProvider themeProvider,
     WalletProvider walletProvider,
   ) {
+    final l10n = AppLocalizations.of(context)!;
     final solBalance = walletProvider.tokens
             .where((t) => t.symbol.toUpperCase() == 'SOL')
             .firstOrNull
@@ -485,14 +500,14 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Total Balance',
+                      l10n.walletHomeTotalBalanceLabel,
                       style: KubusTextStyles.sectionSubtitle.copyWith(
                         color: Colors.white.withValues(alpha: 0.82),
                       ),
                     ),
                     SizedBox(height: DetailSpacing.xs),
                     Text(
-                      'Desktop wallet',
+                      l10n.walletHomeDesktopSurfaceLabel,
                       style: DetailTypography.caption(context).copyWith(
                         color: Colors.white.withValues(alpha: 0.68),
                       ),
@@ -600,7 +615,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                 TextButton.icon(
                   onPressed: _openSwapScreen,
                   icon: const Icon(Icons.local_fire_department_outlined),
-                  label: const Text('Buy KUB8'),
+                  label: Text(l10n.walletHomeBuyAction),
                   style: TextButton.styleFrom(
                     foregroundColor: Colors.white,
                     backgroundColor: Colors.white.withValues(alpha: 0.12),
@@ -616,7 +631,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                 TextButton.icon(
                   onPressed: walletProvider.refreshData,
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Refresh'),
+                  label: Text(l10n.commonRefresh),
                   style: TextButton.styleFrom(
                     foregroundColor: Colors.white,
                     backgroundColor: Colors.white.withValues(alpha: 0.08),
@@ -641,6 +656,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     ThemeProvider themeProvider,
     WalletProvider walletProvider,
   ) {
+    final l10n = AppLocalizations.of(context)!;
     final canTransact = walletProvider.canTransact;
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -655,8 +671,8 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             SizedBox(
               width: resolvedTileWidth,
               child: _buildActionButton(
-                'Send',
-                'Transfer tokens',
+                l10n.walletHomeSendAction,
+                l10n.walletHomeDesktopSendSubtitle,
                 Icons.arrow_upward,
                 themeProvider.accentColor,
                 _openSendScreen,
@@ -666,8 +682,8 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             SizedBox(
               width: resolvedTileWidth,
               child: _buildActionButton(
-                'Receive',
-                'Get your address',
+                l10n.walletHomeReceiveAction,
+                l10n.walletHomeDesktopReceiveSubtitle,
                 Icons.arrow_downward,
                 const Color(0xFF4ECDC4),
                 _openReceiveScreen,
@@ -676,8 +692,8 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             SizedBox(
               width: resolvedTileWidth,
               child: _buildActionButton(
-                'Swap',
-                'Exchange tokens',
+                l10n.walletHomeSwapAction,
+                l10n.walletHomeDesktopSwapSubtitle,
                 Icons.swap_horiz,
                 const Color(0xFFFF9A8B),
                 _openSwapScreen,
@@ -687,8 +703,8 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             SizedBox(
               width: resolvedTileWidth,
               child: _buildActionButton(
-                'Buy',
-                'Add funds',
+                l10n.walletHomeBuyAction,
+                l10n.walletHomeDesktopBuySubtitle,
                 Icons.add,
                 const Color(0xFF667EEA),
                 _openReceiveScreen,
@@ -788,6 +804,13 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
   }
 
   Widget _buildTabs(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
+    final tabLabels = <String>[
+      l10n.walletHomeDesktopTabAssets,
+      l10n.walletHomeDesktopTabActivity,
+      l10n.walletHomeDesktopTabNfts,
+      l10n.walletHomeDesktopTabStaking,
+    ];
     return Padding(
       padding: EdgeInsets.fromLTRB(
         DetailSpacing.xxl,
@@ -818,7 +841,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             horizontal: KubusSpacing.lg,
             vertical: KubusSpacing.sm,
           ),
-          tabs: _tabs.map((tab) => Tab(text: tab)).toList(),
+          tabs: tabLabels.map((tab) => Tab(text: tab)).toList(),
         ),
       ),
     );
@@ -1033,6 +1056,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
         final tokens = walletProvider.tokens;
 
         if (tokens.isEmpty) {
+          final l10n = AppLocalizations.of(context)!;
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -1047,7 +1071,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                 ),
                 SizedBox(height: DetailSpacing.lg),
                 Text(
-                  'No assets yet',
+                  l10n.walletHomeNoTokensTitle,
                   style: DetailTypography.cardTitle(context).copyWith(
                     color: Theme.of(context)
                         .colorScheme
@@ -1233,6 +1257,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
   Widget _buildActivityTab(ThemeProvider themeProvider) {
     return Consumer<WalletProvider>(
       builder: (context, walletProvider, _) {
+        final l10n = AppLocalizations.of(context)!;
         final transactions = walletProvider.transactions;
         if (transactions.isEmpty) {
           return Center(
@@ -1240,10 +1265,10 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
               padding: EdgeInsets.all(DetailSpacing.xl),
               child: EmptyStateCard(
                 icon: Icons.history,
-                title: 'No transactions yet',
-                description: 'Your recent on-chain activity will appear here.',
+                title: l10n.settingsNoTransactionsTitle,
+                description: l10n.settingsNoTransactionsDescription,
                 showAction: true,
-                actionLabel: 'Refresh',
+                actionLabel: l10n.commonRefresh,
                 onAction: walletProvider.refreshData,
               ),
             ),
@@ -1319,6 +1344,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
   }
 
   Widget _buildNFTsTab(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     _loadNftsIfNeeded();
     if (_isLoadingNfts) {
       return Center(
@@ -1335,10 +1361,10 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
           padding: EdgeInsets.all(DetailSpacing.xl),
           child: EmptyStateCard(
             icon: Icons.error_outline,
-            title: 'Could not load NFTs',
+            title: l10n.walletHomeNftLoadFailedTitle,
             description: _nftError!,
             showAction: true,
-            actionLabel: 'Retry',
+            actionLabel: l10n.commonRetry,
             onAction: _loadNfts,
           ),
         ),
@@ -1351,10 +1377,10 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
           padding: EdgeInsets.all(DetailSpacing.xl),
           child: EmptyStateCard(
             icon: Icons.auto_awesome_motion,
-            title: 'No collectibles yet',
-            description: 'Mint or purchase NFTs to see them here.',
+            title: l10n.marketplaceEmptyCollectionTitle,
+            description: l10n.walletHomeNoCollectiblesDescription,
             showAction: true,
-            actionLabel: 'Refresh',
+            actionLabel: l10n.commonRefresh,
             onAction: _loadNfts,
           ),
         ),
@@ -1411,7 +1437,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
               if (creator.isNotEmpty) ...[
                 SizedBox(height: DetailSpacing.xs),
                 Text(
-                  'by $creator',
+                  l10n.walletHomeCollectibleByline(creator),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: DetailTypography.caption(context),
@@ -1427,6 +1453,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
   Widget _buildStakingTab(ThemeProvider themeProvider) {
     return Consumer<WalletProvider>(
       builder: (context, walletProvider, _) {
+        final l10n = AppLocalizations.of(context)!;
         final rewardBalance =
             walletProvider.achievementTokenTotal.toStringAsFixed(2);
         return ListView(
@@ -1453,12 +1480,12 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'KUB8 Rewards',
+                          l10n.walletHomeRewardsTitle,
                           style: DetailTypography.cardTitle(context),
                         ),
                         SizedBox(height: DetailSpacing.xs),
                         Text(
-                          '$rewardBalance KUB8 available from achievements',
+                          l10n.walletHomeRewardsDescription(rewardBalance),
                           style: DetailTypography.caption(context),
                         ),
                       ],
@@ -1467,7 +1494,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                   TextButton(
                     onPressed: _openSwapScreen,
                     child: Text(
-                      'Swap',
+                      l10n.walletHomeSwapAction,
                       style: DetailTypography.label(context).copyWith(
                         color: themeProvider.accentColor,
                       ),
@@ -1482,12 +1509,12 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Stake SOL for gas savings',
+                    l10n.walletHomeStakeTitle,
                     style: DetailTypography.cardTitle(context),
                   ),
                   SizedBox(height: DetailSpacing.sm),
                   Text(
-                    'Lock SOL to cover future transaction fees and keep your gallery publishing smooth.',
+                    l10n.walletHomeStakeDescription,
                     style: DetailTypography.body(context),
                   ),
                   SizedBox(height: DetailSpacing.lg),
@@ -1497,12 +1524,12 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                         onPressed:
                             walletProvider.canTransact ? _openSwapScreen : null,
                         icon: const Icon(Icons.safety_check),
-                        label: const Text('Stake now'),
+                        label: Text(l10n.walletHomeStakeAction),
                       ),
                       SizedBox(width: DetailSpacing.md),
                       OutlinedButton(
                         onPressed: walletProvider.refreshData,
-                        child: const Text('Refresh rates'),
+                        child: Text(l10n.walletHomeRefreshRatesAction),
                       ),
                     ],
                   ),
@@ -1516,6 +1543,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
   }
 
   Widget _buildRightPanel(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final walletProvider = Provider.of<WalletProvider>(context);
     final canTransact = walletProvider.canTransact;
@@ -1525,43 +1553,43 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
       padding: EdgeInsets.all(DetailSpacing.xl),
       children: [
         Text(
-          'Quick Actions',
+          l10n.walletHomeQuickActionsTitle,
           style: DetailTypography.sectionTitle(context),
         ),
         SizedBox(height: DetailSpacing.lg + DetailSpacing.xs),
         _buildQuickActionTile(
-          'Send',
-          'Transfer tokens',
+          l10n.walletHomeSendAction,
+          l10n.walletHomeDesktopSendSubtitle,
           Icons.arrow_upward,
           themeProvider.accentColor,
           _openSendScreen,
           enabled: canTransact,
         ),
         _buildQuickActionTile(
-          'Receive',
-          'Get your address',
+          l10n.walletHomeReceiveAction,
+          l10n.walletHomeDesktopReceiveSubtitle,
           Icons.arrow_downward,
           scheme.secondary,
           _openReceiveScreen,
         ),
         _buildQuickActionTile(
-          'Swap',
-          'Exchange tokens',
+          l10n.walletHomeSwapAction,
+          l10n.walletHomeDesktopSwapSubtitle,
           Icons.swap_horiz,
           scheme.tertiary,
           _openSwapScreen,
           enabled: canTransact,
         ),
         _buildQuickActionTile(
-          'Buy Crypto',
-          'Add funds',
+          l10n.walletHomeBuyAction,
+          l10n.walletHomeDesktopBuySubtitle,
           Icons.add_card,
           scheme.primary,
           _openReceiveScreen,
         ),
         SizedBox(height: DetailSpacing.xxl),
         Text(
-          'Recent Activity',
+          l10n.walletHomeDesktopRecentActivityTitle,
           style: DetailTypography.sectionTitle(context),
         ),
         SizedBox(height: DetailSpacing.lg),
@@ -1584,7 +1612,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                 ),
                 SizedBox(height: DetailSpacing.md),
                 Text(
-                  'No recent transactions',
+                  l10n.daoRecentTransactionsEmptyTitle,
                   style: DetailTypography.label(context).copyWith(
                     color: Theme.of(context)
                         .colorScheme
@@ -1594,7 +1622,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                 ),
                 SizedBox(height: DetailSpacing.xs),
                 Text(
-                  'Your transaction history will appear here',
+                  l10n.settingsNoTransactionsDescription,
                   style: DetailTypography.caption(context),
                 ),
               ],

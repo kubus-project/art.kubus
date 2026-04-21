@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../utils/design_tokens.dart';
 
 /// Google Sign-In button that works across platforms.
@@ -17,6 +18,7 @@ class GoogleSignInButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final background =
@@ -65,7 +67,9 @@ class GoogleSignInButton extends StatelessWidget {
         onPressed: isLoading ? null : () async => onPressed(),
         icon: leading,
         label: Text(
-          isLoading ? 'Connecting...' : 'Continue with Google',
+          isLoading
+              ? l10n.authGoogleConnectingLabel
+              : l10n.authContinueWithGoogleLabel,
           style: KubusTextStyles.sectionTitle,
         ),
       ),

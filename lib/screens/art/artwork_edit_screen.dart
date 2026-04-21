@@ -8,8 +8,11 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../config/config.dart';
 import '../../providers/artwork_provider.dart';
 import '../../providers/app_refresh_provider.dart';
+import '../../providers/profile_provider.dart';
+import '../../providers/wallet_provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../utils/artwork_media_resolver.dart';
+import '../../utils/wallet_action_guard.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/inline_loading.dart';
@@ -185,9 +188,20 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final provider = context.read<ArtworkProvider>();
+    final profileProvider = context.read<ProfileProvider>();
+    final walletProvider = context.read<WalletProvider>();
     final artwork = provider.getArtworkById(widget.artworkId);
     if (artwork == null) {
       messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonSomethingWentWrong)));
+      return;
+    }
+
+    final canProceed = await WalletActionGuard.ensureSignerAccess(
+      context: context,
+      profileProvider: profileProvider,
+      walletProvider: walletProvider,
+    );
+    if (!mounted || !canProceed) {
       return;
     }
 
