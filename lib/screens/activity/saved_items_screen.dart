@@ -30,8 +30,16 @@ import '../community/post_detail_screen.dart';
 import '../events/event_detail_screen.dart';
 import '../events/exhibition_detail_screen.dart';
 
+const double _kSavedSummaryCompactWidth = 480;
+const double _kSavedSectionCompactWidth = 440;
+const double _kSavedTileCompactWidth = 460;
+const double _kSavedTileCompactThumbnailSize = 56;
+const double _kSavedTileRegularThumbnailSize = 68;
+
 class SavedItemsScreen extends StatefulWidget {
-  const SavedItemsScreen({super.key});
+  const SavedItemsScreen({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   State<SavedItemsScreen> createState() => _SavedItemsScreenState();
@@ -195,25 +203,27 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
     return AnimatedGradientBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          surfaceTintColor: Colors.transparent,
-          elevation: 0,
-          title: Text(
-            l10n.profileMenuSavedItemsTitle,
-            style: KubusTypography.inter(fontWeight: FontWeight.w700),
-          ),
-          flexibleSpace:
-              const KubusGlassAppBarBackdrop(showBottomDivider: true),
-          actions: [
-            if (totalCount > 0)
-              IconButton(
-                tooltip: l10n.savedItemsClearAllTooltip,
-                onPressed: _showClearAllDialog,
-                icon: const Icon(Icons.delete_outline),
+        appBar: widget.embedded
+            ? null
+            : AppBar(
+                backgroundColor: Colors.transparent,
+                surfaceTintColor: Colors.transparent,
+                elevation: 0,
+                title: Text(
+                  l10n.profileMenuSavedItemsTitle,
+                  style: KubusTypography.inter(fontWeight: FontWeight.w700),
+                ),
+                flexibleSpace:
+                    const KubusGlassAppBarBackdrop(showBottomDivider: true),
+                actions: [
+                  if (totalCount > 0)
+                    IconButton(
+                      tooltip: l10n.savedItemsClearAllTooltip,
+                      onPressed: _showClearAllDialog,
+                      icon: const Icon(Icons.delete_outline),
+                    ),
+                ],
               ),
-          ],
-        ),
         body: RefreshIndicator(
           onRefresh: _refresh,
           child: ListView(
@@ -661,49 +671,53 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
   }
 
   void _showClearAllDialog() {
-    final l10n = AppLocalizations.of(context)!;
-    final savedProvider = context.read<SavedItemsProvider>();
+    unawaited(showSavedItemsClearAllDialog(context));
+  }
+}
 
-    showKubusDialog<void>(
-      context: context,
-      builder: (dialogContext) => KubusAlertDialog(
-        title: Text(
-          l10n.savedItemsClearAllDialogTitle,
-          style: KubusTypography.inter(fontWeight: FontWeight.w700),
+Future<void> showSavedItemsClearAllDialog(BuildContext context) async {
+  final l10n = AppLocalizations.of(context)!;
+  final savedProvider = context.read<SavedItemsProvider>();
+
+  await showKubusDialog<void>(
+    context: context,
+    builder: (dialogContext) => KubusAlertDialog(
+      title: Text(
+        l10n.savedItemsClearAllDialogTitle,
+        style: KubusTypography.inter(fontWeight: FontWeight.w700),
+      ),
+      content: Text(
+        l10n.savedItemsClearAllDialogMessage,
+        style: KubusTypography.inter(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(),
+          child: Text(l10n.commonCancel),
         ),
-        content: Text(
-          l10n.savedItemsClearAllDialogMessage,
-          style: KubusTypography.inter(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(l10n.commonCancel),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.of(dialogContext).pop();
-              await savedProvider.clearAll();
-              if (!mounted) return;
-              ScaffoldMessenger.of(context).showKubusSnackBar(
-                SnackBar(
-                  content: Text(l10n.savedItemsClearedToast),
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-            },
-            child: Text(
-              l10n.savedItemsClearAllDialogAction,
-              style: KubusTypography.inter(
-                color: Theme.of(context).colorScheme.error,
-                fontWeight: FontWeight.w600,
+        TextButton(
+          onPressed: () async {
+            Navigator.of(dialogContext).pop();
+            await savedProvider.clearAll();
+            if (!context.mounted) return;
+            ScaffoldMessenger.of(context).showKubusSnackBar(
+              SnackBar(
+                content: Text(l10n.savedItemsClearedToast),
+                duration: const Duration(seconds: 2),
               ),
+            );
+          },
+          child: Text(
+            l10n.savedItemsClearAllDialogAction,
+            style: KubusTypography.inter(
+              color: Theme.of(context).colorScheme.error,
+              fontWeight: FontWeight.w600,
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
 }
 
 class _SummaryCard extends StatelessWidget {
@@ -744,53 +758,15 @@ class _SummaryCard extends StatelessWidget {
         blurSigma: style.blurSigma,
         backgroundColor: style.tintColor,
         showBorder: false,
-        child: Padding(
-          padding: const EdgeInsets.all(KubusSpacing.lg),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(KubusRadius.lg),
-                ),
-                child: Icon(
-                  icon,
-                  color: accent,
-                  size: 26,
-                ),
-              ),
-              const SizedBox(width: KubusSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: KubusTypography.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: scheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: KubusSpacing.xs),
-                    Text(
-                      subtitle,
-                      style: KubusTypography.inter(
-                        fontSize: 13,
-                        color: scheme.onSurface.withValues(alpha: 0.68),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: KubusSpacing.md),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: KubusSpacing.md,
-                  vertical: KubusSpacing.sm,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isCompact = constraints.maxWidth < _kSavedSummaryCompactWidth;
+
+            Widget buildCountPill({required bool compact}) {
+              return Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: compact ? KubusSpacing.sm : KubusSpacing.md,
+                  vertical: compact ? KubusSpacing.xs : KubusSpacing.sm,
                 ),
                 decoration: BoxDecoration(
                   color: accent.withValues(alpha: 0.12),
@@ -804,9 +780,117 @@ class _SummaryCard extends StatelessWidget {
                     color: accent,
                   ),
                 ),
-              ),
-            ],
-          ),
+              );
+            }
+
+            final content = isCompact
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: accent.withValues(alpha: 0.14),
+                              borderRadius:
+                                  BorderRadius.circular(KubusRadius.lg),
+                            ),
+                            child: Icon(icon, color: accent, size: 26),
+                          ),
+                          const SizedBox(width: KubusSpacing.sm),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  title,
+                                  maxLines: 2,
+                                  softWrap: true,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: KubusTypography.inter(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: scheme.onSurface,
+                                  ),
+                                ),
+                                const SizedBox(height: KubusSpacing.xs),
+                                Text(
+                                  subtitle,
+                                  maxLines: 3,
+                                  softWrap: true,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: KubusTypography.inter(
+                                    fontSize: 13,
+                                    color: scheme.onSurface
+                                        .withValues(alpha: 0.68),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: KubusSpacing.md),
+                      buildCountPill(compact: true),
+                    ],
+                  )
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: accent.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(KubusRadius.lg),
+                        ),
+                        child: Icon(
+                          icon,
+                          color: accent,
+                          size: 26,
+                        ),
+                      ),
+                      const SizedBox(width: KubusSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: KubusTypography.inter(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: scheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: KubusSpacing.xs),
+                            Text(
+                              subtitle,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: KubusTypography.inter(
+                                fontSize: 13,
+                                color: scheme.onSurface.withValues(alpha: 0.68),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: KubusSpacing.md),
+                      buildCountPill(compact: false),
+                    ],
+                  );
+
+            return Padding(
+              padding: const EdgeInsets.all(KubusSpacing.lg),
+              child: content,
+            );
+          },
         ),
       ),
     );
@@ -853,88 +937,158 @@ class _SavedItemsSection extends StatelessWidget {
         blurSigma: style.blurSigma,
         backgroundColor: style.tintColor,
         showBorder: false,
-        child: Padding(
-          padding: const EdgeInsets.all(KubusSpacing.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              InkWell(
-                borderRadius: BorderRadius.circular(KubusRadius.lg),
-                onTap: onToggle,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: KubusSpacing.sm,
-                    vertical: KubusSpacing.xs,
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: accent.withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(KubusRadius.md),
-                        ),
-                        child: Icon(icon, color: accent, size: 20),
-                      ),
-                      const SizedBox(width: KubusSpacing.md),
-                      Expanded(
-                        child: Text(
-                          title,
-                          style: KubusTypography.inter(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: scheme.onSurface,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: KubusSpacing.sm,
-                          vertical: KubusSpacing.xs,
-                        ),
-                        decoration: BoxDecoration(
-                          color: accent.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(KubusRadius.xl),
-                          border: Border.all(
-                            color: accent.withValues(alpha: 0.24),
-                          ),
-                        ),
-                        child: Text(
-                          '$count',
-                          style: KubusTypography.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: accent,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: KubusSpacing.sm),
-                      AnimatedRotation(
-                        turns: expanded ? 0.5 : 0.0,
-                        duration: const Duration(milliseconds: 180),
-                        curve: Curves.easeOut,
-                        child: Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          color: scheme.onSurface.withValues(alpha: 0.68),
-                        ),
-                      ),
-                    ],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isCompact = constraints.maxWidth < _kSavedSectionCompactWidth;
+
+            Widget buildCountPill({required bool compact}) {
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KubusSpacing.sm,
+                  vertical: KubusSpacing.xs,
+                ),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(KubusRadius.xl),
+                  border: Border.all(
+                    color: accent.withValues(alpha: 0.24),
                   ),
                 ),
-              ),
-              AnimatedSize(
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOutCubic,
-                child: expanded
-                    ? Padding(
-                        padding: const EdgeInsets.only(top: KubusSpacing.md),
-                        child: child,
+                child: Text(
+                  '$count',
+                  style: KubusTypography.inter(
+                    fontSize: compact ? 11 : 12,
+                    fontWeight: FontWeight.w700,
+                    color: accent,
+                  ),
+                ),
+              );
+            }
+
+            final header = InkWell(
+              borderRadius: BorderRadius.circular(KubusRadius.lg),
+              onTap: onToggle,
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isCompact ? KubusSpacing.xs : KubusSpacing.sm,
+                  vertical: KubusSpacing.xs,
+                ),
+                child: isCompact
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: accent.withValues(alpha: 0.14),
+                                  borderRadius:
+                                      BorderRadius.circular(KubusRadius.md),
+                                ),
+                                child: Icon(icon, color: accent, size: 20),
+                              ),
+                              const SizedBox(width: KubusSpacing.md),
+                              Expanded(
+                                child: Text(
+                                  title,
+                                  maxLines: 2,
+                                  softWrap: true,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: KubusTypography.inter(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: scheme.onSurface,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: KubusSpacing.sm),
+                          Row(
+                            children: [
+                              buildCountPill(compact: true),
+                              const Spacer(),
+                              AnimatedRotation(
+                                turns: expanded ? 0.5 : 0.0,
+                                duration: const Duration(milliseconds: 180),
+                                curve: Curves.easeOut,
+                                child: Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                  color:
+                                      scheme.onSurface.withValues(alpha: 0.68),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       )
-                    : const SizedBox.shrink(),
+                    : Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: accent.withValues(alpha: 0.14),
+                              borderRadius:
+                                  BorderRadius.circular(KubusRadius.md),
+                            ),
+                            child: Icon(icon, color: accent, size: 20),
+                          ),
+                          const SizedBox(width: KubusSpacing.md),
+                          Expanded(
+                            child: Text(
+                              title,
+                              maxLines: 2,
+                              softWrap: true,
+                              overflow: TextOverflow.ellipsis,
+                              style: KubusTypography.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: scheme.onSurface,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: KubusSpacing.md),
+                          buildCountPill(compact: false),
+                          const SizedBox(width: KubusSpacing.sm),
+                          AnimatedRotation(
+                            turns: expanded ? 0.5 : 0.0,
+                            duration: const Duration(milliseconds: 180),
+                            curve: Curves.easeOut,
+                            child: Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              color: scheme.onSurface.withValues(alpha: 0.68),
+                            ),
+                          ),
+                        ],
+                      ),
               ),
-            ],
-          ),
+            );
+
+            return Padding(
+              padding: const EdgeInsets.all(KubusSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  header,
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                    child: expanded
+                        ? Padding(
+                            padding:
+                                const EdgeInsets.only(top: KubusSpacing.md),
+                            child: child,
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );
@@ -946,7 +1100,7 @@ class _SavedItemTile extends StatelessWidget {
     required this.l10n,
     required this.title,
     required this.subtitle,
-    required this.leading,
+    required this.leadingBuilder,
     required this.accent,
     required this.onTap,
     required this.onRemove,
@@ -956,7 +1110,7 @@ class _SavedItemTile extends StatelessWidget {
   final AppLocalizations l10n;
   final String title;
   final String subtitle;
-  final Widget leading;
+  final Widget Function(double size) leadingBuilder;
   final Color accent;
   final VoidCallback onTap;
   final VoidCallback onRemove;
@@ -988,53 +1142,63 @@ class _SavedItemTile extends StatelessWidget {
           child: InkWell(
             borderRadius: BorderRadius.circular(KubusRadius.lg),
             onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.all(KubusSpacing.md),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  leading,
-                  const SizedBox(width: KubusSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: KubusTypography.inter(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: scheme.onSurface,
-                          ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isCompact =
+                    constraints.maxWidth < _kSavedTileCompactWidth;
+                final thumbnailSize = isCompact
+                    ? _kSavedTileCompactThumbnailSize
+                    : _kSavedTileRegularThumbnailSize;
+                final removeButtonSize = isCompact ? 36.0 : 40.0;
+
+                Widget buildTextBlock({required bool compact}) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 2,
+                        softWrap: true,
+                        overflow: TextOverflow.ellipsis,
+                        style: KubusTypography.inter(
+                          fontSize: compact ? 14 : 15,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurface,
                         ),
-                        const SizedBox(height: KubusSpacing.xs),
-                        Text(
-                          subtitle,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: KubusTypography.inter(
-                            fontSize: 13,
-                            color: scheme.onSurface.withValues(alpha: 0.68),
-                          ),
+                      ),
+                      const SizedBox(height: KubusSpacing.xs),
+                      Text(
+                        subtitle,
+                        maxLines: compact ? 3 : 2,
+                        softWrap: true,
+                        overflow: TextOverflow.ellipsis,
+                        style: KubusTypography.inter(
+                          fontSize: compact ? 12 : 13,
+                          color: scheme.onSurface.withValues(alpha: 0.68),
                         ),
-                        if (savedAt != null) ...[
-                          const SizedBox(height: KubusSpacing.sm),
-                          Text(
-                            l10n.savedItemsSavedAtLabel(savedAt!),
-                            style: KubusTypography.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: scheme.onSurface.withValues(alpha: 0.52),
-                            ),
-                          ),
-                        ],
-                      ],
+                      ),
+                    ],
+                  );
+                }
+
+                Widget buildSavedAtLabel() {
+                  if (savedAt == null) return const SizedBox.shrink();
+                  return Text(
+                    l10n.savedItemsSavedAtLabel(savedAt!),
+                    maxLines: 2,
+                    softWrap: true,
+                    overflow: TextOverflow.ellipsis,
+                    style: KubusTypography.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: scheme.onSurface.withValues(alpha: 0.52),
                     ),
-                  ),
-                  const SizedBox(width: KubusSpacing.sm),
-                  KubusGlassIconButton(
+                  );
+                }
+
+                Widget buildRemoveButton() {
+                  return KubusGlassIconButton(
                     icon: Icons.bookmark_remove_outlined,
                     onPressed: onRemove,
                     tooltip: l10n.commonRemove,
@@ -1043,10 +1207,64 @@ class _SavedItemTile extends StatelessWidget {
                     iconColor: accent,
                     activeIconColor: accent,
                     activeTint: accent,
-                    size: 40,
+                    size: removeButtonSize,
+                  );
+                }
+
+                final content = isCompact
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              leadingBuilder(thumbnailSize),
+                              const SizedBox(width: KubusSpacing.sm),
+                              Expanded(child: buildTextBlock(compact: true)),
+                            ],
+                          ),
+                          const SizedBox(height: KubusSpacing.sm),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Expanded(child: buildSavedAtLabel()),
+                              const SizedBox(width: KubusSpacing.sm),
+                              buildRemoveButton(),
+                            ],
+                          ),
+                        ],
+                      )
+                    : Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          leadingBuilder(thumbnailSize),
+                          const SizedBox(width: KubusSpacing.md),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                buildTextBlock(compact: false),
+                                if (savedAt != null) ...[
+                                  const SizedBox(height: KubusSpacing.sm),
+                                  buildSavedAtLabel(),
+                                ],
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: KubusSpacing.sm),
+                          buildRemoveButton(),
+                        ],
+                      );
+
+                return Padding(
+                  padding: EdgeInsets.all(
+                    isCompact
+                        ? KubusSpacing.sm + KubusSpacing.xs
+                        : KubusSpacing.md,
                   ),
-                ],
-              ),
+                  child: content,
+                );
+              },
             ),
           ),
         ),
@@ -1095,10 +1313,11 @@ class _ArtworkSavedTile extends StatelessWidget {
       accent: accent,
       onTap: onTap,
       onRemove: onRemove,
-      leading: _MediaThumbnail(
+      leadingBuilder: (size) => _MediaThumbnail(
         accent: accent,
         imageUrl: coverUrl,
         icon: Icons.photo_library_outlined,
+        size: size,
       ),
     );
   }
@@ -1145,10 +1364,11 @@ class _EventSavedTile extends StatelessWidget {
       accent: accent,
       onTap: onTap,
       onRemove: onRemove,
-      leading: _MediaThumbnail(
+      leadingBuilder: (size) => _MediaThumbnail(
         accent: accent,
         imageUrl: coverUrl,
         icon: Icons.event_outlined,
+        size: size,
       ),
     );
   }
@@ -1226,10 +1446,11 @@ class _CollectionSavedTile extends StatelessWidget {
       accent: accent,
       onTap: onTap,
       onRemove: onRemove,
-      leading: _MediaThumbnail(
+      leadingBuilder: (size) => _MediaThumbnail(
         accent: accent,
         imageUrl: coverUrl,
         icon: Icons.folder_outlined,
+        size: size,
       ),
     );
   }
@@ -1275,10 +1496,11 @@ class _ExhibitionSavedTile extends StatelessWidget {
       accent: accent,
       onTap: onTap,
       onRemove: onRemove,
-      leading: _MediaThumbnail(
+      leadingBuilder: (size) => _MediaThumbnail(
         accent: accent,
         imageUrl: coverUrl,
         icon: Icons.panorama_outlined,
+        size: size,
       ),
     );
   }
@@ -1350,11 +1572,12 @@ class _PostSavedTile extends StatelessWidget {
       accent: accent,
       onTap: onTap,
       onRemove: onRemove,
-      leading: _MediaThumbnail(
+      leadingBuilder: (size) => _MediaThumbnail(
         accent: accent,
         imageUrl: imageUrl,
         icon: Icons.forum_outlined,
         avatarLabel: post?.authorName,
+        size: size,
       ),
     );
   }
@@ -1381,12 +1604,14 @@ class _MediaThumbnail extends StatelessWidget {
     required this.accent,
     required this.imageUrl,
     required this.icon,
+    this.size = _kSavedTileRegularThumbnailSize,
     this.avatarLabel,
   });
 
   final Color accent;
   final String? imageUrl;
   final IconData icon;
+  final double size;
   final String? avatarLabel;
 
   @override
@@ -1407,8 +1632,8 @@ class _MediaThumbnail extends StatelessWidget {
         borderRadius: BorderRadius.circular(KubusRadius.lg),
         child: Image.network(
           image,
-          width: 68,
-          height: 68,
+          width: size,
+          height: size,
           fit: BoxFit.cover,
           errorBuilder: (_, __, ___) => _fallback(boxDecoration, scheme),
         ),
@@ -1420,8 +1645,8 @@ class _MediaThumbnail extends StatelessWidget {
 
   Widget _fallback(BoxDecoration decoration, ColorScheme scheme) {
     return Container(
-      width: 68,
-      height: 68,
+      width: size,
+      height: size,
       decoration: decoration,
       child: avatarLabel != null && avatarLabel!.trim().isNotEmpty
           ? Center(

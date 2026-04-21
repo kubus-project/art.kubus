@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../providers/profile_provider.dart';
+import '../../../providers/saved_items_provider.dart';
 import '../../../providers/dao_provider.dart';
 import '../../../providers/task_provider.dart';
 import '../../../providers/artwork_provider.dart';
@@ -20,8 +21,10 @@ import '../../../utils/profile_showcase_normalizer.dart';
 import '../../../community/community_interactions.dart';
 import '../../web3/achievements/achievements_page.dart';
 import '../desktop_settings_screen.dart';
+import '../../activity/saved_items_screen.dart';
 import '../../community/post_detail_screen.dart';
 import '../../../models/achievement_progress.dart';
+import '../../../models/artwork.dart';
 import '../../../services/achievement_service.dart' as achievement_svc;
 import 'desktop_profile_edit_screen.dart';
 import '../../../widgets/avatar_widget.dart';
@@ -268,6 +271,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                 _buildViewedArtworksSection(themeProvider),
                 const SizedBox(height: DetailSpacing.lg),
               ],
+              _buildSavedItemsSection(themeProvider),
+              const SizedBox(height: DetailSpacing.lg),
               _buildPostsSection(themeProvider),
             ],
           ),
@@ -302,6 +307,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           _buildViewedArtworksSection(themeProvider),
           const SizedBox(height: DetailSpacing.lg),
         ],
+        _buildSavedItemsSection(themeProvider),
+        const SizedBox(height: DetailSpacing.lg),
         _buildPerformanceStatsSection(),
         const SizedBox(height: DetailSpacing.lg),
         _buildAchievementsSection(),
@@ -313,8 +320,6 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildHeader({required bool showNavigationChrome}) {
     final l10n = AppLocalizations.of(context)!;
-    final inDesktopShell = DesktopShellScope.of(context) != null;
-    final canShowBackButton = Navigator.of(context).canPop() && !inDesktopShell;
 
     Widget buildActions() {
       return Row(
@@ -399,36 +404,145 @@ class _ProfileScreenState extends State<ProfileScreen>
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Row(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (canShowBackButton)
-              IconButton(
-                onPressed: () => Navigator.of(context).pop(),
-                icon: Icon(
-                  Icons.arrow_back,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-                tooltip: l10n.commonBack,
-              ),
-            if (canShowBackButton) const SizedBox(width: DetailSpacing.sm),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.navigationScreenProfile,
-                  style: DetailTypography.screenTitle(context),
-                ),
-                const SizedBox(height: DetailSpacing.xs),
-                Text(
-                  l10n.desktopProfileHeaderSubtitle,
-                  style: DetailTypography.caption(context),
-                ),
-              ],
+            Text(
+              l10n.navigationScreenProfile,
+              style: DetailTypography.screenTitle(context),
+            ),
+            const SizedBox(height: DetailSpacing.xs),
+            Text(
+              l10n.desktopProfileHeaderSubtitle,
+              style: DetailTypography.caption(context),
             ),
           ],
         ),
         buildActions(),
       ],
+    );
+  }
+
+  void _navigateToSavedItems({required bool showClearAll}) {
+    final shellScope = DesktopShellScope.of(context);
+    if (shellScope != null) {
+      final actions = <Widget>[];
+      if (showClearAll) {
+        final l10n = AppLocalizations.of(context)!;
+        actions.add(
+          IconButton(
+            tooltip: l10n.savedItemsClearAllTooltip,
+            onPressed: () => showSavedItemsClearAllDialog(context),
+            icon: const Icon(Icons.delete_outline),
+          ),
+        );
+      }
+
+      shellScope.pushSubScreen(
+        title: AppLocalizations.of(context)!.profileMenuSavedItemsTitle,
+        actions: actions.isEmpty ? null : actions,
+        child: const SavedItemsScreen(embedded: true),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const SavedItemsScreen(),
+      ),
+    );
+  }
+
+  Widget _buildSavedItemsSection(ThemeProvider themeProvider) {
+    return Consumer2<SavedItemsProvider, ArtworkProvider>(
+      builder: (context, savedProvider, artworkProvider, _) {
+        final l10n = AppLocalizations.of(context)!;
+        final savedIds = savedProvider.getSortedSavedIds(type: 'artwork');
+        final savedArtworks = savedIds
+            .map(artworkProvider.getArtworkById)
+            .whereType<Artwork>()
+            .take(6)
+            .toList(growable: false);
+
+        final subtitle = savedIds.isEmpty
+            ? l10n.savedItemsSummarySubtitleEmpty
+            : l10n.savedItemsSummaryCount(savedIds.length);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            DesktopSectionHeader(
+              title: l10n.profileMenuSavedItemsTitle,
+              subtitle: subtitle,
+              icon: Icons.bookmarks_outlined,
+              iconColor: themeProvider.accentColor,
+              action: TextButton.icon(
+                onPressed: () => _navigateToSavedItems(
+                  showClearAll: savedProvider.totalSavedCount > 0,
+                ),
+                icon: const Icon(Icons.arrow_forward, size: 18),
+                label: Text(l10n.commonViewAll),
+              ),
+            ),
+            const SizedBox(height: DetailSpacing.md),
+            if (savedIds.isEmpty)
+              DesktopCard(
+                child: EmptyStateCard(
+                  icon: Icons.bookmark_border,
+                  title: l10n.savedItemsEmptySectionTitle(
+                    l10n.savedItemsArtworkLabel,
+                  ),
+                  description: l10n.savedItemsEmptySectionDescription(
+                    l10n.savedItemsArtworkLabel,
+                  ),
+                ),
+              )
+            else if (savedArtworks.isEmpty)
+              DesktopCard(
+                child: KubusStatCard(
+                  title:
+                      l10n.savedItemsSectionTitle(l10n.savedItemsArtworkLabel),
+                  value: l10n.savedItemsSummaryCount(savedIds.length),
+                  icon: Icons.bookmarks_outlined,
+                  layout: KubusStatCardLayout.centered,
+                  onTap: () => _navigateToSavedItems(
+                    showClearAll: savedProvider.totalSavedCount > 0,
+                  ),
+                  minHeight: 96,
+                ),
+              )
+            else
+              SizedBox(
+                height: 240,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: savedArtworks.length,
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(width: DetailSpacing.lg),
+                  itemBuilder: (context, index) {
+                    final artwork = savedArtworks[index];
+                    return SharedShowcaseCard(
+                      imageUrl: artwork.imageUrl,
+                      title: artwork.title,
+                      subtitle: artwork.artist,
+                      footer: l10n.userProfileLikesLabel(artwork.likesCount),
+                      onTap: () => openArtwork(
+                        context,
+                        artwork.id,
+                        source: 'desktop_profile_saved_items',
+                      ),
+                      width: 190,
+                      imageHeight: 110,
+                      titleMaxLines: 2,
+                      subtitleMaxLines: 1,
+                    );
+                  },
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 

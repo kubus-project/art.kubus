@@ -1246,7 +1246,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   Widget _buildConversationPane(
     Conversation conversation,
     ThemeProvider themeProvider,
-    ) {
+  ) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final screenWidth = MediaQuery.of(context).size.width;
@@ -1264,11 +1264,11 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             : 900.0;
 
     final shellColor = Color.lerp(
-          scheme.surface,
-          themeProvider.accentColor,
-          themeProvider.isDarkMode ? 0.04 : 0.02,
-        )!
-            .withValues(alpha: themeProvider.isDarkMode ? 0.94 : 0.97);
+      scheme.surface,
+      themeProvider.accentColor,
+      themeProvider.isDarkMode ? 0.04 : 0.02,
+    )!
+        .withValues(alpha: themeProvider.isDarkMode ? 0.94 : 0.97);
 
     return Container(
       key: ValueKey('conversation-pane-${conversation.id}'),
@@ -1736,7 +1736,15 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     ? scheme.onPrimary
                     : scheme.onSurface.withValues(alpha: 0.6)),
             const SizedBox(width: 6),
-            Text(label),
+            Text(
+              label,
+              style: KubusTextStyles.navLabel.copyWith(
+                color: selected
+                    ? scheme.onPrimary
+                    : scheme.onSurface.withValues(alpha: 0.72),
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+              ),
+            ),
           ],
         ),
         selected: selected,
@@ -1952,7 +1960,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       if (institutionId.isNotEmpty) 'institutionId': institutionId,
       if (profileTargetId != null) 'profileTargetId': profileTargetId,
       'displayName': identity.label,
-      'username': identity.username ?? item.raw['username'] ?? item.raw['handle'],
+      'username':
+          identity.username ?? item.raw['username'] ?? item.raw['handle'],
       if (profileTargetId != null) 'walletAddress': profileTargetId,
       if (profileTargetId != null) 'wallet': profileTargetId,
       if (identity.avatarUrl != null) 'avatarUrl': identity.avatarUrl,
@@ -2229,7 +2238,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                               l10n.desktopCommunityArtUseCurrentAreaButton),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: themeProvider.accentColor,
-                            foregroundColor: Colors.white,
+                            foregroundColor:
+                                Theme.of(context).colorScheme.onPrimary,
                             shape: RoundedRectangleBorder(
                                 borderRadius:
                                     BorderRadius.circular(KubusRadius.md)),
@@ -2281,24 +2291,24 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       );
     }
 
-  final single = options.first;
-  return FloatingActionButton.extended(
-    heroTag: 'desktop_comm_fab_$tabIndex',
-    onPressed: single.onTap,
-    backgroundColor: themeProvider.accentColor,
-    foregroundColor: scheme.onPrimary,
-    icon: Icon(
-      single.icon,
-      color: scheme.onPrimary,
-    ),
-    label: Text(
-      single.label,
-      style: KubusTextStyles.navLabel.copyWith(
+    final single = options.first;
+    return FloatingActionButton.extended(
+      heroTag: 'desktop_comm_fab_$tabIndex',
+      onPressed: single.onTap,
+      backgroundColor: themeProvider.accentColor,
+      foregroundColor: scheme.onPrimary,
+      icon: Icon(
+        single.icon,
         color: scheme.onPrimary,
-        fontWeight: FontWeight.w600,
       ),
-    ),
-  );
+      label: Text(
+        single.label,
+        style: KubusTextStyles.navLabel.copyWith(
+          color: scheme.onPrimary,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
   }
 
   List<CommunityFabOption> _getFabOptions(
@@ -2475,7 +2485,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         label: Text(l10n.commonCreate),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: themeProvider.accentColor,
-                          foregroundColor: Colors.white,
+                          foregroundColor:
+                              Theme.of(context).colorScheme.onPrimary,
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 14),
                           shape: RoundedRectangleBorder(
@@ -2549,7 +2560,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: themeProvider.accentColor,
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
             ),
             child: Text(AppLocalizations.of(context)!.commonCreate),
           ),
@@ -2695,7 +2706,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               label: Text(AppLocalizations.of(context)!.commonRetry),
               style: ElevatedButton.styleFrom(
                 backgroundColor: themeProvider.accentColor,
-                foregroundColor: Colors.white,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
               ),
             ),
           ),
@@ -2859,12 +2870,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       }
     });
     if (willExpand) {
-      unawaited(context
-          .read<CommunityCommentsProvider>()
-          .loadComments(post.id));
-      unawaited(context
-          .read<CommunityInteractionsProvider>()
-          .loadPostLikes(post.id));
+      unawaited(
+          context.read<CommunityCommentsProvider>().loadComments(post.id));
+      unawaited(
+          context.read<CommunityInteractionsProvider>().loadPostLikes(post.id));
     }
   }
 
@@ -3204,7 +3213,15 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       Icon(icon,
                           size: 18, color: iconColor ?? scheme.onSurface),
                       const SizedBox(width: KubusSpacing.md),
-                      Expanded(child: Text(label)),
+                      Expanded(
+                        child: Text(
+                          label,
+                          style: KubusTextStyles.navLabel.copyWith(
+                            color: scheme.onSurface,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -3545,8 +3562,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             child: Text(
               l10n.communityUnrepostAction,
               style: KubusTextStyles.navLabel.copyWith(
-              color: Theme.of(dialogContext).colorScheme.onSurface,
-            ),
+                color: Theme.of(dialogContext).colorScheme.error,
+              ),
             ),
           ),
         ],
@@ -3923,7 +3940,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 icon,
                 size: 18,
                 color: isSelected
-                    ? themeProvider.accentColor
+                    ? scheme.onSurface
                     : Theme.of(context)
                         .colorScheme
                         .onSurface
@@ -3935,7 +3952,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 style: KubusTextStyles.navMetaLabel.copyWith(
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                   color: isSelected
-                      ? themeProvider.accentColor
+                      ? scheme.onSurface
                       : Theme.of(context)
                           .colorScheme
                           .onSurface
@@ -4229,10 +4246,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         child: Center(
                           child: Text(
                             '$unreadCount',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 8,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.onSecondary,
                             ),
                           ),
                         ),
@@ -4741,9 +4758,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         secondChild: Text(
                           AppLocalizations.of(context)!
                               .desktopCommunityCreatePostTitle,
-                        style: KubusTextStyles.detailCardTitle.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
+                          style: KubusTextStyles.detailCardTitle.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
                         ),
                       ),
                     ),
@@ -4771,7 +4788,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                   .colorScheme
                                   .onSurface
                                   .withValues(alpha: 0.6)
-                              : Colors.white,
+                              : Theme.of(context).colorScheme.onPrimary,
                         ),
                       ),
                     ),
@@ -4911,8 +4928,13 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                               color: Colors.black.withValues(alpha: 0.6),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.close,
-                                size: 12, color: Colors.white),
+                            child: Icon(
+                              Icons.close,
+                              size: 12,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onInverseSurface,
+                            ),
                           ),
                         ),
                       ),
@@ -5448,9 +5470,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                               .onSurface
                                               .withValues(alpha: 0.4)),
                                       onTap: () => Navigator.of(dialogContext)
-                                          .pop(profileIdentity.username != null &&
-                                                  profileIdentity.username!
-                                                      .isNotEmpty
+                                          .pop(profileIdentity.username !=
+                                                      null &&
+                                                  profileIdentity
+                                                      .username!.isNotEmpty
                                               ? profileIdentity.username
                                               : wallet),
                                     );
@@ -6235,7 +6258,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   ),
               ],
             ),
-              const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
+            const SizedBox(height: KubusSpacing.sm + KubusSpacing.xs),
             if (groups.isEmpty && !isLoading)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16),
@@ -6326,14 +6349,14 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           errorBuilder: (_, __, ___) => Icon(
                             Icons.group,
                             size: 22,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                           ),
                         ),
                       )
                     : Icon(
                         Icons.group,
                         size: 22,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                       ),
               ),
               const SizedBox(width: 12),
@@ -6436,8 +6459,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     .outline
                     .withValues(alpha: 0.1),
                 title: Text(
-                  AppLocalizations.of(context)!
-                      .desktopCommunityCreatePostTitle,
+                  AppLocalizations.of(context)!.desktopCommunityCreatePostTitle,
                   style: KubusTextStyles.sectionTitle.copyWith(
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
@@ -6462,8 +6484,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   style: ElevatedButton.styleFrom(
                     backgroundColor: themeProvider.accentColor,
                     foregroundColor: onPrimary,
-                    disabledBackgroundColor: themeProvider.accentColor
-                        .withValues(alpha: 0.4),
+                    disabledBackgroundColor:
+                        themeProvider.accentColor.withValues(alpha: 0.4),
                     disabledForegroundColor: onPrimary.withValues(alpha: 0.7),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 20,
@@ -6477,11 +6499,11 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       ? SizedBox(
                           width: 18,
                           height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: onPrimary,
-                        ),
-                      )
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: onPrimary,
+                          ),
+                        )
                       : Text(
                           AppLocalizations.of(context)!.commonPost,
                           style: KubusTextStyles.navLabel.copyWith(
@@ -6516,8 +6538,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           decoration: InputDecoration(
                             hintText: AppLocalizations.of(context)!
                                 .desktopCommunityComposerWhatsHappeningHint,
-                            hintStyle:
-                                KubusTextStyles.sectionTitle.copyWith(
+                            hintStyle: KubusTextStyles.sectionTitle.copyWith(
                               color: Theme.of(context)
                                   .colorScheme
                                   .onSurface
@@ -6560,8 +6581,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                   borderRadius:
                                       BorderRadius.circular(KubusRadius.md),
                                   image: DecorationImage(
-                                    image:
-                                        MemoryImage(_selectedImages[index].bytes),
+                                    image: MemoryImage(
+                                        _selectedImages[index].bytes),
                                     fit: BoxFit.cover,
                                   ),
                                 ),
@@ -6578,14 +6599,16 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                   child: Container(
                                     padding: const EdgeInsets.all(4),
                                     decoration: BoxDecoration(
-                                      color: Colors.black
-                                          .withValues(alpha: 0.6),
+                                      color:
+                                          Colors.black.withValues(alpha: 0.6),
                                       shape: BoxShape.circle,
                                     ),
-                                    child: const Icon(
+                                    child: Icon(
                                       Icons.close,
                                       size: 14,
-                                      color: Colors.white,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onInverseSurface,
                                     ),
                                   ),
                                 ),

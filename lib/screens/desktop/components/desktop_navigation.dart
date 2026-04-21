@@ -360,8 +360,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                         ),
                       ],
                     ],
-                    if (item.badgeCount > 0)
-                      _buildBadge(item.badgeCount),
+                    if (item.badgeCount > 0) _buildBadge(item.badgeCount),
                   ],
                 ),
               ),
@@ -848,6 +847,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
     return Consumer<ProfileProvider>(
       builder: (context, profileProvider, _) {
         final user = profileProvider.currentUser;
+        final scheme = Theme.of(context).colorScheme;
 
         return Material(
           color: Colors.transparent,
@@ -857,11 +857,25 @@ class _DesktopNavigationState extends State<DesktopNavigation>
             child: Container(
               padding: EdgeInsets.all(widget.isExpanded ? 10 : 8),
               decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .primaryContainer
-                    .withValues(alpha: 0.5),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    widget.activeAccent.withValues(alpha: 0.28),
+                    widget.activeAccent.withValues(alpha: 0.18),
+                  ],
+                ),
                 borderRadius: BorderRadius.circular(KubusRadius.md),
+                border: Border.all(
+                  color: widget.activeAccent.withValues(alpha: 0.30),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: widget.activeAccent.withValues(alpha: 0.16),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Row(
                 mainAxisAlignment: widget.isExpanded
@@ -891,7 +905,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                                   AppLocalizations.of(context)!
                                       .profilePersonaArtEnthusiast,
                               style: KubusTextStyles.profileName.copyWith(
-                                color: Theme.of(context).colorScheme.onSurface,
+                                color: scheme.onPrimary,
                               ),
                               overflow: TextOverflow.ellipsis,
                               maxLines: 1,
@@ -900,10 +914,8 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                               Text(
                                 '@${user!.username}',
                                 style: KubusTextStyles.profileHandle.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.6),
+                                  color:
+                                      scheme.onPrimary.withValues(alpha: 0.82),
                                 ),
                                 overflow: TextOverflow.ellipsis,
                                 maxLines: 1,
@@ -914,10 +926,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                     ),
                     Icon(
                       Icons.more_horiz,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
+                      color: scheme.onPrimary.withValues(alpha: 0.82),
                       size: KubusHeaderMetrics.actionIcon,
                     ),
                   ],

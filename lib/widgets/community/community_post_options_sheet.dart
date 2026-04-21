@@ -29,13 +29,15 @@ Future<void> showCommunityPostOptionsSheet({
     Color? iconColor,
     Color? textColor,
   }) {
+    final effectiveIconColor = iconColor ?? theme.colorScheme.onSurface;
+    final effectiveTextColor = textColor ?? theme.colorScheme.onSurface;
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: iconColor),
+      leading: Icon(icon, color: effectiveIconColor),
       title: Text(
         label,
         style: KubusTypography.textTheme.bodyLarge?.copyWith(
-          color: textColor,
+          color: effectiveTextColor,
           fontWeight: FontWeight.w500,
         ),
       ),

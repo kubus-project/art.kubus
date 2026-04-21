@@ -82,6 +82,7 @@ class CommunityGroupPickerContent extends StatelessWidget {
                   group.name,
                   style: KubusTypography.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
+                    color: scheme.onSurface,
                   ),
                 ),
                 subtitle: Text(
