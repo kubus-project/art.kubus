@@ -87,6 +87,10 @@ class DesktopNavigation extends StatefulWidget {
   final VoidCallback onSettingsTap;
   final VoidCallback onNotificationsTap;
   final VoidCallback onWalletTap;
+  final bool isProfileSelected;
+  final bool isNotificationsSelected;
+  final bool isSettingsSelected;
+  final bool isCollabInvitesSelected;
   final VoidCallback? onCollabInvitesTap;
 
   const DesktopNavigation({
@@ -102,6 +106,10 @@ class DesktopNavigation extends StatefulWidget {
     required this.onSettingsTap,
     required this.onNotificationsTap,
     required this.onWalletTap,
+    required this.isProfileSelected,
+    this.isNotificationsSelected = false,
+    this.isSettingsSelected = false,
+    this.isCollabInvitesSelected = false,
     this.onCollabInvitesTap,
   });
 
@@ -112,6 +120,18 @@ class DesktopNavigation extends StatefulWidget {
 class _DesktopNavigationState extends State<DesktopNavigation>
     with SingleTickerProviderStateMixin {
   int? _hoveredIndex;
+  bool _isProfileHovered = false;
+  final Set<String> _hoveredActionButtons = <String>{};
+
+  void _setActionButtonHover(String key, bool hovered) {
+    setState(() {
+      if (hovered) {
+        _hoveredActionButtons.add(key);
+      } else {
+        _hoveredActionButtons.remove(key);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -423,6 +443,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
   }
 
   Widget _buildActionButtonsRow() {
+    final animationTheme = context.animationTheme;
     return AnimatedOpacity(
       opacity: widget.expandAnimation.value,
       duration: const Duration(milliseconds: 150),
@@ -441,6 +462,9 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                     onTap: widget.onCollabInvitesTap!,
                     showBadge: pendingCount > 0,
                     badgeCount: pendingCount,
+                    isActive: widget.isCollabInvitesSelected,
+                    hoverKey: 'collab_invites',
+                    animationTheme: animationTheme,
                   );
                 },
               ),
@@ -452,6 +476,9 @@ class _DesktopNavigationState extends State<DesktopNavigation>
               icon: Icons.notifications_outlined,
               onTap: widget.onNotificationsTap,
               showBadge: true,
+              isActive: widget.isNotificationsSelected,
+              hoverKey: 'notifications',
+              animationTheme: animationTheme,
             ),
           ),
 
@@ -460,6 +487,9 @@ class _DesktopNavigationState extends State<DesktopNavigation>
             child: _buildIconOnlyActionButton(
               icon: Icons.settings_outlined,
               onTap: widget.onSettingsTap,
+              isActive: widget.isSettingsSelected,
+              hoverKey: 'settings',
+              animationTheme: animationTheme,
             ),
           ),
         ],
@@ -468,6 +498,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
   }
 
   Widget _buildActionButtonsColumn() {
+    final animationTheme = context.animationTheme;
     return Column(
       children: [
         // Collab invites (if enabled)
@@ -481,6 +512,9 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                 onTap: widget.onCollabInvitesTap!,
                 showBadge: pendingCount > 0,
                 badgeCount: pendingCount,
+                isActive: widget.isCollabInvitesSelected,
+                hoverKey: 'collab_invites',
+                animationTheme: animationTheme,
               );
             },
           ),
@@ -494,6 +528,9 @@ class _DesktopNavigationState extends State<DesktopNavigation>
           icon: Icons.notifications_outlined,
           onTap: widget.onNotificationsTap,
           showBadge: true,
+          isActive: widget.isNotificationsSelected,
+          hoverKey: 'notifications',
+          animationTheme: animationTheme,
         ),
 
         const SizedBox(height: 2),
@@ -502,6 +539,9 @@ class _DesktopNavigationState extends State<DesktopNavigation>
         _buildCollapsedActionButton(
           icon: Icons.settings_outlined,
           onTap: widget.onSettingsTap,
+          isActive: widget.isSettingsSelected,
+          hoverKey: 'settings',
+          animationTheme: animationTheme,
         ),
       ],
     );
@@ -512,87 +552,116 @@ class _DesktopNavigationState extends State<DesktopNavigation>
     required VoidCallback onTap,
     bool showBadge = false,
     int badgeCount = 0,
+    bool isActive = false,
+    required String hoverKey,
+    required AppAnimationTheme animationTheme,
   }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(KubusRadius.sm),
-        child: SizedBox(
-          width: KubusHeaderMetrics.actionHitArea,
-          height: KubusHeaderMetrics.actionHitArea,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Center(
-                child: Icon(
-                  icon,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.7),
-                  size: KubusChromeMetrics.navIcon,
-                ),
-              ),
-              // Generic badge with count (for collab invites, etc.)
-              if (showBadge && badgeCount > 0)
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: KubusSpacing.xs,
-                      vertical: KubusSpacing.xxs,
+    final isHovered = _hoveredActionButtons.contains(hoverKey);
+    return MouseRegion(
+      onEnter: (_) => _setActionButtonHover(hoverKey, true),
+      onExit: (_) => _setActionButtonHover(hoverKey, false),
+      child: AnimatedContainer(
+        duration: animationTheme.short,
+        curve: animationTheme.defaultCurve,
+        decoration: BoxDecoration(
+          color: isActive
+              ? widget.activeAccent.withValues(alpha: 0.16)
+              : isHovered
+                  ? widget.activeAccent.withValues(alpha: 0.08)
+                  : Colors.transparent,
+          borderRadius: BorderRadius.circular(KubusRadius.sm),
+          border: Border.all(
+            color: isActive
+                ? widget.activeAccent.withValues(alpha: 0.30)
+                : isHovered
+                    ? widget.activeAccent.withValues(alpha: 0.12)
+                    : Colors.transparent,
+          ),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(KubusRadius.sm),
+            child: SizedBox(
+              width: KubusHeaderMetrics.actionHitArea,
+              height: KubusHeaderMetrics.actionHitArea,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Center(
+                    child: Icon(
+                      icon,
+                      color: isActive
+                          ? widget.activeAccent
+                          : Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.7),
+                      size: KubusChromeMetrics.navIcon,
                     ),
-                    constraints: const BoxConstraints(
-                      minWidth:
-                          KubusSpacing.sm + KubusSpacing.xs + KubusSpacing.xxs,
-                      minHeight:
-                          KubusSpacing.sm + KubusSpacing.xs + KubusSpacing.xxs,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.error,
-                      borderRadius: BorderRadius.circular(KubusRadius.sm),
-                      border: Border.all(
-                        color: Theme.of(context).colorScheme.surface,
-                        width: 1,
+                  ),
+                // Generic badge with count (for collab invites, etc.)
+                if (showBadge && badgeCount > 0)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: KubusSpacing.xs,
+                        vertical: KubusSpacing.xxs,
                       ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        badgeCount > 99 ? '99+' : badgeCount.toString(),
-                        style: KubusTextStyles.compactBadge.copyWith(
-                          color: Theme.of(context).colorScheme.onError,
+                      constraints: const BoxConstraints(
+                        minWidth:
+                            KubusSpacing.sm + KubusSpacing.xs + KubusSpacing.xxs,
+                        minHeight:
+                            KubusSpacing.sm + KubusSpacing.xs + KubusSpacing.xxs,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.error,
+                        borderRadius: BorderRadius.circular(KubusRadius.sm),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.surface,
+                          width: 1,
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          badgeCount > 99 ? '99+' : badgeCount.toString(),
+                          style: KubusTextStyles.compactBadge.copyWith(
+                            color: Theme.of(context).colorScheme.onError,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              // Notification badge (uses NotificationProvider)
-              if (showBadge && badgeCount == 0)
-                Selector<NotificationProvider, int>(
-                  selector: (_, np) => np.unreadCount,
-                  builder: (context, unreadCount, _) {
-                    if (unreadCount == 0) return const SizedBox.shrink();
-                    return Positioned(
-                      right: 0,
-                      top: 0,
-                      child: Container(
-                        width: KubusChromeMetrics.navBadgeDot,
-                        height: KubusChromeMetrics.navBadgeDot,
-                        decoration: BoxDecoration(
-                          color: widget.activeAccent,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Theme.of(context).colorScheme.surface,
-                            width: 1,
+                // Notification badge (uses NotificationProvider)
+                if (showBadge && badgeCount == 0)
+                  Selector<NotificationProvider, int>(
+                    selector: (_, np) => np.unreadCount,
+                    builder: (context, unreadCount, _) {
+                      if (unreadCount == 0) return const SizedBox.shrink();
+                      return Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          width: KubusChromeMetrics.navBadgeDot,
+                          height: KubusChromeMetrics.navBadgeDot,
+                          decoration: BoxDecoration(
+                            color: widget.activeAccent,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Theme.of(context).colorScheme.surface,
+                              width: 1,
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  },
-                ),
-            ],
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -604,88 +673,117 @@ class _DesktopNavigationState extends State<DesktopNavigation>
     required VoidCallback onTap,
     bool showBadge = false,
     int badgeCount = 0,
+    bool isActive = false,
+    required String hoverKey,
+    required AppAnimationTheme animationTheme,
   }) {
+    final isHovered = _hoveredActionButtons.contains(hoverKey);
     final collapsedButtonPadding = 7.0;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(KubusRadius.md),
-        child: SizedBox(
-          width: KubusHeaderMetrics.actionHitArea - collapsedButtonPadding,
-          height: KubusHeaderMetrics.actionHitArea - collapsedButtonPadding,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Center(
-                child: Icon(
-                  icon,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.7),
-                  size: KubusChromeMetrics.navIcon,
-                ),
-              ),
-              // Generic badge with count (for collab invites, etc.)
-              if (showBadge && badgeCount > 0)
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: KubusSpacing.xs,
-                      vertical: KubusSpacing.xxs,
+    return MouseRegion(
+      onEnter: (_) => _setActionButtonHover(hoverKey, true),
+      onExit: (_) => _setActionButtonHover(hoverKey, false),
+      child: AnimatedContainer(
+        duration: animationTheme.short,
+        curve: animationTheme.defaultCurve,
+        decoration: BoxDecoration(
+          color: isActive
+              ? widget.activeAccent.withValues(alpha: 0.16)
+              : isHovered
+                  ? widget.activeAccent.withValues(alpha: 0.08)
+                  : Colors.transparent,
+          borderRadius: BorderRadius.circular(KubusRadius.md),
+          border: Border.all(
+            color: isActive
+                ? widget.activeAccent.withValues(alpha: 0.30)
+                : isHovered
+                    ? widget.activeAccent.withValues(alpha: 0.12)
+                    : Colors.transparent,
+          ),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(KubusRadius.md),
+            child: SizedBox(
+              width: KubusHeaderMetrics.actionHitArea - collapsedButtonPadding,
+              height: KubusHeaderMetrics.actionHitArea - collapsedButtonPadding,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Center(
+                    child: Icon(
+                      icon,
+                      color: isActive
+                          ? widget.activeAccent
+                          : Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.7),
+                      size: KubusChromeMetrics.navIcon,
                     ),
-                    constraints: const BoxConstraints(
-                      minWidth:
-                          KubusSpacing.sm + KubusSpacing.xs + KubusSpacing.xxs,
-                      minHeight:
-                          KubusSpacing.sm + KubusSpacing.xs + KubusSpacing.xxs,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.error,
-                      borderRadius: BorderRadius.circular(KubusRadius.sm),
-                      border: Border.all(
-                        color: Theme.of(context).colorScheme.surface,
-                        width: 1,
+                  ),
+                // Generic badge with count (for collab invites, etc.)
+                if (showBadge && badgeCount > 0)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: KubusSpacing.xs,
+                        vertical: KubusSpacing.xxs,
                       ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        badgeCount > 99 ? '99+' : badgeCount.toString(),
-                        style: KubusTextStyles.compactBadge.copyWith(
-                          color: Theme.of(context).colorScheme.onError,
+                      constraints: const BoxConstraints(
+                        minWidth:
+                            KubusSpacing.sm + KubusSpacing.xs + KubusSpacing.xxs,
+                        minHeight:
+                            KubusSpacing.sm + KubusSpacing.xs + KubusSpacing.xxs,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.error,
+                        borderRadius: BorderRadius.circular(KubusRadius.sm),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.surface,
+                          width: 1,
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          badgeCount > 99 ? '99+' : badgeCount.toString(),
+                          style: KubusTextStyles.compactBadge.copyWith(
+                            color: Theme.of(context).colorScheme.onError,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              // Notification badge (uses NotificationProvider)
-              if (showBadge && badgeCount == 0)
-                Selector<NotificationProvider, int>(
-                  selector: (_, np) => np.unreadCount,
-                  builder: (context, unreadCount, _) {
-                    if (unreadCount == 0) return const SizedBox.shrink();
-                    return Positioned(
-                      right: 0,
-                      top: 0,
-                      child: Container(
-                        width: KubusChromeMetrics.navBadgeDot,
-                        height: KubusChromeMetrics.navBadgeDot,
-                        decoration: BoxDecoration(
-                          color: widget.activeAccent,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Theme.of(context).colorScheme.surface,
-                            width: 1,
+                // Notification badge (uses NotificationProvider)
+                if (showBadge && badgeCount == 0)
+                  Selector<NotificationProvider, int>(
+                    selector: (_, np) => np.unreadCount,
+                    builder: (context, unreadCount, _) {
+                      if (unreadCount == 0) return const SizedBox.shrink();
+                      return Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          width: KubusChromeMetrics.navBadgeDot,
+                          height: KubusChromeMetrics.navBadgeDot,
+                          decoration: BoxDecoration(
+                            color: widget.activeAccent,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Theme.of(context).colorScheme.surface,
+                              width: 1,
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  },
-                ),
-            ],
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -848,89 +946,96 @@ class _DesktopNavigationState extends State<DesktopNavigation>
       builder: (context, profileProvider, _) {
         final user = profileProvider.currentUser;
         final scheme = Theme.of(context).colorScheme;
+        final isSelected = widget.isProfileSelected;
+        final isHovered = _isProfileHovered;
 
         return Material(
           color: Colors.transparent,
-          child: InkWell(
-            onTap: widget.onProfileTap,
-            borderRadius: BorderRadius.circular(KubusRadius.sm),
-            child: Container(
-              padding: EdgeInsets.all(widget.isExpanded ? 10 : 8),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    widget.activeAccent.withValues(alpha: 0.28),
-                    widget.activeAccent.withValues(alpha: 0.18),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(KubusRadius.md),
-                border: Border.all(
-                  color: widget.activeAccent.withValues(alpha: 0.30),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: widget.activeAccent.withValues(alpha: 0.16),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+          child: MouseRegion(
+            onEnter: (_) => setState(() => _isProfileHovered = true),
+            onExit: (_) => setState(() => _isProfileHovered = false),
+            child: InkWell(
+              onTap: widget.onProfileTap,
+              borderRadius: BorderRadius.circular(KubusRadius.sm),
+              child: Container(
+                padding: EdgeInsets.all(widget.isExpanded ? 10 : 8),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? widget.activeAccent.withValues(alpha: 0.16)
+                      : isHovered
+                          ? widget.activeAccent.withValues(alpha: 0.08)
+                          : Colors.transparent,
+                  borderRadius: BorderRadius.circular(KubusRadius.md),
+                  border: Border.all(
+                    color: isSelected
+                        ? widget.activeAccent.withValues(alpha: 0.30)
+                        : isHovered
+                            ? widget.activeAccent.withValues(alpha: 0.12)
+                            : Colors.transparent,
                   ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: widget.isExpanded
-                    ? MainAxisAlignment.start
-                    : MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AvatarWidget(
-                    wallet: user?.walletAddress ?? '',
-                    avatarUrl: user?.avatar,
-                    radius: widget.isExpanded ? 17 : 16,
-                    allowFabricatedFallback: true,
-                    enableProfileNavigation: false,
-                  ),
-                  if (widget.isExpanded) ...[
-                    const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
-                    Expanded(
-                      child: AnimatedOpacity(
-                        opacity: widget.expandAnimation.value,
-                        duration: const Duration(milliseconds: 150),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              user?.displayName ??
-                                  AppLocalizations.of(context)!
-                                      .profilePersonaArtEnthusiast,
-                              style: KubusTextStyles.profileName.copyWith(
-                                color: scheme.onPrimary,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
-                            if (user?.username != null)
+                ),
+                child: Row(
+                  mainAxisAlignment: widget.isExpanded
+                      ? MainAxisAlignment.start
+                      : MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AvatarWidget(
+                      wallet: user?.walletAddress ?? '',
+                      avatarUrl: user?.avatar,
+                      radius: widget.isExpanded ? 17 : 16,
+                      allowFabricatedFallback: true,
+                      enableProfileNavigation: false,
+                    ),
+                    if (widget.isExpanded) ...[
+                      const SizedBox(width: KubusSpacing.sm + KubusSpacing.xs),
+                      Expanded(
+                        child: AnimatedOpacity(
+                          opacity: widget.expandAnimation.value,
+                          duration: const Duration(milliseconds: 150),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
                               Text(
-                                '@${user!.username}',
-                                style: KubusTextStyles.profileHandle.copyWith(
-                                  color:
-                                      scheme.onPrimary.withValues(alpha: 0.82),
+                                user?.displayName ??
+                                    AppLocalizations.of(context)!
+                                        .profilePersonaArtEnthusiast,
+                                style: KubusTextStyles.profileName.copyWith(
+                                  color: isSelected
+                                      ? widget.activeAccent
+                                      : scheme.onSurface,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                                 maxLines: 1,
                               ),
-                          ],
+                              if (user?.username != null)
+                                Text(
+                                  '@${user!.username}',
+                                  style: KubusTextStyles.profileHandle.copyWith(
+                                    color: isSelected
+                                        ? widget.activeAccent
+                                            .withValues(alpha: 0.82)
+                                        : scheme.onSurface
+                                            .withValues(alpha: 0.6),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    Icon(
-                      Icons.more_horiz,
-                      color: scheme.onPrimary.withValues(alpha: 0.82),
-                      size: KubusHeaderMetrics.actionIcon,
-                    ),
+                      Icon(
+                        Icons.more_horiz,
+                        color: isSelected
+                            ? widget.activeAccent.withValues(alpha: 0.82)
+                            : scheme.onSurface.withValues(alpha: 0.6),
+                        size: KubusHeaderMetrics.actionIcon,
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),

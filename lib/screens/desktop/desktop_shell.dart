@@ -461,6 +461,16 @@ class _DesktopShellState extends State<DesktopShell>
     return Color.lerp(base, accent, isDark ? 0.10 : 0.05) ?? base;
   }
 
+  bool _isInvitesScreenActive() {
+    if (_screenStack.isEmpty) return false;
+    final top = _screenStack.last;
+    if (top is InvitesInboxScreen) return true;
+    if (top is DesktopSubScreen && top.child is InvitesInboxScreen) {
+      return true;
+    }
+    return false;
+  }
+
   List<Color> _blendAccentIntoAnimatedBase({
     required List<Color> base,
     required Color accent,
@@ -628,6 +638,13 @@ class _DesktopShellState extends State<DesktopShell>
     final selectedIndex =
         navItems.indexWhere((item) => item.route == effectiveRoute);
     final activeAccent = _activeScreenAccent(context, route: effectiveRoute);
+    final isProfileSelected =
+        _screenStack.isNotEmpty && _screenStack.last is ProfileScreen;
+    final isNotificationsSelected =
+      _functionsPanel == DesktopFunctionsPanel.notifications;
+    final isSettingsSelected =
+      _screenStack.isNotEmpty && _screenStack.last is DesktopSettingsScreen;
+    final isCollabInvitesSelected = _isInvitesScreenActive();
 
     final isCompact = DesktopBreakpoints.isCompact(context);
     final isLarge = DesktopBreakpoints.isLarge(context);
@@ -753,6 +770,12 @@ class _DesktopShellState extends State<DesktopShell>
                                       isExpanded: _isNavigationExpanded,
                                       expandAnimation: _navExpandAnimation,
                                       onToggleExpand: _toggleNavigation,
+                                      isProfileSelected: isProfileSelected,
+                                        isNotificationsSelected:
+                                          isNotificationsSelected,
+                                        isSettingsSelected: isSettingsSelected,
+                                        isCollabInvitesSelected:
+                                          isCollabInvitesSelected,
                                       onProfileTap: () =>
                                           _showProfileMenu(context),
                                       onSettingsTap: () =>
