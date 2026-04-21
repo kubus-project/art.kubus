@@ -18,6 +18,7 @@ import '../../../providers/collab_provider.dart';
 import '../../../providers/notification_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/recent_activity_provider.dart';
+import '../../../providers/wallet_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../config/config.dart';
 import '../../../models/dao.dart';
@@ -25,6 +26,7 @@ import '../../../models/promotion.dart';
 import '../../../models/user_persona.dart';
 import '../../../utils/activity_navigation.dart';
 import '../../../utils/dao_role_verification.dart';
+import '../../../utils/wallet_action_guard.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../collab/invites_inbox_screen.dart';
 import '../../events/exhibition_list_screen.dart';
@@ -1123,6 +1125,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
                           return;
                         }
                         final profileProvider = context.read<ProfileProvider>();
+                        final walletProvider = context.read<WalletProvider>();
                         final web3Provider = context.read<Web3Provider>();
                         final daoProvider = context.read<DAOProvider>();
                         final wallet =
@@ -1138,11 +1141,19 @@ class _InstitutionHubState extends State<InstitutionHub> {
                           );
                           return;
                         }
+                        final canProceed =
+                            await WalletActionGuard.ensureSignerAccess(
+                          context: context,
+                          profileProvider: profileProvider,
+                          walletProvider: walletProvider,
+                        );
+                        if (!mounted || !canProceed) {
+                          return;
+                        }
                         Navigator.pop(sheetContext);
                         try {
                           final review =
                               await daoProvider.submitInstitutionReview(
-                            walletAddress: wallet,
                             organization: _organizationController.text.trim(),
                             contact: _contactController.text.trim(),
                             focus: _focusController.text.trim(),

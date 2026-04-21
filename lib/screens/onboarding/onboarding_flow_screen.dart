@@ -1220,7 +1220,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     DAOReview? submittedReview;
     if (persona == UserPersona.institution) {
       submittedReview = await daoProvider.submitInstitutionReview(
-        walletAddress: wallet,
         organization: draft.title,
         contact: draft.contact,
         focus: draft.medium,
@@ -1229,7 +1228,6 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
       );
     } else if (persona == UserPersona.creator) {
       submittedReview = await daoProvider.submitReview(
-        walletAddress: wallet,
         portfolioUrl: draft.portfolioUrl,
         medium: draft.medium,
         statement: draft.statement,

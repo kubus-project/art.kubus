@@ -2,8 +2,149 @@
 enum ProposalType { platformUpdate, rewards, featureRequest, governance, community }
 enum ProposalStatus { draft, active, voting, passed, failed, executed }
 enum VoteChoice { yes, no, abstain }
+enum DAOSignedActionType {
+  proposalCreate('proposal.create'),
+  voteCast('vote.cast'),
+  delegationSet('delegation.set'),
+  delegationRevoke('delegation.revoke'),
+  reviewSubmit('review.submit'),
+  reviewDecision('review.decision');
+
+  const DAOSignedActionType(this.apiValue);
+
+  final String apiValue;
+
+  static DAOSignedActionType fromApiValue(String value) {
+    return DAOSignedActionType.values.firstWhere(
+      (entry) => entry.apiValue == value,
+    );
+  }
+}
 
 enum DAOReviewRole { artist, institution, general }
+
+class DAOSignedEnvelope {
+  static const String currentVersion = 'dao-v1';
+
+  final String version;
+  final String actionId;
+  final DAOSignedActionType actionType;
+  final String walletAddress;
+  final String publicKey;
+  final DateTime timestamp;
+  final String nonce;
+  final Map<String, dynamic> payload;
+  final Map<String, dynamic> references;
+  final String signature;
+  final String? referenceId;
+  final String? referenceCid;
+
+  const DAOSignedEnvelope({
+    required this.version,
+    required this.actionId,
+    required this.actionType,
+    required this.walletAddress,
+    required this.publicKey,
+    required this.timestamp,
+    required this.nonce,
+    required this.payload,
+    required this.references,
+    required this.signature,
+    this.referenceId,
+    this.referenceCid,
+  });
+
+  factory DAOSignedEnvelope.unsigned({
+    required String actionId,
+    required DAOSignedActionType actionType,
+    required String walletAddress,
+    required String publicKey,
+    required DateTime timestamp,
+    required String nonce,
+    required Map<String, dynamic> payload,
+    required Map<String, dynamic> references,
+    String? referenceId,
+    String? referenceCid,
+  }) {
+    return DAOSignedEnvelope(
+      version: currentVersion,
+      actionId: actionId,
+      actionType: actionType,
+      walletAddress: walletAddress,
+      publicKey: publicKey,
+      timestamp: timestamp,
+      nonce: nonce,
+      payload: payload,
+      references: references,
+      signature: '',
+      referenceId: referenceId,
+      referenceCid: referenceCid,
+    );
+  }
+
+  factory DAOSignedEnvelope.fromJson(Map<String, dynamic> json) {
+    return DAOSignedEnvelope(
+      version: (json['version'] ?? currentVersion).toString(),
+      actionId: (json['actionId'] ?? '').toString(),
+      actionType: DAOSignedActionType.fromApiValue(
+        (json['actionType'] ?? '').toString(),
+      ),
+      walletAddress: (json['walletAddress'] ?? '').toString(),
+      publicKey: (json['publicKey'] ?? json['walletAddress'] ?? '').toString(),
+      timestamp: DateTime.parse((json['timestamp'] ?? '').toString()).toUtc(),
+      nonce: (json['nonce'] ?? '').toString(),
+      payload: json['payload'] is Map<String, dynamic>
+          ? Map<String, dynamic>.from(json['payload'] as Map<String, dynamic>)
+          : <String, dynamic>{},
+      references: json['references'] is Map<String, dynamic>
+          ? Map<String, dynamic>.from(json['references'] as Map<String, dynamic>)
+          : <String, dynamic>{},
+      signature: (json['signature'] ?? '').toString(),
+      referenceId: json['referenceId']?.toString(),
+      referenceCid: json['referenceCid']?.toString(),
+    );
+  }
+
+  DAOSignedEnvelope withSignature(String signedValue) {
+    return DAOSignedEnvelope(
+      version: version,
+      actionId: actionId,
+      actionType: actionType,
+      walletAddress: walletAddress,
+      publicKey: publicKey,
+      timestamp: timestamp,
+      nonce: nonce,
+      payload: payload,
+      references: references,
+      signature: signedValue,
+      referenceId: referenceId,
+      referenceCid: referenceCid,
+    );
+  }
+
+  Map<String, dynamic> toSigningPayloadJson() {
+    return {
+      'version': version,
+      'actionId': actionId,
+      'actionType': actionType.apiValue,
+      'walletAddress': walletAddress,
+      'publicKey': publicKey,
+      'timestamp': timestamp.toUtc().toIso8601String(),
+      'nonce': nonce,
+      'payload': payload,
+      'references': references,
+    };
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      ...toSigningPayloadJson(),
+      if (referenceId != null && referenceId!.isNotEmpty) 'referenceId': referenceId,
+      if (referenceCid != null && referenceCid!.isNotEmpty) 'referenceCid': referenceCid,
+      'signature': signature,
+    };
+  }
+}
 
 class DAOReview {
   final String id;

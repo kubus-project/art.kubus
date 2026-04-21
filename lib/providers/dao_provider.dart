@@ -3,11 +3,15 @@ import '../config/api_keys.dart';
 import '../config/config.dart';
 import '../models/dao.dart';
 import '../services/backend_api_service.dart';
+import '../services/dao_signed_envelope_service.dart';
+import '../services/telemetry/telemetry_uuid.dart';
 import '../utils/wallet_utils.dart';
 import '../services/solana_wallet_service.dart';
+import 'wallet_provider.dart';
 
 class DAOProvider extends ChangeNotifier {
   final SolanaWalletService _solanaService;
+  final DAOSignedEnvelopeService _signedEnvelopeService;
   List<Proposal> _proposals = [];
   List<Vote> _votes = [];
   List<Delegate> _delegates = [];
@@ -15,9 +19,14 @@ class DAOProvider extends ChangeNotifier {
   List<DAOReview> _reviews = [];
   bool _isLoading = false;
   double? _treasuryOnChainBalance;
+  WalletProvider? _walletProvider;
 
-  DAOProvider({SolanaWalletService? solanaWalletService})
-      : _solanaService = solanaWalletService ?? SolanaWalletService() {
+  DAOProvider({
+    SolanaWalletService? solanaWalletService,
+    DAOSignedEnvelopeService? signedEnvelopeService,
+  })  : _solanaService = solanaWalletService ?? SolanaWalletService(),
+        _signedEnvelopeService =
+            signedEnvelopeService ?? const DAOSignedEnvelopeService() {
     _loadData();
   }
 
@@ -96,6 +105,46 @@ class DAOProvider extends ChangeNotifier {
     await _loadData();
   }
 
+  void bindWalletProvider(WalletProvider walletProvider) {
+    if (identical(_walletProvider, walletProvider)) return;
+    _walletProvider = walletProvider;
+  }
+
+  String _requireSigningWallet() {
+    final walletProvider = _walletProvider;
+    if (walletProvider == null || !walletProvider.canTransact) {
+      throw StateError('A ready wallet signer is required for DAO actions.');
+    }
+
+    final wallet = (walletProvider.currentWalletAddress ?? '').trim();
+    if (wallet.isEmpty) {
+      throw StateError('No active wallet signer is available.');
+    }
+    return wallet;
+  }
+
+  Future<DAOSignedEnvelope> _signEnvelope({
+    required DAOSignedActionType actionType,
+    required Map<String, dynamic> payload,
+    Map<String, dynamic>? references,
+    String? actionId,
+    String? referenceId,
+    String? referenceCid,
+  }) async {
+    final walletProvider = _walletProvider;
+    final wallet = _requireSigningWallet();
+    return _signedEnvelopeService.signEnvelope(
+      actionType: actionType,
+      walletAddress: wallet,
+      signMessage: walletProvider!.signMessage,
+      payload: payload,
+      references: references,
+      actionId: actionId,
+      referenceId: referenceId,
+      referenceCid: referenceCid,
+    );
+  }
+
   // Proposal methods
   List<Proposal> getActiveProposals() {
     return _proposals.where((p) => p.isActive).toList()
@@ -115,7 +164,6 @@ class DAOProvider extends ChangeNotifier {
   }
 
   Future<Proposal?> createProposal({
-    required String walletAddress,
     required String title,
     required String description,
     required ProposalType type,
@@ -127,16 +175,32 @@ class DAOProvider extends ChangeNotifier {
   }) async {
     try {
       final api = BackendApiService();
+      final proposalId = TelemetryUuid.v4();
+      final signedEnvelope = await _signEnvelope(
+        actionType: DAOSignedActionType.proposalCreate,
+        referenceId: proposalId,
+        referenceCid: metadata?['contentCid']?.toString(),
+        references: <String, dynamic>{
+          'proposalId': proposalId,
+          if (metadata?['contentCid'] != null)
+            'contentCid': metadata!['contentCid'].toString(),
+        },
+        payload: {
+          'proposalId': proposalId,
+          'title': title,
+          'description': description,
+          'type': type.name,
+          'votingPeriodDays': votingPeriodDays,
+          'supportRequired': supportRequired,
+          'quorumRequired': quorumRequired,
+          'supportingDocuments': supportingDocuments ?? const <String>[],
+          'metadata': metadata ?? const <String, dynamic>{},
+          if (metadata?['contentCid'] != null)
+            'contentCid': metadata!['contentCid'].toString(),
+        },
+      );
       final payload = await api.createDAOProposal(
-        walletAddress: walletAddress,
-        title: title,
-        description: description,
-        type: type.name,
-        votingPeriodDays: votingPeriodDays,
-        supportRequired: supportRequired,
-        quorumRequired: quorumRequired,
-        supportingDocuments: supportingDocuments,
-        metadata: metadata,
+        envelope: signedEnvelope.toJson(),
       );
       if (payload != null) {
         final proposal = Proposal.fromJson(payload);
@@ -151,7 +215,6 @@ class DAOProvider extends ChangeNotifier {
   }
 
   Future<DAOReview?> submitReview({
-    required String walletAddress,
     required String portfolioUrl,
     required String medium,
     required String statement,
@@ -160,19 +223,31 @@ class DAOProvider extends ChangeNotifier {
     String role = 'artist',
   }) async {
     try {
+      // Review applications are signed locally, but they are not token-governance actions.
       final api = BackendApiService();
-      await api.ensureAuthLoaded(walletAddress: walletAddress);
       final metadataPayload = <String, dynamic>{
         ...?metadata,
       };
       metadataPayload.putIfAbsent('role', () => role);
+      final signedEnvelope = await _signEnvelope(
+        actionType: DAOSignedActionType.reviewSubmit,
+        referenceCid: metadataPayload['contentCid']?.toString(),
+        references: <String, dynamic>{
+          'reviewDomain': 'application',
+          if (metadataPayload['contentCid'] != null)
+            'contentCid': metadataPayload['contentCid'].toString(),
+        },
+        payload: {
+          'portfolioUrl': portfolioUrl,
+          'medium': medium,
+          'statement': statement,
+          if (title != null && title.isNotEmpty) 'title': title,
+          'metadata': metadataPayload,
+        },
+      );
+      final walletAddress = signedEnvelope.walletAddress;
       final payload = await api.submitDAOReview(
-        walletAddress: walletAddress,
-        portfolioUrl: portfolioUrl,
-        medium: medium,
-        statement: statement,
-        title: title,
-        metadata: metadataPayload,
+        envelope: signedEnvelope.toJson(),
       );
       if (payload != null) {
         final review = DAOReview.fromJson(payload);
@@ -192,7 +267,6 @@ class DAOProvider extends ChangeNotifier {
   }
 
   Future<DAOReview?> submitInstitutionReview({
-    required String walletAddress,
     required String organization,
     required String contact,
     required String focus,
@@ -207,7 +281,6 @@ class DAOProvider extends ChangeNotifier {
       ...?metadata,
     };
     return submitReview(
-      walletAddress: walletAddress,
       portfolioUrl: contact,
       medium: focus,
       statement: mission,
@@ -221,15 +294,27 @@ class DAOProvider extends ChangeNotifier {
     required String idOrWallet,
     required String status,
     String? reviewerNotes,
-    required String reviewerWallet,
   }) async {
     try {
+      // Review decisions use a separate signed review-admin authority flow.
       final api = BackendApiService();
+      final signedEnvelope = await _signEnvelope(
+        actionType: DAOSignedActionType.reviewDecision,
+        referenceId: idOrWallet,
+        references: <String, dynamic>{
+          'reviewId': idOrWallet,
+          'domain': 'review_admin',
+        },
+        payload: {
+          'reviewId': idOrWallet,
+          'status': status,
+          if (reviewerNotes != null && reviewerNotes.isNotEmpty)
+            'reviewerNotes': reviewerNotes,
+        },
+      );
       final payload = await api.decideDAOReview(
         idOrWallet: idOrWallet,
-        status: status,
-        reviewerNotes: reviewerNotes,
-        walletAddress: reviewerWallet,
+        envelope: signedEnvelope.toJson(),
       );
       if (payload != null) {
         final review = DAOReview.fromJson(payload);
@@ -287,20 +372,28 @@ class DAOProvider extends ChangeNotifier {
   Future<void> castVote({
     required String proposalId,
     required VoteChoice choice,
-    required int votingPower,
-    required String walletAddress,
     String? reason,
     String? txHash,
   }) async {
     try {
       final api = BackendApiService();
+      final signedEnvelope = await _signEnvelope(
+        actionType: DAOSignedActionType.voteCast,
+        referenceId: proposalId,
+        references: <String, dynamic>{
+          'proposalId': proposalId,
+        },
+        payload: {
+          'proposalId': proposalId,
+          'choice': choice.name,
+          'votingPowerMode': 'server_snapshot',
+          if (reason != null && reason.isNotEmpty) 'reason': reason,
+          if (txHash != null && txHash.isNotEmpty) 'txHash': txHash,
+        },
+      );
       final payload = await api.submitDAOVote(
         proposalId: proposalId,
-        walletAddress: walletAddress,
-        choice: choice.name,
-        votingPower: votingPower.toDouble(),
-        reason: reason,
-        txHash: txHash,
+        envelope: signedEnvelope.toJson(),
       );
 
       if (payload != null) {
@@ -316,73 +409,7 @@ class DAOProvider extends ChangeNotifier {
           _proposals.removeWhere((p) => p.id == updatedProposal.id);
           _proposals.add(updatedProposal);
         } else {
-          // Fallback update when backend does not return proposal payload
-          final proposalIndex = _proposals.indexWhere((p) => p.id == proposalId);
-          if (proposalIndex != -1) {
-            final proposal = _proposals[proposalIndex];
-            switch (choice) {
-              case VoteChoice.yes:
-                _proposals[proposalIndex] = Proposal(
-                  id: proposal.id,
-                  title: proposal.title,
-                  description: proposal.description,
-                  type: proposal.type,
-                  status: proposal.status,
-                  proposer: proposal.proposer,
-                  createdAt: proposal.createdAt,
-                  votingStartDate: proposal.votingStartDate,
-                  votingEndDate: proposal.votingEndDate,
-                  yesVotes: proposal.yesVotes + votingPower,
-                  noVotes: proposal.noVotes,
-                  abstainVotes: proposal.abstainVotes,
-                  quorumRequired: proposal.quorumRequired,
-                  supportRequired: proposal.supportRequired,
-                  supportingDocuments: proposal.supportingDocuments,
-                  metadata: proposal.metadata,
-                );
-                break;
-              case VoteChoice.no:
-                _proposals[proposalIndex] = Proposal(
-                  id: proposal.id,
-                  title: proposal.title,
-                  description: proposal.description,
-                  type: proposal.type,
-                  status: proposal.status,
-                  proposer: proposal.proposer,
-                  createdAt: proposal.createdAt,
-                  votingStartDate: proposal.votingStartDate,
-                  votingEndDate: proposal.votingEndDate,
-                  yesVotes: proposal.yesVotes,
-                  noVotes: proposal.noVotes + votingPower,
-                  abstainVotes: proposal.abstainVotes,
-                  quorumRequired: proposal.quorumRequired,
-                  supportRequired: proposal.supportRequired,
-                  supportingDocuments: proposal.supportingDocuments,
-                  metadata: proposal.metadata,
-                );
-                break;
-              case VoteChoice.abstain:
-                _proposals[proposalIndex] = Proposal(
-                  id: proposal.id,
-                  title: proposal.title,
-                  description: proposal.description,
-                  type: proposal.type,
-                  status: proposal.status,
-                  proposer: proposal.proposer,
-                  createdAt: proposal.createdAt,
-                  votingStartDate: proposal.votingStartDate,
-                  votingEndDate: proposal.votingEndDate,
-                  yesVotes: proposal.yesVotes,
-                  noVotes: proposal.noVotes,
-                  abstainVotes: proposal.abstainVotes + votingPower,
-                  quorumRequired: proposal.quorumRequired,
-                  supportRequired: proposal.supportRequired,
-                  supportingDocuments: proposal.supportingDocuments,
-                  metadata: proposal.metadata,
-                );
-                break;
-            }
-          }
+          await _loadFromBackend();
         }
         notifyListeners();
       }
@@ -409,17 +436,32 @@ class DAOProvider extends ChangeNotifier {
 
   Future<Map<String, dynamic>?> delegateVotingPower({
     required String delegateId,
-    required String walletAddress,
-    double? votingPower,
     Map<String, dynamic>? metadata,
+    bool revoke = false,
   }) async {
     try {
       final api = BackendApiService();
+      final signedEnvelope = await _signEnvelope(
+        actionType: revoke
+            ? DAOSignedActionType.delegationRevoke
+            : DAOSignedActionType.delegationSet,
+        referenceId: delegateId,
+        references: <String, dynamic>{
+          'delegateId': delegateId,
+          if (metadata?['delegateWallet'] != null)
+            'delegateWallet': metadata!['delegateWallet'].toString(),
+        },
+        payload: {
+          'delegateId': delegateId,
+          if (!revoke && metadata?['delegateWallet'] != null)
+            'delegateWallet': metadata!['delegateWallet'].toString(),
+          'scope': 'global',
+          if (metadata != null) 'metadata': metadata,
+        },
+      );
       final result = await api.delegateVotingPower(
         delegateId: delegateId,
-        walletAddress: walletAddress,
-        votingPower: votingPower,
-        metadata: metadata,
+        envelope: signedEnvelope.toJson(),
       );
       await _loadFromBackend();
       notifyListeners();

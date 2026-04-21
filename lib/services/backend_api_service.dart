@@ -6652,32 +6652,15 @@ class BackendApiService
   /// Create a DAO proposal
   /// POST /api/dao/proposals
   Future<Map<String, dynamic>?> createDAOProposal({
-    required String walletAddress,
-    required String title,
-    required String description,
-    required String type,
-    int votingPeriodDays = 7,
-    double supportRequired = 0.5,
-    double quorumRequired = 0.1,
-    List<String>? supportingDocuments,
-    Map<String, dynamic>? metadata,
+    required Map<String, dynamic> envelope,
   }) async {
     try {
+      final walletAddress = (envelope['walletAddress'] ?? '').toString().trim();
       await _ensureAuthBeforeRequest(walletAddress: walletAddress);
       final response = await _post(
         Uri.parse('$baseUrl/api/dao/proposals'),
         headers: _getHeaders(),
-        body: jsonEncode({
-          'title': title,
-          'description': description,
-          'type': type,
-          'votingPeriodDays': votingPeriodDays,
-          'supportRequired': supportRequired,
-          'quorumRequired': quorumRequired,
-          if (supportingDocuments != null)
-            'supportingDocuments': supportingDocuments,
-          if (metadata != null) 'metadata': metadata,
-        }),
+        body: jsonEncode({'envelope': envelope}),
       );
 
       if (response.statusCode == 201 || response.statusCode == 200) {
@@ -6731,23 +6714,15 @@ class BackendApiService
   /// POST /api/dao/proposals/:id/votes
   Future<Map<String, dynamic>?> submitDAOVote({
     required String proposalId,
-    required String walletAddress,
-    required String choice,
-    double? votingPower,
-    String? reason,
-    String? txHash,
+    required Map<String, dynamic> envelope,
   }) async {
     try {
+      final walletAddress = (envelope['walletAddress'] ?? '').toString().trim();
       await _ensureAuthBeforeRequest(walletAddress: walletAddress);
       final response = await _post(
         Uri.parse('$baseUrl/api/dao/proposals/$proposalId/votes'),
         headers: _getHeaders(),
-        body: jsonEncode({
-          'choice': choice,
-          if (votingPower != null) 'votingPower': votingPower,
-          if (reason != null) 'reason': reason,
-          if (txHash != null) 'txHash': txHash,
-        }),
+        body: jsonEncode({'envelope': envelope}),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -6791,19 +6766,17 @@ class BackendApiService
   /// POST /api/dao/delegations
   Future<Map<String, dynamic>?> delegateVotingPower({
     required String delegateId,
-    required String walletAddress,
-    double? votingPower,
-    Map<String, dynamic>? metadata,
+    required Map<String, dynamic> envelope,
   }) async {
     try {
+      final walletAddress = (envelope['walletAddress'] ?? '').toString().trim();
       await _ensureAuthBeforeRequest(walletAddress: walletAddress);
       final response = await _post(
         Uri.parse('$baseUrl/api/dao/delegations'),
         headers: _getHeaders(),
         body: jsonEncode({
           'delegateId': delegateId,
-          if (votingPower != null) 'votingPower': votingPower,
-          if (metadata != null) 'metadata': metadata,
+          'envelope': envelope,
         }),
       );
 
@@ -6863,23 +6836,26 @@ class BackendApiService
   }
 
   Future<Map<String, dynamic>?> submitDAOReview({
-    required String walletAddress,
-    required String portfolioUrl,
-    required String medium,
-    required String statement,
-    String? title,
-    Map<String, dynamic>? metadata,
+    required Map<String, dynamic> envelope,
   }) async {
     try {
+      final walletAddress = (envelope['walletAddress'] ?? '').toString().trim();
       await _ensureAuthBeforeRequest(walletAddress: walletAddress);
       final uri = Uri.parse('$baseUrl/api/dao/reviews');
-      final normalizedPortfolioUrl = _normalizeDaoPortfolioUrl(portfolioUrl);
+      final payload = Map<String, dynamic>.from(
+        envelope['payload'] is Map<String, dynamic>
+            ? envelope['payload'] as Map<String, dynamic>
+            : const <String, dynamic>{},
+      );
+      final portfolioUrl = (payload['portfolioUrl'] ?? '').toString().trim();
+      if (portfolioUrl.isNotEmpty) {
+        payload['portfolioUrl'] = _normalizeDaoPortfolioUrl(portfolioUrl);
+      }
       final body = jsonEncode({
-        'portfolioUrl': normalizedPortfolioUrl,
-        'medium': medium,
-        'statement': statement,
-        if (title != null && title.isNotEmpty) 'title': title,
-        if (metadata != null) 'metadata': metadata,
+        'envelope': {
+          ...envelope,
+          'payload': payload,
+        },
       });
 
       final response = await _post(uri, headers: _getHeaders(), body: body);
@@ -6959,19 +6935,15 @@ class BackendApiService
   /// POST /api/dao/reviews/:id/decision
   Future<Map<String, dynamic>?> decideDAOReview({
     required String idOrWallet,
-    required String status,
-    String? reviewerNotes,
-    String? walletAddress,
+    required Map<String, dynamic> envelope,
   }) async {
     try {
-      if (walletAddress != null && walletAddress.isNotEmpty) {
+      final walletAddress = (envelope['walletAddress'] ?? '').toString().trim();
+      if (walletAddress.isNotEmpty) {
         await ensureAuthLoaded(walletAddress: walletAddress);
       }
       final uri = Uri.parse('$baseUrl/api/dao/reviews/$idOrWallet/decision');
-      final body = jsonEncode({
-        'status': status,
-        if (reviewerNotes != null) 'reviewerNotes': reviewerNotes,
-      });
+      final body = jsonEncode({'envelope': envelope});
       final response = await _post(uri, headers: _getHeaders(), body: body);
 
       if (response.statusCode == 200) {

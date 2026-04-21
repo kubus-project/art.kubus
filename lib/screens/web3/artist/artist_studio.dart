@@ -16,11 +16,13 @@ import '../../../config/config.dart';
 import '../../../providers/collab_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/dao_provider.dart';
+import '../../../providers/wallet_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../models/dao.dart';
 import '../../../models/promotion.dart';
 import '../../../models/user_persona.dart';
 import '../../../utils/dao_role_verification.dart';
+import '../../../utils/wallet_action_guard.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../collab/invites_inbox_screen.dart';
@@ -1209,6 +1211,8 @@ class _ArtistStudioState extends State<ArtistStudio> {
                                   }
                                   final profileProvider =
                                       context.read<ProfileProvider>();
+                                  final walletProvider =
+                                      context.read<WalletProvider>();
                                   final web3Provider =
                                       context.read<Web3Provider>();
                                   final daoProvider =
@@ -1230,11 +1234,19 @@ class _ArtistStudioState extends State<ArtistStudio> {
                                     );
                                     return;
                                   }
+                                  final canProceed =
+                                      await WalletActionGuard.ensureSignerAccess(
+                                    context: context,
+                                    profileProvider: profileProvider,
+                                    walletProvider: walletProvider,
+                                  );
+                                  if (!mounted || !canProceed) {
+                                    return;
+                                  }
                                   setModalState(() => isSubmitting = true);
                                   try {
                                     final review =
                                         await daoProvider.submitReview(
-                                      walletAddress: wallet,
                                       portfolioUrl:
                                           portfolioController.text.trim(),
                                       medium: mediumController.text.trim(),

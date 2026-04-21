@@ -651,10 +651,18 @@ class _AppLauncherState extends State<AppLauncher> {
                   return provider;
                 },
               ),
-              ChangeNotifierProvider(
+              ChangeNotifierProxyProvider<WalletProvider, DAOProvider>(
                 create: (context) => DAOProvider(
                   solanaWalletService: context.read<SolanaWalletService>(),
                 ),
+                update: (context, walletProvider, daoProvider) {
+                  final provider = daoProvider ??
+                      DAOProvider(
+                        solanaWalletService: context.read<SolanaWalletService>(),
+                      );
+                  provider.bindWalletProvider(walletProvider);
+                  return provider;
+                },
               ),
               ChangeNotifierProxyProvider2<ProfileProvider, DAOProvider,
                   InstitutionProvider>(

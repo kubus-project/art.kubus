@@ -975,7 +975,6 @@ class _GovernanceHubState extends State<GovernanceHub>
             idOrWallet: review.id,
             status: decision,
             reviewerNotes: reviewerNotes.isNotEmpty ? reviewerNotes : null,
-            reviewerWallet: reviewerWallet,
           );
       if (!mounted) return;
       final l10n = AppLocalizations.of(context)!;
@@ -1800,7 +1799,6 @@ class _GovernanceHubState extends State<GovernanceHub>
 
     try {
       final proposal = await daoProvider.createProposal(
-        walletAddress: wallet,
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         type: selectedType,
@@ -2918,12 +2916,9 @@ class _GovernanceHubState extends State<GovernanceHub>
     }
 
     try {
-      final votingPower = web3Provider.kub8Balance.floor();
       await daoProvider.castVote(
         proposalId: proposalId,
         choice: isYes ? VoteChoice.yes : VoteChoice.no,
-        votingPower: votingPower > 0 ? votingPower : 1,
-        walletAddress: wallet,
       );
       if (!mounted) return;
       messenger.showKubusSnackBar(
