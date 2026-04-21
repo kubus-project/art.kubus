@@ -76,6 +76,10 @@ class CommunityComposerCategorySelector extends StatelessWidget {
       child: Row(
         children: options.map((option) {
           final selected = selectedValue == option.value;
+          final labelColor =
+              scheme.onSurface.withValues(alpha: selected ? 0.96 : 0.74);
+          final iconColor =
+              scheme.onSurface.withValues(alpha: selected ? 0.96 : 0.68);
           final chip = ChoiceChip(
             label: Row(
               mainAxisSize: MainAxisSize.min,
@@ -83,13 +87,19 @@ class CommunityComposerCategorySelector extends StatelessWidget {
                 Icon(
                   option.icon,
                   size: KubusHeaderMetrics.actionIcon - 4,
-                  color: selected
-                      ? accentColor
-                      : scheme.onSurface
-                          .withValues(alpha: isMobile ? 0.7 : 0.6),
+                  color: iconColor,
                 ),
                 const SizedBox(width: KubusSpacing.xs + KubusSpacing.xxs),
-                Text(option.label),
+                Text(
+                  option.label,
+                  style: KubusTextStyles.navLabel.copyWith(
+                    fontSize: KubusChromeMetrics.navMetaLabel + 1,
+                    fontWeight: selected
+                        ? FontWeight.w600
+                        : (isMobile ? FontWeight.w400 : FontWeight.w500),
+                    color: labelColor,
+                  ),
+                ),
               ],
             ),
             selected: selected,
@@ -112,9 +122,7 @@ class CommunityComposerCategorySelector extends StatelessWidget {
               fontWeight: selected
                   ? FontWeight.w600
                   : (isMobile ? FontWeight.w400 : FontWeight.w500),
-              color: selected
-                  ? accentColor
-                  : scheme.onSurface.withValues(alpha: 0.75),
+              color: labelColor,
             ),
           );
 
@@ -155,6 +163,7 @@ class CommunityComposerAttachmentCard extends StatelessWidget {
     required this.borderColor,
     required this.duration,
     required this.curve,
+    this.foregroundColor,
     this.borderRadius = KubusRadius.lg,
     this.padding = const EdgeInsets.all(KubusSpacing.md),
     this.titleMaxLines = 1,
@@ -170,6 +179,7 @@ class CommunityComposerAttachmentCard extends StatelessWidget {
   final Color borderColor;
   final Duration duration;
   final Curve curve;
+  final Color? foregroundColor;
   final double borderRadius;
   final EdgeInsetsGeometry padding;
   final int titleMaxLines;
@@ -178,6 +188,7 @@ class CommunityComposerAttachmentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final effectiveForeground = foregroundColor ?? scheme.onSurface;
 
     return Material(
       color: Colors.transparent,
@@ -193,39 +204,48 @@ class CommunityComposerAttachmentCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(borderRadius),
             border: Border.all(color: borderColor),
           ),
-          child: Row(
-            children: [
-              leading,
-              const SizedBox(width: KubusSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: KubusTextStyles.sectionTitle.copyWith(
-                        fontSize: KubusChromeMetrics.navLabel + 1,
-                        fontWeight: FontWeight.w600,
-                        color: scheme.onSurface,
-                      ),
-                      maxLines: titleMaxLines,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: KubusSpacing.xs),
-                    Text(
-                      subtitle,
-                      style: KubusTextStyles.navMetaLabel.copyWith(
-                        color: scheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                      maxLines: subtitleMaxLines,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
+          child: IconTheme.merge(
+            data: IconThemeData(color: effectiveForeground),
+            child: DefaultTextStyle.merge(
+              style: KubusTextStyles.navMetaLabel.copyWith(
+                color: effectiveForeground,
               ),
-              const SizedBox(width: KubusSpacing.md),
-              trailing,
-            ],
+              child: Row(
+                children: [
+                  leading,
+                  const SizedBox(width: KubusSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: KubusTextStyles.sectionTitle.copyWith(
+                            fontSize: KubusChromeMetrics.navLabel + 1,
+                            fontWeight: FontWeight.w600,
+                            color: effectiveForeground,
+                          ),
+                          maxLines: titleMaxLines,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: KubusSpacing.xs),
+                        Text(
+                          subtitle,
+                          style: KubusTextStyles.navMetaLabel.copyWith(
+                            color:
+                                effectiveForeground.withValues(alpha: 0.6),
+                          ),
+                          maxLines: subtitleMaxLines,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: KubusSpacing.md),
+                  trailing,
+                ],
+              ),
+            ),
           ),
         ),
       ),

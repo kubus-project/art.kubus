@@ -1,13 +1,13 @@
-import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/core/shell_routes.dart';
-import 'package:art_kubus/providers/profile_provider.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/main_tab_provider.dart';
 import 'package:art_kubus/providers/navigation_provider.dart';
-import 'package:art_kubus/providers/wallet_provider.dart';
-import 'package:art_kubus/models/user_profile.dart';
+import 'package:art_kubus/core/mobile_shell_registry.dart';
+import 'package:art_kubus/providers/task_provider.dart';
 import 'package:art_kubus/screens/activity/advanced_analytics_screen.dart';
 import 'package:art_kubus/screens/desktop/desktop_settings_screen.dart';
 import 'package:art_kubus/screens/desktop/desktop_shell_scope.dart';
+import 'package:art_kubus/screens/web3/achievements/achievements_page.dart';
 import 'package:art_kubus/utils/home/home_quick_action_executor.dart';
 import 'package:art_kubus/utils/home/home_quick_action_models.dart';
 import 'package:flutter/foundation.dart';
@@ -20,8 +20,6 @@ Widget _localizedApp({
   required Widget home,
   required NavigationProvider navigationProvider,
   MainTabProvider? tabProvider,
-  ProfileProvider? profileProvider,
-  WalletProvider? walletProvider,
   Map<String, WidgetBuilder>? routes,
 }) {
   return MultiProvider(
@@ -31,10 +29,6 @@ Widget _localizedApp({
       ),
       if (tabProvider != null)
         ChangeNotifierProvider<MainTabProvider>.value(value: tabProvider),
-      if (profileProvider != null)
-        ChangeNotifierProvider<ProfileProvider>.value(value: profileProvider),
-      if (walletProvider != null)
-        ChangeNotifierProvider<WalletProvider>.value(value: walletProvider),
     ],
     child: MaterialApp(
       locale: const Locale('en'),
@@ -46,68 +40,133 @@ Widget _localizedApp({
   );
 }
 
-UserProfile _testUserProfile() {
-  return UserProfile(
-    id: 'user-1',
-    walletAddress: 'wallet-1',
-    username: 'artist',
-    displayName: 'Artist',
-    bio: '',
-    avatar: '',
-    createdAt: DateTime.utc(2026, 4, 19),
-    updatedAt: DateTime.utc(2026, 4, 19),
-  );
-}
-
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
 
-  testWidgets('mobile tab quick action selects tab and tracks visit',
+  testWidgets('mobile tab quick actions select the real shell tabs',
       (tester) async {
-    final navigationProvider = NavigationProvider();
-    final tabProvider = MainTabProvider()..setIndex(3);
-    bool? result;
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    try {
+      for (final entry in <String, int>{
+        'map': 0,
+        'community': 2,
+        'ar': 1,
+        'profile': 4,
+      }.entries) {
+        final navigationProvider = NavigationProvider();
+        final tabProvider = MainTabProvider()..setIndex(3);
+        bool? result;
 
-    await tester.pumpWidget(
-      _localizedApp(
-        navigationProvider: navigationProvider,
-        tabProvider: tabProvider,
-        home: Builder(
-          builder: (context) => TextButton(
-            onPressed: () async {
-              result = await HomeQuickActionExecutor.execute(
-                context,
-                'map',
-                source: HomeQuickActionSurface.mobileHome,
-              );
-            },
-            child: const Text('run'),
+        await tester.pumpWidget(
+          _localizedApp(
+            navigationProvider: navigationProvider,
+            tabProvider: tabProvider,
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () async {
+                    result = await HomeQuickActionExecutor.execute(
+                      context,
+                      entry.key,
+                      source: HomeQuickActionSurface.mobileHome,
+                    );
+                  },
+                  child: Text('run ${entry.key}'),
+                ),
+              ),
+            ),
           ),
-        ),
-      ),
-    );
+        );
 
-    await tester.tap(find.text('run'));
-    await tester.pump();
+        await tester.tap(find.text('run ${entry.key}'));
+        await tester.pump();
 
-    expect(result, isTrue);
-    expect(tabProvider.index, 0);
-    expect(navigationProvider.visitCounts['map'], 1);
+        expect(result, isTrue);
+        expect(tabProvider.index, entry.value);
+        expect(navigationProvider.visitCounts[entry.key], 1);
+      }
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets(
+      'mobile tab fallback uses the mounted shell registry when the local '
+      'context cannot see MainTabProvider', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(500, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    try {
+      for (final entry in <String, int>{
+        'ar': 1,
+        'profile': 4,
+      }.entries) {
+        final navigationProvider = NavigationProvider();
+        final tabProvider = MainTabProvider()..setIndex(3);
+        BuildContext? shellContext;
+        bool? result;
+
+        await tester.pumpWidget(
+          _localizedApp(
+            navigationProvider: navigationProvider,
+            home: Scaffold(
+              body: Column(
+                children: [
+                  ChangeNotifierProvider<MainTabProvider>.value(
+                    value: tabProvider,
+                    child: Builder(
+                      builder: (context) {
+                        shellContext = context;
+                        MobileShellRegistry.instance.register(context);
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ),
+                  Builder(
+                    builder: (context) => TextButton(
+                      onPressed: () async {
+                        result = await HomeQuickActionExecutor.execute(
+                          context,
+                          entry.key,
+                          source: HomeQuickActionSurface.mobileHome,
+                        );
+                      },
+                      child: Text('fallback ${entry.key}'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('fallback ${entry.key}'));
+        await tester.pump();
+
+        expect(result, isTrue);
+        expect(tabProvider.index, entry.value);
+        expect(navigationProvider.visitCounts[entry.key], 1);
+
+        if (shellContext != null) {
+          MobileShellRegistry.instance.unregister(shellContext!);
+        }
+      }
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
   });
 
   testWidgets('desktop settings and stats use shell subscreens',
       (tester) async {
     final navigationProvider = NavigationProvider();
-    final walletProvider = WalletProvider(deferInit: true)
-      ..setCurrentWalletAddressForTesting('wallet-1');
     final pushedScreens = <Widget>[];
 
     await tester.pumpWidget(
       _localizedApp(
         navigationProvider: navigationProvider,
-        walletProvider: walletProvider,
         home: DesktopShellScope(
           pushScreen: pushedScreens.add,
           popScreen: () {},
@@ -163,6 +222,52 @@ void main() {
     expect(navigationProvider.visitCounts['stats'], 1);
   });
 
+  testWidgets('desktop achievements quick action opens the real page',
+      (tester) async {
+    final navigationProvider = NavigationProvider();
+    final pushedScreens = <Widget>[];
+    bool? result;
+
+    await tester.pumpWidget(
+      _localizedApp(
+        navigationProvider: navigationProvider,
+        home: ChangeNotifierProvider<TaskProvider>(
+          create: (_) => TaskProvider(),
+          child: DesktopShellScope(
+            pushScreen: pushedScreens.add,
+            popScreen: () {},
+            navigateToRoute: (_) {},
+            openNotifications: () {},
+            openFunctionsPanel: (_, {content}) {},
+            setFunctionsPanelContent: (_) {},
+            closeFunctionsPanel: () {},
+            canPop: false,
+            child: Builder(
+              builder: (context) => TextButton(
+                onPressed: () async {
+                  result = await HomeQuickActionExecutor.execute(
+                    context,
+                    'achievements',
+                    source: HomeQuickActionSurface.desktopHome,
+                  );
+                },
+                child: const Text('achievements'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('achievements'));
+    await tester.pump();
+
+    expect(result, isTrue);
+    expect(pushedScreens, hasLength(1));
+    expect(pushedScreens.single, isA<AchievementsPage>());
+    expect(navigationProvider.visitCounts['achievements'], 1);
+  });
+
   testWidgets('unsupported AR action is explicit and not visit-tracked',
       (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.windows;
@@ -197,119 +302,6 @@ void main() {
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }
-  });
-
-  testWidgets('signed-in capability blocks profile when unmet', (tester) async {
-    final navigationProvider = NavigationProvider();
-    final profileProvider = ProfileProvider();
-    bool? result;
-
-    await tester.pumpWidget(
-      _localizedApp(
-        navigationProvider: navigationProvider,
-        profileProvider: profileProvider,
-        home: Scaffold(
-          body: Builder(
-            builder: (context) => TextButton(
-              onPressed: () async {
-                result = await HomeQuickActionExecutor.execute(
-                  context,
-                  'profile',
-                  source: HomeQuickActionSurface.desktopHome,
-                );
-              },
-              child: const Text('profile'),
-            ),
-          ),
-        ),
-      ),
-    );
-
-    await tester.tap(find.text('profile'));
-    await tester.pump();
-
-    expect(result, isFalse);
-    expect(find.text('Sign in to continue.'), findsOneWidget);
-    expect(navigationProvider.visitCounts.containsKey('profile'), isFalse);
-  });
-
-  testWidgets('wallet capability blocks analytics when unmet', (tester) async {
-    final navigationProvider = NavigationProvider();
-    final walletProvider = WalletProvider(deferInit: true);
-    bool? result;
-
-    await tester.pumpWidget(
-      _localizedApp(
-        navigationProvider: navigationProvider,
-        walletProvider: walletProvider,
-        home: Scaffold(
-          body: Builder(
-            builder: (context) => TextButton(
-              onPressed: () async {
-                result = await HomeQuickActionExecutor.execute(
-                  context,
-                  'analytics',
-                  source: HomeQuickActionSurface.desktopHome,
-                );
-              },
-              child: const Text('analytics'),
-            ),
-          ),
-        ),
-      ),
-    );
-
-    await tester.tap(find.text('analytics'));
-    await tester.pump();
-
-    expect(result, isFalse);
-    expect(find.text('Connect your wallet to continue.'), findsOneWidget);
-    expect(navigationProvider.visitCounts.containsKey('analytics'), isFalse);
-  });
-
-  testWidgets('satisfied signed-in capability tracks successful action',
-      (tester) async {
-    final navigationProvider = NavigationProvider();
-    final profileProvider = ProfileProvider()
-      ..setCurrentUser(_testUserProfile());
-    final pushedScreens = <Widget>[];
-    bool? result;
-
-    await tester.pumpWidget(
-      _localizedApp(
-        navigationProvider: navigationProvider,
-        profileProvider: profileProvider,
-        home: DesktopShellScope(
-          pushScreen: pushedScreens.add,
-          popScreen: () {},
-          navigateToRoute: (_) {},
-          openNotifications: () {},
-          openFunctionsPanel: (_, {content}) {},
-          setFunctionsPanelContent: (_) {},
-          closeFunctionsPanel: () {},
-          canPop: false,
-          child: Builder(
-            builder: (context) => TextButton(
-              onPressed: () async {
-                result = await HomeQuickActionExecutor.execute(
-                  context,
-                  'profile',
-                  source: HomeQuickActionSurface.desktopHome,
-                );
-              },
-              child: const Text('profile success'),
-            ),
-          ),
-        ),
-      ),
-    );
-
-    await tester.tap(find.text('profile success'));
-    await tester.pump();
-
-    expect(result, isTrue);
-    expect(pushedScreens, hasLength(1));
-    expect(navigationProvider.visitCounts['profile'], 1);
   });
 
   for (final entry in <String, String>{

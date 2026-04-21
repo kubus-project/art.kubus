@@ -55,13 +55,16 @@ class CommunityExpandableFab extends StatelessWidget {
     final isMobile = variant == CommunityExpandableFabVariant.mobile;
 
     TextStyle labelStyle() {
+      final labelColor = isExpanded ? scheme.onSurface : scheme.onPrimary;
       if (isMobile) {
         return KubusTypography.textTheme.labelMedium!.copyWith(
           fontWeight: FontWeight.w600,
+          color: labelColor,
         );
       }
       return KubusTypography.textTheme.labelMedium!.copyWith(
         fontWeight: FontWeight.w600,
+        color: labelColor,
       );
     }
 

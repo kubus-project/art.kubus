@@ -2894,6 +2894,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                         const Spacer(),
                         IconButton(
                           onPressed: () => Navigator.pop(sheetContext),
+                          color: scheme.onSurface,
                           icon: const Icon(Icons.close),
                         ),
                       ],
@@ -3129,6 +3130,7 @@ class _CommunityScreenState extends State<CommunityScreen>
             child: Consumer<CommunityHubProvider>(
               builder: (context, provider, _) {
                 final draft = provider.draft;
+                final themeProvider = Provider.of<ThemeProvider>(context);
                 return CommunityComposerSurface(
                   showHandle: true,
                   maxHeight: MediaQuery.of(context).size.height * 0.9,
@@ -3206,6 +3208,17 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     setModalState: setModalState,
                                     hub: provider,
                                   ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: themeProvider.accentColor,
+                            foregroundColor:
+                                Theme.of(context).colorScheme.onPrimary,
+                            disabledBackgroundColor: themeProvider.accentColor
+                                .withValues(alpha: 0.4),
+                            disabledForegroundColor: Theme.of(context)
+                                .colorScheme
+                                .onPrimary
+                                .withValues(alpha: 0.7),
+                          ),
                           child: AnimatedSwitcher(
                             duration: context.animationTheme.short,
                             switchInCurve: context.animationTheme.defaultCurve,
@@ -3226,6 +3239,11 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     AppLocalizations.of(context)!
                                         .communityComposerSubmitPostButton,
                                     key: ValueKey('composer_post_label'),
+                                    style: KubusTextStyles.navLabel.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color:
+                                          Theme.of(context).colorScheme.onPrimary,
+                                    ),
                                   ),
                           ),
                         ),
@@ -3325,7 +3343,7 @@ class _CommunityScreenState extends State<CommunityScreen>
         hintText: l10n.communityComposerTextHint,
         hintStyle: KubusTypography.inter(
           fontSize: isCompact ? 14 : 16,
-          color: scheme.onSurface.withValues(alpha: 0.56),
+          color: scheme.onPrimaryContainer.withValues(alpha: 0.72),
         ),
         filled: true,
         fillColor: scheme.primaryContainer.withValues(alpha: 0.4),
@@ -3341,7 +3359,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       style: KubusTypography.inter(
         fontSize: isCompact ? 14 : 16,
         height: 1.4,
-        color: scheme.onSurface,
+        color: scheme.onPrimaryContainer,
       ),
       textInputAction: TextInputAction.newline,
     );
@@ -3372,6 +3390,7 @@ class _CommunityScreenState extends State<CommunityScreen>
               tooltip: l10n.commonRemove,
               style: IconButton.styleFrom(
                 backgroundColor: scheme.surface.withValues(alpha: 0.8),
+                foregroundColor: scheme.onSurface,
               ),
               onPressed: () => setModalState(() {
                 _selectedPostImage = null;
@@ -3420,14 +3439,15 @@ class _CommunityScreenState extends State<CommunityScreen>
             Positioned(
               top: 12,
               right: 12,
-              child: IconButton(
-                tooltip: l10n.commonRemove,
-                style: IconButton.styleFrom(
-                  backgroundColor: scheme.surface.withValues(alpha: 0.8),
-                ),
-                onPressed: () => setModalState(() {
-                  _selectedPostVideo = null;
-                }),
+            child: IconButton(
+              tooltip: l10n.commonRemove,
+              style: IconButton.styleFrom(
+                backgroundColor: scheme.surface.withValues(alpha: 0.8),
+                foregroundColor: scheme.onSurface,
+              ),
+              onPressed: () => setModalState(() {
+                _selectedPostVideo = null;
+              }),
                 icon: const Icon(Icons.close),
               ),
             ),
@@ -3549,6 +3569,7 @@ class _CommunityScreenState extends State<CommunityScreen>
           ? IconButton(
               tooltip: l10n.communityComposerRemoveGroupTooltip,
               onPressed: () => hub.setDraftGroup(null),
+              color: scheme.onSurface,
               icon: const Icon(Icons.close),
             )
           : Icon(
@@ -3558,6 +3579,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       backgroundColor: hasGroup
           ? scheme.primaryContainer.withValues(alpha: 0.25)
           : scheme.surfaceContainerHighest,
+      foregroundColor: hasGroup ? scheme.onPrimaryContainer : scheme.onSurface,
       borderColor: hasGroup
           ? scheme.primary.withValues(alpha: 0.4)
           : scheme.outline.withValues(alpha: 0.3),
@@ -3642,6 +3664,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                 hub.setDraftSubject();
                 hub.setDraftArtwork(null);
               },
+              color: scheme.onSurface,
               icon: const Icon(Icons.close),
             )
           : Icon(
@@ -3651,6 +3674,8 @@ class _CommunityScreenState extends State<CommunityScreen>
       backgroundColor: hasSubject
           ? scheme.primaryContainer.withValues(alpha: 0.25)
           : scheme.surfaceContainerHighest,
+      foregroundColor:
+          hasSubject ? scheme.onPrimaryContainer : scheme.onSurface,
       borderColor: hasSubject
           ? scheme.primary.withValues(alpha: 0.35)
           : scheme.outline.withValues(alpha: 0.3),
@@ -3676,6 +3701,9 @@ class _CommunityScreenState extends State<CommunityScreen>
       icon: const Icon(Icons.my_location_outlined),
       label: Text(l10n.communityComposerAttachCurrentLocationButton),
       onPressed: () => _captureDraftLocation(setModalState),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: scheme.onSurface,
+      ),
     );
 
     Widget currentChild;
@@ -3706,6 +3734,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                     style: KubusTypography.inter(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
+                      color: scheme.onSurface,
                     ),
                   ),
                 ),
@@ -3714,6 +3743,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                   onPressed: () =>
                       Provider.of<CommunityHubProvider>(context, listen: false)
                           .setDraftLocation(null),
+                  color: scheme.onSurface,
                   icon: const Icon(Icons.close),
                 ),
               ],
@@ -3736,12 +3766,18 @@ class _CommunityScreenState extends State<CommunityScreen>
                       _promptLocationLabelEdit(location, initialLabel: label),
                   icon: const Icon(Icons.edit_location_alt_outlined, size: 18),
                   label: Text(l10n.commonRename),
+                  style: TextButton.styleFrom(
+                    foregroundColor: scheme.onSurface,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 TextButton.icon(
                   onPressed: () => _captureDraftLocation(setModalState),
                   icon: const Icon(Icons.my_location, size: 18),
                   label: Text(l10n.commonRefresh),
+                  style: TextButton.styleFrom(
+                    foregroundColor: scheme.onSurface,
+                  ),
                 ),
               ],
             ),
@@ -3771,7 +3807,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     required void Function(String value) onRemove,
   }) {
     final scheme = Theme.of(context).colorScheme;
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    Provider.of<ThemeProvider>(context, listen: false);
     final animationTheme = context.animationTheme;
     final l10n = AppLocalizations.of(context)!;
     final isMentions = prefix == '@';
@@ -3822,14 +3858,20 @@ class _CommunityScreenState extends State<CommunityScreen>
                   }
                 },
               ),
-              icon: Icon(Icons.search,
-                  size: 18, color: themeProvider.accentColor),
+              icon: Icon(
+                Icons.search,
+                size: 18,
+                color: scheme.onSurface,
+              ),
               label: Text(
                 l10n.commonSearch,
                 style: KubusTypography.inter(
                   fontSize: 13,
-                  color: themeProvider.accentColor,
+                  color: scheme.onSurface,
                 ),
+              ),
+              style: TextButton.styleFrom(
+                foregroundColor: scheme.onSurface,
               ),
             ),
           ],
@@ -3849,7 +3891,14 @@ class _CommunityScreenState extends State<CommunityScreen>
                         ? value
                         : '$prefix${value.replaceAll(prefix, '')}';
                     return InputChip(
-                      label: Text(display),
+                      backgroundColor: scheme.surfaceContainerHighest,
+                      label: Text(
+                        display,
+                        style: KubusTypography.inter(
+                          color: scheme.onSurface,
+                        ),
+                      ),
+                      deleteIconColor: scheme.onSurface.withValues(alpha: 0.72),
                       onDeleted: () => onRemove(value),
                     );
                   }).toList(),
@@ -3877,6 +3926,7 @@ class _CommunityScreenState extends State<CommunityScreen>
             ),
             suffixIcon: IconButton(
               icon: const Icon(Icons.add),
+              color: scheme.onSurface,
               onPressed: () {
                 final entry = controller.text.trim();
                 if (entry.isEmpty) return;
@@ -4008,7 +4058,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                       controller: searchController,
                       autofocus: true,
                       style: KubusTypography.inter(
-                        color: scheme.onSurface,
+                        color: scheme.onPrimaryContainer,
                       ),
                       decoration: InputDecoration(
                         hintText: searchType == 'tags'
@@ -4019,12 +4069,18 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     ? l10n.communitySearchSheetHintArtworks
                                     : l10n.communitySearchSheetHintDefault,
                         hintStyle: KubusTypography.inter(
-                          color: scheme.onSurface.withValues(alpha: 0.56),
+                          color: scheme.onPrimaryContainer.withValues(alpha: 0.72),
                         ),
-                        prefixIcon: const Icon(Icons.search),
+                        prefixIcon: Icon(
+                          Icons.search,
+                          color: scheme.onPrimaryContainer.withValues(
+                            alpha: 0.72,
+                          ),
+                        ),
                         suffixIcon: searchController.text.isNotEmpty
                             ? IconButton(
                                 icon: const Icon(Icons.clear),
+                                color: scheme.onPrimaryContainer,
                                 onPressed: () {
                                   searchController.clear();
                                   setModalState(() {
@@ -4293,7 +4349,10 @@ class _CommunityScreenState extends State<CommunityScreen>
         ),
         title: Text(
           '#$tag',
-          style: KubusTypography.inter(fontWeight: FontWeight.w600),
+          style: KubusTypography.inter(
+            fontWeight: FontWeight.w600,
+            color: scheme.onSurface,
+          ),
         ),
         subtitle: isCustom
             ? Text(
@@ -4312,7 +4371,11 @@ class _CommunityScreenState extends State<CommunityScreen>
                     ),
                   )
                 : null,
-        trailing: const Icon(Icons.add_circle_outline, size: 20),
+        trailing: Icon(
+          Icons.add_circle_outline,
+          size: 20,
+          color: scheme.onSurface.withValues(alpha: 0.72),
+        ),
         onTap: onTap,
       );
     } else if (searchType == 'profiles') {
@@ -4328,13 +4391,20 @@ class _CommunityScreenState extends State<CommunityScreen>
           layout: ProfileIdentityLayout.row,
           avatarRadius: 20,
           allowFabricatedFallback: true,
-          titleStyle: KubusTypography.inter(fontWeight: FontWeight.w600),
+          titleStyle: KubusTypography.inter(
+            fontWeight: FontWeight.w600,
+            color: scheme.onSurface,
+          ),
           subtitleStyle: KubusTypography.inter(
             fontSize: 12,
             color: scheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
-        trailing: const Icon(Icons.add_circle_outline, size: 20),
+        trailing: Icon(
+          Icons.add_circle_outline,
+          size: 20,
+          color: scheme.onSurface.withValues(alpha: 0.72),
+        ),
         onTap: onTap,
       );
     } else if (searchType == 'artworks') {
@@ -4376,7 +4446,10 @@ class _CommunityScreenState extends State<CommunityScreen>
         ),
         title: Text(
           title,
-          style: KubusTypography.inter(fontWeight: FontWeight.w600),
+          style: KubusTypography.inter(
+            fontWeight: FontWeight.w600,
+            color: scheme.onSurface,
+          ),
           overflow: TextOverflow.ellipsis,
         ),
         subtitle: Text(
@@ -4386,7 +4459,11 @@ class _CommunityScreenState extends State<CommunityScreen>
             color: scheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
-        trailing: const Icon(Icons.add_circle_outline, size: 20),
+        trailing: Icon(
+          Icons.add_circle_outline,
+          size: 20,
+          color: scheme.onSurface.withValues(alpha: 0.72),
+        ),
         onTap: onTap,
       );
     } else if (searchType == 'institutions') {
@@ -4413,7 +4490,10 @@ class _CommunityScreenState extends State<CommunityScreen>
         ),
         title: Text(
           name.toString(),
-          style: KubusTypography.inter(fontWeight: FontWeight.w600),
+          style: KubusTypography.inter(
+            fontWeight: FontWeight.w600,
+            color: scheme.onSurface,
+          ),
           overflow: TextOverflow.ellipsis,
         ),
         subtitle: Text(
@@ -4427,7 +4507,11 @@ class _CommunityScreenState extends State<CommunityScreen>
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        trailing: const Icon(Icons.chevron_right, size: 20),
+        trailing: Icon(
+          Icons.chevron_right,
+          size: 20,
+          color: scheme.onSurface.withValues(alpha: 0.68),
+        ),
         onTap: onTap,
       );
     } else if (searchType == 'screens') {

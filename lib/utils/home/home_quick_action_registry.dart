@@ -1,13 +1,9 @@
-import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 import '../../screens/activity/advanced_analytics_screen.dart';
 import '../../screens/activity/advanced_stats_screen.dart';
-import '../../screens/art/ar_screen.dart';
 import '../../screens/community/profile_screen.dart';
 import '../../screens/desktop/desktop_settings_screen.dart';
-import '../../screens/onboarding/web3/onboarding_data.dart';
-import '../../screens/onboarding/web3/web3_onboarding.dart' as web3;
 import '../../screens/settings_screen.dart';
 import '../../screens/web3/achievements/achievements_page.dart';
 import '../../screens/web3/artist/artist_studio.dart';
@@ -32,8 +28,8 @@ class HomeQuickActionRegistry {
         HomeQuickActionCapability.arSupportedOnDevice,
       },
       mobileTarget: HomeQuickActionTarget(
-        type: HomeQuickActionTargetType.pushScreen,
-        screenBuilder: _buildArScreen,
+        type: HomeQuickActionTargetType.mobileTab,
+        mobileTabIndex: 1,
       ),
       desktopTarget: const HomeQuickActionTarget(
         type: HomeQuickActionTargetType.infoDialog,
@@ -72,12 +68,9 @@ class HomeQuickActionRegistry {
       key: 'profile',
       labelKey: NavigationScreenLabelKey.profile,
       icon: Icons.person,
-      capabilities: const <HomeQuickActionCapability>{
-        HomeQuickActionCapability.signedIn,
-      },
       mobileTarget: HomeQuickActionTarget(
-        type: HomeQuickActionTargetType.pushScreen,
-        screenBuilder: _buildProfileScreen,
+        type: HomeQuickActionTargetType.mobileTab,
+        mobileTabIndex: 4,
       ),
       desktopTarget: HomeQuickActionTarget(
         type: HomeQuickActionTargetType.pushDesktopSubscreen,
@@ -116,9 +109,6 @@ class HomeQuickActionRegistry {
       key: 'analytics',
       labelKey: NavigationScreenLabelKey.analytics,
       icon: Icons.analytics,
-      capabilities: const <HomeQuickActionCapability>{
-        HomeQuickActionCapability.walletConnected,
-      },
       mobileTarget: HomeQuickActionTarget(
         type: HomeQuickActionTargetType.pushScreen,
         screenBuilder: _buildAnalyticsScreen,
@@ -147,9 +137,6 @@ class HomeQuickActionRegistry {
       key: 'stats',
       labelKey: NavigationScreenLabelKey.myStats,
       icon: Icons.bar_chart,
-      capabilities: const <HomeQuickActionCapability>{
-        HomeQuickActionCapability.walletConnected,
-      },
       mobileTarget: HomeQuickActionTarget(
         type: HomeQuickActionTargetType.pushScreen,
         screenBuilder: _buildStatsScreen,
@@ -164,18 +151,13 @@ class HomeQuickActionRegistry {
       key: 'achievements',
       labelKey: NavigationScreenLabelKey.achievements,
       icon: Icons.emoji_events,
-      capabilities: const <HomeQuickActionCapability>{
-        HomeQuickActionCapability.signedIn,
-        HomeQuickActionCapability.walletConnected,
-      },
       mobileTarget: HomeQuickActionTarget(
         type: HomeQuickActionTargetType.pushScreen,
         screenBuilder: _buildAchievementsPage,
       ),
       desktopTarget: HomeQuickActionTarget(
-        type: HomeQuickActionTargetType.pushDesktopSubscreen,
-        screenBuilder: _buildDesktopAchievementsOnboarding,
-        title: 'Achievements',
+        type: HomeQuickActionTargetType.pushScreen,
+        screenBuilder: _buildAchievementsPage,
       ),
     ),
     'dao_hub': HomeQuickActionDefinition(
@@ -237,8 +219,6 @@ class HomeQuickActionRegistry {
       );
 }
 
-Widget _buildArScreen(BuildContext context) => const ARScreen();
-
 Widget _buildProfileScreen(BuildContext context) => const ProfileScreen();
 
 Widget _buildMarketplace(BuildContext context) => const Marketplace();
@@ -263,16 +243,6 @@ Widget _buildStatsScreen(BuildContext context) =>
     const AdvancedStatsScreen(statType: 'Engagement');
 
 Widget _buildAchievementsPage(BuildContext context) => const AchievementsPage();
-
-Widget _buildDesktopAchievementsOnboarding(BuildContext context) {
-  final l10n = AppLocalizations.of(context)!;
-  return web3.Web3OnboardingScreen(
-    featureKey: 'Achievements',
-    featureTitle: l10n.userProfileAchievementsTitle,
-    pages: Web3FeaturesOnboardingData.pages(l10n),
-    onComplete: () {},
-  );
-}
 
 Widget _buildGovernanceHub(BuildContext context) => const GovernanceHub();
 

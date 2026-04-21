@@ -4733,8 +4733,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                             style: KubusTextStyles.sectionSubtitle.copyWith(
                               color: Theme.of(context)
                                   .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.5),
+                                  .onPrimaryContainer
+                                  .withValues(alpha: 0.82),
                             ),
                           ),
                         ),
@@ -4802,6 +4802,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     CommunityHubProvider hub,
   ) {
     final remainingChars = 280 - _composeController.text.length;
+    final onPrimary = Theme.of(context).colorScheme.onPrimary;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -5014,7 +5015,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     : _submitInlinePost,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: themeProvider.accentColor,
-                  foregroundColor: Colors.white,
+                  foregroundColor: onPrimary,
                   disabledBackgroundColor:
                       themeProvider.accentColor.withValues(alpha: 0.4),
                   padding:
@@ -5025,18 +5026,19 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   ),
                 ),
                 child: _isPosting
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 14,
                         height: 14,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white,
+                          color: onPrimary,
                         ),
                       )
                     : Text(
                         AppLocalizations.of(context)!.commonPost,
                         style: KubusTextStyles.navLabel.copyWith(
                           fontWeight: FontWeight.w600,
+                          color: onPrimary,
                         ),
                       ),
               ),
@@ -5126,6 +5128,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               hintText: l10n.desktopCommunityAddTagDialogHint,
               prefixText: '# ',
             ),
+            style: KubusTypography.inter(
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+            cursorColor: Theme.of(context).colorScheme.onSurface,
             onSubmitted: (value) {
               if (value.trim().isNotEmpty) {
                 hub.addTag(value.trim());
@@ -5137,6 +5143,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.onSurface,
+              ),
               child: Text(l10n.commonCancel),
             ),
             TextButton(
@@ -5147,6 +5156,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   setState(() {});
                 }
               },
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.onSurface,
+              ),
               child: Text(l10n.commonAdd),
             ),
           ],
@@ -5313,14 +5325,25 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     TextField(
                       controller: controller,
                       autofocus: true,
+                      style: KubusTypography.inter(
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      cursorColor: Theme.of(context).colorScheme.onSurface,
                       decoration: InputDecoration(
                         hintText: AppLocalizations.of(context)!
                             .desktopCommunitySearchPeopleHint,
-                        prefixIcon: const Icon(Icons.search),
+                        prefixIcon: Icon(
+                          Icons.search,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.72),
+                        ),
                         suffixIcon: controller.text.isEmpty
                             ? null
                             : IconButton(
                                 icon: const Icon(Icons.clear),
+                                color: Theme.of(context).colorScheme.onSurface,
                                 onPressed: () {
                                   controller.clear();
                                   setDialogState(() {
@@ -5440,6 +5463,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(dialogContext).pop(),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Theme.of(context).colorScheme.onSurface,
+                  ),
                   child: Text(AppLocalizations.of(context)!.commonCancel),
                 ),
                 TextButton(
@@ -5447,6 +5473,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       ? null
                       : () => Navigator.of(dialogContext)
                           .pop(_sanitizeHandle(controller.text)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Theme.of(context).colorScheme.onSurface,
+                  ),
                   child: Text(AppLocalizations.of(context)!
                       .desktopCommunityAddHandleButtonLabel),
                 ),
@@ -6372,6 +6401,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final user = profileProvider.currentUser;
     final remainingChars = 280 - _composeController.text.length;
     final hub = Provider.of<CommunityHubProvider>(context);
+    final onPrimary = Theme.of(context).colorScheme.onPrimary;
 
     return GestureDetector(
       onTap: () {
@@ -6420,6 +6450,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       _selectedLocation = null;
                     });
                   },
+                  color: Theme.of(context).colorScheme.onSurface,
                   icon: const Icon(Icons.close),
                   tooltip: AppLocalizations.of(context)!.commonClose,
                 ),
@@ -6430,11 +6461,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           : _submitPost,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: themeProvider.accentColor,
-                    foregroundColor: Colors.white,
+                    foregroundColor: onPrimary,
                     disabledBackgroundColor: themeProvider.accentColor
                         .withValues(alpha: 0.4),
-                    disabledForegroundColor:
-                        Colors.white.withValues(alpha: 0.7),
+                    disabledForegroundColor: onPrimary.withValues(alpha: 0.7),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 20,
                       vertical: 10,
@@ -6444,18 +6474,19 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     ),
                   ),
                   child: _isPosting
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: onPrimary,
+                        ),
+                      )
                       : Text(
                           AppLocalizations.of(context)!.commonPost,
                           style: KubusTextStyles.navLabel.copyWith(
                             fontWeight: FontWeight.w600,
+                            color: onPrimary,
                           ),
                         ),
                 ),
@@ -6690,19 +6721,30 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             decoration: InputDecoration(
               hintText: l10n.desktopCommunityLocationSearchHint,
             ),
+            style: KubusTypography.inter(
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+            cursorColor: Theme.of(context).colorScheme.onSurface,
             autofocus: true,
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.onSurface,
+              ),
               child: Text(l10n.commonCancel),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, controller.text.trim()),
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.onSurface,
+              ),
               child: Text(
                 l10n.commonSave,
                 style: KubusTextStyles.navLabel.copyWith(
                   fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ),
@@ -6817,6 +6859,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   prefixText: '# ',
                   suffixIcon: IconButton(
                     icon: const Icon(Icons.tag),
+                    color: Theme.of(context).colorScheme.onSurface,
                     tooltip: AppLocalizations.of(context)!
                         .desktopCommunityBrowseTagsTooltip,
                     onPressed: () => _showAddTagDialog(hub),
@@ -6841,6 +6884,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   prefixText: '@ ',
                   suffixIcon: IconButton(
                     icon: const Icon(Icons.alternate_email_outlined),
+                    color: Theme.of(context).colorScheme.onSurface,
                     tooltip: AppLocalizations.of(context)!
                         .desktopCommunityFindProfilesTooltip,
                     onPressed: () => _showMentionPicker(hub),
@@ -6897,6 +6941,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       backgroundColor: group != null
           ? scheme.primaryContainer.withValues(alpha: 0.2)
           : scheme.surfaceContainerHighest,
+      foregroundColor:
+          group != null ? scheme.onPrimaryContainer : scheme.onSurface,
       borderColor: group != null
           ? themeProvider.accentColor.withValues(alpha: 0.4)
           : scheme.outline.withValues(alpha: 0.2),
@@ -7001,6 +7047,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       backgroundColor: hasSubject
           ? scheme.primaryContainer.withValues(alpha: 0.2)
           : scheme.surfaceContainerHighest,
+      foregroundColor:
+          hasSubject ? scheme.onPrimaryContainer : scheme.onSurface,
       borderColor: hasSubject
           ? themeProvider.accentColor.withValues(alpha: 0.35)
           : scheme.outline.withValues(alpha: 0.2),
@@ -7032,6 +7080,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 icon: const Icon(Icons.location_on_outlined),
                 label: Text(AppLocalizations.of(context)!
                     .desktopCommunityTagLocationButtonLabel),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
             )
           : Container(
@@ -7071,6 +7122,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   IconButton(
                     tooltip: AppLocalizations.of(context)!.commonEdit,
                     onPressed: _pickLocation,
+                    color: scheme.onSurface,
                     icon: const Icon(Icons.edit_location_alt_outlined),
                   ),
                   IconButton(
@@ -7079,6 +7131,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       setState(() => _selectedLocation = null);
                       hub.setDraftLocation(null);
                     },
+                    color: scheme.onSurface,
                     icon: const Icon(Icons.close),
                   ),
                 ],
@@ -7130,6 +7183,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               onSelect: (group) => Navigator.of(dialogContext).pop(group),
               headerTrailing: IconButton(
                 onPressed: () => Navigator.of(dialogContext).pop(),
+                color: Theme.of(dialogContext).colorScheme.onSurface,
                 icon: const Icon(Icons.close),
               ),
               footer: Padding(
@@ -7138,11 +7192,19 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   children: [
                     TextButton(
                       onPressed: () => Navigator.of(dialogContext).pop(),
+                      style: TextButton.styleFrom(
+                        foregroundColor:
+                            Theme.of(dialogContext).colorScheme.onSurface,
+                      ),
                       child: Text(l10n.commonCancel),
                     ),
                     const Spacer(),
                     TextButton(
                       onPressed: () => Navigator.of(dialogContext).pop(null),
+                      style: TextButton.styleFrom(
+                        foregroundColor:
+                            Theme.of(dialogContext).colorScheme.onSurface,
+                      ),
                       child: Text(
                         l10n.desktopCommunityClearSelectionButtonLabel,
                       ),
@@ -7159,15 +7221,20 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
   Widget _buildChip(
       String label, ThemeProvider themeProvider, VoidCallback onRemove) {
+    final scheme = Theme.of(context).colorScheme;
     return Chip(
       backgroundColor: themeProvider.accentColor.withValues(alpha: 0.1),
       label: Text(
         label,
         style: KubusTextStyles.actionTileTitle.copyWith(
-          color: themeProvider.accentColor,
+          color: scheme.onSurface,
         ),
       ),
-      deleteIcon: const Icon(Icons.close, size: 16),
+      deleteIcon: Icon(
+        Icons.close,
+        size: 16,
+        color: scheme.onSurface.withValues(alpha: 0.72),
+      ),
       onDeleted: onRemove,
     );
   }
@@ -7207,6 +7274,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.onSurface,
+              ),
               child: Text(l10n.commonClose),
             ),
             TextButton(

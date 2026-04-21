@@ -25,6 +25,22 @@ void main() {
       HomeQuickActionTargetType.mobileTab,
     );
     expect(
+      HomeQuickActionRegistry.of('profile').mobileTarget.type,
+      HomeQuickActionTargetType.mobileTab,
+    );
+    expect(
+      HomeQuickActionRegistry.of('ar').mobileTarget.type,
+      HomeQuickActionTargetType.mobileTab,
+    );
+    expect(
+      HomeQuickActionRegistry.of('ar').mobileTarget.mobileTabIndex,
+      1,
+    );
+    expect(
+      HomeQuickActionRegistry.of('profile').mobileTarget.mobileTabIndex,
+      4,
+    );
+    expect(
       HomeQuickActionRegistry.of('map').desktopTarget.desktopShellRoute,
       '/explore',
     );
@@ -40,6 +56,14 @@ void main() {
       HomeQuickActionRegistry.of('ar').desktopTarget.type,
       HomeQuickActionTargetType.infoDialog,
     );
+    expect(
+      HomeQuickActionRegistry.of('achievements').desktopTarget.type,
+      HomeQuickActionTargetType.pushScreen,
+    );
+    expect(
+      HomeQuickActionRegistry.of('achievements').desktopTarget.screenBuilder,
+      isNotNull,
+    );
   });
 
   test('restricted actions declare capability requirements', () {
@@ -47,31 +71,16 @@ void main() {
       HomeQuickActionRegistry.of('ar').capabilities,
       contains(HomeQuickActionCapability.arSupportedOnDevice),
     );
-    expect(
-      HomeQuickActionRegistry.of('profile').capabilities,
-      contains(HomeQuickActionCapability.signedIn),
-    );
-    expect(
-      HomeQuickActionRegistry.of('analytics').capabilities,
-      contains(HomeQuickActionCapability.walletConnected),
-    );
-    expect(
-      HomeQuickActionRegistry.of('stats').capabilities,
-      contains(HomeQuickActionCapability.walletConnected),
-    );
-    expect(
-      HomeQuickActionRegistry.of('achievements').capabilities,
-      containsAll(<HomeQuickActionCapability>{
-        HomeQuickActionCapability.signedIn,
-        HomeQuickActionCapability.walletConnected,
-      }),
-    );
   });
 
   test('setup and public entry actions remain ungated', () {
     for (final key in <String>[
+      'profile',
       'map',
       'community',
+      'analytics',
+      'stats',
+      'achievements',
       'marketplace',
       'wallet',
       'dao_hub',

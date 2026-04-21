@@ -66,12 +66,7 @@ class HomeQuickActionExecutor {
       case HomeQuickActionTargetType.mobileTab:
         final index = target.mobileTabIndex;
         if (index == null) return false;
-        try {
-          context.read<MainTabProvider>().setIndex(index);
-          return true;
-        } catch (_) {
-          return _openMobileShellTab(context, index);
-        }
+        return _openMobileShellTab(context, index);
       case HomeQuickActionTargetType.desktopShellRoute:
         final route = target.desktopShellRoute;
         if (route == null || route.isEmpty) return false;
@@ -94,6 +89,13 @@ class HomeQuickActionExecutor {
   ) {
     final builder = target.screenBuilder;
     if (builder == null) return false;
+
+    final shellScope = DesktopShellScope.of(context);
+    if (shellScope != null && definition.key == 'achievements') {
+      shellScope.pushScreen(builder(context));
+      return true;
+    }
+
     final navigator = Navigator.of(context);
     unawaited(
       navigator.push(
@@ -167,15 +169,18 @@ class HomeQuickActionExecutor {
       } catch (_) {}
     }
 
-    final routeName = _mobileShellRouteForTab(tabIndex);
+    try {
+      context.read<MainTabProvider>().setIndex(tabIndex);
+      return true;
+    } catch (_) {}
+
     final navigator = Navigator.of(context);
-    if (routeName != null) {
-      try {
-        unawaited(
-          navigator.pushNamedAndRemoveUntil(routeName, (route) => false),
-        );
-        return true;
-      } catch (_) {}
+    final routeName = _mobileShellRouteNameForTab(tabIndex);
+    if (routeName == ShellRoutes.map || routeName == ShellRoutes.community) {
+      unawaited(
+        navigator.pushNamedAndRemoveUntil(routeName, (route) => false),
+      );
+      return true;
     }
 
     unawaited(
@@ -186,7 +191,7 @@ class HomeQuickActionExecutor {
             desktopInitialIndex: _desktopIndexForMobileTab(tabIndex),
           ),
           settings: RouteSettings(
-            name: routeName ?? ShellRoutes.main,
+            name: routeName,
           ),
         ),
         (route) => false,
@@ -195,14 +200,14 @@ class HomeQuickActionExecutor {
     return true;
   }
 
-  static String? _mobileShellRouteForTab(int tabIndex) {
+  static String _mobileShellRouteNameForTab(int tabIndex) {
     switch (tabIndex) {
       case 0:
         return ShellRoutes.map;
       case 2:
         return ShellRoutes.community;
       default:
-        return null;
+        return ShellRoutes.main;
     }
   }
 

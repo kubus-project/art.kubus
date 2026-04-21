@@ -86,6 +86,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   List<Map<String, dynamic>> _artistCollections = [];
   List<Map<String, dynamic>> _artistEvents = [];
   String? _failedCoverImageUrl;
+  bool _isFollowMutationInFlight = false;
 
   @override
   void initState() {
@@ -428,11 +429,13 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
   Future<void> _toggleFollow() async {
     final profile = user;
-    if (profile == null) return;
+    if (profile == null || _isFollowMutationInFlight) return;
 
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final theme = Theme.of(context);
+
+    setState(() => _isFollowMutationInFlight = true);
 
     _followButtonController.forward().then((_) {
       if (mounted) {
@@ -467,6 +470,9 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
       await _refreshFollowStateFromServer();
       await _loadUserStats(skipFollowersOverwrite: true, forceRefresh: true);
+      if (mounted) {
+        setState(() => _isFollowMutationInFlight = false);
+      }
       return;
     }
 
@@ -520,6 +526,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     try {
       if (user != null) UserService.setUsersInCache([user!]);
     } catch (_) {}
+
+    if (mounted) {
+      setState(() => _isFollowMutationInFlight = false);
+    }
   }
 
   Future<void> _refreshFollowStateFromServer() async {
@@ -723,6 +733,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
   Widget _buildProfileHeader(ThemeProvider themeProvider,
       {required bool isArtist, required bool isInstitution}) {
+    final l10n = AppLocalizations.of(context)!;
     final coverImageUrl = _normalizeMediaUrl(user!.coverImageUrl);
     final coverUrlIsKnownBad =
         coverImageUrl != null && coverImageUrl == _failedCoverImageUrl;
@@ -962,7 +973,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               ),
               const SizedBox(height: KubusSpacing.sm),
               Text(
-                user!.joinedDate,
+                _formatJoinedLabel(l10n, user!.joinedDate),
                 style: KubusTextStyles.detailCaption.copyWith(
                   color: Theme.of(context)
                       .colorScheme
@@ -974,6 +985,19 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           ),
         ),
       ],
+    );
+  }
+
+  String _formatJoinedLabel(AppLocalizations l10n, String rawJoinedDate) {
+    final trimmed = rawJoinedDate.trim();
+    if (trimmed.isEmpty) {
+      return l10n.userProfileJoinedLabel('');
+    }
+
+    final joinedPrefixRegex = RegExp(r'^joined\s+', caseSensitive: false);
+    final normalizedDate = trimmed.replaceFirst(joinedPrefixRegex, '').trim();
+    return l10n.userProfileJoinedLabel(
+      normalizedDate.isEmpty ? trimmed : normalizedDate,
     );
   }
 
@@ -1088,7 +1112,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             child: ScaleTransition(
               scale: _followButtonAnimation,
               child: ElevatedButton(
-                onPressed: _toggleFollow,
+                onPressed: _isFollowMutationInFlight ? null : _toggleFollow,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: user!.isFollowing
                       ? Theme.of(context).colorScheme.surface
@@ -1112,87 +1136,114 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                     borderRadius: BorderRadius.circular(KubusRadius.md),
                   ),
                 ),
-                child: Text(
-                  user!.isFollowing
-                      ? l10n.userProfileFollowingButton
-                      : l10n.userProfileFollowButton,
-                  style: KubusTextStyles.actionTileTitle,
-                ),
+                child: _isFollowMutationInFlight
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: user!.isFollowing
+                              ? Theme.of(context).colorScheme.onSurface
+                              : Colors.white,
+                        ),
+                      )
+                    : Text(
+                        user!.isFollowing
+                            ? l10n.userProfileFollowingButton
+                            : l10n.userProfileFollowButton,
+                        style: KubusTextStyles.actionTileTitle,
+                      ),
               ),
             ),
           ),
           const SizedBox(width: 12),
           ElevatedButton(
-            onPressed: () async {
-              final chatProvider =
-                  Provider.of<ChatProvider>(context, listen: false);
-              // navigator variable no longer used; ConversationNavigator handles navigation
-              final messenger = ScaffoldMessenger.of(context);
-              final chatAuth = chatProvider.isAuthenticated;
-              final l10n = AppLocalizations.of(context)!;
-              try {
-                final conv = await chatProvider
-                    .createConversation('', false, [user!.id]);
-                if (conv != null) {
-                  if (!mounted) return;
-                  final preloaded =
-                      Provider.of<ChatProvider>(context, listen: false)
-                          .getPreloadedProfileMapsForConversation(conv.id);
-                  // Ensure we pass non-empty members and sensible fallbacks for avatars / display names
-                  final rawMembers = (preloaded['members'] as List<dynamic>?)
-                          ?.cast<String>() ??
-                      <String>[];
-                  final members =
-                      (rawMembers.isNotEmpty) ? rawMembers : <String>[user!.id];
-                  final rawAvatars =
-                      (preloaded['avatars'] as Map<String, String?>?) ??
-                          <String, String?>{};
-                  final avatars = Map<String, String?>.from(rawAvatars);
-                  if (!avatars.containsKey(members.first) ||
-                      (avatars[members.first] == null ||
-                          avatars[members.first]!.isEmpty)) {
-                    avatars[members.first] = user!.profileImageUrl;
-                  }
-                  final rawNames =
-                      (preloaded['names'] as Map<String, String?>?) ??
-                          <String, String?>{};
-                  final names = Map<String, String?>.from(rawNames);
-                  if (!names.containsKey(members.first) ||
-                      (names[members.first] == null ||
-                          names[members.first]!.isEmpty)) {
-                    names[members.first] = user!.name;
-                  }
-                  await ConversationNavigator.openConversationWithPreload(
-                      context, conv,
-                      preloadedMembers: members,
-                      preloadedAvatars: avatars,
-                      preloadedDisplayNames: names);
-                } else {
-                  // Improve messaging: suggest login if token isn't present
-                  // use pre-captured chatAuth variable
-                  if (!chatAuth) {
-                    if (mounted) {
-                      messenger.showKubusSnackBar(SnackBar(
-                          content:
-                              Text(l10n.userProfileMessageLoginRequiredToast)));
-                    }
-                  } else {
-                    if (mounted) {
-                      messenger.showKubusSnackBar(SnackBar(
+            onPressed: _isFollowMutationInFlight
+                ? null
+                : () async {
+                    final chatProvider =
+                        Provider.of<ChatProvider>(context, listen: false);
+                    // navigator variable no longer used; ConversationNavigator handles navigation
+                    final messenger = ScaffoldMessenger.of(context);
+                    final chatAuth = chatProvider.isAuthenticated;
+                    final l10n = AppLocalizations.of(context)!;
+                    try {
+                      final conv = await chatProvider
+                          .createConversation('', false, [user!.id]);
+                      if (conv != null) {
+                        if (!mounted) return;
+                        final preloaded =
+                            Provider.of<ChatProvider>(context, listen: false)
+                                .getPreloadedProfileMapsForConversation(conv.id);
+                        // Ensure we pass non-empty members and sensible fallbacks for avatars / display names
+                        final rawMembers =
+                            (preloaded['members'] as List<dynamic>?)
+                                    ?.cast<String>() ??
+                                <String>[];
+                        final members = rawMembers.isNotEmpty
+                            ? rawMembers
+                            : <String>[user!.id];
+                        final rawAvatars =
+                            (preloaded['avatars'] as Map<String, String?>?) ??
+                                <String, String?>{};
+                        final avatars = Map<String, String?>.from(rawAvatars);
+                        if (!avatars.containsKey(members.first) ||
+                            (avatars[members.first] == null ||
+                                avatars[members.first]!.isEmpty)) {
+                          avatars[members.first] = user!.profileImageUrl;
+                        }
+                        final rawNames =
+                            (preloaded['names'] as Map<String, String?>?) ??
+                                <String, String?>{};
+                        final names = Map<String, String?>.from(rawNames);
+                        if (!names.containsKey(members.first) ||
+                            (names[members.first] == null ||
+                                names[members.first]!.isEmpty)) {
+                          names[members.first] = user!.name;
+                        }
+                        await ConversationNavigator.openConversationWithPreload(
+                          context,
+                          conv,
+                          preloadedMembers: members,
+                          preloadedAvatars: avatars,
+                          preloadedDisplayNames: names,
+                        );
+                      } else {
+                        if (!chatAuth) {
+                          if (mounted) {
+                            messenger.showKubusSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  l10n.userProfileMessageLoginRequiredToast,
+                                ),
+                              ),
+                            );
+                          }
+                        } else {
+                          if (mounted) {
+                            messenger.showKubusSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  l10n.userProfileConversationOpenFailedToast,
+                                ),
+                              ),
+                            );
+                          }
+                        }
+                      }
+                    } catch (e) {
+                      debugPrint(
+                          'UserProfileScreen: failed to open conversation: $e');
+                      if (!mounted) return;
+                      messenger.showKubusSnackBar(
+                        SnackBar(
                           content: Text(
-                              l10n.userProfileConversationOpenFailedToast)));
+                            l10n.userProfileConversationOpenGenericErrorToast,
+                          ),
+                        ),
+                      );
                     }
-                  }
-                }
-              } catch (e) {
-                debugPrint(
-                    'UserProfileScreen: failed to open conversation: $e');
-                if (!mounted) return;
-                messenger.showKubusSnackBar(SnackBar(
-                    content: Text(
-                        l10n.userProfileConversationOpenGenericErrorToast)));
-              }
-            },
+                  },
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.surface,
               foregroundColor: Theme.of(context).colorScheme.onSurface,

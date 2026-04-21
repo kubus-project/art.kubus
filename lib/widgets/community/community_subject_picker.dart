@@ -143,6 +143,7 @@ class _CommunitySubjectPickerContentState
               const Spacer(),
               IconButton(
                 onPressed: () => Navigator.of(context).maybePop(),
+                color: scheme.onSurface,
                 icon: const Icon(Icons.close),
               ),
             ],
@@ -158,7 +159,14 @@ class _CommunitySubjectPickerContentState
                 return Padding(
                   padding: const EdgeInsets.only(right: KubusSpacing.sm),
                   child: ChoiceChip(
-                    label: Text(_typeLabel(l10n, type)),
+                    label: Text(
+                      _typeLabel(l10n, type),
+                      style: KubusTypography.textTheme.labelMedium?.copyWith(
+                        color: scheme.onSurface,
+                        fontWeight:
+                            selected ? FontWeight.w600 : FontWeight.w500,
+                      ),
+                    ),
                     selected: selected,
                     showCheckmark: false,
                     onSelected: (_) {
@@ -182,7 +190,10 @@ class _CommunitySubjectPickerContentState
             child: TextField(
               decoration: InputDecoration(
                 hintText: l10n.communitySubjectPickerSearchHint,
-                prefixIcon: const Icon(Icons.search),
+                prefixIcon: Icon(
+                  Icons.search,
+                  color: scheme.onPrimaryContainer.withValues(alpha: 0.72),
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(KubusRadius.lg),
                   borderSide: BorderSide.none,
@@ -190,6 +201,9 @@ class _CommunitySubjectPickerContentState
                 filled: true,
                 fillColor: scheme.primaryContainer.withValues(alpha: 0.4),
               ),
+              style: KubusTypography.textTheme.bodyMedium
+                  ?.copyWith(color: scheme.onPrimaryContainer),
+              cursorColor: scheme.onPrimaryContainer,
               onChanged: (value) => setState(() => _query = value.trim()),
             ),
           ),
@@ -228,6 +242,10 @@ class _CommunitySubjectPickerContentState
                 Navigator.of(context)
                     .pop(const CommunitySubjectSelection(cleared: true));
               },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+              ),
               child: Text(l10n.commonRemove),
             ),
           ],
@@ -595,6 +613,7 @@ class _SubjectListTile extends StatelessWidget {
         preview.title,
         style: KubusTypography.textTheme.bodyMedium?.copyWith(
           fontWeight: FontWeight.w500,
+          color: scheme.onSurface,
         ),
       ),
       subtitle: (preview.subtitle ?? '').trim().isNotEmpty
@@ -605,7 +624,10 @@ class _SubjectListTile extends StatelessWidget {
               ),
             )
           : null,
-      trailing: const Icon(Icons.chevron_right),
+      trailing: Icon(
+        Icons.chevron_right,
+        color: scheme.onSurface.withValues(alpha: 0.68),
+      ),
       onTap: onTap,
     );
   }
