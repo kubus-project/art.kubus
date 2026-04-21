@@ -26,11 +26,10 @@ List<MarkerOverlayActionSpec> buildMarkerOverlayActions({
   final artworkProvider = context.read<ArtworkProvider>();
   final actions = <MarkerOverlayActionSpec>[];
 
-  final canShowClaimAction =
-      AppConfig.isFeatureEnabled('streetArtClaims') &&
-          marker.type == ArtMarkerType.streetArt &&
-          marker.isPublic &&
-          onClaimTap != null;
+  final canShowClaimAction = AppConfig.isFeatureEnabled('streetArtClaims') &&
+      marker.type == ArtMarkerType.streetArt &&
+      marker.isPublic &&
+      onClaimTap != null;
 
   if (canShowClaimAction) {
     actions.add(
@@ -61,7 +60,7 @@ List<MarkerOverlayActionSpec> buildMarkerOverlayActions({
       tooltip: l10n.commonSave,
       semanticsLabel: 'marker_save',
       onTap: () {
-        unawaited(artworkProvider.toggleFavorite(artwork.id));
+        unawaited(artworkProvider.toggleArtworkSaved(artwork.id));
       },
     ),
     MarkerOverlayActionSpec(
@@ -83,9 +82,8 @@ List<MarkerOverlayActionSpec> buildMarkerOverlayActions({
       },
     ),
     MarkerOverlayActionSpec(
-      icon: artwork.isLikedByCurrentUser
-          ? Icons.favorite
-          : Icons.favorite_border,
+      icon:
+          artwork.isLikedByCurrentUser ? Icons.favorite : Icons.favorite_border,
       label: '${artwork.likesCount}',
       isActive: artwork.isLikedByCurrentUser,
       activeColor: scheme.error,

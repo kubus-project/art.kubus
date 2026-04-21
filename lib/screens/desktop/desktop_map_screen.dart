@@ -2066,8 +2066,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   Widget _buildDesktopFilterChipRow(ThemeProvider themeProvider) {
     final useMapBlur = kubusMapBlurEnabled(context);
-    final filters =
-        KubusMapFilterCatalog.buildOptions(context, accentColor: themeProvider.accentColor);
+    final filters = KubusMapFilterCatalog.buildOptions(context,
+        accentColor: themeProvider.accentColor);
     return KeyedSubtree(
       key: _tutorialFilterChipsKey,
       child: KubusMapFilterChipStrip(
@@ -2173,9 +2173,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               DetailIdentityBlock(
                 title: artwork.title,
                 kicker: l10n.commonArtwork,
-                subtitle: (artistLabel.isNotEmpty && artistLabel != artwork.title)
-                    ? artistLabel
-                    : null,
+                subtitle:
+                    (artistLabel.isNotEmpty && artistLabel != artwork.title)
+                        ? artistLabel
+                        : null,
               ),
               const SizedBox(height: KubusSpacing.xs),
               ArtworkCreatorByline(
@@ -2291,7 +2292,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                 : null);
                         if (modelUrl == null) {
                           messenger.showKubusSnackBar(
-                            SnackBar(content: Text(l10n.desktopMapNoArAssetToast)),
+                            SnackBar(
+                                content: Text(l10n.desktopMapNoArAssetToast)),
                             tone: KubusSnackBarTone.warning,
                           );
                           return;
@@ -2307,13 +2309,15 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     icon: artwork.isFavoriteByCurrentUser || artwork.isFavorite
                         ? Icons.bookmark
                         : Icons.bookmark_border,
-                    label: (artwork.isFavoriteByCurrentUser || artwork.isFavorite)
-                        ? l10n.commonSavedToast
-                        : l10n.commonSave,
+                    label:
+                        (artwork.isFavoriteByCurrentUser || artwork.isFavorite)
+                            ? l10n.commonSavedToast
+                            : l10n.commonSave,
                     onTap: () {
-                      unawaited(artworkProvider.toggleFavorite(artwork.id));
+                      unawaited(artworkProvider.toggleArtworkSaved(artwork.id));
                     },
-                    isActive: artwork.isFavoriteByCurrentUser || artwork.isFavorite,
+                    isActive:
+                        artwork.isFavoriteByCurrentUser || artwork.isFavorite,
                     activeColor: accent,
                     tooltip: l10n.commonSave,
                   ),
@@ -2553,12 +2557,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                         iconSize: 20,
                         label: l10n.commonViewDetails,
                         backgroundColor: exhibitionAccent,
-                        foregroundColor:
-                            ThemeData.estimateBrightnessForColor(
-                                        exhibitionAccent) ==
-                                    Brightness.dark
-                                ? KubusColors.textPrimaryDark
-                                : KubusColors.textPrimaryLight,
+                        foregroundColor: ThemeData.estimateBrightnessForColor(
+                                    exhibitionAccent) ==
+                                Brightness.dark
+                            ? KubusColors.textPrimaryDark
+                            : KubusColors.textPrimaryLight,
                       ),
                     ),
                   ],
@@ -4905,5 +4908,4 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       return false;
     }
   }
-
 }

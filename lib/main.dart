@@ -617,7 +617,14 @@ class _AppLauncherState extends State<AppLauncher> {
               ),
               ChangeNotifierProvider(
                   create: (context) => CollectionsProvider()),
-              ChangeNotifierProvider(create: (context) => ArtworkProvider()),
+              ChangeNotifierProxyProvider<SavedItemsProvider, ArtworkProvider>(
+                create: (context) => ArtworkProvider(),
+                update: (context, savedItemsProvider, artworkProvider) {
+                  final provider = artworkProvider ?? ArtworkProvider();
+                  provider.bindSavedItemsProvider(savedItemsProvider);
+                  return provider;
+                },
+              ),
               ChangeNotifierProvider(
                   create: (context) => ArtworkDraftsProvider()),
               ChangeNotifierProvider(

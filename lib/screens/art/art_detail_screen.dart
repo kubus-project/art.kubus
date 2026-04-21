@@ -14,6 +14,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 import '../../providers/artwork_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/saved_items_provider.dart';
 import '../../providers/attendance_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/task_provider.dart';
@@ -130,8 +131,9 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Consumer2<ArtworkProvider, ProfileProvider>(
-      builder: (context, artworkProvider, profileProvider, child) {
+    return Consumer3<ArtworkProvider, ProfileProvider, SavedItemsProvider>(
+      builder: (context, artworkProvider, profileProvider, savedItemsProvider,
+          child) {
         final artwork = artworkProvider.getArtworkById(widget.artworkId);
         final isSignedIn = profileProvider.isSignedIn;
         final viewerWallet =
@@ -383,10 +385,13 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
             child: const Icon(Icons.share_outlined),
           ),
         ),
-        Consumer<ArtworkProvider>(
-          builder: (context, provider, child) {
+        Consumer2<ArtworkProvider, SavedItemsProvider>(
+          builder: (context, provider, savedItemsProvider, child) {
+            final l10n = AppLocalizations.of(context)!;
+            final isSaved = savedItemsProvider.isArtworkSaved(artwork.id);
             return IconButton(
-              onPressed: () => provider.toggleFavorite(artwork.id),
+              tooltip: l10n.commonSave,
+              onPressed: () => provider.toggleArtworkSaved(artwork.id),
               icon: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
@@ -394,8 +399,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  artwork.isFavorite ? Icons.favorite : Icons.favorite_border,
-                  color: artwork.isFavorite ? scheme.error : null,
+                  isSaved ? Icons.bookmark : Icons.bookmark_border,
+                  color: isSaved ? scheme.primary : scheme.onSurfaceVariant,
                 ),
               ),
             );
@@ -741,7 +746,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
 
     final markerIdCandidate = (artwork.arMarkerId ?? '').toString().trim();
     final canShowStreetArtClaimCta =
-      AppConfig.isFeatureEnabled('streetArtClaims') && markerIdCandidate.isNotEmpty;
+        AppConfig.isFeatureEnabled('streetArtClaims') &&
+            markerIdCandidate.isNotEmpty;
 
     return Column(
       children: [
@@ -821,7 +827,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                     if (!canManage) return;
                     final profileProvider = context.read<ProfileProvider>();
                     final walletProvider = context.read<WalletProvider>();
-                    final canProceed = await WalletActionGuard.ensureSignerAccess(
+                    final canProceed =
+                        await WalletActionGuard.ensureSignerAccess(
                       context: context,
                       profileProvider: profileProvider,
                       walletProvider: walletProvider,
@@ -961,7 +968,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     final marker = await MapDataController().getArtMarkerById(markerId);
     if (!mounted) return;
 
-    if (marker == null || !KubusMarkerOverlayHelpers.canOpenStreetArtClaims(marker)) {
+    if (marker == null ||
+        !KubusMarkerOverlayHelpers.canOpenStreetArtClaims(marker)) {
       messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.commonNotAvailable)),
         tone: KubusSnackBarTone.warning,

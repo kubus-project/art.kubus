@@ -277,8 +277,8 @@ class _DesktopArtworkDetailScreenState
                             'redirectRoute': '/artwork',
                             'redirectArguments': {
                               'artworkId': artwork.id,
-                              'attendanceMarkerId':
-                                  widget.attendanceMarkerId ?? artwork.arMarkerId,
+                              'attendanceMarkerId': widget.attendanceMarkerId ??
+                                  artwork.arMarkerId,
                             },
                           },
                         ),
@@ -722,8 +722,9 @@ class _DesktopArtworkDetailScreenState
           : null,
       actions: [
         DetailSecondaryAction(
-          icon:
-              artwork.isLikedByCurrentUser ? Icons.favorite : Icons.favorite_border,
+          icon: artwork.isLikedByCurrentUser
+              ? Icons.favorite
+              : Icons.favorite_border,
           label: '${artwork.likesCount}',
           onTap: canInteract
               ? () => artworkProvider.toggleLike(artwork.id)
@@ -738,7 +739,7 @@ class _DesktopArtworkDetailScreenState
               : Icons.bookmark_border,
           label: l10n.commonSave,
           onTap: canInteract
-              ? () => artworkProvider.toggleFavorite(artwork.id)
+              ? () => artworkProvider.toggleArtworkSaved(artwork.id)
               : requireSignInToast,
           isActive: artwork.isFavoriteByCurrentUser,
           tooltip: l10n.commonSave,
@@ -747,7 +748,8 @@ class _DesktopArtworkDetailScreenState
           icon: Icons.comment_outlined,
           label: '${artwork.commentsCount}',
           onTap: () {
-            if (!_commentsSidebarExpanded && MediaQuery.sizeOf(context).width >= 900) {
+            if (!_commentsSidebarExpanded &&
+                MediaQuery.sizeOf(context).width >= 900) {
               setState(() {
                 _commentsSidebarExpanded = true;
               });

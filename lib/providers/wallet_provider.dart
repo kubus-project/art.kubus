@@ -12,6 +12,7 @@ import 'package:solana/solana.dart' show Ed25519HDKeyPair;
 import '../models/wallet.dart';
 import '../models/swap_quote.dart';
 import '../services/encrypted_wallet_backup_service.dart';
+import '../services/browser_solana_wallet_service.dart';
 import '../services/external_wallet_signer_service.dart';
 import '../services/solana_wallet_service.dart';
 import '../services/backend_api_service.dart';
@@ -1525,14 +1526,31 @@ class WalletProvider extends ChangeNotifier {
   Future<ExternalWalletConnectionResult> connectExternalWallet(
     BuildContext context, {
     bool allowReplacingWalletIdentity = false,
+    String? browserWalletId,
+    bool preferBrowserWallet = true,
   }) async {
-    final result = await ExternalWalletSignerService.instance.connect(context);
-    await bindExternalSigner(
-      address: result.address,
-      walletName: result.walletName,
-      allowReplacingWalletIdentity: allowReplacingWalletIdentity,
+    final result = await ExternalWalletSignerService.instance.connect(
+      context,
+      browserWalletId: browserWalletId,
+      preferBrowserWallet: preferBrowserWallet,
     );
-    return result;
+    try {
+      await bindExternalSigner(
+        address: result.address,
+        walletName: result.walletName,
+        allowReplacingWalletIdentity: allowReplacingWalletIdentity,
+      );
+      return result;
+    } catch (_) {
+      await ExternalWalletSignerService.instance.disconnect();
+      rethrow;
+    }
+  }
+
+  Future<ExternalWalletConnectPlan> prepareExternalWalletConnectionPlan(
+    BuildContext context,
+  ) {
+    return ExternalWalletSignerService.instance.prepareConnectionPlan(context);
   }
 
   Future<void> bindExternalSigner({

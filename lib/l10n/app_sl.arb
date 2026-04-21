@@ -2055,7 +2055,7 @@
   "connectWalletChooseTitle": "Poveži denarnico",
   "connectWalletChooseDescription": "Izberi, kako želiš nastaviti denarnico računa. Ustvari ali uvozi lokalno obnovitveno frazo ali poveži zunanjo denarnico za podpisovanje.",
   "connectWalletOptionWalletConnectTitle": "Poveži zunanjo denarnico",
-  "connectWalletOptionWalletConnectDescription": "Uporabi MetaMask, Phantom ali Solflare brez uvoza obnovitvene fraze",
+  "connectWalletOptionWalletConnectDescription": "Uporabi Phantom, Solflare, Backpack ali drugo združljivo Solana denarnico brez uvoza obnovitvene fraze",
   "connectWalletOptionSignInTitle": "Vpiši se",
   "connectWalletOptionSignInDescription": "Vpiši se z e-naslovom in geslom",
   "connectWalletOptionRegisterTitle": "Registriraj se",
@@ -2119,13 +2119,25 @@
   "connectWalletWeb3GuideFeatureDefiDescription": "Isto denarnico lahko uporabljaš v prihodnjih funkcijah art.kubus in združljivih orodjih",
   "connectWalletWeb3GuideGotItButton": "Razumem!",
   "connectWalletWalletConnectTitle": "Poveži zunanjo denarnico",
-  "connectWalletWalletConnectDescription": "Z Reown AppKit poveži Solana denarnico za podpisovanje. art.kubus nikoli ne uvozi ali hrani tvojega zasebnega ključa.",
+  "connectWalletWalletConnectDescription": "Poveži Solana denarnico za podpisovanje. Na spletu art.kubus najprej samodejno prednostno ponudi združljive brskalniške denarnice, nato pa po potrebi preide na celoten seznam denarnic Reown.",
   "connectWalletWalletConnectSupportedTitle": "Podprte denarnice",
-  "connectWalletWalletConnectSupportedList": "MetaMask, Phantom, Solflare, Backpack in druge",
+  "connectWalletWalletConnectSupportedList": "Phantom, Solflare, Backpack in druge združljive Solana denarnice",
   "connectWalletWalletConnectHowToTitle": "Kako deluje",
   "connectWalletWalletConnectStep1": "Izberi denarnico",
   "connectWalletWalletConnectStep2": "Potrdi Solana povezavo",
   "connectWalletWalletConnectStep3": "Vrni se v art.kubus za zaključek",
+  "connectWalletBrowserWalletChooserTitle": "Izberi brskalniško denarnico",
+  "connectWalletBrowserWalletChooserDescription": "Na spletu imajo združljive Solana razširitve prednost. Če jih ni, nadaljuj s tokom za vse denarnice.",
+  "connectWalletBrowserWalletAutoPrompt": "Odpiram {walletName} v tvojem brskalniku. Potrdi povezavo v razširitvi ali pa nadaljuj s tokom za vse denarnice.",
+  "@connectWalletBrowserWalletAutoPrompt": {
+    "placeholders": {
+      "walletName": {}
+    }
+  },
+  "connectWalletBrowserWalletNoWalletTitle": "Združljiva brskalniška denarnica ni zaznana",
+  "connectWalletBrowserWalletNoWalletDescription": "Namesti Phantom ali drugo združljivo Solana brskalniško denarnico ali pa nadaljuj s tokom za vse denarnice.",
+  "connectWalletBrowserWalletFallbackButton": "Odpri vse denarnice",
+  "connectWalletBrowserWalletRescanButton": "Ponovno preišči brskalnik",
   "connectWalletWalletConnectConnectingLabel": "Povezujem…",
   "connectWalletWalletConnectQuickConnectLabel": "Odpri izbor denarnice",
   "connectWalletWalletConnectUriHint": "Seja zunanje denarnice",
@@ -4517,4 +4529,59 @@
   "@promotionBuilderGuaranteedSlots": {
     "placeholders": { "count": {} }
   }
+  ,
+  "savedItemsArtworkLabel": "umetnine",
+  "savedItemsEventLabel": "dogodki",
+  "savedItemsCollectionLabel": "zbirke",
+  "savedItemsExhibitionLabel": "razstave",
+  "savedItemsPostLabel": "objave",
+  "savedItemsSummarySubtitleEmpty": "Dodaj umetnine, dogodke, zbirke, razstave in objave, da ostanejo tukaj.",
+  "savedItemsSummarySubtitleLastSaved": "Zadnje shranjeno {timestamp}",
+  "@savedItemsSummarySubtitleLastSaved": {
+    "placeholders": {
+      "timestamp": {}
+    }
+  },
+  "savedItemsSummaryCount": "{count, plural, one{1 shranjen element} two{{count} shranjena elementa} few{{count} shranjeni elementi} other{{count} shranjenih elementov}}",
+  "@savedItemsSummaryCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "savedItemsClearAllTooltip": "Počisti shranjene vsebine",
+  "savedItemsClearAllDialogTitle": "Počistim vse shranjene vsebine?",
+  "savedItemsClearAllDialogMessage": "To odstrani vse shranjene vsebine iz te naprave. Kasneje jih lahko znova shraniš.",
+  "savedItemsClearAllDialogAction": "Počisti vse",
+  "savedItemsClearedToast": "Vse shranjene vsebine so počiščene",
+  "savedItemsRemoveDialogTitle": "Odstranim shranjeni element?",
+  "savedItemsRemoveDialogMessage": "Odstranim ta shranjeni element iz shranjenih vsebin?",
+  "savedItemsRemoveDialogAction": "Odstrani",
+  "savedItemsRemovedToast": "Odstranjeno iz shranjenih vsebin",
+  "savedItemsSavedAtLabel": "Shranjeno {timestamp}",
+  "@savedItemsSavedAtLabel": {
+    "placeholders": {
+      "timestamp": {}
+    }
+  },
+  "savedItemsSectionTitle": "Shranjeni {itemType}",
+  "@savedItemsSectionTitle": {
+    "placeholders": {
+      "itemType": {}
+    }
+  },
+  "savedItemsEmptySectionTitle": "Ni še shranjenih {itemType}",
+  "@savedItemsEmptySectionTitle": {
+    "placeholders": {
+      "itemType": {}
+    }
+  },
+  "savedItemsEmptySectionDescription": "Shrani {itemType}, da ostanejo tukaj.",
+  "@savedItemsEmptySectionDescription": {
+    "placeholders": {
+      "itemType": {}
+    }
+  },
+  "savedItemsPlaceholderTitle": "Shranjen element",
+  "savedItemsPlaceholderDescription": "Nalaganje podrobnosti...",
+  "commonEvent": "Dogodek"
 }

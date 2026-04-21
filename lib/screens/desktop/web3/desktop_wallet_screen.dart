@@ -299,8 +299,8 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                   ),
                 );
               },
-              icon: const Icon(Icons.qr_code_scanner, size: 20),
-              label: const Text('Connect with WalletConnect'),
+              icon: const Icon(Icons.account_balance_wallet_outlined, size: 20),
+              label: const Text('Connect external wallet'),
             ),
           ],
         ),

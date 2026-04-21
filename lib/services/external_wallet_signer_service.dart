@@ -8,6 +8,7 @@ import 'package:reown_appkit/reown_appkit.dart';
 import '../config/api_keys.dart';
 import '../config/config.dart';
 import '../utils/wallet_utils.dart';
+import 'browser_solana_wallet_service.dart';
 
 class ExternalWalletConnectionResult {
   const ExternalWalletConnectionResult({
@@ -30,18 +31,43 @@ class ExternalWalletSignerService {
   static const String callbackUri = '$callbackScheme://$callbackHost';
   static const String _solanaNamespace = 'solana';
 
+  BrowserSolanaWalletService _browserWalletService =
+      createBrowserSolanaWalletService();
   ReownAppKitModal? _modal;
   BuildContext? _context;
   ReownAppKitModal? _subscribedModal;
   String? _connectedAddress;
   String? _connectedWalletName;
   Completer<ExternalWalletConnectionResult>? _pendingConnection;
+  _ExternalWalletConnectorMode _connectorMode =
+      _ExternalWalletConnectorMode.none;
 
   String? get connectedAddress => _connectedAddress;
   String? get connectedWalletName => _connectedWalletName;
-  bool get isConnected =>
-      (_modal?.isConnected ?? false) &&
-      (_connectedAddress ?? '').trim().isNotEmpty;
+  bool get isConnected {
+    final connectedAddress = (_connectedAddress ?? '').trim();
+    if (connectedAddress.isEmpty) return false;
+    if (_connectorMode == _ExternalWalletConnectorMode.browserInjected) {
+      return true;
+    }
+    return _modal?.isConnected ?? false;
+  }
+
+  @visibleForTesting
+  void replaceBrowserWalletService(BrowserSolanaWalletService service) {
+    _browserWalletService = service;
+    _connectedAddress = null;
+    _connectedWalletName = null;
+    _connectorMode = _ExternalWalletConnectorMode.none;
+  }
+
+  @visibleForTesting
+  void resetBrowserWalletService() {
+    _browserWalletService = createBrowserSolanaWalletService();
+    _connectedAddress = null;
+    _connectedWalletName = null;
+    _connectorMode = _ExternalWalletConnectorMode.none;
+  }
 
   Future<void> initialize(BuildContext context) async {
     final existing = _modal;
@@ -114,8 +140,11 @@ class ExternalWalletSignerService {
   }
 
   void _handleModalDisconnect(ModalDisconnect? event) {
-    _connectedAddress = null;
-    _connectedWalletName = null;
+    if (_connectorMode == _ExternalWalletConnectorMode.reownModal) {
+      _connectedAddress = null;
+      _connectedWalletName = null;
+      _connectorMode = _ExternalWalletConnectorMode.none;
+    }
     final pending = _pendingConnection;
     if (pending != null && !pending.isCompleted) {
       pending.completeError(StateError('External wallet disconnected.'));
@@ -142,6 +171,7 @@ class ExternalWalletSignerService {
             '')
         .trim();
 
+    _connectorMode = _ExternalWalletConnectorMode.reownModal;
     _connectedAddress = address;
     _connectedWalletName = walletName.isEmpty ? 'External wallet' : walletName;
     return ExternalWalletConnectionResult(
@@ -150,7 +180,60 @@ class ExternalWalletSignerService {
     );
   }
 
-  Future<ExternalWalletConnectionResult> connect(BuildContext context) async {
+  Future<ExternalWalletConnectPlan> prepareConnectionPlan(
+    BuildContext context,
+  ) async {
+    if (!kIsWeb) {
+      await initialize(context);
+      return buildExternalWalletConnectPlan(
+        isWeb: false,
+        browserWallets: const <BrowserSolanaWalletDefinition>[],
+      );
+    }
+
+    final browserWallets =
+        await _browserWalletService.discoverCompatibleWallets();
+    final plan = buildExternalWalletConnectPlan(
+      isWeb: true,
+      browserWallets: browserWallets,
+    );
+    _log(
+      'prepared web connection plan ${plan.route.name} '
+      '(${browserWallets.length} injected wallet(s))',
+    );
+    return plan;
+  }
+
+  Future<ExternalWalletConnectionResult> connect(
+    BuildContext context, {
+    String? browserWalletId,
+    bool preferBrowserWallet = true,
+  }) async {
+    if (kIsWeb && preferBrowserWallet) {
+      final plan = await prepareConnectionPlan(context);
+      final selectedWalletId =
+          (browserWalletId ?? plan.preferredBrowserWallet?.id ?? '').trim();
+      if (selectedWalletId.isNotEmpty) {
+        try {
+          return await _connectBrowserWallet(
+            walletId: selectedWalletId,
+            chainId: _solanaChainId(_modal),
+          );
+        } catch (error) {
+          _log(
+            'browser wallet $selectedWalletId failed: $error; '
+            'falling back to Reown modal',
+          );
+        }
+      } else if (plan.route ==
+          ExternalWalletConnectRoute.browserWalletChooser) {
+        throw StateError('Select a browser wallet before continuing.');
+      }
+    }
+
+    if (!context.mounted) {
+      throw StateError('External wallet context is no longer mounted.');
+    }
     await initialize(context);
     final modal = _modal;
     if (modal == null) {
@@ -160,6 +243,7 @@ class ExternalWalletSignerService {
     final existing = _syncFromModal(modal);
     if (existing != null) return existing;
 
+    _connectorMode = _ExternalWalletConnectorMode.reownModal;
     final completer = Completer<ExternalWalletConnectionResult>();
     _pendingConnection = completer;
     await modal.openModalView();
@@ -175,6 +259,11 @@ class ExternalWalletSignerService {
     final modal = _modal;
     _connectedAddress = null;
     _connectedWalletName = null;
+    final connectorMode = _connectorMode;
+    _connectorMode = _ExternalWalletConnectorMode.none;
+    if (connectorMode == _ExternalWalletConnectorMode.browserInjected) {
+      await _browserWalletService.disconnect();
+    }
     if (modal != null && modal.isConnected) {
       await modal.disconnect();
     }
@@ -197,6 +286,9 @@ class ExternalWalletSignerService {
   }
 
   Future<String> signMessageBase64(String messageBase64) async {
+    if (_connectorMode == _ExternalWalletConnectorMode.browserInjected) {
+      return _browserWalletService.signMessageBase64(messageBase64);
+    }
     final modal = _requireConnectedModal();
     final chainId = _solanaChainId(modal);
     final result = await modal.request(
@@ -214,6 +306,12 @@ class ExternalWalletSignerService {
   }
 
   Future<String> signTransactionBase64(String transactionBase64) async {
+    if (_connectorMode == _ExternalWalletConnectorMode.browserInjected) {
+      return _browserWalletService.signTransactionBase64(
+        transactionBase64: transactionBase64,
+        chainId: _solanaChainId(_modal),
+      );
+    }
     final modal = _requireConnectedModal();
     final chainId = _solanaChainId(modal);
     final result = await modal.request(
@@ -232,6 +330,12 @@ class ExternalWalletSignerService {
   }
 
   Future<String> signAndSendTransactionBase64(String transactionBase64) async {
+    if (_connectorMode == _ExternalWalletConnectorMode.browserInjected) {
+      return _browserWalletService.signAndSendTransactionBase64(
+        transactionBase64: transactionBase64,
+        chainId: _solanaChainId(_modal),
+      );
+    }
     final modal = _requireConnectedModal();
     final chainId = _solanaChainId(modal);
     final result = await modal.request(
@@ -249,6 +353,23 @@ class ExternalWalletSignerService {
     return _extractSignature(result);
   }
 
+  Future<ExternalWalletConnectionResult> _connectBrowserWallet({
+    required String walletId,
+    required String chainId,
+  }) async {
+    final result = await _browserWalletService.connect(
+      walletId: walletId,
+      chainId: chainId,
+    );
+    _connectorMode = _ExternalWalletConnectorMode.browserInjected;
+    _connectedAddress = result.address;
+    _connectedWalletName = result.walletName;
+    return ExternalWalletConnectionResult(
+      address: result.address,
+      walletName: result.walletName,
+    );
+  }
+
   ReownAppKitModal _requireConnectedModal() {
     final modal = _modal;
     if (modal == null || modal.session == null || !isConnected) {
@@ -257,12 +378,12 @@ class ExternalWalletSignerService {
     return modal;
   }
 
-  String _solanaChainId(ReownAppKitModal modal) {
-    final selected = (modal.selectedChain?.chainId ?? '').trim();
+  String _solanaChainId(ReownAppKitModal? modal) {
+    final selected = (modal?.selectedChain?.chainId ?? '').trim();
     if (selected.contains(':')) return selected;
     if (selected.isNotEmpty) return '$_solanaNamespace:$selected';
 
-    final sessionChain = (modal.session?.chainId ?? '').trim();
+    final sessionChain = (modal?.session?.chainId ?? '').trim();
     if (sessionChain.contains(':')) return sessionChain;
     if (sessionChain.isNotEmpty) return '$_solanaNamespace:$sessionChain';
 
@@ -333,4 +454,15 @@ class ExternalWalletSignerService {
     if (expected.isEmpty || connected.isEmpty) return false;
     return WalletUtils.equals(expected, connected);
   }
+
+  void _log(String message) {
+    if (!kDebugMode) return;
+    debugPrint('ExternalWalletSignerService: $message');
+  }
+}
+
+enum _ExternalWalletConnectorMode {
+  none,
+  reownModal,
+  browserInjected,
 }

@@ -62,8 +62,7 @@ import 'app_localizations_sl.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale)
-      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -71,8 +70,7 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate =
-      _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -84,8 +82,7 @@ abstract class AppLocalizations {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
-      <LocalizationsDelegate<dynamic>>[
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
     delegate,
     GlobalMaterialLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
@@ -3330,8 +3327,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Account: {accountStatus} · Wallet: {walletStatus} · Signing: {signerStatus}'**
-  String walletSessionStatusSummary(
-      Object accountStatus, Object walletStatus, Object signerStatus);
+  String walletSessionStatusSummary(Object accountStatus, Object walletStatus, Object signerStatus);
 
   /// No description provided for @walletActionSignInRequiredToast.
   ///
@@ -7767,11 +7763,47 @@ abstract class AppLocalizations {
   /// **'Artwork'**
   String get commonArtwork;
 
+  /// No description provided for @commonEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Event'**
+  String get commonEvent;
+
   /// No description provided for @commonUndo.
   ///
   /// In en, this message translates to:
   /// **'Undo'**
   String get commonUndo;
+
+  /// No description provided for @savedItemsArtworkLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'artworks'**
+  String get savedItemsArtworkLabel;
+
+  /// No description provided for @savedItemsEventLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'events'**
+  String get savedItemsEventLabel;
+
+  /// No description provided for @savedItemsCollectionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'collections'**
+  String get savedItemsCollectionLabel;
+
+  /// No description provided for @savedItemsExhibitionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'exhibitions'**
+  String get savedItemsExhibitionLabel;
+
+  /// No description provided for @savedItemsPostLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'posts'**
+  String get savedItemsPostLabel;
 
   /// No description provided for @messagesTitle.
   ///
@@ -9228,7 +9260,7 @@ abstract class AppLocalizations {
   /// No description provided for @connectWalletOptionWalletConnectDescription.
   ///
   /// In en, this message translates to:
-  /// **'Use MetaMask, Phantom, or Solflare without importing a recovery phrase'**
+  /// **'Use Phantom, Solflare, Backpack, or another compatible Solana wallet without importing a recovery phrase'**
   String get connectWalletOptionWalletConnectDescription;
 
   /// No description provided for @connectWalletOptionSignInTitle.
@@ -9522,7 +9554,7 @@ abstract class AppLocalizations {
   /// No description provided for @connectWalletWalletConnectDescription.
   ///
   /// In en, this message translates to:
-  /// **'Use Reown AppKit to connect a Solana wallet for signing. art.kubus never imports or stores your private key.'**
+  /// **'Connect a Solana wallet for signing. On web, compatible browser wallets are preferred automatically before falling back to the full Reown wallet list.'**
   String get connectWalletWalletConnectDescription;
 
   /// No description provided for @connectWalletWalletConnectSupportedTitle.
@@ -9534,7 +9566,7 @@ abstract class AppLocalizations {
   /// No description provided for @connectWalletWalletConnectSupportedList.
   ///
   /// In en, this message translates to:
-  /// **'MetaMask, Phantom, Solflare, Backpack, and more'**
+  /// **'Phantom, Solflare, Backpack, and other compatible Solana wallets'**
   String get connectWalletWalletConnectSupportedList;
 
   /// No description provided for @connectWalletWalletConnectHowToTitle.
@@ -9560,6 +9592,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Return to art.kubus to finish'**
   String get connectWalletWalletConnectStep3;
+
+  /// No description provided for @connectWalletBrowserWalletChooserTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a browser wallet'**
+  String get connectWalletBrowserWalletChooserTitle;
+
+  /// No description provided for @connectWalletBrowserWalletChooserDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Compatible Solana extensions are preferred automatically on web. If none are available, continue with the all-wallets flow.'**
+  String get connectWalletBrowserWalletChooserDescription;
+
+  /// No description provided for @connectWalletBrowserWalletAutoPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening {walletName} in your browser. Approve the connection in the extension, or continue with the all-wallets flow instead.'**
+  String connectWalletBrowserWalletAutoPrompt(Object walletName);
+
+  /// No description provided for @connectWalletBrowserWalletNoWalletTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No compatible browser wallet detected'**
+  String get connectWalletBrowserWalletNoWalletTitle;
+
+  /// No description provided for @connectWalletBrowserWalletNoWalletDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Install Phantom or another compatible Solana browser wallet, or continue with the all-wallets flow.'**
+  String get connectWalletBrowserWalletNoWalletDescription;
+
+  /// No description provided for @connectWalletBrowserWalletFallbackButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Open all wallets'**
+  String get connectWalletBrowserWalletFallbackButton;
+
+  /// No description provided for @connectWalletBrowserWalletRescanButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Rescan browser wallets'**
+  String get connectWalletBrowserWalletRescanButton;
 
   /// No description provided for @connectWalletWalletConnectConnectingLabel.
   ///
@@ -11929,8 +12003,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Open details for {title}, token {tokenId}'**
-  String marketplaceOpenCollectibleDetailsSemantic(
-      Object title, Object tokenId);
+  String marketplaceOpenCollectibleDetailsSemantic(Object title, Object tokenId);
 
   /// No description provided for @marketplaceShareTooltip.
   ///
@@ -12740,8 +12813,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Are you sure you want to delegate your {votingPower} voting power to {delegateName}?'**
-  String daoDelegateVotingPowerDialogBody(
-      Object votingPower, Object delegateName);
+  String daoDelegateVotingPowerDialogBody(Object votingPower, Object delegateName);
 
   /// No description provided for @daoDelegationBenefitsTitle.
   ///
@@ -18179,6 +18251,114 @@ abstract class AppLocalizations {
   /// **'Saved items'**
   String get profileMenuSavedItemsTitle;
 
+  /// No description provided for @savedItemsSummarySubtitleEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookmark artworks, events, collections, exhibitions, and posts to keep them here.'**
+  String get savedItemsSummarySubtitleEmpty;
+
+  /// No description provided for @savedItemsSummarySubtitleLastSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Last saved {timestamp}'**
+  String savedItemsSummarySubtitleLastSaved(Object timestamp);
+
+  /// No description provided for @savedItemsSummaryCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 saved item} other{{count} saved items}}'**
+  String savedItemsSummaryCount(num count);
+
+  /// No description provided for @savedItemsClearAllTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear saved items'**
+  String get savedItemsClearAllTooltip;
+
+  /// No description provided for @savedItemsClearAllDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all saved items?'**
+  String get savedItemsClearAllDialogTitle;
+
+  /// No description provided for @savedItemsClearAllDialogMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This removes every saved item from this device. You can save them again later.'**
+  String get savedItemsClearAllDialogMessage;
+
+  /// No description provided for @savedItemsClearAllDialogAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all'**
+  String get savedItemsClearAllDialogAction;
+
+  /// No description provided for @savedItemsClearedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'All saved items cleared'**
+  String get savedItemsClearedToast;
+
+  /// No description provided for @savedItemsRemoveDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove saved item?'**
+  String get savedItemsRemoveDialogTitle;
+
+  /// No description provided for @savedItemsRemoveDialogMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove this saved item from your saved items?'**
+  String get savedItemsRemoveDialogMessage;
+
+  /// No description provided for @savedItemsRemoveDialogAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get savedItemsRemoveDialogAction;
+
+  /// No description provided for @savedItemsRemovedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed from saved items'**
+  String get savedItemsRemovedToast;
+
+  /// No description provided for @savedItemsSavedAtLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved {timestamp}'**
+  String savedItemsSavedAtLabel(Object timestamp);
+
+  /// No description provided for @savedItemsSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved {itemType}'**
+  String savedItemsSectionTitle(Object itemType);
+
+  /// No description provided for @savedItemsEmptySectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No saved {itemType} yet'**
+  String savedItemsEmptySectionTitle(Object itemType);
+
+  /// No description provided for @savedItemsEmptySectionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookmark {itemType} to keep it here.'**
+  String savedItemsEmptySectionDescription(Object itemType);
+
+  /// No description provided for @savedItemsPlaceholderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved item'**
+  String get savedItemsPlaceholderTitle;
+
+  /// No description provided for @savedItemsPlaceholderDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading details...'**
+  String get savedItemsPlaceholderDescription;
+
   /// No description provided for @profileMenuViewHistoryTitle.
   ///
   /// In en, this message translates to:
@@ -18819,8 +18999,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Activity was recorded on {activeBuckets} of {totalBuckets} buckets.'**
-  String analyticsRecommendationConsistencyDescription(
-      Object activeBuckets, Object totalBuckets);
+  String analyticsRecommendationConsistencyDescription(Object activeBuckets, Object totalBuckets);
 
   /// No description provided for @analyticsRecommendationReverseDecline.
   ///
@@ -19144,8 +19323,7 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'{totalVotes} votes • {supportPct}% support'**
-  String daoProposalVotesSupportSummaryLabel(
-      Object totalVotes, Object supportPct);
+  String daoProposalVotesSupportSummaryLabel(Object totalVotes, Object supportPct);
 
   /// No description provided for @commonSearchHint.
   ///
@@ -19556,8 +19734,7 @@ abstract class AppLocalizations {
   String promotionBuilderGuaranteedSlots(num count);
 }
 
-class _AppLocalizationsDelegate
-    extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -19566,25 +19743,25 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['en', 'sl'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['en', 'sl'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
+
+
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en':
-      return AppLocalizationsEn();
-    case 'sl':
-      return AppLocalizationsSl();
+    case 'en': return AppLocalizationsEn();
+    case 'sl': return AppLocalizationsSl();
   }
 
   throw FlutterError(
-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-      'an issue with the localizations generation tool. Please file an issue '
-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
-      'that was used.');
+    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.'
+  );
 }

@@ -1246,26 +1246,30 @@ class _ProfileScreenState extends State<ProfileScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               KubusHeaderText(
-                title: 'Saved artworks',
+                title: l10n.savedItemsSectionTitle(l10n.savedItemsArtworkLabel),
                 subtitle: savedIds.isEmpty
-                    ? 'Saved artworks will appear here.'
-                    : '${_formatCount(savedIds.length)} saved',
+                    ? l10n.savedItemsEmptySectionDescription(
+                        l10n.savedItemsArtworkLabel)
+                    : l10n.savedItemsSummaryCount(savedIds.length),
                 kind: KubusHeaderKind.section,
               ),
               const SizedBox(height: KubusSpacing.md),
               if (savedIds.isEmpty)
                 EmptyStateCard(
                   icon: Icons.bookmark_border,
-                  title: 'No saved artworks yet',
-                  description: 'Saved artworks will appear here.',
+                  title: l10n
+                      .savedItemsEmptySectionTitle(l10n.savedItemsArtworkLabel),
+                  description: l10n.savedItemsEmptySectionDescription(
+                      l10n.savedItemsArtworkLabel),
                   showAction: true,
                   actionLabel: l10n.profileMenuSavedItemsTitle,
                   onAction: _navigateToSavedItems,
                 )
               else if (savedArtworks.isEmpty)
                 KubusStatCard(
-                  title: 'Saved artworks',
-                  value: _formatCount(savedIds.length),
+                  title:
+                      l10n.savedItemsSectionTitle(l10n.savedItemsArtworkLabel),
+                  value: l10n.savedItemsSummaryCount(savedIds.length),
                   icon: Icons.bookmarks_outlined,
                   layout: KubusStatCardLayout.centered,
                   onTap: _navigateToSavedItems,
@@ -1289,8 +1293,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                       footer: l10n.userProfileLikesLabel(artwork.likesCount),
                     ),
                   ),
-                  emptyTitle: 'No saved artworks yet',
-                  emptyDescription: 'Saved artworks will appear here.',
+                  emptyTitle: l10n
+                      .savedItemsEmptySectionTitle(l10n.savedItemsArtworkLabel),
+                  emptyDescription: l10n.savedItemsEmptySectionDescription(
+                      l10n.savedItemsArtworkLabel),
                   emptyIcon: Icons.bookmark_border,
                   listHeight: 210,
                 ),
@@ -1300,7 +1306,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 child: TextButton.icon(
                   onPressed: _navigateToSavedItems,
                   icon: const Icon(Icons.bookmarks_outlined),
-                  label: const Text('View all saved'),
+                  label: Text(l10n.commonViewAll),
                 ),
               ),
             ],

@@ -1672,7 +1672,13 @@
   "commonUntitled": "Untitled",
   "commonDigital": "Digital",
   "commonArtwork": "Artwork",
+  "commonEvent": "Event",
   "commonUndo": "Undo",
+  "savedItemsArtworkLabel": "artworks",
+  "savedItemsEventLabel": "events",
+  "savedItemsCollectionLabel": "collections",
+  "savedItemsExhibitionLabel": "exhibitions",
+  "savedItemsPostLabel": "posts",
   "messagesTitle": "Messages",
   "messagesEmptyNoConversationsTitle": "No conversations",
   "messagesEmptyNoConversationsDescription": "Start a conversation using the chat button below.",
@@ -2087,7 +2093,7 @@
   "connectWalletChooseTitle": "Connect your wallet",
   "connectWalletChooseDescription": "Choose how to set up your account wallet. Create or import a local recovery phrase, or connect an external wallet for signing.",
   "connectWalletOptionWalletConnectTitle": "Connect external wallet",
-  "connectWalletOptionWalletConnectDescription": "Use MetaMask, Phantom, or Solflare without importing a recovery phrase",
+  "connectWalletOptionWalletConnectDescription": "Use Phantom, Solflare, Backpack, or another compatible Solana wallet without importing a recovery phrase",
   "connectWalletOptionSignInTitle": "Sign in",
   "connectWalletOptionSignInDescription": "Sign in with your e-mail and password",
   "connectWalletOptionRegisterTitle": "Register account",
@@ -2151,13 +2157,25 @@
   "connectWalletWeb3GuideFeatureDefiDescription": "Use the same wallet across future art.kubus and compatible ecosystem features",
   "connectWalletWeb3GuideGotItButton": "Got it!",
   "connectWalletWalletConnectTitle": "Connect external wallet",
-  "connectWalletWalletConnectDescription": "Use Reown AppKit to connect a Solana wallet for signing. art.kubus never imports or stores your private key.",
+  "connectWalletWalletConnectDescription": "Connect a Solana wallet for signing. On web, compatible browser wallets are preferred automatically before falling back to the full Reown wallet list.",
   "connectWalletWalletConnectSupportedTitle": "Supported wallets",
-  "connectWalletWalletConnectSupportedList": "MetaMask, Phantom, Solflare, Backpack, and more",
+  "connectWalletWalletConnectSupportedList": "Phantom, Solflare, Backpack, and other compatible Solana wallets",
   "connectWalletWalletConnectHowToTitle": "How it works",
   "connectWalletWalletConnectStep1": "Choose your wallet",
   "connectWalletWalletConnectStep2": "Approve the Solana connection",
   "connectWalletWalletConnectStep3": "Return to art.kubus to finish",
+  "connectWalletBrowserWalletChooserTitle": "Choose a browser wallet",
+  "connectWalletBrowserWalletChooserDescription": "Compatible Solana extensions are preferred automatically on web. If none are available, continue with the all-wallets flow.",
+  "connectWalletBrowserWalletAutoPrompt": "Opening {walletName} in your browser. Approve the connection in the extension, or continue with the all-wallets flow instead.",
+  "@connectWalletBrowserWalletAutoPrompt": {
+    "placeholders": {
+      "walletName": {}
+    }
+  },
+  "connectWalletBrowserWalletNoWalletTitle": "No compatible browser wallet detected",
+  "connectWalletBrowserWalletNoWalletDescription": "Install Phantom or another compatible Solana browser wallet, or continue with the all-wallets flow.",
+  "connectWalletBrowserWalletFallbackButton": "Open all wallets",
+  "connectWalletBrowserWalletRescanButton": "Rescan browser wallets",
   "connectWalletWalletConnectConnectingLabel": "Connecting…",
   "connectWalletWalletConnectQuickConnectLabel": "Open wallet picker",
   "connectWalletWalletConnectUriHint": "External wallet session",
@@ -4188,6 +4206,54 @@
   "profilePerformancePublicStreetArtAddedTitle": "Added Public Art",
 
   "profileMenuSavedItemsTitle": "Saved items",
+  "savedItemsSummarySubtitleEmpty": "Bookmark artworks, events, collections, exhibitions, and posts to keep them here.",
+  "savedItemsSummarySubtitleLastSaved": "Last saved {timestamp}",
+  "@savedItemsSummarySubtitleLastSaved": {
+    "placeholders": {
+      "timestamp": {}
+    }
+  },
+  "savedItemsSummaryCount": "{count, plural, =1{1 saved item} other{{count} saved items}}",
+  "@savedItemsSummaryCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "savedItemsClearAllTooltip": "Clear saved items",
+  "savedItemsClearAllDialogTitle": "Clear all saved items?",
+  "savedItemsClearAllDialogMessage": "This removes every saved item from this device. You can save them again later.",
+  "savedItemsClearAllDialogAction": "Clear all",
+  "savedItemsClearedToast": "All saved items cleared",
+  "savedItemsRemoveDialogTitle": "Remove saved item?",
+  "savedItemsRemoveDialogMessage": "Remove this saved item from your saved items?",
+  "savedItemsRemoveDialogAction": "Remove",
+  "savedItemsRemovedToast": "Removed from saved items",
+  "savedItemsSavedAtLabel": "Saved {timestamp}",
+  "@savedItemsSavedAtLabel": {
+    "placeholders": {
+      "timestamp": {}
+    }
+  },
+  "savedItemsSectionTitle": "Saved {itemType}",
+  "@savedItemsSectionTitle": {
+    "placeholders": {
+      "itemType": {}
+    }
+  },
+  "savedItemsEmptySectionTitle": "No saved {itemType} yet",
+  "@savedItemsEmptySectionTitle": {
+    "placeholders": {
+      "itemType": {}
+    }
+  },
+  "savedItemsEmptySectionDescription": "Bookmark {itemType} to keep it here.",
+  "@savedItemsEmptySectionDescription": {
+    "placeholders": {
+      "itemType": {}
+    }
+  },
+  "savedItemsPlaceholderTitle": "Saved item",
+  "savedItemsPlaceholderDescription": "Loading details...",
   "profileMenuViewHistoryTitle": "View history",
   "profileMenuHelpSupportTitle": "Help & support",
 

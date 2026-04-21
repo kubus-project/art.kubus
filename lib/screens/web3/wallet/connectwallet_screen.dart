@@ -1,11 +1,10 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../../../services/event_bus.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/profile_provider.dart';
@@ -28,6 +27,7 @@ import '../../../widgets/wallet_mnemonic_backup_prompt.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/wallet_utils.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import '../../../services/browser_solana_wallet_service.dart';
 
 class ConnectWallet extends StatefulWidget {
   final int initialStep;
@@ -62,8 +62,10 @@ class _ConnectWalletState extends State<ConnectWallet>
 
   bool _isLoading = false;
   late int
-      _currentStep; // 0: Choose option, 1: Connect existing (mnemonic), 2: Create new (generate mnemonic), 3: WalletConnect
-  final TextEditingController _wcUriController = TextEditingController();
+      _currentStep; // 0: Choose option, 1: Connect existing, 2: Create new, 3: External wallet
+  ExternalWalletConnectPlan? _externalWalletConnectPlan;
+  bool _externalWalletPlanLoading = false;
+  bool _didAutoStartBrowserWallet = false;
 
   @override
   void initState() {
@@ -90,13 +92,15 @@ class _ConnectWalletState extends State<ConnectWallet>
       curve: Curves.easeInOut,
     ));
     _animationController.forward();
+    if (_currentStep == 3) {
+      unawaited(_refreshExternalWalletPlan());
+    }
   }
 
   @override
   void dispose() {
     _animationController.dispose();
     _mnemonicController.dispose();
-    _wcUriController.dispose();
     super.dispose();
   }
 
@@ -176,6 +180,59 @@ class _ConnectWalletState extends State<ConnectWallet>
       return;
     }
     _closeFlow();
+  }
+
+  void _openExternalWalletStep() {
+    setState(() {
+      _currentStep = 3;
+      _didAutoStartBrowserWallet = false;
+    });
+    unawaited(_refreshExternalWalletPlan(force: true));
+  }
+
+  Future<void> _refreshExternalWalletPlan({bool force = false}) async {
+    if (!kIsWeb) return;
+    if (_externalWalletPlanLoading) return;
+    if (!force && _externalWalletConnectPlan != null) {
+      _maybeAutoStartBrowserWallet();
+      return;
+    }
+
+    final walletProvider = Provider.of<WalletProvider?>(context, listen: false);
+    if (walletProvider == null) return;
+
+    setState(() {
+      _externalWalletPlanLoading = true;
+    });
+
+    try {
+      final plan =
+          await walletProvider.prepareExternalWalletConnectionPlan(context);
+      if (!mounted) return;
+      setState(() {
+        _externalWalletConnectPlan = plan;
+      });
+      _maybeAutoStartBrowserWallet();
+    } catch (error) {
+      debugPrint('connectwallet: external wallet plan failed: $error');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _externalWalletPlanLoading = false;
+        });
+      }
+    }
+  }
+
+  void _maybeAutoStartBrowserWallet() {
+    if (!kIsWeb || _didAutoStartBrowserWallet || _isLoading) return;
+    final preferredWallet = _externalWalletConnectPlan?.preferredBrowserWallet;
+    if (preferredWallet == null) return;
+    _didAutoStartBrowserWallet = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _currentStep != 3 || _isLoading) return;
+      unawaited(_connectExternalWallet(browserWalletId: preferredWallet.id));
+    });
   }
 
   String? _normalizedAuthFlow() {
@@ -598,7 +655,7 @@ class _ConnectWalletState extends State<ConnectWallet>
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         KubusButton(
-          onPressed: () => setState(() => _currentStep = 3),
+          onPressed: _openExternalWalletStep,
           icon: AuthWalletEntryOption.walletConnect.icon,
           label: AuthWalletEntryOption.walletConnect.label(l10n),
           variant: KubusButtonVariant.secondary,
@@ -815,97 +872,368 @@ class _ConnectWalletState extends State<ConnectWallet>
   }
 
   Widget _buildAuthInlineWalletConnectView() {
+    return kIsWeb
+        ? _buildWebExternalWalletBody()
+        : _buildNativeExternalWalletBody();
+  }
+
+  Widget _buildWebExternalWalletBody() {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final isNarrow = MediaQuery.of(context).size.width < 360;
+    final plan = _externalWalletConnectPlan;
+    final browserWallets =
+        plan?.browserWallets ?? const <BrowserSolanaWalletDefinition>[];
+    final preferredWallet = plan?.preferredBrowserWallet;
+
+    if (_externalWalletPlanLoading && plan == null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildExternalWalletInfoCard(
+            color: scheme.primary,
+            icon: Icons.account_balance_wallet_outlined,
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(scheme.primary),
+                  ),
+                ),
+                const SizedBox(width: KubusSpacing.sm),
+                Expanded(
+                  child: Text(
+                    l10n.connectWalletBrowserWalletChooserDescription,
+                    style: KubusTypography.textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurface.withValues(alpha: 0.76),
+                          height: 1.35,
+                        ) ??
+                        KubusTypography.inter(
+                          fontSize: KubusSizes.badgeCountFontSize,
+                          color: scheme.onSurface.withValues(alpha: 0.76),
+                          height: 1.35,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: KubusSpacing.md),
+          _buildExternalWalletPrimaryButton(
+            label: l10n.connectWalletWalletConnectConnectButton,
+            onPressed: null,
+            isFullWidth: true,
+          ),
+        ],
+      );
+    }
+
+    if (plan?.route == ExternalWalletConnectRoute.directBrowserWallet &&
+        preferredWallet != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildExternalWalletInfoCard(
+            color: scheme.primary,
+            icon: Icons.extension_rounded,
+            child: Text(
+              l10n.connectWalletBrowserWalletAutoPrompt(preferredWallet.name),
+              style: KubusTypography.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.76),
+                    height: 1.35,
+                  ) ??
+                  KubusTypography.inter(
+                    fontSize: KubusSizes.badgeCountFontSize,
+                    color: scheme.onSurface.withValues(alpha: 0.76),
+                    height: 1.35,
+                  ),
+            ),
+          ),
+          const SizedBox(height: KubusSpacing.sm),
+          _buildExternalWalletInstructionList(),
+          const SizedBox(height: KubusSpacing.md),
+          _buildExternalWalletPrimaryButton(
+            label: preferredWallet.name,
+            icon: Icons.extension_rounded,
+            onPressed: _isLoading
+                ? null
+                : () => _connectExternalWallet(
+                      browserWalletId: preferredWallet.id,
+                    ),
+            isLoading: _isLoading,
+            isFullWidth: true,
+          ),
+          const SizedBox(height: KubusSpacing.xs),
+          _buildExternalWalletSecondaryButton(
+            label: l10n.connectWalletBrowserWalletFallbackButton,
+            onPressed: _isLoading
+                ? null
+                : () => _connectExternalWallet(preferBrowserWallet: false),
+            isFullWidth: true,
+          ),
+        ],
+      );
+    }
+
+    if (plan?.route == ExternalWalletConnectRoute.browserWalletChooser) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildExternalWalletInfoCard(
+            color: scheme.primary,
+            icon: Icons.account_balance_wallet_outlined,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.connectWalletBrowserWalletChooserTitle,
+                  style: KubusTypography.textTheme.titleSmall?.copyWith(
+                        color: scheme.onSurface,
+                        fontWeight: FontWeight.w700,
+                      ) ??
+                      KubusTypography.inter(
+                        fontSize: KubusHeaderMetrics.sectionSubtitle,
+                        color: scheme.onSurface,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: KubusSpacing.xxs),
+                Text(
+                  l10n.connectWalletBrowserWalletChooserDescription,
+                  style: KubusTypography.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.72),
+                        height: 1.35,
+                      ) ??
+                      KubusTypography.inter(
+                        fontSize: KubusSizes.badgeCountFontSize,
+                        color: scheme.onSurface.withValues(alpha: 0.72),
+                        height: 1.35,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: KubusSpacing.sm),
+          for (final wallet in browserWallets) ...[
+            _buildExternalWalletSecondaryButton(
+              label: wallet.name,
+              icon: wallet.isPhantom
+                  ? Icons.extension_rounded
+                  : Icons.account_balance_wallet_outlined,
+              onPressed: _isLoading
+                  ? null
+                  : () => _connectExternalWallet(browserWalletId: wallet.id),
+              isFullWidth: true,
+            ),
+            const SizedBox(height: KubusSpacing.xs),
+          ],
+          _buildExternalWalletPrimaryButton(
+            label: l10n.connectWalletBrowserWalletFallbackButton,
+            onPressed: _isLoading
+                ? null
+                : () => _connectExternalWallet(preferBrowserWallet: false),
+            isLoading: _isLoading,
+            isFullWidth: true,
+          ),
+        ],
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        TextField(
-          controller: _wcUriController,
-          maxLines: 2,
-          decoration: InputDecoration(
-            hintText: l10n.connectWalletWalletConnectUriHint,
-            hintStyle: KubusTypography.textTheme.bodySmall?.copyWith(
-              color: scheme.onSurface.withValues(alpha: 0.45),
-            ),
-            filled: true,
-            fillColor: scheme.surface.withValues(alpha: 0.56),
-            contentPadding: const EdgeInsets.all(KubusSpacing.md),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              borderSide: BorderSide(
-                color: scheme.outlineVariant.withValues(alpha: 0.22),
-              ),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              borderSide: BorderSide(
-                color: scheme.outlineVariant.withValues(alpha: 0.22),
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(KubusRadius.md),
-              borderSide: BorderSide(
-                color: scheme.primary.withValues(alpha: 0.75),
-                width: 1.5,
-              ),
-            ),
-            suffixIcon: IconButton(
-              icon: const Icon(Icons.paste),
-              onPressed: () async {
-                final clipboardData = await Clipboard.getData('text/plain');
-                final text = clipboardData?.text?.trim();
-                if (text == null || text.isEmpty || !mounted) return;
-                setState(() => _wcUriController.text = text);
-              },
-            ),
-          ),
-          style: KubusTypography.textTheme.bodyMedium?.copyWith(
-            color: scheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: KubusSpacing.md),
-        if (isNarrow) ...[
-          KubusButton(
-            onPressed: _isLoading ? null : _quickWalletConnect,
-            isLoading: _isLoading,
-            icon: Icons.flash_on_rounded,
-            label: l10n.connectWalletWalletConnectQuickConnectLabel,
-            isFullWidth: true,
-          ),
-          const SizedBox(height: KubusSpacing.xs),
-          KubusButton(
-            onPressed: _isLoading ? null : _connectWithWalletConnect,
-            isLoading: _isLoading,
-            label: l10n.connectWalletWalletConnectConnectButton,
-            variant: KubusButtonVariant.secondary,
-            isFullWidth: true,
-          ),
-        ] else ...[
-          Row(
+        _buildExternalWalletInfoCard(
+          color: scheme.tertiary,
+          icon: Icons.account_balance_wallet_outlined,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: KubusButton(
-                  onPressed: _isLoading ? null : _scanQRCode,
-                  icon: Icons.qr_code_scanner,
-                  label: l10n.connectWalletWalletConnectScanQrButton,
-                  variant: KubusButtonVariant.secondary,
-                ),
+              Text(
+                l10n.connectWalletBrowserWalletNoWalletTitle,
+                style: KubusTypography.textTheme.titleSmall?.copyWith(
+                      color: scheme.onSurface,
+                      fontWeight: FontWeight.w700,
+                    ) ??
+                    KubusTypography.inter(
+                      fontSize: KubusHeaderMetrics.sectionSubtitle,
+                      color: scheme.onSurface,
+                      fontWeight: FontWeight.w700,
+                    ),
               ),
-              const SizedBox(width: KubusSpacing.sm),
-              Expanded(
-                child: KubusButton(
-                  onPressed: _isLoading ? null : _connectWithWalletConnect,
-                  isLoading: _isLoading,
-                  label: l10n.connectWalletWalletConnectConnectButton,
-                ),
+              const SizedBox(height: KubusSpacing.xxs),
+              Text(
+                l10n.connectWalletBrowserWalletNoWalletDescription,
+                style: KubusTypography.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurface.withValues(alpha: 0.72),
+                      height: 1.35,
+                    ) ??
+                    KubusTypography.inter(
+                      fontSize: KubusSizes.badgeCountFontSize,
+                      color: scheme.onSurface.withValues(alpha: 0.72),
+                      height: 1.35,
+                    ),
               ),
             ],
           ),
-        ],
+        ),
+        const SizedBox(height: KubusSpacing.sm),
+        _buildExternalWalletInstructionList(),
+        const SizedBox(height: KubusSpacing.md),
+        _buildExternalWalletPrimaryButton(
+          label: l10n.connectWalletBrowserWalletFallbackButton,
+          onPressed: _isLoading
+              ? null
+              : () => _connectExternalWallet(preferBrowserWallet: false),
+          isLoading: _isLoading,
+          isFullWidth: true,
+        ),
+        const SizedBox(height: KubusSpacing.xs),
+        _buildExternalWalletSecondaryButton(
+          label: l10n.connectWalletBrowserWalletRescanButton,
+          onPressed:
+              _isLoading ? null : () => _refreshExternalWalletPlan(force: true),
+          isFullWidth: true,
+        ),
       ],
+    );
+  }
+
+  Widget _buildNativeExternalWalletBody() {
+    final l10n = AppLocalizations.of(context)!;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildExternalWalletInstructionList(),
+        const SizedBox(height: KubusSpacing.md),
+        _buildExternalWalletInfoCard(
+          color: Theme.of(context).colorScheme.primary,
+          icon: Icons.info_outline_rounded,
+          child: Text(
+            l10n.connectWalletWalletConnectSecurityNote,
+            style: KubusTypography.textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.76),
+                  height: 1.35,
+                ) ??
+                KubusTypography.inter(
+                  fontSize: KubusSizes.badgeCountFontSize,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.76),
+                  height: 1.35,
+                ),
+          ),
+        ),
+        const SizedBox(height: KubusSpacing.md),
+        _buildExternalWalletPrimaryButton(
+          label: l10n.connectWalletWalletConnectConnectButton,
+          onPressed: _isLoading ? null : _connectExternalWallet,
+          isLoading: _isLoading,
+          isFullWidth: true,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildExternalWalletInstructionList() {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(KubusSpacing.sm),
+      decoration: BoxDecoration(
+        color: scheme.primaryContainer.withValues(alpha: 0.46),
+        borderRadius: BorderRadius.circular(KubusRadius.sm),
+        border: Border.all(
+          color: scheme.primary.withValues(alpha: 0.22),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.connectWalletWalletConnectHowToTitle,
+            style: KubusTypography.textTheme.titleSmall?.copyWith(
+                  color: scheme.onSurface,
+                  fontWeight: FontWeight.w700,
+                ) ??
+                KubusTypography.inter(
+                  fontSize: KubusHeaderMetrics.sectionSubtitle,
+                  color: scheme.onSurface,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: KubusSpacing.xs),
+          _buildInstructionStep('1', l10n.connectWalletWalletConnectStep1),
+          _buildInstructionStep('2', l10n.connectWalletWalletConnectStep2),
+          _buildInstructionStep('3', l10n.connectWalletWalletConnectStep3),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExternalWalletInfoCard({
+    required Color color,
+    required IconData icon,
+    required Widget child,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(KubusSpacing.sm),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(KubusRadius.sm),
+        border: Border.all(color: color.withValues(alpha: 0.24)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: KubusSpacing.sm),
+          Expanded(child: child),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExternalWalletPrimaryButton({
+    required String label,
+    required VoidCallback? onPressed,
+    bool isLoading = false,
+    bool isFullWidth = false,
+    IconData? icon,
+  }) {
+    return KubusButton(
+      onPressed: onPressed,
+      isLoading: isLoading,
+      icon: icon,
+      label: label,
+      isFullWidth: isFullWidth,
+      backgroundColor: Theme.of(context).colorScheme.primary,
+      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+    );
+  }
+
+  Widget _buildExternalWalletSecondaryButton({
+    required String label,
+    required VoidCallback? onPressed,
+    bool isFullWidth = false,
+    IconData? icon,
+  }) {
+    return KubusButton(
+      onPressed: onPressed,
+      icon: icon,
+      label: label,
+      isFullWidth: isFullWidth,
+      variant: KubusButtonVariant.secondary,
+      backgroundColor:
+          Theme.of(context).colorScheme.surface.withValues(alpha: 0.76),
+      foregroundColor: Theme.of(context).colorScheme.onSurface,
     );
   }
 
@@ -1076,7 +1404,7 @@ class _ConnectWalletState extends State<ConnectWallet>
                   label: AuthWalletEntryOption.walletConnect.label(l10n),
                   description:
                       AuthWalletEntryOption.walletConnect.description(l10n),
-                  onTap: () => setState(() => _currentStep = 3),
+                  onTap: _openExternalWalletStep,
                   isSmallScreen: isSmallScreen,
                 ),
                 _buildActionButton(
@@ -1794,7 +2122,6 @@ class _ConnectWalletState extends State<ConnectWallet>
     );
   }
 
-  // WalletConnect view - scan QR or paste URI
   Widget _buildWalletConnectView() {
     final l10n = AppLocalizations.of(context)!;
     final screenWidth = MediaQuery.of(context).size.width;
@@ -1862,152 +2189,51 @@ class _ConnectWalletState extends State<ConnectWallet>
               ),
               SizedBox(
                   height: isSmallScreen ? KubusSpacing.lg : KubusSpacing.xl),
-
-              // Supported Wallets
-              Container(
-                padding: EdgeInsets.all(
-                  isSmallScreen ? KubusSpacing.sm : KubusSpacing.md,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.1),
-                  borderRadius: KubusRadius.circular(KubusRadius.sm),
-                  border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.check_circle,
+              if (!kIsWeb)
+                Container(
+                  padding: EdgeInsets.all(
+                    isSmallScreen ? KubusSpacing.sm : KubusSpacing.md,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.1),
+                    borderRadius: KubusRadius.circular(KubusRadius.sm),
+                    border:
+                        Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.check_circle,
                             color: Colors.blue,
                             size: isSmallScreen
                                 ? KubusHeaderMetrics.actionIcon
                                 : KubusHeaderMetrics.actionIcon +
-                                    KubusSpacing.xxs),
-                        SizedBox(
+                                    KubusSpacing.xxs,
+                          ),
+                          SizedBox(
                             width: isSmallScreen
                                 ? KubusSpacing.xs
-                                : KubusSpacing.sm),
-                        Text(
-                          l10n.connectWalletWalletConnectSupportedTitle,
-                          style: KubusTypography.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onSurface,
+                                : KubusSpacing.sm,
                           ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(
-                        height:
-                            isSmallScreen ? KubusSpacing.xs : KubusSpacing.sm),
-                    Text(
-                      l10n.connectWalletWalletConnectSupportedList,
-                      style: KubusTypography.textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.7),
+                          Text(
+                            l10n.connectWalletWalletConnectSupportedTitle,
+                            style:
+                                KubusTypography.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(
-                  height: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
-
-              // Instructions
-              Text(
-                l10n.connectWalletWalletConnectHowToTitle,
-                style: KubusTypography.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-              SizedBox(
-                  height: isSmallScreen
-                      ? KubusSpacing.sm + KubusSpacing.xxs
-                      : KubusSpacing.md),
-              _buildInstructionStep('1', l10n.connectWalletWalletConnectStep1),
-              _buildInstructionStep('2', l10n.connectWalletWalletConnectStep2),
-              _buildInstructionStep('3', l10n.connectWalletWalletConnectStep3),
-              SizedBox(
-                  height: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
-
-              // Quick connect without typing
-
-              // URI Input Field
-              TextField(
-                controller: _wcUriController,
-                maxLines: isSmallScreen ? 2 : 3,
-                decoration: InputDecoration(
-                  hintText: l10n.connectWalletWalletConnectUriHint,
-                  hintStyle: KubusTypography.textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.4),
-                  ),
-                  filled: true,
-                  fillColor: Theme.of(context).colorScheme.surface,
-                  contentPadding: EdgeInsets.all(
-                    isSmallScreen
-                        ? KubusSpacing.sm + KubusSpacing.xxs
-                        : KubusSpacing.md,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: KubusRadius.circular(KubusRadius.md),
-                    borderSide: BorderSide(
-                        color: Theme.of(context).colorScheme.outline),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: KubusRadius.circular(KubusRadius.md),
-                    borderSide: BorderSide(
-                        color: Theme.of(context).colorScheme.outline),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: KubusRadius.circular(KubusRadius.md),
-                    borderSide: const BorderSide(color: Colors.blue, width: 2),
-                  ),
-                  suffixIcon: IconButton(
-                    icon: Icon(Icons.paste, size: isSmallScreen ? 18 : 20),
-                    onPressed: () async {
-                      final clipboardData =
-                          await Clipboard.getData('text/plain');
-                      final text = clipboardData?.text?.trim();
-                      if (text == null || text.isEmpty || !mounted) return;
-                      setState(() {
-                        _wcUriController.text = text;
-                      });
-                    },
-                  ),
-                ),
-                style: KubusTypography.textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-              SizedBox(
-                  height: isSmallScreen
-                      ? KubusSpacing.sm + KubusSpacing.xxs
-                      : KubusSpacing.md),
-
-              // Info Box
-              Container(
-                padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.1),
-                  borderRadius: KubusRadius.circular(KubusRadius.sm),
-                  border:
-                      Border.all(color: Colors.orange.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.info_outline,
-                        color: Colors.orange, size: isSmallScreen ? 18 : 20),
-                    SizedBox(width: isSmallScreen ? 10 : 12),
-                    Expanded(
-                      child: Text(
-                        l10n.connectWalletWalletConnectSecurityNote,
+                      SizedBox(
+                        height:
+                            isSmallScreen ? KubusSpacing.xs : KubusSpacing.sm,
+                      ),
+                      Text(
+                        l10n.connectWalletWalletConnectSupportedList,
                         style: KubusTypography.textTheme.bodySmall?.copyWith(
                           color: Theme.of(context)
                               .colorScheme
@@ -2015,58 +2241,16 @@ class _ConnectWalletState extends State<ConnectWallet>
                               .withValues(alpha: 0.7),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              SizedBox(height: isSmallScreen ? 20 : 24),
-
-              // Connect Buttons
-              if (isSmallScreen) ...[
-                KubusButton(
-                  onPressed: _isLoading ? null : _quickWalletConnect,
-                  isLoading: _isLoading,
-                  icon: Icons.flash_on_rounded,
-                  label: l10n.connectWalletWalletConnectQuickConnectLabel,
-                  isFullWidth: true,
-                  backgroundColor: const Color(0xFF3B82F6),
-                  foregroundColor: Colors.white,
+              if (!kIsWeb)
+                SizedBox(
+                  height: isSmallScreen ? KubusSpacing.md : KubusSpacing.lg,
                 ),
-                const SizedBox(height: 12),
-                KubusButton(
-                  onPressed: _isLoading ? null : _connectWithWalletConnect,
-                  isLoading: _isLoading,
-                  label: l10n.connectWalletWalletConnectConnectButton,
-                  isFullWidth: true,
-                  backgroundColor: const Color(0xFF3B82F6),
-                  foregroundColor: Colors.white,
-                ),
-              ] else ...[
-                Row(
-                  children: [
-                    Expanded(
-                      child: KubusButton(
-                        onPressed: _isLoading ? null : _scanQRCode,
-                        icon: Icons.qr_code_scanner,
-                        label: l10n.connectWalletWalletConnectScanQrButton,
-                        backgroundColor: const Color(0xFF3B82F6),
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: KubusButton(
-                        onPressed:
-                            _isLoading ? null : _connectWithWalletConnect,
-                        isLoading: _isLoading,
-                        label: l10n.connectWalletWalletConnectConnectButton,
-                        backgroundColor: const Color(0xFF3B82F6),
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+              kIsWeb
+                  ? _buildWebExternalWalletBody()
+                  : _buildNativeExternalWalletBody(),
             ],
           ),
         ),
@@ -2116,84 +2300,10 @@ class _ConnectWalletState extends State<ConnectWallet>
     );
   }
 
-  Future<void> _scanQRCode() async {
-    final l10n = AppLocalizations.of(context)!;
-    final result = await Navigator.push<String>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => Scaffold(
-          appBar: AppBar(
-            title: Text(
-              l10n.connectWalletWalletConnectScanQrTitle,
-              style: KubusTypography.inter(),
-            ),
-            backgroundColor: Colors.black,
-          ),
-          body: Stack(
-            children: [
-              MobileScanner(
-                onDetect: (capture) {
-                  final List<Barcode> barcodes = capture.barcodes;
-                  for (final barcode in barcodes) {
-                    if (barcode.rawValue != null &&
-                        barcode.rawValue!.startsWith('wc:')) {
-                      Navigator.pop(context, barcode.rawValue);
-                      break;
-                    }
-                  }
-                },
-              ),
-              Center(
-                child: Container(
-                  width: 250,
-                  height: 250,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.white, width: 2),
-                    borderRadius: BorderRadius.circular(KubusRadius.md),
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: 32,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.7),
-                      borderRadius: BorderRadius.circular(KubusRadius.xl),
-                    ),
-                    child: Text(
-                      l10n.connectWalletWalletConnectScanQrHint,
-                      style: KubusTypography.inter(
-                        color: Colors.white,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    if (result != null && mounted) {
-      setState(() {
-        _wcUriController.text = result;
-      });
-      await _connectWithWalletConnect();
-    }
-  }
-
-  Future<void> _quickWalletConnect() async {
-    await _connectWithWalletConnect();
-  }
-
-  Future<void> _connectWithWalletConnect() async {
+  Future<void> _connectExternalWallet({
+    String? browserWalletId,
+    bool preferBrowserWallet = true,
+  }) async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
 
@@ -2226,6 +2336,8 @@ class _ConnectWalletState extends State<ConnectWallet>
         context,
         allowReplacingWalletIdentity:
             (walletProvider.currentWalletAddress ?? '').trim().isEmpty,
+        browserWalletId: browserWalletId,
+        preferBrowserWallet: preferBrowserWallet,
       );
       if (!mounted) return;
       final address = result.address;
@@ -2280,7 +2392,7 @@ class _ConnectWalletState extends State<ConnectWallet>
       _closeFlow();
     } catch (e) {
       debugPrint('connectwallet: external wallet failed: $e');
-      _trackWalletAuthFailure('walletconnect_failed');
+      _trackWalletAuthFailure('external_wallet_failed');
       if (mounted) {
         setState(() {
           _isLoading = false;

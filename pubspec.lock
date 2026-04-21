@@ -129,7 +129,7 @@ packages:
     source: hosted
     version: "0.3.2"
   bs58:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: bs58
       sha256: "3ed24dadf386ca749ff50af678be1131ef569a3583a6f37b87b90c032270c767"

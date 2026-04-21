@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import '../config/config.dart';
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -39,9 +38,11 @@ class ArtworkProvider extends ChangeNotifier {
 
   bool isLoading(String operation) => _loadingStates[operation] ?? false;
 
-  /// Set SavedItemsProvider reference
-  void setSavedItemsProvider(SavedItemsProvider provider) {
+  /// Bind the saved-items provider.
+  void bindSavedItemsProvider(SavedItemsProvider provider) {
+    if (identical(_savedItemsProvider, provider)) return;
     _savedItemsProvider = provider;
+    _reconcileSavedBookmarkState();
   }
 
   /// Get artwork by ID
@@ -114,7 +115,10 @@ class ArtworkProvider extends ChangeNotifier {
 
   /// Get favorite artworks
   List<Artwork> get favoriteArtworks {
-    return _artworks.where((artwork) => artwork.isFavorite).toList();
+    return _artworks
+        .where(
+            (artwork) => artwork.isFavoriteByCurrentUser || artwork.isFavorite)
+        .toList();
   }
 
   /// Get user's own artworks (created by current user)
@@ -150,13 +154,14 @@ class ArtworkProvider extends ChangeNotifier {
 
   /// Add or update artwork
   void addOrUpdateArtwork(Artwork artwork) {
+    final nextArtwork = _mergeSavedBookmarkState(artwork);
     final index = _artworks.indexWhere((a) => a.id == artwork.id);
     if (index >= 0) {
-      _artworks[index] = artwork;
+      _artworks[index] = nextArtwork;
     } else {
-      _artworks.add(artwork);
+      _artworks.add(nextArtwork);
     }
-    _artworkById[artwork.id] = artwork;
+    _artworkById[nextArtwork.id] = nextArtwork;
     notifyListeners();
   }
 
@@ -355,54 +360,72 @@ class ArtworkProvider extends ChangeNotifier {
     }
   }
 
-  /// Add artwork to favorites
-  Future<void> toggleFavorite(String artworkId) async {
-    _setLoading('favorite_$artworkId', true);
+  /// Toggle artwork bookmark state.
+  Future<void> toggleArtworkSaved(String artworkId) async {
+    final id = artworkId.trim();
+    if (id.isEmpty) return;
+
+    _setLoading('save_$id', true);
+    final savedProvider = _savedItemsProvider;
+    final artwork = getArtworkById(id);
+    final previousSaved = savedProvider?.isArtworkSaved(id) ?? false;
+    final previousArtwork = artwork;
+    final previousTimestamp = savedProvider?.getArtworkSavedAt(id);
+    final nextSaved = !previousSaved;
+    final nextTimestamp = DateTime.now();
+
     try {
-      final artwork = getArtworkById(artworkId);
-      if (artwork != null) {
-        final isAddingToFavorites = !artwork.isFavoriteByCurrentUser;
-        final newStatus = artwork.isFavorite
-            ? ArtworkStatus.discovered
-            : ArtworkStatus.favorite;
-
-        final updatedArtwork = artwork.copyWith(
-          status: newStatus,
-          isFavoriteByCurrentUser: !artwork.isFavoriteByCurrentUser,
+      if (savedProvider != null) {
+        await savedProvider.setArtworkSaved(
+          id,
+          nextSaved,
+          timestamp: nextSaved ? nextTimestamp : null,
         );
-        addOrUpdateArtwork(updatedArtwork);
+      }
 
-        // Sync with SavedItemsProvider
-        if (_savedItemsProvider != null) {
-          await _savedItemsProvider!.toggleArtworkSaved(artworkId);
+      if (artwork != null) {
+        addOrUpdateArtwork(
+          artwork.copyWith(
+            isFavoriteByCurrentUser: nextSaved,
+          ),
+        );
+      }
+
+      if (nextSaved) {
+        UserActionLogger.logArtworkSave(
+          artworkId: id,
+          artworkTitle: artwork?.title ?? id,
+          artistName: artwork?.artist,
+        );
+      }
+
+      try {
+        if (nextSaved) {
+          await _backendApi.bookmarkArtwork(id);
+        } else {
+          await _backendApi.unbookmarkArtwork(id);
         }
-
-        if (isAddingToFavorites) {
-          UserActionLogger.logArtworkSave(
-            artworkId: artwork.id,
-            artworkTitle: artwork.title,
-            artistName: artwork.artist,
+      } catch (e) {
+        if (savedProvider != null) {
+          await savedProvider.setArtworkSaved(
+            id,
+            previousSaved,
+            timestamp: previousSaved ? previousTimestamp : null,
           );
         }
-
-        try {
-          if (isAddingToFavorites) {
-            await _backendApi.bookmarkArtwork(artworkId);
-          } else {
-            await _backendApi.unbookmarkArtwork(artworkId);
-          }
-        } catch (e) {
-          if (AppConfig.enableDebugPrints) {
-            AppConfig.debugPrint(
-              'ArtworkProvider.toggleFavorite: bookmark sync failed, keeping local state: $e',
-            );
-          }
+        if (previousArtwork != null) {
+          addOrUpdateArtwork(
+            previousArtwork.copyWith(
+              isFavoriteByCurrentUser: previousSaved,
+            ),
+          );
         }
+        rethrow;
       }
     } catch (e) {
-      _setError('Failed to toggle favorite: $e');
+      _setError('Failed to toggle artwork saved: $e');
     } finally {
-      _setLoading('favorite_$artworkId', false);
+      _setLoading('save_$id', false);
     }
   }
 
@@ -422,7 +445,14 @@ class ArtworkProvider extends ChangeNotifier {
         // Auto-save discovered artwork
         if (_savedItemsProvider != null &&
             !_savedItemsProvider!.isArtworkSaved(artworkId)) {
-          await _savedItemsProvider!.toggleArtworkSaved(artworkId);
+          await _savedItemsProvider!.setArtworkSaved(
+            artworkId,
+            true,
+            timestamp: DateTime.now(),
+          );
+          addOrUpdateArtwork(
+            updatedArtwork.copyWith(isFavoriteByCurrentUser: true),
+          );
         }
 
         // Sync with backend and reconcile server discovery count.
@@ -655,12 +685,13 @@ class ArtworkProvider extends ChangeNotifier {
         _walletsWithPublicArtworks.clear();
       }
       final artworks = await _backendApi.getArtworks(limit: 100);
+      final merged = artworks.map(_mergeSavedBookmarkState).toList();
       _artworks
         ..clear()
-        ..addAll(artworks);
+        ..addAll(merged);
       _artworkById
         ..clear()
-        ..addEntries(artworks.map((a) => MapEntry(a.id, a)));
+        ..addEntries(merged.map((a) => MapEntry(a.id, a)));
       _comments.clear();
 
       notifyListeners();
@@ -696,13 +727,14 @@ class ArtworkProvider extends ChangeNotifier {
       );
       bool updated = false;
       for (final artwork in walletArtworks) {
+        final merged = _mergeSavedBookmarkState(artwork);
         final index = _artworks.indexWhere((a) => a.id == artwork.id);
         if (index >= 0) {
-          _artworks[index] = artwork;
+          _artworks[index] = merged;
         } else {
-          _artworks.add(artwork);
+          _artworks.add(merged);
         }
-        _artworkById[artwork.id] = artwork;
+        _artworkById[merged.id] = merged;
         updated = true;
       }
       cacheSet.add(cacheKey);
@@ -878,6 +910,35 @@ class ArtworkProvider extends ChangeNotifier {
       }
       return withReplies;
     }).toList();
+  }
+
+  Artwork _mergeSavedBookmarkState(Artwork artwork) {
+    final savedProvider = _savedItemsProvider;
+    if (savedProvider == null) return artwork;
+    final isSaved = savedProvider.isArtworkSaved(artwork.id);
+    if (artwork.isFavoriteByCurrentUser == isSaved) {
+      return artwork;
+    }
+    return artwork.copyWith(isFavoriteByCurrentUser: isSaved);
+  }
+
+  void _reconcileSavedBookmarkState() {
+    final savedProvider = _savedItemsProvider;
+    if (savedProvider == null || _artworks.isEmpty) return;
+
+    var changed = false;
+    for (var i = 0; i < _artworks.length; i++) {
+      final artwork = _artworks[i];
+      final merged = _mergeSavedBookmarkState(artwork);
+      if (identical(merged, artwork)) continue;
+      _artworks[i] = merged;
+      _artworkById[merged.id] = merged;
+      changed = true;
+    }
+
+    if (changed) {
+      notifyListeners();
+    }
   }
 }
 

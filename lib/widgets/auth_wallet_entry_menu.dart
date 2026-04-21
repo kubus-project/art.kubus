@@ -39,7 +39,7 @@ extension AuthWalletEntryOptionX on AuthWalletEntryOption {
   IconData get icon {
     switch (this) {
       case AuthWalletEntryOption.walletConnect:
-        return Icons.qr_code_2_outlined;
+        return Icons.account_balance_wallet_outlined;
       case AuthWalletEntryOption.createNewWallet:
         return Icons.add_circle_outline_rounded;
       case AuthWalletEntryOption.linkExistingWallet:
