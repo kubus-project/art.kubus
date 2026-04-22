@@ -1043,10 +1043,22 @@ abstract class AppLocalizations {
   /// **'Google sign-in is disabled.'**
   String get authGoogleSignInDisabled;
 
+  /// No description provided for @authGoogleUnavailableError.
+  ///
+  /// In en, this message translates to:
+  /// **'Google sign-in was cancelled or is unavailable right now.'**
   String get authGoogleUnavailableError;
 
+  /// No description provided for @authGoogleConnectingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting…'**
   String get authGoogleConnectingLabel;
 
+  /// No description provided for @authContinueWithGoogleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Google'**
   String get authContinueWithGoogleLabel;
 
   /// No description provided for @authWalletConnectionDisabled.
@@ -1319,6 +1331,10 @@ abstract class AppLocalizations {
   /// **'Google sign-in failed. Please try again.'**
   String get authGoogleSignInFailed;
 
+  /// No description provided for @authSignerProvisioningFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Signer-backed wallet provisioning failed.'**
   String get authSignerProvisioningFailed;
 
   /// No description provided for @authGoogleRateLimitedRetryIn.
@@ -3349,12 +3365,28 @@ abstract class AppLocalizations {
   /// **'Connect your wallet to continue.'**
   String get walletActionConnectWalletRequiredToast;
 
+  /// No description provided for @walletActionAccountShellNeedsWalletToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account is signed in, but this device still needs the wallet restored or connected before this action can continue.'**
   String get walletActionAccountShellNeedsWalletToast;
 
+  /// No description provided for @walletActionEncryptedBackupRestoreToast.
+  ///
+  /// In en, this message translates to:
+  /// **'An encrypted backup is available. Restore the signer on this device before continuing.'**
   String get walletActionEncryptedBackupRestoreToast;
 
+  /// No description provided for @walletActionRecoveryNeededToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore your wallet signer on this device before continuing.'**
   String get walletActionRecoveryNeededToast;
 
+  /// No description provided for @walletActionReadOnlyReconnectToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnect with your wallet provider or restore the signer on this device before continuing.'**
   String get walletActionReadOnlyReconnectToast;
 
   /// No description provided for @settingsNetworkTileTitle.
@@ -3399,6 +3431,12 @@ abstract class AppLocalizations {
   /// **'No wallet connected yet'**
   String get settingsBackupStatusNoWallet;
 
+  /// No description provided for @settingsBackupStatusAccountShellOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Account wallet has not been restored on this device yet'**
+  String get settingsBackupStatusAccountShellOnly;
+
   /// No description provided for @settingsBackupStatusNoBackup.
   ///
   /// In en, this message translates to:
@@ -3429,6 +3467,10 @@ abstract class AppLocalizations {
   /// **'Read-only wallet session on this device'**
   String get settingsBackupStatusReadOnly;
 
+  /// No description provided for @settingsBackupStatusEncryptedBackupRestoreAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypted backup available to restore signing on this device'**
   String get settingsBackupStatusEncryptedBackupRestoreAvailable;
 
   /// No description provided for @settingsExportRecoveryPhraseTileTitle.
@@ -9389,6 +9431,10 @@ abstract class AppLocalizations {
   /// **'We will create a new non-custodial wallet on this device for your art.kubus account. Back up the recovery phrase right away to protect long-term access.'**
   String get connectWalletCreateDescription;
 
+  /// No description provided for @connectWalletCreateMissingBackupError.
+  ///
+  /// In en, this message translates to:
+  /// **'Created wallet is missing backup details.'**
   String get connectWalletCreateMissingBackupError;
 
   /// No description provided for @connectWalletCreateInfoTitle.
@@ -9775,18 +9821,46 @@ abstract class AppLocalizations {
   /// **'Connect or restore your account wallet to get started.'**
   String get walletHomeNoWalletDescription;
 
+  /// No description provided for @walletHomeSignedOutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No wallet connected'**
   String get walletHomeSignedOutTitle;
 
+  /// No description provided for @walletHomeSignedOutDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in and connect or restore your wallet to view balances, collectibles, and wallet-protected actions.'**
   String get walletHomeSignedOutDescription;
 
+  /// No description provided for @walletHomeAccountShellTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account signed in, wallet not restored'**
   String get walletHomeAccountShellTitle;
 
+  /// No description provided for @walletHomeAccountShellDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account session is available, but this device still needs the wallet restored or connected before wallet activity can continue.'**
   String get walletHomeAccountShellDescription;
 
+  /// No description provided for @walletHomeRestoreWalletAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore wallet'**
   String get walletHomeRestoreWalletAction;
 
+  /// No description provided for @walletHomeCreateWalletAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Create wallet'**
   String get walletHomeCreateWalletAction;
 
+  /// No description provided for @walletHomeImportWalletAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Import wallet'**
   String get walletHomeImportWalletAction;
 
   /// No description provided for @walletHomeAlreadyConnectedToast.
@@ -9801,6 +9875,10 @@ abstract class AppLocalizations {
   /// **'Total balance'**
   String get walletHomeTotalBalanceLabel;
 
+  /// No description provided for @walletHomeDesktopSurfaceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Desktop wallet'**
   String get walletHomeDesktopSurfaceLabel;
 
   /// No description provided for @walletHomeAddressLabel.
@@ -9851,20 +9929,52 @@ abstract class AppLocalizations {
   /// **'Send, receive, swap, or open collectibles from one place.'**
   String get walletHomeQuickActionsSubtitle;
 
+  /// No description provided for @walletHomeSendAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
   String get walletHomeSendAction;
 
+  /// No description provided for @walletHomeReceiveAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Receive'**
   String get walletHomeReceiveAction;
 
+  /// No description provided for @walletHomeSwapAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Swap'**
   String get walletHomeSwapAction;
 
+  /// No description provided for @walletHomeBuyAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy crypto'**
   String get walletHomeBuyAction;
 
+  /// No description provided for @walletHomeDesktopSendSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer tokens'**
   String get walletHomeDesktopSendSubtitle;
 
+  /// No description provided for @walletHomeDesktopReceiveSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Get your address'**
   String get walletHomeDesktopReceiveSubtitle;
 
+  /// No description provided for @walletHomeDesktopSwapSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Exchange tokens'**
   String get walletHomeDesktopSwapSubtitle;
 
+  /// No description provided for @walletHomeDesktopBuySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add funds'**
   String get walletHomeDesktopBuySubtitle;
 
   /// No description provided for @walletHomeYourTokensTitle.
@@ -9903,32 +10013,88 @@ abstract class AppLocalizations {
   /// **'Latest wallet activity and confirmations.'**
   String get walletHomeRecentTransactionsSubtitle;
 
+  /// No description provided for @walletHomeDesktopRecentActivityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent activity'**
   String get walletHomeDesktopRecentActivityTitle;
 
+  /// No description provided for @walletHomeDesktopTabAssets.
+  ///
+  /// In en, this message translates to:
+  /// **'Assets'**
   String get walletHomeDesktopTabAssets;
 
+  /// No description provided for @walletHomeDesktopTabActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity'**
   String get walletHomeDesktopTabActivity;
 
+  /// No description provided for @walletHomeDesktopTabNfts.
+  ///
+  /// In en, this message translates to:
+  /// **'NFTs'**
   String get walletHomeDesktopTabNfts;
 
+  /// No description provided for @walletHomeDesktopTabStaking.
+  ///
+  /// In en, this message translates to:
+  /// **'Staking'**
   String get walletHomeDesktopTabStaking;
 
+  /// No description provided for @walletHomeNftLoadFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load NFTs'**
   String get walletHomeNftLoadFailedTitle;
 
+  /// No description provided for @walletHomeNoCollectiblesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Mint or purchase NFTs to see them here.'**
   String get walletHomeNoCollectiblesDescription;
 
+  /// No description provided for @walletHomeCollectibleByline.
+  ///
+  /// In en, this message translates to:
+  /// **'by {creator}'**
   String walletHomeCollectibleByline(Object creator);
 
+  /// No description provided for @walletHomeRewardsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'KUB8 rewards'**
   String get walletHomeRewardsTitle;
 
+  /// No description provided for @walletHomeRewardsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'{balance} KUB8 available from achievements'**
   String walletHomeRewardsDescription(Object balance);
 
+  /// No description provided for @walletHomeStakeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Stake SOL for gas savings'**
   String get walletHomeStakeTitle;
 
+  /// No description provided for @walletHomeStakeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Lock SOL to cover future transaction fees and keep your gallery publishing smooth.'**
   String get walletHomeStakeDescription;
 
+  /// No description provided for @walletHomeStakeAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Stake now'**
   String get walletHomeStakeAction;
 
+  /// No description provided for @walletHomeRefreshRatesAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh rates'**
   String get walletHomeRefreshRatesAction;
 
   /// No description provided for @walletHomeApproxTotalValue.
@@ -10332,6 +10498,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sent {amount} {token} successfully'**
   String sendTokenSendSuccessToast(Object amount, Object token);
+
+  /// No description provided for @sendTokenSendSuccessWithSignatureToast.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} {token} submitted. Tx: {signature}'**
+  String sendTokenSendSuccessWithSignatureToast(Object amount, Object token, Object signature);
 
   /// No description provided for @sendTokenSendFailedToast.
   ///
@@ -15259,6 +15431,18 @@ abstract class AppLocalizations {
   /// **'Connect or restore the wallet on this device before managing backup protection.'**
   String get walletBackupProtectionNoWalletBody;
 
+  /// No description provided for @walletBackupProtectionAccountShellHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account is ready, but this device does not have a wallet signer yet.'**
+  String get walletBackupProtectionAccountShellHeadline;
+
+  /// No description provided for @walletBackupProtectionAccountShellBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore the account wallet on this device before you configure wallet backup protection, transfers, or future wallet-linked access.'**
+  String get walletBackupProtectionAccountShellBody;
+
   /// No description provided for @walletBackupProtectionNoBackupHeadline.
   ///
   /// In en, this message translates to:
@@ -15295,8 +15479,16 @@ abstract class AppLocalizations {
   /// **'Keep the encrypted backup recovery password stored separately from the recovery phrase so both recovery paths remain usable.'**
   String get walletBackupProtectionEncryptedBody;
 
+  /// No description provided for @walletBackupProtectionEncryptedRestoreHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypted backup is available, but signing is not restored on this device.'**
   String get walletBackupProtectionEncryptedRestoreHeadline;
 
+  /// No description provided for @walletBackupProtectionEncryptedRestoreBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Use the encrypted backup to restore signer access on this device before transfers and other wallet-protected actions.'**
   String get walletBackupProtectionEncryptedRestoreBody;
 
   /// No description provided for @walletBackupProtectionPasskeyHeadline.
@@ -15857,74 +16049,376 @@ abstract class AppLocalizations {
   /// **'Reconnect with your wallet provider to enable signing.'**
   String get walletReconnectManualRequiredToast;
 
+  /// No description provided for @walletSwapTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Token swap'**
   String get walletSwapTitle;
 
+  /// No description provided for @walletSwapSwitchTokensTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch tokens'**
   String get walletSwapSwitchTokensTooltip;
 
+  /// No description provided for @walletSwapNoTokensTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No tradable tokens yet'**
   String get walletSwapNoTokensTitle;
 
+  /// No description provided for @walletSwapNoTokensDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Add funds or receive tokens to enable swaps. Once you hold supported assets they will appear here automatically.'**
   String get walletSwapNoTokensDescription;
 
+  /// No description provided for @walletSwapYouPayLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'You pay'**
   String get walletSwapYouPayLabel;
 
+  /// No description provided for @walletSwapYouReceiveLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'You receive'**
   String get walletSwapYouReceiveLabel;
 
+  /// No description provided for @walletSwapMaxAction.
+  ///
+  /// In en, this message translates to:
+  /// **'MAX'**
   String get walletSwapMaxAction;
 
+  /// No description provided for @walletSwapAmountPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'0.0'**
   String get walletSwapAmountPlaceholder;
 
+  /// No description provided for @walletSwapSelectTokenAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Select'**
   String get walletSwapSelectTokenAction;
 
+  /// No description provided for @walletSwapBalanceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Balance: {balance}'**
   String walletSwapBalanceLabel(Object balance);
 
+  /// No description provided for @walletSwapInvalidAmountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid amount'**
   String get walletSwapInvalidAmountTitle;
 
+  /// No description provided for @walletSwapRouteUnavailableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to fetch route'**
   String get walletSwapRouteUnavailableTitle;
 
+  /// No description provided for @walletSwapSearchingRouteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching best route on Jupiter…'**
   String get walletSwapSearchingRouteLabel;
 
+  /// No description provided for @walletSwapEnterAmountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an amount'**
   String get walletSwapEnterAmountTitle;
 
+  /// No description provided for @walletSwapEnterAmountDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'We will fetch live quotes with fees and minimum received once you type an amount.'**
   String get walletSwapEnterAmountDescription;
 
+  /// No description provided for @walletSwapQuotePreviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Quote preview'**
   String get walletSwapQuotePreviewTitle;
 
+  /// No description provided for @walletSwapEstimatedOutputLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated output'**
   String get walletSwapEstimatedOutputLabel;
 
+  /// No description provided for @walletSwapMinReceivedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Min received (after slippage)'**
   String get walletSwapMinReceivedLabel;
 
+  /// No description provided for @walletSwapPriceImpactLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Price impact'**
   String get walletSwapPriceImpactLabel;
 
+  /// No description provided for @walletSwapSlippageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Slippage'**
   String get walletSwapSlippageLabel;
 
+  /// No description provided for @walletSwapProtocolFeeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Protocol fee'**
   String get walletSwapProtocolFeeLabel;
 
+  /// No description provided for @walletSwapProtocolFeeValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% applied to output token'**
   String walletSwapProtocolFeeValue(Object percent);
 
+  /// No description provided for @walletSwapRouteFallbackLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Route'**
   String get walletSwapRouteFallbackLabel;
 
+  /// No description provided for @walletSwapSlippageToleranceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Slippage tolerance'**
   String get walletSwapSlippageToleranceLabel;
 
+  /// No description provided for @walletSwapEnterAmountCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter amount'**
   String get walletSwapEnterAmountCta;
 
+  /// No description provided for @walletSwapSubmitLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Swap {fromToken} → {toToken}'**
   String walletSwapSubmitLabel(Object fromToken, Object toToken);
 
+  /// No description provided for @walletSwapNoHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No swaps yet'**
   String get walletSwapNoHistoryTitle;
 
+  /// No description provided for @walletSwapNoHistoryDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Executed swaps will appear here with detailed status once completed.'**
   String get walletSwapNoHistoryDescription;
 
+  /// No description provided for @walletSwapPositiveAmountError.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a positive amount'**
   String get walletSwapPositiveAmountError;
 
+  /// No description provided for @walletSwapPositiveAmountDetailedError.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an amount greater than zero'**
   String get walletSwapPositiveAmountDetailedError;
 
+  /// No description provided for @walletSwapSelectTokensError.
+  ///
+  /// In en, this message translates to:
+  /// **'Select both tokens to continue'**
   String get walletSwapSelectTokensError;
 
+  /// No description provided for @walletSwapDifferentTokensError.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose two different tokens'**
   String get walletSwapDifferentTokensError;
 
+  /// No description provided for @walletSwapSubmittedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Swap submitted: {fromToken} → {toToken}'**
   String walletSwapSubmittedToast(Object fromToken, Object toToken);
 
+  /// No description provided for @walletSwapSubmittedToastWithSignature.
+  ///
+  /// In en, this message translates to:
+  /// **'Swap submitted: {fromToken} → {toToken}. Tx: {signature}'**
+  String walletSwapSubmittedToastWithSignature(Object fromToken, Object toToken, Object signature);
+
+  /// No description provided for @walletTransactionConfirmationsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} confirmations'**
+  String walletTransactionConfirmationsLabel(int count);
+
+  /// No description provided for @walletTransactionExplorerAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Open explorer'**
+  String get walletTransactionExplorerAction;
+
+  /// No description provided for @walletTransactionSignatureLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction ID'**
+  String get walletTransactionSignatureLabel;
+
+  /// No description provided for @walletTransactionFromLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get walletTransactionFromLabel;
+
+  /// No description provided for @walletTransactionToLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get walletTransactionToLabel;
+
+  /// No description provided for @walletTransactionCounterpartyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Counterparty'**
+  String get walletTransactionCounterpartyLabel;
+
+  /// No description provided for @walletTransactionSlotLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Slot'**
+  String get walletTransactionSlotLabel;
+
+  /// No description provided for @walletTransactionFinalityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Finality'**
+  String get walletTransactionFinalityLabel;
+
+  /// No description provided for @walletTransactionNetworkFeeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Network fee'**
+  String get walletTransactionNetworkFeeLabel;
+
+  /// No description provided for @walletTransactionAssetChangesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Asset changes'**
+  String get walletTransactionAssetChangesLabel;
+
+  /// No description provided for @walletTransactionRelatedActionsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Related actions'**
+  String get walletTransactionRelatedActionsLabel;
+
+  /// No description provided for @walletTransactionCopiedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction ID copied.'**
+  String get walletTransactionCopiedToast;
+
+  /// No description provided for @walletTransactionExplorerUnavailableToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to open explorer.'**
+  String get walletTransactionExplorerUnavailableToast;
+
+  /// No description provided for @walletTransactionFeeTransferTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Fee transfer'**
+  String get walletTransactionFeeTransferTitle;
+
+  /// No description provided for @walletTransactionMovedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved'**
+  String get walletTransactionMovedTitle;
+
+  /// No description provided for @walletTransactionSwapSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{fromToken} to {toToken}'**
+  String walletTransactionSwapSubtitle(Object fromToken, Object toToken);
+
+  /// No description provided for @walletTransactionStatusSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Submitted'**
+  String get walletTransactionStatusSubmitted;
+
+  /// No description provided for @walletTransactionStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get walletTransactionStatusPending;
+
+  /// No description provided for @walletTransactionStatusConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmed'**
+  String get walletTransactionStatusConfirmed;
+
+  /// No description provided for @walletTransactionStatusFinalized.
+  ///
+  /// In en, this message translates to:
+  /// **'Finalized'**
+  String get walletTransactionStatusFinalized;
+
+  /// No description provided for @walletTransactionStatusFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get walletTransactionStatusFailed;
+
+  /// No description provided for @walletTransactionFinalityUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown'**
+  String get walletTransactionFinalityUnknown;
+
+  /// No description provided for @walletTransactionFinalityProcessed.
+  ///
+  /// In en, this message translates to:
+  /// **'Processed'**
+  String get walletTransactionFinalityProcessed;
+
+  /// No description provided for @walletTransactionFinalityConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmed'**
+  String get walletTransactionFinalityConfirmed;
+
+  /// No description provided for @walletTransactionFinalityFinalized.
+  ///
+  /// In en, this message translates to:
+  /// **'Finalized'**
+  String get walletTransactionFinalityFinalized;
+
+  /// No description provided for @walletTransactionCopySignatureTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy transaction ID'**
+  String get walletTransactionCopySignatureTooltip;
+
+  /// No description provided for @walletSwapFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Swap failed: {message}'**
   String walletSwapFailedToast(Object message);
 
+  /// No description provided for @walletSwapTokenOptionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{symbol} • Balance {balance}'**
   String walletSwapTokenOptionSubtitle(Object symbol, Object balance);
 
   /// No description provided for @manageMarkersTitle.

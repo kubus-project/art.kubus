@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 class WalletBackupStatusSnapshot {
   const WalletBackupStatusSnapshot({
     required this.walletAddress,
+    required this.hasAccountSession,
     required this.hasWalletIdentity,
     required this.hasSigner,
     required this.isReadOnlySession,
@@ -17,6 +18,7 @@ class WalletBackupStatusSnapshot {
 
   const WalletBackupStatusSnapshot.noWallet()
       : walletAddress = null,
+        hasAccountSession = false,
         hasWalletIdentity = false,
         hasSigner = false,
         isReadOnlySession = false,
@@ -26,6 +28,7 @@ class WalletBackupStatusSnapshot {
         encryptedBackupStatusKnown = true;
 
   final String? walletAddress;
+  final bool hasAccountSession;
   final bool hasWalletIdentity;
   final bool hasSigner;
   final bool isReadOnlySession;
@@ -41,6 +44,9 @@ class WalletBackupStatusSnapshot {
 
   _WalletBackupStatusKind get _statusKind {
     if (!hasWalletIdentity) {
+      if (hasAccountSession) {
+        return _WalletBackupStatusKind.accountShellOnly;
+      }
       return _WalletBackupStatusKind.noWallet;
     }
     if (needsSignerRestore && hasEncryptedServerBackup) {
@@ -65,6 +71,8 @@ class WalletBackupStatusSnapshot {
     switch (_statusKind) {
       case _WalletBackupStatusKind.noWallet:
         return l10n.settingsBackupStatusNoWallet;
+      case _WalletBackupStatusKind.accountShellOnly:
+        return l10n.settingsBackupStatusAccountShellOnly;
       case _WalletBackupStatusKind.encryptedBackupRestoreAvailable:
         return l10n.settingsBackupStatusEncryptedBackupRestoreAvailable;
       case _WalletBackupStatusKind.readOnly:
@@ -84,6 +92,8 @@ class WalletBackupStatusSnapshot {
     switch (_statusKind) {
       case _WalletBackupStatusKind.noWallet:
         return l10n.walletBackupProtectionNoWalletHeadline;
+      case _WalletBackupStatusKind.accountShellOnly:
+        return l10n.walletBackupProtectionAccountShellHeadline;
       case _WalletBackupStatusKind.encryptedBackupRestoreAvailable:
         return l10n.walletBackupProtectionEncryptedRestoreHeadline;
       case _WalletBackupStatusKind.readOnly:
@@ -103,6 +113,8 @@ class WalletBackupStatusSnapshot {
     switch (_statusKind) {
       case _WalletBackupStatusKind.noWallet:
         return l10n.walletBackupProtectionNoWalletBody;
+      case _WalletBackupStatusKind.accountShellOnly:
+        return l10n.walletBackupProtectionAccountShellBody;
       case _WalletBackupStatusKind.encryptedBackupRestoreAvailable:
         return l10n.walletBackupProtectionEncryptedRestoreBody;
       case _WalletBackupStatusKind.readOnly:
@@ -121,6 +133,7 @@ class WalletBackupStatusSnapshot {
 
 enum _WalletBackupStatusKind {
   noWallet,
+  accountShellOnly,
   encryptedBackupRestoreAvailable,
   readOnly,
   recoveryPhraseRequired,
@@ -179,6 +192,7 @@ class WalletBackupStatusResolver {
 
     return WalletBackupStatusSnapshot(
       walletAddress: resolvedWallet.isEmpty ? null : resolvedWallet,
+      hasAccountSession: walletProvider.authority.hasAccountSession,
       hasWalletIdentity: hasWalletIdentity,
       hasSigner: walletProvider.hasSigner,
       isReadOnlySession: walletProvider.isReadOnlySession,

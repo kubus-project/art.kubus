@@ -22,6 +22,7 @@ import '../../../widgets/glass_components.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 import '../../../widgets/wallet_custody_status_panel.dart';
+import '../../../widgets/wallet_transaction_card.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 /// Desktop wallet screen with professional dashboard layout
@@ -1280,60 +1281,9 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
               horizontal: DetailSpacing.xl, vertical: DetailSpacing.lg),
           itemBuilder: (context, index) {
             final tx = transactions[index];
-            final color = _transactionColor(tx.type);
-            return DesktopCard(
-              onTap: () => Clipboard.setData(ClipboardData(text: tx.txHash)),
-              child: Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(DetailRadius.md),
-                    ),
-                    child: Icon(
-                      _transactionIcon(tx.type),
-                      color: color,
-                    ),
-                  ),
-                  SizedBox(width: DetailSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          tx.displayTitle,
-                          style: DetailTypography.cardTitle(context),
-                        ),
-                        SizedBox(height: DetailSpacing.xs),
-                        Text(
-                          tx.shortAddress.isNotEmpty
-                              ? tx.shortAddress
-                              : tx.txHash.substring(0, 10),
-                          style: DetailTypography.caption(context),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        '${tx.formattedAmount} ${tx.token}',
-                        style: DetailTypography.cardTitle(context).copyWith(
-                          color: color,
-                        ),
-                      ),
-                      SizedBox(height: DetailSpacing.xs),
-                      Text(
-                        tx.timeAgo,
-                        style: DetailTypography.caption(context),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+            return WalletTransactionCard(
+              transaction: tx,
+              margin: EdgeInsets.zero,
             );
           },
           separatorBuilder: (_, __) => SizedBox(height: DetailSpacing.md),
@@ -1630,53 +1580,10 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
           )
         else
           ...recentTransactions.map((tx) {
-            final color = _transactionColor(tx.type);
-            return DesktopCard(
+            return WalletTransactionCard(
+              transaction: tx,
+              compact: true,
               margin: EdgeInsets.only(bottom: DetailSpacing.md),
-              onTap: () => Clipboard.setData(ClipboardData(text: tx.txHash)),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(DetailRadius.md),
-                    ),
-                    child: Icon(
-                      _transactionIcon(tx.type),
-                      color: color,
-                      size: 20,
-                    ),
-                  ),
-                  SizedBox(width: DetailSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          tx.displayTitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: DetailTypography.cardTitle(context),
-                        ),
-                        SizedBox(height: DetailSpacing.xs),
-                        Text(
-                          tx.timeAgo,
-                          style: DetailTypography.caption(context),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Text(
-                    '${tx.formattedAmount} ${tx.token}',
-                    style: DetailTypography.caption(context).copyWith(
-                      color: color,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
             );
           }),
       ],
@@ -1770,40 +1677,6 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
         ],
       ),
     );
-  }
-
-  IconData _transactionIcon(TransactionType type) {
-    switch (type) {
-      case TransactionType.send:
-        return Icons.arrow_outward;
-      case TransactionType.receive:
-        return Icons.arrow_downward;
-      case TransactionType.swap:
-        return Icons.swap_horiz;
-      case TransactionType.stake:
-        return Icons.savings;
-      case TransactionType.unstake:
-        return Icons.lock_open;
-      case TransactionType.governanceVote:
-        return Icons.how_to_vote;
-    }
-  }
-
-  Color _transactionColor(TransactionType type) {
-    switch (type) {
-      case TransactionType.send:
-        return const Color(0xFFEF4444);
-      case TransactionType.receive:
-        return const Color(0xFF22C55E);
-      case TransactionType.swap:
-        return const Color(0xFF6366F1);
-      case TransactionType.stake:
-        return const Color(0xFF10B981);
-      case TransactionType.unstake:
-        return const Color(0xFFEAB308);
-      case TransactionType.governanceVote:
-        return const Color(0xFF3B82F6);
-    }
   }
 
   String _truncateAddress(String address) {

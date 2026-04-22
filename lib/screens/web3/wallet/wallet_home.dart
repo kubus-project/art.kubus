@@ -15,7 +15,9 @@ import 'receive_token_screen.dart';
 import '../../settings_screen.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/common/keyboard_inset_padding.dart';
+import '../../../widgets/glass_components.dart';
 import '../../../widgets/wallet_custody_status_panel.dart';
+import '../../../widgets/wallet_transaction_card.dart';
 import '../../../utils/app_color_utils.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/utils/wallet_reconnect_action.dart';
@@ -208,201 +210,181 @@ class _WalletHomeState extends State<WalletHome> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Wallet Balance Card
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.all(
-                        isSmallScreen
-                            ? KubusSpacing.lg
-                            : KubusChromeMetrics.cardPadding,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppColorUtils.amberAccent,
-                            AppColorUtils.amberAccent.withValues(alpha: 0.8),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+                    LiquidGlassCard(
+                      padding: EdgeInsets.zero,
+                      borderRadius: BorderRadius.circular(KubusRadius.xl),
+                      child: Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.all(
+                          isSmallScreen
+                              ? KubusSpacing.lg
+                              : KubusChromeMetrics.cardPadding,
                         ),
-                        borderRadius: BorderRadius.circular(KubusRadius.xl),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColorUtils.amberAccent
-                                .withValues(alpha: 0.3),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: <Color>[
+                              Theme.of(context)
+                                  .colorScheme
+                                  .primaryContainer
+                                  .withValues(alpha: 0.94),
+                              Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest
+                                  .withValues(alpha: 0.82),
+                              Theme.of(context)
+                                  .colorScheme
+                                  .surface
+                                  .withValues(alpha: 0.72),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                l10n.walletHomeTotalBalanceLabel,
-                                style: KubusTypography.inter(
-                                  fontSize: KubusHeaderMetrics.sectionSubtitle,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.8),
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: () {
-                                  // Show full address and copy to clipboard
-                                  final address =
-                                      wallet?.address ?? walletAddress ?? '';
-                                  ScaffoldMessenger.of(context)
-                                      .showKubusSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                          l10n.walletHomeAddressLabel(address)),
-                                      action: SnackBarAction(
-                                        label: l10n.commonCopy,
-                                        onPressed: () async {
-                                          await Clipboard.setData(
-                                              ClipboardData(text: address));
-                                          if (context.mounted) {
-                                            ScaffoldMessenger.of(context)
-                                                .showKubusSnackBar(
-                                              SnackBar(
-                                                content: Text(l10n
-                                                    .walletHomeAddressCopiedToast),
-                                                duration:
-                                                    const Duration(seconds: 2),
-                                              ),
-                                            );
-                                          }
-                                        },
-                                      ),
-                                    ),
-                                  );
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal:
-                                        KubusSpacing.md - KubusSpacing.xxs,
-                                    vertical:
-                                        KubusSpacing.xxs + KubusSpacing.xxs,
-                                  ),
-                                  decoration: BoxDecoration(
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  l10n.walletHomeTotalBalanceLabel,
+                                  style: KubusTextStyles.sectionSubtitle.copyWith(
                                     color: Theme.of(context)
                                         .colorScheme
-                                        .onPrimary
-                                        .withValues(alpha: 0.2),
-                                    borderRadius:
-                                        BorderRadius.circular(KubusRadius.xl),
+                                        .onSurface
+                                        .withValues(alpha: 0.76),
                                   ),
-                                  child: Text(
-                                    wallet?.shortAddress ??
-                                        _shortenAddress(walletAddress ?? ''),
-                                    style: KubusTypography.inter(
-                                      fontSize:
-                                          KubusHeaderMetrics.sectionSubtitle,
+                                ),
+                                GestureDetector(
+                                  onTap: () {
+                                    final address =
+                                        wallet?.address ?? walletAddress ?? '';
+                                    ScaffoldMessenger.of(context)
+                                        .showKubusSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          l10n.walletHomeAddressLabel(address),
+                                        ),
+                                        action: SnackBarAction(
+                                          label: l10n.commonCopy,
+                                          onPressed: () async {
+                                            await Clipboard.setData(
+                                              ClipboardData(text: address),
+                                            );
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(context)
+                                                  .showKubusSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    l10n
+                                                        .walletHomeAddressCopiedToast,
+                                                  ),
+                                                  duration: const Duration(
+                                                    seconds: 2,
+                                                  ),
+                                                ),
+                                              );
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: KubusSpacing.md,
+                                      vertical: KubusSpacing.xs,
+                                    ),
+                                    decoration: BoxDecoration(
                                       color: Theme.of(context)
                                           .colorScheme
-                                          .onSurface,
-                                      fontWeight: FontWeight.w500,
+                                          .surface
+                                          .withValues(alpha: 0.62),
+                                      borderRadius:
+                                          BorderRadius.circular(KubusRadius.xl),
+                                      border: Border.all(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .outline
+                                            .withValues(alpha: 0.12),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      wallet?.shortAddress ??
+                                          _shortenAddress(walletAddress ?? ''),
+                                      style:
+                                          KubusTextStyles.detailLabel.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface,
+                                        fontWeight: FontWeight.w700,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(
-                            height: isSmallScreen
-                                ? KubusSpacing.md
-                                : KubusChromeMetrics.compactCardPadding,
-                          ),
-                          // Main KUB8 Balance
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            children: [
-                              Text(
-                                _getKub8Balance().toStringAsFixed(2),
-                                style: KubusTypography.inter(
-                                  fontSize: isSmallScreen
-                                      ? KubusChromeMetrics.heroTitle +
-                                          KubusSpacing.md
-                                      : KubusChromeMetrics.heroTitle +
-                                          KubusSpacing.lg,
-                                  fontWeight: FontWeight.bold,
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface,
-                                ),
-                              ),
-                              const SizedBox(width: KubusSpacing.sm),
-                              Text(
-                                'KUB8',
-                                style: KubusTypography.inter(
-                                  fontSize: KubusHeaderMetrics.sectionTitle,
-                                  fontWeight: FontWeight.w600,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.9),
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(
-                              height: isSmallScreen
-                                  ? KubusSpacing.sm
-                                  : KubusSpacing.md),
-                          // Secondary balances (SOL and approximate fiat value)
-                          Row(
-                            children: [
-                              Text(
-                                '${_getSolBalance().toStringAsFixed(3)} SOL',
-                                style: KubusTypography.inter(
-                                  fontSize: KubusHeaderMetrics.sectionSubtitle,
-                                  fontWeight: FontWeight.w500,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.7),
-                                ),
-                              ),
-                              const SizedBox(width: KubusSpacing.md),
-                              Text(
-                                l10n.walletHomeApproxTotalValue(
-                                  '\$${wallet?.totalValue.toStringAsFixed(2) ?? '0.00'}',
-                                ),
-                                style: KubusTypography.inter(
-                                  fontSize: KubusHeaderMetrics.sectionSubtitle,
-                                  fontWeight: FontWeight.w500,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.7),
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (isReadOnlySession) ...[
+                              ],
+                            ),
                             SizedBox(
                               height: isSmallScreen
                                   ? KubusSpacing.md
-                                  : KubusSpacing.lg,
+                                  : KubusChromeMetrics.compactCardPadding,
                             ),
-                            Text(
-                              l10n.walletReconnectManualRequiredToast,
-                              style: KubusTypography.inter(
-                                fontSize: KubusHeaderMetrics.sectionSubtitle,
-                                fontWeight: FontWeight.w500,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.85),
-                              ),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  _getKub8Balance().toStringAsFixed(2),
+                                  style: KubusTextStyles.heroTitle.copyWith(
+                                    fontSize: isSmallScreen
+                                        ? KubusChromeMetrics.heroTitle +
+                                            KubusSpacing.md
+                                        : KubusChromeMetrics.heroTitle +
+                                            KubusSpacing.lg,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface,
+                                  ),
+                                ),
+                                const SizedBox(width: KubusSpacing.sm),
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    bottom: KubusSpacing.sm,
+                                  ),
+                                  child: Text(
+                                    'KUB8',
+                                    style:
+                                        KubusTextStyles.detailCardTitle.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.88),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: KubusSpacing.sm),
+                            Wrap(
+                              spacing: KubusSpacing.sm,
+                              runSpacing: KubusSpacing.sm,
+                              children: [
+                                _buildBalanceMetaPill(
+                                  '${_getSolBalance().toStringAsFixed(3)} SOL',
+                                ),
+                                _buildBalanceMetaPill(
+                                  l10n.walletHomeApproxTotalValue(
+                                    '\$${wallet?.totalValue.toStringAsFixed(2) ?? '0.00'}',
+                                  ),
+                                ),
+                                if (isReadOnlySession)
+                                  _buildBalanceMetaPill(
+                                    l10n.walletReconnectManualRequiredToast,
+                                    emphasized: true,
+                                  ),
+                              ],
                             ),
                           ],
-                        ],
+                        ),
                       ),
                     ),
 
@@ -433,23 +415,11 @@ class _WalletHomeState extends State<WalletHome> {
                     const SizedBox(height: KubusSpacing.md),
 
                     // Action Buttons (Separated from balance card)
-                    Container(
+                    LiquidGlassCard(
                       padding: EdgeInsets.all(
                         isSmallScreen
                             ? KubusSpacing.lg
                             : KubusChromeMetrics.cardPadding,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest
-                            .withValues(alpha: 0.42),
-                        borderRadius: BorderRadius.circular(KubusRadius.lg),
-                        border: Border.all(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .outline
-                                .withValues(alpha: 0.3)),
                       ),
                       child: LayoutBuilder(
                         builder: (context, actionConstraints) {
@@ -464,7 +434,7 @@ class _WalletHomeState extends State<WalletHome> {
                             _buildActionButton(
                               l10n.walletHomeActionSend,
                               Icons.arrow_upward,
-                              AppColorUtils.coralAccent,
+                              Theme.of(context).colorScheme.error,
                               () {
                                 if (!canTransact) {
                                   _handleReadOnlyReconnect(walletProvider);
@@ -484,7 +454,7 @@ class _WalletHomeState extends State<WalletHome> {
                             _buildActionButton(
                               l10n.walletHomeActionReceive,
                               Icons.arrow_downward,
-                              AppColorUtils.indigoAccent,
+                              Theme.of(context).colorScheme.secondary,
                               () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -498,7 +468,7 @@ class _WalletHomeState extends State<WalletHome> {
                             _buildActionButton(
                               l10n.walletHomeActionSwap,
                               Icons.swap_horiz,
-                              AppColorUtils.greenAccent,
+                              Theme.of(context).colorScheme.tertiary,
                               () {
                                 if (!canTransact) {
                                   _handleReadOnlyReconnect(walletProvider);
@@ -517,7 +487,7 @@ class _WalletHomeState extends State<WalletHome> {
                             _buildActionButton(
                               l10n.walletHomeActionNfts,
                               Icons.image,
-                              AppColorUtils.tealAccent,
+                              Theme.of(context).colorScheme.primary,
                               () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -562,7 +532,7 @@ class _WalletHomeState extends State<WalletHome> {
                     else
                       Column(
                         children: tokens
-                            .map((token) => Container(
+                            .map((token) => LiquidGlassCard(
                                   margin: EdgeInsets.only(
                                       bottom: isSmallScreen
                                           ? KubusSpacing.sm
@@ -571,17 +541,6 @@ class _WalletHomeState extends State<WalletHome> {
                                     isSmallScreen
                                         ? KubusSpacing.md
                                         : KubusSpacing.lg,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color:
-                                        Theme.of(context).colorScheme.surface,
-                                    borderRadius:
-                                        BorderRadius.circular(KubusRadius.md),
-                                    border: Border.all(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .outline
-                                            .withValues(alpha: 0.3)),
                                   ),
                                   child: Row(
                                     children: [
@@ -664,6 +623,32 @@ class _WalletHomeState extends State<WalletHome> {
           },
         );
       },
+    );
+  }
+
+  Widget _buildBalanceMetaPill(String label, {bool emphasized = false}) {
+    final scheme = Theme.of(context).colorScheme;
+    final tint = emphasized ? scheme.primary : scheme.surface;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: KubusSpacing.md,
+        vertical: KubusSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: tint.withValues(alpha: emphasized ? 0.16 : 0.62),
+        borderRadius: BorderRadius.circular(KubusRadius.xl),
+        border: Border.all(
+          color: (emphasized ? scheme.primary : scheme.outline)
+              .withValues(alpha: 0.18),
+        ),
+      ),
+      child: Text(
+        label,
+        style: KubusTextStyles.detailCaption.copyWith(
+          color: scheme.onSurface.withValues(alpha: emphasized ? 0.92 : 0.76),
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 
@@ -927,160 +912,21 @@ class _WalletHomeState extends State<WalletHome> {
             ),
           )
         else
-          ...recentTransactions.map((transaction) => Container(
-                margin: EdgeInsets.only(bottom: isSmallScreen ? 8 : 12),
-                padding: EdgeInsets.all(
-                    isSmallScreen ? KubusSpacing.md : KubusSpacing.lg),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                  border: Border.all(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .outline
-                          .withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: _getTransactionColor(transaction.type)
-                            .withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(KubusRadius.xl),
-                      ),
-                      child: Icon(
-                        _getTransactionIcon(transaction.type),
-                        color: _getTransactionColor(transaction.type),
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _transactionTypeLabel(transaction.type, l10n),
-                            style: KubusTypography.inter(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                          ),
-                          Text(
-                            '${transaction.txHash.substring(0, 10)}...',
-                            style: KubusTypography.inter(
-                              fontSize: 12,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.7),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          '${transaction.amount.toStringAsFixed(4)} ${transaction.token}',
-                          style: KubusTypography.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: _getTransactionColor(transaction.type),
-                          ),
-                        ),
-                        Text(
-                          _formatTime(transaction.timestamp),
-                          style: KubusTypography.inter(
-                            fontSize: 12,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.6),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              )),
+          ...recentTransactions.map(
+            (transaction) => WalletTransactionCard(
+              transaction: transaction,
+              compact: isSmallScreen,
+              margin: EdgeInsets.only(bottom: isSmallScreen ? 8 : 12),
+            ),
+          ),
       ],
     );
-  }
-
-  Color _getTransactionColor(TransactionType type) {
-    switch (type) {
-      case TransactionType.send:
-        return AppColorUtils.coralAccent;
-      case TransactionType.receive:
-        return AppColorUtils.indigoAccent;
-      case TransactionType.swap:
-        return AppColorUtils.greenAccent;
-      case TransactionType.stake:
-        return AppColorUtils.amberAccent;
-      case TransactionType.unstake:
-        return AppColorUtils.orangeAccent;
-      case TransactionType.governanceVote:
-        return Theme.of(context).colorScheme.primary;
-    }
-  }
-
-  IconData _getTransactionIcon(TransactionType type) {
-    switch (type) {
-      case TransactionType.send:
-        return Icons.arrow_upward;
-      case TransactionType.receive:
-        return Icons.arrow_downward;
-      case TransactionType.swap:
-        return Icons.swap_horiz;
-      case TransactionType.stake:
-        return Icons.lock;
-      case TransactionType.unstake:
-        return Icons.lock_open;
-      case TransactionType.governanceVote:
-        return Icons.how_to_vote;
-    }
-  }
-
-  String _formatTime(DateTime timestamp) {
-    final l10n = AppLocalizations.of(context)!;
-    final now = DateTime.now();
-    final difference = now.difference(timestamp);
-
-    if (difference.inDays > 0) {
-      return l10n.walletHomeTimeAgoDays(difference.inDays);
-    } else if (difference.inHours > 0) {
-      return l10n.walletHomeTimeAgoHours(difference.inHours);
-    } else {
-      return l10n.walletHomeTimeAgoMinutes(difference.inMinutes);
-    }
   }
 
   void _showWalletSettings() {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => const SettingsScreen()),
     );
-  }
-
-  String _transactionTypeLabel(TransactionType type, AppLocalizations l10n) {
-    switch (type) {
-      case TransactionType.send:
-        return l10n.settingsTxSentLabel;
-      case TransactionType.receive:
-        return l10n.settingsTxReceivedLabel;
-      case TransactionType.swap:
-        return l10n.walletHomeTxSwapLabel;
-      case TransactionType.stake:
-        return l10n.walletHomeTxStakeLabel;
-      case TransactionType.unstake:
-        return l10n.walletHomeTxUnstakeLabel;
-      case TransactionType.governanceVote:
-        return l10n.walletHomeTxGovernanceVoteLabel;
-    }
   }
 
   void _showTransactionHistorySheet() {
@@ -1149,96 +995,10 @@ class _WalletHomeState extends State<WalletHome> {
                           itemCount: transactions.length,
                           itemBuilder: (context, index) {
                             final tx = transactions[index];
-                            return Container(
+                            return WalletTransactionCard(
+                              transaction: tx,
                               margin: const EdgeInsets.only(
-                                  bottom: KubusSpacing.sm),
-                              padding: const EdgeInsets.all(KubusSpacing.sm),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .surfaceContainerHighest,
-                                borderRadius:
-                                    BorderRadius.circular(KubusRadius.md),
-                                border: Border.all(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .outline
-                                      .withValues(alpha: 0.2),
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 40,
-                                    height: 40,
-                                    decoration: BoxDecoration(
-                                      color: _getTransactionColor(tx.type)
-                                          .withValues(alpha: 0.2),
-                                      borderRadius:
-                                          BorderRadius.circular(KubusRadius.xl),
-                                    ),
-                                    child: Icon(
-                                      _getTransactionIcon(tx.type),
-                                      color: _getTransactionColor(tx.type),
-                                      size: 20,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          _transactionTypeLabel(tx.type, l10n),
-                                          style: KubusTypography.inter(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurface,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          '${tx.txHash.substring(0, 10)}...',
-                                          style: KubusTypography.inter(
-                                            fontSize: 12,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurface
-                                                .withValues(alpha: 0.6),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Text(
-                                        '${tx.amount.toStringAsFixed(4)} ${tx.token}',
-                                        style: KubusTypography.inter(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: _getTransactionColor(tx.type),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        _formatTime(tx.timestamp),
-                                        style: KubusTypography.inter(
-                                          fontSize: 12,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withValues(alpha: 0.6),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
+                                bottom: KubusSpacing.sm,
                               ),
                             );
                           },

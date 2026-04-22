@@ -8,6 +8,7 @@ import 'package:solana/solana.dart';
 import 'package:solana/encoder.dart';
 import 'package:solana/metaplex.dart';
 import '../config/api_keys.dart';
+import '../models/wallet.dart';
 import 'storage_config.dart';
 import '../models/swap_quote.dart';
 import '../utils/wallet_utils.dart';
@@ -239,6 +240,19 @@ class SolanaWalletService {
 
   String get currentNetwork => _network;
   String get currentRpcUrl => _currentRpcUrl;
+
+  String buildExplorerTransactionUrl(String signature) {
+    final trimmed = signature.trim();
+    if (trimmed.isEmpty) {
+      return 'https://explorer.solana.com';
+    }
+    final query = switch (_network) {
+      'devnet' => '?cluster=devnet',
+      'testnet' => '?cluster=testnet',
+      _ => '',
+    };
+    return 'https://explorer.solana.com/tx/$trimmed$query';
+  }
 
   // Mnemonic and Wallet Generation
   String generateMnemonic() {
@@ -611,37 +625,64 @@ class SolanaWalletService {
     }
   }
 
-  Future<List<TransactionInfo>> getTransactionHistory(String publicKey,
-      {int limit = 10}) async {
+  Future<List<WalletTransaction>> getTransactionHistory(
+    String publicKey, {
+    int limit = 25,
+    String? beforeSignature,
+  }) async {
     try {
       final response = await _makeRpcCall('getSignaturesForAddress', [
         publicKey,
-        {'limit': limit}
+        {
+          'limit': limit,
+          if (beforeSignature != null && beforeSignature.trim().isNotEmpty)
+            'before': beforeSignature.trim(),
+        },
       ]);
 
-      final signatures = response['result'] as List;
-      List<TransactionInfo> transactions = [];
+      final signatures = response['result'] as List? ?? const [];
+      final currentSlot = await _fetchCurrentSlot();
+      final transactions = <WalletTransaction>[];
 
-      for (final sig in signatures) {
-        final signature = sig['signature'];
-        final txResponse = await _makeRpcCall('getTransaction', [
-          signature,
-          {'encoding': 'jsonParsed', 'maxSupportedTransactionVersion': 0}
-        ]);
+      for (final rawSignature in signatures) {
+        if (rawSignature is! Map) continue;
+        final signatureRecord = _SignatureStatusRecord.fromJson(
+          Map<String, dynamic>.from(rawSignature),
+        );
 
-        if (txResponse['result'] != null) {
-          final tx = txResponse['result'];
-          transactions.add(TransactionInfo(
-            signature: signature,
-            blockTime: DateTime.fromMillisecondsSinceEpoch(
-                (tx['blockTime'] ?? 0) * 1000),
-            fee: (tx['meta']['fee'] ?? 0) / 1000000000.0,
-            status: tx['meta']['err'] == null ? 'success' : 'failed',
-            slot: tx['slot'] ?? 0,
-          ));
+        try {
+          final txResponse = await _makeRpcCall('getTransaction', [
+            signatureRecord.signature,
+            {
+              'encoding': 'jsonParsed',
+              'maxSupportedTransactionVersion': 0,
+            },
+          ]);
+          final transaction = await _parseWalletTransaction(
+            publicKey: publicKey,
+            signatureRecord: signatureRecord,
+            transactionJson: txResponse['result'] as Map<String, dynamic>?,
+            currentSlot: currentSlot,
+          );
+          if (transaction != null) {
+            transactions.add(transaction);
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            debugPrint(
+              'SolanaWalletService: failed to parse transaction ${signatureRecord.signature}: $e',
+            );
+          }
         }
       }
 
+      transactions.sort((a, b) {
+        final slotCompare = (b.slot ?? 0).compareTo(a.slot ?? 0);
+        if (slotCompare != 0) {
+          return slotCompare;
+        }
+        return b.timestamp.compareTo(a.timestamp);
+      });
       return transactions;
     } catch (e) {
       debugPrint('Error getting transaction history: $e');
@@ -650,8 +691,10 @@ class SolanaWalletService {
   }
 
   // Transfer native SOL between accounts
-  Future<String> transferSol(
-      {required String toAddress, required double amount}) async {
+  Future<SubmittedSolanaTransactionRecord> transferSol({
+    required String toAddress,
+    required double amount,
+  }) async {
     if (!hasActiveKeyPair) {
       throw Exception('No active keypair set for signing');
     }
@@ -662,15 +705,14 @@ class SolanaWalletService {
         recipientAccount: Ed25519HDPublicKey.fromBase58(toAddress),
         lamports: lamports,
       );
-      final signature = await _sendInstructions([ix]);
-      return signature;
+      return _sendInstructions([ix]);
     } catch (e) {
       debugPrint('SOL transfer failed: $e');
       rethrow;
     }
   }
 
-  Future<String> buildTransferSolTransactionBase64({
+  Future<UnsignedSolanaTransactionRecord> buildTransferSolTransactionBase64({
     required String fromAddress,
     required String toAddress,
     required double amount,
@@ -688,7 +730,7 @@ class SolanaWalletService {
   }
 
   // Transfer SPL token (KUB8 or others)
-  Future<String> transferSplToken({
+  Future<SubmittedSolanaTransactionRecord> transferSplToken({
     required String mint,
     required String toAddress,
     required double amount,
@@ -735,7 +777,7 @@ class SolanaWalletService {
     return _sendInstructions(instructions);
   }
 
-  Future<String> buildTransferSplTokenTransactionBase64({
+  Future<UnsignedSolanaTransactionRecord> buildTransferSplTokenTransactionBase64({
     required String fromAddress,
     required String mint,
     required String toAddress,
@@ -756,62 +798,59 @@ class SolanaWalletService {
   }
 
   // Swap SOL -> SPL token (e.g., SOL -> KUB8) via DEX aggregator (Jupiter/Raydium)
-  Future<String> swapSolToSpl(
-      {required String mint,
-      required double solAmount,
-      double slippage = 0.5}) async {
+  Future<SubmittedSolanaTransactionRecord> swapSolToSpl({
+    required String mint,
+    required double solAmount,
+    int slippageBps = 50,
+    SwapQuote? quote,
+  }) async {
     return _executeJupiterSwap(
       inputMint: ApiKeys.wrappedSolMintAddress,
       outputMint: mint,
       inputAmountRaw: (solAmount * 1000000000).round(),
-      slippageBps: (slippage * 100).round(),
+      slippageBps: slippageBps,
       wrapAndUnwrapSol: true,
+      quote: quote,
     );
   }
 
-  // Swap SPL -> SPL token (client-side simulation until on-chain swap is wired)
-  Future<String> swapSplToken({
+  Future<SubmittedSolanaTransactionRecord> swapSplToken({
     required String fromMint,
     required String toMint,
     required double amount,
-    double slippage = 0.01,
+    required int decimals,
+    int slippageBps = 50,
+    SwapQuote? quote,
   }) async {
-    final decimals =
-        ApiKeys.kub8Decimals; // assume SPL has decimals set; adjust if needed
     return _executeJupiterSwap(
       inputMint: fromMint,
       outputMint: toMint,
       inputAmountRaw: (amount * pow(10, decimals)).round(),
-      slippageBps: (slippage * 10000).round(),
+      slippageBps: slippageBps,
       wrapAndUnwrapSol: false,
+      quote: quote,
     );
   }
 
-  Future<String> buildJupiterSwapTransactionBase64({
+  Future<UnsignedSolanaTransactionRecord> buildJupiterSwapTransactionBase64({
     required String userPublicKey,
     required String inputMint,
     required String outputMint,
     required int inputAmountRaw,
     required int slippageBps,
     required bool wrapAndUnwrapSol,
+    SwapQuote? quote,
   }) async {
-    final quoteUri =
-        Uri.parse('${ApiKeys.jupiterBaseUrl}/quote').replace(queryParameters: {
-      'inputMint': inputMint,
-      'outputMint': outputMint,
-      'amount': '$inputAmountRaw',
-      'slippageBps': '$slippageBps',
-    });
-
-    final quoteResp = await http.get(quoteUri);
-    if (quoteResp.statusCode != 200) {
-      throw Exception(
-          'Jupiter quote failed: ${quoteResp.statusCode} ${quoteResp.body}');
-    }
-    final quoteJson = jsonDecode(quoteResp.body) as Map<String, dynamic>;
-    final route = (quoteJson['data'] as List).isNotEmpty
-        ? quoteJson['data'][0] as Map<String, dynamic>
-        : null;
+    final swapRequestRecord = await _buildJupiterSwapRequest(
+      inputMint: inputMint,
+      outputMint: outputMint,
+      inputAmountRaw: inputAmountRaw,
+      slippageBps: slippageBps,
+      wrapAndUnwrapSol: wrapAndUnwrapSol,
+      userPublicKey: userPublicKey,
+      quote: quote,
+    );
+    final route = swapRequestRecord.route;
     if (route == null) {
       throw Exception('No Jupiter route available');
     }
@@ -836,7 +875,20 @@ class SolanaWalletService {
     if (swapTx == null) {
       throw Exception('Jupiter swapTransaction missing');
     }
-    return swapTx;
+    final unsigned = SignedTx.decode(swapTx);
+    final lastValidBlockHeight =
+        (swapJson['lastValidBlockHeight'] as num?)?.toInt();
+    return UnsignedSolanaTransactionRecord(
+      transactionBase64: swapTx,
+      lastValidBlockHeight: lastValidBlockHeight,
+      metadata: {
+        'route': route,
+        'quoteContextSlot': swapRequestRecord.contextSlot,
+        'quoteTimeTakenMs': swapRequestRecord.timeTakenMs,
+        'programs': _extractRouteLabels(route),
+        'requiredSignatures': unsigned.compiledMessage.requiredSignatureCount,
+      },
+    );
   }
 
   Future<SwapQuote> fetchSwapQuote({
@@ -975,7 +1027,7 @@ class SolanaWalletService {
       data: CreateMasterEditionV3Data(maxSupply: BigInt.zero),
     );
 
-    return _sendInstructions(
+    final submission = await _sendInstructions(
       [
         createMintIx,
         initMintIx,
@@ -986,6 +1038,7 @@ class SolanaWalletService {
       ],
       extraSigners: [mint],
     );
+    return submission.signature;
   }
 
   Future<dynamic> _safeGetAccountInfo(String address) async {
@@ -1066,8 +1119,10 @@ class SolanaWalletService {
     return value.substring(0, maxLength);
   }
 
-  Future<String> _sendInstructions(List<Instruction> instructions,
-      {List<Ed25519HDKeyPair> extraSigners = const []}) async {
+  Future<SubmittedSolanaTransactionRecord> _sendInstructions(
+    List<Instruction> instructions, {
+    List<Ed25519HDKeyPair> extraSigners = const [],
+  }) async {
     final signers = [_activeKeyPair!, ...extraSigners];
     final latest = await _rpcClient.getLatestBlockhash();
     final message = Message(instructions: instructions);
@@ -1080,10 +1135,14 @@ class SolanaWalletService {
       signedTx.encode(),
       skipPreflight: true,
     );
-    return sig;
+    return SubmittedSolanaTransactionRecord(
+      signature: sig,
+      lastValidBlockHeight: latest.value.lastValidBlockHeight,
+      explorerUrl: buildExplorerTransactionUrl(sig),
+    );
   }
 
-  Future<String> _buildUnsignedTransaction({
+  Future<UnsignedSolanaTransactionRecord> _buildUnsignedTransaction({
     required String feePayerAddress,
     required List<Instruction> instructions,
   }) async {
@@ -1100,10 +1159,13 @@ class SolanaWalletService {
         publicKey: compiledMessage.accountKeys[index],
       ),
     );
-    return SignedTx(
-      signatures: signatures,
-      compiledMessage: compiledMessage,
-    ).encode();
+    return UnsignedSolanaTransactionRecord(
+      transactionBase64: SignedTx(
+        signatures: signatures,
+        compiledMessage: compiledMessage,
+      ).encode(),
+      lastValidBlockHeight: latest.value.lastValidBlockHeight,
+    );
   }
 
   Future<List<Instruction>> _buildSplTokenTransferInstructions({
@@ -1148,34 +1210,28 @@ class SolanaWalletService {
     return instructions;
   }
 
-  Future<String> _executeJupiterSwap({
+  Future<SubmittedSolanaTransactionRecord> _executeJupiterSwap({
     required String inputMint,
     required String outputMint,
     required int inputAmountRaw,
     required int slippageBps,
     required bool wrapAndUnwrapSol,
+    SwapQuote? quote,
   }) async {
     if (!hasActiveKeyPair) {
       throw Exception('No active keypair set for swap');
     }
 
-    final quoteUri =
-        Uri.parse('${ApiKeys.jupiterBaseUrl}/quote').replace(queryParameters: {
-      'inputMint': inputMint,
-      'outputMint': outputMint,
-      'amount': '$inputAmountRaw',
-      'slippageBps': '$slippageBps',
-    });
-
-    final quoteResp = await http.get(quoteUri);
-    if (quoteResp.statusCode != 200) {
-      throw Exception(
-          'Jupiter quote failed: ${quoteResp.statusCode} ${quoteResp.body}');
-    }
-    final quoteJson = jsonDecode(quoteResp.body) as Map<String, dynamic>;
-    final route = (quoteJson['data'] as List).isNotEmpty
-        ? quoteJson['data'][0] as Map<String, dynamic>
-        : null;
+    final swapRequestRecord = await _buildJupiterSwapRequest(
+      inputMint: inputMint,
+      outputMint: outputMint,
+      inputAmountRaw: inputAmountRaw,
+      slippageBps: slippageBps,
+      wrapAndUnwrapSol: wrapAndUnwrapSol,
+      userPublicKey: _activeKeyPair!.address,
+      quote: quote,
+    );
+    final route = swapRequestRecord.route;
     if (route == null) {
       throw Exception('No Jupiter route available');
     }
@@ -1220,11 +1276,665 @@ class SolanaWalletService {
 
     final signedTx = unsigned.copyWith(signatures: signatures);
 
-    return _rpcClient.sendTransaction(
+    final signature = await _rpcClient.sendTransaction(
       signedTx.encode(),
       skipPreflight: false,
       preflightCommitment: Commitment.confirmed,
     );
+    return SubmittedSolanaTransactionRecord(
+      signature: signature,
+      lastValidBlockHeight:
+          (swapJson['lastValidBlockHeight'] as num?)?.toInt(),
+      explorerUrl: buildExplorerTransactionUrl(signature),
+      metadata: {
+        'route': route,
+        'quoteContextSlot': swapRequestRecord.contextSlot,
+        'quoteTimeTakenMs': swapRequestRecord.timeTakenMs,
+        'programs': _extractRouteLabels(route),
+      },
+    );
+  }
+
+  Future<_JupiterSwapRequestRecord> _buildJupiterSwapRequest({
+    required String inputMint,
+    required String outputMint,
+    required int inputAmountRaw,
+    required int slippageBps,
+    required bool wrapAndUnwrapSol,
+    required String userPublicKey,
+    SwapQuote? quote,
+  }) async {
+    if (quote != null) {
+      return _JupiterSwapRequestRecord(
+        route: quote.rawRoute,
+        contextSlot: quote.contextSlot,
+        timeTakenMs: quote.timeTakenMs,
+      );
+    }
+
+    final quoteUri =
+        Uri.parse('${ApiKeys.jupiterBaseUrl}/quote').replace(queryParameters: {
+      'inputMint': inputMint,
+      'outputMint': outputMint,
+      'amount': '$inputAmountRaw',
+      'slippageBps': '$slippageBps',
+      'swapMode': 'ExactIn',
+    });
+
+    final quoteResp = await http.get(quoteUri);
+    if (quoteResp.statusCode != 200) {
+      throw Exception(
+        'Jupiter quote failed: ${quoteResp.statusCode} ${quoteResp.body}',
+      );
+    }
+
+    final quoteJson = jsonDecode(quoteResp.body) as Map<String, dynamic>;
+    final route = (quoteJson['data'] as List).isNotEmpty
+        ? quoteJson['data'][0] as Map<String, dynamic>
+        : null;
+    if (route == null) {
+      throw Exception('No Jupiter route available');
+    }
+
+    return _JupiterSwapRequestRecord(
+      route: Map<String, dynamic>.from(route),
+      contextSlot: (quoteJson['contextSlot'] as num?)?.toInt(),
+      timeTakenMs: (quoteJson['timeTaken'] as num?)?.toDouble(),
+    );
+  }
+
+  List<String> _extractRouteLabels(Map<String, dynamic>? route) {
+    if (route == null) return const <String>[];
+    final routePlan = route['routePlan'] as List?;
+    if (routePlan == null) return const <String>[];
+    return routePlan
+        .map((step) {
+          if (step is! Map) return '';
+          final swapInfo = step['swapInfo'];
+          if (swapInfo is Map && swapInfo['label'] != null) {
+            return swapInfo['label'].toString();
+          }
+          return step['label']?.toString() ?? '';
+        })
+        .where((label) => label.trim().isNotEmpty)
+        .cast<String>()
+        .toList();
+  }
+
+  Future<int?> _fetchCurrentSlot() async {
+    try {
+      final response = await _makeRpcCall('getSlot', [
+        {'commitment': 'processed'},
+      ]);
+      return (response['result'] as num?)?.toInt();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<WalletTransaction?> _parseWalletTransaction({
+    required String publicKey,
+    required _SignatureStatusRecord signatureRecord,
+    required Map<String, dynamic>? transactionJson,
+    required int? currentSlot,
+  }) async {
+    if (transactionJson == null) {
+      return null;
+    }
+
+    final meta = Map<String, dynamic>.from(
+      transactionJson['meta'] as Map? ?? const {},
+    );
+    final transaction = Map<String, dynamic>.from(
+      transactionJson['transaction'] as Map? ?? const {},
+    );
+    final message = Map<String, dynamic>.from(
+      transaction['message'] as Map? ?? const {},
+    );
+    final accountKeysRaw = message['accountKeys'] as List? ?? const [];
+    final accountKeys = accountKeysRaw
+        .map((item) => _accountKeyToString(item))
+        .where((item) => item.isNotEmpty)
+        .toList();
+
+    final feeLamports = (meta['fee'] as num?)?.toInt() ?? 0;
+    final feeAmount = feeLamports / _lamportsPerSol;
+    final tokenOwnerLookup =
+        _buildTokenOwnerLookup(meta: meta, accountKeys: accountKeys);
+    final tokenMintLookup =
+        _buildTokenMintLookup(meta: meta, accountKeys: accountKeys);
+    final transferRecords = _extractTransferRecords(
+      transactionMessage: message,
+      meta: meta,
+      tokenOwnerLookup: tokenOwnerLookup,
+      tokenMintLookup: tokenMintLookup,
+    );
+    final assetChanges = await _buildAssetChanges(
+      publicKey: publicKey,
+      meta: meta,
+      accountKeys: accountKeys,
+      feeAmount: feeAmount,
+      transferRecords: transferRecords,
+    );
+    final classification = _classifyTransaction(
+      publicKey: publicKey,
+      assetChanges: assetChanges,
+      transferRecords: transferRecords,
+    );
+
+    final timestamp = signatureRecord.blockTime ??
+        DateTime.tryParse((transactionJson['blockTime'] ?? '').toString()) ??
+        DateTime.now();
+    final slot =
+        (transactionJson['slot'] as num?)?.toInt() ?? signatureRecord.slot;
+    final confirmationCount = currentSlot == null || slot == null
+        ? null
+        : (currentSlot - slot + 1).clamp(0, 1 << 31);
+
+    return WalletTransaction(
+      id: signatureRecord.signature,
+      signature: signatureRecord.signature,
+      explorerUrl: buildExplorerTransactionUrl(signatureRecord.signature),
+      type: classification.type,
+      status: _mapStatus(signatureRecord),
+      direction: classification.direction,
+      finality: _mapFinality(signatureRecord.confirmationStatus),
+      token: classification.primarySymbol,
+      tokenMint: classification.primaryMint,
+      assetKind: classification.primaryAssetKind,
+      amount: classification.primaryAmount,
+      amountIn: classification.amountIn,
+      amountOut: classification.amountOut,
+      netAmount: classification.netAmount,
+      primaryCounterparty: classification.counterparty,
+      fromAddress: classification.fromAddress,
+      toAddress: classification.toAddress,
+      timestamp: timestamp,
+      slot: slot,
+      confirmationCount: confirmationCount,
+      feeAmount: feeAmount > 0 ? feeAmount : null,
+      feeToken: 'SOL',
+      feeTokenMint: 'native',
+      gasUsed: (meta['computeUnitsConsumed'] as num?)?.toDouble(),
+      gasFee: feeAmount > 0 ? feeAmount : null,
+      swapToToken: classification.swapToToken,
+      swapToAmount: classification.swapToAmount,
+      assetChanges: assetChanges,
+      metadata: {
+        'memo': signatureRecord.memo,
+        'confirmationStatus': signatureRecord.confirmationStatus,
+        'err': signatureRecord.err,
+        'version': transactionJson['version'],
+        'programs': transferRecords
+            .map((record) => record.program)
+            .where((program) => program.trim().isNotEmpty)
+            .toSet()
+            .toList(),
+      },
+    );
+  }
+
+  Map<String, String> _buildTokenOwnerLookup({
+    required Map<String, dynamic> meta,
+    required List<String> accountKeys,
+  }) {
+    final lookup = <String, String>{};
+    for (final entry in [
+      ...(meta['preTokenBalances'] as List? ?? const []),
+      ...(meta['postTokenBalances'] as List? ?? const []),
+    ]) {
+      if (entry is! Map) continue;
+      final accountIndex = (entry['accountIndex'] as num?)?.toInt();
+      final owner = entry['owner']?.toString();
+      if (accountIndex == null ||
+          accountIndex < 0 ||
+          accountIndex >= accountKeys.length ||
+          owner == null ||
+          owner.trim().isEmpty) {
+        continue;
+      }
+      lookup[accountKeys[accountIndex]] = owner;
+    }
+    return lookup;
+  }
+
+  Map<String, String> _buildTokenMintLookup({
+    required Map<String, dynamic> meta,
+    required List<String> accountKeys,
+  }) {
+    final lookup = <String, String>{};
+    for (final entry in [
+      ...(meta['preTokenBalances'] as List? ?? const []),
+      ...(meta['postTokenBalances'] as List? ?? const []),
+    ]) {
+      if (entry is! Map) continue;
+      final accountIndex = (entry['accountIndex'] as num?)?.toInt();
+      final mint = entry['mint']?.toString();
+      if (accountIndex == null ||
+          accountIndex < 0 ||
+          accountIndex >= accountKeys.length ||
+          mint == null ||
+          mint.trim().isEmpty) {
+        continue;
+      }
+      lookup[accountKeys[accountIndex]] = mint;
+    }
+    return lookup;
+  }
+
+  List<_TransferRecord> _extractTransferRecords({
+    required Map<String, dynamic> transactionMessage,
+    required Map<String, dynamic> meta,
+    required Map<String, String> tokenOwnerLookup,
+    required Map<String, String> tokenMintLookup,
+  }) {
+    final instructions = <dynamic>[
+      ...(transactionMessage['instructions'] as List? ?? const []),
+    ];
+    final innerInstructions = meta['innerInstructions'] as List? ?? const [];
+    for (final entry in innerInstructions) {
+      if (entry is! Map) continue;
+      instructions.addAll(entry['instructions'] as List? ?? const []);
+    }
+
+    final records = <_TransferRecord>[];
+    for (final instruction in instructions) {
+      if (instruction is! Map) continue;
+      final parsed = instruction['parsed'];
+      if (parsed is! Map) continue;
+      final program = instruction['program']?.toString() ?? '';
+      final type = parsed['type']?.toString() ?? '';
+      final info = parsed['info'];
+      if (info is! Map) continue;
+
+      if (program == 'system' && type == 'transfer') {
+        final source = info['source']?.toString() ?? '';
+        final destination = info['destination']?.toString() ?? '';
+        final lamports = (info['lamports'] as num?)?.toInt() ?? 0;
+        records.add(
+          _TransferRecord(
+            program: program,
+            type: type,
+            assetKind: WalletTransactionAssetKind.native,
+            mint: 'native',
+            sourceAddress: source,
+            destinationAddress: destination,
+            sourceOwner: source,
+            destinationOwner: destination,
+            amount: lamports / _lamportsPerSol,
+          ),
+        );
+        continue;
+      }
+
+      if (program == 'spl-token' &&
+          (type == 'transfer' || type == 'transferChecked')) {
+        final source = info['source']?.toString() ?? '';
+        final destination = info['destination']?.toString() ?? '';
+        final tokenAmount = info['tokenAmount'];
+        final amount = _parseUiTokenAmount(tokenAmount);
+        final mint =
+            info['mint']?.toString() ?? tokenMintLookup[source] ?? tokenMintLookup[destination];
+        records.add(
+          _TransferRecord(
+            program: program,
+            type: type,
+            assetKind: WalletTransactionAssetKind.spl,
+            mint: mint,
+            sourceAddress: source,
+            destinationAddress: destination,
+            sourceOwner: tokenOwnerLookup[source] ?? source,
+            destinationOwner: tokenOwnerLookup[destination] ?? destination,
+            amount: amount,
+          ),
+        );
+      }
+    }
+    return records;
+  }
+
+  Future<List<WalletTransactionAssetChange>> _buildAssetChanges({
+    required String publicKey,
+    required Map<String, dynamic> meta,
+    required List<String> accountKeys,
+    required double feeAmount,
+    required List<_TransferRecord> transferRecords,
+  }) async {
+    final changes = <WalletTransactionAssetChange>[];
+    final preToken = _aggregateOwnedTokenBalances(
+      balances: meta['preTokenBalances'] as List? ?? const [],
+      owner: publicKey,
+    );
+    final postToken = _aggregateOwnedTokenBalances(
+      balances: meta['postTokenBalances'] as List? ?? const [],
+      owner: publicKey,
+    );
+    final mints = <String>{...preToken.keys, ...postToken.keys};
+    for (final mint in mints) {
+      final preAmount = preToken[mint]?.amount ?? 0.0;
+      final postAmount = postToken[mint]?.amount ?? 0.0;
+      final delta = postAmount - preAmount;
+      if (delta.abs() < 0.000000001) continue;
+      final tokenInfo = await _getTokenInfo(
+        mint,
+        decimalsHint: postToken[mint]?.decimals ?? preToken[mint]?.decimals,
+      );
+      changes.add(
+        WalletTransactionAssetChange(
+          symbol: (tokenInfo['symbol'] ?? _fallbackSymbol(mint)).toString(),
+          mint: mint,
+          decimals:
+              (tokenInfo['decimals'] as num?)?.toInt() ??
+                  postToken[mint]?.decimals ??
+                  preToken[mint]?.decimals,
+          assetKind: WalletTransactionAssetKind.spl,
+          amount: delta,
+          direction: delta > 0
+              ? WalletTransactionDirection.incoming
+              : WalletTransactionDirection.outgoing,
+        ),
+      );
+    }
+
+    final nativeIndex = accountKeys.indexOf(publicKey);
+    if (nativeIndex >= 0) {
+      final preBalances =
+          (meta['preBalances'] as List? ?? const []).cast<num>();
+      final postBalances =
+          (meta['postBalances'] as List? ?? const []).cast<num>();
+      final preLamports =
+          nativeIndex < preBalances.length ? preBalances[nativeIndex] : 0;
+      final postLamports =
+          nativeIndex < postBalances.length ? postBalances[nativeIndex] : 0;
+      final nativeDelta =
+          (postLamports.toDouble() - preLamports.toDouble()) / _lamportsPerSol;
+      var adjustedNativeDelta = nativeDelta;
+      if (adjustedNativeDelta < 0 && feeAmount > 0) {
+        adjustedNativeDelta += feeAmount;
+      }
+      if (adjustedNativeDelta.abs() >= 0.000000001) {
+        changes.add(
+          WalletTransactionAssetChange(
+            symbol: 'SOL',
+            mint: 'native',
+            decimals: 9,
+            assetKind: WalletTransactionAssetKind.native,
+            amount: adjustedNativeDelta,
+            direction: adjustedNativeDelta > 0
+                ? WalletTransactionDirection.incoming
+                : WalletTransactionDirection.outgoing,
+          ),
+        );
+      }
+    }
+
+    if (feeAmount > 0) {
+      changes.add(
+        WalletTransactionAssetChange(
+          symbol: 'SOL',
+          mint: 'native',
+          decimals: 9,
+          assetKind: WalletTransactionAssetKind.native,
+          amount: -feeAmount,
+          direction: WalletTransactionDirection.outgoing,
+          isFee: true,
+          label: 'Network fee',
+        ),
+      );
+    }
+
+    return changes;
+  }
+
+  Map<String, _OwnedTokenBalanceRecord> _aggregateOwnedTokenBalances({
+    required List balances,
+    required String owner,
+  }) {
+    final aggregated = <String, _OwnedTokenBalanceRecord>{};
+    for (final entry in balances) {
+      if (entry is! Map) continue;
+      final normalizedOwner = entry['owner']?.toString();
+      if (normalizedOwner == null ||
+          !WalletUtils.equals(normalizedOwner, owner)) {
+        continue;
+      }
+      final mint = entry['mint']?.toString();
+      if (mint == null || mint.trim().isEmpty) continue;
+      final uiTokenAmount = entry['uiTokenAmount'];
+      final amount = _parseUiTokenAmount(uiTokenAmount);
+      final decimals =
+          (uiTokenAmount is Map ? uiTokenAmount['decimals'] as num? : null)
+              ?.toInt();
+      final existing = aggregated[mint];
+      aggregated[mint] = _OwnedTokenBalanceRecord(
+        amount: (existing?.amount ?? 0) + amount,
+        decimals: decimals ?? existing?.decimals,
+      );
+    }
+    return aggregated;
+  }
+
+  _TransactionClassificationRecord _classifyTransaction({
+    required String publicKey,
+    required List<WalletTransactionAssetChange> assetChanges,
+    required List<_TransferRecord> transferRecords,
+  }) {
+    final nonFeeChanges = assetChanges.where((change) => !change.isFee).toList()
+      ..sort((a, b) => b.absoluteAmount.compareTo(a.absoluteAmount));
+    final incoming =
+        nonFeeChanges.where((change) => change.amount > 0).toList(growable: false);
+    final outgoing =
+        nonFeeChanges.where((change) => change.amount < 0).toList(growable: false);
+
+    TransactionType type = TransactionType.receive;
+    WalletTransactionDirection direction = WalletTransactionDirection.neutral;
+    WalletTransactionAssetChange? primaryChange;
+    WalletTransactionAssetChange? secondaryChange;
+
+    if (incoming.isNotEmpty && outgoing.isNotEmpty) {
+      type = TransactionType.swap;
+      direction = WalletTransactionDirection.swap;
+      primaryChange = outgoing.first;
+      secondaryChange = incoming.first;
+    } else if (outgoing.isNotEmpty) {
+      primaryChange = outgoing.first;
+      final incomingSameAsset = incoming.firstWhere(
+        (change) =>
+            change.mint == primaryChange!.mint &&
+            change.symbol == primaryChange.symbol,
+        orElse: () => const WalletTransactionAssetChange(
+          symbol: '',
+          amount: 0,
+        ),
+      );
+      if (incomingSameAsset.symbol.isNotEmpty) {
+        type = TransactionType.send;
+        direction = WalletTransactionDirection.self;
+      } else {
+        type = TransactionType.send;
+        direction = WalletTransactionDirection.outgoing;
+      }
+    } else if (incoming.isNotEmpty) {
+      primaryChange = incoming.first;
+      type = TransactionType.receive;
+      direction = WalletTransactionDirection.incoming;
+    } else {
+      final feeOnly = assetChanges.firstWhere(
+        (change) => change.isFee,
+        orElse: () => const WalletTransactionAssetChange(
+          symbol: 'SOL',
+          amount: 0,
+          isFee: true,
+        ),
+      );
+      primaryChange = feeOnly;
+      type = TransactionType.send;
+      direction = WalletTransactionDirection.outgoing;
+    }
+
+    final transferRecord = _matchTransferRecord(
+      publicKey: publicKey,
+      primaryChange: primaryChange,
+      transferRecords: transferRecords,
+      preferredDirection: direction,
+    );
+    final netAmount = nonFeeChanges.fold<double>(
+      0.0,
+      (sum, change) => sum + change.amount,
+    );
+
+    return _TransactionClassificationRecord(
+      type: type,
+      direction: direction,
+      primarySymbol: primaryChange.symbol,
+      primaryMint: primaryChange.mint,
+      primaryAssetKind: primaryChange.assetKind,
+      primaryAmount: primaryChange.absoluteAmount,
+      amountIn: incoming.isNotEmpty ? incoming.first.absoluteAmount : null,
+      amountOut: outgoing.isNotEmpty ? outgoing.first.absoluteAmount : null,
+      netAmount: netAmount == 0 ? null : netAmount,
+      counterparty: transferRecord == null
+          ? primaryChange.counterparty
+          : _counterpartyForTransfer(
+              publicKey: publicKey,
+              direction: direction,
+              record: transferRecord,
+            ),
+      fromAddress: transferRecord?.sourceOwner,
+      toAddress: transferRecord?.destinationOwner,
+      swapToToken: secondaryChange?.symbol,
+      swapToAmount: secondaryChange?.absoluteAmount,
+    );
+  }
+
+  _TransferRecord? _matchTransferRecord({
+    required String publicKey,
+    required WalletTransactionAssetChange? primaryChange,
+    required List<_TransferRecord> transferRecords,
+    required WalletTransactionDirection preferredDirection,
+  }) {
+    if (primaryChange == null) {
+      return null;
+    }
+    for (final record in transferRecords) {
+      final sameAsset = primaryChange.isNative
+          ? record.assetKind == WalletTransactionAssetKind.native
+          : WalletUtils.equals(record.mint, primaryChange.mint);
+      if (!sameAsset) continue;
+      final recordDirection = _directionForTransfer(publicKey, record);
+      if (preferredDirection == WalletTransactionDirection.swap ||
+          recordDirection == preferredDirection ||
+          preferredDirection == WalletTransactionDirection.self) {
+        return record;
+      }
+    }
+    return null;
+  }
+
+  WalletTransactionDirection _directionForTransfer(
+    String publicKey,
+    _TransferRecord record,
+  ) {
+    final sourceMatches =
+        WalletUtils.equals(record.sourceOwner, publicKey);
+    final destinationMatches =
+        WalletUtils.equals(record.destinationOwner, publicKey);
+    if (sourceMatches && destinationMatches) {
+      return WalletTransactionDirection.self;
+    }
+    if (sourceMatches) {
+      return WalletTransactionDirection.outgoing;
+    }
+    if (destinationMatches) {
+      return WalletTransactionDirection.incoming;
+    }
+    return WalletTransactionDirection.neutral;
+  }
+
+  String? _counterpartyForTransfer({
+    required String publicKey,
+    required WalletTransactionDirection direction,
+    required _TransferRecord record,
+  }) {
+    switch (direction) {
+      case WalletTransactionDirection.incoming:
+        return WalletUtils.equals(record.sourceOwner, publicKey)
+            ? record.sourceAddress
+            : record.sourceOwner;
+      case WalletTransactionDirection.outgoing:
+        return WalletUtils.equals(record.destinationOwner, publicKey)
+            ? record.destinationAddress
+            : record.destinationOwner;
+      case WalletTransactionDirection.swap:
+        return record.program;
+      case WalletTransactionDirection.self:
+        return record.destinationOwner;
+      case WalletTransactionDirection.neutral:
+        return record.destinationOwner;
+    }
+  }
+
+  TransactionStatus _mapStatus(_SignatureStatusRecord signatureRecord) {
+    if (signatureRecord.err != null) {
+      return TransactionStatus.failed;
+    }
+    switch (signatureRecord.confirmationStatus) {
+      case 'finalized':
+        return TransactionStatus.finalized;
+      case 'confirmed':
+        return TransactionStatus.confirmed;
+      case 'processed':
+        return TransactionStatus.pending;
+      default:
+        return TransactionStatus.pending;
+    }
+  }
+
+  WalletTransactionFinality _mapFinality(String? confirmationStatus) {
+    switch (confirmationStatus) {
+      case 'processed':
+        return WalletTransactionFinality.processed;
+      case 'confirmed':
+        return WalletTransactionFinality.confirmed;
+      case 'finalized':
+        return WalletTransactionFinality.finalized;
+      default:
+        return WalletTransactionFinality.unknown;
+    }
+  }
+
+  String _accountKeyToString(dynamic value) {
+    if (value is String) {
+      return value;
+    }
+    if (value is Map && value['pubkey'] != null) {
+      return value['pubkey'].toString();
+    }
+    return '';
+  }
+
+  double _parseUiTokenAmount(dynamic value) {
+    if (value is Map) {
+      final uiAmount = value['uiAmount'];
+      if (uiAmount is num) {
+        return uiAmount.toDouble();
+      }
+      final uiAmountString = value['uiAmountString']?.toString();
+      if (uiAmountString != null) {
+        return double.tryParse(uiAmountString) ?? 0.0;
+      }
+      final amountRaw = value['amount']?.toString();
+      final decimals = (value['decimals'] as num?)?.toInt() ?? 0;
+      final raw = double.tryParse(amountRaw ?? '0') ?? 0.0;
+      if (decimals <= 0) {
+        return raw;
+      }
+      return raw / pow(10, decimals);
+    }
+    if (value is num) {
+      return value.toDouble();
+    }
+    return 0.0;
   }
 
   // Private helper methods
@@ -1430,18 +2140,140 @@ class TokenBalance {
   });
 }
 
-class TransactionInfo {
-  final String signature;
-  final DateTime blockTime;
-  final double fee;
-  final String status;
-  final int slot;
-
-  TransactionInfo({
-    required this.signature,
-    required this.blockTime,
-    required this.fee,
-    required this.status,
-    required this.slot,
+class UnsignedSolanaTransactionRecord {
+  const UnsignedSolanaTransactionRecord({
+    required this.transactionBase64,
+    this.lastValidBlockHeight,
+    this.metadata = const {},
   });
+
+  final String transactionBase64;
+  final int? lastValidBlockHeight;
+  final Map<String, dynamic> metadata;
+}
+
+class SubmittedSolanaTransactionRecord {
+  const SubmittedSolanaTransactionRecord({
+    required this.signature,
+    this.lastValidBlockHeight,
+    this.explorerUrl,
+    this.metadata = const {},
+  });
+
+  final String signature;
+  final int? lastValidBlockHeight;
+  final String? explorerUrl;
+  final Map<String, dynamic> metadata;
+}
+
+class _SignatureStatusRecord {
+  const _SignatureStatusRecord({
+    required this.signature,
+    required this.slot,
+    required this.blockTime,
+    required this.confirmationStatus,
+    this.memo,
+    this.err,
+  });
+
+  final String signature;
+  final int? slot;
+  final DateTime? blockTime;
+  final String? confirmationStatus;
+  final String? memo;
+  final dynamic err;
+
+  factory _SignatureStatusRecord.fromJson(Map<String, dynamic> json) {
+    final blockTimeSeconds = (json['blockTime'] as num?)?.toInt();
+    return _SignatureStatusRecord(
+      signature: (json['signature'] ?? '').toString(),
+      slot: (json['slot'] as num?)?.toInt(),
+      blockTime: blockTimeSeconds == null
+          ? null
+          : DateTime.fromMillisecondsSinceEpoch(blockTimeSeconds * 1000),
+      confirmationStatus: json['confirmationStatus']?.toString(),
+      memo: json['memo']?.toString(),
+      err: json['err'],
+    );
+  }
+}
+
+class _OwnedTokenBalanceRecord {
+  const _OwnedTokenBalanceRecord({
+    required this.amount,
+    this.decimals,
+  });
+
+  final double amount;
+  final int? decimals;
+}
+
+class _TransferRecord {
+  const _TransferRecord({
+    required this.program,
+    required this.type,
+    required this.assetKind,
+    this.mint,
+    required this.sourceAddress,
+    required this.destinationAddress,
+    required this.sourceOwner,
+    required this.destinationOwner,
+    required this.amount,
+  });
+
+  final String program;
+  final String type;
+  final WalletTransactionAssetKind assetKind;
+  final String? mint;
+  final String sourceAddress;
+  final String destinationAddress;
+  final String sourceOwner;
+  final String destinationOwner;
+  final double amount;
+}
+
+class _TransactionClassificationRecord {
+  const _TransactionClassificationRecord({
+    required this.type,
+    required this.direction,
+    required this.primarySymbol,
+    required this.primaryMint,
+    required this.primaryAssetKind,
+    required this.primaryAmount,
+    this.amountIn,
+    this.amountOut,
+    this.netAmount,
+    this.counterparty,
+    this.fromAddress,
+    this.toAddress,
+    this.swapToToken,
+    this.swapToAmount,
+  });
+
+  final TransactionType type;
+  final WalletTransactionDirection direction;
+  final String primarySymbol;
+  final String? primaryMint;
+  final WalletTransactionAssetKind primaryAssetKind;
+  final double primaryAmount;
+  final double? amountIn;
+  final double? amountOut;
+  final double? netAmount;
+  final String? counterparty;
+  final String? fromAddress;
+  final String? toAddress;
+  final String? swapToToken;
+  final double? swapToAmount;
+}
+
+class _JupiterSwapRequestRecord {
+  const _JupiterSwapRequestRecord({
+    required this.route,
+    this.contextSlot,
+    this.timeTakenMs,
+  });
+
+  final Map<String, dynamic>? route;
+  final int? contextSlot;
+  final double? timeTakenMs;
 }

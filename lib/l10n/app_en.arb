@@ -659,6 +659,7 @@
     }
   },
   "settingsBackupStatusNoWallet": "No wallet connected yet",
+  "settingsBackupStatusAccountShellOnly": "Account wallet has not been restored on this device yet",
   "settingsBackupStatusNoBackup": "No backup protection configured yet",
   "settingsBackupStatusRecoveryPhraseRequired": "Recovery phrase backup still required",
   "settingsBackupStatusEncryptedServerBackup": "Encrypted server backup configured",
@@ -2433,6 +2434,14 @@
       "token": {}
     }
   },
+  "sendTokenSendSuccessWithSignatureToast": "{amount} {token} submitted. Tx: {signature}",
+  "@sendTokenSendSuccessWithSignatureToast": {
+    "placeholders": {
+      "amount": {},
+      "token": {},
+      "signature": {}
+    }
+  },
   "sendTokenSendFailedToast": "Failed to send tokens. Please try again.",
   "sendTokenInsufficientAfterFeesToast": "Insufficient balance after protocol fees. Reduce the amount or top up your wallet.",
   "sendTokenNoKeypairToast": "No wallet keypair available. Reconnect or re-import your wallet.",
@@ -3558,6 +3567,8 @@
   "walletBackupMarkedCompleteToast": "Recovery phrase backup marked as complete.",
   "walletBackupProtectionNoWalletHeadline": "No wallet is connected on this device yet.",
   "walletBackupProtectionNoWalletBody": "Connect or restore the wallet on this device before managing backup protection.",
+  "walletBackupProtectionAccountShellHeadline": "Your account is ready, but this device does not have a wallet signer yet.",
+  "walletBackupProtectionAccountShellBody": "Restore the account wallet on this device before you configure wallet backup protection, transfers, or future wallet-linked access.",
   "walletBackupProtectionNoBackupHeadline": "No encrypted server backup is configured yet.",
   "walletBackupProtectionNoBackupBody": "Create an encrypted server backup if you want a server-side recovery option, and store its recovery password separately from the recovery phrase.",
   "walletBackupProtectionRecoveryPhraseHeadline": "Recovery phrase backup is still required.",
@@ -3754,6 +3765,53 @@
       "toToken": {}
     }
   },
+  "walletSwapSubmittedToastWithSignature": "Swap submitted: {fromToken} → {toToken}. Tx: {signature}",
+  "@walletSwapSubmittedToastWithSignature": {
+    "placeholders": {
+      "fromToken": {},
+      "toToken": {},
+      "signature": {}
+    }
+  },
+  "walletTransactionConfirmationsLabel": "{count} confirmations",
+  "@walletTransactionConfirmationsLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "walletTransactionExplorerAction": "Open explorer",
+  "walletTransactionSignatureLabel": "Transaction ID",
+  "walletTransactionFromLabel": "From",
+  "walletTransactionToLabel": "To",
+  "walletTransactionCounterpartyLabel": "Counterparty",
+  "walletTransactionSlotLabel": "Slot",
+  "walletTransactionFinalityLabel": "Finality",
+  "walletTransactionNetworkFeeLabel": "Network fee",
+  "walletTransactionAssetChangesLabel": "Asset changes",
+  "walletTransactionRelatedActionsLabel": "Related actions",
+  "walletTransactionCopiedToast": "Transaction ID copied.",
+  "walletTransactionExplorerUnavailableToast": "Unable to open explorer.",
+  "walletTransactionFeeTransferTitle": "Fee transfer",
+  "walletTransactionMovedTitle": "Moved",
+  "walletTransactionSwapSubtitle": "{fromToken} to {toToken}",
+  "@walletTransactionSwapSubtitle": {
+    "placeholders": {
+      "fromToken": {},
+      "toToken": {}
+    }
+  },
+  "walletTransactionStatusSubmitted": "Submitted",
+  "walletTransactionStatusPending": "Pending",
+  "walletTransactionStatusConfirmed": "Confirmed",
+  "walletTransactionStatusFinalized": "Finalized",
+  "walletTransactionStatusFailed": "Failed",
+  "walletTransactionFinalityUnknown": "Unknown",
+  "walletTransactionFinalityProcessed": "Processed",
+  "walletTransactionFinalityConfirmed": "Confirmed",
+  "walletTransactionFinalityFinalized": "Finalized",
+  "walletTransactionCopySignatureTooltip": "Copy transaction ID",
   "walletSwapFailedToast": "Swap failed: {message}",
   "@walletSwapFailedToast": {
     "placeholders": {

@@ -4703,5 +4703,63 @@
   },
   "savedItemsPlaceholderTitle": "Shranjen element",
   "savedItemsPlaceholderDescription": "Nalaganje podrobnosti...",
-  "commonEvent": "Dogodek"
+  "commonEvent": "Dogodek",
+  "sendTokenSendSuccessWithSignatureToast": "{amount} {token} oddano. Tx: {signature}",
+  "@sendTokenSendSuccessWithSignatureToast": {
+    "placeholders": {
+      "amount": {},
+      "token": {},
+      "signature": {}
+    }
+  },
+  "settingsBackupStatusAccountShellOnly": "Računska denarnica na tej napravi še ni obnovljena",
+  "walletBackupProtectionAccountShellHeadline": "Račun je pripravljen, vendar ta naprava še nima podpisnika denarnice.",
+  "walletBackupProtectionAccountShellBody": "Pred nastavljanjem zaščite denarnice, prenosi in prihodnjim dostopom, vezanim na denarnico, na tej napravi najprej obnovi računsko denarnico.",
+  "walletSwapSubmittedToastWithSignature": "Zamenjava oddana: {fromToken} → {toToken}. Tx: {signature}",
+  "@walletSwapSubmittedToastWithSignature": {
+    "placeholders": {
+      "fromToken": {},
+      "toToken": {},
+      "signature": {}
+    }
+  },
+  "walletTransactionConfirmationsLabel": "{count} potrditev",
+  "@walletTransactionConfirmationsLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "walletTransactionExplorerAction": "Odpri raziskovalec",
+  "walletTransactionSignatureLabel": "ID transakcije",
+  "walletTransactionFromLabel": "Od",
+  "walletTransactionToLabel": "Za",
+  "walletTransactionCounterpartyLabel": "Nasprotna stran",
+  "walletTransactionSlotLabel": "Slot",
+  "walletTransactionFinalityLabel": "Finalnost",
+  "walletTransactionNetworkFeeLabel": "Omrežnina",
+  "walletTransactionAssetChangesLabel": "Spremembe sredstev",
+  "walletTransactionRelatedActionsLabel": "Povezana dejanja",
+  "walletTransactionCopiedToast": "ID transakcije je kopiran.",
+  "walletTransactionExplorerUnavailableToast": "Raziskovalca ni mogoče odpreti.",
+  "walletTransactionFeeTransferTitle": "Prenos provizije",
+  "walletTransactionMovedTitle": "Premaknjeno",
+  "walletTransactionSwapSubtitle": "{fromToken} v {toToken}",
+  "@walletTransactionSwapSubtitle": {
+    "placeholders": {
+      "fromToken": {},
+      "toToken": {}
+    }
+  },
+  "walletTransactionStatusSubmitted": "Oddano",
+  "walletTransactionStatusPending": "V teku",
+  "walletTransactionStatusConfirmed": "Potrjeno",
+  "walletTransactionStatusFinalized": "Finalizirano",
+  "walletTransactionStatusFailed": "Neuspelo",
+  "walletTransactionFinalityUnknown": "Neznano",
+  "walletTransactionFinalityProcessed": "Obdelano",
+  "walletTransactionFinalityConfirmed": "Potrjeno",
+  "walletTransactionFinalityFinalized": "Finalizirano",
+  "walletTransactionCopySignatureTooltip": "Kopiraj ID transakcije"
 }

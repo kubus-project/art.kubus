@@ -276,12 +276,130 @@ class _WalletBackupProtectionScreenState
     return '${value.substring(0, 6)}...${value.substring(value.length - 6)}';
   }
 
+  Widget _buildStateRow({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(KubusSpacing.md),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(KubusRadius.md),
+        border: Border.all(
+          color: scheme.outline.withValues(alpha: 0.12),
+        ),
+      ),
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(KubusRadius.sm),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: KubusSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.66),
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+                const SizedBox(height: KubusSpacing.xs),
+                Text(
+                  value,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurface,
+                        fontWeight: FontWeight.w700,
+                        height: 1.3,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionCard({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required String description,
+    required VoidCallback? onPressed,
+    required String actionLabel,
+    bool emphasized = false,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    final accent = emphasized ? scheme.primary : scheme.secondary;
+    return LiquidGlassCard(
+      padding: const EdgeInsets.all(KubusSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(KubusRadius.md),
+            ),
+            child: Icon(icon, color: accent),
+          ),
+          const SizedBox(height: KubusSpacing.md),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: KubusSpacing.xs),
+          Text(
+            description,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.74),
+                  height: 1.45,
+                ),
+          ),
+          const SizedBox(height: KubusSpacing.md),
+          SizedBox(
+            width: double.infinity,
+            child: emphasized
+                ? FilledButton.icon(
+                    onPressed: onPressed,
+                    icon: Icon(icon, size: 18),
+                    label: Text(actionLabel),
+                  )
+                : OutlinedButton.icon(
+                    onPressed: onPressed,
+                    icon: Icon(icon, size: 18),
+                    label: Text(actionLabel),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final appModeProvider = context.watch<AppModeProvider?>();
     final scheme = Theme.of(context).colorScheme;
     final walletProvider = context.watch<WalletProvider>();
+    final authority = walletProvider.authority;
     final isIpfsFallbackMode = appModeProvider?.isIpfsFallbackMode ?? false;
     final walletAddress = walletProvider.currentWalletAddress;
     final backup = walletProvider.encryptedWalletBackupDefinition;
@@ -295,6 +413,7 @@ class _WalletBackupProtectionScreenState
         _passkeysSupported;
     final backupStatus = WalletBackupStatusSnapshot(
       walletAddress: walletAddress,
+      hasAccountSession: authority.hasAccountSession,
       hasWalletIdentity: walletProvider.hasWalletIdentity,
       hasSigner: walletProvider.hasSigner,
       isReadOnlySession: walletProvider.isReadOnlySession,
@@ -302,8 +421,72 @@ class _WalletBackupProtectionScreenState
       hasEncryptedServerBackup: hasEncryptedBackup,
       hasPasskeyProtection: passkeysEnabled &&
           walletProvider.encryptedWalletBackupPasskeys.isNotEmpty,
+      encryptedBackupStatusKnown: authority.encryptedBackupStatusKnown,
     );
     final needsSignerRestore = backupStatus.needsSignerRestore;
+    final mediaWidth = MediaQuery.sizeOf(context).width;
+    final isWide = mediaWidth >= 920;
+    final crossAxisCount = isWide ? 2 : 1;
+    final actionCards = <Widget>[
+      if (needsSignerRestore && hasEncryptedBackup)
+        _buildActionCard(
+          context: context,
+          icon: Icons.login_outlined,
+          title: l10n.walletBackupProtectionRestoreSignerAction,
+          description: l10n.walletBackupProtectionRestoreSignerDescription,
+          onPressed: isBusy ? null : _restoreSignerFromBackup,
+          actionLabel: l10n.walletBackupProtectionRestoreSignerAction,
+          emphasized: true,
+        ),
+      _buildActionCard(
+        context: context,
+        icon: Icons.cloud_upload_outlined,
+        title: hasEncryptedBackup
+            ? l10n.walletBackupProtectionUpdateEncryptedBackupButton
+            : l10n.walletBackupProtectionCreateEncryptedBackupButton,
+        description: l10n.walletBackupProtectionCreateBackupDescription,
+        onPressed: isBusy ? null : _createOrUpdateBackup,
+        actionLabel: hasEncryptedBackup
+            ? l10n.walletBackupProtectionUpdateEncryptedBackupButton
+            : l10n.walletBackupProtectionCreateEncryptedBackupButton,
+        emphasized: !hasEncryptedBackup,
+      ),
+      _buildActionCard(
+        context: context,
+        icon: Icons.visibility_outlined,
+        title: l10n.walletBackupProtectionRevealRecoveryPhraseButton,
+        description: l10n.walletBackupProtectionOfflineReminder,
+        onPressed: isBusy ? null : _revealRecoveryPhrase,
+        actionLabel: l10n.walletBackupProtectionRevealRecoveryPhraseButton,
+      ),
+      if (hasEncryptedBackup)
+        _buildActionCard(
+          context: context,
+          icon: Icons.verified_user_outlined,
+          title: l10n.walletBackupProtectionVerifyBackupAction,
+          description: l10n.walletBackupProtectionVerifyBackupDescription,
+          onPressed: isBusy ? null : _verifyBackup,
+          actionLabel: l10n.walletBackupProtectionVerifyBackupAction,
+        ),
+      if (passkeysEnabled)
+        _buildActionCard(
+          context: context,
+          icon: Icons.phishing_outlined,
+          title: l10n.walletBackupProtectionAddPasskeyAction,
+          description: l10n.walletBackupProtectionPasskeysBody,
+          onPressed: isBusy ? null : _enrollPasskey,
+          actionLabel: l10n.walletBackupProtectionAddPasskeyAction,
+        ),
+      if (hasEncryptedBackup)
+        _buildActionCard(
+          context: context,
+          icon: Icons.delete_outline,
+          title: l10n.walletBackupProtectionDeleteBackupAction,
+          description: l10n.walletBackupProtectionDeleteBackupBody,
+          onPressed: isBusy ? null : _deleteBackup,
+          actionLabel: l10n.walletBackupProtectionDeleteBackupAction,
+        ),
+    ];
 
     return Scaffold(
       appBar: AppBar(
@@ -318,18 +501,162 @@ class _WalletBackupProtectionScreenState
           : RefreshIndicator(
               onRefresh: _refresh,
               child: ListView(
-                padding: const EdgeInsets.all(KubusSpacing.lg),
+                padding: EdgeInsets.all(isWide ? KubusSpacing.xl : KubusSpacing.lg),
                 children: <Widget>[
+                  LiquidGlassCard(
+                    padding: EdgeInsets.zero,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(KubusSpacing.lg),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: <Color>[
+                                scheme.primaryContainer.withValues(alpha: 0.92),
+                                scheme.surfaceContainerHighest
+                                    .withValues(alpha: 0.82),
+                                scheme.surface.withValues(alpha: 0.72),
+                              ],
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                l10n.walletBackupProtectionCurrentWalletLabel,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelLarge
+                                    ?.copyWith(
+                                      color:
+                                          scheme.onSurface.withValues(alpha: 0.72),
+                                    ),
+                              ),
+                              const SizedBox(height: KubusSpacing.xs),
+                              Text(
+                                backupStatus.hasWalletIdentity
+                                    ? _walletLabel(walletAddress)
+                                    : backupStatus.settingsSummary(l10n),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleLarge
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                              ),
+                              const SizedBox(height: KubusSpacing.md),
+                              Wrap(
+                                spacing: KubusSpacing.sm,
+                                runSpacing: KubusSpacing.sm,
+                                children: <Widget>[
+                                  WalletStatusChip(
+                                    label: backupStatus.settingsSummary(l10n),
+                                    icon: needsSignerRestore
+                                        ? Icons.login_outlined
+                                        : authority.canTransact
+                                            ? Icons.verified_user_outlined
+                                            : Icons.visibility_outlined,
+                                    color: needsSignerRestore
+                                        ? scheme.primary
+                                        : authority.canTransact
+                                            ? scheme.tertiary
+                                            : scheme.secondary,
+                                  ),
+                                  WalletStatusChip(
+                                    label: authority.state ==
+                                            WalletAuthorityState.accountShellOnly
+                                        ? l10n.walletSessionStateAccountShellOnly
+                                        : authority.state ==
+                                                WalletAuthorityState
+                                                    .localSignerReady
+                                            ? l10n
+                                                .walletSessionStateLocalSignerReady
+                                            : authority.state ==
+                                                    WalletAuthorityState
+                                                        .externalWalletReady
+                                                ? l10n
+                                                    .walletSessionStateExternalWalletReady
+                                                : authority.state ==
+                                                        WalletAuthorityState
+                                                            .encryptedBackupAvailableSignerMissing
+                                                    ? l10n
+                                                        .walletSessionStateEncryptedBackupAvailable
+                                                    : authority.state ==
+                                                            WalletAuthorityState
+                                                                .recoveryNeeded
+                                                        ? l10n
+                                                            .walletSessionStateRecoveryNeeded
+                                                        : authority.state ==
+                                                                WalletAuthorityState
+                                                                    .walletReadOnly
+                                                            ? l10n
+                                                                .walletSessionStateWalletReadOnly
+                                                            : l10n
+                                                                .walletSessionAccountSignedOut,
+                                    icon: Icons.shield_outlined,
+                                    color: scheme.secondary,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: KubusSpacing.md),
+                              Text(
+                                backupStatus.protectionHeadline(l10n),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyLarge
+                                    ?.copyWith(
+                                      color:
+                                          scheme.onSurface.withValues(alpha: 0.88),
+                                      fontWeight: FontWeight.w800,
+                                      height: 1.35,
+                                    ),
+                              ),
+                              const SizedBox(height: KubusSpacing.sm),
+                              Text(
+                                backupStatus.protectionBody(l10n),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color:
+                                          scheme.onSurface.withValues(alpha: 0.76),
+                                      height: 1.45,
+                                    ),
+                              ),
+                              if (backup?.lastVerifiedAt != null) ...<Widget>[
+                                const SizedBox(height: KubusSpacing.md),
+                                Text(
+                                  l10n.walletBackupProtectionLastVerifiedLabel(
+                                    backup!.lastVerifiedAt!.toLocal().toString(),
+                                  ),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: scheme.onSurface
+                                            .withValues(alpha: 0.72),
+                                      ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: KubusSpacing.lg),
                   WalletCustodyStatusPanel(
-                    authority: walletProvider.authority,
-                    compact: true,
+                    authority: authority,
+                    compact: !isWide,
                     onRestoreSigner: needsSignerRestore && hasEncryptedBackup
                         ? _restoreSignerFromBackup
                         : null,
-                    onConnectExternalWallet: !walletProvider
-                            .authority.canTransact
-                        ? () =>
-                            Navigator.of(context).pushNamed('/connect-wallet')
+                    onConnectExternalWallet: !authority.canTransact
+                        ? () => Navigator.of(context).pushNamed('/connect-wallet')
                         : null,
                   ),
                   const SizedBox(height: KubusSpacing.lg),
@@ -339,119 +666,116 @@ class _WalletBackupProtectionScreenState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         Text(
-                          l10n.walletBackupProtectionCurrentWalletLabel,
+                          l10n.walletSecurityStatusTitle,
                           style: Theme.of(context)
                               .textTheme
-                              .labelLarge
+                              .titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: KubusSpacing.xs),
+                        Text(
+                          l10n.walletSecurityBackendBackupClarifier,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
                               ?.copyWith(
                                 color: scheme.onSurface.withValues(alpha: 0.72),
+                                height: 1.45,
                               ),
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          _walletLabel(walletAddress),
-                          style:
-                              Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          backupStatus.protectionHeadline(l10n),
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(
-                                color: scheme.onSurface.withValues(alpha: 0.82),
-                                fontWeight: FontWeight.w700,
-                                height: 1.4,
-                              ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          backupStatus.protectionBody(l10n),
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(
-                                color: scheme.onSurface.withValues(alpha: 0.78),
-                                height: 1.4,
-                              ),
-                        ),
-                        if (_backupRequired && !hasEncryptedBackup) ...<Widget>[
-                          const SizedBox(height: 10),
-                          Text(
-                            l10n.walletBackupProtectionOfflineReminder,
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: scheme.primary,
-                                      fontWeight: FontWeight.w700,
-                                      height: 1.4,
-                                    ),
-                          ),
-                        ],
-                        if (backup?.lastVerifiedAt != null) ...<Widget>[
-                          const SizedBox(height: 10),
-                          Text(
-                            l10n.walletBackupProtectionLastVerifiedLabel(
-                              backup!.lastVerifiedAt!.toLocal().toString(),
+                        const SizedBox(height: KubusSpacing.md),
+                        GridView.count(
+                          crossAxisCount: crossAxisCount,
+                          shrinkWrap: true,
+                          crossAxisSpacing: KubusSpacing.md,
+                          mainAxisSpacing: KubusSpacing.md,
+                          physics: const NeverScrollableScrollPhysics(),
+                          childAspectRatio: isWide ? 2.9 : 2.5,
+                          children: <Widget>[
+                            _buildStateRow(
+                              context: context,
+                              icon: Icons.account_balance_wallet_outlined,
+                              label: l10n.walletSecurityWalletAddressLabel,
+                              value: backupStatus.hasWalletIdentity
+                                  ? _walletLabel(walletAddress)
+                                  : backupStatus.settingsSummary(l10n),
+                              color: backupStatus.hasWalletIdentity
+                                  ? scheme.primary
+                                  : scheme.secondary,
                             ),
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                  color:
-                                      scheme.onSurface.withValues(alpha: 0.72),
-                                ),
-                          ),
-                        ],
+                            _buildStateRow(
+                              context: context,
+                              icon: Icons.draw_outlined,
+                              label: l10n.walletSecuritySignerStatusLabel,
+                              value: authority.canTransact
+                                  ? authority.signerSource ==
+                                          WalletSignerSource.external
+                                      ? l10n
+                                          .walletSecuritySignerExternalReadyValue
+                                      : l10n.walletSecuritySignerLocalReadyValue
+                                  : needsSignerRestore
+                                      ? l10n
+                                          .walletSecuritySignerRestoreAvailableValue
+                                      : l10n.walletSecuritySignerMissingValue,
+                              color: authority.canTransact
+                                  ? scheme.tertiary
+                                  : needsSignerRestore
+                                      ? scheme.primary
+                                      : scheme.error,
+                            ),
+                            _buildStateRow(
+                              context: context,
+                              icon: Icons.visibility_outlined,
+                              label: l10n.walletBackupProtectionRevealRecoveryPhraseButton,
+                              value: _backupRequired
+                                  ? l10n
+                                      .walletBackupProtectionRecoveryPhraseHeadline
+                                  : l10n.walletSecurityConfigured,
+                              color: _backupRequired
+                                  ? scheme.error
+                                  : scheme.tertiary,
+                            ),
+                            _buildStateRow(
+                              context: context,
+                              icon: Icons.cloud_done_outlined,
+                              label: l10n.walletSecurityEncryptedBackupLabel,
+                              value: authority.hasEncryptedBackup
+                                  ? l10n.walletSecurityAvailable
+                                  : authority.encryptedBackupStatusKnown
+                                      ? l10n.walletSecurityUnavailable
+                                      : l10n.walletSecurityUnknown,
+                              color: authority.hasEncryptedBackup
+                                  ? scheme.tertiary
+                                  : authority.encryptedBackupStatusKnown
+                                      ? scheme.secondary
+                                      : scheme.outline,
+                            ),
+                            _buildStateRow(
+                              context: context,
+                              icon: Icons.fingerprint,
+                              label: l10n.walletSecurityPasskeyLabel,
+                              value: backupStatus.hasPasskeyProtection
+                                  ? l10n.walletSecurityConfigured
+                                  : l10n.walletSecurityNotConfigured,
+                              color: backupStatus.hasPasskeyProtection
+                                  ? scheme.tertiary
+                                  : scheme.secondary,
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
                   const SizedBox(height: KubusSpacing.lg),
-                  if (needsSignerRestore && hasEncryptedBackup) ...<Widget>[
-                    FilledButton.tonalIcon(
-                      onPressed: isBusy ? null : _restoreSignerFromBackup,
-                      icon: const Icon(Icons.login_outlined),
-                      label:
-                          Text(l10n.walletBackupProtectionRestoreSignerAction),
-                    ),
-                    const SizedBox(height: KubusSpacing.sm),
-                  ],
-                  FilledButton.icon(
-                    onPressed: isBusy ? null : _createOrUpdateBackup,
-                    icon: const Icon(Icons.cloud_upload_outlined),
-                    label: Text(
-                      hasEncryptedBackup
-                          ? l10n
-                              .walletBackupProtectionUpdateEncryptedBackupButton
-                          : l10n
-                              .walletBackupProtectionCreateEncryptedBackupButton,
-                    ),
+                  GridView.count(
+                    crossAxisCount: crossAxisCount,
+                    shrinkWrap: true,
+                    crossAxisSpacing: KubusSpacing.md,
+                    mainAxisSpacing: KubusSpacing.md,
+                    physics: const NeverScrollableScrollPhysics(),
+                    childAspectRatio: isWide ? 1.45 : 1.16,
+                    children: actionCards,
                   ),
-                  const SizedBox(height: KubusSpacing.sm),
-                  OutlinedButton.icon(
-                    onPressed: isBusy ? null : _revealRecoveryPhrase,
-                    icon: const Icon(Icons.visibility_outlined),
-                    label: Text(
-                        l10n.walletBackupProtectionRevealRecoveryPhraseButton),
-                  ),
-                  if (hasEncryptedBackup) ...<Widget>[
-                    const SizedBox(height: KubusSpacing.sm),
-                    OutlinedButton.icon(
-                      onPressed: isBusy ? null : _verifyBackup,
-                      icon: const Icon(Icons.verified_user_outlined),
-                      label:
-                          Text(l10n.walletBackupProtectionVerifyBackupAction),
-                    ),
-                    const SizedBox(height: KubusSpacing.sm),
-                    OutlinedButton.icon(
-                      onPressed: isBusy ? null : _deleteBackup,
-                      icon: const Icon(Icons.delete_outline),
-                      label:
-                          Text(l10n.walletBackupProtectionDeleteBackupAction),
-                    ),
-                  ],
                   if (passkeysEnabled) ...<Widget>[
                     const SizedBox(height: KubusSpacing.lg),
                     LiquidGlassCard(

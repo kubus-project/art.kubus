@@ -171,12 +171,12 @@ class Web3Provider extends ChangeNotifier {
   }
 
   Future<String> sendKub8(String toAddress, double amount) async {
-    await _boundWalletProvider.sendTransaction(
+    final result = await _boundWalletProvider.sendTransaction(
       token: 'KUB8',
       amount: amount,
       toAddress: toAddress,
     );
-    return _boundWalletProvider.transactions.first.txHash;
+    return result.primarySignature;
   }
 
   Future<String> swapSolToKub8(double solAmount) async {
@@ -188,16 +188,18 @@ class Web3Provider extends ChangeNotifier {
         ? await signer.swapSolToSpl(
             mint: kub8TokenAddress,
             solAmount: solAmount,
-          )
+          ).then((record) => record.signature)
         : await _boundWalletProvider.signAndSendTransactionBase64(
-            await signer.buildJupiterSwapTransactionBase64(
+            (
+              await signer.buildJupiterSwapTransactionBase64(
               userPublicKey: _boundWalletProvider.currentWalletAddress!,
               inputMint: ApiKeys.wrappedSolMintAddress,
               outputMint: kub8TokenAddress,
               inputAmountRaw: (solAmount * 1000000000).round(),
               slippageBps: 50,
               wrapAndUnwrapSol: true,
-            ),
+            ))
+                .transactionBase64,
           );
     await _boundWalletProvider.refreshData();
     return signature;

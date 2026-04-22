@@ -1124,6 +1124,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
                         if (!_applicationFormKey.currentState!.validate()) {
                           return;
                         }
+                        final sheetNavigator = Navigator.of(sheetContext);
                         final profileProvider = context.read<ProfileProvider>();
                         final walletProvider = context.read<WalletProvider>();
                         final web3Provider = context.read<Web3Provider>();
@@ -1150,7 +1151,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
                         if (!mounted || !canProceed) {
                           return;
                         }
-                        Navigator.pop(sheetContext);
+                        sheetNavigator.pop();
                         try {
                           final review =
                               await daoProvider.submitInstitutionReview(

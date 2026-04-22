@@ -258,6 +258,7 @@ void main() {
   test('status summary prefers recovery phrase over encrypted backup', () {
     const snapshot = WalletBackupStatusSnapshot(
       walletAddress: 'wallet123',
+      hasAccountSession: true,
       hasWalletIdentity: true,
       hasSigner: true,
       isReadOnlySession: false,
@@ -275,6 +276,7 @@ void main() {
   test('status headline prefers recovery phrase over passkey backup', () {
     const snapshot = WalletBackupStatusSnapshot(
       walletAddress: 'wallet123',
+      hasAccountSession: true,
       hasWalletIdentity: true,
       hasSigner: true,
       isReadOnlySession: false,
@@ -292,6 +294,7 @@ void main() {
   test('status summary prefers read-only over encrypted backup', () {
     const snapshot = WalletBackupStatusSnapshot(
       walletAddress: 'wallet123',
+      hasAccountSession: true,
       hasWalletIdentity: true,
       hasSigner: false,
       isReadOnlySession: true,

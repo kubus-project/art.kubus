@@ -1711,6 +1711,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get settingsBackupStatusNoWallet => 'Denarnica še ni povezana';
 
   @override
+  String get settingsBackupStatusAccountShellOnly => 'Računska denarnica na tej napravi še ni obnovljena';
+
+  @override
   String get settingsBackupStatusNoBackup => 'Zaščita varnostne kopije še ni nastavljena';
 
   @override
@@ -5482,6 +5485,11 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
+  String sendTokenSendSuccessWithSignatureToast(Object amount, Object token, Object signature) {
+    return '$amount $token oddano. Tx: $signature';
+  }
+
+  @override
   String get sendTokenSendFailedToast => 'Pošiljanje žetonov ni uspelo. Poskusi znova.';
 
   @override
@@ -8113,6 +8121,12 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletBackupProtectionNoWalletBody => 'Pred upravljanjem zaščite varnostnih kopij na tej napravi poveži ali obnovi denarnico.';
 
   @override
+  String get walletBackupProtectionAccountShellHeadline => 'Račun je pripravljen, vendar ta naprava še nima podpisnika denarnice.';
+
+  @override
+  String get walletBackupProtectionAccountShellBody => 'Pred nastavljanjem zaščite denarnice, prenosi in prihodnjim dostopom, vezanim na denarnico, na tej napravi najprej obnovi računsko denarnico.';
+
+  @override
   String get walletBackupProtectionNoBackupHeadline => 'Šifrirana strežniška varnostna kopija še ni nastavljena.';
 
   @override
@@ -8537,6 +8551,93 @@ class AppLocalizationsSl extends AppLocalizations {
   String walletSwapSubmittedToast(Object fromToken, Object toToken) {
     return 'Zamenjava oddana: $fromToken → $toToken';
   }
+
+  @override
+  String walletSwapSubmittedToastWithSignature(Object fromToken, Object toToken, Object signature) {
+    return 'Zamenjava oddana: $fromToken → $toToken. Tx: $signature';
+  }
+
+  @override
+  String walletTransactionConfirmationsLabel(int count) {
+    return '$count potrditev';
+  }
+
+  @override
+  String get walletTransactionExplorerAction => 'Odpri raziskovalec';
+
+  @override
+  String get walletTransactionSignatureLabel => 'ID transakcije';
+
+  @override
+  String get walletTransactionFromLabel => 'Od';
+
+  @override
+  String get walletTransactionToLabel => 'Za';
+
+  @override
+  String get walletTransactionCounterpartyLabel => 'Nasprotna stran';
+
+  @override
+  String get walletTransactionSlotLabel => 'Slot';
+
+  @override
+  String get walletTransactionFinalityLabel => 'Finalnost';
+
+  @override
+  String get walletTransactionNetworkFeeLabel => 'Omrežnina';
+
+  @override
+  String get walletTransactionAssetChangesLabel => 'Spremembe sredstev';
+
+  @override
+  String get walletTransactionRelatedActionsLabel => 'Povezana dejanja';
+
+  @override
+  String get walletTransactionCopiedToast => 'ID transakcije je kopiran.';
+
+  @override
+  String get walletTransactionExplorerUnavailableToast => 'Raziskovalca ni mogoče odpreti.';
+
+  @override
+  String get walletTransactionFeeTransferTitle => 'Prenos provizije';
+
+  @override
+  String get walletTransactionMovedTitle => 'Premaknjeno';
+
+  @override
+  String walletTransactionSwapSubtitle(Object fromToken, Object toToken) {
+    return '$fromToken v $toToken';
+  }
+
+  @override
+  String get walletTransactionStatusSubmitted => 'Oddano';
+
+  @override
+  String get walletTransactionStatusPending => 'V teku';
+
+  @override
+  String get walletTransactionStatusConfirmed => 'Potrjeno';
+
+  @override
+  String get walletTransactionStatusFinalized => 'Finalizirano';
+
+  @override
+  String get walletTransactionStatusFailed => 'Neuspelo';
+
+  @override
+  String get walletTransactionFinalityUnknown => 'Neznano';
+
+  @override
+  String get walletTransactionFinalityProcessed => 'Obdelano';
+
+  @override
+  String get walletTransactionFinalityConfirmed => 'Potrjeno';
+
+  @override
+  String get walletTransactionFinalityFinalized => 'Finalizirano';
+
+  @override
+  String get walletTransactionCopySignatureTooltip => 'Kopiraj ID transakcije';
 
   @override
   String walletSwapFailedToast(Object message) {

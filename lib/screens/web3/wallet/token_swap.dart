@@ -10,6 +10,8 @@ import '../../../models/wallet.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/design_tokens.dart';
+import '../../../widgets/glass_components.dart';
+import '../../../widgets/wallet_transaction_card.dart';
 import '../../../widgets/wallet_custody_status_panel.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/utils/wallet_reconnect_action.dart';
@@ -130,6 +132,8 @@ class _TokenSwapState extends State<TokenSwap> {
                   final content = Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      _buildSwapOverviewCard(theme, walletProvider),
+                      const SizedBox(height: 20),
                       _buildSwapCard(theme, swapColor, walletProvider, tokens),
                       const SizedBox(height: 20),
                       _buildQuoteDetails(theme, swapColor),
@@ -311,6 +315,70 @@ class _TokenSwapState extends State<TokenSwap> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSwapOverviewCard(
+    ThemeData theme,
+    WalletProvider walletProvider,
+  ) {
+    final l10n = AppLocalizations.of(context)!;
+    final routeLabel = _quote == null
+        ? l10n.walletSwapEnterAmountTitle
+        : l10n.walletSwapSubmitLabel(
+            _fromTokenSymbol ?? '',
+            _toTokenSymbol ?? '',
+          );
+    final secondary = _quote == null
+        ? l10n.walletSwapEnterAmountDescription
+        : l10n.walletSwapEstimatedOutputLabel;
+
+    return LiquidGlassCard(
+      padding: const EdgeInsets.all(KubusSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            l10n.walletSwapTitle,
+            style: KubusTextStyles.screenTitle.copyWith(
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: KubusSpacing.xs),
+          Text(
+            l10n.walletSwapSearchingRouteLabel,
+            style: KubusTextStyles.screenSubtitle.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.72),
+            ),
+          ),
+          const SizedBox(height: KubusSpacing.md),
+          WalletCustodyStatusPanel(
+            authority: walletProvider.authority,
+            compact: true,
+          ),
+          const SizedBox(height: KubusSpacing.md),
+          Wrap(
+            spacing: KubusSpacing.sm,
+            runSpacing: KubusSpacing.sm,
+            children: <Widget>[
+              _SwapOverviewPill(
+                label: routeLabel,
+                value: secondary,
+              ),
+              _SwapOverviewPill(
+                label: l10n.walletSwapSlippageToleranceLabel,
+                value: '${_slippagePercent.toStringAsFixed(2)}%',
+              ),
+              if (_quote != null)
+                _SwapOverviewPill(
+                  label: l10n.walletSwapEstimatedOutputLabel,
+                  value:
+                      '${_formatAmount(_quote!.outputAmount)} ${_toTokenSymbol ?? ''}',
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -781,50 +849,9 @@ class _TokenSwapState extends State<TokenSwap> {
       separatorBuilder: (_, __) => const SizedBox(height: KubusSpacing.md),
       itemBuilder: (context, index) {
         final tx = swaps[index];
-        return Container(
-          padding: const EdgeInsets.all(KubusSpacing.md),
-          decoration: _infoDecoration(theme),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
-                ),
-                child:
-                    Icon(Icons.swap_horiz, color: theme.colorScheme.onSurface),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      tx.token,
-                      style: KubusTypography.inter(
-                          fontWeight: FontWeight.w600,
-                          color: theme.colorScheme.onSurface),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      tx.timeAgo,
-                      style: KubusTypography.inter(
-                          color: theme.colorScheme.onSurface
-                              .withValues(alpha: 0.6)),
-                    ),
-                  ],
-                ),
-              ),
-              Text(
-                tx.amount.toStringAsFixed(4),
-                style: KubusTypography.inter(
-                    fontWeight: FontWeight.w600,
-                    color: theme.colorScheme.onSurface),
-              ),
-            ],
-          ),
+        return WalletTransactionCard(
+          transaction: tx,
+          compact: true,
         );
       },
     );
@@ -915,19 +942,25 @@ class _TokenSwapState extends State<TokenSwap> {
 
     setState(() => _isSubmitting = true);
     try {
-      await walletProvider.swapTokens(
+      final result = await walletProvider.swapTokens(
         fromToken: _fromTokenSymbol!,
         toToken: _toTokenSymbol!,
         fromAmount: amount,
         toAmount: _quote?.outputAmount ?? amount,
         slippage: _slippagePercent / 100,
+        quote: _quote,
       );
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
-          content:
-              Text(l10n.walletSwapSubmittedToast(_fromTokenSymbol!, _toTokenSymbol!)),
+          content: Text(
+            l10n.walletSwapSubmittedToastWithSignature(
+              _fromTokenSymbol!,
+              _toTokenSymbol!,
+              result.primarySignature,
+            ),
+          ),
           backgroundColor: Theme.of(context).colorScheme.tertiary,
         ),
       );
@@ -1073,6 +1106,54 @@ class _TokenAvatar extends StatelessWidget {
             color: theme.colorScheme.onSurface,
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SwapOverviewPill extends StatelessWidget {
+  const _SwapOverviewPill({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: KubusSpacing.md,
+        vertical: KubusSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.26),
+        borderRadius: BorderRadius.circular(KubusRadius.xl),
+        border: Border.all(
+          color: scheme.outline.withValues(alpha: 0.16),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text(
+            label,
+            style: KubusTextStyles.compactBadge.copyWith(
+              color: scheme.onSurface.withValues(alpha: 0.64),
+            ),
+          ),
+          const SizedBox(height: KubusSpacing.xs),
+          Text(
+            value,
+            style: KubusTextStyles.detailLabel.copyWith(
+              color: scheme.onSurface,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }

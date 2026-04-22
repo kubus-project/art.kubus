@@ -1711,6 +1711,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsBackupStatusNoWallet => 'No wallet connected yet';
 
   @override
+  String get settingsBackupStatusAccountShellOnly => 'Account wallet has not been restored on this device yet';
+
+  @override
   String get settingsBackupStatusNoBackup => 'No backup protection configured yet';
 
   @override
@@ -5468,6 +5471,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String sendTokenSendSuccessWithSignatureToast(Object amount, Object token, Object signature) {
+    return '$amount $token submitted. Tx: $signature';
+  }
+
+  @override
   String get sendTokenSendFailedToast => 'Failed to send tokens. Please try again.';
 
   @override
@@ -8091,6 +8099,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletBackupProtectionNoWalletBody => 'Connect or restore the wallet on this device before managing backup protection.';
 
   @override
+  String get walletBackupProtectionAccountShellHeadline => 'Your account is ready, but this device does not have a wallet signer yet.';
+
+  @override
+  String get walletBackupProtectionAccountShellBody => 'Restore the account wallet on this device before you configure wallet backup protection, transfers, or future wallet-linked access.';
+
+  @override
   String get walletBackupProtectionNoBackupHeadline => 'No encrypted server backup is configured yet.';
 
   @override
@@ -8515,6 +8529,93 @@ class AppLocalizationsEn extends AppLocalizations {
   String walletSwapSubmittedToast(Object fromToken, Object toToken) {
     return 'Swap submitted: $fromToken → $toToken';
   }
+
+  @override
+  String walletSwapSubmittedToastWithSignature(Object fromToken, Object toToken, Object signature) {
+    return 'Swap submitted: $fromToken → $toToken. Tx: $signature';
+  }
+
+  @override
+  String walletTransactionConfirmationsLabel(int count) {
+    return '$count confirmations';
+  }
+
+  @override
+  String get walletTransactionExplorerAction => 'Open explorer';
+
+  @override
+  String get walletTransactionSignatureLabel => 'Transaction ID';
+
+  @override
+  String get walletTransactionFromLabel => 'From';
+
+  @override
+  String get walletTransactionToLabel => 'To';
+
+  @override
+  String get walletTransactionCounterpartyLabel => 'Counterparty';
+
+  @override
+  String get walletTransactionSlotLabel => 'Slot';
+
+  @override
+  String get walletTransactionFinalityLabel => 'Finality';
+
+  @override
+  String get walletTransactionNetworkFeeLabel => 'Network fee';
+
+  @override
+  String get walletTransactionAssetChangesLabel => 'Asset changes';
+
+  @override
+  String get walletTransactionRelatedActionsLabel => 'Related actions';
+
+  @override
+  String get walletTransactionCopiedToast => 'Transaction ID copied.';
+
+  @override
+  String get walletTransactionExplorerUnavailableToast => 'Unable to open explorer.';
+
+  @override
+  String get walletTransactionFeeTransferTitle => 'Fee transfer';
+
+  @override
+  String get walletTransactionMovedTitle => 'Moved';
+
+  @override
+  String walletTransactionSwapSubtitle(Object fromToken, Object toToken) {
+    return '$fromToken to $toToken';
+  }
+
+  @override
+  String get walletTransactionStatusSubmitted => 'Submitted';
+
+  @override
+  String get walletTransactionStatusPending => 'Pending';
+
+  @override
+  String get walletTransactionStatusConfirmed => 'Confirmed';
+
+  @override
+  String get walletTransactionStatusFinalized => 'Finalized';
+
+  @override
+  String get walletTransactionStatusFailed => 'Failed';
+
+  @override
+  String get walletTransactionFinalityUnknown => 'Unknown';
+
+  @override
+  String get walletTransactionFinalityProcessed => 'Processed';
+
+  @override
+  String get walletTransactionFinalityConfirmed => 'Confirmed';
+
+  @override
+  String get walletTransactionFinalityFinalized => 'Finalized';
+
+  @override
+  String get walletTransactionCopySignatureTooltip => 'Copy transaction ID';
 
   @override
   String walletSwapFailedToast(Object message) {

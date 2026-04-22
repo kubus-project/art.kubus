@@ -138,6 +138,7 @@ class WalletProvider extends ChangeNotifier {
   Wallet? _wallet;
   List<Token> _tokens = [];
   List<WalletTransaction> _transactions = [];
+  final Map<String, WalletTransaction> _transactionOverridesBySignature = {};
   bool _isLoading = false;
   bool _isBalanceVisible = true;
   String? _currentWalletAddress;
@@ -652,7 +653,9 @@ class WalletProvider extends ChangeNotifier {
   // Getters
   Wallet? get wallet => _wallet;
   List<Token> get tokens => List.unmodifiable(_tokens);
-  List<WalletTransaction> get transactions => List.unmodifiable(_transactions);
+  List<WalletTransaction> get transactions =>
+      List.unmodifiable(_visibleTransactions(_transactions));
+  List<WalletTransaction> get rawTransactions => List.unmodifiable(_transactions);
   bool get isLoading => _isLoading;
   bool get isBalanceVisible => _isBalanceVisible;
   double get totalBalance => _wallet?.totalValue ?? 0.0;
@@ -1657,7 +1660,10 @@ class WalletProvider extends ChangeNotifier {
       final tokenBalances =
           await _solanaWalletService.getTokenBalances(address);
       final transactionHistory =
-          await _solanaWalletService.getTransactionHistory(address);
+          await _solanaWalletService.getTransactionHistory(
+        address,
+        limit: 50,
+      );
 
       // Native SOL token first
       _tokens = [
@@ -1696,25 +1702,7 @@ class WalletProvider extends ChangeNotifier {
         ));
       }
 
-      // Map transaction history (simplified)
-      _transactions = transactionHistory
-          .map((tx) => WalletTransaction(
-                id: tx.signature,
-                type: TransactionType.receive, // Placeholder mapping
-                token: 'SOL',
-                amount: 0.0,
-                fromAddress: null,
-                toAddress: address,
-                timestamp: tx.blockTime,
-                status: tx.status.toLowerCase() == 'finalized'
-                    ? TransactionStatus.confirmed
-                    : TransactionStatus.pending,
-                txHash: tx.signature,
-                gasUsed: tx.fee.toDouble(),
-                gasFee: tx.fee / 1000000000.0,
-                metadata: {'slot': tx.slot.toString()},
-              ))
-          .toList();
+      _transactions = _mergeTransactions(transactionHistory);
 
       _wallet = Wallet(
         id: 'wallet_${address.substring(0, 8)}',
@@ -1722,7 +1710,7 @@ class WalletProvider extends ChangeNotifier {
         name: 'Solana Wallet',
         network: 'Solana',
         tokens: _tokens,
-        transactions: _transactions,
+        transactions: _visibleTransactions(_transactions),
         totalValue: _tokens.fold(0.0, (sum, token) => sum + token.value),
         lastUpdated: DateTime.now(),
       );
@@ -1734,6 +1722,201 @@ class WalletProvider extends ChangeNotifier {
       _setLastError(e);
       rethrow;
     }
+  }
+
+  List<WalletTransaction> _visibleTransactions(
+    List<WalletTransaction> transactions,
+  ) {
+    return transactions
+        .where((transaction) => !transaction.isLinkedSecondaryAction)
+        .toList();
+  }
+
+  List<WalletTransaction> _mergeTransactions(
+    List<WalletTransaction> chainTransactions,
+  ) {
+    final merged = <String, WalletTransaction>{};
+
+    for (final transaction in _transactionOverridesBySignature.values) {
+      if (transaction.signature.trim().isEmpty) continue;
+      merged[transaction.signature] = transaction;
+    }
+
+    for (final chainTransaction in chainTransactions) {
+      final signature = chainTransaction.signature.trim();
+      if (signature.isEmpty) continue;
+      final existing = merged[signature];
+      merged[signature] = existing == null
+          ? chainTransaction
+          : _mergeTransactionPair(existing, chainTransaction);
+    }
+
+    final result = merged.values.toList()
+      ..sort((a, b) {
+        final slotCompare = (b.slot ?? 0).compareTo(a.slot ?? 0);
+        if (slotCompare != 0) {
+          return slotCompare;
+        }
+        return b.timestamp.compareTo(a.timestamp);
+      });
+    return result;
+  }
+
+  WalletTransaction _mergeTransactionPair(
+    WalletTransaction current,
+    WalletTransaction incoming,
+  ) {
+    final chainPreferred = _transactionRichness(incoming) >=
+        _transactionRichness(current);
+    final preferred = chainPreferred ? incoming : current;
+    final fallback = chainPreferred ? current : incoming;
+
+    return preferred.copyWith(
+      status: _moreAdvancedStatus(current.status, incoming.status),
+      finality: _moreAdvancedFinality(current.finality, incoming.finality),
+      direction: preferred.direction != WalletTransactionDirection.neutral
+          ? preferred.direction
+          : fallback.direction,
+      token: preferred.token.isNotEmpty ? preferred.token : fallback.token,
+      tokenMint: preferred.tokenMint ?? fallback.tokenMint,
+      assetKind: preferred.assetKind != WalletTransactionAssetKind.unknown
+          ? preferred.assetKind
+          : fallback.assetKind,
+      amount: preferred.amount > 0 ? preferred.amount : fallback.amount,
+      amountIn: preferred.amountIn ?? fallback.amountIn,
+      amountOut: preferred.amountOut ?? fallback.amountOut,
+      netAmount: preferred.netAmount ?? fallback.netAmount,
+      primaryCounterparty:
+          preferred.primaryCounterparty ?? fallback.primaryCounterparty,
+      fromAddress: preferred.fromAddress ?? fallback.fromAddress,
+      toAddress: preferred.toAddress ?? fallback.toAddress,
+      timestamp: preferred.timestamp.isAfter(fallback.timestamp)
+          ? preferred.timestamp
+          : fallback.timestamp,
+      slot: preferred.slot ?? fallback.slot,
+      confirmationCount:
+          preferred.confirmationCount ?? fallback.confirmationCount,
+      lastValidBlockHeight:
+          preferred.lastValidBlockHeight ?? fallback.lastValidBlockHeight,
+      isOptimistic: preferred.isOptimistic && fallback.isOptimistic,
+      feeAmount: preferred.feeAmount ?? fallback.feeAmount,
+      feeToken: preferred.feeAmount != null ? preferred.feeToken : fallback.feeToken,
+      feeTokenMint: preferred.feeTokenMint ?? fallback.feeTokenMint,
+      gasUsed: preferred.gasUsed ?? fallback.gasUsed,
+      gasFee: preferred.gasFee ?? fallback.gasFee,
+      swapToToken: preferred.swapToToken ?? fallback.swapToToken,
+      swapToAmount: preferred.swapToAmount ?? fallback.swapToAmount,
+      explorerUrl: preferred.explorerUrl ?? fallback.explorerUrl,
+      assetChanges: preferred.assetChanges.isNotEmpty
+          ? preferred.assetChanges
+          : fallback.assetChanges,
+      relatedTransactions: _mergeRelatedTransactions(
+        current.relatedTransactions,
+        incoming.relatedTransactions,
+      ),
+      metadata: {
+        ...fallback.metadata,
+        ...preferred.metadata,
+      },
+    );
+  }
+
+  List<WalletRelatedTransaction> _mergeRelatedTransactions(
+    List<WalletRelatedTransaction> first,
+    List<WalletRelatedTransaction> second,
+  ) {
+    final merged = <String, WalletRelatedTransaction>{};
+    for (final item in [...first, ...second]) {
+      final signature = item.signature.trim();
+      if (signature.isEmpty) continue;
+      final existing = merged[signature];
+      if (existing == null) {
+        merged[signature] = item;
+        continue;
+      }
+      merged[signature] = item.copyWith(
+        label: item.label.isNotEmpty ? item.label : existing.label,
+        token: item.token ?? existing.token,
+        tokenMint: item.tokenMint ?? existing.tokenMint,
+        amount: item.amount ?? existing.amount,
+        status: _moreAdvancedStatus(existing.status, item.status),
+        explorerUrl: item.explorerUrl ?? existing.explorerUrl,
+        metadata: {
+          ...existing.metadata,
+          ...item.metadata,
+        },
+      );
+    }
+    return merged.values.toList();
+  }
+
+  int _transactionRichness(WalletTransaction transaction) {
+    var score = 0;
+    if (transaction.assetChanges.isNotEmpty) score += 4;
+    if (transaction.amount > 0) score += 2;
+    if (transaction.fromAddress != null || transaction.toAddress != null) {
+      score += 2;
+    }
+    if (transaction.primaryCounterparty != null) score += 1;
+    if (transaction.relatedTransactions.isNotEmpty) score += 1;
+    if (transaction.confirmationCount != null) score += 1;
+    if (transaction.swapToToken != null) score += 1;
+    return score;
+  }
+
+  TransactionStatus _moreAdvancedStatus(
+    TransactionStatus first,
+    TransactionStatus second,
+  ) {
+    final firstRank = _transactionStatusRank(first);
+    final secondRank = _transactionStatusRank(second);
+    return firstRank >= secondRank ? first : second;
+  }
+
+  int _transactionStatusRank(TransactionStatus status) {
+    switch (status) {
+      case TransactionStatus.submitted:
+        return 0;
+      case TransactionStatus.pending:
+        return 1;
+      case TransactionStatus.confirmed:
+        return 2;
+      case TransactionStatus.finalized:
+        return 3;
+      case TransactionStatus.failed:
+        return 4;
+    }
+  }
+
+  WalletTransactionFinality _moreAdvancedFinality(
+    WalletTransactionFinality first,
+    WalletTransactionFinality second,
+  ) {
+    final firstRank = _finalityRank(first);
+    final secondRank = _finalityRank(second);
+    return firstRank >= secondRank ? first : second;
+  }
+
+  int _finalityRank(WalletTransactionFinality finality) {
+    switch (finality) {
+      case WalletTransactionFinality.unknown:
+        return 0;
+      case WalletTransactionFinality.processed:
+        return 1;
+      case WalletTransactionFinality.confirmed:
+        return 2;
+      case WalletTransactionFinality.finalized:
+        return 3;
+    }
+  }
+
+  void _rememberTransactionOverride(WalletTransaction transaction) {
+    final signature = transaction.signature.trim();
+    if (signature.isEmpty) return;
+    final existing = _transactionOverridesBySignature[signature];
+    _transactionOverridesBySignature[signature] = existing == null
+        ? transaction
+        : _mergeTransactionPair(existing, transaction);
   }
 
   Future<void> _syncBackendData(String address) async {
@@ -1878,20 +2061,31 @@ class WalletProvider extends ChangeNotifier {
 
   // Transaction methods
   List<WalletTransaction> getRecentTransactions({int limit = 10}) {
-    return List<WalletTransaction>.from(_transactions)
-      ..sort((a, b) => b.timestamp.compareTo(a.timestamp))
-      ..take(limit);
+    final transactions = List<WalletTransaction>.from(
+      _visibleTransactions(_transactions),
+    )..sort((a, b) {
+        final slotCompare = (b.slot ?? 0).compareTo(a.slot ?? 0);
+        if (slotCompare != 0) {
+          return slotCompare;
+        }
+        return b.timestamp.compareTo(a.timestamp);
+      });
+    return transactions.take(limit).toList();
   }
 
   List<WalletTransaction> getTransactionsByType(TransactionType type) {
-    return _transactions.where((tx) => tx.type == type).toList();
+    return _visibleTransactions(_transactions)
+        .where((tx) => tx.type == type)
+        .toList();
   }
 
   List<WalletTransaction> getTransactionsByToken(String token) {
-    return _transactions.where((tx) => tx.token == token).toList();
+    return _visibleTransactions(_transactions)
+        .where((tx) => tx.token == token)
+        .toList();
   }
 
-  Future<void> sendTransaction({
+  Future<WalletTransactionSubmissionResult> sendTransaction({
     required String token,
     required double amount,
     required String toAddress,
@@ -1911,6 +2105,7 @@ class WalletProvider extends ChangeNotifier {
     }
 
     try {
+      final walletAddress = _currentWalletAddress!;
       final feeTeam = amount * ApiKeys.kubusTeamFeePct;
       final feeTreasury = amount * ApiKeys.kubusTreasuryFeePct;
       final totalRequired = amount + feeTeam + feeTreasury;
@@ -1920,40 +2115,62 @@ class WalletProvider extends ChangeNotifier {
             'Insufficient balance. Needed $totalRequired $token including fees.');
       }
 
-      String? signature;
       final isSol = token.toUpperCase() == 'SOL';
       final tokenMeta = getTokenBySymbol(token);
       final decimals = tokenMeta?.decimals ?? ApiKeys.kub8Decimals;
       final mint = tokenMeta?.contractAddress ?? ApiKeys.kub8MintAddress;
+      final useExternalSigner = hasExternalSigner && !hasLocalSigner;
+      final submittedAt = DateTime.now();
+      final partialErrors = <String>[];
 
-      if (hasExternalSigner && !hasLocalSigner) {
+      SubmittedSolanaTransactionRecord primarySubmission;
+
+      if (useExternalSigner) {
         final externalSigner = ExternalWalletSignerService.instance;
         if (isSol) {
           final tx =
               await _solanaWalletService.buildTransferSolTransactionBase64(
-            fromAddress: _currentWalletAddress!,
+            fromAddress: walletAddress,
             toAddress: toAddress,
             amount: amount,
           );
-          signature = await externalSigner.signAndSendTransactionBase64(tx);
+          final signature = await externalSigner.signAndSendTransactionBase64(
+            tx.transactionBase64,
+          );
+          primarySubmission = SubmittedSolanaTransactionRecord(
+            signature: signature,
+            lastValidBlockHeight: tx.lastValidBlockHeight,
+            explorerUrl: _solanaWalletService.buildExplorerTransactionUrl(
+              signature,
+            ),
+          );
         } else {
           final tx =
               await _solanaWalletService.buildTransferSplTokenTransactionBase64(
-            fromAddress: _currentWalletAddress!,
+            fromAddress: walletAddress,
             mint: mint,
             toAddress: toAddress,
             amount: amount,
             decimals: decimals,
           );
-          signature = await externalSigner.signAndSendTransactionBase64(tx);
+          final signature = await externalSigner.signAndSendTransactionBase64(
+            tx.transactionBase64,
+          );
+          primarySubmission = SubmittedSolanaTransactionRecord(
+            signature: signature,
+            lastValidBlockHeight: tx.lastValidBlockHeight,
+            explorerUrl: _solanaWalletService.buildExplorerTransactionUrl(
+              signature,
+            ),
+          );
         }
       } else if (isSol) {
-        signature = await _solanaWalletService.transferSol(
+        primarySubmission = await _solanaWalletService.transferSol(
           toAddress: toAddress,
           amount: amount,
         );
       } else {
-        signature = await _solanaWalletService.transferSplToken(
+        primarySubmission = await _solanaWalletService.transferSplToken(
           mint: mint,
           toAddress: toAddress,
           amount: amount,
@@ -1961,96 +2178,262 @@ class WalletProvider extends ChangeNotifier {
         );
       }
 
-      // Fee transfers (match the token being sent)
-      if (feeTeam > 0) {
-        if (hasExternalSigner && !hasLocalSigner) {
-          final tx = isSol
-              ? await _solanaWalletService.buildTransferSolTransactionBase64(
-                  fromAddress: _currentWalletAddress!,
-                  toAddress: ApiKeys.kubusTeamWallet,
-                  amount: feeTeam,
-                )
-              : await _solanaWalletService
-                  .buildTransferSplTokenTransactionBase64(
-                  fromAddress: _currentWalletAddress!,
-                  mint: mint,
-                  toAddress: ApiKeys.kubusTeamWallet,
-                  amount: feeTeam,
-                  decimals: decimals,
-                );
-          await ExternalWalletSignerService.instance
-              .signAndSendTransactionBase64(tx);
-        } else if (isSol) {
-          await _solanaWalletService.transferSol(
-            toAddress: ApiKeys.kubusTeamWallet,
-            amount: feeTeam,
-          );
-        } else {
-          await _solanaWalletService.transferSplToken(
+      Future<SubmittedSolanaTransactionRecord> submitFeeTransfer({
+        required String label,
+        required String targetAddress,
+        required double feeAmount,
+      }) async {
+        if (useExternalSigner) {
+          if (isSol) {
+            final tx =
+                await _solanaWalletService.buildTransferSolTransactionBase64(
+              fromAddress: walletAddress,
+              toAddress: targetAddress,
+              amount: feeAmount,
+            );
+            final signature = await ExternalWalletSignerService.instance
+                .signAndSendTransactionBase64(tx.transactionBase64);
+            return SubmittedSolanaTransactionRecord(
+              signature: signature,
+              lastValidBlockHeight: tx.lastValidBlockHeight,
+              explorerUrl: _solanaWalletService.buildExplorerTransactionUrl(
+                signature,
+              ),
+              metadata: {'label': label},
+            );
+          }
+          final tx =
+              await _solanaWalletService.buildTransferSplTokenTransactionBase64(
+            fromAddress: walletAddress,
             mint: mint,
-            toAddress: ApiKeys.kubusTeamWallet,
-            amount: feeTeam,
+            toAddress: targetAddress,
+            amount: feeAmount,
             decimals: decimals,
+          );
+          final signature = await ExternalWalletSignerService.instance
+              .signAndSendTransactionBase64(tx.transactionBase64);
+          return SubmittedSolanaTransactionRecord(
+            signature: signature,
+            lastValidBlockHeight: tx.lastValidBlockHeight,
+            explorerUrl: _solanaWalletService.buildExplorerTransactionUrl(
+              signature,
+            ),
+            metadata: {'label': label},
           );
         }
+
+        final record = isSol
+            ? await _solanaWalletService.transferSol(
+                toAddress: targetAddress,
+                amount: feeAmount,
+              )
+            : await _solanaWalletService.transferSplToken(
+                mint: mint,
+                toAddress: targetAddress,
+                amount: feeAmount,
+                decimals: decimals,
+              );
+        return SubmittedSolanaTransactionRecord(
+          signature: record.signature,
+          lastValidBlockHeight: record.lastValidBlockHeight,
+          explorerUrl: record.explorerUrl,
+          metadata: {
+            ...record.metadata,
+            'label': label,
+          },
+        );
       }
-      if (feeTreasury > 0) {
-        if (hasExternalSigner && !hasLocalSigner) {
-          final tx = isSol
-              ? await _solanaWalletService.buildTransferSolTransactionBase64(
-                  fromAddress: _currentWalletAddress!,
-                  toAddress: ApiKeys.kubusTreasuryWallet,
-                  amount: feeTreasury,
-                )
-              : await _solanaWalletService
-                  .buildTransferSplTokenTransactionBase64(
-                  fromAddress: _currentWalletAddress!,
-                  mint: mint,
-                  toAddress: ApiKeys.kubusTreasuryWallet,
-                  amount: feeTreasury,
-                  decimals: decimals,
-                );
-          await ExternalWalletSignerService.instance
-              .signAndSendTransactionBase64(tx);
-        } else if (isSol) {
-          await _solanaWalletService.transferSol(
-            toAddress: ApiKeys.kubusTreasuryWallet,
-            amount: feeTreasury,
+
+      final relatedTransactions = <WalletRelatedTransaction>[];
+      final relatedWalletTransactions = <WalletTransaction>[];
+
+      void addRelatedFeeTransaction({
+        required String label,
+        required double feeAmount,
+        required String targetAddress,
+        required SubmittedSolanaTransactionRecord submission,
+      }) {
+        final related = WalletRelatedTransaction(
+          signature: submission.signature,
+          label: label,
+          token: token,
+          tokenMint: isSol ? 'native' : mint,
+          amount: feeAmount,
+          status: TransactionStatus.submitted,
+          explorerUrl: submission.explorerUrl,
+          metadata: {
+            'isFeeTransfer': true,
+            'linkedPrimarySignature': primarySubmission.signature,
+          },
+        );
+        relatedTransactions.add(related);
+        relatedWalletTransactions.add(
+          WalletTransaction(
+            id: submission.signature,
+            signature: submission.signature,
+            explorerUrl: submission.explorerUrl,
+            type: TransactionType.send,
+            status: TransactionStatus.submitted,
+            direction: WalletTransactionDirection.outgoing,
+            finality: WalletTransactionFinality.unknown,
+            token: token,
+            tokenMint: isSol ? 'native' : mint,
+            assetKind: isSol
+                ? WalletTransactionAssetKind.native
+                : WalletTransactionAssetKind.spl,
+            amount: feeAmount,
+            amountOut: feeAmount,
+            netAmount: -feeAmount,
+            primaryCounterparty: targetAddress,
+            fromAddress: walletAddress,
+            toAddress: targetAddress,
+            timestamp: submittedAt,
+            lastValidBlockHeight: submission.lastValidBlockHeight,
+            isOptimistic: true,
+            assetChanges: [
+              WalletTransactionAssetChange(
+                symbol: token,
+                mint: isSol ? 'native' : mint,
+                decimals: decimals,
+                assetKind: isSol
+                    ? WalletTransactionAssetKind.native
+                    : WalletTransactionAssetKind.spl,
+                amount: -feeAmount,
+                direction: WalletTransactionDirection.outgoing,
+                isPrimary: true,
+                isFee: true,
+                label: label,
+                toAddress: targetAddress,
+                counterparty: targetAddress,
+              ),
+            ],
+            metadata: {
+              'isFeeTransfer': true,
+              'isLinkedSecondaryAction': true,
+              'linkedPrimarySignature': primarySubmission.signature,
+              'linkedLabel': label,
+            },
+          ),
+        );
+      }
+
+      if (feeTeam > 0) {
+        try {
+          final submission = await submitFeeTransfer(
+            label: 'Team fee',
+            targetAddress: ApiKeys.kubusTeamWallet,
+            feeAmount: feeTeam,
           );
-        } else {
-          await _solanaWalletService.transferSplToken(
-            mint: mint,
-            toAddress: ApiKeys.kubusTreasuryWallet,
-            amount: feeTreasury,
-            decimals: decimals,
+          addRelatedFeeTransaction(
+            label: 'Team fee',
+            feeAmount: feeTeam,
+            targetAddress: ApiKeys.kubusTeamWallet,
+            submission: submission,
           );
+        } catch (e) {
+          partialErrors.add('Team fee transfer failed: $e');
         }
       }
 
-      // Optimistically append transaction and refresh
-      _transactions.insert(
-        0,
-        WalletTransaction(
-          id: signature,
-          type: TransactionType.send,
-          token: token,
-          amount: amount,
-          fromAddress: _currentWalletAddress,
-          toAddress: toAddress,
-          timestamp: DateTime.now(),
-          status: TransactionStatus.confirmed,
-          txHash: signature,
-          gasUsed: gasPrice ?? 0.0,
-          gasFee: gasPrice ?? 0.0,
-          metadata: {
-            ...?metadata,
-            'feeTeam': feeTeam,
-            'feeTreasury': feeTreasury,
-          },
-        ),
+      if (feeTreasury > 0) {
+        try {
+          final submission = await submitFeeTransfer(
+            label: 'Treasury fee',
+            targetAddress: ApiKeys.kubusTreasuryWallet,
+            feeAmount: feeTreasury,
+          );
+          addRelatedFeeTransaction(
+            label: 'Treasury fee',
+            feeAmount: feeTreasury,
+            targetAddress: ApiKeys.kubusTreasuryWallet,
+            submission: submission,
+          );
+        } catch (e) {
+          partialErrors.add('Treasury fee transfer failed: $e');
+        }
+      }
+
+      final primaryTransaction = WalletTransaction(
+        id: primarySubmission.signature,
+        signature: primarySubmission.signature,
+        explorerUrl: primarySubmission.explorerUrl,
+        type: TransactionType.send,
+        status: TransactionStatus.submitted,
+        direction: WalletTransactionDirection.outgoing,
+        finality: WalletTransactionFinality.unknown,
+        token: token,
+        tokenMint: isSol ? 'native' : mint,
+        assetKind: isSol
+            ? WalletTransactionAssetKind.native
+            : WalletTransactionAssetKind.spl,
+        amount: amount,
+        amountOut: amount,
+        netAmount: -amount,
+        primaryCounterparty: toAddress,
+        fromAddress: walletAddress,
+        toAddress: toAddress,
+        timestamp: submittedAt,
+        lastValidBlockHeight: primarySubmission.lastValidBlockHeight,
+        isOptimistic: true,
+        feeAmount: gasPrice,
+        feeToken: 'SOL',
+        feeTokenMint: 'native',
+        gasFee: gasPrice,
+        assetChanges: [
+          WalletTransactionAssetChange(
+            symbol: token,
+            mint: isSol ? 'native' : mint,
+            decimals: decimals,
+            assetKind: isSol
+                ? WalletTransactionAssetKind.native
+                : WalletTransactionAssetKind.spl,
+            amount: -amount,
+            direction: WalletTransactionDirection.outgoing,
+            isPrimary: true,
+            toAddress: toAddress,
+            counterparty: toAddress,
+          ),
+        ],
+        relatedTransactions: relatedTransactions,
+        metadata: {
+          ...?metadata,
+          'feeTeam': feeTeam,
+          'feeTreasury': feeTreasury,
+          'partialErrors': partialErrors,
+        },
       );
-      await _loadFromBlockchain();
+
+      _rememberTransactionOverride(primaryTransaction);
+      for (final transaction in relatedWalletTransactions) {
+        _rememberTransactionOverride(transaction);
+      }
+      _transactions = _mergeTransactions(_transactions);
       notifyListeners();
+
+      try {
+        await _loadFromBlockchain();
+      } catch (e) {
+        partialErrors.add('History refresh failed: $e');
+      }
+
+      final mergedPrimary = _transactionOverridesBySignature[
+              primarySubmission.signature] ??
+          primaryTransaction;
+      return WalletTransactionSubmissionResult(
+        primaryTransaction: partialErrors.isEmpty
+            ? mergedPrimary
+            : mergedPrimary.copyWith(
+                metadata: {
+                  ...mergedPrimary.metadata,
+                  'partialErrors': partialErrors,
+                },
+              ),
+        relatedTransactions: relatedTransactions,
+        metadata: {
+          'partialErrors': partialErrors,
+          'primarySignature': primarySubmission.signature,
+        },
+      );
     } catch (e, st) {
       _walletLog('sendTransaction failed: $e\n$st');
       rethrow;
@@ -2120,12 +2503,13 @@ class WalletProvider extends ChangeNotifier {
     );
   }
 
-  Future<void> swapTokens({
+  Future<WalletTransactionSubmissionResult> swapTokens({
     required String fromToken,
     required String toToken,
     required double fromAmount,
     required double toAmount,
     double? slippage,
+    SwapQuote? quote,
   }) async {
     if (!canTransact ||
         _currentWalletAddress == null ||
@@ -2137,123 +2521,355 @@ class WalletProvider extends ChangeNotifier {
     }
 
     try {
-      // Simple SOL -> SPL swap via Jupiter (SolanaWalletService).
-      String? signature;
+      final walletAddress = _currentWalletAddress!;
       final useExternalSigner = hasExternalSigner && !hasLocalSigner;
+      final submittedAt = DateTime.now();
+      final partialErrors = <String>[];
+      final fromTokenMeta = getTokenBySymbol(fromToken);
+      final toTokenMeta = getTokenBySymbol(toToken);
+      final inputMint = fromToken.toUpperCase() == 'SOL'
+          ? ApiKeys.wrappedSolMintAddress
+          : _resolveMintAddress(fromTokenMeta!);
+      final outputMint = toToken.toUpperCase() == 'SOL'
+          ? ApiKeys.wrappedSolMintAddress
+          : _resolveMintAddress(toTokenMeta!);
+      final inputDecimals = fromToken.toUpperCase() == 'SOL'
+          ? 9
+          : fromTokenMeta?.decimals ?? ApiKeys.kub8Decimals;
+      final outputDecimals = toToken.toUpperCase() == 'SOL'
+          ? 9
+          : toTokenMeta?.decimals ?? ApiKeys.kub8Decimals;
+      final slippageBps =
+          (((slippage ?? 0.005) * 10000).round()).clamp(1, 5000).toInt();
+      final estimatedOutput = quote?.outputAmount ?? toAmount;
+      final swapQuote = quote;
+
+      SubmittedSolanaTransactionRecord primarySubmission;
       if (useExternalSigner) {
-        final inputMint = fromToken.toUpperCase() == 'SOL'
-            ? ApiKeys.wrappedSolMintAddress
-            : getTokenBySymbol(fromToken)?.contractAddress ?? fromToken;
-        final outputMint =
-            getTokenBySymbol(toToken)?.contractAddress ?? toToken;
-        final inputDecimals = fromToken.toUpperCase() == 'SOL'
-            ? 9
-            : getTokenBySymbol(fromToken)?.decimals ?? ApiKeys.kub8Decimals;
         final tx = await _solanaWalletService.buildJupiterSwapTransactionBase64(
-          userPublicKey: _currentWalletAddress!,
+          userPublicKey: walletAddress,
           inputMint: inputMint,
           outputMint: outputMint,
           inputAmountRaw: (fromAmount * pow(10, inputDecimals)).round(),
-          slippageBps:
-              (((slippage ?? 0.01) * 10000).round()).clamp(1, 5000).toInt(),
+          slippageBps: slippageBps,
           wrapAndUnwrapSol: fromToken.toUpperCase() == 'SOL' ||
               toToken.toUpperCase() == 'SOL',
+          quote: swapQuote,
         );
-        signature = await ExternalWalletSignerService.instance
-            .signAndSendTransactionBase64(tx);
+        final signature = await ExternalWalletSignerService.instance
+            .signAndSendTransactionBase64(tx.transactionBase64);
+        primarySubmission = SubmittedSolanaTransactionRecord(
+          signature: signature,
+          lastValidBlockHeight: tx.lastValidBlockHeight,
+          explorerUrl: _solanaWalletService.buildExplorerTransactionUrl(
+            signature,
+          ),
+          metadata: tx.metadata,
+        );
       } else if (fromToken.toUpperCase() == 'SOL') {
-        signature = await _solanaWalletService.swapSolToSpl(
-          mint: getTokenBySymbol(toToken)?.contractAddress ?? toToken,
+        primarySubmission = await _solanaWalletService.swapSolToSpl(
+          mint: outputMint,
           solAmount: fromAmount,
+          slippageBps: slippageBps,
+          quote: swapQuote,
         );
       } else {
-        // SPL -> SOL or SPL -> SPL handled via two calls (SPL->SOL not yet wired)
-        signature = await _solanaWalletService.swapSplToken(
-          fromMint: getTokenBySymbol(fromToken)?.contractAddress ?? fromToken,
-          toMint: getTokenBySymbol(toToken)?.contractAddress ?? toToken,
+        primarySubmission = await _solanaWalletService.swapSplToken(
+          fromMint: inputMint,
+          toMint: outputMint,
           amount: fromAmount,
-          slippage: slippage ?? 0.01,
+          decimals: inputDecimals,
+          slippageBps: slippageBps,
+          quote: swapQuote,
         );
       }
 
-      // Apply fees on output token
-      final feeTeam = toAmount * ApiKeys.kubusTeamFeePct;
-      final feeTreasury = toAmount * ApiKeys.kubusTreasuryFeePct;
-      if (feeTeam > 0) {
+      final feeTeam = estimatedOutput * ApiKeys.kubusTeamFeePct;
+      final feeTreasury = estimatedOutput * ApiKeys.kubusTreasuryFeePct;
+      final relatedTransactions = <WalletRelatedTransaction>[];
+      final relatedWalletTransactions = <WalletTransaction>[];
+
+      Future<SubmittedSolanaTransactionRecord> submitOutputFee({
+        required String label,
+        required double feeAmount,
+        required String targetAddress,
+      }) async {
+        final outputIsSol = toToken.toUpperCase() == 'SOL';
         if (useExternalSigner) {
-          final mint = getTokenBySymbol(toToken)?.contractAddress ?? toToken;
-          final decimals =
-              getTokenBySymbol(toToken)?.decimals ?? ApiKeys.kub8Decimals;
+          if (outputIsSol) {
+            final tx =
+                await _solanaWalletService.buildTransferSolTransactionBase64(
+              fromAddress: walletAddress,
+              toAddress: targetAddress,
+              amount: feeAmount,
+            );
+            final signature = await ExternalWalletSignerService.instance
+                .signAndSendTransactionBase64(tx.transactionBase64);
+            return SubmittedSolanaTransactionRecord(
+              signature: signature,
+              lastValidBlockHeight: tx.lastValidBlockHeight,
+              explorerUrl: _solanaWalletService.buildExplorerTransactionUrl(
+                signature,
+              ),
+              metadata: {'label': label},
+            );
+          }
           final tx =
               await _solanaWalletService.buildTransferSplTokenTransactionBase64(
-            fromAddress: _currentWalletAddress!,
-            mint: mint,
-            toAddress: ApiKeys.kubusTeamWallet,
-            amount: feeTeam,
-            decimals: decimals,
+            fromAddress: walletAddress,
+            mint: outputMint,
+            toAddress: targetAddress,
+            amount: feeAmount,
+            decimals: outputDecimals,
           );
-          await ExternalWalletSignerService.instance
-              .signAndSendTransactionBase64(tx);
-        } else {
-          await _solanaWalletService.transferSplToken(
-            mint: getTokenBySymbol(toToken)?.contractAddress ?? toToken,
-            toAddress: ApiKeys.kubusTeamWallet,
-            amount: feeTeam,
-            decimals:
-                getTokenBySymbol(toToken)?.decimals ?? ApiKeys.kub8Decimals,
+          final signature = await ExternalWalletSignerService.instance
+              .signAndSendTransactionBase64(tx.transactionBase64);
+          return SubmittedSolanaTransactionRecord(
+            signature: signature,
+            lastValidBlockHeight: tx.lastValidBlockHeight,
+            explorerUrl: _solanaWalletService.buildExplorerTransactionUrl(
+              signature,
+            ),
+            metadata: {'label': label},
           );
         }
+
+        if (outputIsSol) {
+          final record = await _solanaWalletService.transferSol(
+            toAddress: targetAddress,
+            amount: feeAmount,
+          );
+          return SubmittedSolanaTransactionRecord(
+            signature: record.signature,
+            lastValidBlockHeight: record.lastValidBlockHeight,
+            explorerUrl: record.explorerUrl,
+            metadata: {
+              ...record.metadata,
+              'label': label,
+            },
+          );
+        }
+        final record = await _solanaWalletService.transferSplToken(
+          mint: outputMint,
+          toAddress: targetAddress,
+          amount: feeAmount,
+          decimals: outputDecimals,
+        );
+        return SubmittedSolanaTransactionRecord(
+          signature: record.signature,
+          lastValidBlockHeight: record.lastValidBlockHeight,
+          explorerUrl: record.explorerUrl,
+          metadata: {
+            ...record.metadata,
+            'label': label,
+          },
+        );
       }
-      if (feeTreasury > 0) {
-        if (useExternalSigner) {
-          final mint = getTokenBySymbol(toToken)?.contractAddress ?? toToken;
-          final decimals =
-              getTokenBySymbol(toToken)?.decimals ?? ApiKeys.kub8Decimals;
-          final tx =
-              await _solanaWalletService.buildTransferSplTokenTransactionBase64(
-            fromAddress: _currentWalletAddress!,
-            mint: mint,
-            toAddress: ApiKeys.kubusTreasuryWallet,
-            amount: feeTreasury,
-            decimals: decimals,
+
+      void addRelatedFeeTransaction({
+        required String label,
+        required double feeAmount,
+        required String targetAddress,
+        required SubmittedSolanaTransactionRecord submission,
+      }) {
+        final outputIsSol = toToken.toUpperCase() == 'SOL';
+        relatedTransactions.add(
+          WalletRelatedTransaction(
+            signature: submission.signature,
+            label: label,
+            token: toToken,
+            tokenMint: outputIsSol ? 'native' : outputMint,
+            amount: feeAmount,
+            status: TransactionStatus.submitted,
+            explorerUrl: submission.explorerUrl,
+            metadata: {
+              'isFeeTransfer': true,
+              'linkedPrimarySignature': primarySubmission.signature,
+            },
+          ),
+        );
+        relatedWalletTransactions.add(
+          WalletTransaction(
+            id: submission.signature,
+            signature: submission.signature,
+            explorerUrl: submission.explorerUrl,
+            type: TransactionType.send,
+            status: TransactionStatus.submitted,
+            direction: WalletTransactionDirection.outgoing,
+            finality: WalletTransactionFinality.unknown,
+            token: toToken,
+            tokenMint: outputIsSol ? 'native' : outputMint,
+            assetKind: outputIsSol
+                ? WalletTransactionAssetKind.native
+                : WalletTransactionAssetKind.spl,
+            amount: feeAmount,
+            amountOut: feeAmount,
+            netAmount: -feeAmount,
+            primaryCounterparty: targetAddress,
+            fromAddress: walletAddress,
+            toAddress: targetAddress,
+            timestamp: submittedAt,
+            lastValidBlockHeight: submission.lastValidBlockHeight,
+            isOptimistic: true,
+            assetChanges: [
+              WalletTransactionAssetChange(
+                symbol: toToken,
+                mint: outputIsSol ? 'native' : outputMint,
+                decimals: outputDecimals,
+                assetKind: outputIsSol
+                    ? WalletTransactionAssetKind.native
+                    : WalletTransactionAssetKind.spl,
+                amount: -feeAmount,
+                direction: WalletTransactionDirection.outgoing,
+                isPrimary: true,
+                isFee: true,
+                label: label,
+                toAddress: targetAddress,
+                counterparty: targetAddress,
+              ),
+            ],
+            metadata: {
+              'isFeeTransfer': true,
+              'isLinkedSecondaryAction': true,
+              'linkedPrimarySignature': primarySubmission.signature,
+              'linkedLabel': label,
+            },
+          ),
+        );
+      }
+
+      if (feeTeam > 0) {
+        try {
+          final submission = await submitOutputFee(
+            label: 'Team fee',
+            feeAmount: feeTeam,
+            targetAddress: ApiKeys.kubusTeamWallet,
           );
-          await ExternalWalletSignerService.instance
-              .signAndSendTransactionBase64(tx);
-        } else {
-          await _solanaWalletService.transferSplToken(
-            mint: getTokenBySymbol(toToken)?.contractAddress ?? toToken,
-            toAddress: ApiKeys.kubusTreasuryWallet,
-            amount: feeTreasury,
-            decimals:
-                getTokenBySymbol(toToken)?.decimals ?? ApiKeys.kub8Decimals,
+          addRelatedFeeTransaction(
+            label: 'Team fee',
+            feeAmount: feeTeam,
+            targetAddress: ApiKeys.kubusTeamWallet,
+            submission: submission,
           );
+        } catch (e) {
+          partialErrors.add('Team fee transfer failed: $e');
         }
       }
 
-      _transactions.insert(
-        0,
-        WalletTransaction(
-          id: signature,
-          type: TransactionType.swap,
-          token: '$fromToken->$toToken',
-          amount: fromAmount,
-          fromAddress: _currentWalletAddress,
-          toAddress: _currentWalletAddress,
-          timestamp: DateTime.now(),
-          status: TransactionStatus.confirmed,
-          txHash: signature,
-          gasUsed: 0.0,
-          gasFee: 0.0,
-          metadata: {
-            'slippage': slippage,
-            'expectedOut': toAmount,
-            'feeTeam': feeTeam,
-            'feeTreasury': feeTreasury,
-          },
-        ),
+      if (feeTreasury > 0) {
+        try {
+          final submission = await submitOutputFee(
+            label: 'Treasury fee',
+            feeAmount: feeTreasury,
+            targetAddress: ApiKeys.kubusTreasuryWallet,
+          );
+          addRelatedFeeTransaction(
+            label: 'Treasury fee',
+            feeAmount: feeTreasury,
+            targetAddress: ApiKeys.kubusTreasuryWallet,
+            submission: submission,
+          );
+        } catch (e) {
+          partialErrors.add('Treasury fee transfer failed: $e');
+        }
+      }
+
+      final primaryTransaction = WalletTransaction(
+        id: primarySubmission.signature,
+        signature: primarySubmission.signature,
+        explorerUrl: primarySubmission.explorerUrl,
+        type: TransactionType.swap,
+        status: TransactionStatus.submitted,
+        direction: WalletTransactionDirection.swap,
+        finality: WalletTransactionFinality.unknown,
+        token: fromToken,
+        tokenMint: inputMint,
+        assetKind: fromToken.toUpperCase() == 'SOL'
+            ? WalletTransactionAssetKind.native
+            : WalletTransactionAssetKind.spl,
+        amount: fromAmount,
+        amountIn: estimatedOutput,
+        amountOut: fromAmount,
+        primaryCounterparty: 'Jupiter',
+        fromAddress: walletAddress,
+        toAddress: walletAddress,
+        timestamp: submittedAt,
+        lastValidBlockHeight: primarySubmission.lastValidBlockHeight,
+        isOptimistic: true,
+        swapToToken: toToken,
+        swapToAmount: estimatedOutput,
+        assetChanges: [
+          WalletTransactionAssetChange(
+            symbol: fromToken,
+            mint: inputMint,
+            decimals: inputDecimals,
+            assetKind: fromToken.toUpperCase() == 'SOL'
+                ? WalletTransactionAssetKind.native
+                : WalletTransactionAssetKind.spl,
+            amount: -fromAmount,
+            direction: WalletTransactionDirection.outgoing,
+            isPrimary: true,
+            counterparty: 'Jupiter',
+          ),
+          WalletTransactionAssetChange(
+            symbol: toToken,
+            mint: outputMint,
+            decimals: outputDecimals,
+            assetKind: toToken.toUpperCase() == 'SOL'
+                ? WalletTransactionAssetKind.native
+                : WalletTransactionAssetKind.spl,
+            amount: estimatedOutput,
+            direction: WalletTransactionDirection.incoming,
+            counterparty: 'Jupiter',
+          ),
+        ],
+        relatedTransactions: relatedTransactions,
+        metadata: {
+          'slippage': slippage,
+          'slippageBps': slippageBps,
+          'expectedOut': estimatedOutput,
+          'feeTeam': feeTeam,
+          'feeTreasury': feeTreasury,
+          'quoteContextSlot': swapQuote?.contextSlot,
+          'quoteTimeTakenMs': swapQuote?.timeTakenMs,
+          'routePlan': swapQuote?.routePlan ?? primarySubmission.metadata['route'],
+          'rawRoute': swapQuote?.rawRoute ?? primarySubmission.metadata['route'],
+          'partialErrors': partialErrors,
+        },
       );
-      await _loadFromBlockchain();
+
+      _rememberTransactionOverride(primaryTransaction);
+      for (final transaction in relatedWalletTransactions) {
+        _rememberTransactionOverride(transaction);
+      }
+      _transactions = _mergeTransactions(_transactions);
       notifyListeners();
+
+      try {
+        await _loadFromBlockchain();
+      } catch (e) {
+        partialErrors.add('History refresh failed: $e');
+      }
+
+      final mergedPrimary = _transactionOverridesBySignature[
+              primarySubmission.signature] ??
+          primaryTransaction;
+      return WalletTransactionSubmissionResult(
+        primaryTransaction: partialErrors.isEmpty
+            ? mergedPrimary
+            : mergedPrimary.copyWith(
+                metadata: {
+                  ...mergedPrimary.metadata,
+                  'partialErrors': partialErrors,
+                },
+              ),
+        relatedTransactions: relatedTransactions,
+        metadata: {
+          'partialErrors': partialErrors,
+          'primarySignature': primarySubmission.signature,
+          'estimatedOutput': estimatedOutput,
+        },
+      );
     } catch (e, st) {
       _walletLog('swapTokens failed: $e\n$st');
       rethrow;
