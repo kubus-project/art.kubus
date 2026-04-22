@@ -2238,11 +2238,14 @@
   "walletHomeSendAction": "Send",
   "walletHomeReceiveAction": "Receive",
   "walletHomeSwapAction": "Swap",
-  "walletHomeBuyAction": "Buy crypto",
   "walletHomeDesktopSendSubtitle": "Transfer tokens",
   "walletHomeDesktopReceiveSubtitle": "Get your address",
   "walletHomeDesktopSwapSubtitle": "Exchange tokens",
-  "walletHomeDesktopBuySubtitle": "Add funds",
+  "walletHomeDesktopNftsSubtitle": "Open collectibles and account-linked pieces",
+  "walletHomeDesktopRailSubtitle": "Session status, activity mix, and balances stay visible while you work.",
+  "walletHomeSecureWalletAction": "Secure wallet",
+  "walletHomeSecurityTitle": "Secure your wallet",
+  "walletHomeSecuritySubtitle": "Backup, signer access, and recovery status stay together here.",
   "walletHomeYourTokensTitle": "Your tokens",
   "walletHomeYourTokensSubtitle": "Balances currently associated with this wallet.",
   "walletHomeNoTokensTitle": "No tokens yet",
@@ -2367,6 +2370,21 @@
     }
   },
   "receiveTokenNoTokensMessage": "Connect or import a wallet to display available tokens.",
+  "receiveTokenSidebarShareTitle": "Share your receive details",
+  "receiveTokenSidebarShareSubtitle": "Copy the address or share the QR-ready payload.",
+  "receiveTokenSidebarShareAction": "Share",
+  "receiveTokenSidebarActivityTitle": "Recent inbound",
+  "receiveTokenSidebarActivitySubtitle": "Recent counterparties can be reused or verified here.",
+  "receiveTokenSidebarNoActivityTitle": "No inbound activity",
+  "receiveTokenSidebarNoActivityDescription": "Incoming transfers will appear here once this wallet receives funds.",
+  "receiveTokenSidebarTransferSubtitle": "{token} • {amount} • {date}",
+  "@receiveTokenSidebarTransferSubtitle": {
+    "placeholders": {
+      "token": {},
+      "amount": {},
+      "date": {}
+    }
+  },
   "sendTokenTitle": "Send token",
   "sendTokenScanQrTooltip": "Scan QR code",
   "sendTokenQrScannerUnavailableTooltip": "QR scanner not available",
@@ -2374,6 +2392,7 @@
   "sendTokenRecipientAddressTitle": "Recipient address",
   "sendTokenRecipientAddressHint": "Enter recipient address",
   "sendTokenAmountTitle": "Amount",
+  "sendTokenAmountPlaceholder": "0.0",
   "sendTokenMaxButton": "MAX",
   "sendTokenAvailableLabel": "Available: {amount} {token}",
   "@sendTokenAvailableLabel": {
@@ -2383,6 +2402,21 @@
     }
   },
   "sendTokenTransactionSummaryTitle": "Transaction summary",
+  "sendTokenSidebarRecipientsTitle": "Recent recipients",
+  "sendTokenSidebarRecipientsSubtitle": "Reuse recent destinations without leaving this flow.",
+  "sendTokenSidebarNoRecipientsTitle": "No recent recipients",
+  "sendTokenSidebarNoRecipientsDescription": "Recent send destinations will appear here after you transfer tokens.",
+  "sendTokenSidebarRecipientSubtitle": "{token} • {amount} • {date}",
+  "@sendTokenSidebarRecipientSubtitle": {
+    "placeholders": {
+      "token": {},
+      "amount": {},
+      "date": {}
+    }
+  },
+  "sendTokenSidebarSummaryTitle": "Send context",
+  "sendTokenSidebarSummarySubtitle": "Review available balance, fee estimate, and destination at a glance.",
+  "sendTokenSidebarSecuritySubtitle": "Signer and recovery status for this transfer.",
   "sendTokenSummaryAmountLabel": "Amount",
   "sendTokenSummaryFeesLabel": "kubus fees (~{percent}%)",
   "@sendTokenSummaryFeesLabel": {
@@ -3731,6 +3765,18 @@
   "walletSwapEnterAmountTitle": "Enter an amount",
   "walletSwapEnterAmountDescription": "We will fetch live quotes with fees and minimum received once you type an amount.",
   "walletSwapQuotePreviewTitle": "Quote preview",
+  "walletSwapQuoteSidebarTitle": "Quote details",
+  "walletSwapQuoteSidebarSubtitle": "Route, slippage, and output update with every amount change.",
+  "walletSwapRecentPairsTitle": "Recent pairs",
+  "walletSwapRecentPairsSubtitle": "Jump back into recent routes without rebuilding the form.",
+  "walletSwapRecentPairSubtitle": "{amount} • {date}",
+  "@walletSwapRecentPairSubtitle": {
+    "placeholders": {
+      "amount": {},
+      "date": {}
+    }
+  },
+  "walletSwapSecuritySubtitle": "Swap execution still depends on signer access and recovery state.",
   "walletSwapEstimatedOutputLabel": "Estimated output",
   "walletSwapMinReceivedLabel": "Min received (after slippage)",
   "walletSwapPriceImpactLabel": "Price impact",

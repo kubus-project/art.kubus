@@ -5,9 +5,12 @@ import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../utils/design_tokens.dart';
-import '../../../providers/themeprovider.dart';
+import '../../../utils/kubus_color_roles.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../models/wallet.dart';
+import '../../../widgets/glass_components.dart';
+import '../../../widgets/kubus_action_sidebar.dart';
+import '../../../widgets/wallet/kubus_wallet_shell.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class ReceiveTokenScreen extends StatefulWidget {
@@ -77,53 +80,60 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final isTablet =
-              constraints.maxWidth > 600 && constraints.maxWidth <= 800;
-          final isWideScreen = constraints.maxWidth > 800;
+          final isLargeCanvas = constraints.maxWidth >= 1360;
 
-          return SingleChildScrollView(
-            padding: EdgeInsets.all(
-              isWideScreen
-                  ? KubusSpacing.xl
-                  : isTablet
-                      ? KubusSpacing.lg + KubusSpacing.sm
-                      : KubusSpacing.lg,
-            ),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: isWideScreen ? 600 : double.infinity,
+          return KubusWalletResponsiveShell(
+            wideBreakpoint: 1100,
+            mainChildren: <Widget>[
+              KubusWalletSectionCard(
+                child: _buildTokenSelector(),
               ),
-              child: Center(
-                child: Column(
-                  children: [
-                    _buildTokenSelector(),
-                    SizedBox(
-                        height: isWideScreen
-                            ? 40
-                            : isTablet
-                                ? 36
-                                : 32),
-                    _buildQRCode(
-                        walletAddress, hasWalletAddress, selectedToken),
-                    SizedBox(
-                        height: isWideScreen
-                            ? 40
-                            : isTablet
-                                ? 36
-                                : 32),
-                    _buildAddressSection(
-                        walletAddress, hasWalletAddress, selectedToken),
-                    SizedBox(
-                        height: isWideScreen
-                            ? 40
-                            : isTablet
-                                ? 36
-                                : 32),
-                    _buildInstructions(),
+              const SizedBox(height: KubusSpacing.lg),
+              if (isLargeCanvas)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Expanded(
+                      child: _buildQRCode(
+                        walletAddress,
+                        hasWalletAddress,
+                        selectedToken,
+                      ),
+                    ),
+                    const SizedBox(width: KubusSpacing.lg),
+                    Expanded(
+                      child: _buildAddressSection(
+                        walletAddress,
+                        hasWalletAddress,
+                        selectedToken,
+                      ),
+                    ),
                   ],
+                )
+              else ...<Widget>[
+                _buildQRCode(
+                  walletAddress,
+                  hasWalletAddress,
+                  selectedToken,
                 ),
+                const SizedBox(height: KubusSpacing.lg),
+                _buildAddressSection(
+                  walletAddress,
+                  hasWalletAddress,
+                  selectedToken,
+                ),
+              ],
+              const SizedBox(height: KubusSpacing.lg),
+              _buildInstructions(),
+            ],
+            sideChildren: <Widget>[
+              _buildReceiveSidebar(
+                walletProvider,
+                walletAddress: walletAddress,
+                hasWalletAddress: hasWalletAddress,
+                token: selectedToken,
               ),
-            ),
+            ],
           );
         },
       ),
@@ -152,7 +162,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
         }
 
         final theme = Theme.of(context);
-        final accent = Provider.of<ThemeProvider>(context).accentColor;
+        final accent = KubusColorRoles.of(context).statBlue;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -243,6 +253,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
       String? walletAddress, bool hasWalletAddress, Token? token) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+    final roles = KubusColorRoles.of(context);
     final tokenSymbol = token?.symbol ?? _selectedToken;
     final qrData = hasWalletAddress && walletAddress != null
         ? _buildQrPayload(walletAddress, token)
@@ -250,13 +261,8 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
 
     return ScaleTransition(
       scale: _scaleAnimation,
-      child: Container(
+      child: LiquidGlassCard(
         padding: const EdgeInsets.all(KubusSpacing.lg),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.primaryContainer,
-          borderRadius: BorderRadius.circular(KubusRadius.xl),
-          border: Border.all(color: theme.colorScheme.outline),
-        ),
         child: Column(
           children: [
             Container(
@@ -265,6 +271,9 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
               decoration: BoxDecoration(
                 color: theme.colorScheme.surface,
                 borderRadius: BorderRadius.circular(KubusRadius.md),
+                border: Border.all(
+                  color: roles.statBlue.withValues(alpha: 0.18),
+                ),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(KubusSpacing.sm),
@@ -334,16 +343,12 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
       String? walletAddress, bool hasWalletAddress, Token? token) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    final accent = Provider.of<ThemeProvider>(context).accentColor;
+    final roles = KubusColorRoles.of(context);
+    final accent = roles.statBlue;
     final tokenSymbol = token?.symbol ?? _selectedToken;
 
-    return Container(
+    return LiquidGlassCard(
       padding: const EdgeInsets.all(KubusSpacing.lg),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
-        border: Border.all(color: theme.colorScheme.outline),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -392,7 +397,8 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
               color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(KubusRadius.md),
               border: Border.all(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.2)),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.16),
+              ),
             ),
             child: hasWalletAddress
                 ? SelectableText(
@@ -421,19 +427,20 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                   hasWalletAddress ? () => _copyAddress(walletAddress) : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: accent,
+                foregroundColor: theme.colorScheme.onPrimary,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(KubusRadius.md),
                 ),
               ),
               icon: Icon(Icons.content_copy,
-                  color: theme.colorScheme.onSurface, size: 18),
+                  color: theme.colorScheme.onPrimary, size: 18),
               label: Text(
                 l10n.receiveTokenCopyAddressButton,
                 style: KubusTypography.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onSurface,
+                  color: theme.colorScheme.onPrimary,
                 ),
               ),
             ),
@@ -445,13 +452,10 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
 
   Widget _buildInstructions() {
     final l10n = AppLocalizations.of(context)!;
-    return Container(
+    final theme = Theme.of(context);
+    final roles = KubusColorRoles.of(context);
+    return LiquidGlassCard(
       padding: const EdgeInsets.all(KubusSpacing.lg),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
-        border: Border.all(color: Theme.of(context).colorScheme.outline),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -459,7 +463,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
             children: [
               Icon(
                 Icons.info_outline,
-                color: Provider.of<ThemeProvider>(context).accentColor,
+                color: roles.statBlue,
                 size: 20,
               ),
               const SizedBox(width: KubusSpacing.sm),
@@ -468,7 +472,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                 style: KubusTypography.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
             ],
@@ -495,28 +499,23 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
           Container(
             padding: const EdgeInsets.all(KubusSpacing.sm),
             decoration: BoxDecoration(
-              color: Theme.of(context)
-                  .colorScheme
-                  .errorContainer
-                  .withValues(alpha: 0.3),
+              color: theme.colorScheme.errorContainer.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(KubusRadius.sm),
               border: Border.all(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .error
-                      .withValues(alpha: 0.3)),
+                color: theme.colorScheme.error.withValues(alpha: 0.3),
+              ),
             ),
             child: Row(
               children: [
                 Icon(Icons.warning_amber_outlined,
-                    color: Theme.of(context).colorScheme.error, size: 20),
+                    color: theme.colorScheme.error, size: 20),
                 const SizedBox(width: KubusSpacing.sm),
                 Expanded(
                   child: Text(
                     l10n.receiveTokenWarningOnlySend(_selectedToken),
                     style: KubusTypography.inter(
                       fontSize: 12,
-                      color: Theme.of(context).colorScheme.error,
+                      color: theme.colorScheme.error,
                     ),
                   ),
                 ),
@@ -525,6 +524,123 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildReceiveSidebar(
+    WalletProvider walletProvider, {
+    required String? walletAddress,
+    required bool hasWalletAddress,
+    required Token? token,
+  }) {
+    final l10n = AppLocalizations.of(context)!;
+    final roles = KubusColorRoles.of(context);
+    final recentInbound = _recentInboundTransfers(walletProvider);
+    final tokenSymbol = token?.symbol ?? _selectedToken;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        KubusWalletSectionCard(
+          title: l10n.receiveTokenSidebarShareTitle,
+          subtitle: l10n.receiveTokenSidebarShareSubtitle,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Wrap(
+                spacing: KubusSpacing.sm,
+                runSpacing: KubusSpacing.sm,
+                children: <Widget>[
+                  KubusWalletMetaPill(
+                    label: tokenSymbol,
+                    icon: Icons.token_outlined,
+                    tintColor: roles.statAmber,
+                  ),
+                  KubusWalletMetaPill(
+                    label: l10n.receiveTokenBalanceLabel(
+                      token == null
+                          ? '0'
+                          : token.balance.toStringAsFixed(
+                              token.decimals >= 3 ? 3 : 2,
+                            ),
+                    ),
+                    icon: Icons.savings_outlined,
+                    tintColor: roles.statBlue,
+                  ),
+                ],
+              ),
+              const SizedBox(height: KubusSpacing.md),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: hasWalletAddress
+                          ? () => _copyAddress(walletAddress)
+                          : null,
+                      icon: const Icon(Icons.copy_rounded),
+                      label: Text(l10n.receiveTokenCopyAddressButton),
+                    ),
+                  ),
+                  const SizedBox(width: KubusSpacing.md),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: hasWalletAddress && walletAddress != null
+                          ? () => _shareAddress(walletAddress, token)
+                          : null,
+                      icon: const Icon(Icons.share_outlined),
+                      label: Text(l10n.receiveTokenSidebarShareAction),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: KubusSpacing.lg),
+        KubusWalletSectionCard(
+          title: l10n.receiveTokenSidebarActivityTitle,
+          subtitle: l10n.receiveTokenSidebarActivitySubtitle,
+          child: recentInbound.isEmpty
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      l10n.receiveTokenSidebarNoActivityTitle,
+                      style: KubusTextStyles.detailCardTitle.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: KubusSpacing.xs),
+                    Text(
+                      l10n.receiveTokenSidebarNoActivityDescription,
+                      style: KubusTextStyles.detailBody.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.68),
+                      ),
+                    ),
+                  ],
+                )
+              : Column(
+                  children: recentInbound
+                      .map(
+                        (entry) => KubusActionSidebarTile(
+                          title: _shortAddress(entry.counterparty),
+                          subtitle: l10n.receiveTokenSidebarTransferSubtitle(
+                            entry.token,
+                            entry.amount.toStringAsFixed(4),
+                            _formatSidebarDate(entry.timestamp),
+                          ),
+                          icon: Icons.south_west_rounded,
+                          semantic: KubusActionSemantic.view,
+                          onTap: () => _copyAddress(entry.counterparty),
+                        ),
+                      )
+                      .toList(),
+                ),
+        ),
+      ],
     );
   }
 
@@ -537,7 +653,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
           width: 24,
           height: 24,
           decoration: BoxDecoration(
-            color: Provider.of<ThemeProvider>(context).accentColor,
+            color: KubusColorRoles.of(context).statBlue,
             borderRadius: BorderRadius.circular(KubusRadius.md),
           ),
           child: Center(
@@ -600,11 +716,51 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
     ScaffoldMessenger.of(context).showKubusSnackBar(
       SnackBar(
         content: Text(l10n.walletHomeAddressCopiedToast),
-        backgroundColor: Provider.of<ThemeProvider>(context).accentColor,
+        backgroundColor: KubusColorRoles.of(context).statBlue,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ),
     );
+  }
+
+  String _shortAddress(String address) {
+    if (address.length <= 14) return address;
+    return '${address.substring(0, 6)}...${address.substring(address.length - 6)}';
+  }
+
+  String _formatSidebarDate(DateTime timestamp) {
+    final localizations = MaterialLocalizations.of(context);
+    return localizations.formatShortDate(timestamp.toLocal());
+  }
+
+  List<_ReceiveSidebarEntry> _recentInboundTransfers(WalletProvider wallet) {
+    final transactions = List<WalletTransaction>.from(
+      wallet.getTransactionsByType(TransactionType.receive),
+    )..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    final seen = <String>{};
+    final entries = <_ReceiveSidebarEntry>[];
+
+    for (final transaction in transactions) {
+      final counterparty =
+          (transaction.fromAddress ?? transaction.primaryCounterparty ?? '')
+              .trim();
+      if (counterparty.isEmpty || !seen.add(counterparty)) {
+        continue;
+      }
+      entries.add(
+        _ReceiveSidebarEntry(
+          counterparty: counterparty,
+          token: transaction.token,
+          amount: transaction.amount,
+          timestamp: transaction.timestamp,
+        ),
+      );
+      if (entries.length >= 4) {
+        break;
+      }
+    }
+
+    return entries;
   }
 
   Future<void> _shareAddress(String address, Token? token) async {
@@ -676,8 +832,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
 
   Widget _buildTokenAvatar(Token token, {bool isSelected = false}) {
     final theme = Theme.of(context);
-    final accent =
-        Provider.of<ThemeProvider>(context, listen: false).accentColor;
+    final accent = KubusColorRoles.of(context).statBlue;
     final background = isSelected
         ? accent.withValues(alpha: 0.25)
         : theme.colorScheme.surfaceContainerHighest;
@@ -728,4 +883,18 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
       ),
     );
   }
+}
+
+class _ReceiveSidebarEntry {
+  const _ReceiveSidebarEntry({
+    required this.counterparty,
+    required this.token,
+    required this.amount,
+    required this.timestamp,
+  });
+
+  final String counterparty;
+  final String token;
+  final double amount;
+  final DateTime timestamp;
 }

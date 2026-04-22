@@ -143,41 +143,6 @@ class BackendAuthSessionTransport {
   }
 }
 
-class BackendSignedActionTransport {
-  const BackendSignedActionTransport(this._service);
-
-  final BackendApiService _service;
-
-  bool hasWalletSignedSessionFor(String walletAddress) {
-    final token = (_service.getAuthToken() ?? '').trim();
-    final currentWallet = (_service.getCurrentAuthWalletAddress() ?? '').trim();
-    if (token.isEmpty || !WalletUtils.equals(currentWallet, walletAddress)) {
-      return false;
-    }
-    return _service.getCurrentAuthLevel() == BackendAuthLevel.walletSigned;
-  }
-
-  Future<WalletAuthChallengeDto> requestWalletChallenge(
-    String walletAddress,
-  ) {
-    return _service.requestWalletAuthChallenge(walletAddress);
-  }
-
-  Future<AuthSessionPayload> ensureWalletSignedSession({
-    required String walletAddress,
-    required Future<String> Function(String message) signMessage,
-  }) {
-    return _service.ensureSessionForActiveSigner(
-      walletAddress: walletAddress,
-      signMessage: signMessage,
-    );
-  }
-
-  Future<bool> issueDebugWalletToken(String walletAddress) {
-    return _service.issueDebugTokenForWallet(walletAddress);
-  }
-}
-
 class BackendRecoveryTransport {
   const BackendRecoveryTransport(this._service);
 
@@ -385,28 +350,6 @@ class BackendPublicObjectTransport {
 
   Future<Map<String, dynamic>?> getCidRecord(String cid) {
     return _service.getPublicCidRecord(cid);
-  }
-}
-
-class BackendDaoTransport {
-  const BackendDaoTransport(this._service);
-
-  final BackendApiService _service;
-
-  Future<List<Map<String, dynamic>>> getProposals({
-    String? status,
-    int page = 1,
-    int limit = 20,
-  }) {
-    return _service.getDAOProposals(
-      status: status,
-      limit: limit,
-      offset: (page - 1) * limit,
-    );
-  }
-
-  Future<Map<String, dynamic>?> getReview({required String idOrWallet}) {
-    return _service.getDAOReview(idOrWallet: idOrWallet);
   }
 }
 

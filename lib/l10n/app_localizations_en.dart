@@ -5155,9 +5155,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeSwapAction => 'Swap';
 
   @override
-  String get walletHomeBuyAction => 'Buy crypto';
-
-  @override
   String get walletHomeDesktopSendSubtitle => 'Transfer tokens';
 
   @override
@@ -5167,7 +5164,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeDesktopSwapSubtitle => 'Exchange tokens';
 
   @override
-  String get walletHomeDesktopBuySubtitle => 'Add funds';
+  String get walletHomeDesktopNftsSubtitle => 'Open collectibles and account-linked pieces';
+
+  @override
+  String get walletHomeDesktopRailSubtitle => 'Session status, activity mix, and balances stay visible while you work.';
+
+  @override
+  String get walletHomeSecureWalletAction => 'Secure wallet';
+
+  @override
+  String get walletHomeSecurityTitle => 'Secure your wallet';
+
+  @override
+  String get walletHomeSecuritySubtitle => 'Backup, signer access, and recovery status stay together here.';
 
   @override
   String get walletHomeYourTokensTitle => 'Your tokens';
@@ -5354,6 +5363,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get receiveTokenNoTokensMessage => 'Connect or import a wallet to display available tokens.';
 
   @override
+  String get receiveTokenSidebarShareTitle => 'Share your receive details';
+
+  @override
+  String get receiveTokenSidebarShareSubtitle => 'Copy the address or share the QR-ready payload.';
+
+  @override
+  String get receiveTokenSidebarShareAction => 'Share';
+
+  @override
+  String get receiveTokenSidebarActivityTitle => 'Recent inbound';
+
+  @override
+  String get receiveTokenSidebarActivitySubtitle => 'Recent counterparties can be reused or verified here.';
+
+  @override
+  String get receiveTokenSidebarNoActivityTitle => 'No inbound activity';
+
+  @override
+  String get receiveTokenSidebarNoActivityDescription => 'Incoming transfers will appear here once this wallet receives funds.';
+
+  @override
+  String receiveTokenSidebarTransferSubtitle(Object token, Object amount, Object date) {
+    return '$token • $amount • $date';
+  }
+
+  @override
   String get sendTokenTitle => 'Send token';
 
   @override
@@ -5375,6 +5410,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sendTokenAmountTitle => 'Amount';
 
   @override
+  String get sendTokenAmountPlaceholder => '0.0';
+
+  @override
   String get sendTokenMaxButton => 'MAX';
 
   @override
@@ -5384,6 +5422,32 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sendTokenTransactionSummaryTitle => 'Transaction summary';
+
+  @override
+  String get sendTokenSidebarRecipientsTitle => 'Recent recipients';
+
+  @override
+  String get sendTokenSidebarRecipientsSubtitle => 'Reuse recent destinations without leaving this flow.';
+
+  @override
+  String get sendTokenSidebarNoRecipientsTitle => 'No recent recipients';
+
+  @override
+  String get sendTokenSidebarNoRecipientsDescription => 'Recent send destinations will appear here after you transfer tokens.';
+
+  @override
+  String sendTokenSidebarRecipientSubtitle(Object token, Object amount, Object date) {
+    return '$token • $amount • $date';
+  }
+
+  @override
+  String get sendTokenSidebarSummaryTitle => 'Send context';
+
+  @override
+  String get sendTokenSidebarSummarySubtitle => 'Review available balance, fee estimate, and destination at a glance.';
+
+  @override
+  String get sendTokenSidebarSecuritySubtitle => 'Signer and recovery status for this transfer.';
 
   @override
   String get sendTokenSummaryAmountLabel => 'Amount';
@@ -8472,6 +8536,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get walletSwapQuotePreviewTitle => 'Quote preview';
+
+  @override
+  String get walletSwapQuoteSidebarTitle => 'Quote details';
+
+  @override
+  String get walletSwapQuoteSidebarSubtitle => 'Route, slippage, and output update with every amount change.';
+
+  @override
+  String get walletSwapRecentPairsTitle => 'Recent pairs';
+
+  @override
+  String get walletSwapRecentPairsSubtitle => 'Jump back into recent routes without rebuilding the form.';
+
+  @override
+  String walletSwapRecentPairSubtitle(Object amount, Object date) {
+    return '$amount • $date';
+  }
+
+  @override
+  String get walletSwapSecuritySubtitle => 'Swap execution still depends on signer access and recovery state.';
 
   @override
   String get walletSwapEstimatedOutputLabel => 'Estimated output';

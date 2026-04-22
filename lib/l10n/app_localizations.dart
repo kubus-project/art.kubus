@@ -9947,12 +9947,6 @@ abstract class AppLocalizations {
   /// **'Swap'**
   String get walletHomeSwapAction;
 
-  /// No description provided for @walletHomeBuyAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Buy crypto'**
-  String get walletHomeBuyAction;
-
   /// No description provided for @walletHomeDesktopSendSubtitle.
   ///
   /// In en, this message translates to:
@@ -9971,11 +9965,35 @@ abstract class AppLocalizations {
   /// **'Exchange tokens'**
   String get walletHomeDesktopSwapSubtitle;
 
-  /// No description provided for @walletHomeDesktopBuySubtitle.
+  /// No description provided for @walletHomeDesktopNftsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Add funds'**
-  String get walletHomeDesktopBuySubtitle;
+  /// **'Open collectibles and account-linked pieces'**
+  String get walletHomeDesktopNftsSubtitle;
+
+  /// No description provided for @walletHomeDesktopRailSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Session status, activity mix, and balances stay visible while you work.'**
+  String get walletHomeDesktopRailSubtitle;
+
+  /// No description provided for @walletHomeSecureWalletAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure wallet'**
+  String get walletHomeSecureWalletAction;
+
+  /// No description provided for @walletHomeSecurityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure your wallet'**
+  String get walletHomeSecurityTitle;
+
+  /// No description provided for @walletHomeSecuritySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup, signer access, and recovery status stay together here.'**
+  String get walletHomeSecuritySubtitle;
 
   /// No description provided for @walletHomeYourTokensTitle.
   ///
@@ -10289,6 +10307,54 @@ abstract class AppLocalizations {
   /// **'Connect or import a wallet to display available tokens.'**
   String get receiveTokenNoTokensMessage;
 
+  /// No description provided for @receiveTokenSidebarShareTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Share your receive details'**
+  String get receiveTokenSidebarShareTitle;
+
+  /// No description provided for @receiveTokenSidebarShareSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy the address or share the QR-ready payload.'**
+  String get receiveTokenSidebarShareSubtitle;
+
+  /// No description provided for @receiveTokenSidebarShareAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get receiveTokenSidebarShareAction;
+
+  /// No description provided for @receiveTokenSidebarActivityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent inbound'**
+  String get receiveTokenSidebarActivityTitle;
+
+  /// No description provided for @receiveTokenSidebarActivitySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent counterparties can be reused or verified here.'**
+  String get receiveTokenSidebarActivitySubtitle;
+
+  /// No description provided for @receiveTokenSidebarNoActivityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No inbound activity'**
+  String get receiveTokenSidebarNoActivityTitle;
+
+  /// No description provided for @receiveTokenSidebarNoActivityDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Incoming transfers will appear here once this wallet receives funds.'**
+  String get receiveTokenSidebarNoActivityDescription;
+
+  /// No description provided for @receiveTokenSidebarTransferSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{token} • {amount} • {date}'**
+  String receiveTokenSidebarTransferSubtitle(Object token, Object amount, Object date);
+
   /// No description provided for @sendTokenTitle.
   ///
   /// In en, this message translates to:
@@ -10331,6 +10397,12 @@ abstract class AppLocalizations {
   /// **'Amount'**
   String get sendTokenAmountTitle;
 
+  /// No description provided for @sendTokenAmountPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'0.0'**
+  String get sendTokenAmountPlaceholder;
+
   /// No description provided for @sendTokenMaxButton.
   ///
   /// In en, this message translates to:
@@ -10348,6 +10420,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Transaction summary'**
   String get sendTokenTransactionSummaryTitle;
+
+  /// No description provided for @sendTokenSidebarRecipientsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent recipients'**
+  String get sendTokenSidebarRecipientsTitle;
+
+  /// No description provided for @sendTokenSidebarRecipientsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reuse recent destinations without leaving this flow.'**
+  String get sendTokenSidebarRecipientsSubtitle;
+
+  /// No description provided for @sendTokenSidebarNoRecipientsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No recent recipients'**
+  String get sendTokenSidebarNoRecipientsTitle;
+
+  /// No description provided for @sendTokenSidebarNoRecipientsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent send destinations will appear here after you transfer tokens.'**
+  String get sendTokenSidebarNoRecipientsDescription;
+
+  /// No description provided for @sendTokenSidebarRecipientSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{token} • {amount} • {date}'**
+  String sendTokenSidebarRecipientSubtitle(Object token, Object amount, Object date);
+
+  /// No description provided for @sendTokenSidebarSummaryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Send context'**
+  String get sendTokenSidebarSummaryTitle;
+
+  /// No description provided for @sendTokenSidebarSummarySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review available balance, fee estimate, and destination at a glance.'**
+  String get sendTokenSidebarSummarySubtitle;
+
+  /// No description provided for @sendTokenSidebarSecuritySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Signer and recovery status for this transfer.'**
+  String get sendTokenSidebarSecuritySubtitle;
 
   /// No description provided for @sendTokenSummaryAmountLabel.
   ///
@@ -16144,6 +16264,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Quote preview'**
   String get walletSwapQuotePreviewTitle;
+
+  /// No description provided for @walletSwapQuoteSidebarTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Quote details'**
+  String get walletSwapQuoteSidebarTitle;
+
+  /// No description provided for @walletSwapQuoteSidebarSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Route, slippage, and output update with every amount change.'**
+  String get walletSwapQuoteSidebarSubtitle;
+
+  /// No description provided for @walletSwapRecentPairsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent pairs'**
+  String get walletSwapRecentPairsTitle;
+
+  /// No description provided for @walletSwapRecentPairsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Jump back into recent routes without rebuilding the form.'**
+  String get walletSwapRecentPairsSubtitle;
+
+  /// No description provided for @walletSwapRecentPairSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} • {date}'**
+  String walletSwapRecentPairSubtitle(Object amount, Object date);
+
+  /// No description provided for @walletSwapSecuritySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Swap execution still depends on signer access and recovery state.'**
+  String get walletSwapSecuritySubtitle;
 
   /// No description provided for @walletSwapEstimatedOutputLabel.
   ///

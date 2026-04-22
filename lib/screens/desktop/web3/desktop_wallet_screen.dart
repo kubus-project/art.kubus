@@ -20,10 +20,12 @@ import '../../web3/wallet/receive_token_screen.dart';
 import '../../web3/wallet/connectwallet_screen.dart';
 import '../../../widgets/glass_components.dart';
 import '../../../utils/design_tokens.dart';
+import '../../../utils/kubus_color_roles.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 import '../../../widgets/wallet_custody_status_panel.dart';
 import '../../../widgets/wallet_transaction_card.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import '../../web3/wallet/wallet_backup_protection_screen.dart';
 
 /// Desktop wallet screen with professional dashboard layout
 /// Web-optimized with hover states and keyboard shortcuts
@@ -347,6 +349,14 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     );
   }
 
+  Future<void> _openBackupProtection() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const WalletBackupProtectionScreen(),
+      ),
+    );
+  }
+
   Widget _buildHeader(
       ThemeProvider themeProvider, WalletProvider walletProvider) {
     final l10n = AppLocalizations.of(context)!;
@@ -399,6 +409,11 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                     alignment: WrapAlignment.end,
                     children: [
                       _buildNetworkSelector(themeProvider, walletProvider),
+                      _buildHeaderActionButton(
+                        icon: Icons.shield_outlined,
+                        label: l10n.walletHomeSecureWalletAction,
+                        onPressed: _openBackupProtection,
+                      ),
                       _buildHeaderActionButton(
                         icon: Icons.refresh,
                         label: l10n.commonRefresh,
@@ -461,6 +476,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     WalletProvider walletProvider,
   ) {
     final l10n = AppLocalizations.of(context)!;
+    final roles = KubusColorRoles.of(context);
     final solBalance = walletProvider.tokens
             .where((t) => t.symbol.toUpperCase() == 'SOL')
             .firstOrNull
@@ -482,9 +498,9 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              themeProvider.accentColor,
-              themeProvider.accentColor.withValues(alpha: 0.82),
-              const Color(0xFF0F172A).withValues(alpha: 0.92),
+              roles.statAmber,
+              roles.statAmber.withValues(alpha: 0.84),
+              Theme.of(context).colorScheme.surface,
             ],
             stops: const [0.0, 0.58, 1.0],
           ),
@@ -614,9 +630,9 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
               runSpacing: DetailSpacing.sm,
               children: [
                 TextButton.icon(
-                  onPressed: _openSwapScreen,
-                  icon: const Icon(Icons.local_fire_department_outlined),
-                  label: Text(l10n.walletHomeBuyAction),
+                  onPressed: _openReceiveScreen,
+                  icon: const Icon(Icons.arrow_downward_rounded),
+                  label: Text(l10n.walletHomeReceiveAction),
                   style: TextButton.styleFrom(
                     foregroundColor: Colors.white,
                     backgroundColor: Colors.white.withValues(alpha: 0.12),
@@ -659,10 +675,11 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
   ) {
     final l10n = AppLocalizations.of(context)!;
     final canTransact = walletProvider.canTransact;
+    final roles = KubusColorRoles.of(context);
     return LayoutBuilder(
       builder: (context, constraints) {
         final tileWidth = constraints.maxWidth >= 980
-            ? (constraints.maxWidth - (DetailSpacing.md * 3)) / 4
+            ? (constraints.maxWidth - (DetailSpacing.md * 2)) / 3
             : (constraints.maxWidth - DetailSpacing.md) / 2;
         final resolvedTileWidth = tileWidth.clamp(164.0, 240.0);
         return Wrap(
@@ -675,7 +692,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                 l10n.walletHomeSendAction,
                 l10n.walletHomeDesktopSendSubtitle,
                 Icons.arrow_upward,
-                themeProvider.accentColor,
+                roles.negativeAction,
                 _openSendScreen,
                 enabled: canTransact,
               ),
@@ -686,7 +703,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                 l10n.walletHomeReceiveAction,
                 l10n.walletHomeDesktopReceiveSubtitle,
                 Icons.arrow_downward,
-                const Color(0xFF4ECDC4),
+                roles.statBlue,
                 _openReceiveScreen,
               ),
             ),
@@ -696,19 +713,9 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                 l10n.walletHomeSwapAction,
                 l10n.walletHomeDesktopSwapSubtitle,
                 Icons.swap_horiz,
-                const Color(0xFFFF9A8B),
+                roles.positiveAction,
                 _openSwapScreen,
                 enabled: canTransact,
-              ),
-            ),
-            SizedBox(
-              width: resolvedTileWidth,
-              child: _buildActionButton(
-                l10n.walletHomeBuyAction,
-                l10n.walletHomeDesktopBuySubtitle,
-                Icons.add,
-                const Color(0xFF667EEA),
-                _openReceiveScreen,
               ),
             ),
           ],
@@ -1494,9 +1501,10 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
 
   Widget _buildRightPanel(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
     final walletProvider = Provider.of<WalletProvider>(context);
+    final authority = walletProvider.authority;
     final canTransact = walletProvider.canTransact;
+    final roles = KubusColorRoles.of(context);
     final recentTransactions = walletProvider.transactions.take(5).toList();
 
     return ListView(
@@ -1511,7 +1519,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
           l10n.walletHomeSendAction,
           l10n.walletHomeDesktopSendSubtitle,
           Icons.arrow_upward,
-          themeProvider.accentColor,
+          roles.negativeAction,
           _openSendScreen,
           enabled: canTransact,
         ),
@@ -1519,23 +1527,16 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
           l10n.walletHomeReceiveAction,
           l10n.walletHomeDesktopReceiveSubtitle,
           Icons.arrow_downward,
-          scheme.secondary,
+          roles.statBlue,
           _openReceiveScreen,
         ),
         _buildQuickActionTile(
           l10n.walletHomeSwapAction,
           l10n.walletHomeDesktopSwapSubtitle,
           Icons.swap_horiz,
-          scheme.tertiary,
+          roles.positiveAction,
           _openSwapScreen,
           enabled: canTransact,
-        ),
-        _buildQuickActionTile(
-          l10n.walletHomeBuyAction,
-          l10n.walletHomeDesktopBuySubtitle,
-          Icons.add_card,
-          scheme.primary,
-          _openReceiveScreen,
         ),
         SizedBox(height: DetailSpacing.xxl),
         Text(
@@ -1586,6 +1587,61 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
               margin: EdgeInsets.only(bottom: DetailSpacing.md),
             );
           }),
+        SizedBox(height: DetailSpacing.xxl),
+        Text(
+          l10n.walletHomeSecurityTitle,
+          style: DetailTypography.sectionTitle(context),
+        ),
+        SizedBox(height: DetailSpacing.lg),
+        DesktopCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.walletHomeSecuritySubtitle,
+                style: DetailTypography.caption(context),
+              ),
+              SizedBox(height: DetailSpacing.lg),
+              WalletCustodyStatusPanel(
+                authority: authority,
+                compact: true,
+                onRestoreSigner: authority.canRestoreFromEncryptedBackup
+                    ? () => WalletReconnectAction.handleReadOnlyReconnect(
+                          context: context,
+                          walletProvider: walletProvider,
+                        )
+                    : null,
+                onConnectExternalWallet: !authority.canTransact
+                    ? () => Navigator.of(context).pushNamed('/connect-wallet')
+                    : null,
+              ),
+              SizedBox(height: DetailSpacing.lg),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _openBackupProtection,
+                  icon: const Icon(Icons.shield_outlined),
+                  label: Text(l10n.walletHomeSecureWalletAction),
+                ),
+              ),
+              if (authority.canRestoreFromEncryptedBackup) ...[
+                SizedBox(height: DetailSpacing.md),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () =>
+                        WalletReconnectAction.handleReadOnlyReconnect(
+                      context: context,
+                      walletProvider: walletProvider,
+                    ),
+                    icon: const Icon(Icons.login_outlined),
+                    label: Text(l10n.walletSecurityRestoreSignerAction),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ],
     );
   }

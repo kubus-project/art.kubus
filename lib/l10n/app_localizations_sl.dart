@@ -5169,9 +5169,6 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletHomeSwapAction => 'Zamenjaj';
 
   @override
-  String get walletHomeBuyAction => 'Kupi kripto';
-
-  @override
   String get walletHomeDesktopSendSubtitle => 'Prenesi žetone';
 
   @override
@@ -5181,7 +5178,19 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletHomeDesktopSwapSubtitle => 'Zamenjaj žetone';
 
   @override
-  String get walletHomeDesktopBuySubtitle => 'Dodaj sredstva';
+  String get walletHomeDesktopNftsSubtitle => 'Odpri zbirateljske predmete in dela, vezana na raÄun';
+
+  @override
+  String get walletHomeDesktopRailSubtitle => 'Stanje seje, dejavnost in kljuÄna stanja ostanejo vidna med delom.';
+
+  @override
+  String get walletHomeSecureWalletAction => 'ZaÅ¡Äiti denarnico';
+
+  @override
+  String get walletHomeSecurityTitle => 'ZaÅ¡Äiti svojo denarnico';
+
+  @override
+  String get walletHomeSecuritySubtitle => 'Varnostna kopija, dostop podpisnika in stanje obnove so zbrani tukaj.';
 
   @override
   String get walletHomeYourTokensTitle => 'Tvoji žetoni';
@@ -5368,6 +5377,32 @@ class AppLocalizationsSl extends AppLocalizations {
   String get receiveTokenNoTokensMessage => 'Za prikaz žetonov poveži ali uvozi denarnico.';
 
   @override
+  String get receiveTokenSidebarShareTitle => 'Deli podatke za prejem';
+
+  @override
+  String get receiveTokenSidebarShareSubtitle => 'Kopiraj naslov ali deli vsebino, pripravljeno za QR.';
+
+  @override
+  String get receiveTokenSidebarShareAction => 'Deli';
+
+  @override
+  String get receiveTokenSidebarActivityTitle => 'Nedavni prilivi';
+
+  @override
+  String get receiveTokenSidebarActivitySubtitle => 'Nedavne nasprotne strani lahko tukaj preveriÅ¡ ali znova uporabiÅ¡.';
+
+  @override
+  String get receiveTokenSidebarNoActivityTitle => 'Å e ni prilivov';
+
+  @override
+  String get receiveTokenSidebarNoActivityDescription => 'PrihajajoÄi prenosi se bodo prikazali tukaj, ko ta denarnica prejme sredstva.';
+
+  @override
+  String receiveTokenSidebarTransferSubtitle(Object token, Object amount, Object date) {
+    return '$token • $amount • $date';
+  }
+
+  @override
   String get sendTokenTitle => 'Pošlji žeton';
 
   @override
@@ -5389,6 +5424,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get sendTokenAmountTitle => 'Znesek';
 
   @override
+  String get sendTokenAmountPlaceholder => '0.0';
+
+  @override
   String get sendTokenMaxButton => 'MAX';
 
   @override
@@ -5398,6 +5436,32 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get sendTokenTransactionSummaryTitle => 'Povzetek transakcije';
+
+  @override
+  String get sendTokenSidebarRecipientsTitle => 'Nedavni prejemniki';
+
+  @override
+  String get sendTokenSidebarRecipientsSubtitle => 'Ponovno uporabi nedavne cilje, ne da bi zapustil ta tok.';
+
+  @override
+  String get sendTokenSidebarNoRecipientsTitle => 'Å e ni nedavnih prejemnikov';
+
+  @override
+  String get sendTokenSidebarNoRecipientsDescription => 'Nedavni cilji za poÅ¡iljanje se bodo prikazali tukaj po prvem prenosu.';
+
+  @override
+  String sendTokenSidebarRecipientSubtitle(Object token, Object amount, Object date) {
+    return '$token • $amount • $date';
+  }
+
+  @override
+  String get sendTokenSidebarSummaryTitle => 'Kontekst poÅ¡iljanja';
+
+  @override
+  String get sendTokenSidebarSummarySubtitle => 'Na hitro preveri stanje, oceno provizije in cilj prenosa.';
+
+  @override
+  String get sendTokenSidebarSecuritySubtitle => 'Stanje podpisnika in obnove za ta prenos.';
 
   @override
   String get sendTokenSummaryAmountLabel => 'Znesek';
@@ -8494,6 +8558,26 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get walletSwapQuotePreviewTitle => 'Predogled ponudbe';
+
+  @override
+  String get walletSwapQuoteSidebarTitle => 'Podrobnosti ponudbe';
+
+  @override
+  String get walletSwapQuoteSidebarSubtitle => 'Pot, zdrs in izhodni znesek se posodabljajo ob vsaki spremembi.';
+
+  @override
+  String get walletSwapRecentPairsTitle => 'Nedavni pari';
+
+  @override
+  String get walletSwapRecentPairsSubtitle => 'Vrni se na nedavne poti brez ponovne sestave obrazca.';
+
+  @override
+  String walletSwapRecentPairSubtitle(Object amount, Object date) {
+    return '$amount • $date';
+  }
+
+  @override
+  String get walletSwapSecuritySubtitle => 'Izvedba zamenjave je Å¡e vedno odvisna od dostopa podpisnika in stanja obnove.';
 
   @override
   String get walletSwapEstimatedOutputLabel => 'Ocenjen izhod';

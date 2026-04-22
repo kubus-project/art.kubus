@@ -1879,136 +1879,20 @@ class BackendApiService
     );
   }
 
-  bool _shouldQueuePublicActionAfterFailure(
-    http.Response? response,
-    Object? error,
-  ) {
-    if (_publicFallbackService.mode == AppRuntimeMode.ipfsFallback) {
-      return true;
-    }
 
-    if (response != null) {
-      return _isTransientWriteStatusCode(response.statusCode);
-    }
 
-    final status = error == null ? null : _tryParseRequestFailedStatus(error);
-    if (status != null) {
-      return _isTransientWriteStatusCode(status);
-    }
 
-    return error != null;
-  }
+  void _throwIfIpfsFallbackUnavailable(String featureLabel) =>
+      _backendApiThrowIfIpfsFallbackUnavailable(this, featureLabel);
 
-  Future<void> _queuePublicAction({
-    required String actionType,
-    required String entityType,
-    required String entityId,
-    Map<String, dynamic> payload = const <String, dynamic>{},
-  }) async {
-    await _publicActionOutboxService.enqueueSignedAction(
-      PublicActionDraftPayload(
-        actionType: actionType,
-        entityType: entityType,
-        entityId: entityId,
-        payload: payload,
-      ),
-    );
-  }
+  Map<String, dynamic>? _decodeResponseMap(http.Response response) =>
+      _backendApiDecodeResponseMap(response);
 
-  String _queueUnavailableMessage(String entityType) {
-    switch (entityType.trim().toLowerCase()) {
-      case 'artwork':
-        return 'Artwork actions are unavailable while the app is running on public snapshot fallback.';
-      case 'post':
-        return 'Post actions are unavailable while the app is running on public snapshot fallback.';
-      case 'profile':
-        return 'Follow actions are unavailable while the app is running on public snapshot fallback.';
-      default:
-        return 'This action is unavailable while the app is running on public snapshot fallback.';
-    }
-  }
 
-  void _throwIfIpfsFallbackUnavailable(String featureLabel) {
-    if (_publicFallbackService.mode != AppRuntimeMode.ipfsFallback) {
-      return;
-    }
-    throw Exception(
-      '$featureLabel is unavailable while the app is running on public snapshot fallback.',
-    );
-  }
+  bool? _tryBoolValue(dynamic value) => _backendApiTryBoolValue(value);
 
-  Map<String, dynamic>? _decodeResponseMap(http.Response response) {
-    if (response.body.isEmpty) {
-      return null;
-    }
-
-    final decoded = jsonDecode(response.body);
-    if (decoded is Map<String, dynamic>) {
-      return decoded;
-    }
-    if (decoded is Map) {
-      return Map<String, dynamic>.from(decoded);
-    }
-    return null;
-  }
-
-  int? _tryIntValue(dynamic value) {
-    if (value is int) {
-      return value;
-    }
-    if (value is num) {
-      return value.toInt();
-    }
-    if (value is String) {
-      return int.tryParse(value);
-    }
-    return null;
-  }
-
-  bool? _tryBoolValue(dynamic value) {
-    if (value is bool) {
-      return value;
-    }
-    if (value is String) {
-      final normalized = value.trim().toLowerCase();
-      if (const <String>['true', '1', 'yes', 'y', 'on'].contains(normalized)) {
-        return true;
-      }
-      if (const <String>['false', '0', 'no', 'n', 'off'].contains(normalized)) {
-        return false;
-      }
-    }
-    if (value is num) {
-      return value != 0;
-    }
-    return null;
-  }
-
-  int? _extractIntFromResponse(http.Response response, List<String> keys) {
-    final decoded = _decodeResponseMap(response);
-    if (decoded == null) {
-      return null;
-    }
-
-    final candidates = <Map<String, dynamic>>[
-      decoded,
-      if (decoded['data'] is Map<String, dynamic>)
-        decoded['data'] as Map<String, dynamic>,
-      if (decoded['data'] is Map)
-        Map<String, dynamic>.from(decoded['data'] as Map),
-    ];
-
-    for (final candidate in candidates) {
-      for (final key in keys) {
-        final value = _tryIntValue(candidate[key]);
-        if (value != null) {
-          return value;
-        }
-      }
-    }
-
-    return null;
-  }
+  int? _extractIntFromResponse(http.Response response, List<String> keys) =>
+      _backendApiExtractIntFromResponse(response, keys);
 
   Future<http.Response?> _sendQueueablePublicAction({
     required String method,
@@ -2021,82 +1905,20 @@ class BackendApiService
     Object? body,
     Encoding? encoding,
     bool isIdempotent = false,
-  }) async {
-    if (_publicFallbackService.mode == AppRuntimeMode.ipfsFallback) {
-      if (!_publicActionOutboxService.canQueueSignedActions) {
-        throw Exception(_queueUnavailableMessage(entityType));
-      }
-      await _queuePublicAction(
+  }) =>
+      _backendApiSendQueueablePublicAction(
+        this,
+        method: method,
+        path: path,
         actionType: actionType,
         entityType: entityType,
         entityId: entityId,
+        walletAddress: walletAddress,
         payload: payload,
-      );
-      return null;
-    }
-
-    try {
-      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
-    } catch (error) {
-      if (kDebugMode) {
-        AppConfig.debugPrint(
-          'BackendApiService: auth prep for $entityType:$actionType failed: $error',
-        );
-      }
-    }
-
-    http.Response? response;
-    Object? error;
-    try {
-      response = await _sendWriteWithFailover(
-        method,
-        path,
-        includeAuth: true,
-        headers: _getHeaders(),
         body: body,
         encoding: encoding,
         isIdempotent: isIdempotent,
       );
-    } catch (caughtError) {
-      error = caughtError;
-    }
-
-    if (response != null && _isSuccessStatus(response.statusCode)) {
-      return response;
-    }
-
-    if (_shouldQueuePublicActionAfterFailure(response, error)) {
-      if (!_publicActionOutboxService.canQueueSignedActions) {
-        if (error != null) {
-          throw error;
-        }
-        throw BackendApiRequestException(
-          statusCode: response?.statusCode ?? 0,
-          path: path,
-          body: response?.body ?? '',
-        );
-      }
-      // Queueable mutation failures must not count as dual-backend outages.
-      // Global fallback mode should be driven by health/read probes.
-      await _queuePublicAction(
-        actionType: actionType,
-        entityType: entityType,
-        entityId: entityId,
-        payload: payload,
-      );
-      return response;
-    }
-
-    if (error != null) {
-      throw error;
-    }
-
-    throw BackendApiRequestException(
-      statusCode: response?.statusCode ?? 0,
-      path: path,
-      body: response?.body ?? '',
-    );
-  }
 
   /// Normalize search suggestion payloads from various backend shapes into a
   /// stable list of maps with keys: `label`, `subtitle`, `id`, `type`, `lat`, `lng`.
@@ -6622,319 +6444,109 @@ class BackendApiService
 
   /// List DAO proposals
   /// GET /api/dao/proposals
-  Future<List<Map<String, dynamic>>> getDAOProposals(
-      {int limit = 50, int offset = 0, String? status}) async {
-    try {
-      final uri = Uri.parse('$baseUrl/api/dao/proposals').replace(
-        queryParameters: <String, String>{
-          'limit': '$limit',
-          'offset': '$offset',
-          if (status != null && status.isNotEmpty) 'status': status,
-        },
+  Future<List<Map<String, dynamic>>> getDAOProposals({
+    int limit = 50,
+    int offset = 0,
+    String? status,
+  }) =>
+      _backendApiGetDAOProposals(
+        this,
+        limit: limit,
+        offset: offset,
+        status: status,
       );
-      final response = await _get(uri,
-          includeAuth: false, headers: _getHeaders(includeAuth: false));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final list = (data['data'] ?? data['proposals'] ?? []) as List;
-        return List<Map<String, dynamic>>.from(list);
-      } else if (response.statusCode == 404) {
-        return [];
-      } else {
-        throw Exception('Failed to get DAO proposals: ${response.statusCode}');
-      }
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.getDAOProposals failed: $e');
-      return [];
-    }
-  }
 
   /// Create a DAO proposal
   /// POST /api/dao/proposals
   Future<Map<String, dynamic>?> createDAOProposal({
     required Map<String, dynamic> envelope,
-  }) async {
-    try {
-      final walletAddress = (envelope['walletAddress'] ?? '').toString().trim();
-      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
-      final response = await _post(
-        Uri.parse('$baseUrl/api/dao/proposals'),
-        headers: _getHeaders(),
-        body: jsonEncode({'envelope': envelope}),
-      );
-
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final payload = data['data'] ?? data['proposal'] ?? data;
-        return payload is Map<String, dynamic> ? payload : null;
-      } else {
-        throw Exception(
-            'Failed to create proposal: ${response.statusCode} ${response.body}');
-      }
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.createDAOProposal failed: $e');
-      rethrow;
-    }
-  }
+  }) =>
+      _backendApiCreateDAOProposal(this, envelope: envelope);
 
   /// List votes for a proposal or all votes
   /// GET /api/dao/proposals/:id/votes or /api/dao/votes
-  Future<List<Map<String, dynamic>>> getDAOVotes(
-      {String? proposalId, int limit = 100, int offset = 0}) async {
-    try {
-      final uri = proposalId == null
-          ? Uri.parse('$baseUrl/api/dao/votes').replace(queryParameters: {
-              'limit': '$limit',
-              'offset': '$offset',
-            })
-          : Uri.parse('$baseUrl/api/dao/proposals/$proposalId/votes')
-              .replace(queryParameters: {
-              'limit': '$limit',
-              'offset': '$offset',
-            });
-      final response = await _get(uri,
-          includeAuth: false, headers: _getHeaders(includeAuth: false));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final list = (data['votes'] ?? data['data'] ?? []) as List;
-        return List<Map<String, dynamic>>.from(list);
-      } else if (response.statusCode == 404) {
-        return [];
-      } else {
-        throw Exception('Failed to get DAO votes: ${response.statusCode}');
-      }
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.getDAOVotes failed: $e');
-      return [];
-    }
-  }
+  Future<List<Map<String, dynamic>>> getDAOVotes({
+    String? proposalId,
+    int limit = 100,
+    int offset = 0,
+  }) =>
+      _backendApiGetDAOVotes(
+        this,
+        proposalId: proposalId,
+        limit: limit,
+        offset: offset,
+      );
 
   /// Submit a DAO vote
   /// POST /api/dao/proposals/:id/votes
   Future<Map<String, dynamic>?> submitDAOVote({
     required String proposalId,
     required Map<String, dynamic> envelope,
-  }) async {
-    try {
-      final walletAddress = (envelope['walletAddress'] ?? '').toString().trim();
-      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
-      final response = await _post(
-        Uri.parse('$baseUrl/api/dao/proposals/$proposalId/votes'),
-        headers: _getHeaders(),
-        body: jsonEncode({'envelope': envelope}),
+  }) =>
+      _backendApiSubmitDAOVote(
+        this,
+        proposalId: proposalId,
+        envelope: envelope,
       );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return data['data'] as Map<String, dynamic>? ?? data;
-      } else {
-        throw Exception('Failed to submit DAO vote: ${response.statusCode}');
-      }
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.submitDAOVote failed: $e');
-      rethrow;
-    }
-  }
 
   /// List DAO delegates
   /// GET /api/dao/delegates
-  Future<List<Map<String, dynamic>>> getDAODelegates() async {
-    try {
-      final response = await _get(
-        Uri.parse('$baseUrl/api/dao/delegates'),
-        includeAuth: false,
-        headers: _getHeaders(includeAuth: false),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final list = (data['delegates'] ?? data['data'] ?? []) as List;
-        return List<Map<String, dynamic>>.from(list);
-      } else if (response.statusCode == 404) {
-        return [];
-      } else {
-        throw Exception('Failed to get DAO delegates: ${response.statusCode}');
-      }
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.getDAODelegates failed: $e');
-      return [];
-    }
-  }
+  Future<List<Map<String, dynamic>>> getDAODelegates() =>
+      _backendApiGetDAODelegates(this);
 
   /// Delegate voting power
   /// POST /api/dao/delegations
   Future<Map<String, dynamic>?> delegateVotingPower({
     required String delegateId,
     required Map<String, dynamic> envelope,
-  }) async {
-    try {
-      final walletAddress = (envelope['walletAddress'] ?? '').toString().trim();
-      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
-      final response = await _post(
-        Uri.parse('$baseUrl/api/dao/delegations'),
-        headers: _getHeaders(),
-        body: jsonEncode({
-          'delegateId': delegateId,
-          'envelope': envelope,
-        }),
+  }) =>
+      _backendApiDelegateVotingPower(
+        this,
+        delegateId: delegateId,
+        envelope: envelope,
       );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return data['data'] as Map<String, dynamic>? ?? data;
-      } else {
-        throw Exception(
-            'Failed to delegate voting power: ${response.statusCode}');
-      }
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.delegateVotingPower failed: $e');
-      rethrow;
-    }
-  }
 
   /// List DAO treasury/governance transactions
   /// GET /api/dao/transactions
-  Future<List<Map<String, dynamic>>> getDAOTransactions() async {
-    try {
-      final response = await _get(
-        Uri.parse('$baseUrl/api/dao/transactions'),
-        includeAuth: false,
-        headers: _getHeaders(includeAuth: false),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final list = (data['data'] ?? data['transactions'] ?? []) as List;
-        return List<Map<String, dynamic>>.from(list);
-      } else if (response.statusCode == 404) {
-        return [];
-      } else {
-        throw Exception(
-            'Failed to get DAO transactions: ${response.statusCode}');
-      }
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.getDAOTransactions failed: $e');
-      return [];
-    }
-  }
+  Future<List<Map<String, dynamic>>> getDAOTransactions() =>
+      _backendApiGetDAOTransactions(this);
 
   /// Submit a DAO review/application
   /// POST /api/dao/reviews
   Future<Map<String, dynamic>?> submitDAOReview({
     required Map<String, dynamic> envelope,
-  }) async {
-    try {
-      final walletAddress = (envelope['walletAddress'] ?? '').toString().trim();
-      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
-      final uri = Uri.parse('$baseUrl/api/dao/reviews');
-      final body = jsonEncode({'envelope': envelope});
-
-      final response = await _post(uri, headers: _getHeaders(), body: body);
-
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        if (response.body.isEmpty) return null;
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final payload = data['data'] ?? data['review'] ?? data;
-        return payload is Map<String, dynamic> ? payload : null;
-      } else if (response.statusCode == 404) {
-        return null;
-      } else {
-        throw BackendApiRequestException(
-          statusCode: response.statusCode,
-          path: uri.path,
-          body: response.body,
-        );
-      }
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.submitDAOReview failed: $e');
-      rethrow;
-    }
-  }
+  }) =>
+      _backendApiSubmitDAOReview(this, envelope: envelope);
 
   /// List DAO reviews
   /// GET /api/dao/reviews
-  Future<List<Map<String, dynamic>>> getDAOReviews(
-      {int limit = 50, int offset = 0}) async {
-    try {
-      final uri = Uri.parse('$baseUrl/api/dao/reviews')
-          .replace(queryParameters: {'limit': '$limit', 'offset': '$offset'});
-      final response = await _get(uri, headers: _getHeaders());
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final list =
-            (data['data'] ?? data['reviews'] ?? data['items'] ?? []) as List;
-        return List<Map<String, dynamic>>.from(list);
-      } else if (response.statusCode == 404) {
-        return [];
-      } else if (response.statusCode >= 500) {
-        AppConfig.debugPrint(
-            'BackendApiService.getDAOReviews: backend returned ${response.statusCode}, returning empty list');
-        return [];
-      } else {
-        throw Exception('Failed to get DAO reviews: ${response.statusCode}');
-      }
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.getDAOReviews failed: $e');
-      return [];
-    }
-  }
+  Future<List<Map<String, dynamic>>> getDAOReviews({
+    int limit = 50,
+    int offset = 0,
+  }) =>
+      _backendApiGetDAOReviews(
+        this,
+        limit: limit,
+        offset: offset,
+      );
 
   /// Get a single DAO review by id or wallet address
   /// GET /api/dao/reviews/:id
   @override
-  Future<Map<String, dynamic>?> getDAOReview(
-      {required String idOrWallet}) async {
-    try {
-      final uri = Uri.parse('$baseUrl/api/dao/reviews/$idOrWallet');
-      final response = await _get(uri, headers: _getHeaders());
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return (data['data'] ?? data['review'] ?? data) as Map<String, dynamic>;
-      } else if (response.statusCode == 404) {
-        return null;
-      } else {
-        throw Exception('Failed to get DAO review: ${response.statusCode}');
-      }
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.getDAOReview failed: $e');
-      return null;
-    }
-  }
+  Future<Map<String, dynamic>?> getDAOReview({required String idOrWallet}) =>
+      _backendApiGetDAOReview(this, idOrWallet: idOrWallet);
 
   /// Decide on a DAO review (approve/reject/pending)
   /// POST /api/dao/reviews/:id/decision
   Future<Map<String, dynamic>?> decideDAOReview({
     required String idOrWallet,
     required Map<String, dynamic> envelope,
-  }) async {
-    try {
-      final walletAddress = (envelope['walletAddress'] ?? '').toString().trim();
-      await ensureAuthLoaded(walletAddress: walletAddress);
-      final uri = Uri.parse('$baseUrl/api/dao/reviews/$idOrWallet/decision');
-      final body = jsonEncode({'envelope': envelope});
-      final response = await _post(uri, headers: _getHeaders(), body: body);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final payload = data['data'] ?? data['review'] ?? data;
-        return payload is Map<String, dynamic> ? payload : null;
-      } else if (response.statusCode == 403 || response.statusCode == 401) {
-        throw Exception('Not authorized to decide on this review');
-      } else if (response.statusCode == 404) {
-        throw Exception('Review not found');
-      } else if (response.statusCode == 503) {
-        throw Exception('Review decisions are currently disabled');
-      } else {
-        throw Exception('Failed to update review: ${response.statusCode}');
-      }
-    } catch (e) {
-      AppConfig.debugPrint('BackendApiService.decideDAOReview failed: $e');
-      rethrow;
-    }
-  }
+  }) =>
+      _backendApiDecideDAOReview(
+        this,
+        idOrWallet: idOrWallet,
+        envelope: envelope,
+      );
 
   // ==================== Institution & Events (Provisional) ====================
 
