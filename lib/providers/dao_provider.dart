@@ -123,6 +123,36 @@ class DAOProvider extends ChangeNotifier {
     return wallet;
   }
 
+  String _normalizePortfolioUrl(String rawValue) {
+    final trimmed = rawValue.trim();
+    if (trimmed.isEmpty) return '';
+
+    final hasScheme = RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*:').hasMatch(trimmed);
+    final withScheme = hasScheme
+        ? trimmed
+        : (trimmed.startsWith('//') ? 'https:$trimmed' : 'https://$trimmed');
+    final parsed = Uri.tryParse(withScheme);
+    if (parsed == null) return trimmed;
+
+    final scheme = parsed.scheme.toLowerCase();
+    if (scheme != 'http' && scheme != 'https') return trimmed;
+    return parsed.toString();
+  }
+
+  Future<void> _ensureBackendSessionForAction(DAOSignedEnvelope envelope) async {
+    final walletProvider = _walletProvider;
+    if (walletProvider == null) {
+      throw StateError('A wallet provider is required for DAO actions.');
+    }
+
+    final ok = await walletProvider.ensureBackendSessionForActiveSigner(
+      walletAddress: envelope.walletAddress,
+    );
+    if (!ok) {
+      throw StateError('Unable to establish a wallet-signed backend session.');
+    }
+  }
+
   Future<DAOSignedEnvelope> _signEnvelope({
     required DAOSignedActionType actionType,
     required Map<String, dynamic> payload,
@@ -199,6 +229,7 @@ class DAOProvider extends ChangeNotifier {
             'contentCid': metadata!['contentCid'].toString(),
         },
       );
+      await _ensureBackendSessionForAction(signedEnvelope);
       final payload = await api.createDAOProposal(
         envelope: signedEnvelope.toJson(),
       );
@@ -229,6 +260,7 @@ class DAOProvider extends ChangeNotifier {
         ...?metadata,
       };
       metadataPayload.putIfAbsent('role', () => role);
+      final normalizedPortfolioUrl = _normalizePortfolioUrl(portfolioUrl);
       final signedEnvelope = await _signEnvelope(
         actionType: DAOSignedActionType.reviewSubmit,
         referenceCid: metadataPayload['contentCid']?.toString(),
@@ -238,13 +270,14 @@ class DAOProvider extends ChangeNotifier {
             'contentCid': metadataPayload['contentCid'].toString(),
         },
         payload: {
-          'portfolioUrl': portfolioUrl,
+          'portfolioUrl': normalizedPortfolioUrl,
           'medium': medium,
           'statement': statement,
           if (title != null && title.isNotEmpty) 'title': title,
           'metadata': metadataPayload,
         },
       );
+      await _ensureBackendSessionForAction(signedEnvelope);
       final walletAddress = signedEnvelope.walletAddress;
       final payload = await api.submitDAOReview(
         envelope: signedEnvelope.toJson(),
@@ -312,6 +345,7 @@ class DAOProvider extends ChangeNotifier {
             'reviewerNotes': reviewerNotes,
         },
       );
+      await _ensureBackendSessionForAction(signedEnvelope);
       final payload = await api.decideDAOReview(
         idOrWallet: idOrWallet,
         envelope: signedEnvelope.toJson(),
@@ -391,6 +425,7 @@ class DAOProvider extends ChangeNotifier {
           if (txHash != null && txHash.isNotEmpty) 'txHash': txHash,
         },
       );
+      await _ensureBackendSessionForAction(signedEnvelope);
       final payload = await api.submitDAOVote(
         proposalId: proposalId,
         envelope: signedEnvelope.toJson(),
@@ -459,6 +494,7 @@ class DAOProvider extends ChangeNotifier {
           if (metadata != null) 'metadata': metadata,
         },
       );
+      await _ensureBackendSessionForAction(signedEnvelope);
       final result = await api.delegateVotingPower(
         delegateId: delegateId,
         envelope: signedEnvelope.toJson(),

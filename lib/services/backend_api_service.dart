@@ -6822,20 +6822,6 @@ class BackendApiService
 
   /// Submit a DAO review/application
   /// POST /api/dao/reviews
-  String _normalizeDaoPortfolioUrl(String rawValue) {
-    final trimmed = rawValue.trim();
-    if (trimmed.isEmpty) return '';
-    final hasScheme = RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*:').hasMatch(trimmed);
-    final withScheme = hasScheme
-        ? trimmed
-        : (trimmed.startsWith('//') ? 'https:$trimmed' : 'https://$trimmed');
-    final parsed = Uri.tryParse(withScheme);
-    if (parsed == null) return trimmed;
-    final scheme = parsed.scheme.toLowerCase();
-    if (scheme != 'http' && scheme != 'https') return trimmed;
-    return parsed.toString();
-  }
-
   Future<Map<String, dynamic>?> submitDAOReview({
     required Map<String, dynamic> envelope,
   }) async {
@@ -6843,21 +6829,7 @@ class BackendApiService
       final walletAddress = (envelope['walletAddress'] ?? '').toString().trim();
       await _ensureAuthBeforeRequest(walletAddress: walletAddress);
       final uri = Uri.parse('$baseUrl/api/dao/reviews');
-      final payload = Map<String, dynamic>.from(
-        envelope['payload'] is Map<String, dynamic>
-            ? envelope['payload'] as Map<String, dynamic>
-            : const <String, dynamic>{},
-      );
-      final portfolioUrl = (payload['portfolioUrl'] ?? '').toString().trim();
-      if (portfolioUrl.isNotEmpty) {
-        payload['portfolioUrl'] = _normalizeDaoPortfolioUrl(portfolioUrl);
-      }
-      final body = jsonEncode({
-        'envelope': {
-          ...envelope,
-          'payload': payload,
-        },
-      });
+      final body = jsonEncode({'envelope': envelope});
 
       final response = await _post(uri, headers: _getHeaders(), body: body);
 
@@ -6940,9 +6912,7 @@ class BackendApiService
   }) async {
     try {
       final walletAddress = (envelope['walletAddress'] ?? '').toString().trim();
-      if (walletAddress.isNotEmpty) {
-        await ensureAuthLoaded(walletAddress: walletAddress);
-      }
+      await ensureAuthLoaded(walletAddress: walletAddress);
       final uri = Uri.parse('$baseUrl/api/dao/reviews/$idOrWallet/decision');
       final body = jsonEncode({'envelope': envelope});
       final response = await _post(uri, headers: _getHeaders(), body: body);

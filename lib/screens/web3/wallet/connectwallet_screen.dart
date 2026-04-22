@@ -343,9 +343,8 @@ class _ConnectWalletState extends State<ConnectWallet>
           walletProvider.canTransact &&
           WalletUtils.equals(walletProvider.currentWalletAddress, address);
       if (signerReady) {
-        await backendApiService.signedActions.ensureWalletSignedSession(
+        await walletProvider.ensureBackendSessionForActiveSigner(
           walletAddress: address,
-          signMessage: walletProvider.signMessage,
         );
       } else {
         debugPrint(

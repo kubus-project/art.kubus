@@ -100,7 +100,14 @@ extension BackendApiPublicObjectRegistryAccess on BackendApiService {
         includeAuth: false,
         allowOrbitFallback: false,
       );
-      return _backendApiDecodeMapList(response['data']);
+      final data = _backendApiMapOrNull(response['data']);
+      if (data != null) {
+        final versions = _backendApiDecodeMapList(data['versions']);
+        if (versions.isNotEmpty || data.containsKey('versions')) {
+          return versions;
+        }
+      }
+      return _backendApiDecodeMapList(response['versions']);
     } catch (e) {
       AppConfig.debugPrint(
         'BackendApiService.getCanonicalPublicObjectVersions failed: $e',
