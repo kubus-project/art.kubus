@@ -5178,16 +5178,16 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletHomeDesktopSwapSubtitle => 'Zamenjaj žetone';
 
   @override
-  String get walletHomeDesktopNftsSubtitle => 'Odpri zbirateljske predmete in dela, vezana na raÄun';
+  String get walletHomeDesktopNftsSubtitle => 'Odpri zbirateljske predmete in dela, vezana na račun';
 
   @override
-  String get walletHomeDesktopRailSubtitle => 'Stanje seje, dejavnost in kljuÄna stanja ostanejo vidna med delom.';
+  String get walletHomeDesktopRailSubtitle => 'Stanje seje, dejavnost in ključna stanja ostanejo vidna med delom.';
 
   @override
-  String get walletHomeSecureWalletAction => 'ZaÅ¡Äiti denarnico';
+  String get walletHomeSecureWalletAction => 'Zaščiti denarnico';
 
   @override
-  String get walletHomeSecurityTitle => 'ZaÅ¡Äiti svojo denarnico';
+  String get walletHomeSecurityTitle => 'Zaščiti svojo denarnico';
 
   @override
   String get walletHomeSecuritySubtitle => 'Varnostna kopija, dostop podpisnika in stanje obnove so zbrani tukaj.';
@@ -5389,13 +5389,13 @@ class AppLocalizationsSl extends AppLocalizations {
   String get receiveTokenSidebarActivityTitle => 'Nedavni prilivi';
 
   @override
-  String get receiveTokenSidebarActivitySubtitle => 'Nedavne nasprotne strani lahko tukaj preveriÅ¡ ali znova uporabiÅ¡.';
+  String get receiveTokenSidebarActivitySubtitle => 'Nedavne nasprotne strani lahko tukaj preveriš ali znova uporabiš.';
 
   @override
-  String get receiveTokenSidebarNoActivityTitle => 'Å e ni prilivov';
+  String get receiveTokenSidebarNoActivityTitle => 'Še ni prilivov';
 
   @override
-  String get receiveTokenSidebarNoActivityDescription => 'PrihajajoÄi prenosi se bodo prikazali tukaj, ko ta denarnica prejme sredstva.';
+  String get receiveTokenSidebarNoActivityDescription => 'Prihajajoči prenosi se bodo prikazali tukaj, ko ta denarnica prejme sredstva.';
 
   @override
   String receiveTokenSidebarTransferSubtitle(Object token, Object amount, Object date) {
@@ -5444,10 +5444,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get sendTokenSidebarRecipientsSubtitle => 'Ponovno uporabi nedavne cilje, ne da bi zapustil ta tok.';
 
   @override
-  String get sendTokenSidebarNoRecipientsTitle => 'Å e ni nedavnih prejemnikov';
+  String get sendTokenSidebarNoRecipientsTitle => 'Še ni nedavnih prejemnikov';
 
   @override
-  String get sendTokenSidebarNoRecipientsDescription => 'Nedavni cilji za poÅ¡iljanje se bodo prikazali tukaj po prvem prenosu.';
+  String get sendTokenSidebarNoRecipientsDescription => 'Nedavni cilji za pošiljanje se bodo prikazali tukaj po prvem prenosu.';
 
   @override
   String sendTokenSidebarRecipientSubtitle(Object token, Object amount, Object date) {
@@ -5455,7 +5455,7 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String get sendTokenSidebarSummaryTitle => 'Kontekst poÅ¡iljanja';
+  String get sendTokenSidebarSummaryTitle => 'Kontekst pošiljanja';
 
   @override
   String get sendTokenSidebarSummarySubtitle => 'Na hitro preveri stanje, oceno provizije in cilj prenosa.';
@@ -8577,7 +8577,7 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String get walletSwapSecuritySubtitle => 'Izvedba zamenjave je Å¡e vedno odvisna od dostopa podpisnika in stanja obnove.';
+  String get walletSwapSecuritySubtitle => 'Izvedba zamenjave je še vedno odvisna od dostopa podpisnika in stanja obnove.';
 
   @override
   String get walletSwapEstimatedOutputLabel => 'Ocenjen izhod';

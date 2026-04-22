@@ -4760,18 +4760,18 @@
   "walletTransactionFinalityConfirmed": "Potrjeno",
   "walletTransactionFinalityFinalized": "Finalizirano",
   "walletTransactionCopySignatureTooltip": "Kopiraj ID transakcije",
-  "walletHomeDesktopNftsSubtitle": "Odpri zbirateljske predmete in dela, vezana na raÄun",
-  "walletHomeDesktopRailSubtitle": "Stanje seje, dejavnost in kljuÄna stanja ostanejo vidna med delom.",
-  "walletHomeSecureWalletAction": "ZaÅ¡Äiti denarnico",
-  "walletHomeSecurityTitle": "ZaÅ¡Äiti svojo denarnico",
+  "walletHomeDesktopNftsSubtitle": "Odpri zbirateljske predmete in dela, vezana na račun",
+  "walletHomeDesktopRailSubtitle": "Stanje seje, dejavnost in ključna stanja ostanejo vidna med delom.",
+  "walletHomeSecureWalletAction": "Zaščiti denarnico",
+  "walletHomeSecurityTitle": "Zaščiti svojo denarnico",
   "walletHomeSecuritySubtitle": "Varnostna kopija, dostop podpisnika in stanje obnove so zbrani tukaj.",
   "receiveTokenSidebarShareTitle": "Deli podatke za prejem",
   "receiveTokenSidebarShareSubtitle": "Kopiraj naslov ali deli vsebino, pripravljeno za QR.",
   "receiveTokenSidebarShareAction": "Deli",
   "receiveTokenSidebarActivityTitle": "Nedavni prilivi",
-  "receiveTokenSidebarActivitySubtitle": "Nedavne nasprotne strani lahko tukaj preveriÅ¡ ali znova uporabiÅ¡.",
-  "receiveTokenSidebarNoActivityTitle": "Å e ni prilivov",
-  "receiveTokenSidebarNoActivityDescription": "PrihajajoÄi prenosi se bodo prikazali tukaj, ko ta denarnica prejme sredstva.",
+  "receiveTokenSidebarActivitySubtitle": "Nedavne nasprotne strani lahko tukaj preveriš ali znova uporabiš.",
+  "receiveTokenSidebarNoActivityTitle": "Še ni prilivov",
+  "receiveTokenSidebarNoActivityDescription": "Prihajajoči prenosi se bodo prikazali tukaj, ko ta denarnica prejme sredstva.",
   "receiveTokenSidebarTransferSubtitle": "{token} • {amount} • {date}",
   "@receiveTokenSidebarTransferSubtitle": {
     "placeholders": {
@@ -4779,12 +4779,11 @@
       "amount": {},
       "date": {}
     }
-  },
-  "sendTokenAmountPlaceholder": "0.0",
+  },  "sendTokenAmountPlaceholder": "0.0",
   "sendTokenSidebarRecipientsTitle": "Nedavni prejemniki",
   "sendTokenSidebarRecipientsSubtitle": "Ponovno uporabi nedavne cilje, ne da bi zapustil ta tok.",
-  "sendTokenSidebarNoRecipientsTitle": "Å e ni nedavnih prejemnikov",
-  "sendTokenSidebarNoRecipientsDescription": "Nedavni cilji za poÅ¡iljanje se bodo prikazali tukaj po prvem prenosu.",
+  "sendTokenSidebarNoRecipientsTitle": "Še ni nedavnih prejemnikov",
+  "sendTokenSidebarNoRecipientsDescription": "Nedavni cilji za pošiljanje se bodo prikazali tukaj po prvem prenosu.",
   "sendTokenSidebarRecipientSubtitle": "{token} • {amount} • {date}",
   "@sendTokenSidebarRecipientSubtitle": {
     "placeholders": {
@@ -4793,7 +4792,7 @@
       "date": {}
     }
   },
-  "sendTokenSidebarSummaryTitle": "Kontekst poÅ¡iljanja",
+  "sendTokenSidebarSummaryTitle": "Kontekst pošiljanja",
   "sendTokenSidebarSummarySubtitle": "Na hitro preveri stanje, oceno provizije in cilj prenosa.",
   "sendTokenSidebarSecuritySubtitle": "Stanje podpisnika in obnove za ta prenos.",
   "walletSwapQuoteSidebarTitle": "Podrobnosti ponudbe",
@@ -4807,5 +4806,5 @@
       "date": {}
     }
   },
-  "walletSwapSecuritySubtitle": "Izvedba zamenjave je Å¡e vedno odvisna od dostopa podpisnika in stanja obnove."
+  "walletSwapSecuritySubtitle": "Izvedba zamenjave je še vedno odvisna od dostopa podpisnika in stanja obnove."
 }
