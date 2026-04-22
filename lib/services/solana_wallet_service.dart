@@ -777,7 +777,8 @@ class SolanaWalletService {
     return _sendInstructions(instructions);
   }
 
-  Future<UnsignedSolanaTransactionRecord> buildTransferSplTokenTransactionBase64({
+  Future<UnsignedSolanaTransactionRecord>
+      buildTransferSplTokenTransactionBase64({
     required String fromAddress,
     required String mint,
     required String toAddress,
@@ -1283,8 +1284,7 @@ class SolanaWalletService {
     );
     return SubmittedSolanaTransactionRecord(
       signature: signature,
-      lastValidBlockHeight:
-          (swapJson['lastValidBlockHeight'] as num?)?.toInt(),
+      lastValidBlockHeight: (swapJson['lastValidBlockHeight'] as num?)?.toInt(),
       explorerUrl: buildExplorerTransactionUrl(signature),
       metadata: {
         'route': route,
@@ -1423,13 +1423,13 @@ class SolanaWalletService {
     );
 
     final timestamp = signatureRecord.blockTime ??
-        DateTime.tryParse((transactionJson['blockTime'] ?? '').toString()) ??
+        _parseRpcBlockTime(transactionJson['blockTime']) ??
         DateTime.now();
     final slot =
         (transactionJson['slot'] as num?)?.toInt() ?? signatureRecord.slot;
     final confirmationCount = currentSlot == null || slot == null
         ? null
-        : (currentSlot - slot + 1).clamp(0, 1 << 31);
+        : max(0, currentSlot - slot).clamp(0, 1 << 31);
 
     return WalletTransaction(
       id: signatureRecord.signature,
@@ -1573,8 +1573,12 @@ class SolanaWalletService {
         final destination = info['destination']?.toString() ?? '';
         final tokenAmount = info['tokenAmount'];
         final amount = _parseUiTokenAmount(tokenAmount);
-        final mint =
-            info['mint']?.toString() ?? tokenMintLookup[source] ?? tokenMintLookup[destination];
+        final mint = info['mint']?.toString() ??
+            tokenMintLookup[source] ??
+            tokenMintLookup[destination];
+        if (mint == null || mint.trim().isEmpty) {
+          continue;
+        }
         records.add(
           _TransferRecord(
             program: program,
@@ -1623,10 +1627,9 @@ class SolanaWalletService {
         WalletTransactionAssetChange(
           symbol: (tokenInfo['symbol'] ?? _fallbackSymbol(mint)).toString(),
           mint: mint,
-          decimals:
-              (tokenInfo['decimals'] as num?)?.toInt() ??
-                  postToken[mint]?.decimals ??
-                  preToken[mint]?.decimals,
+          decimals: (tokenInfo['decimals'] as num?)?.toInt() ??
+              postToken[mint]?.decimals ??
+              preToken[mint]?.decimals,
           assetKind: WalletTransactionAssetKind.spl,
           amount: delta,
           direction: delta > 0
@@ -1721,10 +1724,12 @@ class SolanaWalletService {
   }) {
     final nonFeeChanges = assetChanges.where((change) => !change.isFee).toList()
       ..sort((a, b) => b.absoluteAmount.compareTo(a.absoluteAmount));
-    final incoming =
-        nonFeeChanges.where((change) => change.amount > 0).toList(growable: false);
-    final outgoing =
-        nonFeeChanges.where((change) => change.amount < 0).toList(growable: false);
+    final incoming = nonFeeChanges
+        .where((change) => change.amount > 0)
+        .toList(growable: false);
+    final outgoing = nonFeeChanges
+        .where((change) => change.amount < 0)
+        .toList(growable: false);
 
     TransactionType type = TransactionType.receive;
     WalletTransactionDirection direction = WalletTransactionDirection.neutral;
@@ -1738,16 +1743,15 @@ class SolanaWalletService {
       secondaryChange = incoming.first;
     } else if (outgoing.isNotEmpty) {
       primaryChange = outgoing.first;
-      final incomingSameAsset = incoming.firstWhere(
-        (change) =>
-            change.mint == primaryChange!.mint &&
-            change.symbol == primaryChange.symbol,
-        orElse: () => const WalletTransactionAssetChange(
-          symbol: '',
-          amount: 0,
-        ),
+      final transferRecord = _matchTransferRecord(
+        publicKey: publicKey,
+        primaryChange: primaryChange,
+        transferRecords: transferRecords,
+        preferredDirection: WalletTransactionDirection.outgoing,
       );
-      if (incomingSameAsset.symbol.isNotEmpty) {
+      if (transferRecord != null &&
+          _directionForTransfer(publicKey, transferRecord) ==
+              WalletTransactionDirection.self) {
         type = TransactionType.send;
         direction = WalletTransactionDirection.self;
       } else {
@@ -1823,8 +1827,7 @@ class SolanaWalletService {
       if (!sameAsset) continue;
       final recordDirection = _directionForTransfer(publicKey, record);
       if (preferredDirection == WalletTransactionDirection.swap ||
-          recordDirection == preferredDirection ||
-          preferredDirection == WalletTransactionDirection.self) {
+          recordDirection == preferredDirection) {
         return record;
       }
     }
@@ -1835,8 +1838,7 @@ class SolanaWalletService {
     String publicKey,
     _TransferRecord record,
   ) {
-    final sourceMatches =
-        WalletUtils.equals(record.sourceOwner, publicKey);
+    final sourceMatches = WalletUtils.equals(record.sourceOwner, publicKey);
     final destinationMatches =
         WalletUtils.equals(record.destinationOwner, publicKey);
     if (sourceMatches && destinationMatches) {
@@ -1868,10 +1870,27 @@ class SolanaWalletService {
       case WalletTransactionDirection.swap:
         return record.program;
       case WalletTransactionDirection.self:
-        return record.destinationOwner;
+        return WalletUtils.equals(record.destinationOwner, publicKey)
+            ? record.destinationAddress
+            : record.destinationOwner;
       case WalletTransactionDirection.neutral:
         return record.destinationOwner;
     }
+  }
+
+  DateTime? _parseRpcBlockTime(dynamic blockTime) {
+    if (blockTime is num) {
+      return DateTime.fromMillisecondsSinceEpoch(blockTime.toInt() * 1000);
+    }
+    final asString = blockTime?.toString();
+    if (asString == null || asString.trim().isEmpty) {
+      return null;
+    }
+    final asInt = int.tryParse(asString);
+    if (asInt != null) {
+      return DateTime.fromMillisecondsSinceEpoch(asInt * 1000);
+    }
+    return DateTime.tryParse(asString);
   }
 
   TransactionStatus _mapStatus(_SignatureStatusRecord signatureRecord) {
@@ -1915,13 +1934,13 @@ class SolanaWalletService {
 
   double _parseUiTokenAmount(dynamic value) {
     if (value is Map) {
+      final uiAmountString = value['uiAmountString']?.toString();
+      if (uiAmountString != null && uiAmountString.isNotEmpty) {
+        return double.tryParse(uiAmountString) ?? 0.0;
+      }
       final uiAmount = value['uiAmount'];
       if (uiAmount is num) {
         return uiAmount.toDouble();
-      }
-      final uiAmountString = value['uiAmountString']?.toString();
-      if (uiAmountString != null) {
-        return double.tryParse(uiAmountString) ?? 0.0;
       }
       final amountRaw = value['amount']?.toString();
       final decimals = (value['decimals'] as num?)?.toInt() ?? 0;

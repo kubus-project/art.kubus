@@ -655,7 +655,8 @@ class WalletProvider extends ChangeNotifier {
   List<Token> get tokens => List.unmodifiable(_tokens);
   List<WalletTransaction> get transactions =>
       List.unmodifiable(_visibleTransactions(_transactions));
-  List<WalletTransaction> get rawTransactions => List.unmodifiable(_transactions);
+  List<WalletTransaction> get rawTransactions =>
+      List.unmodifiable(_transactions);
   bool get isLoading => _isLoading;
   bool get isBalanceVisible => _isBalanceVisible;
   double get totalBalance => _wallet?.totalValue ?? 0.0;
@@ -889,8 +890,7 @@ class WalletProvider extends ChangeNotifier {
 
     try {
       if (refreshBackendSession) {
-        await _apiService
-            .session
+        await _apiService.session
             .restoreStoredSession(allowRefresh: false)
             .timeout(const Duration(seconds: 4));
       }
@@ -1766,14 +1766,31 @@ class WalletProvider extends ChangeNotifier {
     WalletTransaction current,
     WalletTransaction incoming,
   ) {
-    final chainPreferred = _transactionRichness(incoming) >=
-        _transactionRichness(current);
+    final chainPreferred =
+        _transactionRichness(incoming) > _transactionRichness(current);
     final preferred = chainPreferred ? incoming : current;
     final fallback = chainPreferred ? current : incoming;
+    final mergedStatus = _moreAdvancedStatus(current.status, incoming.status);
+    final mergedFinality =
+        _moreAdvancedFinality(current.finality, incoming.finality);
+    final mergedFeeAmount = preferred.feeAmount ?? fallback.feeAmount;
+    final feeSource = preferred.feeAmount != null ? preferred : fallback;
+    final mergedTimestamp = _pickMergedTimestamp(
+      preferred: preferred,
+      fallback: fallback,
+    );
+    final mergedConfirmationCount = _maxNullableInt(
+      preferred.confirmationCount,
+      fallback.confirmationCount,
+    );
+    final mergedIsOptimistic =
+        (current.isOptimistic || incoming.isOptimistic) &&
+            (mergedStatus == TransactionStatus.submitted ||
+                mergedStatus == TransactionStatus.pending);
 
     return preferred.copyWith(
-      status: _moreAdvancedStatus(current.status, incoming.status),
-      finality: _moreAdvancedFinality(current.finality, incoming.finality),
+      status: mergedStatus,
+      finality: mergedFinality,
       direction: preferred.direction != WalletTransactionDirection.neutral
           ? preferred.direction
           : fallback.direction,
@@ -1790,18 +1807,21 @@ class WalletProvider extends ChangeNotifier {
           preferred.primaryCounterparty ?? fallback.primaryCounterparty,
       fromAddress: preferred.fromAddress ?? fallback.fromAddress,
       toAddress: preferred.toAddress ?? fallback.toAddress,
-      timestamp: preferred.timestamp.isAfter(fallback.timestamp)
-          ? preferred.timestamp
-          : fallback.timestamp,
+      timestamp: mergedTimestamp,
       slot: preferred.slot ?? fallback.slot,
-      confirmationCount:
-          preferred.confirmationCount ?? fallback.confirmationCount,
+      confirmationCount: mergedConfirmationCount,
       lastValidBlockHeight:
           preferred.lastValidBlockHeight ?? fallback.lastValidBlockHeight,
-      isOptimistic: preferred.isOptimistic && fallback.isOptimistic,
-      feeAmount: preferred.feeAmount ?? fallback.feeAmount,
-      feeToken: preferred.feeAmount != null ? preferred.feeToken : fallback.feeToken,
-      feeTokenMint: preferred.feeTokenMint ?? fallback.feeTokenMint,
+      isOptimistic: mergedIsOptimistic,
+      feeAmount: mergedFeeAmount,
+      feeToken: feeSource.feeToken.isNotEmpty
+          ? feeSource.feeToken
+          : (preferred.feeToken.isNotEmpty
+              ? preferred.feeToken
+              : fallback.feeToken),
+      feeTokenMint: feeSource.feeTokenMint ??
+          preferred.feeTokenMint ??
+          fallback.feeTokenMint,
       gasUsed: preferred.gasUsed ?? fallback.gasUsed,
       gasFee: preferred.gasFee ?? fallback.gasFee,
       swapToToken: preferred.swapToToken ?? fallback.swapToToken,
@@ -1819,6 +1839,30 @@ class WalletProvider extends ChangeNotifier {
         ...preferred.metadata,
       },
     );
+  }
+
+  DateTime _pickMergedTimestamp({
+    required WalletTransaction preferred,
+    required WalletTransaction fallback,
+  }) {
+    final preferredHasChainSlot = preferred.slot != null;
+    final fallbackHasChainSlot = fallback.slot != null;
+
+    if (preferredHasChainSlot && !fallbackHasChainSlot) {
+      return preferred.timestamp;
+    }
+    if (!preferredHasChainSlot && fallbackHasChainSlot) {
+      return fallback.timestamp;
+    }
+    return preferred.timestamp.isBefore(fallback.timestamp)
+        ? preferred.timestamp
+        : fallback.timestamp;
+  }
+
+  int? _maxNullableInt(int? first, int? second) {
+    if (first == null) return second;
+    if (second == null) return first;
+    return max(first, second);
   }
 
   List<WalletRelatedTransaction> _mergeRelatedTransactions(
@@ -2416,9 +2460,9 @@ class WalletProvider extends ChangeNotifier {
         partialErrors.add('History refresh failed: $e');
       }
 
-      final mergedPrimary = _transactionOverridesBySignature[
-              primarySubmission.signature] ??
-          primaryTransaction;
+      final mergedPrimary =
+          _transactionOverridesBySignature[primarySubmission.signature] ??
+              primaryTransaction;
       return WalletTransactionSubmissionResult(
         primaryTransaction: partialErrors.isEmpty
             ? mergedPrimary
@@ -2832,8 +2876,10 @@ class WalletProvider extends ChangeNotifier {
           'feeTreasury': feeTreasury,
           'quoteContextSlot': swapQuote?.contextSlot,
           'quoteTimeTakenMs': swapQuote?.timeTakenMs,
-          'routePlan': swapQuote?.routePlan ?? primarySubmission.metadata['route'],
-          'rawRoute': swapQuote?.rawRoute ?? primarySubmission.metadata['route'],
+          'routePlan':
+              swapQuote?.routePlan ?? primarySubmission.metadata['route'],
+          'rawRoute':
+              swapQuote?.rawRoute ?? primarySubmission.metadata['route'],
           'partialErrors': partialErrors,
         },
       );
@@ -2851,9 +2897,9 @@ class WalletProvider extends ChangeNotifier {
         partialErrors.add('History refresh failed: $e');
       }
 
-      final mergedPrimary = _transactionOverridesBySignature[
-              primarySubmission.signature] ??
-          primaryTransaction;
+      final mergedPrimary =
+          _transactionOverridesBySignature[primarySubmission.signature] ??
+              primaryTransaction;
       return WalletTransactionSubmissionResult(
         primaryTransaction: partialErrors.isEmpty
             ? mergedPrimary
