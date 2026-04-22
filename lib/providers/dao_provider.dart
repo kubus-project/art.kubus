@@ -193,6 +193,7 @@ class DAOProvider extends ChangeNotifier {
     }
   }
 
+
   Future<Proposal?> createProposal({
     required String title,
     required String description,
