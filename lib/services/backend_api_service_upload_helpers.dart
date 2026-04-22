@@ -80,6 +80,7 @@ Future<Map<String, dynamic>> _backendApiUploadFileImpl(
 }) async {
   await service._ensureAuthBeforeRequest(walletAddress: walletAddress);
   final initialMetadata = Map<String, String>.from(metadata ?? const {});
+  initialMetadata.putIfAbsent('publicationScope', () => 'draft');
   var uploadBytes = Uint8List.fromList(fileBytes);
   var uploadFileName = fileName;
   String? uploadContentType = _backendApiGuessContentType(fileName, fileType);
@@ -261,6 +262,7 @@ Future<String?> _backendApiUploadMarkerCoverImageImpl(
       'entity': 'art_marker',
       'kind': 'cover',
       'source': source,
+      'publicationScope': 'draft',
     },
     walletAddress: walletAddress,
     compress: compress,
@@ -299,6 +301,7 @@ Future<Map<String, dynamic>> _backendApiUploadAvatarToProfileImpl(
 
   const int maxRetries = 3;
   final initialMetadata = Map<String, String>.from(metadata ?? const {});
+  initialMetadata.putIfAbsent('publicationScope', () => 'draft');
   var uploadBytes = Uint8List.fromList(fileBytes);
   var uploadFileName = fileName;
   var uploadFileType =

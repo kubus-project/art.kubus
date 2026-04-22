@@ -699,8 +699,7 @@ class BackendApiService
       }
     }
 
-    if (refreshToken != null && refreshToken.trim().isNotEmpty) {
-    }
+    if (refreshToken != null && refreshToken.trim().isNotEmpty) {}
   }
 
   Future<bool> refreshAuthTokenFromStorage() async {
@@ -2658,7 +2657,7 @@ class BackendApiService
           String conversationId, String newTitle) =>
       _backendApiRenameConversationImpl(this, conversationId, newTitle);
 
-    Future<Map<String, dynamic>> deleteConversation(String conversationId) =>
+  Future<Map<String, dynamic>> deleteConversation(String conversationId) =>
       _backendApiDeleteConversationImpl(this, conversationId);
 
   /// Update user profile (preferences / metadata)
@@ -4367,6 +4366,7 @@ class BackendApiService
     required String description,
     required String imageUrl,
     required String walletAddress,
+    String? imageCid,
     String? artistName,
     String category = 'General',
     List<String> tags = const [],
@@ -4402,6 +4402,7 @@ class BackendApiService
         'title': title,
         'description': description,
         'imageUrl': imageUrl,
+        if (imageCid != null) 'imageCid': imageCid,
         'walletAddress': walletAddress,
         if (artistName != null && artistName.isNotEmpty)
           'artistName': artistName,
@@ -9012,6 +9013,13 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
     addMeta('currency', json['currency']);
     addMeta('isForSale', json['isForSale']);
     addMeta('imageCID', json['imageCID'] ?? json['image_cid']);
+    addMeta('publicRef', json['publicRef'] ?? json['public_ref']);
+    addMeta(
+        'canonicalSource', json['canonicalSource'] ?? json['canonical_source']);
+    addMeta('publicManifestCid',
+        json['publicManifestCid'] ?? json['public_manifest_cid']);
+    addMeta('publicRecordCid',
+        json['publicRecordCid'] ?? json['public_record_cid']);
     addMeta('poap', json['poap']);
     addMeta('promotion', json['promotion']);
 

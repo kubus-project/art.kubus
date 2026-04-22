@@ -277,6 +277,8 @@ class BackendPublicObjectTransport {
       title: (payload['title'] ?? '').toString(),
       description: (payload['description'] ?? '').toString(),
       imageUrl: (payload['imageUrl'] ?? payload['image_url'] ?? '').toString(),
+      imageCid:
+          payload['imageCid']?.toString() ?? payload['image_cid']?.toString(),
       walletAddress:
           (payload['walletAddress'] ?? payload['wallet_address'] ?? '')
               .toString(),
@@ -284,9 +286,10 @@ class BackendPublicObjectTransport {
       category: (payload['category'] ?? 'General').toString(),
       tags: (payload['tags'] as List?)?.map((e) => e.toString()).toList() ??
           const <String>[],
-      galleryUrls:
-          (payload['galleryUrls'] as List?)?.map((e) => e.toString()).toList() ??
-              const <String>[],
+      galleryUrls: (payload['galleryUrls'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const <String>[],
       galleryMeta: (payload['galleryMeta'] as List?)
           ?.whereType<Map>()
           .map((e) => Map<String, dynamic>.from(e))
@@ -299,9 +302,8 @@ class BackendPublicObjectTransport {
           ? (payload['arScale'] as num).toDouble()
           : 1,
       mintAsNFT: payload['mintAsNFT'] == true || payload['isNFT'] == true,
-      price: payload['price'] is num
-          ? (payload['price'] as num).toDouble()
-          : null,
+      price:
+          payload['price'] is num ? (payload['price'] as num).toDouble() : null,
       royaltyPercent: payload['royaltyPercent'] is num
           ? (payload['royaltyPercent'] as num).toDouble()
           : null,
@@ -403,8 +405,7 @@ class BackendCollectiblesAttestationsTransport {
 }
 
 extension BackendApiDomainAccess on BackendApiService {
-  BackendAuthSessionTransport get session =>
-      BackendAuthSessionTransport(this);
+  BackendAuthSessionTransport get session => BackendAuthSessionTransport(this);
 
   BackendSignedActionTransport get signedActions =>
       BackendSignedActionTransport(this);
