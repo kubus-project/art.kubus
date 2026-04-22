@@ -350,6 +350,42 @@ class BackendPublicObjectTransport {
       limit: limit,
     );
   }
+
+  Future<Map<String, dynamic>?> getCanonicalObject({
+    required String objectType,
+    required String objectId,
+  }) {
+    return _service.getCanonicalPublicObject(
+      objectType: objectType,
+      objectId: objectId,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getObjectVersions({
+    required String objectType,
+    required String objectId,
+  }) {
+    return _service.getCanonicalPublicObjectVersions(
+      objectType: objectType,
+      objectId: objectId,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getRewardableCids({
+    String? objectType,
+    String? objectId,
+    int limit = 50,
+  }) {
+    return _service.getRewardablePublicCids(
+      objectType: objectType,
+      objectId: objectId,
+      limit: limit,
+    );
+  }
+
+  Future<Map<String, dynamic>?> getCidRecord(String cid) {
+    return _service.getPublicCidRecord(cid);
+  }
 }
 
 class BackendDaoTransport {

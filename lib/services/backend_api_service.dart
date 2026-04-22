@@ -9020,6 +9020,8 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
         json['publicManifestCid'] ?? json['public_manifest_cid']);
     addMeta('publicRecordCid',
         json['publicRecordCid'] ?? json['public_record_cid']);
+    addMeta('publicRegistry', json['publicRegistry'] ?? json['public_registry']);
+    addMeta('cidRegistry', json['cidRegistry'] ?? json['cid_registry']);
     addMeta('poap', json['poap']);
     addMeta('promotion', json['promotion']);
 
