@@ -921,18 +921,26 @@ class SolanaWalletService {
     required int decimals,
     String? sourceTokenAccount,
   }) async {
-    final instructions = await _buildSplTokenTransferInstructions(
-      fromAddress: fromAddress,
-      mint: mint,
-      toAddress: toAddress,
-      amount: amount,
-      decimals: decimals,
-      sourceTokenAccount: sourceTokenAccount,
-    );
-    return _buildUnsignedTransaction(
-      feePayerAddress: fromAddress,
-      instructions: instructions,
-    );
+    try {
+      final instructions = await _buildSplTokenTransferInstructions(
+        fromAddress: fromAddress,
+        mint: mint,
+        toAddress: toAddress,
+        amount: amount,
+        decimals: decimals,
+        sourceTokenAccount: sourceTokenAccount,
+      );
+      return _buildUnsignedTransaction(
+        feePayerAddress: fromAddress,
+        instructions: instructions,
+      );
+    } catch (e) {
+      if (e is SolanaWalletSendException) rethrow;
+      throw SolanaWalletSendException(
+        _normalizeSendFailureMessage(e.toString()),
+        cause: e,
+      );
+    }
   }
 
   // Swap SOL -> SPL token (e.g., SOL -> KUB8) via DEX aggregator (Jupiter/Raydium)
@@ -1423,6 +1431,188 @@ class SolanaWalletService {
     );
   }
 
+  Ed25519HDPublicKey _parsePublicKeyOrThrow(
+    String value, {
+    required String fieldName,
+  }) {
+    final normalized = value.trim();
+    try {
+      return Ed25519HDPublicKey.fromBase58(normalized);
+    } catch (_) {
+      throw SolanaWalletSendException(
+        '$fieldName is not a valid Solana address.',
+      );
+    }
+  }
+
+  SolanaWalletSendException _buildRecipientAtaValidationException({
+    required String ataAddress,
+    required String reason,
+    required String recipientAddress,
+    required String mint,
+    Map<String, dynamic> rpcData = const <String, dynamic>{},
+  }) {
+    return SolanaWalletSendException(
+      'Recipient token account at $ataAddress is not valid for this token transfer: $reason',
+      rpcData: {
+        'recipientAta': ataAddress,
+        'recipientAddress': recipientAddress,
+        'mint': mint,
+        ...rpcData,
+      },
+    );
+  }
+
+  Future<_RecipientAtaResolutionRecord> _resolveRecipientAtaForTransfer({
+    required String recipientAddress,
+    required String mint,
+    required int decimals,
+  }) async {
+    final recipientPub = _parsePublicKeyOrThrow(
+      recipientAddress,
+      fieldName: 'Recipient address',
+    );
+    final mintPub = _parsePublicKeyOrThrow(
+      mint,
+      fieldName: 'Token mint',
+    );
+    late final Ed25519HDPublicKey recipientAta;
+    String recipientAtaAddress = '';
+
+    late final Map<String, dynamic> accountInfo;
+    try {
+      recipientAta = await findAssociatedTokenAddress(
+        owner: recipientPub,
+        mint: mintPub,
+      );
+      recipientAtaAddress = recipientAta.toBase58();
+      final response = await _makeRpcCall('getAccountInfo', [
+        recipientAtaAddress,
+        {'encoding': 'jsonParsed'},
+      ]);
+      final value = response['result']?['value'];
+      if (value == null) {
+        return _RecipientAtaResolutionRecord(
+          address: recipientAta,
+          needsCreation: true,
+        );
+      }
+      if (value is! Map) {
+        throw _buildRecipientAtaValidationException(
+          ataAddress: recipientAtaAddress,
+          recipientAddress: recipientPub.toBase58(),
+          mint: mintPub.toBase58(),
+          reason:
+              'the on-chain account data could not be parsed as an SPL token account',
+          rpcData: {'rawAccountInfo': value},
+        );
+      }
+      accountInfo = Map<String, dynamic>.from(value);
+    } catch (e) {
+      if (e is SolanaWalletSendException) rethrow;
+      throw SolanaWalletSendException(
+        'Unable to verify the recipient token account before creating it.',
+        cause: e,
+        rpcData: {
+          'recipientAta': recipientAtaAddress,
+          'recipientAddress': recipientPub.toBase58(),
+          'mint': mintPub.toBase58(),
+        },
+      );
+    }
+
+    final programOwner = accountInfo['owner']?.toString().trim() ?? '';
+    final data = accountInfo['data'];
+    if (!WalletUtils.equals(programOwner, ApiKeys.splTokenProgramId) ||
+        data is! Map) {
+      throw _buildRecipientAtaValidationException(
+        ataAddress: recipientAtaAddress,
+        recipientAddress: recipientPub.toBase58(),
+        mint: mintPub.toBase58(),
+        reason: 'it is not owned by the SPL token program',
+        rpcData: {
+          'programOwner': programOwner,
+        },
+      );
+    }
+
+    final parsed = data['parsed'];
+    if (parsed is! Map) {
+      throw _buildRecipientAtaValidationException(
+        ataAddress: recipientAtaAddress,
+        recipientAddress: recipientPub.toBase58(),
+        mint: mintPub.toBase58(),
+        reason: 'it does not contain parsed SPL token account data',
+      );
+    }
+
+    final info = parsed['info'];
+    if (info is! Map) {
+      throw _buildRecipientAtaValidationException(
+        ataAddress: recipientAtaAddress,
+        recipientAddress: recipientPub.toBase58(),
+        mint: mintPub.toBase58(),
+        reason: 'it does not expose the expected token account fields',
+      );
+    }
+
+    final tokenOwner = info['owner']?.toString().trim() ?? '';
+    final tokenMint = info['mint']?.toString().trim() ?? '';
+    final state = info['state']?.toString().trim().toLowerCase() ?? 'unknown';
+    final tokenAmount = info['tokenAmount'];
+    if (tokenAmount is! Map) {
+      throw _buildRecipientAtaValidationException(
+        ataAddress: recipientAtaAddress,
+        recipientAddress: recipientPub.toBase58(),
+        mint: mintPub.toBase58(),
+        reason: 'it is missing token balance metadata',
+      );
+    }
+
+    final accountDecimals = (tokenAmount['decimals'] as num?)?.toInt();
+    if (!WalletUtils.equals(tokenOwner, recipientPub.toBase58())) {
+      throw _buildRecipientAtaValidationException(
+        ataAddress: recipientAtaAddress,
+        recipientAddress: recipientPub.toBase58(),
+        mint: mintPub.toBase58(),
+        reason: 'it belongs to a different owner than the intended recipient',
+        rpcData: {'tokenOwner': tokenOwner},
+      );
+    }
+    if (!WalletUtils.equals(tokenMint, mintPub.toBase58())) {
+      throw _buildRecipientAtaValidationException(
+        ataAddress: recipientAtaAddress,
+        recipientAddress: recipientPub.toBase58(),
+        mint: mintPub.toBase58(),
+        reason: 'it belongs to a different mint',
+        rpcData: {'tokenMint': tokenMint},
+      );
+    }
+    if (state != 'initialized') {
+      throw _buildRecipientAtaValidationException(
+        ataAddress: recipientAtaAddress,
+        recipientAddress: recipientPub.toBase58(),
+        mint: mintPub.toBase58(),
+        reason: 'it is not in an initialized, spendable state',
+        rpcData: {'state': state},
+      );
+    }
+    if (accountDecimals != null && accountDecimals != decimals) {
+      throw _buildRecipientAtaValidationException(
+        ataAddress: recipientAtaAddress,
+        recipientAddress: recipientPub.toBase58(),
+        mint: mintPub.toBase58(),
+        reason: 'it reports token decimals that do not match the transfer mint',
+        rpcData: {'decimals': accountDecimals},
+      );
+    }
+
+    return _RecipientAtaResolutionRecord(
+      address: recipientAta,
+      needsCreation: false,
+    );
+  }
+
   Future<String> _sendEncodedTransactionWithDiagnostics(
     String transactionBase64,
   ) async {
@@ -1532,15 +1722,15 @@ class SolanaWalletService {
               entry.contains('owner mismatch'),
         )) {
       message =
-          'The selected source token account is not valid for this wallet or mint.';
+        'A token account used for this transfer is not valid for the expected owner or mint.';
     } else if (loweredMessage.contains('invalid account data') ||
         loweredLogs.any((entry) => entry.contains('invalid account data'))) {
       message =
-          'The selected source token account is invalid for this mint transfer.';
+        'A token account used for this transfer is invalid for the selected mint.';
     } else if (loweredMessage.contains('frozen') ||
         loweredLogs.any((entry) => entry.contains('frozen'))) {
       message =
-          'The selected source token account is frozen and cannot send tokens.';
+        'A token account used for this transfer is frozen and cannot move tokens.';
     } else if (loweredMessage.contains('mint decimals') ||
         loweredMessage.contains('decimals mismatch') ||
         loweredMessage.contains('decimal') ||
@@ -1748,8 +1938,14 @@ class SolanaWalletService {
     String? sourceTokenAccount,
   }) async {
     final fromPub = Ed25519HDPublicKey.fromBase58(fromAddress);
-    final mintPub = Ed25519HDPublicKey.fromBase58(mint);
-    final toPub = Ed25519HDPublicKey.fromBase58(toAddress);
+    final mintPub = _parsePublicKeyOrThrow(
+      mint,
+      fieldName: 'Token mint',
+    );
+    final toPub = _parsePublicKeyOrThrow(
+      toAddress,
+      fieldName: 'Recipient address',
+    );
     final resolvedSource = await _resolveSplSourceAccount(
       ownerAddress: fromAddress,
       mint: mint,
@@ -1757,11 +1953,15 @@ class SolanaWalletService {
       decimals: decimals,
       sourceTokenAccount: sourceTokenAccount,
     );
-    final toAta = await findAssociatedTokenAddress(owner: toPub, mint: mintPub);
+    final recipientAta = await _resolveRecipientAtaForTransfer(
+      recipientAddress: toAddress,
+      mint: mint,
+      decimals: decimals,
+    );
+    final toAta = recipientAta.address;
 
     final instructions = <Instruction>[];
-    final toAccountInfo = await _safeGetAccountInfo(toAta.toBase58());
-    if (toAccountInfo == null) {
+    if (recipientAta.needsCreation) {
       instructions.add(
         AssociatedTokenAccountInstruction.createAccount(
           address: toAta,
@@ -3034,6 +3234,16 @@ class _ResolvedSplSourceAccountRecord {
   final Ed25519HDPublicKey publicKey;
   final double balance;
   final bool isAssociatedTokenAccount;
+}
+
+class _RecipientAtaResolutionRecord {
+  const _RecipientAtaResolutionRecord({
+    required this.address,
+    required this.needsCreation,
+  });
+
+  final Ed25519HDPublicKey address;
+  final bool needsCreation;
 }
 
 class _SignatureStatusRecord {
