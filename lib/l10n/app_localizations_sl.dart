@@ -10944,6 +10944,32 @@ class AppLocalizationsSl extends AppLocalizations {
   String get exhibitionDetailPromoteTooltip => 'Promoviraj razstavo';
 
   @override
+  String get eventDetailPromoteLabel => 'Promoviraj';
+
+  @override
+  String get eventDetailPromoteTooltip => 'Promoviraj dogodek';
+
+  @override
+  String get eventDetailInvitesLabel => 'Povabila';
+
+  @override
+  String get eventDetailInvitesTooltip => 'Deli možnosti povabila';
+
+  @override
+  String get eventDetailLinkedExhibitionsLabel => 'Povezane razstave';
+
+  @override
+  String get eventDetailLinkedExhibitionsEmpty => 'Za ta dogodek še ni povezanih razstav.';
+
+  @override
+  String eventDetailLinkedExhibitionsSummary(Object count) {
+    return 'Povezane razstave: $count';
+  }
+
+  @override
+  String get eventDetailPoapAggregationHint => 'Prevzemi se urejajo na spodnjih karticah povezanih razstav.';
+
+  @override
   String exhibitionDetailHostedBy(Object name) {
     return 'Gostitelj: $name';
   }
@@ -10967,7 +10993,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get exhibitionDetailPoapSignedOutHint => 'Za prevzem značke obiska se prijavi.';
 
   @override
-  String get exhibitionDetailPoapClaimAction => 'Prevzemi Značko';
+  String get exhibitionDetailPoapClaimAction => 'Prevzemi značko';
 
   @override
   String get exhibitionDetailPoapClaimingAction => 'Prevzemanje…';
@@ -10979,7 +11005,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get exhibitionDetailPoapClaimFailedToast => 'Značka trenutno ni mogoče prevzeti.';
 
   @override
-  String get exhibitionDetailPoapAttendanceHint => 'Potrditev prisotnosti je spodaj na voljo za dogodke v živo.';
+  String get exhibitionDetailPoapAttendanceHint => 'Preverjanje prisotnosti je spodaj na voljo za dogodke v živo.';
 
   @override
   String get exhibitionDetailPoapEligibilityClaimed => 'Že prevzeto';
@@ -10988,13 +11014,40 @@ class AppLocalizationsSl extends AppLocalizations {
   String get exhibitionDetailPoapEligibilityVerified => 'Prisotnost potrjena';
 
   @override
-  String get exhibitionDetailPoapEligibilityVisitRequired => 'Zahtevan je dokaz obiska';
+  String get exhibitionDetailPoapEligibilityVisitRequired => 'Zahtevan obisk';
 
   @override
   String get exhibitionDetailPoapEligibilitySignedOut => 'Zahtevana je prijava';
 
   @override
   String get exhibitionDetailPoapEligibilityClaimReadyHint => 'Tvoja prisotnost je potrjena. Značko lahko zdaj prevzameš.';
+
+  @override
+  String get exhibitionDetailPoapEligibilityNotPublished => 'Ni objavljeno';
+
+  @override
+  String get exhibitionDetailPoapEligibilityNotPublishedHint => 'Preden lahko udeleženci prevzamejo značko, razstavo objavi.';
+
+  @override
+  String get exhibitionDetailPoapEligibilityMarkerLinkRequired => 'Povezava do označevalnika je potrebna';
+
+  @override
+  String get exhibitionDetailPoapEligibilityMarkerLinkHint => 'Odpri povezani označevalnik ali pot QR, da odkleniš možnost prevzema.';
+
+  @override
+  String get exhibitionDetailPoapEligibilityAttendanceRequired => 'Potrebna je prisotnost';
+
+  @override
+  String get exhibitionDetailPoapEligibilityAttendanceHint => 'Obišči označevalnik razstave, da pred prevzemom potrdiš prisotnost.';
+
+  @override
+  String get exhibitionDetailPoapProofTypeMarkerAttendance => 'Prisotnost pri označevalniku';
+
+  @override
+  String get exhibitionDetailPoapLinkedMarkersLabel => 'Povezani označevalniki';
+
+  @override
+  String get exhibitionDetailPoapLatestCheckInLabel => 'Zadnja prijava';
 
   @override
   String get exhibitionDetailAttendanceConfirmAction => 'Potrdi prisotnost';

@@ -17,6 +17,7 @@ import '../../utils/media_url_resolver.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/promotion/promotion_builder_sheet.dart';
 import '../../widgets/detail/detail_shell_components.dart';
+import '../../widgets/detail/detail_shell_primitives.dart';
 import '../../widgets/detail/poap_detail_card.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../widgets/glass_components.dart';
@@ -55,9 +56,14 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       await events.fetchEvent(widget.eventId, force: true);
       await events.loadEventExhibitions(widget.eventId, refresh: true);
       final loadedExhibitions = events.exhibitionsForEvent(widget.eventId);
-      for (final exhibition in loadedExhibitions) {
-        await exhibitions.fetchExhibitionPoap(exhibition.id, force: true);
-      }
+      await Future.wait(
+        loadedExhibitions.map(
+          (exhibition) => exhibitions.fetchExhibitionPoap(
+            exhibition.id,
+            force: true,
+          ),
+        ),
+      );
     } catch (_) {
       // Provider handles errors.
     }
@@ -89,7 +95,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     final event = events.events.firstWhere(
       (e) => e.id == widget.eventId,
       orElse: () =>
-          widget.initialEvent ?? KubusEvent(id: widget.eventId, title: 'Event'),
+          widget.initialEvent ??
+          KubusEvent(id: widget.eventId, title: l10n.mapMarkerSubjectTypeEvent),
     );
 
     final exhibitions = events.exhibitionsForEvent(widget.eventId);
@@ -138,9 +145,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                       if (canPromote)
                         DetailSecondaryAction(
                           icon: Icons.campaign_outlined,
-                          label: 'Promote',
+                          label: l10n.eventDetailPromoteLabel,
                           onTap: () => _openPromotionFlow(event),
-                          tooltip: 'Promote event',
+                          tooltip: l10n.eventDetailPromoteTooltip,
                         ),
                       DetailSecondaryAction(
                         icon: Icons.share_outlined,
@@ -159,7 +166,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                       ),
                       DetailSecondaryAction(
                         icon: Icons.inbox_outlined,
-                        label: 'Invites',
+                        label: l10n.eventDetailInvitesLabel,
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
@@ -167,7 +174,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                             ),
                           );
                         },
-                        tooltip: 'Invites',
+                        tooltip: l10n.eventDetailInvitesTooltip,
                       ),
                       DetailSecondaryAction(
                         icon: Icons.refresh,
@@ -285,7 +292,9 @@ class _EventDetailsCard extends StatelessWidget {
     final location = locationBits.isNotEmpty ? locationBits.join(', ') : null;
     final hostLabel = event.host == null
         ? null
-        : 'Hosted by ${event.host!.displayName ?? event.host!.username ?? 'Unknown'}';
+        : l10n.exhibitionDetailHostedBy(
+            event.host!.displayName ?? event.host!.username ?? l10n.commonUnknown,
+          );
 
     return DetailCard(
       borderRadius: DetailRadius.md,
@@ -329,7 +338,7 @@ class _EventDetailsCard extends StatelessWidget {
               if ((event.status ?? '').trim().isNotEmpty)
                 DetailMetaItem(
                   icon: Icons.event_available_outlined,
-                  label: _labelForStatus(event.status),
+                  label: _labelForStatus(l10n, event.status),
                 ),
             ],
           ),
@@ -340,7 +349,7 @@ class _EventDetailsCard extends StatelessWidget {
               DetailContextItem(
                 icon: Icons.collections_outlined,
                 value: '$exhibitionsCount',
-                label: 'Exhibitions',
+                label: l10n.eventDetailLinkedExhibitionsLabel,
               ),
             ],
           ),
@@ -365,11 +374,11 @@ class _EventDetailsCard extends StatelessWidget {
     return '${d.year}-$mm-$dd';
   }
 
-  static String _labelForStatus(String? raw) {
+  static String _labelForStatus(AppLocalizations l10n, String? raw) {
     final value = (raw ?? '').trim().toLowerCase();
-    if (value.isEmpty) return 'Unknown';
-    if (value == 'published') return 'Published';
-    if (value == 'draft') return 'Draft';
+    if (value.isEmpty) return l10n.commonUnknown;
+    if (value == 'published') return l10n.commonPublished;
+    if (value == 'draft') return l10n.commonDraft;
     return value;
   }
 }
@@ -381,6 +390,7 @@ class _ExhibitionsPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return DetailCard(
       borderRadius: DetailRadius.md,
       child: Row(
@@ -393,8 +403,8 @@ class _ExhibitionsPreview extends StatelessWidget {
           Expanded(
             child: Text(
               exhibitionsCount == 0
-                  ? 'No exhibitions yet.'
-                  : 'This event includes $exhibitionsCount exhibition${exhibitionsCount == 1 ? '' : 's'}.',
+                  ? l10n.eventDetailLinkedExhibitionsEmpty
+                  : l10n.eventDetailLinkedExhibitionsSummary(exhibitionsCount),
               style: DetailTypography.caption(context),
             ),
           ),
@@ -417,6 +427,74 @@ class _EventPoapSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
+    List<DetailContextItem> contextItemsFor(ExhibitionPoapStatus poap) {
+      final items = <DetailContextItem>[];
+      if (poap.proofType?.trim().isNotEmpty == true) {
+        items.add(
+          DetailContextItem(
+            icon: Icons.verified_outlined,
+            value: l10n.exhibitionDetailPoapProofTypeMarkerAttendance,
+          ),
+        );
+      }
+      if (poap.linkedMarkerCount > 0) {
+        items.add(
+          DetailContextItem(
+            icon: Icons.route_outlined,
+            value: poap.linkedMarkerCount.toString(),
+            label: l10n.exhibitionDetailPoapLinkedMarkersLabel,
+          ),
+        );
+      }
+      if (poap.latestAttendanceAt != null) {
+        items.add(
+          DetailContextItem(
+            icon: Icons.schedule_outlined,
+            value: MaterialLocalizations.of(context)
+                .formatMediumDate(poap.latestAttendanceAt!.toLocal()),
+            label: l10n.exhibitionDetailPoapLatestCheckInLabel,
+          ),
+        );
+      }
+      return items;
+    }
+
+    String poapEligibilityLabel(ExhibitionPoapStatus poap) {
+      if (poap.claimed) return l10n.exhibitionDetailPoapEligibilityClaimed;
+      if (poap.canClaim) return l10n.exhibitionDetailPoapEligibilityVerified;
+      switch ((poap.eligibilityReason ?? '').trim().toLowerCase()) {
+        case 'sign_in_required':
+          return l10n.exhibitionDetailPoapEligibilitySignedOut;
+        case 'exhibition_not_published':
+          return l10n.exhibitionDetailPoapEligibilityNotPublished;
+        case 'marker_link_required':
+          return l10n.exhibitionDetailPoapEligibilityMarkerLinkRequired;
+        case 'marker_attendance_required':
+          return l10n.exhibitionDetailPoapEligibilityAttendanceRequired;
+        default:
+          return l10n.exhibitionDetailPoapEligibilityVisitRequired;
+      }
+    }
+
+    String? poapEligibilityHint(ExhibitionPoapStatus poap) {
+      if (poap.claimed) return null;
+      if (poap.canClaim) {
+        return l10n.eventDetailPoapAggregationHint;
+      }
+      switch ((poap.eligibilityReason ?? '').trim().toLowerCase()) {
+        case 'sign_in_required':
+          return l10n.exhibitionDetailPoapSignedOutHint;
+        case 'exhibition_not_published':
+          return l10n.exhibitionDetailPoapEligibilityNotPublishedHint;
+        case 'marker_link_required':
+          return l10n.exhibitionDetailPoapEligibilityMarkerLinkHint;
+        case 'marker_attendance_required':
+          return l10n.exhibitionDetailPoapEligibilityAttendanceHint;
+        default:
+          return l10n.eventDetailPoapAggregationHint;
+      }
+    }
+
     final cards = <Widget>[];
     for (final exhibition in exhibitions) {
       final poap = exhibitionsProvider.poapStatusFor(exhibition.id);
@@ -438,20 +516,13 @@ class _EventPoapSection extends StatelessWidget {
           rewardLabel: poap.poap.rewardKub8 > 0
               ? '+${poap.poap.rewardKub8} KUB8'
               : null,
-          stateLabel: poap.claimed
+            stateLabel: poap.claimed
               ? l10n.exhibitionDetailPoapClaimedStatus
               : l10n.exhibitionDetailPoapNotClaimedStatus,
-          eligibilityLabel: poap.claimed
-              ? l10n.exhibitionDetailPoapEligibilityClaimed
-              : (poap.canClaim
-                  ? l10n.exhibitionDetailPoapEligibilityVerified
-                  : l10n.exhibitionDetailPoapEligibilityVisitRequired),
-          eligibilityHint: poap.claimed
-              ? null
-              : (poap.canClaim
-                  ? l10n.exhibitionDetailPoapEligibilityClaimReadyHint
-                  : l10n.exhibitionDetailPoapEligibilityVisitRequired),
-          signedOutHint: null,
+            eligibilityLabel: poapEligibilityLabel(poap),
+            eligibilityHint: poapEligibilityHint(poap),
+            signedOutHint: null,
+            contextItems: contextItemsFor(poap),
           isClaimed: poap.claimed,
           canClaim: false,
           isClaiming: false,
@@ -475,6 +546,11 @@ class _EventPoapSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           DetailSectionLabel(label: l10n.exhibitionDetailPoapTitle),
+          const SizedBox(height: DetailSpacing.sm),
+          Text(
+            l10n.eventDetailPoapAggregationHint,
+            style: DetailTypography.caption(context),
+          ),
           const SizedBox(height: DetailSpacing.sm),
           ...cards,
         ],

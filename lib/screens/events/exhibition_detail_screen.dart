@@ -24,6 +24,7 @@ import '../../utils/artwork_media_resolver.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/detail/detail_shell_components.dart';
+import '../../widgets/detail/detail_shell_primitives.dart';
 import '../../widgets/detail/poap_detail_card.dart';
 import '../../utils/artwork_navigation.dart';
 import '../../utils/design_tokens.dart';
@@ -193,6 +194,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final provider = context.read<ExhibitionsProvider>();
     final attestationProvider = context.read<AttestationProvider>();
+    final currentPoap = provider.poapStatusFor(widget.exhibitionId);
+    if (currentPoap?.claimed == true) return;
 
     setState(() {
       _isClaimingPoap = true;
@@ -653,9 +656,11 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       final subject = result.subject;
       final subjectType = (subject?['subjectType'] ?? '').toString().trim().toLowerCase();
       final subjectId = (subject?['subjectId'] ?? '').toString().trim();
+      final currentPoap = context.read<ExhibitionsProvider>().poapStatusFor(widget.exhibitionId);
       if (subjectType == 'exhibition' &&
           subjectId.isNotEmpty &&
-          subjectId == widget.exhibitionId) {
+          subjectId == widget.exhibitionId &&
+          currentPoap?.claimed != true) {
         unawaited(_claimExhibitionPoap());
       }
     } on BackendApiRequestException catch (e) {
@@ -1002,6 +1007,80 @@ class _ExhibitionDetailsCard extends StatelessWidget {
     final hostLabel =
         hostName == null ? null : l10n.exhibitionDetailHostedBy(hostName);
 
+    List<DetailContextItem> buildPoapContextItems() {
+      final items = <DetailContextItem>[];
+      if (poap?.proofType?.trim().isNotEmpty == true) {
+        items.add(
+          DetailContextItem(
+            icon: Icons.verified_outlined,
+            value: l10n.exhibitionDetailPoapProofTypeMarkerAttendance,
+          ),
+        );
+      }
+      if ((poap?.linkedMarkerCount ?? 0) > 0) {
+        items.add(
+          DetailContextItem(
+            icon: Icons.route_outlined,
+            value: poap!.linkedMarkerCount.toString(),
+            label: l10n.exhibitionDetailPoapLinkedMarkersLabel,
+          ),
+        );
+      }
+      if (poap?.latestAttendanceAt != null) {
+        final latest = MaterialLocalizations.of(context)
+            .formatMediumDate(poap!.latestAttendanceAt!.toLocal());
+        items.add(
+          DetailContextItem(
+            icon: Icons.schedule_outlined,
+            value: latest,
+            label: l10n.exhibitionDetailPoapLatestCheckInLabel,
+          ),
+        );
+      }
+      return items;
+    }
+
+    String? poapEligibilityLabel() {
+      if (poap == null) return null;
+      if (poap!.claimed) {
+        return l10n.exhibitionDetailPoapEligibilityClaimed;
+      }
+      if (poap!.canClaim) {
+        return l10n.exhibitionDetailPoapEligibilityVerified;
+      }
+      switch ((poap!.eligibilityReason ?? '').trim().toLowerCase()) {
+        case 'sign_in_required':
+          return l10n.exhibitionDetailPoapEligibilitySignedOut;
+        case 'exhibition_not_published':
+          return l10n.exhibitionDetailPoapEligibilityNotPublished;
+        case 'marker_link_required':
+          return l10n.exhibitionDetailPoapEligibilityMarkerLinkRequired;
+        case 'marker_attendance_required':
+          return l10n.exhibitionDetailPoapEligibilityAttendanceRequired;
+        default:
+          return l10n.exhibitionDetailPoapEligibilityVisitRequired;
+      }
+    }
+
+    String? poapEligibilityHint() {
+      if (poap == null || poap!.claimed) return null;
+      if (poap!.canClaim) {
+        return l10n.exhibitionDetailPoapEligibilityClaimReadyHint;
+      }
+      switch ((poap!.eligibilityReason ?? '').trim().toLowerCase()) {
+        case 'sign_in_required':
+          return l10n.exhibitionDetailPoapSignedOutHint;
+        case 'exhibition_not_published':
+          return l10n.exhibitionDetailPoapEligibilityNotPublishedHint;
+        case 'marker_link_required':
+          return l10n.exhibitionDetailPoapEligibilityMarkerLinkHint;
+        case 'marker_attendance_required':
+          return l10n.exhibitionDetailPoapEligibilityAttendanceHint;
+        default:
+          return showAttendanceHint ? l10n.exhibitionDetailPoapAttendanceHint : null;
+      }
+    }
+
     return DetailCard(
       borderRadius: DetailRadius.md,
       child: Column(
@@ -1095,21 +1174,11 @@ class _ExhibitionDetailsCard extends StatelessWidget {
               stateLabel: poap!.claimed
                   ? l10n.exhibitionDetailPoapClaimedStatus
                   : l10n.exhibitionDetailPoapNotClaimedStatus,
-              eligibilityLabel: poap!.claimed
-                  ? l10n.exhibitionDetailPoapEligibilityClaimed
-                  : (poap!.canClaim
-                      ? l10n.exhibitionDetailPoapEligibilityVerified
-                      : (isSignedIn
-                          ? l10n.exhibitionDetailPoapEligibilityVisitRequired
-                          : l10n.exhibitionDetailPoapEligibilitySignedOut)),
-              eligibilityHint: poap!.claimed
-                  ? null
-                  : (poap!.canClaim
-                      ? l10n.exhibitionDetailPoapEligibilityClaimReadyHint
-                      : (showAttendanceHint
-                          ? l10n.exhibitionDetailPoapAttendanceHint
-                          : null)),
-              signedOutHint: isSignedIn ? null : l10n.exhibitionDetailPoapSignedOutHint,
+                eligibilityLabel: poapEligibilityLabel(),
+                eligibilityHint: poapEligibilityHint(),
+                signedOutHint:
+                  isSignedIn ? null : l10n.exhibitionDetailPoapSignedOutHint,
+                contextItems: buildPoapContextItems(),
               isClaimed: poap!.claimed,
               canClaim: !poap!.claimed && poap!.canClaim && isSignedIn,
               isClaiming: isClaimingPoap,

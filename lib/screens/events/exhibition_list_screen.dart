@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 import '../../config/config.dart';
@@ -446,6 +447,7 @@ class _ExhibitionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final themeProvider = Provider.of<ThemeProvider>(context);
 
@@ -603,7 +605,11 @@ class _ExhibitionCard extends StatelessWidget {
                         color: scheme.onSurface.withValues(alpha: 0.5)),
                     const SizedBox(width: 4),
                     Text(
-                      'Hosted by ${exhibition.host!.displayName ?? exhibition.host!.username ?? 'Unknown'}',
+                      l10n.exhibitionDetailHostedBy(
+                        exhibition.host!.displayName ??
+                            exhibition.host!.username ??
+                            l10n.commonUnknown,
+                      ),
                       style: KubusTypography.inter(
                         fontSize: 11,
                         color: scheme.onSurface.withValues(alpha: 0.6),

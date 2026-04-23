@@ -20609,6 +20609,54 @@ abstract class AppLocalizations {
   /// **'Promote exhibition'**
   String get exhibitionDetailPromoteTooltip;
 
+  /// No description provided for @eventDetailPromoteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Promote'**
+  String get eventDetailPromoteLabel;
+
+  /// No description provided for @eventDetailPromoteTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Promote event'**
+  String get eventDetailPromoteTooltip;
+
+  /// No description provided for @eventDetailInvitesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Invites'**
+  String get eventDetailInvitesLabel;
+
+  /// No description provided for @eventDetailInvitesTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Share invite options'**
+  String get eventDetailInvitesTooltip;
+
+  /// No description provided for @eventDetailLinkedExhibitionsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked exhibitions'**
+  String get eventDetailLinkedExhibitionsLabel;
+
+  /// No description provided for @eventDetailLinkedExhibitionsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No exhibitions are linked to this event yet.'**
+  String get eventDetailLinkedExhibitionsEmpty;
+
+  /// No description provided for @eventDetailLinkedExhibitionsSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked exhibitions: {count}'**
+  String eventDetailLinkedExhibitionsSummary(Object count);
+
+  /// No description provided for @eventDetailPoapAggregationHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Claims are handled on the linked exhibition cards below.'**
+  String get eventDetailPoapAggregationHint;
+
   /// No description provided for @exhibitionDetailHostedBy.
   ///
   /// In en, this message translates to:
@@ -20624,7 +20672,7 @@ abstract class AppLocalizations {
   /// No description provided for @exhibitionDetailPoapTitle.
   ///
   /// In en, this message translates to:
-  /// **'Badge of attendance(POAP)'**
+  /// **'Attendance badge (POAP)'**
   String get exhibitionDetailPoapTitle;
 
   /// No description provided for @exhibitionDetailPoapDescription.
@@ -20654,7 +20702,7 @@ abstract class AppLocalizations {
   /// No description provided for @exhibitionDetailPoapClaimAction.
   ///
   /// In en, this message translates to:
-  /// **'Claim Badge'**
+  /// **'Claim badge'**
   String get exhibitionDetailPoapClaimAction;
 
   /// No description provided for @exhibitionDetailPoapClaimingAction.
@@ -20678,7 +20726,7 @@ abstract class AppLocalizations {
   /// No description provided for @exhibitionDetailPoapAttendanceHint.
   ///
   /// In en, this message translates to:
-  /// **'Attendance check-in appears below for live events.'**
+  /// **'Attendance verification appears below for live events.'**
   String get exhibitionDetailPoapAttendanceHint;
 
   /// No description provided for @exhibitionDetailPoapEligibilityClaimed.
@@ -20696,7 +20744,7 @@ abstract class AppLocalizations {
   /// No description provided for @exhibitionDetailPoapEligibilityVisitRequired.
   ///
   /// In en, this message translates to:
-  /// **'Visit proof required'**
+  /// **'Visit required'**
   String get exhibitionDetailPoapEligibilityVisitRequired;
 
   /// No description provided for @exhibitionDetailPoapEligibilitySignedOut.
@@ -20710,6 +20758,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your attendance is verified. You can claim this badge now.'**
   String get exhibitionDetailPoapEligibilityClaimReadyHint;
+
+  /// No description provided for @exhibitionDetailPoapEligibilityNotPublished.
+  ///
+  /// In en, this message translates to:
+  /// **'Not published'**
+  String get exhibitionDetailPoapEligibilityNotPublished;
+
+  /// No description provided for @exhibitionDetailPoapEligibilityNotPublishedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish this exhibition before attendees can claim the badge.'**
+  String get exhibitionDetailPoapEligibilityNotPublishedHint;
+
+  /// No description provided for @exhibitionDetailPoapEligibilityMarkerLinkRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Marker link required'**
+  String get exhibitionDetailPoapEligibilityMarkerLinkRequired;
+
+  /// No description provided for @exhibitionDetailPoapEligibilityMarkerLinkHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the linked marker or QR path to unlock claim eligibility.'**
+  String get exhibitionDetailPoapEligibilityMarkerLinkHint;
+
+  /// No description provided for @exhibitionDetailPoapEligibilityAttendanceRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance required'**
+  String get exhibitionDetailPoapEligibilityAttendanceRequired;
+
+  /// No description provided for @exhibitionDetailPoapEligibilityAttendanceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit the exhibition marker to verify attendance before claiming.'**
+  String get exhibitionDetailPoapEligibilityAttendanceHint;
+
+  /// No description provided for @exhibitionDetailPoapProofTypeMarkerAttendance.
+  ///
+  /// In en, this message translates to:
+  /// **'Marker attendance'**
+  String get exhibitionDetailPoapProofTypeMarkerAttendance;
+
+  /// No description provided for @exhibitionDetailPoapLinkedMarkersLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked markers'**
+  String get exhibitionDetailPoapLinkedMarkersLabel;
+
+  /// No description provided for @exhibitionDetailPoapLatestCheckInLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest check-in'**
+  String get exhibitionDetailPoapLatestCheckInLabel;
 
   /// No description provided for @exhibitionDetailAttendanceConfirmAction.
   ///

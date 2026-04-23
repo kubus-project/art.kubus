@@ -10,7 +10,7 @@ class DeepLinkProvider extends ChangeNotifier {
   ShareDeepLinkTarget? get pending => _pending;
 
   void setPending(ShareDeepLinkTarget? target) {
-    if (_pending?.type == target?.type && _pending?.id == target?.id) return;
+    if (_signatureFor(_pending) == _signatureFor(target)) return;
     _pending = target;
     _notifySafely();
   }
@@ -51,5 +51,10 @@ class DeepLinkProvider extends ChangeNotifier {
       _notifyScheduled = false;
       notifyListeners();
     }
+  }
+
+  String? _signatureFor(ShareDeepLinkTarget? target) {
+    if (target == null) return null;
+    return const ShareDeepLinkCodec().canonicalPathForTarget(target);
   }
 }

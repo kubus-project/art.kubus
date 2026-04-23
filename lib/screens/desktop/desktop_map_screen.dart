@@ -2434,6 +2434,76 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         : null;
     final coverUrl = MediaUrlResolver.resolve(exhibition.coverUrl);
     final poap = context.watch<ExhibitionsProvider>().poapStatusFor(exhibition.id);
+
+    List<DetailContextItem> buildPoapContextItems() {
+      final items = <DetailContextItem>[];
+      final currentPoap = poap;
+      if (currentPoap == null) return items;
+      if (currentPoap.proofType?.trim().isNotEmpty == true) {
+        items.add(
+          DetailContextItem(
+            icon: Icons.verified_outlined,
+            value: l10n.exhibitionDetailPoapProofTypeMarkerAttendance,
+          ),
+        );
+      }
+      if (currentPoap.linkedMarkerCount > 0) {
+        items.add(
+          DetailContextItem(
+            icon: Icons.route_outlined,
+            value: currentPoap.linkedMarkerCount.toString(),
+            label: l10n.exhibitionDetailPoapLinkedMarkersLabel,
+          ),
+        );
+      }
+      if (currentPoap.latestAttendanceAt != null) {
+        items.add(
+          DetailContextItem(
+            icon: Icons.schedule_outlined,
+            value: MaterialLocalizations.of(context)
+                .formatMediumDate(currentPoap.latestAttendanceAt!.toLocal()),
+            label: l10n.exhibitionDetailPoapLatestCheckInLabel,
+          ),
+        );
+      }
+      return items;
+    }
+
+    String? poapEligibilityLabel() {
+      if (poap == null) return null;
+      if (poap.claimed) return l10n.exhibitionDetailPoapEligibilityClaimed;
+      if (poap.canClaim) return l10n.exhibitionDetailPoapEligibilityVerified;
+      switch ((poap.eligibilityReason ?? '').trim().toLowerCase()) {
+        case 'sign_in_required':
+          return l10n.exhibitionDetailPoapEligibilitySignedOut;
+        case 'exhibition_not_published':
+          return l10n.exhibitionDetailPoapEligibilityNotPublished;
+        case 'marker_link_required':
+          return l10n.exhibitionDetailPoapEligibilityMarkerLinkRequired;
+        case 'marker_attendance_required':
+          return l10n.exhibitionDetailPoapEligibilityAttendanceRequired;
+        default:
+          return l10n.exhibitionDetailPoapEligibilityVisitRequired;
+      }
+    }
+
+    String? poapEligibilityHint() {
+      if (poap == null || poap.claimed) return null;
+      if (poap.canClaim) return l10n.exhibitionDetailPoapEligibilityClaimReadyHint;
+      switch ((poap.eligibilityReason ?? '').trim().toLowerCase()) {
+        case 'sign_in_required':
+          return l10n.exhibitionDetailPoapSignedOutHint;
+        case 'exhibition_not_published':
+          return l10n.exhibitionDetailPoapEligibilityNotPublishedHint;
+        case 'marker_link_required':
+          return l10n.exhibitionDetailPoapEligibilityMarkerLinkHint;
+        case 'marker_attendance_required':
+          return l10n.exhibitionDetailPoapEligibilityAttendanceHint;
+        default:
+          return l10n.exhibitionDetailPoapAttendanceHint;
+      }
+    }
+
     final badge = Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -2450,7 +2520,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           ),
           const SizedBox(width: 6),
           Text(
-            'Exhibition',
+            l10n.commonExhibition,
             style: KubusTextStyles.navMetaLabel.copyWith(
               fontWeight: FontWeight.w600,
               color: exhibitionAccent,
@@ -2490,7 +2560,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 kicker: l10n.commonExhibition,
                 subtitle: exhibition.host == null
                     ? null
-                    : 'Hosted by ${exhibition.host!.displayName ?? exhibition.host!.username ?? 'Unknown'}',
+                    : l10n.exhibitionDetailHostedBy(
+                        exhibition.host!.displayName ??
+                            exhibition.host!.username ??
+                            l10n.commonUnknown,
+                      ),
               ),
               const SizedBox(height: KubusSpacing.md),
               DetailMetadataBlock(
@@ -2505,7 +2579,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     ),
                   DetailMetaItem(
                     icon: Icons.event_available_outlined,
-                    label: _labelForExhibitionStatus(exhibition.status),
+                    label: _labelForExhibitionStatus(l10n, exhibition.status),
                   ),
                 ],
               ),
@@ -2551,17 +2625,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   stateLabel: poap.claimed
                       ? l10n.exhibitionDetailPoapClaimedStatus
                       : l10n.exhibitionDetailPoapNotClaimedStatus,
-                  eligibilityLabel: poap.claimed
-                      ? l10n.exhibitionDetailPoapEligibilityClaimed
-                      : (poap.canClaim
-                          ? l10n.exhibitionDetailPoapEligibilityVerified
-                          : l10n.exhibitionDetailPoapEligibilityVisitRequired),
-                  eligibilityHint: poap.claimed
-                      ? null
-                      : (poap.canClaim
-                          ? l10n.exhibitionDetailPoapEligibilityClaimReadyHint
-                          : l10n.exhibitionDetailPoapAttendanceHint),
+                    eligibilityLabel: poapEligibilityLabel(),
+                    eligibilityHint: poapEligibilityHint(),
                   signedOutHint: null,
+                    contextItems: buildPoapContextItems(),
                   isClaimed: poap.claimed,
                   canClaim: !poap.claimed && poap.canClaim,
                   isClaiming: _isClaimingSelectedExhibitionPoap,
@@ -2735,7 +2802,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 kicker: l10n.mapMarkerSubjectTypeEvent,
                 subtitle: event.host == null
                     ? null
-                    : 'Hosted by ${event.host!.displayName ?? event.host!.username ?? 'Unknown'}',
+                  : l10n.exhibitionDetailHostedBy(
+                    event.host!.displayName ??
+                      event.host!.username ??
+                      l10n.commonUnknown,
+                    ),
               ),
               const SizedBox(height: KubusSpacing.md),
               DetailMetadataBlock(
@@ -2750,12 +2821,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     ),
                   DetailMetaItem(
                     icon: Icons.collections_outlined,
-                    label: 'Exhibitions: $exhibitionsCount',
+                    label: l10n.eventDetailLinkedExhibitionsSummary(exhibitionsCount),
                   ),
                   if ((event.status ?? '').trim().isNotEmpty)
                     DetailMetaItem(
                       icon: Icons.event_available_outlined,
-                      label: _labelForPanelStatus(event.status),
+                      label: _labelForPanelStatus(l10n, event.status),
                     ),
                 ],
               ),
@@ -2781,7 +2852,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   DetailContextItem(
                     icon: Icons.collections_outlined,
                     value: '$exhibitionsCount',
-                    label: 'Exhibitions',
+                    label: l10n.eventDetailLinkedExhibitionsLabel,
                   ),
                 ],
               ),
@@ -2863,15 +2934,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   String _formatExhibitionDate(DateTime dt) => _formatPanelDate(dt);
 
-  String _labelForPanelStatus(String? raw) {
+  String _labelForPanelStatus(AppLocalizations l10n, String? raw) {
     final v = (raw ?? '').trim().toLowerCase();
-    if (v.isEmpty) return 'Unknown';
-    if (v == 'published') return 'Published';
-    if (v == 'draft') return 'Draft';
+    if (v.isEmpty) return l10n.commonUnknown;
+    if (v == 'published') return l10n.commonPublished;
+    if (v == 'draft') return l10n.commonDraft;
     return v;
   }
 
-  String _labelForExhibitionStatus(String? raw) => _labelForPanelStatus(raw);
+  String _labelForExhibitionStatus(AppLocalizations l10n, String? raw) =>
+      _labelForPanelStatus(l10n, raw);
 
   void _openDesktopSubScreenOrPush({
     required String title,

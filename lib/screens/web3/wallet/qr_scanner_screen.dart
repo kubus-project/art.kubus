@@ -36,6 +36,8 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
   QRScanResult? _scanResult;
   bool _hasCompletedScan = false;
   bool _isProcessingClaimReadyTarget = false;
+  String? _lastClaimReadyCode;
+  DateTime? _lastClaimReadyCodeAt;
   String? _errorMessage;
   Timer? _statusResetTimer;
   bool _isTorchOn = false;
@@ -492,6 +494,15 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
 
     final deepLinkTarget = _tryParseClaimReadyExhibitionTarget(raw);
     if (deepLinkTarget != null) {
+      final lastCode = _lastClaimReadyCode;
+      final lastAt = _lastClaimReadyCodeAt;
+      if (lastCode == raw &&
+          lastAt != null &&
+          DateTime.now().difference(lastAt) < const Duration(seconds: 2)) {
+        return;
+      }
+      _lastClaimReadyCode = raw;
+      _lastClaimReadyCodeAt = DateTime.now();
       unawaited(_handleClaimReadyExhibitionTarget(deepLinkTarget));
       return;
     }

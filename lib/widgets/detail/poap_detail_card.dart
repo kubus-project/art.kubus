@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 
 import '../../utils/media_url_resolver.dart';
+import 'detail_shell_primitives.dart';
 import 'detail_shell_components.dart';
 
 class PoapDetailCard extends StatelessWidget {
@@ -15,6 +16,7 @@ class PoapDetailCard extends StatelessWidget {
   final String? eligibilityLabel;
   final String? eligibilityHint;
   final String? signedOutHint;
+  final List<DetailContextItem> contextItems;
   final bool isClaimed;
   final bool canClaim;
   final bool isClaiming;
@@ -34,6 +36,7 @@ class PoapDetailCard extends StatelessWidget {
     this.eligibilityLabel,
     this.eligibilityHint,
     this.signedOutHint,
+    this.contextItems = const <DetailContextItem>[],
     this.isClaimed = false,
     this.canClaim = false,
     this.isClaiming = false,
@@ -141,6 +144,13 @@ class PoapDetailCard extends StatelessWidget {
             Text(
               signedOutHint!.trim(),
               style: DetailTypography.caption(context),
+            ),
+          ],
+          if (contextItems.where((item) => item.value.trim().isNotEmpty).isNotEmpty) ...[
+            const SizedBox(height: DetailSpacing.md),
+            DetailContextCluster(
+              compact: true,
+              items: contextItems,
             ),
           ],
           if (canClaim && onClaim != null) ...[

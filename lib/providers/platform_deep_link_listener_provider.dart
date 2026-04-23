@@ -153,7 +153,7 @@ class PlatformDeepLinkListenerProvider extends ChangeNotifier {
 
     // De-dupe repeats (Android may dispatch the same URI more than once; and
     // some link sources trigger both initial+stream events).
-    final signature = '${target.type.name}:${target.id}';
+    final signature = const ShareDeepLinkCodec().canonicalPathForTarget(target);
     final now = DateTime.now();
     final lastAt = _lastHandledAt;
     if (_lastHandledSignature == signature &&

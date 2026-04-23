@@ -18,6 +18,7 @@ import '../screens/events/exhibition_detail_screen.dart';
 import '../services/share/share_types.dart';
 import 'artwork_navigation.dart';
 import 'user_profile_navigation.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 
 class ShareDeepLinkNavigation {
   static void _maybePromptDeferredOnboarding(BuildContext context) {
@@ -167,12 +168,15 @@ class ShareDeepLinkNavigation {
     BuildContext context,
     ShareDeepLinkTarget target,
   ) async {
+    final l10n = AppLocalizations.of(context);
+    String titleFor(String fallback, String? localized) =>
+        localized ?? fallback;
     switch (target.type) {
       case ShareEntityType.post:
         scope.navigateToRoute('/community');
         scope.pushScreen(
           DesktopSubScreen(
-            title: 'Post',
+            title: titleFor('Post', l10n?.commonPost),
             child: PostDetailScreen(postId: target.id),
           ),
         );
@@ -189,7 +193,7 @@ class ShareDeepLinkNavigation {
         scope.navigateToRoute('/home');
         scope.pushScreen(
           DesktopSubScreen(
-            title: 'Event',
+            title: titleFor('Event', l10n?.commonEvent),
             child: EventDetailScreen(eventId: target.id),
           ),
         );
@@ -198,7 +202,7 @@ class ShareDeepLinkNavigation {
         scope.navigateToRoute('/home');
         scope.pushScreen(
           DesktopSubScreen(
-            title: 'Exhibition',
+            title: titleFor('Exhibition', l10n?.commonExhibition),
             child: ExhibitionDetailScreen(
               exhibitionId: target.id,
               attendanceMarkerId: target.attendanceMarkerId,
@@ -210,7 +214,7 @@ class ShareDeepLinkNavigation {
         scope.navigateToRoute('/home');
         scope.pushScreen(
           DesktopSubScreen(
-            title: 'Collection',
+            title: titleFor('Collection', l10n?.commonCollection),
             child: CollectionDetailScreen(collectionId: target.id),
           ),
         );
@@ -219,7 +223,7 @@ class ShareDeepLinkNavigation {
         scope.navigateToRoute('/explore');
         scope.pushScreen(
           DesktopSubScreen(
-            title: 'Explore',
+            title: titleFor('Explore', l10n?.commonExplore),
             child: DesktopMapScreen(
               autoFollow: false,
               initialMarkerId: target.id,

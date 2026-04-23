@@ -10906,6 +10906,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionDetailPromoteTooltip => 'Promote exhibition';
 
   @override
+  String get eventDetailPromoteLabel => 'Promote';
+
+  @override
+  String get eventDetailPromoteTooltip => 'Promote event';
+
+  @override
+  String get eventDetailInvitesLabel => 'Invites';
+
+  @override
+  String get eventDetailInvitesTooltip => 'Share invite options';
+
+  @override
+  String get eventDetailLinkedExhibitionsLabel => 'Linked exhibitions';
+
+  @override
+  String get eventDetailLinkedExhibitionsEmpty => 'No exhibitions are linked to this event yet.';
+
+  @override
+  String eventDetailLinkedExhibitionsSummary(Object count) {
+    return 'Linked exhibitions: $count';
+  }
+
+  @override
+  String get eventDetailPoapAggregationHint => 'Claims are handled on the linked exhibition cards below.';
+
+  @override
   String exhibitionDetailHostedBy(Object name) {
     return 'Hosted by $name';
   }
@@ -10914,7 +10940,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionDetailManagementTitle => 'Management';
 
   @override
-  String get exhibitionDetailPoapTitle => 'Badge of attendance(POAP)';
+  String get exhibitionDetailPoapTitle => 'Attendance badge (POAP)';
 
   @override
   String get exhibitionDetailPoapDescription => 'Claim this proof of visit to add it to your recognition history.';
@@ -10929,7 +10955,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionDetailPoapSignedOutHint => 'Sign in to claim this proof of visit badge.';
 
   @override
-  String get exhibitionDetailPoapClaimAction => 'Claim Badge';
+  String get exhibitionDetailPoapClaimAction => 'Claim badge';
 
   @override
   String get exhibitionDetailPoapClaimingAction => 'Claiming…';
@@ -10941,7 +10967,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionDetailPoapClaimFailedToast => 'Unable to claim badge right now.';
 
   @override
-  String get exhibitionDetailPoapAttendanceHint => 'Attendance check-in appears below for live events.';
+  String get exhibitionDetailPoapAttendanceHint => 'Attendance verification appears below for live events.';
 
   @override
   String get exhibitionDetailPoapEligibilityClaimed => 'Already claimed';
@@ -10950,13 +10976,40 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionDetailPoapEligibilityVerified => 'Attendance verified';
 
   @override
-  String get exhibitionDetailPoapEligibilityVisitRequired => 'Visit proof required';
+  String get exhibitionDetailPoapEligibilityVisitRequired => 'Visit required';
 
   @override
   String get exhibitionDetailPoapEligibilitySignedOut => 'Sign in required';
 
   @override
   String get exhibitionDetailPoapEligibilityClaimReadyHint => 'Your attendance is verified. You can claim this badge now.';
+
+  @override
+  String get exhibitionDetailPoapEligibilityNotPublished => 'Not published';
+
+  @override
+  String get exhibitionDetailPoapEligibilityNotPublishedHint => 'Publish this exhibition before attendees can claim the badge.';
+
+  @override
+  String get exhibitionDetailPoapEligibilityMarkerLinkRequired => 'Marker link required';
+
+  @override
+  String get exhibitionDetailPoapEligibilityMarkerLinkHint => 'Open the linked marker or QR path to unlock claim eligibility.';
+
+  @override
+  String get exhibitionDetailPoapEligibilityAttendanceRequired => 'Attendance required';
+
+  @override
+  String get exhibitionDetailPoapEligibilityAttendanceHint => 'Visit the exhibition marker to verify attendance before claiming.';
+
+  @override
+  String get exhibitionDetailPoapProofTypeMarkerAttendance => 'Marker attendance';
+
+  @override
+  String get exhibitionDetailPoapLinkedMarkersLabel => 'Linked markers';
+
+  @override
+  String get exhibitionDetailPoapLatestCheckInLabel => 'Latest check-in';
 
   @override
   String get exhibitionDetailAttendanceConfirmAction => 'Confirm attendance';

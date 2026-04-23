@@ -914,7 +914,7 @@ class _DesktopShellState extends State<DesktopShell>
     })();
     if (pending == null) return;
 
-    final signature = '${pending.type.name}:${pending.id}';
+    final signature = const ShareDeepLinkCodec().canonicalPathForTarget(pending);
     final now = DateTime.now();
     final lastAt = _lastDeepLinkHandledAt;
     if (_lastDeepLinkSignature == signature &&
