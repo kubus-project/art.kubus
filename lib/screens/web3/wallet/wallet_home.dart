@@ -19,6 +19,7 @@ import '../../../widgets/common/keyboard_inset_padding.dart';
 import '../../../widgets/glass_components.dart';
 import '../../../widgets/wallet_custody_status_panel.dart';
 import '../../../widgets/wallet_transaction_card.dart';
+import '../../../widgets/attestation_badge_panel.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../widgets/kubus_action_sidebar.dart';
@@ -253,6 +254,10 @@ class _WalletHomeState extends State<WalletHome> {
                       roles: roles,
                       swapEnabled: swapEnabled,
                     ),
+                  ),
+                  const SizedBox(height: KubusSpacing.lg),
+                  const AttestationBadgePanel(
+                    title: 'Attestation badges',
                   ),
                   const SizedBox(height: KubusSpacing.lg),
                   if (isWide)

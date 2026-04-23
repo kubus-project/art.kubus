@@ -381,6 +381,26 @@ class BackendCollectiblesAttestationsTransport {
       walletAddress: walletAddress,
     );
   }
+
+  Future<List<UnifiedAttestation>> listMyAttestations({
+    int limit = 100,
+    String? walletAddress,
+  }) {
+    return _service.getMyAttestations(
+      limit: limit,
+      walletAddress: walletAddress,
+    );
+  }
+
+  Future<UnifiedAttestation?> claimExhibitionAttestation(
+    String exhibitionId,
+  ) {
+    return _service.claimExhibitionAttestation(exhibitionId);
+  }
+
+  Future<BackendAttestationTaxonomyDto?> getTaxonomy() {
+    return _backendApiGetAttestationTaxonomy(_service);
+  }
 }
 
 extension BackendApiDomainAccess on BackendApiService {
@@ -400,6 +420,9 @@ extension BackendApiDomainAccess on BackendApiService {
       BackendWalletSettlementTransport(this);
 
   BackendCollectiblesAttestationsTransport get collectibles =>
+      BackendCollectiblesAttestationsTransport(this);
+
+    BackendCollectiblesAttestationsTransport get attestations =>
       BackendCollectiblesAttestationsTransport(this);
 
   BackendAuthLevel getCurrentAuthLevel() {

@@ -52,6 +52,7 @@ import 'providers/desktop_dashboard_state_provider.dart';
 import 'providers/marker_management_provider.dart';
 import 'providers/street_art_claims_provider.dart';
 import 'providers/attendance_provider.dart';
+import 'providers/attestation_provider.dart';
 import 'providers/security_gate_provider.dart';
 import 'providers/email_preferences_provider.dart';
 import 'providers/auth_deep_link_provider.dart';
@@ -658,7 +659,8 @@ class _AppLauncherState extends State<AppLauncher> {
                 update: (context, walletProvider, daoProvider) {
                   final provider = daoProvider ??
                       DAOProvider(
-                        solanaWalletService: context.read<SolanaWalletService>(),
+                        solanaWalletService:
+                            context.read<SolanaWalletService>(),
                       );
                   provider.bindWalletProvider(walletProvider);
                   return provider;
@@ -713,6 +715,20 @@ class _AppLauncherState extends State<AppLauncher> {
                   provider.bindAuthContext(
                     isSignedIn: walletProvider.authority.hasAccountSession,
                     walletAddress: walletProvider.currentWalletAddress,
+                  );
+                  return provider;
+                },
+              ),
+              ChangeNotifierProxyProvider2<ProfileProvider, WalletProvider,
+                  AttestationProvider>(
+                create: (context) => AttestationProvider(),
+                update: (context, profileProvider, walletProvider,
+                    attestationProvider) {
+                  final provider = attestationProvider ?? AttestationProvider();
+                  provider.bindAuthContext(
+                    isSignedIn: walletProvider.authority.hasAccountSession,
+                    walletAddress: profileProvider.currentUser?.walletAddress ??
+                        walletProvider.currentWalletAddress,
                   );
                   return provider;
                 },

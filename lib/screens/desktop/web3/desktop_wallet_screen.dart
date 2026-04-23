@@ -24,6 +24,7 @@ import '../../../utils/kubus_color_roles.dart';
 import '../../../widgets/common/kubus_screen_header.dart';
 import '../../../widgets/wallet_custody_status_panel.dart';
 import '../../../widgets/wallet_transaction_card.dart';
+import '../../../widgets/attestation_badge_panel.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../web3/wallet/wallet_backup_protection_screen.dart';
 
@@ -681,8 +682,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
       builder: (context, constraints) {
         final actionCount = swapEnabled ? 3 : 2;
         final tileWidth = constraints.maxWidth >= 980
-            ? (constraints.maxWidth -
-                    (DetailSpacing.md * (actionCount - 1))) /
+            ? (constraints.maxWidth - (DetailSpacing.md * (actionCount - 1))) /
                 actionCount
             : (constraints.maxWidth - DetailSpacing.md) / 2;
         final resolvedTileWidth = tileWidth.clamp(164.0, 240.0);
@@ -1540,6 +1540,11 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
           style: DetailTypography.sectionTitle(context),
         ),
         SizedBox(height: DetailSpacing.lg + DetailSpacing.xs),
+        const AttestationBadgePanel(
+          title: 'Attestation badges',
+          compact: true,
+        ),
+        SizedBox(height: DetailSpacing.lg),
         _buildQuickActionTile(
           l10n.walletHomeSendAction,
           l10n.walletHomeDesktopSendSubtitle,

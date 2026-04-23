@@ -39,6 +39,7 @@ import '../../../widgets/institution_badge.dart';
 import '../../../widgets/email_verification_status_badge.dart';
 import '../../../widgets/secure_account_banner_card.dart';
 import '../../../widgets/wallet_backup_banner_card.dart';
+import '../../../widgets/attestation_badge_panel.dart';
 import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/design_tokens.dart';
@@ -243,6 +244,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _buildAttestationSection(),
+              const SizedBox(height: DetailSpacing.lg),
               _buildPerformanceStatsSection(),
               const SizedBox(height: DetailSpacing.lg),
               _buildAchievementsSection(),
@@ -310,6 +313,8 @@ class _ProfileScreenState extends State<ProfileScreen>
         _buildSavedItemsSection(themeProvider),
         const SizedBox(height: DetailSpacing.lg),
         _buildPerformanceStatsSection(),
+        const SizedBox(height: DetailSpacing.lg),
+        _buildAttestationSection(),
         const SizedBox(height: DetailSpacing.lg),
         _buildAchievementsSection(),
         const SizedBox(height: DetailSpacing.lg),
@@ -1486,6 +1491,24 @@ class _ProfileScreenState extends State<ProfileScreen>
           ],
         );
       },
+    );
+  }
+
+  Widget _buildAttestationSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: const [
+        DesktopSectionHeader(
+          title: 'Attestation badges',
+          subtitle: 'Attendance, participation, approvals, and proofs',
+          icon: Icons.verified_outlined,
+        ),
+        SizedBox(height: DetailSpacing.md),
+        AttestationBadgePanel(
+          title: 'Attestation badges',
+          compact: true,
+        ),
+      ],
     );
   }
 

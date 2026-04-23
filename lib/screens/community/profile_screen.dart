@@ -55,6 +55,7 @@ import '../../widgets/institution_badge.dart';
 import '../../widgets/email_verification_status_badge.dart';
 import '../../widgets/secure_account_banner_card.dart';
 import '../../widgets/wallet_backup_banner_card.dart';
+import '../../widgets/attestation_badge_panel.dart';
 import '../../models/dao.dart';
 import '../../config/config.dart';
 import '../../utils/kubus_color_roles.dart';
@@ -226,6 +227,18 @@ class _ProfileScreenState extends State<ProfileScreen>
                       _buildStatsSection(),
                       const SliverToBoxAdapter(
                           child: SizedBox(height: DetailSpacing.xxl)),
+                      const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: DetailSpacing.lg,
+                          ),
+                          child: AttestationBadgePanel(
+                            title: 'Attestation badges',
+                          ),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(
+                          child: SizedBox(height: DetailSpacing.xl)),
                       SliverToBoxAdapter(child: _buildSavedArtworksSection()),
                       const SliverToBoxAdapter(
                           child: SizedBox(height: DetailSpacing.xl)),

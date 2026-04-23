@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../config/config.dart';
+import '../models/attestation.dart';
 import '../services/backend_api_service.dart';
 
 class AttendanceProximitySnapshot {
@@ -77,6 +78,7 @@ class AttendanceConfirmDto {
   final bool viewedAdded;
   final bool discoveryPathUpdated;
   final List<dynamic> achievementsUnlocked;
+  final List<UnifiedAttestation> attestations;
   final Map<String, dynamic>? poap;
   final Map<String, dynamic>? kub8;
   final Map<String, dynamic>? subject;
@@ -86,6 +88,7 @@ class AttendanceConfirmDto {
     required this.viewedAdded,
     required this.discoveryPathUpdated,
     required this.achievementsUnlocked,
+    required this.attestations,
     this.poap,
     this.kub8,
     this.subject,
@@ -93,6 +96,72 @@ class AttendanceConfirmDto {
 
   factory AttendanceConfirmDto.fromApi(Map<String, dynamic> json) {
     final data = (json['data'] is Map) ? Map<String, dynamic>.from(json['data'] as Map) : json;
+    final parsedAttestations = () {
+      final raw = data['attestations'];
+      if (raw is List) {
+        return raw
+            .whereType<Map>()
+            .map((item) => UnifiedAttestation.fromJson(
+                Map<String, dynamic>.from(item)))
+            .toList(growable: false);
+      }
+
+      // Backward compatibility for older payloads that only returned
+      // attendance/POAP/achievement fields.
+      final poap = (data['poap'] is Map) ? Map<String, dynamic>.from(data['poap'] as Map) : null;
+      final subject =
+          (data['subject'] is Map) ? Map<String, dynamic>.from(data['subject'] as Map) : null;
+      final markerId = (subject?['markerId'] ?? '').toString();
+      final subjectType = (subject?['subjectType'] ?? 'art_marker').toString();
+      final subjectId = (subject?['subjectId'] ?? markerId).toString();
+
+      final fallback = <UnifiedAttestation>[];
+      if (markerId.isNotEmpty) {
+        fallback.add(
+          UnifiedAttestation.fromJson(<String, dynamic>{
+            'id': 'attendance:$markerId',
+            'type': 'attendance',
+            'subjectType': subjectType,
+            'subjectId': subjectId,
+            'status': data['attendanceRecorded'] == true ? 'recorded' : 'idempotent',
+            'usage': const <String>['trust', 'eligibility', 'discovery'],
+            'mint': const <String, dynamic>{
+              'eligible': false,
+              'policy': 'none',
+              'status': 'not_minted',
+            },
+            'metadata': <String, dynamic>{
+              'attendanceRecorded': data['attendanceRecorded'] == true,
+              'viewedAdded': data['viewedAdded'] == true,
+            },
+          }),
+        );
+      }
+      if (poap != null) {
+        final status = (poap['status'] ?? '').toString().trim();
+        if (status.isNotEmpty && status != 'none' && status != 'not_configured') {
+          fallback.add(
+            UnifiedAttestation.fromJson(<String, dynamic>{
+              'id': 'poap:${poap['eventId'] ?? markerId}',
+              'type': 'participation_proof',
+              'subjectType': 'event_drop',
+              'subjectId': (poap['eventId'] ?? markerId).toString(),
+              'status': status,
+              'usage': const <String>['trust', 'visibility', 'discovery'],
+              'mint': <String, dynamic>{
+                'eligible': poap['eventId'] != null ||
+                    (poap['claimUrl']?.toString().isNotEmpty ?? false),
+                'policy': 'optional',
+                'status': status == 'claimed' ? 'minted' : 'not_minted',
+              },
+              'metadata': poap,
+            }),
+          );
+        }
+      }
+      return fallback;
+    }();
+
     return AttendanceConfirmDto(
       attendanceRecorded: data['attendanceRecorded'] == true,
       viewedAdded: data['viewedAdded'] == true,
@@ -100,6 +169,7 @@ class AttendanceConfirmDto {
       achievementsUnlocked: (data['achievementsUnlocked'] is List)
           ? List<dynamic>.from(data['achievementsUnlocked'] as List)
           : const <dynamic>[],
+      attestations: parsedAttestations,
       poap: (data['poap'] is Map) ? Map<String, dynamic>.from(data['poap'] as Map) : null,
       kub8: (data['kub8'] is Map) ? Map<String, dynamic>.from(data['kub8'] as Map) : null,
       subject: (data['subject'] is Map) ? Map<String, dynamic>.from(data['subject'] as Map) : null,

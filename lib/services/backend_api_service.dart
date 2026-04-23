@@ -14,6 +14,7 @@ import '../models/artwork_comment.dart';
 import '../models/community_group.dart';
 import '../models/event.dart';
 import '../models/exhibition.dart';
+import '../models/attestation.dart';
 import '../models/collab_member.dart';
 import '../models/collab_invite.dart';
 import '../models/street_art_claim.dart';
@@ -3687,10 +3688,23 @@ class BackendApiService
     try {
       await _ensureAuthBeforeRequest(walletAddress: walletAddress);
 
-      final uri = Uri.parse('$baseUrl/api/attendance/challenge').replace(
+      final uri = Uri.parse('$baseUrl/api/attestations/attendance/challenge').replace(
         queryParameters: <String, String>{'markerId': markerId.trim()},
       );
-      final response = await _get(uri, headers: _getHeaders());
+        final response = await _get(uri, headers: _getHeaders());
+      if (response.statusCode == 404 || response.statusCode == 400) {
+        final fallbackUri = Uri.parse('$baseUrl/api/attendance/challenge')
+            .replace(queryParameters: <String, String>{'markerId': markerId.trim()});
+        final fallback = await _get(fallbackUri, headers: _getHeaders());
+        if (fallback.statusCode == 200) {
+          return jsonDecode(fallback.body) as Map<String, dynamic>;
+        }
+        throw BackendApiRequestException(
+          statusCode: fallback.statusCode,
+          path: fallbackUri.path,
+          body: fallback.body,
+        );
+      }
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       }
@@ -3716,7 +3730,7 @@ class BackendApiService
   }) async {
     try {
       await _ensureAuthBeforeRequest(walletAddress: walletAddress);
-      final uri = Uri.parse('$baseUrl/api/attendance/confirm');
+      final uri = Uri.parse('$baseUrl/api/attestations/attendance/confirm');
       final response = await _post(
         uri,
         headers: _getHeaders(),
@@ -3726,6 +3740,29 @@ class BackendApiService
           'clientLocation': clientLocation,
         }),
       );
+
+      if (response.statusCode == 404 || response.statusCode == 400) {
+        final fallbackUri = Uri.parse('$baseUrl/api/attendance/confirm');
+        final fallbackResponse = await _post(
+          fallbackUri,
+          headers: _getHeaders(),
+          body: jsonEncode({
+            'markerId': markerId.trim(),
+            'challengeToken': challengeToken,
+            'clientLocation': clientLocation,
+          }),
+        );
+
+        if (fallbackResponse.statusCode == 200) {
+          return jsonDecode(fallbackResponse.body) as Map<String, dynamic>;
+        }
+
+        throw BackendApiRequestException(
+          statusCode: fallbackResponse.statusCode,
+          path: fallbackUri.path,
+          body: fallbackResponse.body,
+        );
+      }
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
@@ -3738,6 +3775,81 @@ class BackendApiService
       );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.confirmAttendance failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Get unified attestation graph for current user.
+  /// GET /api/attestations/me
+  Future<List<UnifiedAttestation>> getMyAttestations({
+    int limit = 100,
+    String? walletAddress,
+  }) async {
+    try {
+      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
+      final safeLimit = limit.clamp(1, 250);
+      final uri = Uri.parse('$baseUrl/api/attestations/me').replace(
+        queryParameters: <String, String>{
+          'limit': '$safeLimit',
+        },
+      );
+        final response = await _get(uri, headers: _getHeaders());
+      if (response.statusCode != 200) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
+      }
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      final payload = decoded['data'] ?? decoded;
+      if (payload is! Map<String, dynamic>) return const <UnifiedAttestation>[];
+      final raw = payload['attestations'];
+      if (raw is! List) return const <UnifiedAttestation>[];
+      return raw
+          .whereType<Map>()
+          .map((entry) =>
+              UnifiedAttestation.fromJson(Map<String, dynamic>.from(entry)))
+          .toList(growable: false);
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.getMyAttestations failed: $e');
+      return const <UnifiedAttestation>[];
+    }
+  }
+
+  /// Claim an exhibition participation attestation (POAP-backed when configured).
+  /// POST /api/attestations/exhibitions/:id/claim
+  Future<UnifiedAttestation?> claimExhibitionAttestation(
+    String exhibitionId,
+  ) async {
+    try {
+      await _ensureAuthBeforeRequest();
+      final uri =
+          Uri.parse('$baseUrl/api/attestations/exhibitions/$exhibitionId/claim');
+      final response = await _post(uri, headers: _getHeaders());
+      if (response.statusCode != 200) {
+        throw BackendApiRequestException(
+          statusCode: response.statusCode,
+          path: uri.path,
+          body: response.body,
+        );
+      }
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      final payload = decoded['data'] ?? decoded;
+      if (payload is! Map<String, dynamic>) return null;
+      final attestations = payload['attestations'];
+      if (attestations is List && attestations.isNotEmpty) {
+        final first = attestations.first;
+        if (first is Map) {
+          return UnifiedAttestation.fromJson(
+            Map<String, dynamic>.from(first),
+          );
+        }
+      }
+      return null;
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.claimExhibitionAttestation failed: $e');
       rethrow;
     }
   }
