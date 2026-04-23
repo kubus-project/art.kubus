@@ -1,4 +1,4 @@
-﻿{
+{
   "@@locale": "sl",
   "appTitle": "art.kubus",
   "appExitConfirmBackHint": "Za izhod iz aplikacije še enkrat povleci ali pritisni nazaj.",
@@ -166,7 +166,7 @@
   "authHighlightControl": "Dostop ostane v tvojih rokah",
   "authHighlightOnboardingOptions": "Izberi e-pošto, Google ali denarnico",
   "authHighlightKeysLocal": "Zasebni ključi ostanejo pri tebi",
-  "authHighlightOptionalWeb3": "Pripravljeno za prihodnje lastništvo in sodelovanje",
+  "authHighlightOptionalWeb3": "Temelj za prihodnje lastništvo in sodelovanje",
   "authSignedInProfileRefreshSoon": "Prijava je uspela. Profil se bo kmalu osvežil.",
   "authReauthDialogTitle": "Ponovna prijava",
   "@authReauthDialogTitle": {
@@ -228,7 +228,7 @@
   "authResetPasswordSuccessToast": "Geslo posodobljeno. Zdaj se lahko prijaviš.",
   "authResetPasswordFailedInline": "Ponastavitev ni uspela. Povezava je morda neveljavna ali potekla.",
   "authGoogleSignInFailed": "Prijava z Googlom ni uspela. Poskusi znova.",
-  "authSignerProvisioningFailed": "Priprava dostopa do denarnice na tej napravi ni uspela.",
+  "authSignerProvisioningFailed": "Priprava denarnice s podpisnikom ni uspela.",
   "authGoogleRateLimitedRetryIn": "Prijava z Googlom je začasno omejena. Poskusi znova čez ~{duration}.",
   "@authGoogleRateLimitedRetryIn": {
     "placeholders": {
@@ -251,8 +251,8 @@
   "authHideOtherOptions": "Skrij druge možnosti",
   "authOtherOptionsLabel": "Drugi načini za nadaljevanje",
   "authRestoreWalletTitle": "Obnovi denarnico iz šifrirane varnostne kopije",
-  "authRestoreWalletBeforeSignInDescription": "Vnesi obnovitveno geslo, da pred zaključkom prijave obnoviš dostop do denarnice na tej napravi.",
-  "authRestoreWalletForAccountDescription": "Vnesi obnovitveno geslo, da za ta račun na tej napravi obnoviš dostop do denarnice.",
+  "authRestoreWalletBeforeSignInDescription": "Vnesi obnovitveno geslo, da pred zaključkom prijave obnoviš podpisnika denarnice.",
+  "authRestoreWalletForAccountDescription": "Vnesi obnovitveno geslo, da na tej napravi obnoviš podpisnika denarnice za ta račun.",
   "authRestoreWalletAction": "Obnovi denarnico",
   "authSecureAccountTitle": "Zavaruj svoj račun",
   "authSecureAccountButton": "Zavaruj račun",
@@ -281,7 +281,7 @@
   "onboardingFlowWelcomeInfoFollow": "Sledi umetnikom in prilagodi svoj tok vsebin.",
   "onboardingFlowWelcomeInfoTime": "Večina uporabnikov to dokonča v približno 2 minutah.",
   "onboardingFlowAccountTitle": "Ustvari račun",
-  "onboardingFlowAccountBody": "Račun lahko ustvariš z e-pošto, Googlom ali denarnico. art.kubus uporablja denarnico, ki jo upravljaš sam, zato dolgoročni dostop ostane v tvojih rokah.",
+  "onboardingFlowAccountBody": "Račun lahko ustvariš z e-pošto, Googlom ali denarnico. art.kubus uporablja neskrbniško denarnico, da dolgoročni dostop ostane v tvojih rokah.",
   "onboardingFlowAccountVerifyHint": "Če si se registriral/a z e-pošto, pred prijavo potrdi e-poštni naslov.",
   "onboardingFlowCreateAccount": "Ustvari račun",
   "onboardingFlowOpenVerification": "Odpri potrditev e-pošte",
@@ -391,7 +391,7 @@
   "onboardingFlowDaoReviewSubmitAction": "Oddaj za DAO pregled",
   "onboardingWelcomeTitle": "Dobrodošel/a v art.kubus",
   "onboardingWelcomeSubtitle": "Umetnost, kraji in skupnost — skupaj",
-  "onboardingWelcomeDescription": "Odkrij umetnine, raziskuj kraje ter se poveži z ustvarjalci in institucijami. AR je tu, ko ga želiš. Tvoj račun uporablja denarnico, ki jo upravljaš sam, zato dolgoročni dostop, lastništvo in prihodnje sodelovanje ostanejo v tvojih rokah.",
+  "onboardingWelcomeDescription": "Odkrij umetnine, raziskuj kraje ter se poveži z ustvarjalci in institucijami. AR je tu, ko ga želiš. Tvoj račun temelji na neskrbniški denarnici, da dolgoročni dostop, lastništvo in prihodnje sodelovanje ostanejo v tvojih rokah.",
   "onboardingExploreTitle": "Raziskuj umetnine",
   "onboardingExploreSubtitle": "Poišči umetnost v bližini",
   "onboardingExploreDescription": "Z zemljevidom odkrij umetnine in označevalce v okolici. Vsaka lokacija lahko pripoveduje zgodbo.",
@@ -628,7 +628,7 @@
   "walletSessionAccountSignedOut": "Odjavljen/-a",
   "walletSessionSignerReady": "Podpisovanje je na voljo",
   "walletSessionSignerMissing": "Podpisovanje v tej napravi ni na voljo",
-  "walletSessionStatusSummary": "Račun: {accountStatus} · Denarnica: {walletStatus} · Dostop: {signerStatus}",
+  "walletSessionStatusSummary": "Račun: {accountStatus} · Denarnica: {walletStatus} · Podpisovanje: {signerStatus}",
   "@walletSessionStatusSummary": {
     "placeholders": {
       "accountStatus": {},
@@ -639,9 +639,9 @@
   "walletActionSignInRequiredToast": "Za nadaljevanje se prijavi.",
   "walletActionConnectWalletRequiredToast": "Za nadaljevanje poveži denarnico.",
   "walletActionAccountShellNeedsWalletToast": "Račun je prijavljen, vendar je treba na tej napravi še obnoviti ali povezati denarnico, preden lahko to dejanje nadaljuje.",
-  "walletActionEncryptedBackupRestoreToast": "Na voljo je šifrirana varnostna kopija. Pred nadaljevanjem na tej napravi obnovi dostop do denarnice.",
-  "walletActionRecoveryNeededToast": "Pred nadaljevanjem na tej napravi obnovi dostop do denarnice.",
-  "walletActionReadOnlyReconnectToast": "Pred nadaljevanjem se znova poveži s ponudnikom denarnice ali na tej napravi obnovi dostop do denarnice.",
+  "walletActionEncryptedBackupRestoreToast": "Na voljo je šifrirana varnostna kopija. Pred nadaljevanjem na tej napravi obnovi podpisnik.",
+  "walletActionRecoveryNeededToast": "Pred nadaljevanjem na tej napravi obnovi podpisnik denarnice.",
+  "walletActionReadOnlyReconnectToast": "Pred nadaljevanjem se znova poveži s ponudnikom denarnice ali na tej napravi obnovi podpisnik.",
   "settingsNetworkTileTitle": "Omrežje",
   "settingsCurrentNetworkValue": "Trenutno: {network}",
   "@settingsCurrentNetworkValue": {
@@ -788,7 +788,7 @@
   "settingsResetAppDialogBody": "To bo izbrisalo podatke in nastavitve na tej napravi. Seja denarnice se tukaj prekine, sama denarnica pa se ne izbriše.",
   "settingsAppResetSuccessToast": "Aplikacija je uspešno ponastavljena. Prosim, znova jo zaženi.",
   "settingsDeleteAccountDialogTitle": "Izbriši račun",
-  "settingsDeleteAccountDialogBody": "S strežnikov bomo odstranili tvoj profil in podatke skupnosti. Tvoja denarnica ostane tvoja in jo lahko še vedno obnoviš z obnovitveno frazo.",
+  "settingsDeleteAccountDialogBody": "S strežnikov bomo odstranili tvoj profil in podatke skupnosti. Tvoja neskrbniška denarnica ostane tvoja in jo lahko še vedno obnoviš z obnovitveno frazo.",
   "settingsFinalConfirmationTitle": "Končna potrditev",
   "settingsDeleteAccountFinalConfirmationBody": "Si res prepričan/a, da želiš izbrisati račun? Tega dejanja ni mogoče razveljaviti.",
   "settingsConfirmButton": "Potrdi",
@@ -917,7 +917,7 @@
   "settingsEmailPreferencesActivityCommunityTitle": "Aktivnost skupnosti",
   "settingsEmailPreferencesActivityCommunitySubtitle": "Odgovori, omembe in posodobitve iz skupnosti",
   "settingsEmailPreferencesActivityDaoTitle": "Aktivnost DAO",
-  "settingsEmailPreferencesActivityDaoSubtitle": "Posodobitve skupnostnega upravljanja, predlogi in opomniki za glasovanje",
+  "settingsEmailPreferencesActivityDaoSubtitle": "Posodobitve upravljanja, predlogi in opomniki za glasovanje",
   "settingsEmailPreferencesActivityArtistHubTitle": "Aktivnost Artist Huba",
   "settingsEmailPreferencesActivityArtistHubSubtitle": "Posodobitve funkcij in delovnih tokov Artist Huba",
   "settingsEmailPreferencesActivityInstitutionHubTitle": "Aktivnost Institution Huba",
@@ -940,7 +940,7 @@
   "settingsInAppNotificationsCommunityTitle": "Obvestila skupnosti",
   "settingsInAppNotificationsCommunitySubtitle": "Obvestila v aplikaciji za komentarje, všečke, sledenja in delitve.",
   "settingsInAppNotificationsDaoTitle": "DAO obvestila",
-  "settingsInAppNotificationsDaoSubtitle": "Obvestila v aplikaciji o DAO pregledih in odločitvah skupnosti.",
+  "settingsInAppNotificationsDaoSubtitle": "Obvestila v aplikaciji za preglede DAO obrazcev in odločitve upravljanja.",
   "settingsInAppNotificationsArtistHubTitle": "Obvestila Artist Huba",
   "settingsInAppNotificationsArtistHubSubtitle": "Obvestila v aplikaciji za delovne tokove umetnikov in posodobitve studia.",
   "settingsInAppNotificationsInstitutionHubTitle": "Obvestila Institution Huba",
@@ -978,9 +978,9 @@
   "web3DaoP1Feature2": "Ustvari in oddaj predloge",
   "web3DaoP1Feature3": "Za sodelovanje zbiraj KUB8 točke",
   "web3DaoP1Feature4": "Razpravljaj in sodeluj z drugimi",
-  "web3DaoP2Title": "Tvoja glasovalna moč",
-  "web3DaoP2Description": "Glasovalna moč lahko odraža sodelovanje v Sezoni 0 (KUB8 točke). Gre za prispevek in priznanje, ne za finančno vrednost.",
-  "web3DaoP2Feature1": "Glasovalna moč lahko sledi tvojim KUB8 točkam",
+  "web3DaoP2Title": "Tvoja glasovalna teža",
+  "web3DaoP2Description": "Glasovalna teža lahko odraža sodelovanje v Sezoni 0 (KUB8 točke). Gre za prispevek in priznanje, ne za finančno vrednost.",
+  "web3DaoP2Feature1": "Glasovalna teža lahko sledi tvojim KUB8 točkam",
   "web3DaoP2Feature2": "Glasuj o aktivnih predlogih",
   "web3DaoP2Feature3": "Spremljaj rezultate v živo",
   "web3DaoP2Feature4": "Spremljaj zgodovino sodelovanja",
@@ -1063,10 +1063,10 @@
   "institutionHubTabAnalytics": "Analitika",
   "institutionHubSeparateWalletsTip": "Namig: Uporabi ločeni denarnici za vloge umetnika in institucije, da se izogneš DAO konfliktom.",
   "institutionHubApplyForReviewAction": "Oddaj prijavo za pregled",
-  "institutionHubArtistBadgeActiveTitle": "Umetniška značka je aktivna",
-  "institutionHubArtistBadgeActiveDescription": "Umetniške denarnice odklenejo ustvarjalna orodja. Institucijski poteki potrebujejo namensko denarnico brez ustvarjalskih odobritev.",
+  "institutionHubArtistBadgeActiveTitle": "Umetniska znacka je aktivna",
+  "institutionHubArtistBadgeActiveDescription": "Umetniske denarnice odklenejo ustvarjalna orodja. Institucijski tokovi potrebujejo namensko denarnico brez ustvarjalskih odobritev.",
   "institutionHubArtistReviewInProgressTitle": "Pregled umetnika je v teku",
-  "institutionHubArtistReviewInProgressDescription": "Imaš aktivno umetniško prijavo. Počakaj na odločitev ali jo ponastavi, preden nadaljuješ kot institucija.",
+  "institutionHubArtistReviewInProgressDescription": "Imas aktivno umetnisko prijavo. Pocakaj na odlocitev ali jo ponastavi, preden nadaljujes kot institucija.",
   "institutionHubApplicationTitle": "Prijava institucije",
   "institutionHubApplicationSubtitle": "Deli svoje poslanstvo, programski fokus in nacin sodelovanja z DAO.",
   "institutionHubApplicationOrganizationLabel": "Ime organizacije",
@@ -1078,7 +1078,7 @@
   "institutionHubApplicationFocusRequired": "Opisi programski fokus.",
   "institutionHubApplicationMissionRequired": "Opisi poslanstvo z vsaj 20 znaki.",
   "institutionHubApplicationWalletRequired": "Pred oddajo povezi denarnico.",
-  "institutionHubApplicationSubmittedToast": "Prijava je oddana v DAO pregled.",
+  "institutionHubApplicationSubmittedToast": "Prijava je oddana DAO pregledovalcem.",
   "institutionHubApplicationSubmitUnavailableToast": "Prijave trenutno ni mogoce oddati.",
   "institutionHubApplicationSubmitFailedToast": "Oddaja ni uspela: {error}",
   "@institutionHubApplicationSubmitFailedToast": {
@@ -1088,9 +1088,9 @@
   },
   "institutionHubApplicationSubmitButton": "Oddaj prijavo",
   "institutionHubCrossRoleConflictTitle": "Zaznan je konflikt vlog",
-  "institutionHubArtistWalletSwitchDescription": "Umetniške denarnice so namenjene ustvarjalnim orodjem. Pred prijavo za kuratorska orodja preklopi na namensko institucijsko denarnico.",
-  "institutionHubArtistReviewPendingResetDescription": "Trenutno imaš umetniško prijavo v pregledu. Dokončaj pregled ali zaprosi za ponastavitev, preden oddaš prijavo za institucijo.",
-  "institutionHubArtistSubmissionConflictDescription": "Za to denarnico je zaznana umetniška prijava. Počisti jo v nastavitvah, preden nadaljuješ kot institucija.",
+  "institutionHubArtistWalletSwitchDescription": "Umetniske denarnice so namenjene ustvarjalnim orodjem. Pred prijavo za kuratorska orodja preklopi na namensko institucijsko denarnico.",
+  "institutionHubArtistReviewPendingResetDescription": "Trenutno imas umetnisko prijavo v pregledu. Dokoncaj pregled ali zaprosi za ponastavitev pred institucijsko prijavo.",
+  "institutionHubArtistSubmissionConflictDescription": "Za to denarnico je zaznana umetniska prijava. Pocisti jo v nastavitvah, preden nadaljujes kot institucija.",
   "institutionHubApplicationCardSubtitle": "Oddaj organizacijo v DAO pregled in odkleni institucijska orodja.",
   "institutionHubDaoStatusApproved": "ODOBRENO",
   "institutionHubDaoStatusPending": "ČAKA",
@@ -1098,10 +1098,10 @@
   "institutionHubDaoStatusInReview": "V PREGLEDU",
   "institutionHubDaoStatusNotApplied": "NI PRIJAVLJENO",
   "institutionHubCtaApprovedByDao": "Odobril DAO",
-  "institutionHubCtaPendingDaoReview": "Čaka na DAO pregled",
+  "institutionHubCtaPendingDaoReview": "Caka na DAO pregled",
   "institutionHubCtaConnectWalletToApply": "Povezi denarnico za prijavo",
   "institutionHubDaoStatusSyncedLabel": "Stanje sinhronizirano iz DAO",
-  "institutionHubDaoReviewQueueMessage": "Tvoja prijava čaka v vrsti za DAO pregled.",
+  "institutionHubDaoReviewQueueMessage": "Tvoja prijava caka v DAO pregledni vrsti.",
   "institutionHubApprovedToolsMessage": "Cestitke! Institucijska orodja so odobrena.",
   "institutionHubRejectedResubmitMessage": "Zadnja prijava je bila zavrnjena. Ponovno jo lahko oddas s popravki.",
   "web3MarketplaceP1Title": "Dobrodošel/a na tržnici",
@@ -1129,7 +1129,7 @@
   "web3MarketplaceP4Feature3": "Objavi predmet za prodajo",
   "web3MarketplaceP4Feature4": "Pridruži se ustvarjalni skupnosti",
   "web3FeaturesP1Title": "Denarnica tvojega računa",
-  "web3FeaturesP1Description": "art.kubus uporablja denarnico, ki jo upravljaš sam, kot del temelja računa. Ta podpira dolgoročni dostop, lastništvo in prihodnje sodelovanje v umetniških, institucijskih in skupnostnih funkcijah.",
+  "web3FeaturesP1Description": "art.kubus uporablja neskrbniško denarnico kot del temelja računa. Ta podpira dolgoročni dostop, lastništvo in prihodnje sodelovanje v umetniških, institucijskih in skupnostnih funkcijah.",
   "web3FeaturesP1Feature1": "Dolgoročna kontinuiteta računa",
   "web3FeaturesP1Feature2": "Zbirke, dokazi obiska in prihodnje pravice",
   "web3FeaturesP1Feature3": "Ključi ostanejo pri tebi",
@@ -2092,7 +2092,7 @@
   },
   "connectWalletImportFailedToast": "Uvoz denarnice ni uspel. Poskusi znova.",
   "connectWalletCreateTitle": "Ustvari novo denarnico",
-  "connectWalletCreateDescription": "Na tej napravi bomo ustvarili novo denarnico, ki jo upravljaš sam, za tvoj račun art.kubus. Obnovitveno frazo shrani takoj, da zaščitiš dolgoročni dostop.",
+  "connectWalletCreateDescription": "Na tej napravi bomo ustvarili novo neskrbniško denarnico za tvoj račun art.kubus. Obnovitveno frazo shrani takoj, da zaščitiš dolgoročni dostop.",
   "connectWalletCreateMissingBackupError": "Ustvarjeni denarnici manjkajo podatki za varnostno kopijo.",
   "connectWalletCreateInfoTitle": "Pomembno",
   "connectWalletCreateInfoBody": "Obnovitveno frazo zapiši in jo varno shrani brez povezave. Potrebuješ jo za obnovitev te denarnice, mi pa je ne moremo obnoviti namesto tebe.",
@@ -2204,8 +2204,8 @@
   "walletHomeDesktopReceiveSubtitle": "Pridobi svoj naslov",
   "walletHomeDesktopSwapSubtitle": "Zamenjaj žetone",
   "walletHomeYourTokensSubtitle": "Stanja, trenutno povezana s to denarnico.",
-  "walletHomeNoTokensTitle": "Žetonov še ni",
-  "walletHomeNoTokensDescription": "Stanja žetonov se prikažejo, ko denarnica prejme sredstva.",
+  "walletHomeNoTokensTitle": "Zetonov se ni",
+  "walletHomeNoTokensDescription": "Stanja zetonov se prikazejo, ko denarnica prejme sredstva.",
   "walletHomeRecentTransactionsTitle": "Nedavne transakcije",
   "walletHomeRecentTransactionsSubtitle": "Najnovejsa aktivnost denarnice in potrditve.",
   "walletHomeDesktopRecentActivityTitle": "Nedavna dejavnost",
@@ -2214,7 +2214,7 @@
   "walletHomeDesktopTabNfts": "NFT-ji",
   "walletHomeDesktopTabStaking": "Zastavljanje",
   "walletHomeNftLoadFailedTitle": "NFT-jev ni bilo mogoče naložiti",
-  "walletHomeNoCollectiblesDescription": "Izdaj ali kupi NFT-je, da se prikažejo tukaj.",
+  "walletHomeNoCollectiblesDescription": "Mintaj ali kupi NFT-je, da se prikažejo tukaj.",
   "walletHomeCollectibleByline": "avtor: {creator}",
   "@walletHomeCollectibleByline": {
     "placeholders": {
@@ -2415,7 +2415,7 @@
   "qrScannerStatusReadyTitle": "Pripravljeno na skeniranje",
   "qrScannerStatusReadyDescription": "Poravnaj QR kodo znotraj okvirja, da zajameš Solana naslov.",
   "qrScannerMetaAmountLabel": "Znesek",
-  "qrScannerMetaMintLabel": "Izdaja",
+  "qrScannerMetaMintLabel": "Mint",
   "qrScannerInvalidQrToast": "Prosim, skeniraj QR kodo Solana denarnice.",
   "qrScannerTorchNotSupportedToast": "Vklop bliskavice na tej napravi ni podprt.",
   "qrScannerSwitchCameraFailedToast": "Kamere ni mogoče zamenjati.",
@@ -2579,7 +2579,7 @@
   "artistStudioReviewPendingInfo": "Tvoja prijava je v čakalni vrsti DAO. Sporočili ti bomo, ko bo pregled zaključen.",
   "artistStudioReviewApprovedInfo": "Tvoja praksa je bila potrjena v postopku DAO. Studijska orodja so pripravljena.",
   "artistStudioReviewRejectedInfo": "Tvoja zadnja prijava je bila zavrnjena. Lahko jo znova oddaš z dopolnitvami.",
-  "artistStudioConnectWalletToSubmitForDaoReview": "Poveži denarnico, da oddaš prijavo v DAO pregled.",
+  "artistStudioConnectWalletToSubmitForDaoReview": "Poveži denarnico za oddajo v pregled DAO.",
   "artistStudioCtaConnectWalletToApply": "Poveži denarnico za prijavo",
   "artistStudioCtaApprovedByDao": "Odobreno s strani DAO",
   "artistStudioCtaPendingDaoReview": "V pregledu DAO",
@@ -2691,12 +2691,12 @@
   "marketplaceMyListingsTab": "Moje objave",
   "marketplaceFeaturedCollectionsTitle": "Izpostavljene zbirke",
   "marketplaceFeaturedCollectionsSubtitle": "Kurirane izdaje in AR serije iz skupnosti.",
-  "marketplaceNoMintedNftsTitle": "Še ni izdanih NFT-jev",
-  "marketplaceNoMintedNftsDescription": "Objave na tržnici se prikažejo, ko je umetnina izdana kot NFT.",
+  "marketplaceNoMintedNftsTitle": "Kovanih NFT-jev se ni",
+  "marketplaceNoMintedNftsDescription": "Objave na trznici se prikazejo, ko ima umetnina pravi NFT zapis.",
   "marketplaceTrendingThisWeekTitle": "V trendu ta teden",
   "marketplaceTrendingThisWeekSubtitle": "Objave z najvec zbirateljske aktivnosti trenutno.",
-  "marketplaceNoTrendingNftsTitle": "Še ni priljubljenih NFT-jev",
-  "marketplaceNoTrendingNftsDescription": "Preveri pozneje, ko bo dejavnost NFT-jev večja.",
+  "marketplaceNoTrendingNftsTitle": "Trendovskih NFT-jev se ni",
+  "marketplaceNoTrendingNftsDescription": "Preveri pozneje, ko se aktivnost kovanih umetnin poveca.",
   "marketplaceMyCollectionTitle": "Moja NFT zbirka",
   "marketplaceMyCollectionCount": "{count} NFT",
   "@marketplaceMyCollectionCount": {
@@ -2709,8 +2709,8 @@
   "marketplacePriceKub8Label": "Cena (KUB8)",
   "marketplaceDetailCollectionLabel": "Zbirka",
   "marketplaceDetailArtworkLabel": "Umetnina",
-  "marketplaceTokenIdLabel": "ID žetona",
-  "marketplaceMintedLabel": "Izdano kot NFT",
+  "marketplaceTokenIdLabel": "ID zetona",
+  "marketplaceMintedLabel": "Kovano",
   "marketplaceTotalSupplyLabel": "Skupna zaloga",
   "marketplaceRarityLabel": "Redkost",
   "marketplaceOwnedNftStatus": "NFT v lasti",
@@ -2738,21 +2738,21 @@
   "marketplaceCardActionView": "Poglej",
   "marketplaceNftArtworkStatus": "NFT umetnina",
   "marketplaceNftArtworkStatusArEnabled": "NFT umetnina • AR omogočeno",
-  "marketplaceMintUnavailableLabel": "Izdaja ni na voljo",
+  "marketplaceMintUnavailableLabel": "Kovanje ni na voljo",
   "marketplaceSoldOutLabel": "Razprodano",
-  "marketplaceMintNftButtonLabel": "Izdaj NFT",
+  "marketplaceMintNftButtonLabel": "Kuj NFT",
   "marketplaceArRequiredTitle": "AR je obvezen",
-  "marketplaceArRequiredDescription": "Ta NFT zahteva AR-interakcijo s fizično umetnino. Obišči lokacijo umetnine in uporabi AR-skener, da izdaš svoj NFT.",
+  "marketplaceArRequiredDescription": "Ta NFT zahteva AR interakcijo s fizično umetnino. Obišči lokacijo umetnine in uporabi AR skener za kovanje NFT-ja.",
   "marketplaceGoToArButton": "Pojdi na AR",
-  "marketplaceMintDialogTitle": "Izdaj NFT",
-  "marketplaceMintConfirmCollectionDescription": "Kmalu boš izdal/-a NFT iz zbirke \"{collection}\".",
+  "marketplaceMintDialogTitle": "Kuj NFT",
+  "marketplaceMintConfirmCollectionDescription": "Kmalu boš skoval/-a NFT iz zbirke \"{collection}\".",
   "@marketplaceMintConfirmCollectionDescription": {
     "placeholders": {
       "collection": {}
     }
   },
-  "marketplaceMintPriceLabel": "Cena izdaje:",
-  "marketplaceConfirmMintButton": "Potrdi izdajo",
+  "marketplaceMintPriceLabel": "Cena kovanja:",
+  "marketplaceConfirmMintButton": "Potrdi kovanje",
   "marketplaceTokenNumberLabel": "Žeton #{tokenId}",
   "@marketplaceTokenNumberLabel": {
     "placeholders": {
@@ -2765,16 +2765,11 @@
   "marketplaceSettingsTooltip": "Nastavitve tržnice",
   "marketplaceOpenSeriesDetailsSemantic": "Odpri podrobnosti za {title}",
   "@marketplaceOpenSeriesDetailsSemantic": {
-    "placeholders": {
-      "title": {}
-    }
+    "placeholders": { "title": {} }
   },
   "marketplaceOpenCollectibleDetailsSemantic": "Odpri podrobnosti za {title}, žeton {tokenId}",
   "@marketplaceOpenCollectibleDetailsSemantic": {
-    "placeholders": {
-      "title": {},
-      "tokenId": {}
-    }
+    "placeholders": { "title": {}, "tokenId": {} }
   },
   "marketplaceShareTooltip": "Deli zbirko",
   "marketplaceListForSaleTooltip": "Objavi za prodajo",
@@ -2782,22 +2777,20 @@
   "marketplaceRemoveFromSaleFailedToast": "NFT-ja trenutno ni mogoče odstraniti iz prodaje.",
   "marketplaceValueNotListedLabel": "Ni objavljeno",
   "marketplaceValueLastSaleLabel": "Zadnja prodaja",
-  "marketplaceValueMintPriceLabel": "Cena izdaje",
+  "marketplaceValueMintPriceLabel": "Cena kovanja",
   "marketplaceOwnedCollectionTitle": "Zbirka v lasti",
   "marketplaceOwnedCollectionSubtitle": "Zbirateljski predmeti, ki jih trenutno hrani ta denarnica.",
   "marketplaceListedForSaleSubtitle": "Zbirateljski predmeti, ki so trenutno vidni kupcem na tržnici.",
   "marketplaceArOnlyFilterActiveLabel": "Samo AR",
-  "marketplaceArOnlyFilterInactiveLabel": "Vse izdaje",
+  "marketplaceArOnlyFilterInactiveLabel": "Vsa kovanja",
   "marketplaceListingDialogDescription": "Nastavi prodajno ceno v KUB8 za {title}.",
   "@marketplaceListingDialogDescription": {
-    "placeholders": {
-      "title": {}
-    }
+    "placeholders": { "title": {} }
   },
   "marketplacePriceRequiredError": "Vnesi ceno.",
   "marketplacePriceInvalidError": "Vnesi ceno, večjo od 0.",
-  "marketplacePropertyMintTimestampLabel": "Izdano ob",
-  "marketplacePropertyMintedByLabel": "Izdal/-a",
+  "marketplacePropertyMintTimestampLabel": "Skovano ob",
+  "marketplacePropertyMintedByLabel": "Skoval/-a",
   "marketplaceNftCollectibleLabel": "NFT zbirateljski predmet",
   "collectibleRarityCommon": "Običajno",
   "collectibleRarityUncommon": "Neobičajno",
@@ -2805,7 +2798,7 @@
   "collectibleRarityEpic": "Epsko",
   "collectibleRarityLegendary": "Legendarno",
   "collectibleRarityMythic": "Mitsko",
-  "collectibleStatusMinted": "Izdano kot NFT",
+  "collectibleStatusMinted": "Skovano",
   "collectibleStatusListed": "Objavljeno",
   "collectibleStatusSold": "Prodano",
   "collectibleStatusTransferred": "Preneseno",
@@ -2836,7 +2829,7 @@
   "daoReviewDetailsVotingDisabledForApplicant": "Glasovanje za profil prijavitelja je onemogočeno.",
   "daoReviewDetailsVotingDisabledForSubmission": "Glasovanje za to prijavo je onemogočeno.",
   "daoReviewDetailsVotingManagedByDao": "Odločitve o pregledu upravlja DAO postopek.",
-  "daoReviewQueueTitle": "Čakalna vrsta za DAO pregled",
+  "daoReviewQueueTitle": "Čakalna vrsta za pregled DAO",
   "daoReviewVotingHandledByDaoHelper": "Glasovanje poteka neposredno prek DAO; za odločanje uporabi predloge.",
   "daoReviewCannotVoteOwnSubmissionHelper": "O svoji prijavi ne moreš glasovati",
   "daoReviewVotingDisabledSubmissionHelper": "Glasovanje za to prijavo je onemogočeno",
@@ -3180,9 +3173,7 @@
   "communitySearchAddNewTag": "Dodaj kot novo oznako",
   "communitySearchTagUses": "{count, plural, =1{1 uporaba} other{{count} uporab}}",
   "@communitySearchTagUses": {
-    "placeholders": {
-      "count": {}
-    }
+    "placeholders": { "count": {} }
   },
   "communitySearchFallbackInstitution": "Institucija",
   "communitySearchFallbackScreen": "Zaslon",
@@ -3196,16 +3187,11 @@
   "communityComposerMentionsHint": "Dodaj @uporabnika",
   "communityComposerNoChipsYet": "{label} še ni dodanih",
   "@communityComposerNoChipsYet": {
-    "placeholders": {
-      "label": {}
-    }
+    "placeholders": { "label": {} }
   },
   "communityComposerLocationDropLabel": "Objava na {lat}, {lng}",
   "@communityComposerLocationDropLabel": {
-    "placeholders": {
-      "lat": {},
-      "lng": {}
-    }
+    "placeholders": { "lat": {}, "lng": {} }
   },
   "communityComposerCurrentLocationLabel": "Trenutna lokacija",
   "communityComposerTargetGroupLabel": "Ciljna skupina",
@@ -3439,7 +3425,7 @@
   "homeRailsUnavailableTitle": "Domace tirnice niso na voljo",
   "homeRailsUnavailableDescription": "Razvrscenih domacih tirnic trenutno ni mogoce naloziti.",
   "homeRailsWarmingTitle": "Odkritja se pripravljajo",
-  "homeRailsWarmingDescription": "Izpostavljene umetnine, umetniki, institucije, dogodki in razstave se prikažejo, ko je na voljo razvrščena vsebina.",
+  "homeRailsWarmingDescription": "Izpostavljene umetnine, umetniki, institucije, dogodki in razstave se prikazejo, ko je na voljo razvrscena vsebina.",
   "homeRailArtworksTitle": "Umetnine",
   "homeRailArtistsTitle": "Umetniki",
   "homeRailInstitutionsTitle": "Institucije",
@@ -3521,27 +3507,27 @@
   "walletBackupProtectionEncryptedHeadline": "Šifrirana strežniška varnostna kopija je nastavljena.",
   "walletBackupProtectionEncryptedBody": "Obnovitveno geslo za šifrirano kopijo hrani ločeno od obnovitvene fraze, da obe poti za obnovitev ostaneta uporabni.",
   "walletBackupProtectionEncryptedRestoreHeadline": "Šifrirana kopija je na voljo, vendar podpisovanje na tej napravi ni obnovljeno.",
-  "walletBackupProtectionEncryptedRestoreBody": "S šifrirano kopijo na tej napravi obnovi dostop do denarnice, preden uporabiš prenose in druga dejanja, zaščitena z denarnico.",
+  "walletBackupProtectionEncryptedRestoreBody": "S šifrirano kopijo obnovi dostop za podpisovanje na tej napravi, preden uporabiš prenose in druga dejanja, zaščitena z denarnico.",
   "walletBackupProtectionPasskeyHeadline": "Šifrirana strežniška kopija, zaščitena s passkeyem, je nastavljena.",
   "walletBackupProtectionPasskeyBody": "Ta šifrirana strežniška kopija je na spletu zaščitena s passkeyem. Obnovitveno geslo še vedno shrani ločeno od obnovitvene fraze.",
   "walletBackupProtectionReadOnlyHeadline": "Ta naprava ima do denarnice dostop samo za branje.",
   "walletBackupProtectionReadOnlyBody": "Pred prenosi in drugimi dejanji, zaščitenimi z denarnico, obnovi možnost podpisovanja s šifrirano kopijo ali obnovitveno frazo.",
   "walletSessionStateAccountShellOnly": "Samo lupina računa",
   "walletSessionStateWalletReadOnly": "Identiteta denarnice, samo za branje",
-  "walletSessionStateLocalSignerReady": "Dostop do denarnice na tej napravi je pripravljen",
+  "walletSessionStateLocalSignerReady": "Lokalni podpisnik je pripravljen",
   "walletSessionStateExternalWalletReady": "Zunanja denarnica je pripravljena",
   "walletSessionStateRecoveryNeeded": "Potrebna je obnova",
   "walletSessionStateEncryptedBackupAvailable": "Šifrirana kopija je na voljo",
   "walletSecurityStatusTitle": "Varnostno stanje denarnice",
   "walletSecuritySignInMethodLabel": "Prijava v račun",
   "walletSecurityWalletAddressLabel": "Naslov denarnice",
-  "walletSecuritySignerStatusLabel": "Stanje dostopa do denarnice",
-  "walletSecurityLocalSignerLabel": "Dostop do denarnice na tej napravi",
+  "walletSecuritySignerStatusLabel": "Stanje podpisnika",
+  "walletSecurityLocalSignerLabel": "Lokalni podpisnik na tej napravi",
   "walletSecurityExternalWalletLabel": "Zunanja denarnica",
   "walletSecurityEncryptedBackupLabel": "Šifrirana kopija",
   "walletSecurityPasskeyLabel": "Passkey",
   "walletSecurityRecoveryNeededLabel": "Obnova",
-  "walletSecurityBackendBackupClarifier": "Prijava z e-pošto ali Googlom lahko obnovi samo dostop do računa. Prenosi še vedno zahtevajo dostop do denarnice na tej napravi ali povezano zunanjo denarnico. Šifrirana kopija na strežniku je izbirna pomoč in strežniku nikoli ne omogoči upravljanja tvoje denarnice.",
+  "walletSecurityBackendBackupClarifier": "Prijava z e-pošto ali Googlom lahko obnovi samo dostop do računa. Prenosi še vedno zahtevajo lokalnega podpisnika ali povezano zunanjo denarnico. Šifrirana kopija na strežniku je izbirna pomoč in strežnika nikoli ne naredi podpisnika.",
   "walletSecuritySignedOutMethod": "Odjavljen/-a",
   "walletSecuritySignInMethodEmail": "E-pošta",
   "walletSecuritySignInMethodEmailWithAddress": "E-pošta ({email})",
@@ -3569,10 +3555,10 @@
   "walletSecurityNotConfigured": "Ni nastavljeno",
   "walletSecurityLocalSignerReadyValue": "Prisoten in pripravljen",
   "walletSecurityLocalSignerMissingValue": "Ni obnovljen na tej napravi",
-  "walletSecuritySignerLocalReadyValue": "Dostop do denarnice na tej napravi je pripravljen",
+  "walletSecuritySignerLocalReadyValue": "Lokalni podpisnik je pripravljen",
   "walletSecuritySignerExternalReadyValue": "Zunanja denarnica je pripravljena",
   "walletSecuritySignerRestoreAvailableValue": "Obnova je na voljo iz šifrirane kopije",
-  "walletSecuritySignerMissingValue": "Dostop do denarnice manjka",
+  "walletSecuritySignerMissingValue": "Podpisnik manjka",
   "walletSecurityExternalWalletConnectedValue": "Povezano: {walletName}",
   "@walletSecurityExternalWalletConnectedValue": {
     "placeholders": {
@@ -3581,7 +3567,7 @@
   },
   "walletSecurityRecoveryNeededValue": "Potrebna",
   "walletSecurityRecoveryNotNeededValue": "Ni potrebna",
-  "walletSecurityRestoreSignerAction": "Obnovi dostop do denarnice",
+  "walletSecurityRestoreSignerAction": "Obnovi podpisnika",
   "walletSecurityConnectExternalAction": "Poveži zunanjo denarnico",
   "walletBackupRecoveryPasswordLabel": "Obnovitveno geslo",
   "walletBackupPasswordTooShortError": "Uporabi vsaj 8 znakov.",
@@ -3621,11 +3607,11 @@
   "walletBackupProtectionDeleteBackupBody": "To odstrani šifrirano strežniško kopijo za trenutno denarnico. Prepričaj se, da imaš obnovitveno frazo še vedno varno shranjeno brez povezave.",
   "walletBackupProtectionDeleteBackupAction": "Izbriši šifrirano kopijo",
   "walletBackupProtectionBackupDeletedToast": "Šifrirana kopija denarnice je izbrisana.",
-  "walletBackupProtectionRestoreSignerTitle": "Obnovi dostop do denarnice",
+  "walletBackupProtectionRestoreSignerTitle": "Obnovi podpisnika denarnice",
   "walletBackupProtectionRestoreSignerDescription": "Vnesi obnovitveno geslo šifrirane kopije, da na tej napravi obnoviš možnost podpisovanja.",
-  "walletBackupProtectionRestoreSignerAction": "Obnovi dostop do denarnice",
-  "walletBackupProtectionSignerRestoredToast": "Dostop do denarnice je na tej napravi obnovljen.",
-  "walletBackupProtectionSignerRestoreFailedToast": "Dostopa do denarnice ni bilo mogoče obnoviti.",
+  "walletBackupProtectionRestoreSignerAction": "Obnovi podpisnika",
+  "walletBackupProtectionSignerRestoredToast": "Podpisnik denarnice je obnovljen na tej napravi.",
+  "walletBackupProtectionSignerRestoreFailedToast": "Podpisnika denarnice ni bilo mogoče obnoviti.",
   "walletBackupProtectionUpdateEncryptedBackupButton": "Posodobi šifrirano kopijo",
   "walletBackupProtectionCreateEncryptedBackupButton": "Ustvari šifrirano kopijo",
   "walletBackupProtectionRevealRecoveryPhraseButton": "Prikaži in kopiraj obnovitveno frazo",
@@ -3856,9 +3842,11 @@
   "collectionCreatorSearchArtworksLabel": "Iskanje",
   "collectionCreatorSearchArtworksHint": "Iskanje umetnin...",
   "collectionCreatorNoArtworksAvailable": "Ni razpoložljivih umetnin",
+
   "commonChange": "Spremeni",
   "commonOpen": "Odpri",
   "commonLoading": "Nalagam",
+
   "desktopShellNavHome": "Domov",
   "desktopShellNavExplore": "Raziskuj",
   "desktopShellNavConnect": "Poveži",
@@ -3867,6 +3855,7 @@
   "desktopShellNavGovern": "Upravljaj",
   "desktopShellNavTrade": "Trguj",
   "desktopShellNavWeb3": "Web3",
+
   "navigationScreenCreateAr": "Ustvari AR",
   "navigationScreenExploreMap": "Raziskuj zemljevid",
   "navigationScreenCommunity": "Skupnost",
@@ -3880,17 +3869,19 @@
   "navigationScreenDaoHub": "DAO središče",
   "navigationScreenArtistStudio": "Umetniški studio",
   "navigationScreenInstitutionHub": "Institucijsko središče",
-  "daoHubAppBarTitle": "DAO",
+
+  "daoHubAppBarTitle": "DAO upravljanje",
   "labsDaoSemanticLabel": "DAO Lab",
   "labsMarketplaceSemanticLabel": "Lab tržnice",
   "daoHubHeaderSubtitle": "Skupnostno upravljanje za umetnike, institucije in kulturno sodelovanje",
-  "daoHubInfoDialogTitle": "Kako deluje DAO",
+  "daoHubInfoDialogTitle": "Kako deluje DAO upravljanje",
   "daoHubInfoDialogBody": "DAO skupnosti omogoča, da predlaga in soodloča o odločitvah platforme. Glasovalna moč sledi tvojemu sodelovanju KUB8, po potrebi pa jo lahko delegiraš osebi, ki ji zaupaš.",
   "daoHubTabActiveProposals": "Predlogi",
   "daoHubTabVotingHistory": "Zgodovina glasovanja",
   "daoHubTabCreateProposal": "Ustvari",
   "daoHubTabTreasury": "Zakladnica",
   "daoHubTabDelegation": "Delegiranje",
+
   "daoCreateProposalTitle": "Ustvari nov predlog",
   "daoCreateProposalSubtitle": "Oddaj predlog, o katerem bo skupnost glasovala",
   "daoCreateProposalFieldTitleLabel": "Naslov predloga",
@@ -3911,6 +3902,7 @@
   "daoVotingHistoryInfoYourVoteLabel": "Tvoj glas",
   "daoVotingHistoryInfoParticipationLabel": "Udeležba",
   "daoVotingHistoryInfoYourVotingPowerLabel": "Tvoja glasovalna moč",
+
   "desktopGovernanceSidebarOverviewTitle": "Pregled DAO",
   "desktopGovernanceSidebarQuickActionsTitle": "Hitre akcije",
   "desktopGovernanceQuickActionCreateProposalTitle": "Ustvari predlog",
@@ -3923,6 +3915,7 @@
   "desktopGovernanceSidebarStatisticsTitle": "DAO statistika",
   "desktopGovernanceSidebarRecentActivityTitle": "Nedavna aktivnost",
   "desktopGovernanceAcquireKub8Hint": "Gradi sodelovanje in priznanje za vključitev v upravljanje",
+
   "profileEditTitle": "Uredi profil",
   "profileEditSaveChanges": "Shrani spremembe",
   "profileEditCoverImageClickToUpload": "Klikni za nalaganje naslovne slike",
@@ -3994,6 +3987,7 @@
   "profileEditPickImageFailedToast": "Slike ni bilo mogoče izbrati. Poskusi znova.",
   "profileEditUploadDebugInfoTitle": "Razhroščevalni podatki nalaganja",
   "profileEditUploadDebugInfoCopiedToast": "Razhroščevalni podatki kopirani v odložišče",
+
   "desktopCommunityTabDiscover": "Odkrij",
   "desktopCommunityTabFollowing": "Slediš",
   "desktopCommunityTabGroups": "Skupine",
@@ -4054,6 +4048,7 @@
   "desktopCommunityCreateOptionArtDrop": "Umetniški drop",
   "desktopCommunityCreateOptionPostReview": "Ocena objave",
   "desktopCommunityCreateOptionPost": "Objava",
+
   "desktopCommunityComposerTypePostLabel": "Objava",
   "desktopCommunityComposerTypePostDescription": "Deli novost s skupnostjo",
   "desktopCommunityComposerTypeArtDropLabel": "Umetniški drop",
@@ -4064,6 +4059,7 @@
   "desktopCommunityComposerTypeEventDescription": "Najavi srečanja in druženja",
   "desktopCommunityComposerTypeQuestionLabel": "Vprašanje",
   "desktopCommunityComposerTypeQuestionDescription": "Vprašaj skupnost za povratne informacije",
+
   "desktopNavigationExpandTooltip": "Razširi navigacijo",
   "desktopNavigationCollapseTooltip": "Skrči navigacijo",
   "desktopNavigationSubtitle": "Umetniška platforma",
@@ -4077,12 +4073,15 @@
   "userProfileAchievementCategoryTrading": "Trgovanje",
   "userProfileAchievementCategorySpecial": "Posebno",
   "userProfileAchievementCategoryStreetArt": "Ulična umetnost",
+
   "daoHubStatYourVotingPowerLabel": "Tvoja glasovalna moč",
   "daoHubStatActiveProposalsLabel": "Aktivni predlogi",
   "daoHubStatTotalDelegatesLabel": "Skupaj delegatov",
+
   "daoDelegationCurrentStatusTitle": "Tvoj status delegiranja",
   "daoDelegationDelegatorsLabel": "Delegatorji",
   "daoDelegationSelfLabel": "Jaz",
+
   "commonSubmit": "Pošlji",
   "commonTimeAgoMonths": "{count, plural, =1{pred 1 mes.} other{pred {count} mes.}}",
   "@commonTimeAgoMonths": {
@@ -4096,12 +4095,14 @@
       "count": {}
     }
   },
+
   "communityQuickRepostAction": "Hitro ponovno objavi",
   "communityRepostButtonLabel": "Ponovno objavi",
   "communityRepostedToast": "Ponovno objavljeno",
   "communityRepostedWithCommentToast": "Ponovno objavljeno s komentarjem",
   "communityRepostWithCommentAction": "Ponovno objavi s komentarjem",
   "communityRepostWithCommentHint": "Dodaj svoje misli (neobvezno)",
+
   "desktopCommunityActiveCommunitiesTitle": "Aktivne skupnosti",
   "desktopCommunityNoCommunitiesFoundLabel": "Ni najdenih skupnosti",
   "desktopCommunityViewAllCommunitiesButtonLabel": "Prikaži vse {count, plural, =1{1 skupnost} other{{count} skupnosti}}",
@@ -4174,30 +4175,37 @@
       "count": {}
     }
   },
+
   "postDetailPostUnlikedToast": "Všeček odstranjen",
+
   "profileAnalyticsProfileTitle": "Analitika profila",
   "profileAnalyticsCommunityTitle": "Analitika skupnosti",
+
   "profileArtworkMediumFallback": "Digitalna umetnost",
   "profileCollectionFallbackTitle": "Nova zbirka",
   "profileCollectionCuratedByYouFooter": "Kurirano od tebe",
   "profileEventFallbackTitle": "Dogodek",
   "profileEventLocationTba": "Še ni določeno",
+
   "profileHelpSupportTitle": "Pomoč in podpora",
   "profileHelpDocumentationOption": "Dokumentacija",
   "profileHelpContactSupportOption": "Kontaktiraj podporo",
   "profileHelpReportBugOption": "Prijavi napako",
   "profileHelpAboutOption": "O art.kubus",
   "profileHelpOpeningDocumentationToast": "Odpiram dokumentacijo...",
+
   "profileContactSupportTitle": "Kontaktiraj podporo",
   "profileContactSupportSubtitle": "Pomoč naše podpore:",
   "profileContactSupportEmailLabel": "E-pošta",
   "profileContactSupportLiveChatLabel": "Klepet v živo",
   "profileContactSupportLiveChatAvailability": "Na voljo Pon-Pet 9:00-17:00",
   "profileContactSupportWebsiteLabel": "Spletna stran",
+
   "profileReportBugTitle": "Prijavi napako",
   "profileReportBugSubtitle": "Opiši težavo, na katero si naletel:",
   "profileReportBugHint": "Vnesi opis napake...",
   "profileReportBugEmailSubject": "Prijava napake",
+
   "profileAboutTitle": "O art.kubus",
   "profileAboutVersionLabel": "Različica {version}",
   "@profileAboutVersionLabel": {
@@ -4207,14 +4215,17 @@
   },
   "profileAboutDescription": "AR umetniška platforma za odkrivanje javne umetnosti ter povezovanje umetnikov, institucij in skupnosti.",
   "profileAboutCopyright": "Avtorske pravice (c) 2024 kubus Project",
+
   "profileShowcaseEmptyTitle": "Ni {title}",
   "@profileShowcaseEmptyTitle": {
     "placeholders": {
       "title": {}
     }
   },
+
   "groupFeedSignInToPostLabel": "Prijavi se za objavo.",
   "groupFeedJoinToPostLabel": "Pridruži se tej skupini za objavo.",
+
   "analyticsDisabledTitle": "Analitika onemogočena",
   "analyticsDisabledDescription": "Ta funkcija je trenutno izklopljena.",
   "analyticsNoProfileSelectedTitle": "Profil ni izbran",
@@ -4367,9 +4378,11 @@
   "analyticsShareUnavailable": "Analitike v tej napravi ni mogoče deliti.",
   "analyticsBucketHour": "uro",
   "analyticsBucketDay": "dan",
+
   "userProfileCollectionsDesktopSubtitle": "Kurirani izbori del",
   "userProfileNoCollectionsTitle": "Še ni zbirk",
   "userProfileNoCollectionsDescription": "Tvoje zbirke se bodo prikazale tukaj",
+
   "desktopProfileHeaderSubtitle": "Upravljaj svojo identiteto in vsebino",
   "desktopProfileShareProfileLabel": "Deli profil",
   "desktopProfilePortfolioTitle": "Portfelj",
@@ -4396,12 +4409,15 @@
   "desktopProfileAchievementsSubtitle": "Tvoj napredek in mejniki",
   "desktopProfileYourPostsTitle": "Tvoje objave",
   "desktopProfileYourPostsSubtitle": "Vsebina, ki si jo delil s skupnostjo",
+
   "commonUnknownArtist": "Neznan umetnik",
+
   "daoAnalyticsTitle": "DAO analitika",
   "daoAnalyticsProposalsByTypeTitle": "Predlogi po vrsti",
   "daoAnalyticsProposalsByStatusTitle": "Predlogi po statusu",
   "daoAnalyticsNoProposalsYetLabel": "Še ni predlogov.",
   "daoTreasuryTotalLabel": "Skupaj",
+
   "profileInvitesTooltip": "Vabila",
   "profileMenuViewHistoryTitle": "Zgodovina ogledov",
   "profileNoPostsYetDescription": "Deli svoj pogled s skupnostjo, da se prikaže tukaj.",
@@ -4410,9 +4426,12 @@
   "profilePerformanceSectionTitle": "Uspešnost",
   "profilePerformanceArtworksViewedTitle": "Ogledane umetnine",
   "profilePerformanceDiscoveriesTitle": "Odkritja",
+
   "daoTreasuryTotalValueLabel": "Skupna vrednost zakladnice",
+
   "daoDelegationSelectDelegateTitle": "Izberi delegata",
   "daoDelegationSelectDelegateSubtitle": "Izberi zaupanja vrednega člana skupnosti, ki bo glasoval v tvojem imenu",
+
   "daoDelegationDelegatorsCountLabel": "{count, plural, one{1 delegator} two{2 delegatorja} few{{count} delegatorji} other{{count} delegatorjev}}",
   "@daoDelegationDelegatorsCountLabel": {
     "placeholders": {
@@ -4425,6 +4444,7 @@
       "percent": {}
     }
   },
+
   "daoProposalVotesSupportSummaryLabel": "{totalVotes} glasov • {supportPct}% podpore",
   "@daoProposalVotesSupportSummaryLabel": {
     "placeholders": {
@@ -4432,6 +4452,7 @@
       "supportPct": {}
     }
   },
+
   "commonSearchHint": "Išči…",
   "commonDialogSemanticLabel": "Dialog",
   "commonFailedToLoadLabel": "Nalaganje ni uspelo",
@@ -4521,12 +4542,14 @@
   "profilePerformancePublicStreetArtAddedTitle": "Dodana javna umetnost",
   "profileMenuSavedItemsTitle": "Shranjene vsebine",
   "profileMenuHelpSupportTitle": "Pomoč in podpora",
+
   "onboardingWelcomeDiscoverTitle": "Odkrij umetnost okoli sebe",
   "onboardingWelcomeDiscoverBody": "Raziskuj umetnine, razstave in ustvarjalne prostore na interaktivnem zemljevidu.",
   "onboardingWelcomeCreateTitle": "Ustvarjaj in deli",
   "onboardingWelcomeCreateBody": "Gradi svoj portfelj, objavljaj umetnine in sodeluj v rastoči kulturni skupnosti.",
   "onboardingWelcomeJoinTitle": "Pripravljen/a?",
   "onboardingWelcomeJoinBody": "Začni raziskovati ali ustvari račun.",
+
   "promotionBuilderTitle": "Povečaj vidnost",
   "@promotionBuilderTitle": {
     "description": "Title for the promotion builder sheet"
@@ -4540,22 +4563,16 @@
   "promotionBuilderTierBoostDesc": "Pogostejša rotacija v virih odkrivanja",
   "promotionBuilderPerDay": "{price}/dan",
   "@promotionBuilderPerDay": {
-    "placeholders": {
-      "price": {}
-    }
+    "placeholders": { "price": {} }
   },
   "promotionBuilderSlotsAvailable": "{count, plural, one{{count} prosto mesto} two{{count} prosti mesti} few{{count} prosta mesta} other{{count} prostih mest}} na voljo",
   "@promotionBuilderSlotsAvailable": {
-    "placeholders": {
-      "count": {}
-    }
+    "placeholders": { "count": {} }
   },
   "promotionBuilderDurationTitle": "Trajanje",
   "promotionBuilderDurationDays": "{days, plural, one{{days} dan} two{{days} dneva} few{{days} dni} other{{days} dni}}",
   "@promotionBuilderDurationDays": {
-    "placeholders": {
-      "days": {}
-    }
+    "placeholders": { "days": {} }
   },
   "promotionBuilderQuickPick3Days": "3 dni",
   "promotionBuilderQuickPick1Week": "1 teden",
@@ -4563,23 +4580,17 @@
   "promotionBuilderQuickPick1Month": "1 mesec",
   "promotionBuilderDiscountBadge": "{percent}% popusta",
   "@promotionBuilderDiscountBadge": {
-    "placeholders": {
-      "percent": {}
-    }
+    "placeholders": { "percent": {} }
   },
   "promotionBuilderSelectSlotTitle": "Izberi režo",
   "promotionBuilderSlotLabel": "Reža {index}",
   "@promotionBuilderSlotLabel": {
-    "placeholders": {
-      "index": {}
-    }
+    "placeholders": { "index": {} }
   },
   "promotionBuilderSlotAvailable": "Na voljo",
   "promotionBuilderSlotBookedUntil": "Zasedeno do {date}",
   "@promotionBuilderSlotBookedUntil": {
-    "placeholders": {
-      "date": {}
-    }
+    "placeholders": { "date": {} }
   },
   "promotionBuilderAlternativeDates": "Poskusi te proste datume",
   "promotionBuilderStartDateTitle": "Začetni datum",
@@ -4594,9 +4605,7 @@
   "promotionBuilderPaymentKub8": "Plačilo s KUB8",
   "promotionBuilderKub8Balance": "Stanje: {amount} KUB8",
   "@promotionBuilderKub8Balance": {
-    "placeholders": {
-      "amount": {}
-    }
+    "placeholders": { "amount": {} }
   },
   "promotionBuilderCancellationNote": "Polno vračilo ob preklicu 24+ ur pred začetkom",
   "promotionBuilderSubmitButton": "Oddaj v pregled",
@@ -4607,9 +4616,7 @@
   "promotionBuilderNoRatesAvailable": "Za ta tip vsebine ni razpoložljivih promocijskih možnosti.",
   "promotionBuilderPromoteEntityTitle": "Promoviraj: {entityLabel}",
   "@promotionBuilderPromoteEntityTitle": {
-    "placeholders": {
-      "entityLabel": {}
-    }
+    "placeholders": { "entityLabel": {} }
   },
   "promotionBuilderHeaderSubtitle": "Izberi nivo promocije, trajanje in način plačila",
   "promotionBuilderSelectedSlotUnavailable": "Izbrana reža ni na voljo",
@@ -4626,9 +4633,7 @@
   "promotionBuilderCancelFailed": "Preklic promocije ni uspel",
   "promotionBuilderStartsOn": "Začetek: {date}",
   "@promotionBuilderStartsOn": {
-    "placeholders": {
-      "date": {}
-    }
+    "placeholders": { "date": {} }
   },
   "promotionBuilderCancelTooltip": "Prekliči promocijo",
   "promotionBuilderPremiumSlotsHint": "Premium reže zagotavljajo vrhnje pozicije",
@@ -4636,16 +4641,13 @@
   "promotionBuilderNoRefundNote": "Vračilo ni na voljo (začetek je kmalu)",
   "promotionBuilderInsufficientKub8Balance": "Premalo stanja KUB8 ({amount})",
   "@promotionBuilderInsufficientKub8Balance": {
-    "placeholders": {
-      "amount": {}
-    }
+    "placeholders": { "amount": {} }
   },
   "promotionBuilderGuaranteedSlots": "{count, plural, one{{count} zagotovljena reža} two{{count} zagotovljeni reži} few{{count} zagotovljene reže} other{{count} zagotovljenih rež}}",
   "@promotionBuilderGuaranteedSlots": {
-    "placeholders": {
-      "count": {}
-    }
-  },
+    "placeholders": { "count": {} }
+  }
+  ,
   "savedItemsArtworkLabel": "umetnine",
   "savedItemsEventLabel": "dogodki",
   "savedItemsCollectionLabel": "zbirke",
@@ -4709,7 +4711,7 @@
     }
   },
   "settingsBackupStatusAccountShellOnly": "Računska denarnica na tej napravi še ni obnovljena",
-  "walletBackupProtectionAccountShellHeadline": "Račun je pripravljen, vendar ta naprava še nima dostopa do denarnice.",
+  "walletBackupProtectionAccountShellHeadline": "Račun je pripravljen, vendar ta naprava še nima podpisnika denarnice.",
   "walletBackupProtectionAccountShellBody": "Pred nastavljanjem zaščite denarnice, prenosi in prihodnjim dostopom, vezanim na denarnico, na tej napravi najprej obnovi računsko denarnico.",
   "walletSwapSubmittedToastWithSignature": "Zamenjava oddana: {fromToken} → {toToken}. Tx: {signature}",
   "@walletSwapSubmittedToastWithSignature": {
@@ -4762,7 +4764,7 @@
   "walletHomeDesktopRailSubtitle": "Stanje seje, dejavnost in ključna stanja ostanejo vidna med delom.",
   "walletHomeSecureWalletAction": "Zaščiti denarnico",
   "walletHomeSecurityTitle": "Zaščiti svojo denarnico",
-  "walletHomeSecuritySubtitle": "Varnostna kopija, dostop do denarnice in stanje obnove so zbrani tukaj.",
+  "walletHomeSecuritySubtitle": "Varnostna kopija, dostop podpisnika in stanje obnove so zbrani tukaj.",
   "receiveTokenSidebarShareTitle": "Deli podatke za prejem",
   "receiveTokenSidebarShareSubtitle": "Kopiraj naslov ali deli vsebino, pripravljeno za QR.",
   "receiveTokenSidebarShareAction": "Deli",
@@ -4777,8 +4779,7 @@
       "amount": {},
       "date": {}
     }
-  },
-  "sendTokenAmountPlaceholder": "0.0",
+  },  "sendTokenAmountPlaceholder": "0.0",
   "sendTokenSidebarRecipientsTitle": "Nedavni prejemniki",
   "sendTokenSidebarRecipientsSubtitle": "Ponovno uporabi nedavne cilje, ne da bi zapustil ta tok.",
   "sendTokenSidebarNoRecipientsTitle": "Še ni nedavnih prejemnikov",
@@ -4793,7 +4794,7 @@
   },
   "sendTokenSidebarSummaryTitle": "Kontekst pošiljanja",
   "sendTokenSidebarSummarySubtitle": "Na hitro preveri stanje, oceno provizije in cilj prenosa.",
-  "sendTokenSidebarSecuritySubtitle": "Stanje dostopa do denarnice in obnove za ta prenos.",
+  "sendTokenSidebarSecuritySubtitle": "Stanje podpisnika in obnove za ta prenos.",
   "walletSwapQuoteSidebarTitle": "Podrobnosti ponudbe",
   "walletSwapQuoteSidebarSubtitle": "Pot, zdrs in izhodni znesek se posodabljajo ob vsaki spremembi.",
   "walletSwapRecentPairsTitle": "Nedavni pari",
@@ -4805,5 +4806,5 @@
       "date": {}
     }
   },
-  "walletSwapSecuritySubtitle": "Izvedba zamenjave je še vedno odvisna od dostopa do denarnice in stanja obnove."
+  "walletSwapSecuritySubtitle": "Izvedba zamenjave je še vedno odvisna od dostopa podpisnika in stanja obnove."
 }

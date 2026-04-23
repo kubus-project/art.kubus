@@ -998,7 +998,7 @@ abstract class AppLocalizations {
   /// No description provided for @authHighlightOptionalWeb3.
   ///
   /// In en, this message translates to:
-  /// **'Built for future ownership and participation'**
+  /// **'Built for ownership and future participation'**
   String get authHighlightOptionalWeb3;
 
   /// No description provided for @authSignedInProfileRefreshSoon.
@@ -1334,7 +1334,7 @@ abstract class AppLocalizations {
   /// No description provided for @authSignerProvisioningFailed.
   ///
   /// In en, this message translates to:
-  /// **'Signer-backed wallet provisioning failed.'**
+  /// **'Unable to prepare wallet access on this device.'**
   String get authSignerProvisioningFailed;
 
   /// No description provided for @authGoogleRateLimitedRetryIn.
@@ -1442,13 +1442,13 @@ abstract class AppLocalizations {
   /// No description provided for @authRestoreWalletBeforeSignInDescription.
   ///
   /// In en, this message translates to:
-  /// **'Enter the recovery password to restore the wallet signer before sign-in completes.'**
+  /// **'Enter the recovery password to restore wallet access on this device before sign-in completes.'**
   String get authRestoreWalletBeforeSignInDescription;
 
   /// No description provided for @authRestoreWalletForAccountDescription.
   ///
   /// In en, this message translates to:
-  /// **'Enter the recovery password to restore the wallet signer for this account on this device.'**
+  /// **'Enter the recovery password to restore wallet access for this account on this device.'**
   String get authRestoreWalletForAccountDescription;
 
   /// No description provided for @authRestoreWalletAction.
@@ -1622,7 +1622,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingFlowAccountBody.
   ///
   /// In en, this message translates to:
-  /// **'Use email, Google, or wallet sign-in to create your account. art.kubus is built on a non-custodial wallet model so long-term access stays with you.'**
+  /// **'Use email, Google, or wallet sign-in to create your account. art.kubus uses a wallet you control, so long-term access stays with you.'**
   String get onboardingFlowAccountBody;
 
   /// No description provided for @onboardingFlowAccountVerifyHint.
@@ -2192,7 +2192,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingWelcomeDescription.
   ///
   /// In en, this message translates to:
-  /// **'Discover artworks, explore places, and connect with creators and institutions. AR is there when you want it. Your account is built on a non-custodial wallet so long-term access, ownership, and future participation stay with you.'**
+  /// **'Discover artworks, explore places, and connect with creators and institutions. AR is there when you want it. Your account uses a wallet you control, so long-term access, ownership, and future participation stay with you.'**
   String get onboardingWelcomeDescription;
 
   /// No description provided for @onboardingExploreTitle.
@@ -3350,7 +3350,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletSessionStatusSummary.
   ///
   /// In en, this message translates to:
-  /// **'Account: {accountStatus} · Wallet: {walletStatus} · Signing: {signerStatus}'**
+  /// **'Account: {accountStatus} · Wallet: {walletStatus} · Access: {signerStatus}'**
   String walletSessionStatusSummary(Object accountStatus, Object walletStatus, Object signerStatus);
 
   /// No description provided for @walletActionSignInRequiredToast.
@@ -3374,19 +3374,19 @@ abstract class AppLocalizations {
   /// No description provided for @walletActionEncryptedBackupRestoreToast.
   ///
   /// In en, this message translates to:
-  /// **'An encrypted backup is available. Restore the signer on this device before continuing.'**
+  /// **'An encrypted backup is available. Restore wallet access on this device before continuing.'**
   String get walletActionEncryptedBackupRestoreToast;
 
   /// No description provided for @walletActionRecoveryNeededToast.
   ///
   /// In en, this message translates to:
-  /// **'Restore your wallet signer on this device before continuing.'**
+  /// **'Restore wallet access on this device before continuing.'**
   String get walletActionRecoveryNeededToast;
 
   /// No description provided for @walletActionReadOnlyReconnectToast.
   ///
   /// In en, this message translates to:
-  /// **'Reconnect with your wallet provider or restore the signer on this device before continuing.'**
+  /// **'Reconnect with your wallet provider or restore wallet access on this device before continuing.'**
   String get walletActionReadOnlyReconnectToast;
 
   /// No description provided for @settingsNetworkTileTitle.
@@ -4124,7 +4124,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsDeleteAccountDialogBody.
   ///
   /// In en, this message translates to:
-  /// **'We will remove your profile and community data from our servers. Your non-custodial wallet remains yours, and you can still restore it with your recovery phrase.'**
+  /// **'We will remove your profile and community data from our servers. Your wallet remains yours, and you can still restore access with your recovery phrase.'**
   String get settingsDeleteAccountDialogBody;
 
   /// No description provided for @settingsFinalConfirmationTitle.
@@ -5138,19 +5138,19 @@ abstract class AppLocalizations {
   /// No description provided for @web3DaoP2Title.
   ///
   /// In en, this message translates to:
-  /// **'Your voting weight'**
+  /// **'Your voting power'**
   String get web3DaoP2Title;
 
   /// No description provided for @web3DaoP2Description.
   ///
   /// In en, this message translates to:
-  /// **'Voting weight can reflect Season 0 participation (KUB8 points). It is about contribution and recognition, not financial value.'**
+  /// **'Voting power can reflect Season 0 participation (KUB8 points). It is about contribution and recognition, not financial value.'**
   String get web3DaoP2Description;
 
   /// No description provided for @web3DaoP2Feature1.
   ///
   /// In en, this message translates to:
-  /// **'Voting weight can follow your KUB8 points'**
+  /// **'Voting power can follow your KUB8 points'**
   String get web3DaoP2Feature1;
 
   /// No description provided for @web3DaoP2Feature2.
@@ -5738,7 +5738,7 @@ abstract class AppLocalizations {
   /// No description provided for @institutionHubApplicationSubmittedToast.
   ///
   /// In en, this message translates to:
-  /// **'Application submitted to DAO reviewers.'**
+  /// **'Application submitted for DAO review.'**
   String get institutionHubApplicationSubmittedToast;
 
   /// No description provided for @institutionHubApplicationSubmitUnavailableToast.
@@ -6014,7 +6014,7 @@ abstract class AppLocalizations {
   /// No description provided for @web3FeaturesP1Description.
   ///
   /// In en, this message translates to:
-  /// **'art.kubus uses a non-custodial wallet as part of your account foundation. It supports long-term access, ownership, and future participation across artist, institution, and community features.'**
+  /// **'art.kubus uses a wallet you control as part of your account foundation. It supports long-term access, ownership, and future participation across artist, institution, and community features.'**
   String get web3FeaturesP1Description;
 
   /// No description provided for @web3FeaturesP1Feature1.
@@ -9428,7 +9428,7 @@ abstract class AppLocalizations {
   /// No description provided for @connectWalletCreateDescription.
   ///
   /// In en, this message translates to:
-  /// **'We will create a new non-custodial wallet on this device for your art.kubus account. Back up the recovery phrase right away to protect long-term access.'**
+  /// **'We will create a new wallet you control on this device for your art.kubus account. Back up the recovery phrase right away to protect long-term access.'**
   String get connectWalletCreateDescription;
 
   /// No description provided for @connectWalletCreateMissingBackupError.
@@ -9992,7 +9992,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletHomeSecuritySubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Backup, signer access, and recovery status stay together here.'**
+  /// **'Backup, wallet access, and recovery status stay together here.'**
   String get walletHomeSecuritySubtitle;
 
   /// No description provided for @walletHomeYourTokensTitle.
@@ -10466,7 +10466,7 @@ abstract class AppLocalizations {
   /// No description provided for @sendTokenSidebarSecuritySubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Signer and recovery status for this transfer.'**
+  /// **'Wallet access and recovery status for this transfer.'**
   String get sendTokenSidebarSecuritySubtitle;
 
   /// No description provided for @sendTokenSummaryAmountLabel.
@@ -12020,13 +12020,13 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceNoMintedNftsTitle.
   ///
   /// In en, this message translates to:
-  /// **'No minted NFTs available yet'**
+  /// **'No NFTs available yet'**
   String get marketplaceNoMintedNftsTitle;
 
   /// No description provided for @marketplaceNoMintedNftsDescription.
   ///
   /// In en, this message translates to:
-  /// **'Marketplace listings appear once an artwork has a real NFT mint.'**
+  /// **'Marketplace listings appear once an artwork is issued as an NFT.'**
   String get marketplaceNoMintedNftsDescription;
 
   /// No description provided for @marketplaceTrendingThisWeekTitle.
@@ -12050,7 +12050,7 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceNoTrendingNftsDescription.
   ///
   /// In en, this message translates to:
-  /// **'Check back later as minted artwork activity picks up.'**
+  /// **'Check back later as NFT activity picks up.'**
   String get marketplaceNoTrendingNftsDescription;
 
   /// No description provided for @marketplaceMyCollectionTitle.
@@ -12104,7 +12104,7 @@ abstract class AppLocalizations {
   /// No description provided for @marketplaceMintedLabel.
   ///
   /// In en, this message translates to:
-  /// **'Minted'**
+  /// **'Issued as NFT'**
   String get marketplaceMintedLabel;
 
   /// No description provided for @marketplaceTotalSupplyLabel.
@@ -12470,13 +12470,13 @@ abstract class AppLocalizations {
   /// No description provided for @marketplacePropertyMintTimestampLabel.
   ///
   /// In en, this message translates to:
-  /// **'Minted at'**
+  /// **'Issued at'**
   String get marketplacePropertyMintTimestampLabel;
 
   /// No description provided for @marketplacePropertyMintedByLabel.
   ///
   /// In en, this message translates to:
-  /// **'Minted by'**
+  /// **'Issued by'**
   String get marketplacePropertyMintedByLabel;
 
   /// No description provided for @marketplaceNftCollectibleLabel.
@@ -12524,7 +12524,7 @@ abstract class AppLocalizations {
   /// No description provided for @collectibleStatusMinted.
   ///
   /// In en, this message translates to:
-  /// **'Minted'**
+  /// **'Issued as NFT'**
   String get collectibleStatusMinted;
 
   /// No description provided for @collectibleStatusListed.
@@ -15554,7 +15554,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletBackupProtectionAccountShellHeadline.
   ///
   /// In en, this message translates to:
-  /// **'Your account is ready, but this device does not have a wallet signer yet.'**
+  /// **'Your account is ready, but this device does not have wallet access yet.'**
   String get walletBackupProtectionAccountShellHeadline;
 
   /// No description provided for @walletBackupProtectionAccountShellBody.
@@ -15608,7 +15608,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletBackupProtectionEncryptedRestoreBody.
   ///
   /// In en, this message translates to:
-  /// **'Use the encrypted backup to restore signer access on this device before transfers and other wallet-protected actions.'**
+  /// **'Use the encrypted backup to restore wallet access on this device before transfers and other wallet-protected actions.'**
   String get walletBackupProtectionEncryptedRestoreBody;
 
   /// No description provided for @walletBackupProtectionPasskeyHeadline.
@@ -15650,7 +15650,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletSessionStateLocalSignerReady.
   ///
   /// In en, this message translates to:
-  /// **'Local signer ready'**
+  /// **'Wallet access ready on this device'**
   String get walletSessionStateLocalSignerReady;
 
   /// No description provided for @walletSessionStateExternalWalletReady.
@@ -15692,13 +15692,13 @@ abstract class AppLocalizations {
   /// No description provided for @walletSecuritySignerStatusLabel.
   ///
   /// In en, this message translates to:
-  /// **'Signer status'**
+  /// **'Wallet access status'**
   String get walletSecuritySignerStatusLabel;
 
   /// No description provided for @walletSecurityLocalSignerLabel.
   ///
   /// In en, this message translates to:
-  /// **'Local signer on this device'**
+  /// **'Wallet access on this device'**
   String get walletSecurityLocalSignerLabel;
 
   /// No description provided for @walletSecurityExternalWalletLabel.
@@ -15728,7 +15728,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletSecurityBackendBackupClarifier.
   ///
   /// In en, this message translates to:
-  /// **'Email or Google sign-in can restore account access only. Transfers still require a local signer or a connected external wallet. Encrypted backend backup is optional convenience and never makes the backend a signer.'**
+  /// **'Email or Google sign-in can restore account access only. Transfers still require wallet access on this device or a connected external wallet. Encrypted backend backup is optional convenience and never gives the backend control of your wallet.'**
   String get walletSecurityBackendBackupClarifier;
 
   /// No description provided for @walletSecuritySignedOutMethod.
@@ -15836,7 +15836,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletSecuritySignerLocalReadyValue.
   ///
   /// In en, this message translates to:
-  /// **'Local signer ready'**
+  /// **'Wallet access ready on this device'**
   String get walletSecuritySignerLocalReadyValue;
 
   /// No description provided for @walletSecuritySignerExternalReadyValue.
@@ -15854,7 +15854,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletSecuritySignerMissingValue.
   ///
   /// In en, this message translates to:
-  /// **'Signer missing'**
+  /// **'Wallet access missing'**
   String get walletSecuritySignerMissingValue;
 
   /// No description provided for @walletSecurityExternalWalletConnectedValue.
@@ -15878,7 +15878,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletSecurityRestoreSignerAction.
   ///
   /// In en, this message translates to:
-  /// **'Restore signer'**
+  /// **'Restore wallet access'**
   String get walletSecurityRestoreSignerAction;
 
   /// No description provided for @walletSecurityConnectExternalAction.
@@ -16028,7 +16028,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletBackupProtectionRestoreSignerTitle.
   ///
   /// In en, this message translates to:
-  /// **'Restore wallet signer'**
+  /// **'Restore wallet access'**
   String get walletBackupProtectionRestoreSignerTitle;
 
   /// No description provided for @walletBackupProtectionRestoreSignerDescription.
@@ -16040,19 +16040,19 @@ abstract class AppLocalizations {
   /// No description provided for @walletBackupProtectionRestoreSignerAction.
   ///
   /// In en, this message translates to:
-  /// **'Restore signer'**
+  /// **'Restore wallet access'**
   String get walletBackupProtectionRestoreSignerAction;
 
   /// No description provided for @walletBackupProtectionSignerRestoredToast.
   ///
   /// In en, this message translates to:
-  /// **'Wallet signer restored on this device.'**
+  /// **'Wallet access restored on this device.'**
   String get walletBackupProtectionSignerRestoredToast;
 
   /// No description provided for @walletBackupProtectionSignerRestoreFailedToast.
   ///
   /// In en, this message translates to:
-  /// **'Unable to restore wallet signer.'**
+  /// **'Unable to restore wallet access.'**
   String get walletBackupProtectionSignerRestoreFailedToast;
 
   /// No description provided for @walletBackupProtectionUpdateEncryptedBackupButton.
@@ -16298,7 +16298,7 @@ abstract class AppLocalizations {
   /// No description provided for @walletSwapSecuritySubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Swap execution still depends on signer access and recovery state.'**
+  /// **'Swap execution still depends on wallet access and recovery status.'**
   String get walletSwapSecuritySubtitle;
 
   /// No description provided for @walletSwapEstimatedOutputLabel.
@@ -17240,7 +17240,7 @@ abstract class AppLocalizations {
   /// No description provided for @daoHubAppBarTitle.
   ///
   /// In en, this message translates to:
-  /// **'DAO Governance'**
+  /// **'DAO'**
   String get daoHubAppBarTitle;
 
   /// No description provided for @labsDaoSemanticLabel.
@@ -17264,7 +17264,7 @@ abstract class AppLocalizations {
   /// No description provided for @daoHubInfoDialogTitle.
   ///
   /// In en, this message translates to:
-  /// **'How DAO governance works'**
+  /// **'How the DAO works'**
   String get daoHubInfoDialogTitle;
 
   /// No description provided for @daoHubInfoDialogBody.

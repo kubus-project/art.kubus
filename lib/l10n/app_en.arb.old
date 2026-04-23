@@ -166,7 +166,7 @@
   "authHighlightControl": "Your access stays yours",
   "authHighlightOnboardingOptions": "Choose email, Google, or wallet sign-in",
   "authHighlightKeysLocal": "Private keys stay with you",
-  "authHighlightOptionalWeb3": "Built for ownership and future participation",
+  "authHighlightOptionalWeb3": "Built for future ownership and participation",
   "authSignedInProfileRefreshSoon": "Signed in. Your profile will refresh shortly.",
   "authReauthDialogTitle": "Sign in again",
   "@authReauthDialogTitle": {
@@ -228,7 +228,7 @@
   "authResetPasswordSuccessToast": "Password updated. You can now sign in.",
   "authResetPasswordFailedInline": "Could not reset your password. The link may be invalid or expired.",
   "authGoogleSignInFailed": "Google sign-in failed. Please try again.",
-  "authSignerProvisioningFailed": "Unable to prepare wallet access on this device.",
+  "authSignerProvisioningFailed": "Signer-backed wallet provisioning failed.",
   "authGoogleRateLimitedRetryIn": "Google sign-in is temporarily rate limited. Retry in ~{duration}.",
   "@authGoogleRateLimitedRetryIn": {
     "placeholders": {
@@ -251,8 +251,8 @@
   "authHideOtherOptions": "Hide other options",
   "authOtherOptionsLabel": "Other ways to continue",
   "authRestoreWalletTitle": "Restore wallet from encrypted backup",
-  "authRestoreWalletBeforeSignInDescription": "Enter the recovery password to restore wallet access on this device before sign-in completes.",
-  "authRestoreWalletForAccountDescription": "Enter the recovery password to restore wallet access for this account on this device.",
+  "authRestoreWalletBeforeSignInDescription": "Enter the recovery password to restore the wallet signer before sign-in completes.",
+  "authRestoreWalletForAccountDescription": "Enter the recovery password to restore the wallet signer for this account on this device.",
   "authRestoreWalletAction": "Restore wallet",
   "authSecureAccountTitle": "Secure your account",
   "authSecureAccountButton": "Secure account",
@@ -281,7 +281,7 @@
   "onboardingFlowWelcomeInfoFollow": "Follow artists to personalize your feed.",
   "onboardingFlowWelcomeInfoTime": "Most people finish this in about 2 minutes.",
   "onboardingFlowAccountTitle": "Create your account",
-  "onboardingFlowAccountBody": "Use email, Google, or wallet sign-in to create your account. art.kubus uses a wallet you control, so long-term access stays with you.",
+  "onboardingFlowAccountBody": "Use email, Google, or wallet sign-in to create your account. art.kubus is built on a non-custodial wallet model so long-term access stays with you.",
   "onboardingFlowAccountVerifyHint": "If you registered with email, verify your email before signing in.",
   "onboardingFlowCreateAccount": "Create account",
   "onboardingFlowOpenVerification": "Open email verification",
@@ -391,7 +391,7 @@
   "onboardingFlowDaoReviewSubmitAction": "Submit for DAO review",
   "onboardingWelcomeTitle": "Welcome to art.kubus",
   "onboardingWelcomeSubtitle": "Art, places, and community—together",
-  "onboardingWelcomeDescription": "Discover artworks, explore places, and connect with creators and institutions. AR is there when you want it. Your account uses a wallet you control, so long-term access, ownership, and future participation stay with you.",
+  "onboardingWelcomeDescription": "Discover artworks, explore places, and connect with creators and institutions. AR is there when you want it. Your account is built on a non-custodial wallet so long-term access, ownership, and future participation stay with you.",
   "onboardingExploreTitle": "Explore artworks",
   "onboardingExploreSubtitle": "Find art around you",
   "onboardingExploreDescription": "Use the map to discover artworks and markers nearby. Every location can tell a story.",
@@ -628,7 +628,7 @@
   "walletSessionAccountSignedOut": "Signed out",
   "walletSessionSignerReady": "Signing available",
   "walletSessionSignerMissing": "Signing unavailable on this device",
-  "walletSessionStatusSummary": "Account: {accountStatus} · Wallet: {walletStatus} · Access: {signerStatus}",
+  "walletSessionStatusSummary": "Account: {accountStatus} · Wallet: {walletStatus} · Signing: {signerStatus}",
   "@walletSessionStatusSummary": {
     "placeholders": {
       "accountStatus": {},
@@ -639,9 +639,9 @@
   "walletActionSignInRequiredToast": "Sign in to continue.",
   "walletActionConnectWalletRequiredToast": "Connect your wallet to continue.",
   "walletActionAccountShellNeedsWalletToast": "Your account is signed in, but this device still needs the wallet restored or connected before this action can continue.",
-  "walletActionEncryptedBackupRestoreToast": "An encrypted backup is available. Restore wallet access on this device before continuing.",
-  "walletActionRecoveryNeededToast": "Restore wallet access on this device before continuing.",
-  "walletActionReadOnlyReconnectToast": "Reconnect with your wallet provider or restore wallet access on this device before continuing.",
+  "walletActionEncryptedBackupRestoreToast": "An encrypted backup is available. Restore the signer on this device before continuing.",
+  "walletActionRecoveryNeededToast": "Restore your wallet signer on this device before continuing.",
+  "walletActionReadOnlyReconnectToast": "Reconnect with your wallet provider or restore the signer on this device before continuing.",
   "settingsNetworkTileTitle": "Network",
   "settingsCurrentNetworkValue": "Current: {network}",
   "@settingsCurrentNetworkValue": {
@@ -789,7 +789,7 @@
   "settingsResetAppDialogBody": "This will clear app data and settings on this device. It disconnects the wallet session here, but it does not delete the wallet itself.",
   "settingsAppResetSuccessToast": "App reset successfully. Please restart the app.",
   "settingsDeleteAccountDialogTitle": "Delete account",
-  "settingsDeleteAccountDialogBody": "We will remove your profile and community data from our servers. Your wallet remains yours, and you can still restore access with your recovery phrase.",
+  "settingsDeleteAccountDialogBody": "We will remove your profile and community data from our servers. Your non-custodial wallet remains yours, and you can still restore it with your recovery phrase.",
   "settingsFinalConfirmationTitle": "Final confirmation",
   "settingsDeleteAccountFinalConfirmationBody": "Are you absolutely sure you want to delete your account? This action cannot be undone.",
   "settingsConfirmButton": "Confirm",
@@ -990,9 +990,9 @@
   "web3DaoP1Feature2": "Create and submit proposals",
   "web3DaoP1Feature3": "Collect KUB8 points for participation",
   "web3DaoP1Feature4": "Discuss and collaborate with others",
-  "web3DaoP2Title": "Your voting power",
-  "web3DaoP2Description": "Voting power can reflect Season 0 participation (KUB8 points). It is about contribution and recognition, not financial value.",
-  "web3DaoP2Feature1": "Voting power can follow your KUB8 points",
+  "web3DaoP2Title": "Your voting weight",
+  "web3DaoP2Description": "Voting weight can reflect Season 0 participation (KUB8 points). It is about contribution and recognition, not financial value.",
+  "web3DaoP2Feature1": "Voting weight can follow your KUB8 points",
   "web3DaoP2Feature2": "Vote on active proposals",
   "web3DaoP2Feature3": "See results as they update",
   "web3DaoP2Feature4": "Track your participation history",
@@ -1111,7 +1111,7 @@
   "institutionHubApplicationFocusRequired": "Let us know your programming focus.",
   "institutionHubApplicationMissionRequired": "Describe your mission in at least 20 characters.",
   "institutionHubApplicationWalletRequired": "Connect your wallet before submitting.",
-  "institutionHubApplicationSubmittedToast": "Application submitted for DAO review.",
+  "institutionHubApplicationSubmittedToast": "Application submitted to DAO reviewers.",
   "institutionHubApplicationSubmitUnavailableToast": "Unable to submit application right now.",
   "institutionHubApplicationSubmitFailedToast": "Submission failed: {error}",
   "@institutionHubApplicationSubmitFailedToast": {
@@ -1162,7 +1162,7 @@
   "web3MarketplaceP4Feature3": "List an item for sale",
   "web3MarketplaceP4Feature4": "Join the creative community",
   "web3FeaturesP1Title": "Your account wallet",
-  "web3FeaturesP1Description": "art.kubus uses a wallet you control as part of your account foundation. It supports long-term access, ownership, and future participation across artist, institution, and community features.",
+  "web3FeaturesP1Description": "art.kubus uses a non-custodial wallet as part of your account foundation. It supports long-term access, ownership, and future participation across artist, institution, and community features.",
   "web3FeaturesP1Feature1": "Long-term account continuity",
   "web3FeaturesP1Feature2": "Collectibles, visit proofs, and future rights",
   "web3FeaturesP1Feature3": "Keys stay with you",
@@ -2131,7 +2131,7 @@
   },
   "connectWalletImportFailedToast": "Wallet import failed. Please try again.",
   "connectWalletCreateTitle": "Create a new wallet",
-  "connectWalletCreateDescription": "We will create a new wallet you control on this device for your art.kubus account. Back up the recovery phrase right away to protect long-term access.",
+  "connectWalletCreateDescription": "We will create a new non-custodial wallet on this device for your art.kubus account. Back up the recovery phrase right away to protect long-term access.",
   "connectWalletCreateMissingBackupError": "Created wallet is missing backup details.",
   "connectWalletCreateInfoTitle": "Important",
   "connectWalletCreateInfoBody": "Write down the recovery phrase and store it safely offline. It is essential for restoring this wallet, and we cannot recover it for you.",
@@ -2245,7 +2245,7 @@
   "walletHomeDesktopRailSubtitle": "Session status, activity mix, and balances stay visible while you work.",
   "walletHomeSecureWalletAction": "Secure wallet",
   "walletHomeSecurityTitle": "Secure your wallet",
-  "walletHomeSecuritySubtitle": "Backup, wallet access, and recovery status stay together here.",
+  "walletHomeSecuritySubtitle": "Backup, signer access, and recovery status stay together here.",
   "walletHomeYourTokensTitle": "Your tokens",
   "walletHomeYourTokensSubtitle": "Balances currently associated with this wallet.",
   "walletHomeNoTokensTitle": "No tokens yet",
@@ -2416,7 +2416,7 @@
   },
   "sendTokenSidebarSummaryTitle": "Send context",
   "sendTokenSidebarSummarySubtitle": "Review available balance, fee estimate, and destination at a glance.",
-  "sendTokenSidebarSecuritySubtitle": "Wallet access and recovery status for this transfer.",
+  "sendTokenSidebarSecuritySubtitle": "Signer and recovery status for this transfer.",
   "sendTokenSummaryAmountLabel": "Amount",
   "sendTokenSummaryFeesLabel": "kubus fees (~{percent}%)",
   "@sendTokenSummaryFeesLabel": {
@@ -2778,12 +2778,12 @@
   "marketplaceMyListingsTab": "My listings",
   "marketplaceFeaturedCollectionsTitle": "Featured collections",
   "marketplaceFeaturedCollectionsSubtitle": "Curated mints and AR-ready series from the community.",
-  "marketplaceNoMintedNftsTitle": "No NFTs available yet",
-  "marketplaceNoMintedNftsDescription": "Marketplace listings appear once an artwork is issued as an NFT.",
+  "marketplaceNoMintedNftsTitle": "No minted NFTs available yet",
+  "marketplaceNoMintedNftsDescription": "Marketplace listings appear once an artwork has a real NFT mint.",
   "marketplaceTrendingThisWeekTitle": "Trending this week",
   "marketplaceTrendingThisWeekSubtitle": "Listings with the strongest collector activity right now.",
   "marketplaceNoTrendingNftsTitle": "No trending NFTs yet",
-  "marketplaceNoTrendingNftsDescription": "Check back later as NFT activity picks up.",
+  "marketplaceNoTrendingNftsDescription": "Check back later as minted artwork activity picks up.",
   "marketplaceMyCollectionTitle": "My NFT collection",
   "marketplaceMyCollectionCount": "{count} NFTs",
   "@marketplaceMyCollectionCount": {
@@ -2797,7 +2797,7 @@
   "marketplaceDetailCollectionLabel": "Collection",
   "marketplaceDetailArtworkLabel": "Artwork",
   "marketplaceTokenIdLabel": "Token ID",
-  "marketplaceMintedLabel": "Issued as NFT",
+  "marketplaceMintedLabel": "Minted",
   "marketplaceTotalSupplyLabel": "Total supply",
   "marketplaceRarityLabel": "Rarity",
   "marketplaceOwnedNftStatus": "Owned NFT",
@@ -2855,16 +2855,11 @@
   "marketplaceSettingsTooltip": "Marketplace settings",
   "marketplaceOpenSeriesDetailsSemantic": "Open details for {title}",
   "@marketplaceOpenSeriesDetailsSemantic": {
-    "placeholders": {
-      "title": {}
-    }
+    "placeholders": { "title": {} }
   },
   "marketplaceOpenCollectibleDetailsSemantic": "Open details for {title}, token {tokenId}",
   "@marketplaceOpenCollectibleDetailsSemantic": {
-    "placeholders": {
-      "title": {},
-      "tokenId": {}
-    }
+    "placeholders": { "title": {}, "tokenId": {} }
   },
   "marketplaceShareTooltip": "Share collection",
   "marketplaceListForSaleTooltip": "List for sale",
@@ -2880,14 +2875,12 @@
   "marketplaceArOnlyFilterInactiveLabel": "All mints",
   "marketplaceListingDialogDescription": "Set a KUB8 sale price for {title}.",
   "@marketplaceListingDialogDescription": {
-    "placeholders": {
-      "title": {}
-    }
+    "placeholders": { "title": {} }
   },
   "marketplacePriceRequiredError": "Enter a price.",
   "marketplacePriceInvalidError": "Enter a price greater than 0.",
-  "marketplacePropertyMintTimestampLabel": "Issued at",
-  "marketplacePropertyMintedByLabel": "Issued by",
+  "marketplacePropertyMintTimestampLabel": "Minted at",
+  "marketplacePropertyMintedByLabel": "Minted by",
   "marketplaceNftCollectibleLabel": "NFT collectible",
   "collectibleRarityCommon": "Common",
   "collectibleRarityUncommon": "Uncommon",
@@ -2895,7 +2888,7 @@
   "collectibleRarityEpic": "Epic",
   "collectibleRarityLegendary": "Legendary",
   "collectibleRarityMythic": "Mythic",
-  "collectibleStatusMinted": "Issued as NFT",
+  "collectibleStatusMinted": "Minted",
   "collectibleStatusListed": "Listed",
   "collectibleStatusSold": "Sold",
   "collectibleStatusTransferred": "Transferred",
@@ -3283,9 +3276,7 @@
   "communitySearchAddNewTag": "Add as new tag",
   "communitySearchTagUses": "{count, plural, =1{1 use} other{{count} uses}}",
   "@communitySearchTagUses": {
-    "placeholders": {
-      "count": {}
-    }
+    "placeholders": { "count": {} }
   },
   "communitySearchFallbackInstitution": "Institution",
   "communitySearchFallbackScreen": "Screen",
@@ -3299,16 +3290,11 @@
   "communityComposerMentionsHint": "Add @handle",
   "communityComposerNoChipsYet": "No {label} yet",
   "@communityComposerNoChipsYet": {
-    "placeholders": {
-      "label": {}
-    }
+    "placeholders": { "label": {} }
   },
   "communityComposerLocationDropLabel": "Drop at {lat}, {lng}",
   "@communityComposerLocationDropLabel": {
-    "placeholders": {
-      "lat": {},
-      "lng": {}
-    }
+    "placeholders": { "lat": {}, "lng": {} }
   },
   "communityComposerCurrentLocationLabel": "Current location",
   "communityComposerTargetGroupLabel": "Target group",
@@ -3615,7 +3601,7 @@
   "walletBackupMarkedCompleteToast": "Recovery phrase backup marked as complete.",
   "walletBackupProtectionNoWalletHeadline": "No wallet is connected on this device yet.",
   "walletBackupProtectionNoWalletBody": "Connect or restore the wallet on this device before managing backup protection.",
-  "walletBackupProtectionAccountShellHeadline": "Your account is ready, but this device does not have wallet access yet.",
+  "walletBackupProtectionAccountShellHeadline": "Your account is ready, but this device does not have a wallet signer yet.",
   "walletBackupProtectionAccountShellBody": "Restore the account wallet on this device before you configure wallet backup protection, transfers, or future wallet-linked access.",
   "walletBackupProtectionNoBackupHeadline": "No encrypted server backup is configured yet.",
   "walletBackupProtectionNoBackupBody": "Create an encrypted server backup if you want a server-side recovery option, and store its recovery password separately from the recovery phrase.",
@@ -3624,27 +3610,27 @@
   "walletBackupProtectionEncryptedHeadline": "Encrypted server backup is configured.",
   "walletBackupProtectionEncryptedBody": "Keep the encrypted backup recovery password stored separately from the recovery phrase so both recovery paths remain usable.",
   "walletBackupProtectionEncryptedRestoreHeadline": "Encrypted backup is available, but signing is not restored on this device.",
-  "walletBackupProtectionEncryptedRestoreBody": "Use the encrypted backup to restore wallet access on this device before transfers and other wallet-protected actions.",
+  "walletBackupProtectionEncryptedRestoreBody": "Use the encrypted backup to restore signer access on this device before transfers and other wallet-protected actions.",
   "walletBackupProtectionPasskeyHeadline": "Passkey-protected server backup is configured.",
   "walletBackupProtectionPasskeyBody": "This encrypted server backup is protected with a passkey on web. Keep the recovery password stored separately from the recovery phrase.",
   "walletBackupProtectionReadOnlyHeadline": "This device has read-only wallet access.",
   "walletBackupProtectionReadOnlyBody": "Restore signing access with your encrypted backup or recovery phrase before using transfers and other wallet-protected actions on this device.",
   "walletSessionStateAccountShellOnly": "Account shell only",
   "walletSessionStateWalletReadOnly": "Wallet identity, read-only",
-  "walletSessionStateLocalSignerReady": "Wallet access ready on this device",
+  "walletSessionStateLocalSignerReady": "Local signer ready",
   "walletSessionStateExternalWalletReady": "External wallet ready",
   "walletSessionStateRecoveryNeeded": "Recovery needed",
   "walletSessionStateEncryptedBackupAvailable": "Encrypted backup available",
   "walletSecurityStatusTitle": "Wallet security status",
   "walletSecuritySignInMethodLabel": "Account sign-in",
   "walletSecurityWalletAddressLabel": "Wallet address",
-  "walletSecuritySignerStatusLabel": "Wallet access status",
-  "walletSecurityLocalSignerLabel": "Wallet access on this device",
+  "walletSecuritySignerStatusLabel": "Signer status",
+  "walletSecurityLocalSignerLabel": "Local signer on this device",
   "walletSecurityExternalWalletLabel": "External wallet",
   "walletSecurityEncryptedBackupLabel": "Encrypted backup",
   "walletSecurityPasskeyLabel": "Passkey",
   "walletSecurityRecoveryNeededLabel": "Recovery",
-  "walletSecurityBackendBackupClarifier": "Email or Google sign-in can restore account access only. Transfers still require wallet access on this device or a connected external wallet. Encrypted backend backup is optional convenience and never gives the backend control of your wallet.",
+  "walletSecurityBackendBackupClarifier": "Email or Google sign-in can restore account access only. Transfers still require a local signer or a connected external wallet. Encrypted backend backup is optional convenience and never makes the backend a signer.",
   "walletSecuritySignedOutMethod": "Signed out",
   "walletSecuritySignInMethodEmail": "Email",
   "walletSecuritySignInMethodEmailWithAddress": "Email ({email})",
@@ -3672,10 +3658,10 @@
   "walletSecurityNotConfigured": "Not configured",
   "walletSecurityLocalSignerReadyValue": "Present and ready",
   "walletSecurityLocalSignerMissingValue": "Not restored on this device",
-  "walletSecuritySignerLocalReadyValue": "Wallet access ready on this device",
+  "walletSecuritySignerLocalReadyValue": "Local signer ready",
   "walletSecuritySignerExternalReadyValue": "External wallet ready",
   "walletSecuritySignerRestoreAvailableValue": "Restore available from encrypted backup",
-  "walletSecuritySignerMissingValue": "Wallet access missing",
+  "walletSecuritySignerMissingValue": "Signer missing",
   "walletSecurityExternalWalletConnectedValue": "Connected: {walletName}",
   "@walletSecurityExternalWalletConnectedValue": {
     "placeholders": {
@@ -3684,7 +3670,7 @@
   },
   "walletSecurityRecoveryNeededValue": "Needed",
   "walletSecurityRecoveryNotNeededValue": "Not needed",
-  "walletSecurityRestoreSignerAction": "Restore wallet access",
+  "walletSecurityRestoreSignerAction": "Restore signer",
   "walletSecurityConnectExternalAction": "Connect external wallet",
   "walletBackupRecoveryPasswordLabel": "Recovery password",
   "walletBackupPasswordTooShortError": "Use at least 8 characters.",
@@ -3724,11 +3710,11 @@
   "walletBackupProtectionDeleteBackupBody": "This removes the encrypted server backup for the current wallet. Make sure you still have the recovery phrase stored safely offline.",
   "walletBackupProtectionDeleteBackupAction": "Delete encrypted backup",
   "walletBackupProtectionBackupDeletedToast": "Encrypted wallet backup deleted.",
-  "walletBackupProtectionRestoreSignerTitle": "Restore wallet access",
+  "walletBackupProtectionRestoreSignerTitle": "Restore wallet signer",
   "walletBackupProtectionRestoreSignerDescription": "Enter the recovery password for the encrypted backup to restore signing access on this device.",
-  "walletBackupProtectionRestoreSignerAction": "Restore wallet access",
-  "walletBackupProtectionSignerRestoredToast": "Wallet access restored on this device.",
-  "walletBackupProtectionSignerRestoreFailedToast": "Unable to restore wallet access.",
+  "walletBackupProtectionRestoreSignerAction": "Restore signer",
+  "walletBackupProtectionSignerRestoredToast": "Wallet signer restored on this device.",
+  "walletBackupProtectionSignerRestoreFailedToast": "Unable to restore wallet signer.",
   "walletBackupProtectionUpdateEncryptedBackupButton": "Update encrypted backup",
   "walletBackupProtectionCreateEncryptedBackupButton": "Create encrypted backup",
   "walletBackupProtectionRevealRecoveryPhraseButton": "Reveal and copy recovery phrase",
@@ -3790,7 +3776,7 @@
       "date": {}
     }
   },
-  "walletSwapSecuritySubtitle": "Swap execution still depends on wallet access and recovery status.",
+  "walletSwapSecuritySubtitle": "Swap execution still depends on signer access and recovery state.",
   "walletSwapEstimatedOutputLabel": "Estimated output",
   "walletSwapMinReceivedLabel": "Min received (after slippage)",
   "walletSwapPriceImpactLabel": "Price impact",
@@ -3989,9 +3975,11 @@
   "collectionCreatorSearchArtworksLabel": "Search",
   "collectionCreatorSearchArtworksHint": "Search your artworks...",
   "collectionCreatorNoArtworksAvailable": "No artworks available",
+
   "commonChange": "Change",
   "commonOpen": "Open",
   "commonLoading": "Loading",
+
   "desktopShellNavHome": "Home",
   "desktopShellNavExplore": "Explore",
   "desktopShellNavConnect": "Connect",
@@ -4000,6 +3988,7 @@
   "desktopShellNavGovern": "Govern",
   "desktopShellNavTrade": "Trade",
   "desktopShellNavWeb3": "Web3",
+
   "navigationScreenCreateAr": "Create AR",
   "navigationScreenExploreMap": "Explore Map",
   "navigationScreenCommunity": "Community",
@@ -4013,17 +4002,19 @@
   "navigationScreenDaoHub": "DAO Hub",
   "navigationScreenArtistStudio": "Artist Studio",
   "navigationScreenInstitutionHub": "Institution Hub",
-  "daoHubAppBarTitle": "DAO",
+
+  "daoHubAppBarTitle": "DAO Governance",
   "labsDaoSemanticLabel": "DAO Lab",
   "labsMarketplaceSemanticLabel": "Marketplace Lab",
   "daoHubHeaderSubtitle": "Community governance for artists, institutions, and cultural participation",
-  "daoHubInfoDialogTitle": "How the DAO works",
+  "daoHubInfoDialogTitle": "How DAO governance works",
   "daoHubInfoDialogBody": "The DAO gives the community a way to propose and vote on platform decisions. Voting power follows your KUB8 participation, and you can delegate to someone you trust when needed.",
   "daoHubTabActiveProposals": "Proposals",
   "daoHubTabVotingHistory": "Voting history",
   "daoHubTabCreateProposal": "Create",
   "daoHubTabTreasury": "Treasury",
   "daoHubTabDelegation": "Delegation",
+
   "daoCreateProposalTitle": "Create new proposal",
   "daoCreateProposalSubtitle": "Submit a proposal for the community to vote on",
   "daoCreateProposalFieldTitleLabel": "Proposal title",
@@ -4044,6 +4035,7 @@
   "daoVotingHistoryInfoYourVoteLabel": "Your vote",
   "daoVotingHistoryInfoParticipationLabel": "Participation",
   "daoVotingHistoryInfoYourVotingPowerLabel": "Your voting power",
+
   "desktopGovernanceSidebarOverviewTitle": "DAO Overview",
   "desktopGovernanceSidebarQuickActionsTitle": "Quick Actions",
   "desktopGovernanceQuickActionCreateProposalTitle": "Create proposal",
@@ -4056,6 +4048,7 @@
   "desktopGovernanceSidebarStatisticsTitle": "DAO Statistics",
   "desktopGovernanceSidebarRecentActivityTitle": "Recent Activity",
   "desktopGovernanceAcquireKub8Hint": "Build participation and recognition to take part in governance",
+
   "profileEditTitle": "Edit profile",
   "profileEditSaveChanges": "Save changes",
   "profileEditCoverImageClickToUpload": "Click to upload cover image",
@@ -4127,6 +4120,7 @@
   "profileEditPickImageFailedToast": "Could not select the image. Please try again.",
   "profileEditUploadDebugInfoTitle": "Upload debug info",
   "profileEditUploadDebugInfoCopiedToast": "Debug info copied to clipboard",
+
   "desktopCommunityTabDiscover": "Discover",
   "desktopCommunityTabFollowing": "Following",
   "desktopCommunityTabGroups": "Groups",
@@ -4187,6 +4181,7 @@
   "desktopCommunityCreateOptionArtDrop": "Art drop",
   "desktopCommunityCreateOptionPostReview": "Post review",
   "desktopCommunityCreateOptionPost": "Post",
+
   "desktopCommunityComposerTypePostLabel": "Post",
   "desktopCommunityComposerTypePostDescription": "Share an update with the community",
   "desktopCommunityComposerTypeArtDropLabel": "Art drop",
@@ -4197,6 +4192,7 @@
   "desktopCommunityComposerTypeEventDescription": "Announce meetups and gatherings",
   "desktopCommunityComposerTypeQuestionLabel": "Question",
   "desktopCommunityComposerTypeQuestionDescription": "Ask the community for feedback",
+
   "desktopNavigationExpandTooltip": "Expand navigation",
   "desktopNavigationCollapseTooltip": "Collapse navigation",
   "desktopNavigationSubtitle": "Art platform",
@@ -4210,12 +4206,15 @@
   "userProfileAchievementCategoryTrading": "Trading",
   "userProfileAchievementCategorySpecial": "Special",
   "userProfileAchievementCategoryStreetArt": "Street Art",
+
   "daoHubStatYourVotingPowerLabel": "Your voting power",
   "daoHubStatActiveProposalsLabel": "Active proposals",
   "daoHubStatTotalDelegatesLabel": "Total delegates",
+
   "daoDelegationCurrentStatusTitle": "Your delegation status",
   "daoDelegationDelegatorsLabel": "Delegators",
   "daoDelegationSelfLabel": "Self",
+
   "commonDialogSemanticLabel": "Dialog",
   "commonFailedToLoadLabel": "Failed to load",
   "commonSubmit": "Submit",
@@ -4232,7 +4231,9 @@
       "count": {}
     }
   },
+
   "postDetailPostUnlikedToast": "Post unliked",
+
   "communityBookmarkSaveForLaterTooltip": "Save for later",
   "communityBookmarkRemoveTooltip": "Remove bookmark",
   "communityQuickRepostAction": "Quick repost",
@@ -4241,6 +4242,7 @@
   "communityRepostButtonLabel": "Repost",
   "communityRepostedToast": "Reposted",
   "communityRepostedWithCommentToast": "Reposted with comment",
+
   "desktopCommunityActiveCommunitiesTitle": "Active communities",
   "desktopCommunityNoCommunitiesFoundLabel": "No communities found",
   "desktopCommunityViewAllCommunitiesButtonLabel": "View all {count, plural, =1{1 community} other{{count} communities}}",
@@ -4285,6 +4287,7 @@
       "query": {}
     }
   },
+
   "desktopCommunityAddHandleButtonLabel": "Add handle",
   "desktopCommunityAddTagDialogTitle": "Add tag",
   "desktopCommunityAddTagDialogHint": "Enter tag (e.g., art, photography)",
@@ -4300,6 +4303,7 @@
   "desktopCommunityLocationSearchHint": "e.g. Ljubljana, Slovenia",
   "desktopCommunityClearSelectionButtonLabel": "Clear selection",
   "desktopCommunityJoinGroupToPostToast": "Join a group to post.",
+
   "desktopCommunityTargetCommunityOptionalTitle": "Target a community (optional)",
   "desktopCommunityTargetCommunityNoGroupHint": "Posts shared to groups notify members instantly.",
   "desktopCommunityTargetCommunityPostingToLabel": "Posting to {groupName}",
@@ -4309,15 +4313,18 @@
     }
   },
   "desktopCommunityRemoveGroupTooltip": "Remove group",
+
   "desktopCommunityArAttachmentsTitle": "AR attachments",
   "desktopCommunityArAttachmentsBody": "Attach AR assets from your mobile device to ensure ARCore/ARKit compatibility. You can still tag this post and continue editing here.",
   "desktopCommunityDownloadAppTitle": "Download app",
   "desktopCommunityDownloadAppButtonLabel": "Download app",
   "desktopCommunitySharedPhotoFallbackContent": "Shared a photo",
+
   "desktopCommunityPostPublishedToast": "Post published!",
   "desktopCommunityPostPublishFailedToast": "Failed to post.",
   "desktopCommunityPostCreatedSuccessToast": "Post created successfully!",
   "desktopCommunityPostCreateFailedToast": "Failed to create post.",
+
   "desktopCommunityCreatePostTitle": "Create post",
   "desktopCommunityComposerPromptHint": "Share what you're building, discovering, or thinking...",
   "desktopCommunityComposerWhatsHappeningHint": "What's happening?",
@@ -4330,12 +4337,16 @@
   "desktopCommunityComposerAddLocationTooltip": "Add location",
   "desktopCommunityComposerMentionUserTooltip": "Mention user",
   "desktopCommunityComposerAddEmojiTooltip": "Add emoji",
+
   "desktopCommunityCreateGroupNameLabel": "Group name",
   "desktopCommunityCreateGroupDescriptionLabel": "Description (optional)",
+
   "desktopCommunityArtUseCurrentAreaButton": "Use current area",
   "desktopCommunityArtWiderRadiusButton": "Wider radius",
+
   "desktopCommunityArArtworkLabel": "AR artwork",
   "desktopCommunityArArtworkSubtitle": "Tap to view in augmented reality",
+
   "desktopCommunityTagFeedLoadingPostsLabel": "Loading #{tag} posts...",
   "@desktopCommunityTagFeedLoadingPostsLabel": {
     "placeholders": {
@@ -4373,13 +4384,16 @@
       "count": {}
     }
   },
+
   "desktopCommunityTrendingTitle": "Trending",
   "desktopCommunityTrendingLoadFailedTapToRetry": "Could not load trending topics. Tap to retry.",
   "desktopCommunityTrendingEmptyLabel": "No trending tags yet. Engage with the community to surface trends.",
   "desktopCommunityTrendingBasedOnRecentPostsLabel": "Based on recent posts",
+
   "desktopCommunityWhoToFollowTitle": "Who to follow",
   "desktopCommunitySuggestionsLoadFailedTapToRetry": "Unable to load suggestions. Tap to retry.",
   "desktopCommunitySuggestionsEmptyLabel": "Follow artists to personalize your feed.",
+
   "profileInvitesTooltip": "Invites",
   "profileConnectWalletToSeeProfileLabel": "Connect wallet to see profile",
   "profileMoreOptionsTitle": "More options",
@@ -4394,6 +4408,7 @@
   "profileInstitutionHighlightsSubtitle": "Promote upcoming programs and featured collections.",
   "profileInstitutionEventsEmptyLabel": "Share your next exhibition or gathering here.",
   "profileInstitutionCollectionsEmptyLabel": "Curate institutional collections to highlight.",
+
   "profileShowcaseEmptyTitle": "No {title}",
   "@profileShowcaseEmptyTitle": {
     "placeholders": {
@@ -4405,6 +4420,7 @@
   "profileCollectionCuratedByYouFooter": "Curated by you",
   "profileEventFallbackTitle": "Event",
   "profileEventLocationTba": "TBA",
+
   "profileAchievementsEmptyTitle": "No achievements yet",
   "profilePerformanceSectionTitle": "Performance",
   "profilePerformanceArtworksViewedTitle": "Artworks viewed",
@@ -4412,6 +4428,7 @@
   "profilePerformanceCreatedOwnedTitle": "Created / owned",
   "profilePerformanceFollowersFollowingTitle": "Followers / following",
   "profilePerformancePublicStreetArtAddedTitle": "Added Public Art",
+
   "profileMenuSavedItemsTitle": "Saved items",
   "savedItemsSummarySubtitleEmpty": "Bookmark artworks, events, collections, exhibitions, and posts to keep them here.",
   "savedItemsSummarySubtitleLastSaved": "Last saved {timestamp}",
@@ -4463,24 +4480,29 @@
   "savedItemsPlaceholderDescription": "Loading details...",
   "profileMenuViewHistoryTitle": "View history",
   "profileMenuHelpSupportTitle": "Help & support",
+
   "profileHelpSupportTitle": "Help & support",
   "profileHelpDocumentationOption": "Documentation",
   "profileHelpContactSupportOption": "Contact support",
   "profileHelpReportBugOption": "Report a bug",
   "profileHelpAboutOption": "About art.kubus",
   "profileHelpOpeningDocumentationToast": "Opening documentation...",
+
   "profileContactSupportTitle": "Contact support",
   "profileContactSupportSubtitle": "Get help from our support team:",
   "profileContactSupportEmailLabel": "Email",
   "profileContactSupportLiveChatLabel": "Live chat",
   "profileContactSupportLiveChatAvailability": "Available Mon-Fri 9AM-5PM",
   "profileContactSupportWebsiteLabel": "Website",
+
   "profileReportBugTitle": "Report a bug",
   "profileReportBugSubtitle": "Describe the issue you encountered:",
   "profileReportBugHint": "Enter bug description...",
   "profileReportBugEmailSubject": "Bug report",
+
   "profileAnalyticsProfileTitle": "Profile analytics",
   "profileAnalyticsCommunityTitle": "Community analytics",
+
   "profileAboutTitle": "About art.kubus",
   "profileAboutVersionLabel": "Version {version}",
   "@profileAboutVersionLabel": {
@@ -4490,8 +4512,10 @@
   },
   "profileAboutDescription": "AR art platform for discovering public art and connecting artists, institutions, and communities.",
   "profileAboutCopyright": "Copyright (c) 2024 kubus Project",
+
   "groupFeedSignInToPostLabel": "Sign in to post.",
   "groupFeedJoinToPostLabel": "Join this group to post.",
+
   "analyticsDisabledTitle": "Analytics disabled",
   "analyticsDisabledDescription": "This feature is currently turned off.",
   "analyticsNoProfileSelectedTitle": "No profile selected",
@@ -4644,9 +4668,11 @@
   "analyticsShareUnavailable": "Unable to share analytics on this device.",
   "analyticsBucketHour": "hour",
   "analyticsBucketDay": "day",
+
   "userProfileCollectionsDesktopSubtitle": "Curated sets of work",
   "userProfileNoCollectionsTitle": "No collections yet",
   "userProfileNoCollectionsDescription": "Your collections will appear here",
+
   "desktopProfileHeaderSubtitle": "Manage your identity and content",
   "desktopProfileShareProfileLabel": "Share profile",
   "desktopProfilePortfolioTitle": "Portfolio",
@@ -4673,15 +4699,19 @@
   "desktopProfileAchievementsSubtitle": "Your progress and milestones",
   "desktopProfileYourPostsTitle": "Your posts",
   "desktopProfileYourPostsSubtitle": "Content you've shared with the community",
+
   "commonUnknownArtist": "Unknown artist",
+
   "daoAnalyticsTitle": "DAO Analytics",
   "daoAnalyticsProposalsByTypeTitle": "Proposals by Type",
   "daoAnalyticsProposalsByStatusTitle": "Proposals by Status",
   "daoAnalyticsNoProposalsYetLabel": "No proposals yet.",
   "daoTreasuryTotalLabel": "Total",
   "daoTreasuryTotalValueLabel": "Total Treasury Value",
+
   "daoDelegationSelectDelegateTitle": "Select a Delegate",
   "daoDelegationSelectDelegateSubtitle": "Choose a trusted community member to vote on your behalf",
+
   "daoDelegationDelegatorsCountLabel": "{count, plural, =1{1 delegator} other{{count} delegators}}",
   "@daoDelegationDelegatorsCountLabel": {
     "placeholders": {
@@ -4694,6 +4724,7 @@
       "percent": {}
     }
   },
+
   "daoProposalVotesSupportSummaryLabel": "{totalVotes} votes • {supportPct}% support",
   "@daoProposalVotesSupportSummaryLabel": {
     "placeholders": {
@@ -4701,13 +4732,16 @@
       "supportPct": {}
     }
   },
+
   "commonSearchHint": "Search…",
+
   "onboardingWelcomeDiscoverTitle": "Discover art around you",
   "onboardingWelcomeDiscoverBody": "Explore artworks, exhibitions, and creative spaces on an interactive map.",
   "onboardingWelcomeCreateTitle": "Create and share",
   "onboardingWelcomeCreateBody": "Build your portfolio, publish artworks, and take part in a growing cultural community.",
   "onboardingWelcomeJoinTitle": "Ready to begin?",
   "onboardingWelcomeJoinBody": "Start exploring or create your account.",
+
   "promotionBuilderTitle": "Boost Visibility",
   "@promotionBuilderTitle": {
     "description": "Title for the promotion builder sheet"
@@ -4721,22 +4755,16 @@
   "promotionBuilderTierBoostDesc": "Increased rotation in discovery feeds",
   "promotionBuilderPerDay": "{price}/day",
   "@promotionBuilderPerDay": {
-    "placeholders": {
-      "price": {}
-    }
+    "placeholders": { "price": {} }
   },
   "promotionBuilderSlotsAvailable": "{count, plural, =1{1 slot} other{{count} slots}} available",
   "@promotionBuilderSlotsAvailable": {
-    "placeholders": {
-      "count": {}
-    }
+    "placeholders": { "count": {} }
   },
   "promotionBuilderDurationTitle": "Duration",
   "promotionBuilderDurationDays": "{days, plural, =1{1 day} other{{days} days}}",
   "@promotionBuilderDurationDays": {
-    "placeholders": {
-      "days": {}
-    }
+    "placeholders": { "days": {} }
   },
   "promotionBuilderQuickPick3Days": "3 days",
   "promotionBuilderQuickPick1Week": "1 week",
@@ -4744,23 +4772,17 @@
   "promotionBuilderQuickPick1Month": "1 month",
   "promotionBuilderDiscountBadge": "{percent}% off",
   "@promotionBuilderDiscountBadge": {
-    "placeholders": {
-      "percent": {}
-    }
+    "placeholders": { "percent": {} }
   },
   "promotionBuilderSelectSlotTitle": "Select slot",
   "promotionBuilderSlotLabel": "Slot {index}",
   "@promotionBuilderSlotLabel": {
-    "placeholders": {
-      "index": {}
-    }
+    "placeholders": { "index": {} }
   },
   "promotionBuilderSlotAvailable": "Available",
   "promotionBuilderSlotBookedUntil": "Booked until {date}",
   "@promotionBuilderSlotBookedUntil": {
-    "placeholders": {
-      "date": {}
-    }
+    "placeholders": { "date": {} }
   },
   "promotionBuilderAlternativeDates": "Try these available dates",
   "promotionBuilderStartDateTitle": "Start date",
@@ -4775,9 +4797,7 @@
   "promotionBuilderPaymentKub8": "Pay with KUB8",
   "promotionBuilderKub8Balance": "Balance: {amount} KUB8",
   "@promotionBuilderKub8Balance": {
-    "placeholders": {
-      "amount": {}
-    }
+    "placeholders": { "amount": {} }
   },
   "promotionBuilderCancellationNote": "Full refund if cancelled 24+ hours before start",
   "promotionBuilderSubmitButton": "Submit for Review",
@@ -4788,9 +4808,7 @@
   "promotionBuilderNoRatesAvailable": "No promotion options available for this item type.",
   "promotionBuilderPromoteEntityTitle": "Promote {entityLabel}",
   "@promotionBuilderPromoteEntityTitle": {
-    "placeholders": {
-      "entityLabel": {}
-    }
+    "placeholders": { "entityLabel": {} }
   },
   "promotionBuilderHeaderSubtitle": "Choose your promotion tier, duration, and payment method",
   "promotionBuilderSelectedSlotUnavailable": "Selected slot is not available",
@@ -4807,9 +4825,7 @@
   "promotionBuilderCancelFailed": "Failed to cancel promotion",
   "promotionBuilderStartsOn": "Starts {date}",
   "@promotionBuilderStartsOn": {
-    "placeholders": {
-      "date": {}
-    }
+    "placeholders": { "date": {} }
   },
   "promotionBuilderCancelTooltip": "Cancel promotion",
   "promotionBuilderPremiumSlotsHint": "Premium slots are guaranteed top positions",
@@ -4817,14 +4833,10 @@
   "promotionBuilderNoRefundNote": "No refund available (starts soon)",
   "promotionBuilderInsufficientKub8Balance": "Insufficient KUB8 balance ({amount})",
   "@promotionBuilderInsufficientKub8Balance": {
-    "placeholders": {
-      "amount": {}
-    }
+    "placeholders": { "amount": {} }
   },
   "promotionBuilderGuaranteedSlots": "{count, plural, =1{1 guaranteed slot} other{{count} guaranteed slots}}",
   "@promotionBuilderGuaranteedSlots": {
-    "placeholders": {
-      "count": {}
-    }
+    "placeholders": { "count": {} }
   }
 }

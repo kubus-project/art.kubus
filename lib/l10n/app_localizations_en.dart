@@ -463,7 +463,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authHighlightKeysLocal => 'Private keys stay with you';
 
   @override
-  String get authHighlightOptionalWeb3 => 'Built for future ownership and participation';
+  String get authHighlightOptionalWeb3 => 'Built for ownership and future participation';
 
   @override
   String get authSignedInProfileRefreshSoon => 'Signed in. Your profile will refresh shortly.';
@@ -631,7 +631,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authGoogleSignInFailed => 'Google sign-in failed. Please try again.';
 
   @override
-  String get authSignerProvisioningFailed => 'Signer-backed wallet provisioning failed.';
+  String get authSignerProvisioningFailed => 'Unable to prepare wallet access on this device.';
 
   @override
   String authGoogleRateLimitedRetryIn(Object duration) {
@@ -687,10 +687,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authRestoreWalletTitle => 'Restore wallet from encrypted backup';
 
   @override
-  String get authRestoreWalletBeforeSignInDescription => 'Enter the recovery password to restore the wallet signer before sign-in completes.';
+  String get authRestoreWalletBeforeSignInDescription => 'Enter the recovery password to restore wallet access on this device before sign-in completes.';
 
   @override
-  String get authRestoreWalletForAccountDescription => 'Enter the recovery password to restore the wallet signer for this account on this device.';
+  String get authRestoreWalletForAccountDescription => 'Enter the recovery password to restore wallet access for this account on this device.';
 
   @override
   String get authRestoreWalletAction => 'Restore wallet';
@@ -777,7 +777,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingFlowAccountTitle => 'Create your account';
 
   @override
-  String get onboardingFlowAccountBody => 'Use email, Google, or wallet sign-in to create your account. art.kubus is built on a non-custodial wallet model so long-term access stays with you.';
+  String get onboardingFlowAccountBody => 'Use email, Google, or wallet sign-in to create your account. art.kubus uses a wallet you control, so long-term access stays with you.';
 
   @override
   String get onboardingFlowAccountVerifyHint => 'If you registered with email, verify your email before signing in.';
@@ -1068,7 +1068,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingWelcomeSubtitle => 'Art, places, and community—together';
 
   @override
-  String get onboardingWelcomeDescription => 'Discover artworks, explore places, and connect with creators and institutions. AR is there when you want it. Your account is built on a non-custodial wallet so long-term access, ownership, and future participation stay with you.';
+  String get onboardingWelcomeDescription => 'Discover artworks, explore places, and connect with creators and institutions. AR is there when you want it. Your account uses a wallet you control, so long-term access, ownership, and future participation stay with you.';
 
   @override
   String get onboardingExploreTitle => 'Explore artworks';
@@ -1664,7 +1664,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String walletSessionStatusSummary(Object accountStatus, Object walletStatus, Object signerStatus) {
-    return 'Account: $accountStatus · Wallet: $walletStatus · Signing: $signerStatus';
+    return 'Account: $accountStatus · Wallet: $walletStatus · Access: $signerStatus';
   }
 
   @override
@@ -1677,13 +1677,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletActionAccountShellNeedsWalletToast => 'Your account is signed in, but this device still needs the wallet restored or connected before this action can continue.';
 
   @override
-  String get walletActionEncryptedBackupRestoreToast => 'An encrypted backup is available. Restore the signer on this device before continuing.';
+  String get walletActionEncryptedBackupRestoreToast => 'An encrypted backup is available. Restore wallet access on this device before continuing.';
 
   @override
-  String get walletActionRecoveryNeededToast => 'Restore your wallet signer on this device before continuing.';
+  String get walletActionRecoveryNeededToast => 'Restore wallet access on this device before continuing.';
 
   @override
-  String get walletActionReadOnlyReconnectToast => 'Reconnect with your wallet provider or restore the signer on this device before continuing.';
+  String get walletActionReadOnlyReconnectToast => 'Reconnect with your wallet provider or restore wallet access on this device before continuing.';
 
   @override
   String get settingsNetworkTileTitle => 'Network';
@@ -2062,7 +2062,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsDeleteAccountDialogTitle => 'Delete account';
 
   @override
-  String get settingsDeleteAccountDialogBody => 'We will remove your profile and community data from our servers. Your non-custodial wallet remains yours, and you can still restore it with your recovery phrase.';
+  String get settingsDeleteAccountDialogBody => 'We will remove your profile and community data from our servers. Your wallet remains yours, and you can still restore access with your recovery phrase.';
 
   @override
   String get settingsFinalConfirmationTitle => 'Final confirmation';
@@ -2581,13 +2581,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3DaoP1Feature4 => 'Discuss and collaborate with others';
 
   @override
-  String get web3DaoP2Title => 'Your voting weight';
+  String get web3DaoP2Title => 'Your voting power';
 
   @override
-  String get web3DaoP2Description => 'Voting weight can reflect Season 0 participation (KUB8 points). It is about contribution and recognition, not financial value.';
+  String get web3DaoP2Description => 'Voting power can reflect Season 0 participation (KUB8 points). It is about contribution and recognition, not financial value.';
 
   @override
-  String get web3DaoP2Feature1 => 'Voting weight can follow your KUB8 points';
+  String get web3DaoP2Feature1 => 'Voting power can follow your KUB8 points';
 
   @override
   String get web3DaoP2Feature2 => 'Vote on active proposals';
@@ -2881,7 +2881,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get institutionHubApplicationWalletRequired => 'Connect your wallet before submitting.';
 
   @override
-  String get institutionHubApplicationSubmittedToast => 'Application submitted to DAO reviewers.';
+  String get institutionHubApplicationSubmittedToast => 'Application submitted for DAO review.';
 
   @override
   String get institutionHubApplicationSubmitUnavailableToast => 'Unable to submit application right now.';
@@ -3021,7 +3021,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get web3FeaturesP1Title => 'Your account wallet';
 
   @override
-  String get web3FeaturesP1Description => 'art.kubus uses a non-custodial wallet as part of your account foundation. It supports long-term access, ownership, and future participation across artist, institution, and community features.';
+  String get web3FeaturesP1Description => 'art.kubus uses a wallet you control as part of your account foundation. It supports long-term access, ownership, and future participation across artist, institution, and community features.';
 
   @override
   String get web3FeaturesP1Feature1 => 'Long-term account continuity';
@@ -4886,7 +4886,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectWalletCreateTitle => 'Create a new wallet';
 
   @override
-  String get connectWalletCreateDescription => 'We will create a new non-custodial wallet on this device for your art.kubus account. Back up the recovery phrase right away to protect long-term access.';
+  String get connectWalletCreateDescription => 'We will create a new wallet you control on this device for your art.kubus account. Back up the recovery phrase right away to protect long-term access.';
 
   @override
   String get connectWalletCreateMissingBackupError => 'Created wallet is missing backup details.';
@@ -5176,7 +5176,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeSecurityTitle => 'Secure your wallet';
 
   @override
-  String get walletHomeSecuritySubtitle => 'Backup, signer access, and recovery status stay together here.';
+  String get walletHomeSecuritySubtitle => 'Backup, wallet access, and recovery status stay together here.';
 
   @override
   String get walletHomeYourTokensTitle => 'Your tokens';
@@ -5447,7 +5447,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sendTokenSidebarSummarySubtitle => 'Review available balance, fee estimate, and destination at a glance.';
 
   @override
-  String get sendTokenSidebarSecuritySubtitle => 'Signer and recovery status for this transfer.';
+  String get sendTokenSidebarSecuritySubtitle => 'Wallet access and recovery status for this transfer.';
 
   @override
   String get sendTokenSummaryAmountLabel => 'Amount';
@@ -6270,10 +6270,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceFeaturedCollectionsSubtitle => 'Curated mints and AR-ready series from the community.';
 
   @override
-  String get marketplaceNoMintedNftsTitle => 'No minted NFTs available yet';
+  String get marketplaceNoMintedNftsTitle => 'No NFTs available yet';
 
   @override
-  String get marketplaceNoMintedNftsDescription => 'Marketplace listings appear once an artwork has a real NFT mint.';
+  String get marketplaceNoMintedNftsDescription => 'Marketplace listings appear once an artwork is issued as an NFT.';
 
   @override
   String get marketplaceTrendingThisWeekTitle => 'Trending this week';
@@ -6285,7 +6285,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceNoTrendingNftsTitle => 'No trending NFTs yet';
 
   @override
-  String get marketplaceNoTrendingNftsDescription => 'Check back later as minted artwork activity picks up.';
+  String get marketplaceNoTrendingNftsDescription => 'Check back later as NFT activity picks up.';
 
   @override
   String get marketplaceMyCollectionTitle => 'My NFT collection';
@@ -6314,7 +6314,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplaceTokenIdLabel => 'Token ID';
 
   @override
-  String get marketplaceMintedLabel => 'Minted';
+  String get marketplaceMintedLabel => 'Issued as NFT';
 
   @override
   String get marketplaceTotalSupplyLabel => 'Total supply';
@@ -6507,10 +6507,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get marketplacePriceInvalidError => 'Enter a price greater than 0.';
 
   @override
-  String get marketplacePropertyMintTimestampLabel => 'Minted at';
+  String get marketplacePropertyMintTimestampLabel => 'Issued at';
 
   @override
-  String get marketplacePropertyMintedByLabel => 'Minted by';
+  String get marketplacePropertyMintedByLabel => 'Issued by';
 
   @override
   String get marketplaceNftCollectibleLabel => 'NFT collectible';
@@ -6534,7 +6534,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collectibleRarityMythic => 'Mythic';
 
   @override
-  String get collectibleStatusMinted => 'Minted';
+  String get collectibleStatusMinted => 'Issued as NFT';
 
   @override
   String get collectibleStatusListed => 'Listed';
@@ -8163,7 +8163,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletBackupProtectionNoWalletBody => 'Connect or restore the wallet on this device before managing backup protection.';
 
   @override
-  String get walletBackupProtectionAccountShellHeadline => 'Your account is ready, but this device does not have a wallet signer yet.';
+  String get walletBackupProtectionAccountShellHeadline => 'Your account is ready, but this device does not have wallet access yet.';
 
   @override
   String get walletBackupProtectionAccountShellBody => 'Restore the account wallet on this device before you configure wallet backup protection, transfers, or future wallet-linked access.';
@@ -8190,7 +8190,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletBackupProtectionEncryptedRestoreHeadline => 'Encrypted backup is available, but signing is not restored on this device.';
 
   @override
-  String get walletBackupProtectionEncryptedRestoreBody => 'Use the encrypted backup to restore signer access on this device before transfers and other wallet-protected actions.';
+  String get walletBackupProtectionEncryptedRestoreBody => 'Use the encrypted backup to restore wallet access on this device before transfers and other wallet-protected actions.';
 
   @override
   String get walletBackupProtectionPasskeyHeadline => 'Passkey-protected server backup is configured.';
@@ -8211,7 +8211,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletSessionStateWalletReadOnly => 'Wallet identity, read-only';
 
   @override
-  String get walletSessionStateLocalSignerReady => 'Local signer ready';
+  String get walletSessionStateLocalSignerReady => 'Wallet access ready on this device';
 
   @override
   String get walletSessionStateExternalWalletReady => 'External wallet ready';
@@ -8232,10 +8232,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletSecurityWalletAddressLabel => 'Wallet address';
 
   @override
-  String get walletSecuritySignerStatusLabel => 'Signer status';
+  String get walletSecuritySignerStatusLabel => 'Wallet access status';
 
   @override
-  String get walletSecurityLocalSignerLabel => 'Local signer on this device';
+  String get walletSecurityLocalSignerLabel => 'Wallet access on this device';
 
   @override
   String get walletSecurityExternalWalletLabel => 'External wallet';
@@ -8250,7 +8250,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletSecurityRecoveryNeededLabel => 'Recovery';
 
   @override
-  String get walletSecurityBackendBackupClarifier => 'Email or Google sign-in can restore account access only. Transfers still require a local signer or a connected external wallet. Encrypted backend backup is optional convenience and never makes the backend a signer.';
+  String get walletSecurityBackendBackupClarifier => 'Email or Google sign-in can restore account access only. Transfers still require wallet access on this device or a connected external wallet. Encrypted backend backup is optional convenience and never gives the backend control of your wallet.';
 
   @override
   String get walletSecuritySignedOutMethod => 'Signed out';
@@ -8308,7 +8308,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletSecurityLocalSignerMissingValue => 'Not restored on this device';
 
   @override
-  String get walletSecuritySignerLocalReadyValue => 'Local signer ready';
+  String get walletSecuritySignerLocalReadyValue => 'Wallet access ready on this device';
 
   @override
   String get walletSecuritySignerExternalReadyValue => 'External wallet ready';
@@ -8317,7 +8317,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletSecuritySignerRestoreAvailableValue => 'Restore available from encrypted backup';
 
   @override
-  String get walletSecuritySignerMissingValue => 'Signer missing';
+  String get walletSecuritySignerMissingValue => 'Wallet access missing';
 
   @override
   String walletSecurityExternalWalletConnectedValue(Object walletName) {
@@ -8331,7 +8331,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletSecurityRecoveryNotNeededValue => 'Not needed';
 
   @override
-  String get walletSecurityRestoreSignerAction => 'Restore signer';
+  String get walletSecurityRestoreSignerAction => 'Restore wallet access';
 
   @override
   String get walletSecurityConnectExternalAction => 'Connect external wallet';
@@ -8412,19 +8412,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletBackupProtectionBackupDeletedToast => 'Encrypted wallet backup deleted.';
 
   @override
-  String get walletBackupProtectionRestoreSignerTitle => 'Restore wallet signer';
+  String get walletBackupProtectionRestoreSignerTitle => 'Restore wallet access';
 
   @override
   String get walletBackupProtectionRestoreSignerDescription => 'Enter the recovery password for the encrypted backup to restore signing access on this device.';
 
   @override
-  String get walletBackupProtectionRestoreSignerAction => 'Restore signer';
+  String get walletBackupProtectionRestoreSignerAction => 'Restore wallet access';
 
   @override
-  String get walletBackupProtectionSignerRestoredToast => 'Wallet signer restored on this device.';
+  String get walletBackupProtectionSignerRestoredToast => 'Wallet access restored on this device.';
 
   @override
-  String get walletBackupProtectionSignerRestoreFailedToast => 'Unable to restore wallet signer.';
+  String get walletBackupProtectionSignerRestoreFailedToast => 'Unable to restore wallet access.';
 
   @override
   String get walletBackupProtectionUpdateEncryptedBackupButton => 'Update encrypted backup';
@@ -8555,7 +8555,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get walletSwapSecuritySubtitle => 'Swap execution still depends on signer access and recovery state.';
+  String get walletSwapSecuritySubtitle => 'Swap execution still depends on wallet access and recovery status.';
 
   @override
   String get walletSwapEstimatedOutputLabel => 'Estimated output';
@@ -9054,7 +9054,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navigationScreenInstitutionHub => 'Institution Hub';
 
   @override
-  String get daoHubAppBarTitle => 'DAO Governance';
+  String get daoHubAppBarTitle => 'DAO';
 
   @override
   String get labsDaoSemanticLabel => 'DAO Lab';
@@ -9066,7 +9066,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get daoHubHeaderSubtitle => 'Community governance for artists, institutions, and cultural participation';
 
   @override
-  String get daoHubInfoDialogTitle => 'How DAO governance works';
+  String get daoHubInfoDialogTitle => 'How the DAO works';
 
   @override
   String get daoHubInfoDialogBody => 'The DAO gives the community a way to propose and vote on platform decisions. Voting power follows your KUB8 participation, and you can delegate to someone you trust when needed.';
