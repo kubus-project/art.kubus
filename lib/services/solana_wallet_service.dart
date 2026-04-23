@@ -8,6 +8,7 @@ import 'package:solana/solana.dart';
 import 'package:solana/encoder.dart';
 import 'package:solana/metaplex.dart';
 import '../config/api_keys.dart';
+import '../config/config.dart';
 import '../models/wallet.dart';
 import 'storage_config.dart';
 import '../models/swap_quote.dart';
@@ -73,6 +74,96 @@ class SolanaWalletService {
   SolanaWalletService() {
     // Initialize with the configured default network
     switchNetwork(ApiKeys.defaultSolanaNetwork);
+  }
+
+  Uri _jupiterBackendUri(
+    String path, {
+    Map<String, String>? queryParameters,
+  }) {
+    return Uri.parse('${AppConfig.baseApiUrl}/api/dao/jupiter/$path').replace(
+      queryParameters: queryParameters,
+    );
+  }
+
+  Uri _jupiterDirectUri(
+    String path, {
+    Map<String, String>? queryParameters,
+  }) {
+    return Uri.parse('${ApiKeys.jupiterBaseUrl}/$path').replace(
+      queryParameters: queryParameters,
+    );
+  }
+
+  Future<Map<String, dynamic>> _getJupiterJson({
+    required String path,
+    required Map<String, String> queryParameters,
+  }) async {
+    final attempts = <({String source, Uri uri})>[
+      (source: 'direct', uri: _jupiterDirectUri(path, queryParameters: queryParameters)),
+      (source: 'backend', uri: _jupiterBackendUri(path, queryParameters: queryParameters)),
+    ];
+
+    final failures = <String>[];
+    for (final attempt in attempts) {
+      try {
+        final response = await http.get(attempt.uri);
+        if (response.statusCode != 200) {
+          failures.add(
+            '${attempt.source}: HTTP ${response.statusCode} ${response.body}',
+          );
+          continue;
+        }
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (error) {
+        failures.add('${attempt.source}: $error');
+      }
+    }
+
+    throw Exception('Jupiter $path failed. ${failures.join(' | ')}');
+  }
+
+  Future<Map<String, dynamic>> _postJupiterJson({
+    required String path,
+    required Map<String, dynamic> body,
+  }) async {
+    final attempts = <({String source, Uri uri})>[
+      (source: 'direct', uri: _jupiterDirectUri(path)),
+      (source: 'backend', uri: _jupiterBackendUri(path)),
+    ];
+
+    final failures = <String>[];
+    for (final attempt in attempts) {
+      try {
+        final response = await http.post(
+          attempt.uri,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(body),
+        );
+        if (response.statusCode != 200) {
+          failures.add(
+            '${attempt.source}: HTTP ${response.statusCode} ${response.body}',
+          );
+          continue;
+        }
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } catch (error) {
+        failures.add('${attempt.source}: $error');
+      }
+    }
+
+    throw Exception('Jupiter $path failed. ${failures.join(' | ')}');
+  }
+
+  Map<String, dynamic> _extractProxyPayload(Map<String, dynamic> decoded) {
+    final payload = decoded['data'];
+    if (payload is Map<String, dynamic>) {
+      return payload;
+    }
+    if (decoded.containsKey('swapTransaction') ||
+        (decoded.containsKey('inputMint') && decoded.containsKey('outputMint'))) {
+      return decoded;
+    }
+    throw Exception('Invalid Jupiter proxy response payload');
   }
 
   String _cacheKeyForMnemonic(String mnemonic) {
@@ -458,11 +549,11 @@ class SolanaWalletService {
 
     final signedTransactionBase64 =
         await signTransactionBase64(transactionBase64);
-    return _rpcClient.sendTransaction(
-      signedTransactionBase64,
-      skipPreflight: false,
-      preflightCommitment: Commitment.confirmed,
-    );
+    return _sendEncodedTransactionWithDiagnostics(signedTransactionBase64);
+  }
+
+  Future<String> submitSignedTransactionBase64(String transactionBase64) {
+    return _sendEncodedTransactionWithDiagnostics(transactionBase64);
   }
 
   // Get balance for a public key
@@ -539,36 +630,88 @@ class SolanaWalletService {
       );
 
       final accounts = response['result']['value'] as List;
-      List<TokenBalance> tokenBalances = [];
+      final ownerPub = Ed25519HDPublicKey.fromBase58(publicKey);
+      final aggregatedByMint = <String, _OwnedMintBalanceAggregationRecord>{};
 
       for (final account in accounts) {
+        if (account is! Map) continue;
+        final accountAddress = account['pubkey']?.toString().trim() ?? '';
+        if (accountAddress.isEmpty) continue;
         final parsedInfo = account['account']['data']['parsed']['info'];
         final tokenAmount = parsedInfo['tokenAmount'];
-        final mint = parsedInfo['mint'];
+        final mint = parsedInfo['mint']?.toString().trim() ?? '';
+        if (mint.isEmpty) continue;
         final decimals = (tokenAmount['decimals'] as num?)?.toInt() ?? 0;
         final amountRaw =
             double.tryParse(tokenAmount['amount']?.toString() ?? '0') ?? 0.0;
         final balance =
             decimals > 0 ? amountRaw / pow(10, decimals) : amountRaw;
         final uiAmount = tokenAmount['uiAmount'];
-
-        final tokenInfo = await _getTokenInfo(mint, decimalsHint: decimals);
-
-        tokenBalances.add(TokenBalance(
-          mint: mint,
-          symbol: (tokenInfo['symbol'] ?? _fallbackSymbol(mint)).toString(),
-          name: (tokenInfo['name'] ?? 'Unknown Token').toString(),
-          balance: balance,
-          decimals: decimals,
-          uiAmount: uiAmount is num ? uiAmount.toDouble() : balance,
-          logoUrl: tokenInfo['logoUrl'] as String?,
-          metadataUri: tokenInfo['uri'] as String?,
-          description: tokenInfo['description'] as String?,
-          rawMetadata:
-              tokenInfo['rawOffChainMetadata'] as Map<String, dynamic>?,
-        ));
+        final aggregated = aggregatedByMint.putIfAbsent(
+          mint,
+          () => _OwnedMintBalanceAggregationRecord(
+            mint: mint,
+            decimals: decimals,
+          ),
+        );
+        aggregated.totalBalance += balance;
+        aggregated.totalUiAmount += uiAmount is num ? uiAmount.toDouble() : balance;
+        aggregated.decimals = decimals;
+        aggregated.ownedTokenAccounts.add(
+          TokenAccountHolding(
+            address: accountAddress,
+            rawAmount: tokenAmount['amount']?.toString() ?? '0',
+            balance: balance,
+            decimals: decimals,
+            state: parsedInfo['state']?.toString() ?? 'unknown',
+          ),
+        );
       }
 
+      final tokenBalances = <TokenBalance>[];
+      for (final entry in aggregatedByMint.entries) {
+        final mint = entry.key;
+        final aggregated = entry.value;
+        final tokenInfo = await _getTokenInfo(
+          mint,
+          decimalsHint: aggregated.decimals,
+        );
+        final canonicalAta = await _findAssociatedTokenAddressSafe(
+          owner: ownerPub,
+          mintAddress: mint,
+        );
+        final ownedTokenAccounts = _orderOwnedTokenAccounts(
+          accounts: aggregated.ownedTokenAccounts,
+          canonicalAta: canonicalAta,
+        );
+
+        tokenBalances.add(
+          TokenBalance(
+            mint: mint,
+            symbol: (tokenInfo['symbol'] ?? _fallbackSymbol(mint)).toString(),
+            name: (tokenInfo['name'] ?? 'Unknown Token').toString(),
+            balance: aggregated.totalBalance,
+            decimals: aggregated.decimals,
+            uiAmount: aggregated.totalUiAmount,
+            logoUrl: tokenInfo['logoUrl'] as String?,
+            metadataUri: tokenInfo['uri'] as String?,
+            description: tokenInfo['description'] as String?,
+            rawMetadata:
+                tokenInfo['rawOffChainMetadata'] as Map<String, dynamic>?,
+            preferredSourceTokenAccount:
+                _defaultPreferredSourceTokenAccount(ownedTokenAccounts),
+            ownedTokenAccounts: ownedTokenAccounts,
+          ),
+        );
+      }
+
+      tokenBalances.sort((a, b) {
+        final symbolCompare = a.symbol.toLowerCase().compareTo(
+              b.symbol.toLowerCase(),
+            );
+        if (symbolCompare != 0) return symbolCompare;
+        return a.mint.toLowerCase().compareTo(b.mint.toLowerCase());
+      });
       return tokenBalances;
     } catch (e) {
       debugPrint('Error getting token balances: $e');
@@ -607,6 +750,16 @@ class SolanaWalletService {
       debugPrint('Error getting SPL balance for $mint: $e');
       return 0.0;
     }
+  }
+
+  Future<List<TokenAccountHolding>> getOwnedTokenAccountsForMint({
+    required String ownerAddress,
+    required String mint,
+  }) {
+    return _loadOwnedTokenAccountsForMint(
+      ownerAddress: ownerAddress,
+      mint: mint,
+    );
   }
 
   Future<String> requestAirdrop(String publicKey, {double amount = 1.0}) async {
@@ -735,46 +888,28 @@ class SolanaWalletService {
     required String toAddress,
     required double amount,
     required int decimals,
+    String? sourceTokenAccount,
   }) async {
     if (!hasActiveKeyPair) {
       throw Exception('No active keypair set for SPL transfer');
     }
-    final fromPub = Ed25519HDPublicKey.fromBase58(_activeKeyPair!.address);
-    final mintPub = Ed25519HDPublicKey.fromBase58(mint);
-    final toPub = Ed25519HDPublicKey.fromBase58(toAddress);
-
-    final fromAta =
-        await findAssociatedTokenAddress(owner: fromPub, mint: mintPub);
-    final toAta = await findAssociatedTokenAddress(owner: toPub, mint: mintPub);
-
-    final instructions = <Instruction>[];
-
-    // Create destination ATA if missing
-    final toAccountInfo = await _safeGetAccountInfo(toAta.toBase58());
-    if (toAccountInfo == null) {
-      instructions.add(
-        AssociatedTokenAccountInstruction.createAccount(
-          address: toAta,
-          funder: fromPub,
-          owner: toPub,
-          mint: mintPub,
-        ),
+    try {
+      final instructions = await _buildSplTokenTransferInstructions(
+        fromAddress: _activeKeyPair!.address,
+        mint: mint,
+        toAddress: toAddress,
+        amount: amount,
+        decimals: decimals,
+        sourceTokenAccount: sourceTokenAccount,
+      );
+      return _sendInstructions(instructions);
+    } catch (e) {
+      if (e is SolanaWalletSendException) rethrow;
+      throw SolanaWalletSendException(
+        _normalizeSendFailureMessage(e.toString()),
+        cause: e,
       );
     }
-
-    final amountRaw = (amount * pow(10, decimals)).round();
-    instructions.add(
-      TokenInstruction.transferChecked(
-        source: fromAta,
-        mint: mintPub,
-        destination: toAta,
-        owner: fromPub,
-        amount: amountRaw,
-        decimals: decimals,
-      ),
-    );
-
-    return _sendInstructions(instructions);
   }
 
   Future<UnsignedSolanaTransactionRecord>
@@ -784,6 +919,7 @@ class SolanaWalletService {
     required String toAddress,
     required double amount,
     required int decimals,
+    String? sourceTokenAccount,
   }) async {
     final instructions = await _buildSplTokenTransferInstructions(
       fromAddress: fromAddress,
@@ -791,6 +927,7 @@ class SolanaWalletService {
       toAddress: toAddress,
       amount: amount,
       decimals: decimals,
+      sourceTokenAccount: sourceTokenAccount,
     );
     return _buildUnsignedTransaction(
       feePayerAddress: fromAddress,
@@ -804,14 +941,33 @@ class SolanaWalletService {
     required double solAmount,
     int slippageBps = 50,
     SwapQuote? quote,
+    int platformFeeBps = 0,
+    String? platformFeeOwnerAddress,
+    FeeSplitterProgramInstructionRecord? feeSplitterProgram,
   }) async {
-    return _executeJupiterSwap(
+    if (!hasActiveKeyPair) {
+      throw Exception('No active keypair set for swap');
+    }
+    final unsigned = await buildJupiterSwapTransactionBase64(
+      userPublicKey: _activeKeyPair!.address,
       inputMint: ApiKeys.wrappedSolMintAddress,
       outputMint: mint,
       inputAmountRaw: (solAmount * 1000000000).round(),
       slippageBps: slippageBps,
       wrapAndUnwrapSol: true,
       quote: quote,
+      platformFeeBps: platformFeeBps,
+      platformFeeOwnerAddress: platformFeeOwnerAddress,
+      feeSplitterProgram: feeSplitterProgram,
+    );
+    final signature = await signAndSendTransactionBase64(
+      unsigned.transactionBase64,
+    );
+    return SubmittedSolanaTransactionRecord(
+      signature: signature,
+      lastValidBlockHeight: unsigned.lastValidBlockHeight,
+      explorerUrl: buildExplorerTransactionUrl(signature),
+      metadata: unsigned.metadata,
     );
   }
 
@@ -822,14 +978,33 @@ class SolanaWalletService {
     required int decimals,
     int slippageBps = 50,
     SwapQuote? quote,
+    int platformFeeBps = 0,
+    String? platformFeeOwnerAddress,
+    FeeSplitterProgramInstructionRecord? feeSplitterProgram,
   }) async {
-    return _executeJupiterSwap(
+    if (!hasActiveKeyPair) {
+      throw Exception('No active keypair set for swap');
+    }
+    final unsigned = await buildJupiterSwapTransactionBase64(
+      userPublicKey: _activeKeyPair!.address,
       inputMint: fromMint,
       outputMint: toMint,
       inputAmountRaw: (amount * pow(10, decimals)).round(),
       slippageBps: slippageBps,
       wrapAndUnwrapSol: false,
       quote: quote,
+      platformFeeBps: platformFeeBps,
+      platformFeeOwnerAddress: platformFeeOwnerAddress,
+      feeSplitterProgram: feeSplitterProgram,
+    );
+    final signature = await signAndSendTransactionBase64(
+      unsigned.transactionBase64,
+    );
+    return SubmittedSolanaTransactionRecord(
+      signature: signature,
+      lastValidBlockHeight: unsigned.lastValidBlockHeight,
+      explorerUrl: buildExplorerTransactionUrl(signature),
+      metadata: unsigned.metadata,
     );
   }
 
@@ -841,54 +1016,32 @@ class SolanaWalletService {
     required int slippageBps,
     required bool wrapAndUnwrapSol,
     SwapQuote? quote,
+    int platformFeeBps = 0,
+    String? platformFeeOwnerAddress,
+    FeeSplitterProgramInstructionRecord? feeSplitterProgram,
   }) async {
     final swapRequestRecord = await _buildJupiterSwapRequest(
       inputMint: inputMint,
       outputMint: outputMint,
       inputAmountRaw: inputAmountRaw,
       slippageBps: slippageBps,
-      wrapAndUnwrapSol: wrapAndUnwrapSol,
-      userPublicKey: userPublicKey,
       quote: quote,
+      platformFeeBps: platformFeeBps,
     );
     final route = swapRequestRecord.route;
     if (route == null) {
       throw Exception('No Jupiter route available');
     }
-
-    final swapResp = await http.post(
-      Uri.parse('${ApiKeys.jupiterBaseUrl}/swap'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'quoteResponse': route,
-        'userPublicKey': userPublicKey,
-        'wrapAndUnwrapSol': wrapAndUnwrapSol,
-      }),
-    );
-
-    if (swapResp.statusCode != 200) {
-      throw Exception(
-          'Jupiter swap build failed: ${swapResp.statusCode} ${swapResp.body}');
-    }
-
-    final swapJson = jsonDecode(swapResp.body) as Map<String, dynamic>;
-    final swapTx = swapJson['swapTransaction'] as String?;
-    if (swapTx == null) {
-      throw Exception('Jupiter swapTransaction missing');
-    }
-    final unsigned = SignedTx.decode(swapTx);
-    final lastValidBlockHeight =
-        (swapJson['lastValidBlockHeight'] as num?)?.toInt();
-    return UnsignedSolanaTransactionRecord(
-      transactionBase64: swapTx,
-      lastValidBlockHeight: lastValidBlockHeight,
-      metadata: {
-        'route': route,
-        'quoteContextSlot': swapRequestRecord.contextSlot,
-        'quoteTimeTakenMs': swapRequestRecord.timeTakenMs,
-        'programs': _extractRouteLabels(route),
-        'requiredSignatures': unsigned.compiledMessage.requiredSignatureCount,
-      },
+    return _buildAtomicJupiterSwapTransaction(
+      userPublicKey: userPublicKey,
+      outputMint: outputMint,
+      wrapAndUnwrapSol: wrapAndUnwrapSol,
+      route: route,
+      quoteContextSlot: swapRequestRecord.contextSlot,
+      quoteTimeTakenMs: swapRequestRecord.timeTakenMs,
+      platformFeeBps: platformFeeBps,
+      platformFeeOwnerAddress: platformFeeOwnerAddress,
+      feeSplitterProgram: feeSplitterProgram,
     );
   }
 
@@ -899,30 +1052,21 @@ class SolanaWalletService {
     required int inputDecimals,
     required int outputDecimals,
     int slippageBps = 50,
+    int platformFeeBps = 0,
   }) async {
-    final uri = Uri.parse('${ApiKeys.jupiterBaseUrl}/quote').replace(
+    final decoded = await _getJupiterJson(
+      path: 'quote',
       queryParameters: {
         'inputMint': inputMint,
         'outputMint': outputMint,
         'amount': inputAmountRaw.toString(),
         'slippageBps': slippageBps.toString(),
         'swapMode': 'ExactIn',
+        if (platformFeeBps > 0) 'platformFeeBps': platformFeeBps.toString(),
+        'instructionVersion': 'V2',
       },
     );
-
-    final response = await http.get(uri);
-    if (response.statusCode != 200) {
-      throw Exception('Jupiter quote failed (${response.statusCode})');
-    }
-
-    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-    final routes = decoded['data'] as List?;
-    if (routes == null || routes.isEmpty) {
-      throw Exception('No swap routes available for the selected pair.');
-    }
-
-    final route =
-        Map<String, dynamic>.from(routes.first as Map<String, dynamic>);
+    final route = _extractProxyPayload(decoded);
     return SwapQuote.fromRoute(
       route: route,
       inputMint: inputMint,
@@ -930,8 +1074,8 @@ class SolanaWalletService {
       inputDecimals: inputDecimals,
       outputDecimals: outputDecimals,
       slippageBps: slippageBps,
-      contextSlot: decoded['contextSlot'] as int?,
-      timeTakenMs: (decoded['timeTaken'] as num?)?.toDouble(),
+      contextSlot: (route['contextSlot'] as num?)?.toInt(),
+      timeTakenMs: (route['timeTaken'] as num?)?.toDouble(),
     );
   }
 
@@ -1050,6 +1194,402 @@ class SolanaWalletService {
     }
   }
 
+  Future<String?> _findAssociatedTokenAddressSafe({
+    required Ed25519HDPublicKey owner,
+    required String mintAddress,
+  }) async {
+    try {
+      final mint = Ed25519HDPublicKey.fromBase58(mintAddress);
+      final ata = await findAssociatedTokenAddress(owner: owner, mint: mint);
+      return ata.toBase58();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  List<TokenAccountHolding> _orderOwnedTokenAccounts({
+    required List<TokenAccountHolding> accounts,
+    required String? canonicalAta,
+  }) {
+    final ordered = accounts
+        .map(
+          (account) => TokenAccountHolding(
+            address: account.address,
+            rawAmount: account.rawAmount,
+            balance: account.balance,
+            decimals: account.decimals,
+            state: account.state,
+            isAssociatedTokenAccount:
+                canonicalAta != null &&
+                WalletUtils.equals(account.address, canonicalAta),
+          ),
+        )
+        .toList(growable: false);
+
+    ordered.sort((a, b) {
+      if (a.isAssociatedTokenAccount != b.isAssociatedTokenAccount) {
+        return a.isAssociatedTokenAccount ? -1 : 1;
+      }
+      final rawCompare = _parseRawTokenAmount(b.rawAmount).compareTo(
+        _parseRawTokenAmount(a.rawAmount),
+      );
+      if (rawCompare != 0) return rawCompare;
+      return a.address.toLowerCase().compareTo(b.address.toLowerCase());
+    });
+    return ordered;
+  }
+
+  String? _defaultPreferredSourceTokenAccount(
+    List<TokenAccountHolding> ownedTokenAccounts,
+  ) {
+    for (final account in ownedTokenAccounts) {
+      if (_isSpendableTokenAccount(account) &&
+          account.isAssociatedTokenAccount &&
+          account.balance > 0) {
+        return account.address;
+      }
+    }
+    for (final account in ownedTokenAccounts) {
+      if (_isSpendableTokenAccount(account) && account.balance > 0) {
+        return account.address;
+      }
+    }
+    return null;
+  }
+
+  Future<List<TokenAccountHolding>> _loadOwnedTokenAccountsForMint({
+    required String ownerAddress,
+    required String mint,
+  }) async {
+    final response = await _makeRpcCall('getTokenAccountsByOwner', [
+      ownerAddress,
+      {'mint': mint},
+      {'encoding': 'jsonParsed'},
+    ]);
+
+    final accounts = response['result']?['value'] as List? ?? const [];
+    final ownerPub = Ed25519HDPublicKey.fromBase58(ownerAddress);
+    final canonicalAta = await _findAssociatedTokenAddressSafe(
+      owner: ownerPub,
+      mintAddress: mint,
+    );
+    final ownedTokenAccounts = <TokenAccountHolding>[];
+    for (final account in accounts) {
+      if (account is! Map) continue;
+      final address = account['pubkey']?.toString().trim() ?? '';
+      if (address.isEmpty) continue;
+      final parsedInfo =
+          account['account']?['data']?['parsed']?['info'] as Map? ?? const {};
+      final tokenAmount = parsedInfo['tokenAmount'] as Map? ?? const {};
+      final decimals = (tokenAmount['decimals'] as num?)?.toInt() ?? 0;
+      final rawAmount = tokenAmount['amount']?.toString() ?? '0';
+      final amountRaw =
+          double.tryParse(rawAmount) ?? 0.0;
+      final balance =
+          decimals > 0 ? amountRaw / pow(10, decimals) : amountRaw;
+      ownedTokenAccounts.add(
+        TokenAccountHolding(
+          address: address,
+          rawAmount: rawAmount,
+          balance: balance,
+          decimals: decimals,
+          state: parsedInfo['state']?.toString() ?? 'unknown',
+          isAssociatedTokenAccount:
+              canonicalAta != null && WalletUtils.equals(address, canonicalAta),
+        ),
+      );
+    }
+    return _orderOwnedTokenAccounts(
+      accounts: ownedTokenAccounts,
+      canonicalAta: canonicalAta,
+    );
+  }
+
+  TokenAccountHolding? _selectOwnedTokenAccountForAmount({
+    required List<TokenAccountHolding> ownedTokenAccounts,
+    required BigInt rawAmount,
+  }) {
+    for (final account in ownedTokenAccounts) {
+      if (!_isSpendableTokenAccount(account)) continue;
+      if (account.isAssociatedTokenAccount &&
+          _parseRawTokenAmount(account.rawAmount) >= rawAmount) {
+        return account;
+      }
+    }
+    for (final account in ownedTokenAccounts) {
+      if (!_isSpendableTokenAccount(account)) continue;
+      if (_parseRawTokenAmount(account.rawAmount) >= rawAmount) {
+        return account;
+      }
+    }
+    return null;
+  }
+
+  Future<_ResolvedSplSourceAccountRecord> _resolveSplSourceAccount({
+    required String ownerAddress,
+    required String mint,
+    required double amount,
+    required int decimals,
+    String? sourceTokenAccount,
+  }) async {
+    if (amount <= 0) {
+      throw const SolanaWalletSendException(
+        'Token amount must be greater than zero.',
+      );
+    }
+    if (decimals < 0) {
+      throw SolanaWalletSendException(
+        'Invalid token decimals for mint $mint.',
+      );
+    }
+    final requiredRawAmount = BigInt.from((amount * pow(10, decimals)).round());
+
+    final ownedTokenAccounts = await _loadOwnedTokenAccountsForMint(
+      ownerAddress: ownerAddress,
+      mint: mint,
+    );
+    if (ownedTokenAccounts.isEmpty) {
+      throw SolanaWalletSendException(
+        'No owned token account found for mint $mint.',
+      );
+    }
+
+    final actualDecimals = ownedTokenAccounts.first.decimals;
+    if (actualDecimals != decimals) {
+      throw SolanaWalletSendException(
+        'Token decimals mismatch for mint $mint. Expected $decimals but RPC reported $actualDecimals.',
+      );
+    }
+
+    final requestedSource = sourceTokenAccount?.trim();
+    if (requestedSource != null && requestedSource.isNotEmpty) {
+      TokenAccountHolding? matchedSource;
+      for (final account in ownedTokenAccounts) {
+        if (WalletUtils.equals(account.address, requestedSource)) {
+          matchedSource = account;
+          break;
+        }
+      }
+      if (matchedSource == null) {
+        throw SolanaWalletSendException(
+          'Selected source token account is not owned by this wallet for mint $mint.',
+        );
+      }
+      if (!_isSpendableTokenAccount(matchedSource)) {
+        throw SolanaWalletSendException(
+          'Selected source token account is not spendable (state: ${matchedSource.state}).',
+        );
+      }
+      if (_parseRawTokenAmount(matchedSource.rawAmount) < requiredRawAmount) {
+        throw SolanaWalletSendException(
+          'Selected source token account does not have enough $mint balance for this send.',
+        );
+      }
+      return _ResolvedSplSourceAccountRecord(
+        address: matchedSource.address,
+        publicKey: Ed25519HDPublicKey.fromBase58(matchedSource.address),
+        balance: matchedSource.balance,
+        isAssociatedTokenAccount: matchedSource.isAssociatedTokenAccount,
+      );
+    }
+
+    final selected = _selectOwnedTokenAccountForAmount(
+      ownedTokenAccounts: ownedTokenAccounts,
+      rawAmount: requiredRawAmount,
+    );
+    if (selected == null) {
+      final totalRawBalance = ownedTokenAccounts.fold<BigInt>(
+        BigInt.zero,
+        (sum, account) =>
+            _isSpendableTokenAccount(account)
+                ? sum + _parseRawTokenAmount(account.rawAmount)
+                : sum,
+      );
+      if (totalRawBalance >= requiredRawAmount) {
+        throw SolanaWalletSendException(
+          'No single owned token account can cover $amount tokens for mint $mint. Balance is split across multiple token accounts.',
+        );
+      }
+      throw SolanaWalletSendException(
+        'Insufficient token balance in owned token accounts for mint $mint.',
+      );
+    }
+
+    return _ResolvedSplSourceAccountRecord(
+      address: selected.address,
+      publicKey: Ed25519HDPublicKey.fromBase58(selected.address),
+      balance: selected.balance,
+      isAssociatedTokenAccount: selected.isAssociatedTokenAccount,
+    );
+  }
+
+  Future<String> _sendEncodedTransactionWithDiagnostics(
+    String transactionBase64,
+  ) async {
+    http.Response response;
+    try {
+      response = await http.post(
+        Uri.parse(_currentRpcUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'jsonrpc': '2.0',
+          'id': 1,
+          'method': 'sendTransaction',
+          'params': [
+            transactionBase64,
+            {
+              'encoding': 'base64',
+              'skipPreflight': false,
+              'preflightCommitment': 'confirmed',
+            },
+          ],
+        }),
+      );
+    } catch (e) {
+      throw SolanaWalletSendException(
+        'Transaction submission failed before reaching the RPC endpoint.',
+        cause: e,
+      );
+    }
+
+    if (response.statusCode != 200) {
+      final responseBody = _summarizeRpcBody(response.body);
+      throw SolanaWalletSendException(
+        responseBody.isEmpty
+            ? 'Transaction submission failed: HTTP ${response.statusCode}.'
+            : 'Transaction submission failed: HTTP ${response.statusCode}. $responseBody',
+        rpcData: {
+          'statusCode': response.statusCode,
+          'body': response.body,
+        },
+      );
+    }
+
+    late final Map<String, dynamic> data;
+    try {
+      data = jsonDecode(response.body) as Map<String, dynamic>;
+    } catch (e) {
+      throw SolanaWalletSendException(
+        'Transaction submission failed: invalid RPC response.',
+        cause: e,
+        rpcData: {'body': response.body},
+      );
+    }
+    final error = data['error'];
+    if (error is Map) {
+      throw _buildRpcSendException(Map<String, dynamic>.from(error));
+    }
+
+    final signature = data['result']?.toString().trim() ?? '';
+    if (signature.isEmpty) {
+      throw const SolanaWalletSendException(
+        'Transaction submission failed: missing RPC signature.',
+      );
+    }
+    return signature;
+  }
+
+  SolanaWalletSendException _buildRpcSendException(
+    Map<String, dynamic> error,
+  ) {
+    final rpcMessage = error['message']?.toString().trim();
+    final data = error['data'] is Map
+        ? Map<String, dynamic>.from(error['data'] as Map)
+        : const <String, dynamic>{};
+    final logs = (data['logs'] as List?)
+            ?.map((entry) => entry?.toString() ?? '')
+            .where((entry) => entry.trim().isNotEmpty)
+            .toList(growable: false) ??
+        const <String>[];
+
+    String message = rpcMessage?.isNotEmpty == true
+        ? rpcMessage!
+        : 'Transaction simulation failed.';
+    final loweredLogs = logs.map((entry) => entry.toLowerCase()).toList();
+    final loweredMessage = message.toLowerCase();
+
+    final insufficientRent = loweredLogs.any(
+          (entry) =>
+              entry.contains('rent-exempt') ||
+              entry.contains('rent exemption') ||
+              entry.contains('insufficient lamports') ||
+              entry.contains('create associated token account') ||
+              entry.contains('associated token account'),
+        ) ||
+        loweredMessage.contains('insufficient lamports');
+    if (insufficientRent) {
+      message =
+          'Insufficient SOL to pay network fees or create the recipient token account.';
+    } else if (loweredMessage.contains('insufficient funds') ||
+        loweredLogs.any((entry) => entry.contains('insufficient funds'))) {
+      message =
+          'Insufficient funds in the selected source account for this transfer.';
+    } else if (loweredMessage.contains('owner does not match') ||
+        loweredLogs.any(
+          (entry) =>
+              entry.contains('owner does not match') ||
+              entry.contains('provided owner is not allowed') ||
+              entry.contains('owner mismatch'),
+        )) {
+      message =
+          'The selected source token account is not valid for this wallet or mint.';
+    } else if (loweredMessage.contains('invalid account data') ||
+        loweredLogs.any((entry) => entry.contains('invalid account data'))) {
+      message =
+          'The selected source token account is invalid for this mint transfer.';
+    } else if (loweredMessage.contains('frozen') ||
+        loweredLogs.any((entry) => entry.contains('frozen'))) {
+      message =
+          'The selected source token account is frozen and cannot send tokens.';
+    } else if (loweredMessage.contains('mint decimals') ||
+        loweredMessage.contains('decimals mismatch') ||
+        loweredMessage.contains('decimal') ||
+        loweredLogs.any((entry) => entry.contains('decimal'))) {
+      message =
+          'Token decimals do not match the mint configuration for this transfer.';
+    } else if (loweredLogs.any(
+      (entry) =>
+          entry.contains('associated token account') &&
+          entry.contains('create'),
+    )) {
+      message =
+          'Failed to create the recipient token account. The recipient address may be invalid or the wallet may not have enough SOL.';
+    }
+
+    return SolanaWalletSendException(
+      _normalizeSendFailureMessage(message),
+      rpcMessage: rpcMessage,
+      logs: logs,
+      rpcData: data,
+    );
+  }
+
+  String _normalizeSendFailureMessage(String message) {
+    final trimmed = message.trim();
+    if (trimmed.startsWith('Exception:')) {
+      return trimmed.substring('Exception:'.length).trim();
+    }
+    return trimmed;
+  }
+
+  String _summarizeRpcBody(String body) {
+    final normalized = body.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (normalized.isEmpty) return '';
+    if (normalized.length <= 180) return normalized;
+    return '${normalized.substring(0, 177)}...';
+  }
+
+  BigInt _parseRawTokenAmount(String rawAmount) {
+    final normalized = rawAmount.trim();
+    if (normalized.isEmpty) return BigInt.zero;
+    return BigInt.tryParse(normalized) ?? BigInt.zero;
+  }
+
+  bool _isSpendableTokenAccount(TokenAccountHolding account) {
+    final state = account.state.trim().toLowerCase();
+    return state.isEmpty || state == 'initialized';
+  }
+
   List<MetadataCreator>? _parseMetadataCreators(
     Map<String, dynamic> metadata,
     Ed25519HDPublicKey payer,
@@ -1124,6 +1664,9 @@ class SolanaWalletService {
     List<Instruction> instructions, {
     List<Ed25519HDKeyPair> extraSigners = const [],
   }) async {
+    if (!hasActiveKeyPair) {
+      throw SolanaWalletSendException('No active keypair set for signing.');
+    }
     final signers = [_activeKeyPair!, ...extraSigners];
     final latest = await _rpcClient.getLatestBlockhash();
     final message = Message(instructions: instructions);
@@ -1132,10 +1675,7 @@ class SolanaWalletService {
       message,
       signers,
     );
-    final sig = await _rpcClient.sendTransaction(
-      signedTx.encode(),
-      skipPreflight: true,
-    );
+    final sig = await _sendEncodedTransactionWithDiagnostics(signedTx.encode());
     return SubmittedSolanaTransactionRecord(
       signature: sig,
       lastValidBlockHeight: latest.value.lastValidBlockHeight,
@@ -1169,19 +1709,54 @@ class SolanaWalletService {
     );
   }
 
+  Future<UnsignedSolanaTransactionRecord> _buildUnsignedVersionedTransaction({
+    required String feePayerAddress,
+    required List<Instruction> instructions,
+    required List<AddressLookupTableAccount> addressLookupTableAccounts,
+    Map<String, dynamic> metadata = const <String, dynamic>{},
+  }) async {
+    final latest = await _rpcClient.getLatestBlockhash();
+    final message = Message(instructions: instructions);
+    final compiledMessage = message.compileV0(
+      recentBlockhash: latest.value.blockhash,
+      feePayer: Ed25519HDPublicKey.fromBase58(feePayerAddress),
+      addressLookupTableAccounts: addressLookupTableAccounts,
+    );
+    final signatures = List<Signature>.generate(
+      compiledMessage.requiredSignatureCount,
+      (index) => Signature(
+        List<int>.filled(64, 0),
+        publicKey: compiledMessage.accountKeys[index],
+      ),
+    );
+    return UnsignedSolanaTransactionRecord(
+      transactionBase64: SignedTx(
+        signatures: signatures,
+        compiledMessage: compiledMessage,
+      ).encode(),
+      lastValidBlockHeight: latest.value.lastValidBlockHeight,
+      metadata: metadata,
+    );
+  }
+
   Future<List<Instruction>> _buildSplTokenTransferInstructions({
     required String fromAddress,
     required String mint,
     required String toAddress,
     required double amount,
     required int decimals,
+    String? sourceTokenAccount,
   }) async {
     final fromPub = Ed25519HDPublicKey.fromBase58(fromAddress);
     final mintPub = Ed25519HDPublicKey.fromBase58(mint);
     final toPub = Ed25519HDPublicKey.fromBase58(toAddress);
-
-    final fromAta =
-        await findAssociatedTokenAddress(owner: fromPub, mint: mintPub);
+    final resolvedSource = await _resolveSplSourceAccount(
+      ownerAddress: fromAddress,
+      mint: mint,
+      amount: amount,
+      decimals: decimals,
+      sourceTokenAccount: sourceTokenAccount,
+    );
     final toAta = await findAssociatedTokenAddress(owner: toPub, mint: mintPub);
 
     final instructions = <Instruction>[];
@@ -1200,7 +1775,7 @@ class SolanaWalletService {
     final amountRaw = (amount * pow(10, decimals)).round();
     instructions.add(
       TokenInstruction.transferChecked(
-        source: fromAta,
+        source: resolvedSource.publicKey,
         mint: mintPub,
         destination: toAta,
         owner: fromPub,
@@ -1211,87 +1786,305 @@ class SolanaWalletService {
     return instructions;
   }
 
-  Future<SubmittedSolanaTransactionRecord> _executeJupiterSwap({
-    required String inputMint,
+  Future<UnsignedSolanaTransactionRecord> _buildAtomicJupiterSwapTransaction({
+    required String userPublicKey,
     required String outputMint,
-    required int inputAmountRaw,
-    required int slippageBps,
     required bool wrapAndUnwrapSol,
-    SwapQuote? quote,
+    required Map<String, dynamic> route,
+    required int platformFeeBps,
+    required String? platformFeeOwnerAddress,
+    FeeSplitterProgramInstructionRecord? feeSplitterProgram,
+    int? quoteContextSlot,
+    double? quoteTimeTakenMs,
   }) async {
-    if (!hasActiveKeyPair) {
-      throw Exception('No active keypair set for swap');
-    }
-
-    final swapRequestRecord = await _buildJupiterSwapRequest(
-      inputMint: inputMint,
-      outputMint: outputMint,
-      inputAmountRaw: inputAmountRaw,
-      slippageBps: slippageBps,
-      wrapAndUnwrapSol: wrapAndUnwrapSol,
-      userPublicKey: _activeKeyPair!.address,
-      quote: quote,
-    );
-    final route = swapRequestRecord.route;
-    if (route == null) {
-      throw Exception('No Jupiter route available');
-    }
-
-    final swapResp = await http.post(
-      Uri.parse('${ApiKeys.jupiterBaseUrl}/swap'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'quoteResponse': route,
-        'userPublicKey': _activeKeyPair!.address,
-        'wrapAndUnwrapSol': wrapAndUnwrapSol,
-      }),
-    );
-
-    if (swapResp.statusCode != 200) {
-      throw Exception(
-          'Jupiter swap build failed: ${swapResp.statusCode} ${swapResp.body}');
-    }
-
-    final swapJson = jsonDecode(swapResp.body) as Map<String, dynamic>;
-    final swapTx = swapJson['swapTransaction'] as String?;
-    if (swapTx == null) {
-      throw Exception('Jupiter swapTransaction missing');
-    }
-
-    final unsigned = SignedTx.decode(swapTx);
-    final requiredSignatures = unsigned.compiledMessage.requiredSignatureCount;
-    if (requiredSignatures < 1) {
-      throw Exception('Jupiter swap did not request any signatures');
-    }
-
-    final signatures = List<Signature>.from(unsigned.signatures);
-    if (signatures.length != requiredSignatures) {
-      throw Exception(
-        'Swap transaction expects $requiredSignatures signatures but received ${signatures.length}.',
+    final rawRoutePlatformFeeBps = (route['platformFee'] as Map?)?['feeBps'];
+    final routePlatformFeeBps = switch (rawRoutePlatformFeeBps) {
+      int value => value,
+      num value => value.toInt(),
+      String value => int.tryParse(value) ?? 0,
+      _ => 0,
+    };
+    final rawRoutePlatformFeeAmount = (route['platformFee'] as Map?)?['amount'];
+    final routePlatformFeeAmountRaw = switch (rawRoutePlatformFeeAmount) {
+      int value => value,
+      num value => value.toInt(),
+      String value => int.tryParse(value) ?? 0,
+      _ => 0,
+    };
+    if (platformFeeBps > 0 && routePlatformFeeBps != platformFeeBps) {
+      throw const SolanaWalletSendException(
+        'Swap quote is missing the required platform fee metadata. Refresh the quote and try again.',
       );
     }
 
-    signatures[0] = await _activeKeyPair!.sign(
-      unsigned.compiledMessage.toByteArray(),
+    final userPub = Ed25519HDPublicKey.fromBase58(userPublicKey);
+    final outputMintPub = Ed25519HDPublicKey.fromBase58(outputMint);
+    final createdAtaAddresses = <String>{};
+    final preSwapInstructions = <Instruction>[];
+
+    String? destinationTokenAccount;
+    final outputIsWrappedSol = WalletUtils.equals(
+      outputMint,
+      ApiKeys.wrappedSolMintAddress,
+    );
+    if (!outputIsWrappedSol) {
+      final userOutputAta = await findAssociatedTokenAddress(
+        owner: userPub,
+        mint: outputMintPub,
+      );
+      destinationTokenAccount = userOutputAta.toBase58();
+      if (await _safeGetAccountInfo(destinationTokenAccount) == null &&
+          createdAtaAddresses.add(destinationTokenAccount)) {
+        preSwapInstructions.add(
+          AssociatedTokenAccountInstruction.createAccount(
+            funder: userPub,
+            address: userOutputAta,
+            owner: userPub,
+            mint: outputMintPub,
+          ),
+        );
+      }
+    }
+
+    String? feeAccount;
+    final feeOwnerAddress = feeSplitterProgram?.vaultAuthorityAddress.trim() ??
+        platformFeeOwnerAddress?.trim() ??
+        '';
+    if (platformFeeBps > 0) {
+      if (feeOwnerAddress.isEmpty) {
+        throw const SolanaWalletSendException(
+          'Swap platform fee collection is not configured for this wallet.',
+        );
+      }
+      final feeOwnerPub = Ed25519HDPublicKey.fromBase58(feeOwnerAddress);
+      final feeAta = await findAssociatedTokenAddress(
+        owner: feeOwnerPub,
+        mint: outputMintPub,
+      );
+      feeAccount = feeAta.toBase58();
+      if (await _safeGetAccountInfo(feeAccount) == null &&
+          createdAtaAddresses.add(feeAccount)) {
+        preSwapInstructions.add(
+          AssociatedTokenAccountInstruction.createAccount(
+            funder: userPub,
+            address: feeAta,
+            owner: feeOwnerPub,
+            mint: outputMintPub,
+          ),
+        );
+      }
+    }
+
+    Instruction? feeSplitterInstruction;
+    if (feeSplitterProgram != null && routePlatformFeeAmountRaw > 0) {
+      if (!WalletUtils.equals(
+        feeOwnerAddress,
+        feeSplitterProgram.vaultAuthorityAddress,
+      )) {
+        throw const SolanaWalletSendException(
+          'Fee splitter program configuration does not match the platform fee vault authority.',
+        );
+      }
+      if (feeSplitterProgram.totalPlatformFeeAmountRaw != routePlatformFeeAmountRaw) {
+        throw const SolanaWalletSendException(
+          'Fee splitter amounts do not match the Jupiter platform fee amount for this quote.',
+        );
+      }
+      if (feeAccount == null || feeAccount.isEmpty) {
+        throw const SolanaWalletSendException(
+          'Fee splitter program requires a platform fee token account.',
+        );
+      }
+      feeSplitterInstruction = await _buildFeeSplitterProgramInstruction(
+        feeSplitterProgram: feeSplitterProgram,
+        userPublicKey: userPub,
+        outputMintPublicKey: outputMintPub,
+        platformFeeAccountAddress: feeAccount,
+      );
+    }
+
+    final swapInstructionJson = _extractProxyPayload(
+      await _postJupiterJson(
+        path: 'swap-instructions',
+        body: {
+          'quoteResponse': route,
+          'userPublicKey': userPublicKey,
+          'payer': userPublicKey,
+          'wrapAndUnwrapSol': wrapAndUnwrapSol,
+          'useSharedAccounts': true,
+          'asLegacyTransaction': false,
+          'dynamicComputeUnitLimit': true,
+          'skipUserAccountsRpcCalls': preSwapInstructions.isNotEmpty,
+          if (feeAccount != null) 'feeAccount': feeAccount,
+          if (feeOwnerAddress.isNotEmpty) 'trackingAccount': feeOwnerAddress,
+          if (destinationTokenAccount != null)
+            'destinationTokenAccount': destinationTokenAccount,
+          if (outputIsWrappedSol) 'nativeDestinationAccount': userPublicKey,
+        },
+      ),
     );
 
-    final signedTx = unsigned.copyWith(signatures: signatures);
+    final instructions = <Instruction>[
+      ..._parseJupiterInstructionList(
+        swapInstructionJson['computeBudgetInstructions'],
+      ),
+      ...preSwapInstructions,
+      ..._parseJupiterInstructionList(swapInstructionJson['otherInstructions']),
+      ..._parseJupiterInstructionList(swapInstructionJson['setupInstructions']),
+      _buildJupiterInstruction(
+        Map<String, dynamic>.from(
+          swapInstructionJson['swapInstruction'] as Map? ?? const {},
+        ),
+      ),
+      ..._parseJupiterInstructionList(
+        swapInstructionJson['cleanupInstruction'] == null
+            ? const <dynamic>[]
+            : <dynamic>[swapInstructionJson['cleanupInstruction']],
+      ),
+      if (feeSplitterInstruction != null) feeSplitterInstruction,
+    ];
 
-    final signature = await _rpcClient.sendTransaction(
-      signedTx.encode(),
-      skipPreflight: false,
-      preflightCommitment: Commitment.confirmed,
+    if (instructions.isEmpty) {
+      throw const SolanaWalletSendException(
+        'Jupiter did not return any swap instructions.',
+      );
+    }
+
+    final addressLookupTableAccounts = await _loadAddressLookupTableAccounts(
+      swapInstructionJson['addressLookupTableAddresses'] as List?,
     );
-    return SubmittedSolanaTransactionRecord(
-      signature: signature,
-      lastValidBlockHeight: (swapJson['lastValidBlockHeight'] as num?)?.toInt(),
-      explorerUrl: buildExplorerTransactionUrl(signature),
+    return _buildUnsignedVersionedTransaction(
+      feePayerAddress: userPublicKey,
+      instructions: instructions,
+      addressLookupTableAccounts: addressLookupTableAccounts,
       metadata: {
         'route': route,
-        'quoteContextSlot': swapRequestRecord.contextSlot,
-        'quoteTimeTakenMs': swapRequestRecord.timeTakenMs,
+        'quoteContextSlot': quoteContextSlot,
+        'quoteTimeTakenMs': quoteTimeTakenMs,
         'programs': _extractRouteLabels(route),
+        'platformFeeBps': platformFeeBps,
+        'platformFeeAccount': feeAccount,
+        'platformFeeOwnerAddress': feeOwnerAddress.isEmpty
+            ? null
+            : feeOwnerAddress,
+        'feeSettlementMode': feeSplitterProgram == null ? 'direct' : 'program',
+        'feeSplitterProgramId': feeSplitterProgram?.programId,
+        'feeSplitterConfigAccount': feeSplitterProgram?.configAccountAddress,
+        'feeSplitterVaultAuthority': feeSplitterProgram?.vaultAuthorityAddress,
+        'destinationTokenAccount': destinationTokenAccount,
       },
+    );
+  }
+
+  Future<Instruction> _buildFeeSplitterProgramInstruction({
+    required FeeSplitterProgramInstructionRecord feeSplitterProgram,
+    required Ed25519HDPublicKey userPublicKey,
+    required Ed25519HDPublicKey outputMintPublicKey,
+    required String platformFeeAccountAddress,
+  }) async {
+    final programId =
+        Ed25519HDPublicKey.fromBase58(feeSplitterProgram.programId);
+    final configAccount = Ed25519HDPublicKey.fromBase58(
+      feeSplitterProgram.configAccountAddress,
+    );
+    final vaultAuthority = Ed25519HDPublicKey.fromBase58(
+      feeSplitterProgram.vaultAuthorityAddress,
+    );
+    final platformFeeAccount =
+        Ed25519HDPublicKey.fromBase58(platformFeeAccountAddress);
+    final teamWallet = Ed25519HDPublicKey.fromBase58(
+      feeSplitterProgram.teamWalletAddress,
+    );
+    final treasuryWallet = Ed25519HDPublicKey.fromBase58(
+      feeSplitterProgram.treasuryWalletAddress,
+    );
+    final teamTokenAccount = await findAssociatedTokenAddress(
+      owner: teamWallet,
+      mint: outputMintPublicKey,
+    );
+    final treasuryTokenAccount = await findAssociatedTokenAddress(
+      owner: treasuryWallet,
+      mint: outputMintPublicKey,
+    );
+
+    return Instruction(
+      programId: programId,
+      accounts: <AccountMeta>[
+        AccountMeta.writeable(pubKey: configAccount, isSigner: false),
+        AccountMeta.readonly(pubKey: vaultAuthority, isSigner: false),
+        AccountMeta.writeable(pubKey: platformFeeAccount, isSigner: false),
+        AccountMeta.writeable(pubKey: userPublicKey, isSigner: true),
+        AccountMeta.readonly(pubKey: teamWallet, isSigner: false),
+        AccountMeta.writeable(pubKey: teamTokenAccount, isSigner: false),
+        AccountMeta.readonly(pubKey: treasuryWallet, isSigner: false),
+        AccountMeta.writeable(pubKey: treasuryTokenAccount, isSigner: false),
+        AccountMeta.readonly(pubKey: outputMintPublicKey, isSigner: false),
+        AccountMeta.readonly(pubKey: TokenProgram.id, isSigner: false),
+        AccountMeta.readonly(
+          pubKey: AssociatedTokenAccountProgram.id,
+          isSigner: false,
+        ),
+        AccountMeta.readonly(pubKey: SystemProgram.id, isSigner: false),
+      ],
+      data: ByteArray.merge([
+        ByteArray.u8(1),
+        ByteArray.u64(feeSplitterProgram.totalPlatformFeeAmountRaw),
+      ]),
+    );
+  }
+
+  List<Instruction> _parseJupiterInstructionList(dynamic instructions) {
+    if (instructions is! List) return const <Instruction>[];
+    return instructions
+        .whereType<Map>()
+        .map((entry) => _buildJupiterInstruction(Map<String, dynamic>.from(entry)))
+        .toList(growable: false);
+  }
+
+  Instruction _buildJupiterInstruction(Map<String, dynamic> rawInstruction) {
+    final programId = rawInstruction['programId']?.toString().trim() ?? '';
+    if (programId.isEmpty) {
+      throw const SolanaWalletSendException(
+        'Jupiter returned an instruction without a program id.',
+      );
+    }
+    final accounts = (rawInstruction['accounts'] as List? ?? const [])
+        .whereType<Map>()
+        .map(
+          (entry) => AccountMeta(
+            pubKey: Ed25519HDPublicKey.fromBase58(
+              entry['pubkey']?.toString().trim() ?? '',
+            ),
+            isWriteable: entry['isWritable'] as bool? ?? false,
+            isSigner: entry['isSigner'] as bool? ?? false,
+          ),
+        )
+        .toList(growable: false);
+    final data = rawInstruction['data']?.toString() ?? '';
+    return Instruction(
+      programId: Ed25519HDPublicKey.fromBase58(programId),
+      accounts: accounts,
+      data: ByteArray(base64Decode(data)),
+    );
+  }
+
+  Future<List<AddressLookupTableAccount>> _loadAddressLookupTableAccounts(
+    List? rawAddresses,
+  ) async {
+    if (rawAddresses == null || rawAddresses.isEmpty) {
+      return const <AddressLookupTableAccount>[];
+    }
+    final addresses = rawAddresses
+        .map((entry) => entry?.toString().trim() ?? '')
+        .where((entry) => entry.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+    return Future.wait(
+      addresses.map(
+        (address) => _rpcClient.getAddressLookupTable(
+          Ed25519HDPublicKey.fromBase58(address),
+        ),
+      ),
     );
   }
 
@@ -1300,9 +2093,8 @@ class SolanaWalletService {
     required String outputMint,
     required int inputAmountRaw,
     required int slippageBps,
-    required bool wrapAndUnwrapSol,
-    required String userPublicKey,
     SwapQuote? quote,
+    int platformFeeBps = 0,
   }) async {
     if (quote != null) {
       return _JupiterSwapRequestRecord(
@@ -1312,32 +2104,23 @@ class SolanaWalletService {
       );
     }
 
-    final quoteUri =
-        Uri.parse('${ApiKeys.jupiterBaseUrl}/quote').replace(queryParameters: {
-      'inputMint': inputMint,
-      'outputMint': outputMint,
-      'amount': '$inputAmountRaw',
-      'slippageBps': '$slippageBps',
-      'swapMode': 'ExactIn',
-    });
-
-    final quoteResp = await http.get(quoteUri);
-    if (quoteResp.statusCode != 200) {
-      throw Exception(
-        'Jupiter quote failed: ${quoteResp.statusCode} ${quoteResp.body}',
-      );
-    }
-
-    final quoteJson = jsonDecode(quoteResp.body) as Map<String, dynamic>;
-    final route = (quoteJson['data'] as List).isNotEmpty
-        ? quoteJson['data'][0] as Map<String, dynamic>
-        : null;
-    if (route == null) {
-      throw Exception('No Jupiter route available');
-    }
+    final quoteJson = _extractProxyPayload(
+      await _getJupiterJson(
+        path: 'quote',
+        queryParameters: {
+          'inputMint': inputMint,
+          'outputMint': outputMint,
+          'amount': '$inputAmountRaw',
+          'slippageBps': '$slippageBps',
+          'swapMode': 'ExactIn',
+          if (platformFeeBps > 0) 'platformFeeBps': '$platformFeeBps',
+          'instructionVersion': 'V2',
+        },
+      ),
+    );
 
     return _JupiterSwapRequestRecord(
-      route: Map<String, dynamic>.from(route),
+      route: Map<String, dynamic>.from(quoteJson),
       contextSlot: (quoteJson['contextSlot'] as num?)?.toInt(),
       timeTakenMs: (quoteJson['timeTaken'] as num?)?.toDouble(),
     );
@@ -2144,6 +2927,8 @@ class TokenBalance {
   final String? metadataUri;
   final String? description;
   final Map<String, dynamic>? rawMetadata;
+  final String? preferredSourceTokenAccount;
+  final List<TokenAccountHolding> ownedTokenAccounts;
 
   TokenBalance({
     required this.mint,
@@ -2156,6 +2941,8 @@ class TokenBalance {
     this.metadataUri,
     this.description,
     this.rawMetadata,
+    this.preferredSourceTokenAccount,
+    this.ownedTokenAccounts = const [],
   });
 }
 
@@ -2183,6 +2970,70 @@ class SubmittedSolanaTransactionRecord {
   final int? lastValidBlockHeight;
   final String? explorerUrl;
   final Map<String, dynamic> metadata;
+}
+
+class FeeSplitterProgramInstructionRecord {
+  const FeeSplitterProgramInstructionRecord({
+    required this.programId,
+    required this.configAccountAddress,
+    required this.vaultAuthorityAddress,
+    required this.teamWalletAddress,
+    required this.treasuryWalletAddress,
+    required this.totalPlatformFeeAmountRaw,
+  });
+
+  final String programId;
+  final String configAccountAddress;
+  final String vaultAuthorityAddress;
+  final String teamWalletAddress;
+  final String treasuryWalletAddress;
+  final int totalPlatformFeeAmountRaw;
+}
+
+class SolanaWalletSendException implements Exception {
+  const SolanaWalletSendException(
+    this.message, {
+    this.rpcMessage,
+    this.logs = const <String>[],
+    this.rpcData = const <String, dynamic>{},
+    this.cause,
+  });
+
+  final String message;
+  final String? rpcMessage;
+  final List<String> logs;
+  final Map<String, dynamic> rpcData;
+  final Object? cause;
+
+  @override
+  String toString() => message;
+}
+
+class _OwnedMintBalanceAggregationRecord {
+  _OwnedMintBalanceAggregationRecord({
+    required this.mint,
+    required this.decimals,
+  });
+
+  final String mint;
+  int decimals;
+  double totalBalance = 0;
+  double totalUiAmount = 0;
+  final List<TokenAccountHolding> ownedTokenAccounts = <TokenAccountHolding>[];
+}
+
+class _ResolvedSplSourceAccountRecord {
+  const _ResolvedSplSourceAccountRecord({
+    required this.address,
+    required this.publicKey,
+    required this.balance,
+    required this.isAssociatedTokenAccount,
+  });
+
+  final String address;
+  final Ed25519HDPublicKey publicKey;
+  final double balance;
+  final bool isAssociatedTokenAccount;
 }
 
 class _SignatureStatusRecord {

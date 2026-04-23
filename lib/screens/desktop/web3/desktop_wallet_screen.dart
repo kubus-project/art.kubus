@@ -1062,40 +1062,56 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     return Consumer<WalletProvider>(
       builder: (context, walletProvider, _) {
         final tokens = walletProvider.tokens;
+        final l10n = AppLocalizations.of(context)!;
 
         if (tokens.isEmpty) {
-          final l10n = AppLocalizations.of(context)!;
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.account_balance_wallet_outlined,
-                  size: 72,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.25),
-                ),
-                SizedBox(height: DetailSpacing.lg),
-                Text(
-                  l10n.walletHomeNoTokensTitle,
-                  style: DetailTypography.cardTitle(context).copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.5),
+          return ListView(
+            padding: EdgeInsets.all(DetailSpacing.xxl),
+            children: [
+              SizedBox(
+                height: 240,
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.account_balance_wallet_outlined,
+                        size: 72,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.25),
+                      ),
+                      SizedBox(height: DetailSpacing.lg),
+                      Text(
+                        l10n.walletHomeNoTokensTitle,
+                        style: DetailTypography.cardTitle(context).copyWith(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.5),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+              SizedBox(height: DetailSpacing.xxl),
+              _buildSecuritySectionCard(walletProvider),
+            ],
           );
         }
 
         return ListView.builder(
           padding: EdgeInsets.all(DetailSpacing.xxl),
-          itemCount: tokens.length,
+          itemCount: tokens.length + 1,
           itemBuilder: (context, index) {
+            if (index == tokens.length) {
+              return Padding(
+                padding: EdgeInsets.only(top: DetailSpacing.xxl),
+                child: _buildSecuritySectionCard(walletProvider),
+              );
+            }
             return _buildTokenRow(tokens[index], themeProvider);
           },
         );
@@ -1502,7 +1518,6 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
   Widget _buildRightPanel(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
     final walletProvider = Provider.of<WalletProvider>(context);
-    final authority = walletProvider.authority;
     final canTransact = walletProvider.canTransact;
     final roles = KubusColorRoles.of(context);
     final recentTransactions = walletProvider.transactions.take(5).toList();
@@ -1587,7 +1602,17 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
               margin: EdgeInsets.only(bottom: DetailSpacing.md),
             );
           }),
-        SizedBox(height: DetailSpacing.xxl),
+      ],
+    );
+  }
+
+  Widget _buildSecuritySectionCard(WalletProvider walletProvider) {
+    final l10n = AppLocalizations.of(context)!;
+    final authority = walletProvider.authority;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
         Text(
           l10n.walletHomeSecurityTitle,
           style: DetailTypography.sectionTitle(context),

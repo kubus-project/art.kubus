@@ -16,6 +16,7 @@ import '../../../widgets/wallet/kubus_wallet_shell.dart';
 import '../../../config/api_keys.dart';
 import '../../../models/qr_scan_result.dart';
 import '../../../models/wallet.dart';
+import '../../../services/solana_wallet_service.dart';
 import '../../../utils/wallet_action_guard.dart';
 import 'qr_scanner_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -1036,9 +1037,22 @@ class _SendTokenScreenState extends State<SendTokenScreen>
   String _mapSendError(AppLocalizations l10n, Object error) {
     if (kDebugMode) {
       debugPrint('SendTokenScreen: send error: $error');
+      if (error is SolanaWalletSendException) {
+        if ((error.rpcMessage ?? '').trim().isNotEmpty) {
+          debugPrint('SendTokenScreen: rpc message: ${error.rpcMessage}');
+        }
+        if (error.logs.isNotEmpty) {
+          debugPrint('SendTokenScreen: rpc logs: ${error.logs.join(' | ')}');
+        }
+      }
     }
 
-    final message = error.toString();
+    final rawMessage = error is SolanaWalletSendException
+        ? error.message
+        : error.toString();
+    final message = rawMessage.startsWith('Exception:')
+        ? rawMessage.substring('Exception:'.length).trim()
+        : rawMessage.trim();
     if (message.contains('Insufficient balance')) {
       return l10n.sendTokenInsufficientAfterFeesToast;
     }
@@ -1050,6 +1064,11 @@ class _SendTokenScreenState extends State<SendTokenScreen>
     }
     if (message.contains('Connect wallet')) {
       return l10n.sendTokenConnectWalletBeforeSendToast;
+    }
+    if (message.isNotEmpty &&
+        message != 'Instruction failed' &&
+        message != 'Transaction simulation failed.') {
+      return message;
     }
     return l10n.sendTokenSendFailedToast;
   }

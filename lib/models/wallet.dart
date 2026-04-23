@@ -10,6 +10,46 @@ enum WalletTransactionAssetKind { native, spl, unknown }
 
 enum WalletTransactionFinality { unknown, processed, confirmed, finalized }
 
+class TokenAccountHolding {
+  final String address;
+  final String rawAmount;
+  final double balance;
+  final int decimals;
+  final String state;
+  final bool isAssociatedTokenAccount;
+
+  const TokenAccountHolding({
+    required this.address,
+    required this.rawAmount,
+    required this.balance,
+    required this.decimals,
+    this.state = 'unknown',
+    this.isAssociatedTokenAccount = false,
+  });
+
+  factory TokenAccountHolding.fromJson(Map<String, dynamic> json) {
+    return TokenAccountHolding(
+      address: (json['address'] ?? '').toString(),
+      rawAmount: (json['rawAmount'] ?? '0').toString(),
+      balance: _toDouble(json['balance']),
+      decimals: (json['decimals'] as num?)?.toInt() ?? 0,
+      state: (json['state'] ?? 'unknown').toString(),
+      isAssociatedTokenAccount: json['isAssociatedTokenAccount'] == true,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'address': address,
+      'rawAmount': rawAmount,
+      'balance': balance,
+      'decimals': decimals,
+      'state': state,
+      'isAssociatedTokenAccount': isAssociatedTokenAccount,
+    };
+  }
+}
+
 class Token {
   final String id;
   final String name;
@@ -22,6 +62,8 @@ class Token {
   final int decimals;
   final String? logoUrl;
   final String network;
+  final String? preferredSourceTokenAccount;
+  final List<TokenAccountHolding> ownedTokenAccounts;
 
   Token({
     required this.id,
@@ -35,6 +77,8 @@ class Token {
     this.decimals = 18,
     this.logoUrl,
     required this.network,
+    this.preferredSourceTokenAccount,
+    this.ownedTokenAccounts = const [],
   });
 
   String get formattedBalance {
@@ -75,6 +119,14 @@ class Token {
       decimals: (json['decimals'] as num?)?.toInt() ?? 18,
       logoUrl: json['logoUrl']?.toString(),
       network: (json['network'] ?? '').toString(),
+      preferredSourceTokenAccount: json['preferredSourceTokenAccount']?.toString(),
+      ownedTokenAccounts:
+          (json['ownedTokenAccounts'] as List<dynamic>?)
+              ?.map((entry) => TokenAccountHolding.fromJson(
+                    Map<String, dynamic>.from(entry as Map),
+                  ))
+              .toList() ??
+          const [],
     );
   }
 
@@ -91,6 +143,10 @@ class Token {
       'decimals': decimals,
       'logoUrl': logoUrl,
       'network': network,
+      'preferredSourceTokenAccount': preferredSourceTokenAccount,
+      'ownedTokenAccounts': ownedTokenAccounts
+          .map((account) => account.toJson())
+          .toList(growable: false),
     };
   }
 }

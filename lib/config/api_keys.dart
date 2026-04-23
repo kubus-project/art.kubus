@@ -54,6 +54,10 @@ class ApiKeys {
     'KUBUS_TREASURY_WALLET',
     defaultValue: 'F81jSXoiB15kcEERt8nxYabm5kgZ37jGbC9fmAQZMSws',
   );
+  static const String kubusSwapFeeVaultOwner = String.fromEnvironment(
+    'KUBUS_SWAP_FEE_VAULT_OWNER',
+    defaultValue: 'F81jSXoiB15kcEERt8nxYabm5kgZ37jGbC9fmAQZMSws',
+  );
   static const String wrappedSolMintAddress = String.fromEnvironment(
     'KUBUS_WRAPPED_SOL_MINT_ADDRESS',
     defaultValue: 'So11111111111111111111111111111111111111112',
@@ -74,7 +78,7 @@ class ApiKeys {
   static double get kubusTreasuryFeePct => double.tryParse(_kubusTreasuryFeePctRaw) ?? 0.03;
   static const String jupiterBaseUrl = String.fromEnvironment(
     'KUBUS_JUPITER_BASE_URL',
-    defaultValue: 'https://quote-api.jup.ag/v6',
+    defaultValue: 'https://lite-api.jup.ag/swap/v1',
   );
 
   // WalletConnect / Reown

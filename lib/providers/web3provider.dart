@@ -183,26 +183,21 @@ class Web3Provider extends ChangeNotifier {
     if (!_boundWalletProvider.authority.canTransact) {
       throw Exception('Wallet signer required for swaps');
     }
-    final signer = _boundWalletProvider.solanaWalletService;
-    final signature = _boundWalletProvider.hasLocalSigner
-        ? await signer.swapSolToSpl(
-            mint: kub8TokenAddress,
-            solAmount: solAmount,
-          ).then((record) => record.signature)
-        : await _boundWalletProvider.signAndSendTransactionBase64(
-            (
-              await signer.buildJupiterSwapTransactionBase64(
-              userPublicKey: _boundWalletProvider.currentWalletAddress!,
-              inputMint: ApiKeys.wrappedSolMintAddress,
-              outputMint: kub8TokenAddress,
-              inputAmountRaw: (solAmount * 1000000000).round(),
-              slippageBps: 50,
-              wrapAndUnwrapSol: true,
-            ))
-                .transactionBase64,
-          );
+    final quote = await _boundWalletProvider.previewSwapQuote(
+      fromToken: 'SOL',
+      toToken: 'KUB8',
+      amount: solAmount,
+    );
+    final submission = await _boundWalletProvider.swapTokens(
+      fromToken: 'SOL',
+      toToken: 'KUB8',
+      fromAmount: solAmount,
+      toAmount: quote.outputAmount,
+      quote: quote,
+      slippage: 0.005,
+    );
     await _boundWalletProvider.refreshData();
-    return signature;
+    return submission.primarySignature;
   }
 
   Future<String> mintArtworkNFT(Map<String, dynamic> metadata) async {

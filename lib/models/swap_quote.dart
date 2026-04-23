@@ -15,6 +15,9 @@ class SwapQuote {
     required this.marketInfos,
     required this.routePlan,
     required this.rawRoute,
+    this.platformFeeAmountRaw = 0,
+    this.platformFeeBps = 0,
+    this.platformFeeMint,
     this.contextSlot,
     this.timeTakenMs,
   });
@@ -31,12 +34,21 @@ class SwapQuote {
   final List<dynamic> marketInfos;
   final List<dynamic> routePlan;
   final Map<String, dynamic> rawRoute;
+  final int platformFeeAmountRaw;
+  final int platformFeeBps;
+  final String? platformFeeMint;
   final int? contextSlot;
   final double? timeTakenMs;
 
   double get inputAmount => _toUiAmount(inputAmountRaw, inputDecimals);
   double get outputAmount => _toUiAmount(outputAmountRaw, outputDecimals);
   double get minOutputAmount => _toUiAmount(minOutputAmountRaw, outputDecimals);
+  double get platformFeeAmount {
+    final feeMint = (platformFeeMint ?? '').toLowerCase();
+    final feeDecimals =
+        feeMint == inputMint.toLowerCase() ? inputDecimals : outputDecimals;
+    return _toUiAmount(platformFeeAmountRaw, feeDecimals);
+  }
   double get slippagePercent => slippageBps / 100;
   bool get hasRoute => outputAmountRaw > 0;
 
@@ -65,6 +77,13 @@ class SwapQuote {
       return 0;
     }
 
+    int parseBps(dynamic value) {
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      if (value is String) return int.tryParse(value) ?? 0;
+      return 0;
+    }
+
     return SwapQuote(
       inputMint: inputMint,
       outputMint: outputMint,
@@ -78,6 +97,11 @@ class SwapQuote {
       marketInfos: List<dynamic>.from(route['marketInfos'] as List? ?? const []),
       routePlan: List<dynamic>.from(route['routePlan'] as List? ?? const []),
       rawRoute: Map<String, dynamic>.from(route),
+      platformFeeAmountRaw: parseAmount(
+        (route['platformFee'] as Map?)?['amount'],
+      ),
+      platformFeeBps: parseBps((route['platformFee'] as Map?)?['feeBps']),
+      platformFeeMint: (route['platformFee'] as Map?)?['mint']?.toString(),
       contextSlot: contextSlot,
       timeTakenMs: timeTakenMs,
     );

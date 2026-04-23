@@ -117,6 +117,18 @@ void _walletLog(String message) {
   debugPrint('WalletProvider: $message');
 }
 
+class _PlannedSplTransferRecord {
+  const _PlannedSplTransferRecord({
+    required this.id,
+    required this.label,
+    required this.amount,
+  });
+
+  final String id;
+  final String label;
+  final double amount;
+}
+
 class WalletProvider extends ChangeNotifier {
   static const Duration _secureStorageOpTimeout = Duration(milliseconds: 800);
 
@@ -158,6 +170,10 @@ class WalletProvider extends ChangeNotifier {
   String? _accountEmail;
   String? _externalSignerAddress;
   String? _externalSignerName;
+  BackendWalletFeeSplitterConfigDto? _walletFeeSplitterConfigCache;
+  DateTime? _walletFeeSplitterConfigFetchedAt;
+  static const Duration _walletFeeSplitterConfigCacheTtl =
+      Duration(minutes: 5);
 
   // Backend supplemental data
   Map<String, dynamic>? _backendProfile;
@@ -1699,6 +1715,8 @@ class WalletProvider extends ChangeNotifier {
           decimals: t.decimals,
           logoUrl: t.logoUrl,
           network: 'Solana',
+          preferredSourceTokenAccount: t.preferredSourceTokenAccount,
+          ownedTokenAccounts: t.ownedTokenAccounts,
         ));
       }
 
@@ -2103,6 +2121,222 @@ class WalletProvider extends ChangeNotifier {
     return token?.balance ?? 0.0;
   }
 
+  BigInt _toRawTokenAmount(double amount, int decimals) {
+    return BigInt.from((amount * pow(10, decimals)).round());
+  }
+
+  bool _isSpendableTokenAccount(TokenAccountHolding account) {
+    final state = account.state.trim().toLowerCase();
+    return state.isEmpty || state == 'initialized';
+  }
+
+  int _compareTokenAccountsByPriority(
+    TokenAccountHolding a,
+    TokenAccountHolding b,
+  ) {
+    if (a.isAssociatedTokenAccount != b.isAssociatedTokenAccount) {
+      return a.isAssociatedTokenAccount ? -1 : 1;
+    }
+    final rawCompare =
+        (BigInt.tryParse(b.rawAmount) ?? BigInt.zero).compareTo(
+      BigInt.tryParse(a.rawAmount) ?? BigInt.zero,
+    );
+    if (rawCompare != 0) return rawCompare;
+    return a.address.toLowerCase().compareTo(b.address.toLowerCase());
+  }
+
+  Map<String, String> _planSplSourceTokenAccountsFromOwnedAccounts({
+    required List<TokenAccountHolding> authoritativeAccounts,
+    required Token tokenMeta,
+    required List<_PlannedSplTransferRecord> transfers,
+  }) {
+    if (authoritativeAccounts.isEmpty) {
+      throw SolanaWalletSendException(
+        'No owned token account data is available for ${tokenMeta.symbol}. Refresh wallet data and try again.',
+      );
+    }
+
+    final orderedAccounts = List<TokenAccountHolding>.from(
+      authoritativeAccounts,
+    )..sort(_compareTokenAccountsByPriority);
+    final remainingByAddress = <String, BigInt>{
+      for (final account in orderedAccounts)
+        account.address: BigInt.tryParse(account.rawAmount) ?? BigInt.zero,
+    };
+
+    final plannedSources = <String, String>{};
+    for (final transfer in transfers) {
+      if (transfer.amount <= 0) continue;
+      final requiredRaw = _toRawTokenAmount(transfer.amount, tokenMeta.decimals);
+      if (requiredRaw <= BigInt.zero) continue;
+
+      TokenAccountHolding? selected;
+      for (final account in orderedAccounts) {
+        if (!_isSpendableTokenAccount(account)) continue;
+        final remaining = remainingByAddress[account.address] ?? BigInt.zero;
+        if (remaining < requiredRaw) continue;
+        selected = account;
+        break;
+      }
+
+      if (selected == null) {
+        final totalRemaining = orderedAccounts.fold<BigInt>(
+          BigInt.zero,
+          (sum, account) => _isSpendableTokenAccount(account)
+              ? sum + (remainingByAddress[account.address] ?? BigInt.zero)
+              : sum,
+        );
+        if (totalRemaining >= requiredRaw) {
+          throw SolanaWalletSendException(
+            'No single owned token account can cover ${transfer.amount} ${tokenMeta.symbol} for ${transfer.label}. Balance is split across multiple token accounts.',
+          );
+        }
+        throw SolanaWalletSendException(
+          'Insufficient ${tokenMeta.symbol} balance in the actual source token accounts for ${transfer.label}.',
+        );
+      }
+
+      remainingByAddress[selected.address] =
+          (remainingByAddress[selected.address] ?? BigInt.zero) - requiredRaw;
+      plannedSources[transfer.id] = selected.address;
+    }
+
+    return plannedSources;
+  }
+
+  Future<Map<String, String>> _planSplSourceTokenAccounts({
+    required String walletAddress,
+    required String mint,
+    required Token tokenMeta,
+    required List<_PlannedSplTransferRecord> transfers,
+  }) async {
+    final authoritativeAccounts =
+        await _solanaWalletService.getOwnedTokenAccountsForMint(
+      ownerAddress: walletAddress,
+      mint: mint,
+    );
+    return _planSplSourceTokenAccountsFromOwnedAccounts(
+      authoritativeAccounts: authoritativeAccounts,
+      tokenMeta: tokenMeta,
+      transfers: transfers,
+    );
+  }
+
+  BackendWalletFeeSplitterConfigDto _buildDirectFeeSplitterFallbackConfig() {
+    final teamFeePct = ApiKeys.kubusTeamFeePct;
+    final treasuryFeePct = ApiKeys.kubusTreasuryFeePct;
+    final totalFeePct = teamFeePct + treasuryFeePct;
+    final platformFeeBps =
+        (totalFeePct * 10000).round().clamp(0, 10000).toInt();
+    final teamShareBpsOfPlatformFee = platformFeeBps > 0
+        ? ((teamFeePct / totalFeePct) * 10000).round().clamp(0, 10000).toInt()
+        : 0;
+    return BackendWalletFeeSplitterConfigDto(
+      enabled: true,
+      mode: 'direct',
+      feeVaultOwnerAddress: ApiKeys.kubusSwapFeeVaultOwner,
+      teamWalletAddress: ApiKeys.kubusTeamWallet,
+      treasuryWalletAddress: ApiKeys.kubusTreasuryWallet,
+      teamFeePct: teamFeePct,
+      treasuryFeePct: treasuryFeePct,
+      totalFeePct: totalFeePct,
+      platformFeeBps: platformFeeBps,
+      teamShareBpsOfPlatformFee: teamShareBpsOfPlatformFee,
+      treasuryShareBpsOfPlatformFee:
+          platformFeeBps > 0 ? 10000 - teamShareBpsOfPlatformFee : 0,
+      requiresBackendSettlementRequest: false,
+      disabledReason: null,
+      requestPath: null,
+      solanaRpcUrl: null,
+      program: null,
+    );
+  }
+
+  Future<BackendWalletFeeSplitterConfigDto> _getWalletFeeSplitterConfig({
+    bool forceRefresh = false,
+  }) async {
+    if (!AppConfig.isFeatureEnabled('walletSettlements')) {
+      return _buildDirectFeeSplitterFallbackConfig();
+    }
+    final now = DateTime.now();
+    if (!forceRefresh &&
+        _walletFeeSplitterConfigCache != null &&
+        _walletFeeSplitterConfigFetchedAt != null &&
+        now.difference(_walletFeeSplitterConfigFetchedAt!) <=
+            _walletFeeSplitterConfigCacheTtl) {
+      return _walletFeeSplitterConfigCache!;
+    }
+
+    try {
+      final config = await _apiService.walletSettlements.getFeeSplitterConfig();
+      final hasRequiredWallets = config.teamWalletAddress.trim().isNotEmpty &&
+          config.treasuryWalletAddress.trim().isNotEmpty;
+      final resolvedConfig = (!config.enabled ||
+              config.feeVaultOwnerAddress.trim().isEmpty ||
+              !hasRequiredWallets ||
+              (config.isProgramMode && !(config.program?.isValid ?? false)))
+          ? _buildDirectFeeSplitterFallbackConfig()
+          : config;
+      _walletFeeSplitterConfigCache = resolvedConfig;
+      _walletFeeSplitterConfigFetchedAt = now;
+      return resolvedConfig;
+    } catch (e) {
+      _walletLog('wallet fee splitter config fetch failed: $e');
+      final fallback = _buildDirectFeeSplitterFallbackConfig();
+      _walletFeeSplitterConfigCache = fallback;
+      _walletFeeSplitterConfigFetchedAt = now;
+      return fallback;
+    }
+  }
+
+  Map<String, int> _splitPlatformFeeRawAmounts({
+    required int totalPlatformFeeRaw,
+    required int teamShareBpsOfPlatformFee,
+  }) {
+    if (totalPlatformFeeRaw <= 0) {
+      return const <String, int>{
+        'team': 0,
+        'treasury': 0,
+      };
+    }
+    final totalRaw = BigInt.from(totalPlatformFeeRaw);
+    final teamRaw =
+        (totalRaw * BigInt.from(teamShareBpsOfPlatformFee)) ~/ BigInt.from(10000);
+    final treasuryRaw = totalRaw - teamRaw;
+    return <String, int>{
+      'team': teamRaw.toInt(),
+      'treasury': treasuryRaw.toInt(),
+    };
+  }
+
+  double _rawTokenAmountToUi(int rawAmount, int decimals) {
+    if (rawAmount <= 0) {
+      return 0;
+    }
+    return rawAmount / pow(10, decimals);
+  }
+
+  Future<SubmittedSolanaTransactionRecord> _submitUnsignedTransactionRecord(
+    UnsignedSolanaTransactionRecord unsignedTransaction, {
+    Map<String, dynamic> metadata = const <String, dynamic>{},
+  }) async {
+    final signedTransaction = await signTransactionBase64(
+      unsignedTransaction.transactionBase64,
+    );
+    final signature = await _solanaWalletService.submitSignedTransactionBase64(
+      signedTransaction,
+    );
+    return SubmittedSolanaTransactionRecord(
+      signature: signature,
+      lastValidBlockHeight: unsignedTransaction.lastValidBlockHeight,
+      explorerUrl: _solanaWalletService.buildExplorerTransactionUrl(signature),
+      metadata: {
+        ...unsignedTransaction.metadata,
+        ...metadata,
+      },
+    );
+  }
+
   // Transaction methods
   List<WalletTransaction> getRecentTransactions({int limit = 10}) {
     final transactions = List<WalletTransaction>.from(
@@ -2161,8 +2395,39 @@ class WalletProvider extends ChangeNotifier {
 
       final isSol = token.toUpperCase() == 'SOL';
       final tokenMeta = getTokenBySymbol(token);
+      if (!isSol && tokenMeta == null) {
+        throw SolanaWalletSendException(
+          'Token metadata unavailable for $token. Refresh wallet data and try again.',
+        );
+      }
       final decimals = tokenMeta?.decimals ?? ApiKeys.kub8Decimals;
       final mint = tokenMeta?.contractAddress ?? ApiKeys.kub8MintAddress;
+      final splSourceAccounts = !isSol
+          ? await _planSplSourceTokenAccounts(
+              walletAddress: walletAddress,
+              mint: mint,
+              tokenMeta: tokenMeta!,
+              transfers: [
+                _PlannedSplTransferRecord(
+                  id: 'primary',
+                  label: 'primary send',
+                  amount: amount,
+                ),
+                if (feeTeam > 0)
+                  _PlannedSplTransferRecord(
+                    id: 'team_fee',
+                    label: 'team fee',
+                    amount: feeTeam,
+                  ),
+                if (feeTreasury > 0)
+                  _PlannedSplTransferRecord(
+                    id: 'treasury_fee',
+                    label: 'treasury fee',
+                    amount: feeTreasury,
+                  ),
+              ],
+            )
+          : const <String, String>{};
       final useExternalSigner = hasExternalSigner && !hasLocalSigner;
       final submittedAt = DateTime.now();
       final partialErrors = <String>[];
@@ -2170,7 +2435,6 @@ class WalletProvider extends ChangeNotifier {
       SubmittedSolanaTransactionRecord primarySubmission;
 
       if (useExternalSigner) {
-        final externalSigner = ExternalWalletSignerService.instance;
         if (isSol) {
           final tx =
               await _solanaWalletService.buildTransferSolTransactionBase64(
@@ -2178,16 +2442,7 @@ class WalletProvider extends ChangeNotifier {
             toAddress: toAddress,
             amount: amount,
           );
-          final signature = await externalSigner.signAndSendTransactionBase64(
-            tx.transactionBase64,
-          );
-          primarySubmission = SubmittedSolanaTransactionRecord(
-            signature: signature,
-            lastValidBlockHeight: tx.lastValidBlockHeight,
-            explorerUrl: _solanaWalletService.buildExplorerTransactionUrl(
-              signature,
-            ),
-          );
+          primarySubmission = await _submitUnsignedTransactionRecord(tx);
         } else {
           final tx =
               await _solanaWalletService.buildTransferSplTokenTransactionBase64(
@@ -2196,17 +2451,9 @@ class WalletProvider extends ChangeNotifier {
             toAddress: toAddress,
             amount: amount,
             decimals: decimals,
+            sourceTokenAccount: splSourceAccounts['primary'],
           );
-          final signature = await externalSigner.signAndSendTransactionBase64(
-            tx.transactionBase64,
-          );
-          primarySubmission = SubmittedSolanaTransactionRecord(
-            signature: signature,
-            lastValidBlockHeight: tx.lastValidBlockHeight,
-            explorerUrl: _solanaWalletService.buildExplorerTransactionUrl(
-              signature,
-            ),
-          );
+          primarySubmission = await _submitUnsignedTransactionRecord(tx);
         }
       } else if (isSol) {
         primarySubmission = await _solanaWalletService.transferSol(
@@ -2219,6 +2466,7 @@ class WalletProvider extends ChangeNotifier {
           toAddress: toAddress,
           amount: amount,
           decimals: decimals,
+          sourceTokenAccount: splSourceAccounts['primary'],
         );
       }
 
@@ -2226,6 +2474,7 @@ class WalletProvider extends ChangeNotifier {
         required String label,
         required String targetAddress,
         required double feeAmount,
+        String? sourceTokenAccount,
       }) async {
         if (useExternalSigner) {
           if (isSol) {
@@ -2235,14 +2484,8 @@ class WalletProvider extends ChangeNotifier {
               toAddress: targetAddress,
               amount: feeAmount,
             );
-            final signature = await ExternalWalletSignerService.instance
-                .signAndSendTransactionBase64(tx.transactionBase64);
-            return SubmittedSolanaTransactionRecord(
-              signature: signature,
-              lastValidBlockHeight: tx.lastValidBlockHeight,
-              explorerUrl: _solanaWalletService.buildExplorerTransactionUrl(
-                signature,
-              ),
+            return _submitUnsignedTransactionRecord(
+              tx,
               metadata: {'label': label},
             );
           }
@@ -2253,15 +2496,10 @@ class WalletProvider extends ChangeNotifier {
             toAddress: targetAddress,
             amount: feeAmount,
             decimals: decimals,
+            sourceTokenAccount: sourceTokenAccount,
           );
-          final signature = await ExternalWalletSignerService.instance
-              .signAndSendTransactionBase64(tx.transactionBase64);
-          return SubmittedSolanaTransactionRecord(
-            signature: signature,
-            lastValidBlockHeight: tx.lastValidBlockHeight,
-            explorerUrl: _solanaWalletService.buildExplorerTransactionUrl(
-              signature,
-            ),
+          return _submitUnsignedTransactionRecord(
+            tx,
             metadata: {'label': label},
           );
         }
@@ -2276,6 +2514,7 @@ class WalletProvider extends ChangeNotifier {
                 toAddress: targetAddress,
                 amount: feeAmount,
                 decimals: decimals,
+                sourceTokenAccount: sourceTokenAccount,
               );
         return SubmittedSolanaTransactionRecord(
           signature: record.signature,
@@ -2367,6 +2606,7 @@ class WalletProvider extends ChangeNotifier {
             label: 'Team fee',
             targetAddress: ApiKeys.kubusTeamWallet,
             feeAmount: feeTeam,
+            sourceTokenAccount: splSourceAccounts['team_fee'],
           );
           addRelatedFeeTransaction(
             label: 'Team fee',
@@ -2385,6 +2625,7 @@ class WalletProvider extends ChangeNotifier {
             label: 'Treasury fee',
             targetAddress: ApiKeys.kubusTreasuryWallet,
             feeAmount: feeTreasury,
+            sourceTokenAccount: splSourceAccounts['treasury_fee'],
           );
           addRelatedFeeTransaction(
             label: 'Treasury fee',
@@ -2542,8 +2783,12 @@ class WalletProvider extends ChangeNotifier {
         transactionBase64,
       );
     }
-    return ExternalWalletSignerService.instance.signAndSendTransactionBase64(
+    final signedTransaction = await ExternalWalletSignerService.instance
+        .signTransactionBase64(
       transactionBase64,
+    );
+    return _solanaWalletService.submitSignedTransactionBase64(
+      signedTransaction,
     );
   }
 
@@ -2566,9 +2811,9 @@ class WalletProvider extends ChangeNotifier {
 
     try {
       final walletAddress = _currentWalletAddress!;
-      final useExternalSigner = hasExternalSigner && !hasLocalSigner;
       final submittedAt = DateTime.now();
       final partialErrors = <String>[];
+      final feeSplitterConfig = await _getWalletFeeSplitterConfig();
       final fromTokenMeta = getTokenBySymbol(fromToken);
       final toTokenMeta = getTokenBySymbol(toToken);
       final inputMint = fromToken.toUpperCase() == 'SOL'
@@ -2585,236 +2830,98 @@ class WalletProvider extends ChangeNotifier {
           : toTokenMeta?.decimals ?? ApiKeys.kub8Decimals;
       final slippageBps =
           (((slippage ?? 0.005) * 10000).round()).clamp(1, 5000).toInt();
-      final estimatedOutput = quote?.outputAmount ?? toAmount;
-      final swapQuote = quote;
-
-      SubmittedSolanaTransactionRecord primarySubmission;
-      if (useExternalSigner) {
-        final tx = await _solanaWalletService.buildJupiterSwapTransactionBase64(
-          userPublicKey: walletAddress,
-          inputMint: inputMint,
-          outputMint: outputMint,
-          inputAmountRaw: (fromAmount * pow(10, inputDecimals)).round(),
-          slippageBps: slippageBps,
-          wrapAndUnwrapSol: fromToken.toUpperCase() == 'SOL' ||
-              toToken.toUpperCase() == 'SOL',
-          quote: swapQuote,
-        );
-        final signature = await ExternalWalletSignerService.instance
-            .signAndSendTransactionBase64(tx.transactionBase64);
-        primarySubmission = SubmittedSolanaTransactionRecord(
-          signature: signature,
-          lastValidBlockHeight: tx.lastValidBlockHeight,
-          explorerUrl: _solanaWalletService.buildExplorerTransactionUrl(
-            signature,
-          ),
-          metadata: tx.metadata,
-        );
-      } else if (fromToken.toUpperCase() == 'SOL') {
-        primarySubmission = await _solanaWalletService.swapSolToSpl(
-          mint: outputMint,
-          solAmount: fromAmount,
-          slippageBps: slippageBps,
-          quote: swapQuote,
-        );
-      } else {
-        primarySubmission = await _solanaWalletService.swapSplToken(
-          fromMint: inputMint,
-          toMint: outputMint,
-          amount: fromAmount,
-          decimals: inputDecimals,
-          slippageBps: slippageBps,
-          quote: swapQuote,
-        );
-      }
-
-      final feeTeam = estimatedOutput * ApiKeys.kubusTeamFeePct;
-      final feeTreasury = estimatedOutput * ApiKeys.kubusTreasuryFeePct;
+      final totalProtocolFeePct = feeSplitterConfig.totalFeePct;
+      final swapPlatformFeeBps = feeSplitterConfig.platformFeeBps;
+      final inputAmountRaw = (fromAmount * pow(10, inputDecimals)).round();
+      final swapQuote =
+          quote != null && quote.platformFeeBps == swapPlatformFeeBps
+              ? quote
+              : await _solanaWalletService.fetchSwapQuote(
+                  inputMint: inputMint,
+                  outputMint: outputMint,
+                  inputAmountRaw: inputAmountRaw,
+                  inputDecimals: inputDecimals,
+                  outputDecimals: outputDecimals,
+                  slippageBps: slippageBps,
+                  platformFeeBps: swapPlatformFeeBps,
+                );
+      final estimatedOutput =
+          swapQuote.outputAmount > 0 ? swapQuote.outputAmount : toAmount;
+      final estimatedOutputRaw = swapQuote.outputAmountRaw > 0
+          ? swapQuote.outputAmountRaw
+          : (estimatedOutput * pow(10, outputDecimals)).round();
+      final totalPlatformFeeRaw = swapQuote.platformFeeAmountRaw > 0
+          ? swapQuote.platformFeeAmountRaw
+          : (totalProtocolFeePct > 0 && totalProtocolFeePct < 1
+              ? (estimatedOutputRaw *
+                      (totalProtocolFeePct / (1 - totalProtocolFeePct)))
+                  .round()
+              : 0);
+      final splitRawAmounts = _splitPlatformFeeRawAmounts(
+        totalPlatformFeeRaw: totalPlatformFeeRaw,
+        teamShareBpsOfPlatformFee:
+            feeSplitterConfig.teamShareBpsOfPlatformFee,
+      );
+      final feeTeamRaw = splitRawAmounts['team'] ?? 0;
+      final feeTreasuryRaw = splitRawAmounts['treasury'] ?? 0;
+      final totalPlatformFee =
+          _rawTokenAmountToUi(totalPlatformFeeRaw, outputDecimals);
+      final feeTeam = _rawTokenAmountToUi(feeTeamRaw, outputDecimals);
+      final feeTreasury = _rawTokenAmountToUi(feeTreasuryRaw, outputDecimals);
+      final feeSplitterProgram = feeSplitterConfig.isProgramMode
+          ? FeeSplitterProgramInstructionRecord(
+              programId: feeSplitterConfig.program!.programId,
+              configAccountAddress: feeSplitterConfig.program!.configAccount,
+              vaultAuthorityAddress:
+                  feeSplitterConfig.program!.vaultAuthority,
+              teamWalletAddress: feeSplitterConfig.teamWalletAddress,
+              treasuryWalletAddress: feeSplitterConfig.treasuryWalletAddress,
+              totalPlatformFeeAmountRaw: totalPlatformFeeRaw,
+            )
+          : null;
+      final swapTx = await _solanaWalletService.buildJupiterSwapTransactionBase64(
+        userPublicKey: walletAddress,
+        inputMint: inputMint,
+        outputMint: outputMint,
+        inputAmountRaw: inputAmountRaw,
+        slippageBps: slippageBps,
+        wrapAndUnwrapSol:
+            fromToken.toUpperCase() == 'SOL' || toToken.toUpperCase() == 'SOL',
+        quote: swapQuote,
+        platformFeeBps: swapPlatformFeeBps,
+        platformFeeOwnerAddress: feeSplitterConfig.feeVaultOwnerAddress,
+        feeSplitterProgram: feeSplitterProgram,
+      );
+      final primarySubmission = await _submitUnsignedTransactionRecord(swapTx);
       final relatedTransactions = <WalletRelatedTransaction>[];
-      final relatedWalletTransactions = <WalletTransaction>[];
+      BackendSwapFeeSettlementStatusDto? feeSettlementStatus;
 
-      Future<SubmittedSolanaTransactionRecord> submitOutputFee({
-        required String label,
-        required double feeAmount,
-        required String targetAddress,
-      }) async {
-        final outputIsSol = toToken.toUpperCase() == 'SOL';
-        if (useExternalSigner) {
-          if (outputIsSol) {
-            final tx =
-                await _solanaWalletService.buildTransferSolTransactionBase64(
-              fromAddress: walletAddress,
-              toAddress: targetAddress,
-              amount: feeAmount,
-            );
-            final signature = await ExternalWalletSignerService.instance
-                .signAndSendTransactionBase64(tx.transactionBase64);
-            return SubmittedSolanaTransactionRecord(
-              signature: signature,
-              lastValidBlockHeight: tx.lastValidBlockHeight,
-              explorerUrl: _solanaWalletService.buildExplorerTransactionUrl(
-                signature,
-              ),
-              metadata: {'label': label},
+      if (feeSplitterConfig.isBackendFallbackMode && totalPlatformFeeRaw > 0) {
+        try {
+          final hasBackendSession = await ensureBackendSessionForActiveSigner(
+            walletAddress: walletAddress,
+          );
+          if (!hasBackendSession) {
+            throw Exception(
+              'Wallet-signed backend session is required to settle swap fees.',
             );
           }
-          final tx =
-              await _solanaWalletService.buildTransferSplTokenTransactionBase64(
-            fromAddress: walletAddress,
-            mint: outputMint,
-            toAddress: targetAddress,
-            amount: feeAmount,
-            decimals: outputDecimals,
+          feeSettlementStatus = await _apiService.walletSettlements.submitSwapFees(
+            swapSignature: primarySubmission.signature,
+            outputMintAddress: outputMint,
+            platformFeeAccountAddress:
+                primarySubmission.metadata['platformFeeAccount']?.toString(),
+            platformFeeAmountRaw: '$totalPlatformFeeRaw',
+            teamFeeAmountRaw: '$feeTeamRaw',
+            treasuryFeeAmountRaw: '$feeTreasuryRaw',
           );
-          final signature = await ExternalWalletSignerService.instance
-              .signAndSendTransactionBase64(tx.transactionBase64);
-          return SubmittedSolanaTransactionRecord(
-            signature: signature,
-            lastValidBlockHeight: tx.lastValidBlockHeight,
-            explorerUrl: _solanaWalletService.buildExplorerTransactionUrl(
-              signature,
-            ),
-            metadata: {'label': label},
-          );
-        }
-
-        if (outputIsSol) {
-          final record = await _solanaWalletService.transferSol(
-            toAddress: targetAddress,
-            amount: feeAmount,
-          );
-          return SubmittedSolanaTransactionRecord(
-            signature: record.signature,
-            lastValidBlockHeight: record.lastValidBlockHeight,
-            explorerUrl: record.explorerUrl,
-            metadata: {
-              ...record.metadata,
-              'label': label,
-            },
-          );
-        }
-        final record = await _solanaWalletService.transferSplToken(
-          mint: outputMint,
-          toAddress: targetAddress,
-          amount: feeAmount,
-          decimals: outputDecimals,
-        );
-        return SubmittedSolanaTransactionRecord(
-          signature: record.signature,
-          lastValidBlockHeight: record.lastValidBlockHeight,
-          explorerUrl: record.explorerUrl,
-          metadata: {
-            ...record.metadata,
-            'label': label,
-          },
-        );
-      }
-
-      void addRelatedFeeTransaction({
-        required String label,
-        required double feeAmount,
-        required String targetAddress,
-        required SubmittedSolanaTransactionRecord submission,
-      }) {
-        final outputIsSol = toToken.toUpperCase() == 'SOL';
-        relatedTransactions.add(
-          WalletRelatedTransaction(
-            signature: submission.signature,
-            label: label,
-            token: toToken,
-            tokenMint: outputIsSol ? 'native' : outputMint,
-            amount: feeAmount,
-            status: TransactionStatus.submitted,
-            explorerUrl: submission.explorerUrl,
-            metadata: {
-              'isFeeTransfer': true,
-              'linkedPrimarySignature': primarySubmission.signature,
-            },
-          ),
-        );
-        relatedWalletTransactions.add(
-          WalletTransaction(
-            id: submission.signature,
-            signature: submission.signature,
-            explorerUrl: submission.explorerUrl,
-            type: TransactionType.send,
-            status: TransactionStatus.submitted,
-            direction: WalletTransactionDirection.outgoing,
-            finality: WalletTransactionFinality.unknown,
-            token: toToken,
-            tokenMint: outputIsSol ? 'native' : outputMint,
-            assetKind: outputIsSol
-                ? WalletTransactionAssetKind.native
-                : WalletTransactionAssetKind.spl,
-            amount: feeAmount,
-            amountOut: feeAmount,
-            netAmount: -feeAmount,
-            primaryCounterparty: targetAddress,
-            fromAddress: walletAddress,
-            toAddress: targetAddress,
-            timestamp: submittedAt,
-            lastValidBlockHeight: submission.lastValidBlockHeight,
-            isOptimistic: true,
-            assetChanges: [
-              WalletTransactionAssetChange(
-                symbol: toToken,
-                mint: outputIsSol ? 'native' : outputMint,
-                decimals: outputDecimals,
-                assetKind: outputIsSol
-                    ? WalletTransactionAssetKind.native
-                    : WalletTransactionAssetKind.spl,
-                amount: -feeAmount,
-                direction: WalletTransactionDirection.outgoing,
-                isPrimary: true,
-                isFee: true,
-                label: label,
-                toAddress: targetAddress,
-                counterparty: targetAddress,
-              ),
-            ],
-            metadata: {
-              'isFeeTransfer': true,
-              'isLinkedSecondaryAction': true,
-              'linkedPrimarySignature': primarySubmission.signature,
-              'linkedLabel': label,
-            },
-          ),
-        );
-      }
-
-      if (feeTeam > 0) {
-        try {
-          final submission = await submitOutputFee(
-            label: 'Team fee',
-            feeAmount: feeTeam,
-            targetAddress: ApiKeys.kubusTeamWallet,
-          );
-          addRelatedFeeTransaction(
-            label: 'Team fee',
-            feeAmount: feeTeam,
-            targetAddress: ApiKeys.kubusTeamWallet,
-            submission: submission,
-          );
+          if (feeSettlementStatus.isPending) {
+            await Future<void>.delayed(const Duration(seconds: 2));
+            feeSettlementStatus = await _apiService.walletSettlements
+                .getSwapFeeSettlementStatus(primarySubmission.signature);
+          }
         } catch (e) {
-          partialErrors.add('Team fee transfer failed: $e');
-        }
-      }
-
-      if (feeTreasury > 0) {
-        try {
-          final submission = await submitOutputFee(
-            label: 'Treasury fee',
-            feeAmount: feeTreasury,
-            targetAddress: ApiKeys.kubusTreasuryWallet,
-          );
-          addRelatedFeeTransaction(
-            label: 'Treasury fee',
-            feeAmount: feeTreasury,
-            targetAddress: ApiKeys.kubusTreasuryWallet,
-            submission: submission,
-          );
-        } catch (e) {
-          partialErrors.add('Treasury fee transfer failed: $e');
+          partialErrors.add('Swap fee settlement failed: $e');
         }
       }
 
@@ -2832,8 +2939,8 @@ class WalletProvider extends ChangeNotifier {
             ? WalletTransactionAssetKind.native
             : WalletTransactionAssetKind.spl,
         amount: fromAmount,
-        amountIn: estimatedOutput,
-        amountOut: fromAmount,
+        amountIn: fromAmount,
+        amountOut: estimatedOutput,
         primaryCounterparty: 'Jupiter',
         fromAddress: walletAddress,
         toAddress: walletAddress,
@@ -2872,22 +2979,44 @@ class WalletProvider extends ChangeNotifier {
           'slippage': slippage,
           'slippageBps': slippageBps,
           'expectedOut': estimatedOutput,
+          'protocolFeeAtomic': true,
+          'feeSettlementMode': feeSplitterConfig.mode,
+          'platformFeeBps': swapPlatformFeeBps,
+          'platformFeeAmount': totalPlatformFee,
+          'platformFeeAmountRaw': totalPlatformFeeRaw,
+          'platformFeeAccount': primarySubmission.metadata['platformFeeAccount'],
+          'platformFeeOwnerAddress':
+              primarySubmission.metadata['platformFeeOwnerAddress'],
           'feeTeam': feeTeam,
+          'feeTeamRaw': feeTeamRaw,
           'feeTreasury': feeTreasury,
-          'quoteContextSlot': swapQuote?.contextSlot,
-          'quoteTimeTakenMs': swapQuote?.timeTakenMs,
-          'routePlan':
-              swapQuote?.routePlan ?? primarySubmission.metadata['route'],
-          'rawRoute':
-              swapQuote?.rawRoute ?? primarySubmission.metadata['route'],
+          'feeTreasuryRaw': feeTreasuryRaw,
+          'feeSettlementStatus': feeSettlementStatus?.status,
+          'feeSettlementDetail': feeSettlementStatus?.statusDetail,
+          'feeSettlementSignature': feeSettlementStatus?.settlementSignature,
+          'feeSettlementTransfers': feeSettlementStatus?.transfers
+              .map(
+                (transfer) => <String, dynamic>{
+                  'transferKind': transfer.transferKind,
+                  'amountRaw': transfer.amountRaw,
+                  'status': transfer.status,
+                  'signature': transfer.signature,
+                  'sourceTokenAccount': transfer.sourceTokenAccount,
+                  'destinationTokenAccount': transfer.destinationTokenAccount,
+                  'mint': transfer.mint,
+                  'error': transfer.error,
+                },
+              )
+              .toList(growable: false),
+          'quoteContextSlot': swapQuote.contextSlot,
+          'quoteTimeTakenMs': swapQuote.timeTakenMs,
+          'routePlan': swapQuote.routePlan,
+          'rawRoute': swapQuote.rawRoute,
           'partialErrors': partialErrors,
         },
       );
 
       _rememberTransactionOverride(primaryTransaction);
-      for (final transaction in relatedWalletTransactions) {
-        _rememberTransactionOverride(transaction);
-      }
       _transactions = _mergeTransactions(_transactions);
       notifyListeners();
 
@@ -2914,6 +3043,9 @@ class WalletProvider extends ChangeNotifier {
           'partialErrors': partialErrors,
           'primarySignature': primarySubmission.signature,
           'estimatedOutput': estimatedOutput,
+          'platformFeeAmount': totalPlatformFee,
+          'platformFeeAmountRaw': totalPlatformFeeRaw,
+          'feeSettlementStatus': feeSettlementStatus?.status,
         },
       );
     } catch (e, st) {
@@ -2954,6 +3086,7 @@ class WalletProvider extends ChangeNotifier {
     }
 
     final slippageBps = (slippagePercent * 100).round().clamp(1, 500);
+    final feeSplitterConfig = await _getWalletFeeSplitterConfig();
 
     return _solanaWalletService.fetchSwapQuote(
       inputMint: _resolveMintAddress(from),
@@ -2962,6 +3095,7 @@ class WalletProvider extends ChangeNotifier {
       inputDecimals: inputDecimals,
       outputDecimals: outputDecimals,
       slippageBps: slippageBps,
+      platformFeeBps: feeSplitterConfig.platformFeeBps,
     );
   }
 

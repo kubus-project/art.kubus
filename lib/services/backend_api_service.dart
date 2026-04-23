@@ -42,6 +42,7 @@ part 'backend_api_service_recovery_transport.dart';
 part 'backend_api_service_public_object_transport.dart';
 part 'backend_api_service_signed_action_transport.dart';
 part 'backend_api_service_dao_transport.dart';
+part 'backend_api_service_wallet_settlement_transport.dart';
 part 'backend_api_service_collectibles_attestations_transport.dart';
 part 'backend_api_service_messages.dart';
 part 'backend_api_service_profile_helpers.dart';

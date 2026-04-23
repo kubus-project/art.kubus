@@ -396,6 +396,9 @@ extension BackendApiDomainAccess on BackendApiService {
 
   BackendDaoTransport get dao => BackendDaoTransport(this);
 
+  BackendWalletSettlementTransport get walletSettlements =>
+      BackendWalletSettlementTransport(this);
+
   BackendCollectiblesAttestationsTransport get collectibles =>
       BackendCollectiblesAttestationsTransport(this);
 
@@ -468,6 +471,24 @@ extension BackendApiDomainAccess on BackendApiService {
           notes:
               'Recovery transport. Backend account auth plus recovery checks, not wallet signature.',
           requiresBackendSession: true,
+        ),
+        BackendTransportSurfaceDefinition(
+          name: 'walletSettlements.getFeeSplitterConfig',
+          domain: 'wallet settlement',
+          lifecycle: BackendTransportLifecycle.canonical,
+          route: 'GET /api/wallet-settlements/fee-splitter/config',
+          notes:
+              'Canonical fee splitter configuration surface for swap fee settlement mode selection.',
+        ),
+        BackendTransportSurfaceDefinition(
+          name: 'walletSettlements.submitSwapFees',
+          domain: 'wallet settlement',
+          lifecycle: BackendTransportLifecycle.canonical,
+          route: 'POST /api/wallet-settlements/swap-fees',
+          notes:
+              'Wallet-signed backend settlement fallback for swap fee splitting.',
+          requiresBackendSession: true,
+          requiresWalletSignature: true,
         ),
         BackendTransportSurfaceDefinition(
           name: 'getDAOReview',

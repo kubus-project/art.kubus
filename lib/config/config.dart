@@ -49,6 +49,7 @@ class AppConfig {
   static const bool enableWalletBackupOnboarding = true;
   static const bool enableEncryptedWalletBackup = true;
   static const bool enableWalletBackupPasskeyWeb = true;
+  static const bool enableWalletSettlements = true;
 
   /// AR and Camera features
   static const bool enableARViewer = true;
@@ -415,6 +416,8 @@ class AppConfig {
         return enableEncryptedWalletBackup;
       case 'walletBackupPasskeyWeb':
         return enableWalletBackupPasskeyWeb;
+      case 'walletSettlements':
+        return enableWalletSettlements;
       case 'marketplace':
         return enableMarketplace;
       case 'nftMinting':
@@ -518,8 +521,8 @@ class AppConfig {
 class AppInfo {
   static const String appName = 'art.kubus';
   static const String version = '0.5.11';
-  static const int buildNumber = 26042207;
-  static const String buildDate = '2026-04-22';
+  static const int buildNumber = 26042301;
+  static const String buildDate = '2026-04-23';
 
   /// Get full version string
   static String get fullVersion => '$version+$buildNumber';

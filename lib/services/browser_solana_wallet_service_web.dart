@@ -451,8 +451,7 @@ class _WalletStandardBrowserWalletAdapter implements _BrowserWalletAdapter {
     if (features == null ||
         !_hasObjectFeature(features, _standardConnect) ||
         !_hasObjectFeature(features, _solanaSignMessage) ||
-        !_hasObjectFeature(features, _solanaSignTransaction) ||
-        !_hasObjectFeature(features, _solanaSignAndSendTransaction)) {
+        !_hasObjectFeature(features, _solanaSignTransaction)) {
       return null;
     }
 
