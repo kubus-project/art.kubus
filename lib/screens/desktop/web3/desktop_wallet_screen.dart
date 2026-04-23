@@ -676,10 +676,14 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     final l10n = AppLocalizations.of(context)!;
     final canTransact = walletProvider.canTransact;
     final roles = KubusColorRoles.of(context);
+    final swapEnabled = AppConfig.isFeatureEnabled('tokenSwap');
     return LayoutBuilder(
       builder: (context, constraints) {
+        final actionCount = swapEnabled ? 3 : 2;
         final tileWidth = constraints.maxWidth >= 980
-            ? (constraints.maxWidth - (DetailSpacing.md * 2)) / 3
+            ? (constraints.maxWidth -
+                    (DetailSpacing.md * (actionCount - 1))) /
+                actionCount
             : (constraints.maxWidth - DetailSpacing.md) / 2;
         final resolvedTileWidth = tileWidth.clamp(164.0, 240.0);
         return Wrap(
@@ -707,17 +711,18 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                 _openReceiveScreen,
               ),
             ),
-            SizedBox(
-              width: resolvedTileWidth,
-              child: _buildActionButton(
-                l10n.walletHomeSwapAction,
-                l10n.walletHomeDesktopSwapSubtitle,
-                Icons.swap_horiz,
-                roles.positiveAction,
-                _openSwapScreen,
-                enabled: canTransact,
+            if (swapEnabled)
+              SizedBox(
+                width: resolvedTileWidth,
+                child: _buildActionButton(
+                  l10n.walletHomeSwapAction,
+                  l10n.walletHomeDesktopSwapSubtitle,
+                  Icons.swap_horiz,
+                  roles.positiveAction,
+                  _openSwapScreen,
+                  enabled: canTransact,
+                ),
               ),
-            ),
           ],
         );
       },
@@ -1429,6 +1434,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
         final l10n = AppLocalizations.of(context)!;
         final rewardBalance =
             walletProvider.achievementTokenTotal.toStringAsFixed(2);
+        final swapEnabled = AppConfig.isFeatureEnabled('tokenSwap');
         return ListView(
           padding: EdgeInsets.all(DetailSpacing.xl),
           children: [
@@ -1464,15 +1470,16 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                       ],
                     ),
                   ),
-                  TextButton(
-                    onPressed: _openSwapScreen,
-                    child: Text(
-                      l10n.walletHomeSwapAction,
-                      style: DetailTypography.label(context).copyWith(
-                        color: themeProvider.accentColor,
+                  if (swapEnabled)
+                    TextButton(
+                      onPressed: _openSwapScreen,
+                      child: Text(
+                        l10n.walletHomeSwapAction,
+                        style: DetailTypography.label(context).copyWith(
+                          color: themeProvider.accentColor,
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -1493,12 +1500,14 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                   SizedBox(height: DetailSpacing.lg),
                   Row(
                     children: [
-                      ElevatedButton.icon(
-                        onPressed:
-                            walletProvider.canTransact ? _openSwapScreen : null,
-                        icon: const Icon(Icons.safety_check),
-                        label: Text(l10n.walletHomeStakeAction),
-                      ),
+                      if (swapEnabled)
+                        ElevatedButton.icon(
+                          onPressed: walletProvider.canTransact
+                              ? _openSwapScreen
+                              : null,
+                          icon: const Icon(Icons.safety_check),
+                          label: Text(l10n.walletHomeStakeAction),
+                        ),
                       SizedBox(width: DetailSpacing.md),
                       OutlinedButton(
                         onPressed: walletProvider.refreshData,
@@ -1520,6 +1529,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     final walletProvider = Provider.of<WalletProvider>(context);
     final canTransact = walletProvider.canTransact;
     final roles = KubusColorRoles.of(context);
+    final swapEnabled = AppConfig.isFeatureEnabled('tokenSwap');
     final recentTransactions = walletProvider.transactions.take(5).toList();
 
     return ListView(
@@ -1545,14 +1555,15 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
           roles.statBlue,
           _openReceiveScreen,
         ),
-        _buildQuickActionTile(
-          l10n.walletHomeSwapAction,
-          l10n.walletHomeDesktopSwapSubtitle,
-          Icons.swap_horiz,
-          roles.positiveAction,
-          _openSwapScreen,
-          enabled: canTransact,
-        ),
+        if (swapEnabled)
+          _buildQuickActionTile(
+            l10n.walletHomeSwapAction,
+            l10n.walletHomeDesktopSwapSubtitle,
+            Icons.swap_horiz,
+            roles.positiveAction,
+            _openSwapScreen,
+            enabled: canTransact,
+          ),
         SizedBox(height: DetailSpacing.xxl),
         Text(
           l10n.walletHomeDesktopRecentActivityTitle,

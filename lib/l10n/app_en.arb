@@ -3759,6 +3759,8 @@
   "walletReconnectReadOnlyToast": "Session refreshed. Signing is still unavailable on this device.",
   "walletReconnectManualRequiredToast": "Reconnect with your wallet provider to enable signing.",
   "walletSwapTitle": "Token swap",
+  "walletSwapTemporarilyDisabledTitle": "Swap is temporarily unavailable",
+  "walletSwapTemporarilyDisabledDescription": "Token swapping is turned off in this app build. You can still use Send and Receive, and the full swap flow can be restored later.",
   "walletSwapSwitchTokensTooltip": "Switch tokens",
   "walletSwapNoTokensTitle": "No tradable tokens yet",
   "walletSwapNoTokensDescription": "Add funds or receive tokens to enable swaps. Once you hold supported assets they will appear here automatically.",

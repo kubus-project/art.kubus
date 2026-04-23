@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
+import '../../../config/config.dart';
 import '../../../config/api_keys.dart';
 import '../../../models/swap_quote.dart';
 import '../../../models/wallet.dart';
@@ -45,7 +46,9 @@ class _TokenSwapState extends State<TokenSwap> {
   @override
   void initState() {
     super.initState();
-    _fromController.addListener(_onAmountChanged);
+    if (AppConfig.isFeatureEnabled('tokenSwap')) {
+      _fromController.addListener(_onAmountChanged);
+    }
   }
 
   @override
@@ -77,7 +80,11 @@ class _TokenSwapState extends State<TokenSwap> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
+    final swapEnabled = AppConfig.isFeatureEnabled('tokenSwap');
     final swapColor = KubusColorRoles.of(context).positiveAction;
+    if (!swapEnabled) {
+      return _buildDisabledState(theme, swapColor, l10n);
+    }
     final walletProvider = context.watch<WalletProvider>();
     final authority = walletProvider.authority;
     if (!authority.canTransact) {
@@ -294,6 +301,70 @@ class _TokenSwapState extends State<TokenSwap> {
                             ? l10n.commonContinue
                             : l10n.walletSecurityConnectExternalAction,
                   ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDisabledState(
+    ThemeData theme,
+    Color swapColor,
+    AppLocalizations l10n,
+  ) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: Text(
+          l10n.walletSwapTitle,
+          style: KubusTypography.inter(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: theme.colorScheme.onSurface),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(KubusSpacing.xl),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.swap_horiz, size: 64, color: swapColor),
+                const SizedBox(height: KubusSpacing.lg),
+                Text(
+                  l10n.walletSwapTemporarilyDisabledTitle,
+                  textAlign: TextAlign.center,
+                  style: KubusTypography.inter(
+                    fontSize: KubusHeaderMetrics.screenTitle,
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: KubusSpacing.md),
+                Text(
+                  l10n.walletSwapTemporarilyDisabledDescription,
+                  textAlign: TextAlign.center,
+                  style: KubusTypography.inter(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+                const SizedBox(height: KubusSpacing.lg),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(l10n.commonBack),
                 ),
               ],
             ),
@@ -1044,6 +1115,9 @@ class _TokenSwapState extends State<TokenSwap> {
   }
 
   void _applyRecentPair(_RecentSwapPair pair) {
+    if (!AppConfig.isFeatureEnabled('tokenSwap')) {
+      return;
+    }
     setState(() {
       _fromTokenSymbol = pair.fromToken;
       _toTokenSymbol = pair.toToken;
@@ -1057,6 +1131,9 @@ class _TokenSwapState extends State<TokenSwap> {
   }
 
   void _onAmountChanged() {
+    if (!AppConfig.isFeatureEnabled('tokenSwap')) {
+      return;
+    }
     _quoteDebounce?.cancel();
     _quote = null;
     _quoteError = null;
@@ -1073,6 +1150,9 @@ class _TokenSwapState extends State<TokenSwap> {
   }
 
   Future<void> _requestQuote() async {
+    if (!AppConfig.isFeatureEnabled('tokenSwap')) {
+      return;
+    }
     final l10n = AppLocalizations.of(context)!;
     final walletProvider = context.read<WalletProvider>();
     final amount = double.tryParse(_fromController.text.trim());
@@ -1126,6 +1206,9 @@ class _TokenSwapState extends State<TokenSwap> {
   }
 
   Future<void> _handleSwap(WalletProvider walletProvider) async {
+    if (!AppConfig.isFeatureEnabled('tokenSwap')) {
+      return;
+    }
     final l10n = AppLocalizations.of(context)!;
     final amount = double.tryParse(_fromController.text.trim()) ?? 0;
     if (amount <= 0) {
@@ -1185,6 +1268,9 @@ class _TokenSwapState extends State<TokenSwap> {
 
   Future<void> _selectToken(
       {required bool isFrom, required List<Token> tokens}) async {
+    if (!AppConfig.isFeatureEnabled('tokenSwap')) {
+      return;
+    }
     final currentSymbol = isFrom ? _fromTokenSymbol : _toTokenSymbol;
     final otherSymbol = isFrom ? _toTokenSymbol : _fromTokenSymbol;
 
@@ -1249,6 +1335,9 @@ class _TokenSwapState extends State<TokenSwap> {
   }
 
   void _swapDirection() {
+    if (!AppConfig.isFeatureEnabled('tokenSwap')) {
+      return;
+    }
     setState(() {
       final temp = _fromTokenSymbol;
       _fromTokenSymbol = _toTokenSymbol;
@@ -1258,6 +1347,9 @@ class _TokenSwapState extends State<TokenSwap> {
   }
 
   void _fillMax(Token token) {
+    if (!AppConfig.isFeatureEnabled('tokenSwap')) {
+      return;
+    }
     final balance = token.balance;
     if (balance <= 0) return;
     _fromController.text = _formatAmount(balance);

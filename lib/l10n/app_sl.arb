@@ -3656,6 +3656,8 @@
   "walletReconnectReadOnlyToast": "Seja je osvežena. Podpisovanje v tej napravi še vedno ni na voljo.",
   "walletReconnectManualRequiredToast": "Za podpisovanje se znova poveži prek ponudnika denarnice.",
   "walletSwapTitle": "Zamenjava žetonov",
+  "walletSwapTemporarilyDisabledTitle": "Zamenjava je začasno nedosegljiva",
+  "walletSwapTemporarilyDisabledDescription": "Zamenjava žetonov je v tej različici aplikacije izključena. Še vedno lahko uporabljaš Pošlji in Prejmi, polni potek zamenjave pa lahko kasneje znova omogočimo.",
   "walletSwapSwitchTokensTooltip": "Zamenjaj žetona",
   "walletSwapNoTokensTitle": "Trenutno še ni žetonov za zamenjavo",
   "walletSwapNoTokensDescription": "Dodaj sredstva ali prejmi žetone, da omogočiš zamenjave. Ko boš imel podprta sredstva, se bodo tukaj prikazala samodejno.",

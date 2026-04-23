@@ -8513,6 +8513,12 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletSwapTitle => 'Zamenjava žetonov';
 
   @override
+  String get walletSwapTemporarilyDisabledTitle => 'Zamenjava je začasno nedosegljiva';
+
+  @override
+  String get walletSwapTemporarilyDisabledDescription => 'Zamenjava žetonov je v tej različici aplikacije izključena. Še vedno lahko uporabljaš Pošlji in Prejmi, polni potek zamenjave pa lahko kasneje znova omogočimo.';
+
+  @override
   String get walletSwapSwitchTokensTooltip => 'Zamenjaj žetona';
 
   @override

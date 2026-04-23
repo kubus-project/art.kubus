@@ -50,6 +50,8 @@ class AppConfig {
   static const bool enableEncryptedWalletBackup = true;
   static const bool enableWalletBackupPasskeyWeb = true;
   static const bool enableWalletSettlements = true;
+  /// Token swaps are intentionally disabled at the app surface for now.
+  static const bool enableTokenSwap = false;
 
   /// AR and Camera features
   static const bool enableARViewer = true;
@@ -418,6 +420,8 @@ class AppConfig {
         return enableWalletBackupPasskeyWeb;
       case 'walletSettlements':
         return enableWalletSettlements;
+      case 'tokenSwap':
+        return enableTokenSwap;
       case 'marketplace':
         return enableMarketplace;
       case 'nftMinting':
@@ -521,7 +525,7 @@ class AppConfig {
 class AppInfo {
   static const String appName = 'art.kubus';
   static const String version = '0.5.11';
-  static const int buildNumber = 26042304;
+  static const int buildNumber = 26042305;
   static const String buildDate = '2026-04-23';
 
   /// Get full version string

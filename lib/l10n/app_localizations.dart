@@ -16175,6 +16175,18 @@ abstract class AppLocalizations {
   /// **'Token swap'**
   String get walletSwapTitle;
 
+  /// No description provided for @walletSwapTemporarilyDisabledTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Swap is temporarily unavailable'**
+  String get walletSwapTemporarilyDisabledTitle;
+
+  /// No description provided for @walletSwapTemporarilyDisabledDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Token swapping is turned off in this app build. You can still use Send and Receive, and the full swap flow can be restored later.'**
+  String get walletSwapTemporarilyDisabledDescription;
+
   /// No description provided for @walletSwapSwitchTokensTooltip.
   ///
   /// In en, this message translates to:

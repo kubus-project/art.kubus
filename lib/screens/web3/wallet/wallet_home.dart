@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
+import '../../../config/config.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../providers/navigation_provider.dart';
@@ -172,6 +173,7 @@ class _WalletHomeState extends State<WalletHome> {
             final isWide = constraints.maxWidth >= 1100;
             final roles = KubusColorRoles.of(context);
             final analytics = walletProvider.getWalletAnalytics();
+            final swapEnabled = AppConfig.isFeatureEnabled('tokenSwap');
 
             return Scaffold(
               backgroundColor: Colors.transparent,
@@ -249,6 +251,7 @@ class _WalletHomeState extends State<WalletHome> {
                       canTransact: canTransact,
                       isCompact: isCompact,
                       roles: roles,
+                      swapEnabled: swapEnabled,
                     ),
                   ),
                   const SizedBox(height: KubusSpacing.lg),
@@ -661,13 +664,16 @@ class _WalletHomeState extends State<WalletHome> {
     required bool canTransact,
     required bool isCompact,
     required KubusColorRoles roles,
+    required bool swapEnabled,
   }) {
     final l10n = AppLocalizations.of(context)!;
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        final columns = swapEnabled ? 4 : 3;
         final actionWidth = constraints.maxWidth >= 920
-            ? (constraints.maxWidth - (KubusSpacing.md * 3)) / 4
+            ? (constraints.maxWidth - (KubusSpacing.md * (columns - 1))) /
+                columns
             : constraints.maxWidth >= 560
                 ? (constraints.maxWidth - KubusSpacing.md) / 2
                 : constraints.maxWidth;
@@ -696,18 +702,19 @@ class _WalletHomeState extends State<WalletHome> {
               minHeight: isCompact ? 132 : 150,
             ),
           ),
-          SizedBox(
-            width: actionWidth,
-            child: KubusWalletActionCard(
-              title: l10n.walletHomeSwapAction,
-              subtitle: l10n.walletHomeDesktopSwapSubtitle,
-              icon: Icons.swap_horiz_rounded,
-              color: roles.positiveAction,
-              onTap: () => _openSwapScreen(walletProvider, canTransact),
-              enabled: canTransact,
-              minHeight: isCompact ? 132 : 150,
+          if (swapEnabled)
+            SizedBox(
+              width: actionWidth,
+              child: KubusWalletActionCard(
+                title: l10n.walletHomeSwapAction,
+                subtitle: l10n.walletHomeDesktopSwapSubtitle,
+                icon: Icons.swap_horiz_rounded,
+                color: roles.positiveAction,
+                onTap: () => _openSwapScreen(walletProvider, canTransact),
+                enabled: canTransact,
+                minHeight: isCompact ? 132 : 150,
+              ),
             ),
-          ),
           SizedBox(
             width: actionWidth,
             child: KubusWalletActionCard(

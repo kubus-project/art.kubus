@@ -8491,6 +8491,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletSwapTitle => 'Token swap';
 
   @override
+  String get walletSwapTemporarilyDisabledTitle => 'Swap is temporarily unavailable';
+
+  @override
+  String get walletSwapTemporarilyDisabledDescription => 'Token swapping is turned off in this app build. You can still use Send and Receive, and the full swap flow can be restored later.';
+
+  @override
   String get walletSwapSwitchTokensTooltip => 'Switch tokens';
 
   @override
