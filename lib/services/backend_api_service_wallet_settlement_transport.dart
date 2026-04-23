@@ -31,6 +31,7 @@ class BackendWalletFeeSplitterConfigDto {
   const BackendWalletFeeSplitterConfigDto({
     required this.enabled,
     required this.mode,
+    required this.effectiveMode,
     required this.feeVaultOwnerAddress,
     required this.teamWalletAddress,
     required this.treasuryWalletAddress,
@@ -41,7 +42,10 @@ class BackendWalletFeeSplitterConfigDto {
     required this.teamShareBpsOfPlatformFee,
     required this.treasuryShareBpsOfPlatformFee,
     required this.requiresBackendSettlementRequest,
+    required this.backendFallbackReady,
+    required this.programReady,
     this.disabledReason,
+    this.requestedMode,
     this.requestPath,
     this.solanaRpcUrl,
     this.program,
@@ -49,6 +53,7 @@ class BackendWalletFeeSplitterConfigDto {
 
   final bool enabled;
   final String mode;
+  final String effectiveMode;
   final String feeVaultOwnerAddress;
   final String teamWalletAddress;
   final String treasuryWalletAddress;
@@ -59,24 +64,32 @@ class BackendWalletFeeSplitterConfigDto {
   final int teamShareBpsOfPlatformFee;
   final int treasuryShareBpsOfPlatformFee;
   final bool requiresBackendSettlementRequest;
+  final bool backendFallbackReady;
+  final bool programReady;
   final String? disabledReason;
+  final String? requestedMode;
   final String? requestPath;
   final String? solanaRpcUrl;
   final BackendWalletFeeSplitterProgramConfigDto? program;
 
-  bool get isProgramMode => mode == 'program' && program?.isValid == true;
+  bool get isProgramMode =>
+      effectiveMode == 'program' && program?.isValid == true && programReady;
   bool get isBackendFallbackMode =>
-      mode == 'backend_fallback' && requiresBackendSettlementRequest;
+      effectiveMode == 'backend_fallback' &&
+      requiresBackendSettlementRequest &&
+      backendFallbackReady;
 
-  factory BackendWalletFeeSplitterConfigDto.fromJson(Map<String, dynamic> json) {
+  factory BackendWalletFeeSplitterConfigDto.fromJson(
+      Map<String, dynamic> json) {
     final program = _backendApiMapOrNull(json['program']);
     return BackendWalletFeeSplitterConfigDto(
       enabled: json['enabled'] == true,
       mode: (json['mode'] ?? '').toString().trim(),
+      effectiveMode:
+          (json['effectiveMode'] ?? json['mode'] ?? '').toString().trim(),
       feeVaultOwnerAddress:
           (json['feeVaultOwnerAddress'] ?? '').toString().trim(),
-      teamWalletAddress:
-          (json['teamWalletAddress'] ?? '').toString().trim(),
+      teamWalletAddress: (json['teamWalletAddress'] ?? '').toString().trim(),
       treasuryWalletAddress:
           (json['treasuryWalletAddress'] ?? '').toString().trim(),
       teamFeePct: (json['teamFeePct'] as num?)?.toDouble() ?? 0,
@@ -89,7 +102,10 @@ class BackendWalletFeeSplitterConfigDto {
           (json['treasuryShareBpsOfPlatformFee'] as num?)?.toInt() ?? 0,
       requiresBackendSettlementRequest:
           json['requiresBackendSettlementRequest'] == true,
+      backendFallbackReady: json['backendFallbackReady'] == true,
+      programReady: json['programReady'] == true,
       disabledReason: json['disabledReason']?.toString(),
+      requestedMode: json['requestedMode']?.toString(),
       requestPath: json['requestPath']?.toString(),
       solanaRpcUrl: json['solanaRpcUrl']?.toString(),
       program: program == null
@@ -203,7 +219,8 @@ class BackendSwapFeeSettlementStatusDto {
 }
 
 extension BackendApiWalletSettlementTransport on BackendApiService {
-  Future<BackendWalletFeeSplitterConfigDto> fetchWalletFeeSplitterConfig() async {
+  Future<BackendWalletFeeSplitterConfigDto>
+      fetchWalletFeeSplitterConfig() async {
     const path = '/api/wallet-settlements/fee-splitter/config';
     final response = await _sendAuthRequestWithFailover(
       'GET',

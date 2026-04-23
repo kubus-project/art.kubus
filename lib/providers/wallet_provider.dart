@@ -172,8 +172,7 @@ class WalletProvider extends ChangeNotifier {
   String? _externalSignerName;
   BackendWalletFeeSplitterConfigDto? _walletFeeSplitterConfigCache;
   DateTime? _walletFeeSplitterConfigFetchedAt;
-  static const Duration _walletFeeSplitterConfigCacheTtl =
-      Duration(minutes: 5);
+  static const Duration _walletFeeSplitterConfigCacheTtl = Duration(minutes: 5);
 
   // Backend supplemental data
   Map<String, dynamic>? _backendProfile;
@@ -2137,8 +2136,7 @@ class WalletProvider extends ChangeNotifier {
     if (a.isAssociatedTokenAccount != b.isAssociatedTokenAccount) {
       return a.isAssociatedTokenAccount ? -1 : 1;
     }
-    final rawCompare =
-        (BigInt.tryParse(b.rawAmount) ?? BigInt.zero).compareTo(
+    final rawCompare = (BigInt.tryParse(b.rawAmount) ?? BigInt.zero).compareTo(
       BigInt.tryParse(a.rawAmount) ?? BigInt.zero,
     );
     if (rawCompare != 0) return rawCompare;
@@ -2167,7 +2165,8 @@ class WalletProvider extends ChangeNotifier {
     final plannedSources = <String, String>{};
     for (final transfer in transfers) {
       if (transfer.amount <= 0) continue;
-      final requiredRaw = _toRawTokenAmount(transfer.amount, tokenMeta.decimals);
+      final requiredRaw =
+          _toRawTokenAmount(transfer.amount, tokenMeta.decimals);
       if (requiredRaw <= BigInt.zero) continue;
 
       TokenAccountHolding? selected;
@@ -2234,6 +2233,7 @@ class WalletProvider extends ChangeNotifier {
     return BackendWalletFeeSplitterConfigDto(
       enabled: true,
       mode: 'direct',
+      effectiveMode: 'direct',
       feeVaultOwnerAddress: ApiKeys.kubusSwapFeeVaultOwner,
       teamWalletAddress: ApiKeys.kubusTeamWallet,
       treasuryWalletAddress: ApiKeys.kubusTreasuryWallet,
@@ -2245,7 +2245,37 @@ class WalletProvider extends ChangeNotifier {
       treasuryShareBpsOfPlatformFee:
           platformFeeBps > 0 ? 10000 - teamShareBpsOfPlatformFee : 0,
       requiresBackendSettlementRequest: false,
+      backendFallbackReady: false,
+      programReady: false,
       disabledReason: null,
+      requestedMode: null,
+      requestPath: null,
+      solanaRpcUrl: null,
+      program: null,
+    );
+  }
+
+  BackendWalletFeeSplitterConfigDto _buildDisabledFeeSplitterFallbackConfig({
+    required String reason,
+  }) {
+    return BackendWalletFeeSplitterConfigDto(
+      enabled: false,
+      mode: 'disabled',
+      effectiveMode: 'disabled',
+      feeVaultOwnerAddress: ApiKeys.kubusSwapFeeVaultOwner,
+      teamWalletAddress: ApiKeys.kubusTeamWallet,
+      treasuryWalletAddress: ApiKeys.kubusTreasuryWallet,
+      teamFeePct: ApiKeys.kubusTeamFeePct,
+      treasuryFeePct: ApiKeys.kubusTreasuryFeePct,
+      totalFeePct: 0,
+      platformFeeBps: 0,
+      teamShareBpsOfPlatformFee: 0,
+      treasuryShareBpsOfPlatformFee: 0,
+      requiresBackendSettlementRequest: false,
+      backendFallbackReady: false,
+      programReady: false,
+      disabledReason: reason,
+      requestedMode: null,
       requestPath: null,
       solanaRpcUrl: null,
       program: null,
@@ -2256,7 +2286,9 @@ class WalletProvider extends ChangeNotifier {
     bool forceRefresh = false,
   }) async {
     if (!AppConfig.isFeatureEnabled('walletSettlements')) {
-      return _buildDirectFeeSplitterFallbackConfig();
+      return _buildDisabledFeeSplitterFallbackConfig(
+        reason: 'Wallet settlements feature is disabled in app config.',
+      );
     }
     final now = DateTime.now();
     if (!forceRefresh &&
@@ -2273,16 +2305,27 @@ class WalletProvider extends ChangeNotifier {
           config.treasuryWalletAddress.trim().isNotEmpty;
       final resolvedConfig = (!config.enabled ||
               config.feeVaultOwnerAddress.trim().isEmpty ||
-              !hasRequiredWallets ||
-              (config.isProgramMode && !(config.program?.isValid ?? false)))
-          ? _buildDirectFeeSplitterFallbackConfig()
+              !hasRequiredWallets)
+          // Direct mode is an explicit emergency kill-switch only.
+          // Default behavior is disabled settlement rather than silent direct fallback.
+          ? (ApiKeys.allowDirectWalletSettlementFallback
+              ? _buildDirectFeeSplitterFallbackConfig()
+              : _buildDisabledFeeSplitterFallbackConfig(
+                  reason: config.disabledReason ??
+                      'Wallet settlement configuration is unavailable.',
+                ))
           : config;
       _walletFeeSplitterConfigCache = resolvedConfig;
       _walletFeeSplitterConfigFetchedAt = now;
       return resolvedConfig;
     } catch (e) {
       _walletLog('wallet fee splitter config fetch failed: $e');
-      final fallback = _buildDirectFeeSplitterFallbackConfig();
+      final fallback = ApiKeys.allowDirectWalletSettlementFallback
+          ? _buildDirectFeeSplitterFallbackConfig()
+          : _buildDisabledFeeSplitterFallbackConfig(
+              reason:
+                  'Wallet settlement config endpoint is unavailable. Direct fallback is disabled.',
+            );
       _walletFeeSplitterConfigCache = fallback;
       _walletFeeSplitterConfigFetchedAt = now;
       return fallback;
@@ -2300,8 +2343,8 @@ class WalletProvider extends ChangeNotifier {
       };
     }
     final totalRaw = BigInt.from(totalPlatformFeeRaw);
-    final teamRaw =
-        (totalRaw * BigInt.from(teamShareBpsOfPlatformFee)) ~/ BigInt.from(10000);
+    final teamRaw = (totalRaw * BigInt.from(teamShareBpsOfPlatformFee)) ~/
+        BigInt.from(10000);
     final treasuryRaw = totalRaw - teamRaw;
     return <String, int>{
       'team': teamRaw.toInt(),
@@ -2783,8 +2826,8 @@ class WalletProvider extends ChangeNotifier {
         transactionBase64,
       );
     }
-    final signedTransaction = await ExternalWalletSignerService.instance
-        .signTransactionBase64(
+    final signedTransaction =
+        await ExternalWalletSignerService.instance.signTransactionBase64(
       transactionBase64,
     );
     return _solanaWalletService.submitSignedTransactionBase64(
@@ -2859,8 +2902,7 @@ class WalletProvider extends ChangeNotifier {
               : 0);
       final splitRawAmounts = _splitPlatformFeeRawAmounts(
         totalPlatformFeeRaw: totalPlatformFeeRaw,
-        teamShareBpsOfPlatformFee:
-            feeSplitterConfig.teamShareBpsOfPlatformFee,
+        teamShareBpsOfPlatformFee: feeSplitterConfig.teamShareBpsOfPlatformFee,
       );
       final feeTeamRaw = splitRawAmounts['team'] ?? 0;
       final feeTreasuryRaw = splitRawAmounts['treasury'] ?? 0;
@@ -2872,14 +2914,14 @@ class WalletProvider extends ChangeNotifier {
           ? FeeSplitterProgramInstructionRecord(
               programId: feeSplitterConfig.program!.programId,
               configAccountAddress: feeSplitterConfig.program!.configAccount,
-              vaultAuthorityAddress:
-                  feeSplitterConfig.program!.vaultAuthority,
+              vaultAuthorityAddress: feeSplitterConfig.program!.vaultAuthority,
               teamWalletAddress: feeSplitterConfig.teamWalletAddress,
               treasuryWalletAddress: feeSplitterConfig.treasuryWalletAddress,
               totalPlatformFeeAmountRaw: totalPlatformFeeRaw,
             )
           : null;
-      final swapTx = await _solanaWalletService.buildJupiterSwapTransactionBase64(
+      final swapTx =
+          await _solanaWalletService.buildJupiterSwapTransactionBase64(
         userPublicKey: walletAddress,
         inputMint: inputMint,
         outputMint: outputMint,
@@ -2895,6 +2937,12 @@ class WalletProvider extends ChangeNotifier {
       final primarySubmission = await _submitUnsignedTransactionRecord(swapTx);
       final relatedTransactions = <WalletRelatedTransaction>[];
       BackendSwapFeeSettlementStatusDto? feeSettlementStatus;
+      final settlementStatusLabel =
+          feeSplitterConfig.effectiveMode == 'disabled' ? 'disabled' : null;
+      final settlementStatusDetail =
+          feeSplitterConfig.effectiveMode == 'disabled'
+              ? feeSplitterConfig.disabledReason
+              : null;
 
       if (feeSplitterConfig.isBackendFallbackMode && totalPlatformFeeRaw > 0) {
         try {
@@ -2906,7 +2954,8 @@ class WalletProvider extends ChangeNotifier {
               'Wallet-signed backend session is required to settle swap fees.',
             );
           }
-          feeSettlementStatus = await _apiService.walletSettlements.submitSwapFees(
+          feeSettlementStatus =
+              await _apiService.walletSettlements.submitSwapFees(
             swapSignature: primarySubmission.signature,
             outputMintAddress: outputMint,
             platformFeeAccountAddress:
@@ -2980,19 +3029,23 @@ class WalletProvider extends ChangeNotifier {
           'slippageBps': slippageBps,
           'expectedOut': estimatedOutput,
           'protocolFeeAtomic': true,
-          'feeSettlementMode': feeSplitterConfig.mode,
+          'feeSettlementMode': feeSplitterConfig.effectiveMode,
+          'feeSettlementRequestedMode': feeSplitterConfig.requestedMode,
           'platformFeeBps': swapPlatformFeeBps,
           'platformFeeAmount': totalPlatformFee,
           'platformFeeAmountRaw': totalPlatformFeeRaw,
-          'platformFeeAccount': primarySubmission.metadata['platformFeeAccount'],
+          'platformFeeAccount':
+              primarySubmission.metadata['platformFeeAccount'],
           'platformFeeOwnerAddress':
               primarySubmission.metadata['platformFeeOwnerAddress'],
           'feeTeam': feeTeam,
           'feeTeamRaw': feeTeamRaw,
           'feeTreasury': feeTreasury,
           'feeTreasuryRaw': feeTreasuryRaw,
-          'feeSettlementStatus': feeSettlementStatus?.status,
-          'feeSettlementDetail': feeSettlementStatus?.statusDetail,
+          'feeSettlementStatus':
+              feeSettlementStatus?.status ?? settlementStatusLabel,
+          'feeSettlementDetail':
+              feeSettlementStatus?.statusDetail ?? settlementStatusDetail,
           'feeSettlementSignature': feeSettlementStatus?.settlementSignature,
           'feeSettlementTransfers': feeSettlementStatus?.transfers
               .map(
@@ -3045,7 +3098,8 @@ class WalletProvider extends ChangeNotifier {
           'estimatedOutput': estimatedOutput,
           'platformFeeAmount': totalPlatformFee,
           'platformFeeAmountRaw': totalPlatformFeeRaw,
-          'feeSettlementStatus': feeSettlementStatus?.status,
+          'feeSettlementStatus':
+              feeSettlementStatus?.status ?? settlementStatusLabel,
         },
       );
     } catch (e, st) {

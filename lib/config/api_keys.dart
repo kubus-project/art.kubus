@@ -62,6 +62,10 @@ class ApiKeys {
     'KUBUS_WRAPPED_SOL_MINT_ADDRESS',
     defaultValue: 'So11111111111111111111111111111111111111112',
   );
+  static const bool allowDirectWalletSettlementFallback = bool.fromEnvironment(
+    'KUBUS_ALLOW_DIRECT_WALLET_SETTLEMENT_FALLBACK',
+    defaultValue: false,
+  );
 
   // Dart (and Flutter) only support bool/int/String.fromEnvironment as consts.
   // For doubles, we parse at runtime from a compile-time string.
@@ -74,8 +78,10 @@ class ApiKeys {
     defaultValue: '0.03',
   );
 
-  static double get kubusTeamFeePct => double.tryParse(_kubusTeamFeePctRaw) ?? 0.02;
-  static double get kubusTreasuryFeePct => double.tryParse(_kubusTreasuryFeePctRaw) ?? 0.03;
+  static double get kubusTeamFeePct =>
+      double.tryParse(_kubusTeamFeePctRaw) ?? 0.02;
+  static double get kubusTreasuryFeePct =>
+      double.tryParse(_kubusTreasuryFeePctRaw) ?? 0.03;
   static const String jupiterBaseUrl = String.fromEnvironment(
     'KUBUS_JUPITER_BASE_URL',
     defaultValue: 'https://lite-api.jup.ag/swap/v1',
@@ -106,14 +112,17 @@ class ApiKeys {
   /// (Client IDs are not secrets, but still configurable.)
   static const String googleClientId = String.fromEnvironment(
     'KUBUS_GOOGLE_CLIENT_ID',
-    defaultValue: '623807687386-h0cbiqegcaint6s7gf4av9fvcvs1jmor.apps.googleusercontent.com',
+    defaultValue:
+        '623807687386-h0cbiqegcaint6s7gf4av9fvcvs1jmor.apps.googleusercontent.com',
   );
   static const String googleWebClientId = String.fromEnvironment(
     'KUBUS_GOOGLE_WEB_CLIENT_ID',
-    defaultValue: '623807687386-b08lhv474n1li9kkaasq46sag1s8gjcp.apps.googleusercontent.com',
+    defaultValue:
+        '623807687386-b08lhv474n1li9kkaasq46sag1s8gjcp.apps.googleusercontent.com',
   );
   static const String googleIosClientId = String.fromEnvironment(
     'KUBUS_GOOGLE_IOS_CLIENT_ID',
-    defaultValue: '623807687386-h0cbiqegcaint6s7gf4av9fvcvs1jmor.apps.googleusercontent.com',
+    defaultValue:
+        '623807687386-h0cbiqegcaint6s7gf4av9fvcvs1jmor.apps.googleusercontent.com',
   );
 }

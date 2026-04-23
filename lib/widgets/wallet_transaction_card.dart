@@ -35,6 +35,11 @@ class _WalletTransactionCardState extends State<WalletTransactionCard> {
     final isCompact = widget.compact;
     final primaryChange = tx.primaryAssetChange;
     final secondaryChange = _resolveSecondarySwapChange(tx);
+    final feeSettlementMode = tx.metadata['feeSettlementMode']?.toString();
+    final feeSettlementStatus = tx.metadata['feeSettlementStatus']?.toString();
+    final feeSettlementDetail = tx.metadata['feeSettlementDetail']?.toString();
+    final feeSettlementSignature =
+        tx.metadata['feeSettlementSignature']?.toString();
 
     return LiquidGlassCard(
       margin: widget.margin,
@@ -216,6 +221,32 @@ class _WalletTransactionCardState extends State<WalletTransactionCard> {
                           label: l10n.walletTransactionNetworkFeeLabel,
                           value:
                               '${tx.feeAmount!.toStringAsFixed(6)} ${tx.feeToken}',
+                        ),
+                      if (tx.type == TransactionType.swap &&
+                          (feeSettlementMode ?? '').trim().isNotEmpty)
+                        _DetailRowData(
+                          label: 'Fee settlement mode',
+                          value: feeSettlementMode!,
+                        ),
+                      if (tx.type == TransactionType.swap &&
+                          (feeSettlementStatus ?? '').trim().isNotEmpty)
+                        _DetailRowData(
+                          label: 'Fee settlement status',
+                          value: feeSettlementStatus!,
+                        ),
+                      if (tx.type == TransactionType.swap &&
+                          (feeSettlementDetail ?? '').trim().isNotEmpty)
+                        _DetailRowData(
+                          label: 'Fee settlement detail',
+                          value: feeSettlementDetail!,
+                        ),
+                      if (tx.type == TransactionType.swap &&
+                          (feeSettlementSignature ?? '').trim().isNotEmpty)
+                        _DetailRowData(
+                          label: 'Settlement signature',
+                          value: feeSettlementSignature!,
+                          onTap: () =>
+                              _copySignature(context, feeSettlementSignature),
                         ),
                     ],
                   ),
