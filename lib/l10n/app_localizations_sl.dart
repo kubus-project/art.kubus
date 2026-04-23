@@ -10952,7 +10952,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get exhibitionDetailManagementTitle => 'Upravljanje';
 
   @override
-  String get exhibitionDetailPoapTitle => 'POAP';
+  String get exhibitionDetailPoapTitle => 'Značka prisotnosti (POAP)';
 
   @override
   String get exhibitionDetailPoapDescription => 'Prevzemi ta dokaz obiska in ga dodaj v svojo zgodovino priznanj.';
@@ -10964,19 +10964,19 @@ class AppLocalizationsSl extends AppLocalizations {
   String get exhibitionDetailPoapNotClaimedStatus => 'Na voljo za prevzem';
 
   @override
-  String get exhibitionDetailPoapSignedOutHint => 'Za prevzem dokaza obiska se prijavi.';
+  String get exhibitionDetailPoapSignedOutHint => 'Za prevzem značke obiska se prijavi.';
 
   @override
-  String get exhibitionDetailPoapClaimAction => 'Prevzemi POAP';
+  String get exhibitionDetailPoapClaimAction => 'Prevzemi Značko';
 
   @override
   String get exhibitionDetailPoapClaimingAction => 'Prevzemanje…';
 
   @override
-  String get exhibitionDetailPoapClaimSuccessToast => 'POAP prevzet.';
+  String get exhibitionDetailPoapClaimSuccessToast => 'Značka prevzeta.';
 
   @override
-  String get exhibitionDetailPoapClaimFailedToast => 'POAP trenutno ni mogoče prevzeti.';
+  String get exhibitionDetailPoapClaimFailedToast => 'Značka trenutno ni mogoče prevzeti.';
 
   @override
   String get exhibitionDetailPoapAttendanceHint => 'Potrditev prisotnosti je spodaj na voljo za dogodke v živo.';
@@ -10994,7 +10994,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get exhibitionDetailPoapEligibilitySignedOut => 'Zahtevana je prijava';
 
   @override
-  String get exhibitionDetailPoapEligibilityClaimReadyHint => 'Tvoja prisotnost je potrjena. POAP lahko zdaj prevzameš.';
+  String get exhibitionDetailPoapEligibilityClaimReadyHint => 'Tvoja prisotnost je potrjena. Značko lahko zdaj prevzameš.';
 
   @override
   String get exhibitionDetailAttendanceConfirmAction => 'Potrdi prisotnost';

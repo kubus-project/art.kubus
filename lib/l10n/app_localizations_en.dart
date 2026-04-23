@@ -10914,7 +10914,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionDetailManagementTitle => 'Management';
 
   @override
-  String get exhibitionDetailPoapTitle => 'POAP';
+  String get exhibitionDetailPoapTitle => 'Badge of attendance(POAP)';
 
   @override
   String get exhibitionDetailPoapDescription => 'Claim this proof of visit to add it to your recognition history.';
@@ -10926,19 +10926,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionDetailPoapNotClaimedStatus => 'Ready to claim';
 
   @override
-  String get exhibitionDetailPoapSignedOutHint => 'Sign in to claim this proof of visit.';
+  String get exhibitionDetailPoapSignedOutHint => 'Sign in to claim this proof of visit badge.';
 
   @override
-  String get exhibitionDetailPoapClaimAction => 'Claim POAP';
+  String get exhibitionDetailPoapClaimAction => 'Claim Badge';
 
   @override
   String get exhibitionDetailPoapClaimingAction => 'Claiming…';
 
   @override
-  String get exhibitionDetailPoapClaimSuccessToast => 'POAP claimed.';
+  String get exhibitionDetailPoapClaimSuccessToast => 'Badge claimed.';
 
   @override
-  String get exhibitionDetailPoapClaimFailedToast => 'Unable to claim POAP right now.';
+  String get exhibitionDetailPoapClaimFailedToast => 'Unable to claim badge right now.';
 
   @override
   String get exhibitionDetailPoapAttendanceHint => 'Attendance check-in appears below for live events.';
@@ -10956,7 +10956,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionDetailPoapEligibilitySignedOut => 'Sign in required';
 
   @override
-  String get exhibitionDetailPoapEligibilityClaimReadyHint => 'Your attendance is verified. You can claim this POAP now.';
+  String get exhibitionDetailPoapEligibilityClaimReadyHint => 'Your attendance is verified. You can claim this badge now.';
 
   @override
   String get exhibitionDetailAttendanceConfirmAction => 'Confirm attendance';

@@ -20624,7 +20624,7 @@ abstract class AppLocalizations {
   /// No description provided for @exhibitionDetailPoapTitle.
   ///
   /// In en, this message translates to:
-  /// **'POAP'**
+  /// **'Badge of attendance(POAP)'**
   String get exhibitionDetailPoapTitle;
 
   /// No description provided for @exhibitionDetailPoapDescription.
@@ -20648,13 +20648,13 @@ abstract class AppLocalizations {
   /// No description provided for @exhibitionDetailPoapSignedOutHint.
   ///
   /// In en, this message translates to:
-  /// **'Sign in to claim this proof of visit.'**
+  /// **'Sign in to claim this proof of visit badge.'**
   String get exhibitionDetailPoapSignedOutHint;
 
   /// No description provided for @exhibitionDetailPoapClaimAction.
   ///
   /// In en, this message translates to:
-  /// **'Claim POAP'**
+  /// **'Claim Badge'**
   String get exhibitionDetailPoapClaimAction;
 
   /// No description provided for @exhibitionDetailPoapClaimingAction.
@@ -20666,13 +20666,13 @@ abstract class AppLocalizations {
   /// No description provided for @exhibitionDetailPoapClaimSuccessToast.
   ///
   /// In en, this message translates to:
-  /// **'POAP claimed.'**
+  /// **'Badge claimed.'**
   String get exhibitionDetailPoapClaimSuccessToast;
 
   /// No description provided for @exhibitionDetailPoapClaimFailedToast.
   ///
   /// In en, this message translates to:
-  /// **'Unable to claim POAP right now.'**
+  /// **'Unable to claim badge right now.'**
   String get exhibitionDetailPoapClaimFailedToast;
 
   /// No description provided for @exhibitionDetailPoapAttendanceHint.
@@ -20708,7 +20708,7 @@ abstract class AppLocalizations {
   /// No description provided for @exhibitionDetailPoapEligibilityClaimReadyHint.
   ///
   /// In en, this message translates to:
-  /// **'Your attendance is verified. You can claim this POAP now.'**
+  /// **'Your attendance is verified. You can claim this badge now.'**
   String get exhibitionDetailPoapEligibilityClaimReadyHint;
 
   /// No description provided for @exhibitionDetailAttendanceConfirmAction.
