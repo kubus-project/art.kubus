@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -33,6 +35,7 @@ import '../community/profile_screen_methods.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/common/keyboard_inset_padding.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
+import '../../utils/share_deep_link_navigation.dart';
 
 /// AR Screen with seamless Android and iOS support
 /// On web, redirects to download app screen
@@ -327,6 +330,23 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             if (_isARReady)
               _currentMode == 'scan'
                   ? ARMarkerScanner(
+                        onDeepLinkFound: (target) {
+                          if (!mounted) return;
+                          final l10n = AppLocalizations.of(context)!;
+                          if (target.isClaimReadyExhibition) {
+                            ScaffoldMessenger.of(context).showKubusSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  l10n.exhibitionDetailPoapEligibilityClaimReadyHint,
+                                ),
+                              ),
+                              tone: KubusSnackBarTone.success,
+                            );
+                          }
+                          unawaited(
+                            ShareDeepLinkNavigation.open(context, target),
+                          );
+                        },
                       onArtworkFound: (artworkData) async {
                         setState(() {
                           // Store scanned artwork

@@ -20548,6 +20548,216 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 guaranteed slot} other{{count} guaranteed slots}}'**
   String promotionBuilderGuaranteedSlots(num count);
+
+  /// No description provided for @attestationBadgePanelLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load recognition right now.'**
+  String get attestationBadgePanelLoadFailed;
+
+  /// No description provided for @attestationBadgePanelEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No recognition yet. Attend events or complete approvals to unlock badges.'**
+  String get attestationBadgePanelEmpty;
+
+  /// No description provided for @attestationBadgePanelAttendance.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance'**
+  String get attestationBadgePanelAttendance;
+
+  /// No description provided for @attestationBadgePanelParticipation.
+  ///
+  /// In en, this message translates to:
+  /// **'Participation'**
+  String get attestationBadgePanelParticipation;
+
+  /// No description provided for @attestationBadgePanelApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'Approval'**
+  String get attestationBadgePanelApproval;
+
+  /// No description provided for @attestationBadgePanelCuratorial.
+  ///
+  /// In en, this message translates to:
+  /// **'Curatorial'**
+  String get attestationBadgePanelCuratorial;
+
+  /// No description provided for @attestationBadgePanelInstitutional.
+  ///
+  /// In en, this message translates to:
+  /// **'Institutional'**
+  String get attestationBadgePanelInstitutional;
+
+  /// No description provided for @attestationBadgePanelCollectibleProof.
+  ///
+  /// In en, this message translates to:
+  /// **'Collectible proof'**
+  String get attestationBadgePanelCollectibleProof;
+
+  /// No description provided for @attestationBadgePanelMinted.
+  ///
+  /// In en, this message translates to:
+  /// **'Minted'**
+  String get attestationBadgePanelMinted;
+
+  /// No description provided for @exhibitionDetailPromoteTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Promote exhibition'**
+  String get exhibitionDetailPromoteTooltip;
+
+  /// No description provided for @exhibitionDetailHostedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Hosted by {name}'**
+  String exhibitionDetailHostedBy(Object name);
+
+  /// No description provided for @exhibitionDetailManagementTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Management'**
+  String get exhibitionDetailManagementTitle;
+
+  /// No description provided for @exhibitionDetailPoapTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'POAP'**
+  String get exhibitionDetailPoapTitle;
+
+  /// No description provided for @exhibitionDetailPoapDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim this proof of visit to add it to your recognition history.'**
+  String get exhibitionDetailPoapDescription;
+
+  /// No description provided for @exhibitionDetailPoapClaimedStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Claimed'**
+  String get exhibitionDetailPoapClaimedStatus;
+
+  /// No description provided for @exhibitionDetailPoapNotClaimedStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to claim'**
+  String get exhibitionDetailPoapNotClaimedStatus;
+
+  /// No description provided for @exhibitionDetailPoapSignedOutHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to claim this proof of visit.'**
+  String get exhibitionDetailPoapSignedOutHint;
+
+  /// No description provided for @exhibitionDetailPoapClaimAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim POAP'**
+  String get exhibitionDetailPoapClaimAction;
+
+  /// No description provided for @exhibitionDetailPoapClaimingAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Claiming…'**
+  String get exhibitionDetailPoapClaimingAction;
+
+  /// No description provided for @exhibitionDetailPoapClaimSuccessToast.
+  ///
+  /// In en, this message translates to:
+  /// **'POAP claimed.'**
+  String get exhibitionDetailPoapClaimSuccessToast;
+
+  /// No description provided for @exhibitionDetailPoapClaimFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to claim POAP right now.'**
+  String get exhibitionDetailPoapClaimFailedToast;
+
+  /// No description provided for @exhibitionDetailPoapAttendanceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance check-in appears below for live events.'**
+  String get exhibitionDetailPoapAttendanceHint;
+
+  /// No description provided for @exhibitionDetailPoapEligibilityClaimed.
+  ///
+  /// In en, this message translates to:
+  /// **'Already claimed'**
+  String get exhibitionDetailPoapEligibilityClaimed;
+
+  /// No description provided for @exhibitionDetailPoapEligibilityVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance verified'**
+  String get exhibitionDetailPoapEligibilityVerified;
+
+  /// No description provided for @exhibitionDetailPoapEligibilityVisitRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit proof required'**
+  String get exhibitionDetailPoapEligibilityVisitRequired;
+
+  /// No description provided for @exhibitionDetailPoapEligibilitySignedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in required'**
+  String get exhibitionDetailPoapEligibilitySignedOut;
+
+  /// No description provided for @exhibitionDetailPoapEligibilityClaimReadyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your attendance is verified. You can claim this POAP now.'**
+  String get exhibitionDetailPoapEligibilityClaimReadyHint;
+
+  /// No description provided for @exhibitionDetailAttendanceConfirmAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm attendance'**
+  String get exhibitionDetailAttendanceConfirmAction;
+
+  /// No description provided for @exhibitionDetailAttendanceConfirmingAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirming…'**
+  String get exhibitionDetailAttendanceConfirmingAction;
+
+  /// No description provided for @exhibitionDetailAttendanceAlreadyCheckedIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Already checked in'**
+  String get exhibitionDetailAttendanceAlreadyCheckedIn;
+
+  /// No description provided for @exhibitionDetailAttendanceMoveCloserHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Move closer to confirm attendance.'**
+  String get exhibitionDetailAttendanceMoveCloserHint;
+
+  /// No description provided for @exhibitionDetailAttendanceConfirmedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendance confirmed.'**
+  String get exhibitionDetailAttendanceConfirmedToast;
+
+  /// No description provided for @exhibitionDetailAttendanceAlreadyCheckedInToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Already checked in.'**
+  String get exhibitionDetailAttendanceAlreadyCheckedInToast;
+
+  /// No description provided for @exhibitionDetailAttendanceUnableToConfirmToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to confirm attendance.'**
+  String get exhibitionDetailAttendanceUnableToConfirmToast;
+
+  /// No description provided for @exhibitionDetailAttendanceRewardPending.
+  ///
+  /// In en, this message translates to:
+  /// **'+{amount} KUB8 (pending)'**
+  String exhibitionDetailAttendanceRewardPending(Object amount);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

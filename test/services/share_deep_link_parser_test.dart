@@ -28,6 +28,17 @@ void main() {
     expect(parser.parse(Uri.parse('/share/a/a3'))?.type, ShareEntityType.artwork);
   });
 
+  test('ShareDeepLinkParser parses claim-ready exhibition handoffs', () {
+    final target = parser.parse(
+      Uri.parse('/x/expo-1?handoff=claim-ready&attendanceMarkerId=marker-1'),
+    );
+
+    expect(target?.type, ShareEntityType.exhibition);
+    expect(target?.id, 'expo-1');
+    expect(target?.isClaimReadyExhibition, isTrue);
+    expect(target?.attendanceMarkerId, 'marker-1');
+  });
+
   test('ShareDeepLinkParser returns null for unsupported paths', () {
     expect(parser.parse(Uri.parse('/')), isNull);
     expect(parser.parse(Uri.parse('/unknown/123')), isNull);

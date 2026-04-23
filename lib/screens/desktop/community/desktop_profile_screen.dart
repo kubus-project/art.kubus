@@ -1495,17 +1495,18 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildAttestationSection() {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
+      children: [
         DesktopSectionHeader(
-          title: 'Attestation badges',
-          subtitle: 'Attendance, participation, approvals, and proofs',
+          title: l10n.desktopSettingsAchievementsTitle,
+          subtitle: l10n.desktopSettingsAchievementsSubtitle,
           icon: Icons.verified_outlined,
         ),
-        SizedBox(height: DetailSpacing.md),
+        const SizedBox(height: DetailSpacing.md),
         AttestationBadgePanel(
-          title: 'Attestation badges',
+          title: l10n.desktopSettingsAchievementsTitle,
           compact: true,
         ),
       ],

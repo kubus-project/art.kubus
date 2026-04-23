@@ -4828,5 +4828,50 @@
     "placeholders": {
       "count": {}
     }
+  },
+  "attestationBadgePanelLoadFailed": "Unable to load recognition right now.",
+  "attestationBadgePanelEmpty": "No recognition yet. Attend events or complete approvals to unlock badges.",
+  "attestationBadgePanelAttendance": "Attendance",
+  "attestationBadgePanelParticipation": "Participation",
+  "attestationBadgePanelApproval": "Approval",
+  "attestationBadgePanelCuratorial": "Curatorial",
+  "attestationBadgePanelInstitutional": "Institutional",
+  "attestationBadgePanelCollectibleProof": "Collectible proof",
+  "attestationBadgePanelMinted": "Minted",
+  "exhibitionDetailPromoteTooltip": "Promote exhibition",
+  "exhibitionDetailHostedBy": "Hosted by {name}",
+  "@exhibitionDetailHostedBy": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "exhibitionDetailManagementTitle": "Management",
+  "exhibitionDetailPoapTitle": "Badge of attendance(POAP)",
+  "exhibitionDetailPoapDescription": "Claim this proof of visit to add it to your recognition history.",
+  "exhibitionDetailPoapClaimedStatus": "Claimed",
+  "exhibitionDetailPoapNotClaimedStatus": "Ready to claim",
+  "exhibitionDetailPoapSignedOutHint": "Sign in to claim this proof of visit badge.",
+  "exhibitionDetailPoapClaimAction": "Claim Badge",
+  "exhibitionDetailPoapClaimingAction": "Claiming…",
+  "exhibitionDetailPoapClaimSuccessToast": "Badge claimed.",
+  "exhibitionDetailPoapClaimFailedToast": "Unable to claim badge right now.",
+  "exhibitionDetailPoapAttendanceHint": "Attendance check-in appears below for live events.",
+  "exhibitionDetailPoapEligibilityClaimed": "Already claimed",
+  "exhibitionDetailPoapEligibilityVerified": "Attendance verified",
+  "exhibitionDetailPoapEligibilityVisitRequired": "Visit proof required",
+  "exhibitionDetailPoapEligibilitySignedOut": "Sign in required",
+  "exhibitionDetailPoapEligibilityClaimReadyHint": "Your attendance is verified. You can claim this badge now.",
+  "exhibitionDetailAttendanceConfirmAction": "Confirm attendance",
+  "exhibitionDetailAttendanceConfirmingAction": "Confirming…",
+  "exhibitionDetailAttendanceAlreadyCheckedIn": "Already checked in",
+  "exhibitionDetailAttendanceMoveCloserHint": "Move closer to confirm attendance.",
+  "exhibitionDetailAttendanceConfirmedToast": "Attendance confirmed.",
+  "exhibitionDetailAttendanceAlreadyCheckedInToast": "Already checked in.",
+  "exhibitionDetailAttendanceUnableToConfirmToast": "Unable to confirm attendance.",
+  "exhibitionDetailAttendanceRewardPending": "+{amount} KUB8 (pending)",
+  "@exhibitionDetailAttendanceRewardPending": {
+    "placeholders": {
+      "amount": {}
+    }
   }
 }

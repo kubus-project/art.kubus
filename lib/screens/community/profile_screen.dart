@@ -227,13 +227,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                       _buildStatsSection(),
                       const SliverToBoxAdapter(
                           child: SizedBox(height: DetailSpacing.xxl)),
-                      const SliverToBoxAdapter(
+                      SliverToBoxAdapter(
                         child: Padding(
                           padding: EdgeInsets.symmetric(
                             horizontal: DetailSpacing.lg,
                           ),
                           child: AttestationBadgePanel(
-                            title: 'Attestation badges',
+                            title: AppLocalizations.of(context)!
+                                .desktopSettingsAchievementsTitle,
                           ),
                         ),
                       ),

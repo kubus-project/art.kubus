@@ -1,10 +1,14 @@
 import 'dart:async';
 
+import 'package:art_kubus/core/app_navigator.dart';
 import 'package:art_kubus/models/qr_scan_result.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../utils/design_tokens.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
+import 'package:art_kubus/services/share/share_deep_link_parser.dart';
+import 'package:art_kubus/utils/share_deep_link_navigation.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
@@ -31,6 +35,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
   _ScannerState _scannerState = _ScannerState.initializing;
   QRScanResult? _scanResult;
   bool _hasCompletedScan = false;
+  bool _isProcessingClaimReadyTarget = false;
   String? _errorMessage;
   Timer? _statusResetTimer;
   bool _isTorchOn = false;
@@ -484,6 +489,13 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     }
 
     final raw = validBarcode.rawValue!.trim();
+
+    final deepLinkTarget = _tryParseClaimReadyExhibitionTarget(raw);
+    if (deepLinkTarget != null) {
+      unawaited(_handleClaimReadyExhibitionTarget(deepLinkTarget));
+      return;
+    }
+
     final parsed = QRScanResult.tryParse(raw);
 
     if (parsed == null) {
@@ -535,6 +547,88 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
         .replaceFirst(RegExp(r'0+$'), '')
         .replaceFirst(RegExp(r'\.$'), '');
     return trimmed.isEmpty ? '0' : trimmed;
+  }
+
+  ShareDeepLinkTarget? _tryParseClaimReadyExhibitionTarget(String raw) {
+    final uri = Uri.tryParse(raw);
+    if (uri == null) return null;
+
+    final target = const ShareDeepLinkParser().parse(uri);
+    if (target == null || !target.isClaimReadyExhibition) {
+      return null;
+    }
+    return target;
+  }
+
+  Future<void> _handleClaimReadyExhibitionTarget(
+    ShareDeepLinkTarget target,
+  ) async {
+    if (_isProcessingClaimReadyTarget || _hasCompletedScan) return;
+
+    setState(() {
+      _isProcessingClaimReadyTarget = true;
+    });
+
+    try {
+      if (!mounted) return;
+      final confirm = await showKubusDialog<bool>(
+        context: context,
+        builder: (dialogContext) {
+          final confirmL10n = AppLocalizations.of(dialogContext)!;
+          return KubusAlertDialog(
+            title: Text(confirmL10n.exhibitionDetailPoapEligibilityVerified),
+            content: Text(
+              confirmL10n.exhibitionDetailPoapEligibilityClaimReadyHint,
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: Text(confirmL10n.commonCancel),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: Text(confirmL10n.commonContinue),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (!mounted) return;
+      if (confirm != true) {
+        return;
+      }
+
+      _hasCompletedScan = true;
+      _controller.stop();
+
+      if (Navigator.of(context).canPop()) {
+        Navigator.pop(context);
+      }
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final shellContext = appNavigatorKey.currentContext;
+        if (shellContext == null) return;
+        // ignore: discarded_futures
+        ShareDeepLinkNavigation.open(shellContext, target);
+      });
+
+      if (kDebugMode) {
+        debugPrint(
+          'QRScannerScreen: claim-ready exhibition handoff confirmed: ${target.id}',
+        );
+      }
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('QRScannerScreen: claim-ready exhibition handoff failed: $error');
+      }
+    } finally {
+      if (mounted && !_hasCompletedScan) {
+        setState(() {
+          _isProcessingClaimReadyTarget = false;
+        });
+      }
+    }
   }
 
   Future<void> _toggleTorch() async {

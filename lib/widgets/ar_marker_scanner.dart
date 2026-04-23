@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import '../services/share/share_deep_link_parser.dart';
 import '../services/ar_service.dart';
 import '../providers/themeprovider.dart';
 import '../widgets/app_loading.dart';
@@ -15,11 +16,13 @@ import 'package:art_kubus/widgets/kubus_snackbar.dart';
 class ARMarkerScanner extends StatefulWidget {
   final Function(Map<String, dynamic>)? onArtworkFound;
   final Function(MobileScannerController)? onControllerReady;
+  final void Function(ShareDeepLinkTarget target)? onDeepLinkFound;
 
   const ARMarkerScanner({
     super.key,
     this.onArtworkFound,
     this.onControllerReady,
+    this.onDeepLinkFound,
   });
 
   @override
@@ -83,6 +86,63 @@ class _ARMarkerScannerState extends State<ARMarkerScanner>
 
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
+
+    final parsedUri = Uri.tryParse(code);
+    if (parsedUri != null) {
+      final deepLinkTarget = const ShareDeepLinkParser().parse(parsedUri);
+      if (deepLinkTarget != null) {
+        setState(() {
+          _isProcessing = true;
+          _lastScannedCode = code;
+        });
+
+        try {
+          if (!mounted) return;
+          if (deepLinkTarget.isClaimReadyExhibition) {
+            final confirm = await showKubusDialog<bool>(
+              context: context,
+              builder: (dialogContext) {
+                final confirmL10n = AppLocalizations.of(dialogContext)!;
+                return KubusAlertDialog(
+                  title: Text(
+                    confirmL10n.exhibitionDetailPoapEligibilityVerified,
+                    style: Theme.of(dialogContext).textTheme.titleLarge,
+                  ),
+                  content: Text(
+                    confirmL10n.exhibitionDetailPoapEligibilityClaimReadyHint,
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialogContext, false),
+                      child: Text(confirmL10n.commonCancel),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(dialogContext, true),
+                      child: Text(confirmL10n.commonContinue),
+                    ),
+                  ],
+                );
+              },
+            );
+
+            if (!mounted) return;
+            if (confirm == true) {
+              widget.onDeepLinkFound?.call(deepLinkTarget);
+            }
+          } else {
+            widget.onDeepLinkFound?.call(deepLinkTarget);
+          }
+
+          return;
+        } finally {
+          if (mounted) {
+            setState(() {
+              _isProcessing = false;
+            });
+          }
+        }
+      }
+    }
 
     setState(() {
       _isProcessing = true;

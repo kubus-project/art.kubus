@@ -120,7 +120,10 @@ class ShareDeepLinkNavigation {
       case ShareEntityType.exhibition:
         tabs?.setIndex(3);
         await Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => ExhibitionDetailScreen(exhibitionId: target.id)));
+            builder: (_) => ExhibitionDetailScreen(
+                  exhibitionId: target.id,
+                  attendanceMarkerId: target.attendanceMarkerId,
+                )));
         if (!context.mounted) return;
         _maybePromptDeferredOnboarding(context);
         return;
@@ -196,7 +199,10 @@ class ShareDeepLinkNavigation {
         scope.pushScreen(
           DesktopSubScreen(
             title: 'Exhibition',
-            child: ExhibitionDetailScreen(exhibitionId: target.id),
+            child: ExhibitionDetailScreen(
+              exhibitionId: target.id,
+              attendanceMarkerId: target.attendanceMarkerId,
+            ),
           ),
         );
         return;

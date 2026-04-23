@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/attestation.dart';
 import '../providers/attestation_provider.dart';
 import '../utils/design_tokens.dart';
@@ -10,7 +11,7 @@ import 'glass_components.dart';
 class AttestationBadgePanel extends StatelessWidget {
   const AttestationBadgePanel({
     super.key,
-    this.title = 'Attestations',
+    required this.title,
     this.compact = false,
   });
 
@@ -21,6 +22,7 @@ class AttestationBadgePanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<AttestationProvider>(
       builder: (context, provider, _) {
+        final l10n = AppLocalizations.of(context)!;
         final roles = KubusColorRoles.of(context);
         final scheme = Theme.of(context).colorScheme;
 
@@ -47,7 +49,7 @@ class AttestationBadgePanel extends StatelessWidget {
                   provider.totalCount == 0) ...<Widget>[
                 const SizedBox(height: KubusSpacing.sm),
                 Text(
-                  'Unable to load attestations right now.',
+                  l10n.attestationBadgePanelLoadFailed,
                   style: KubusTextStyles.detailCaption.copyWith(
                     color: scheme.error.withValues(alpha: 0.82),
                   ),
@@ -113,6 +115,7 @@ class AttestationBadgePanel extends StatelessWidget {
 
   List<Widget> _buildBadges(
       BuildContext context, AttestationProvider provider) {
+    final l10n = AppLocalizations.of(context)!;
     final roles = KubusColorRoles.of(context);
     final badges = <Widget>[];
 
@@ -131,43 +134,43 @@ class AttestationBadgePanel extends StatelessWidget {
     }
 
     addBadge(
-      label: 'Attendance',
+      label: l10n.attestationBadgePanelAttendance,
       count: provider.countByType(AttestationType.attendance),
       icon: Icons.place_outlined,
       color: roles.statBlue,
     );
     addBadge(
-      label: 'Participation',
+      label: l10n.attestationBadgePanelParticipation,
       count: provider.countByType(AttestationType.participationProof),
       icon: Icons.event_available_outlined,
       color: roles.statTeal,
     );
     addBadge(
-      label: 'Approval',
+      label: l10n.attestationBadgePanelApproval,
       count: provider.countByType(AttestationType.approval),
       icon: Icons.task_alt,
       color: roles.positiveAction,
     );
     addBadge(
-      label: 'Curatorial',
+      label: l10n.attestationBadgePanelCuratorial,
       count: provider.countByType(AttestationType.curatorial),
       icon: Icons.auto_awesome_outlined,
       color: roles.statAmber,
     );
     addBadge(
-      label: 'Institutional',
+      label: l10n.attestationBadgePanelInstitutional,
       count: provider.countByType(AttestationType.institutional),
       icon: Icons.account_balance_outlined,
       color: roles.web3InstitutionAccent,
     );
     addBadge(
-      label: 'Collectible proof',
+      label: l10n.attestationBadgePanelCollectibleProof,
       count: provider.countByType(AttestationType.collectibleProof),
       icon: Icons.collections_bookmark_outlined,
       color: roles.web3MarketplaceAccent,
     );
     addBadge(
-      label: 'Minted',
+      label: l10n.attestationBadgePanelMinted,
       count: provider.mintedCount,
       icon: Icons.verified,
       color: roles.web3MarketplaceAccent,
@@ -176,7 +179,7 @@ class AttestationBadgePanel extends StatelessWidget {
     if (badges.isEmpty) {
       return <Widget>[
         Text(
-          'No attestations yet. Attend events or complete approvals to unlock badges.',
+          l10n.attestationBadgePanelEmpty,
           style: KubusTextStyles.detailCaption.copyWith(
             color:
                 Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.68),

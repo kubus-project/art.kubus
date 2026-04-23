@@ -18,6 +18,7 @@ import '../../providers/themeprovider.dart';
 import '../../providers/artwork_provider.dart';
 import '../../providers/exhibitions_provider.dart';
 import '../../providers/events_provider.dart';
+import '../../providers/attestation_provider.dart';
 import '../../providers/marker_management_provider.dart';
 import '../../providers/presence_provider.dart';
 import '../../providers/tile_providers.dart';
@@ -106,6 +107,7 @@ import '../../widgets/map/overlays/kubus_marker_overlay_card_wrapper.dart'
     as overlay_wrapper;
 import '../../widgets/detail/artwork_engagement_sections.dart';
 import '../../widgets/detail/detail_shell_primitives.dart';
+import '../../widgets/detail/poap_detail_card.dart';
 import '../../widgets/search/kubus_general_search.dart';
 import '../../widgets/search/kubus_search_config.dart';
 import '../../widgets/search/kubus_search_controller.dart';
@@ -195,6 +197,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   double _searchRadius = 5.0; // km
   bool _travelModeEnabled = false;
   bool _isometricViewEnabled = false;
+  bool _isClaimingSelectedExhibitionPoap = false;
 
   // Travel mode is viewport-based (bounds query), not huge-radius.
   double get _effectiveSearchRadiusKm => _searchRadius;
@@ -2430,6 +2433,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         ? exhibition.locationName!.trim()
         : null;
     final coverUrl = MediaUrlResolver.resolve(exhibition.coverUrl);
+    final poap = context.watch<ExhibitionsProvider>().poapStatusFor(exhibition.id);
     final badge = Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -2531,6 +2535,43 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   ),
                 ],
               ),
+              if (poap?.poap != null) ...[
+                const SizedBox(height: KubusSpacing.lg),
+                PoapDetailCard(
+                  title: l10n.exhibitionDetailPoapTitle,
+                  description: poap!.poap.description?.trim().isNotEmpty == true
+                      ? poap.poap.description!.trim()
+                      : l10n.exhibitionDetailPoapDescription,
+                  code: poap.poap.code,
+                  iconUrl: poap.poap.iconUrl,
+                  rarityLabel: poap.poap.rarity,
+                  rewardLabel: poap.poap.rewardKub8 > 0
+                      ? '+${poap.poap.rewardKub8} KUB8'
+                      : null,
+                  stateLabel: poap.claimed
+                      ? l10n.exhibitionDetailPoapClaimedStatus
+                      : l10n.exhibitionDetailPoapNotClaimedStatus,
+                  eligibilityLabel: poap.claimed
+                      ? l10n.exhibitionDetailPoapEligibilityClaimed
+                      : (poap.canClaim
+                          ? l10n.exhibitionDetailPoapEligibilityVerified
+                          : l10n.exhibitionDetailPoapEligibilityVisitRequired),
+                  eligibilityHint: poap.claimed
+                      ? null
+                      : (poap.canClaim
+                          ? l10n.exhibitionDetailPoapEligibilityClaimReadyHint
+                          : l10n.exhibitionDetailPoapAttendanceHint),
+                  signedOutHint: null,
+                  isClaimed: poap.claimed,
+                  canClaim: !poap.claimed && poap.canClaim,
+                  isClaiming: _isClaimingSelectedExhibitionPoap,
+                  onClaim: () => unawaited(
+                    _claimSelectedExhibitionPoap(exhibition.id),
+                  ),
+                  claimActionLabel: l10n.exhibitionDetailPoapClaimAction,
+                  claimingActionLabel: l10n.exhibitionDetailPoapClaimingAction,
+                ),
+              ],
               const SizedBox(height: KubusSpacing.lg),
               DetailActionsSection(
                 title: l10n.commonActions,
@@ -4516,8 +4557,17 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     final fetched = await (() async {
       try {
-        return await exhibitionsProvider.fetchExhibition(resolved.id,
-            force: true);
+        final exhibition = await exhibitionsProvider.fetchExhibition(
+          resolved.id,
+          force: true,
+        );
+        if (exhibition != null) {
+          await exhibitionsProvider.fetchExhibitionPoap(
+            resolved.id,
+            force: true,
+          );
+        }
+        return exhibition;
       } catch (_) {
         return null;
       }
@@ -4545,6 +4595,49 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       _selectedEvent = null;
       _showFiltersPanel = false;
     });
+  }
+
+  Future<void> _claimSelectedExhibitionPoap(String exhibitionId) async {
+    if (_isClaimingSelectedExhibitionPoap) return;
+
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final exhibitionsProvider = context.read<ExhibitionsProvider>();
+    final attestationProvider = context.read<AttestationProvider>();
+
+    setState(() {
+      _isClaimingSelectedExhibitionPoap = true;
+    });
+
+    try {
+      final status = await exhibitionsProvider.claimExhibitionPoap(exhibitionId);
+      if (!mounted) return;
+      if (status == null) {
+        messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.exhibitionDetailPoapClaimFailedToast)),
+          tone: KubusSnackBarTone.warning,
+        );
+        return;
+      }
+
+      unawaited(attestationProvider.refresh(force: true));
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.exhibitionDetailPoapClaimSuccessToast)),
+        tone: KubusSnackBarTone.success,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.exhibitionDetailPoapClaimFailedToast)),
+        tone: KubusSnackBarTone.error,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isClaimingSelectedExhibitionPoap = false;
+        });
+      }
+    }
   }
 
   Future<Artwork?> _ensureLinkedArtworkLoaded(

@@ -46,6 +46,22 @@ void main() {
     }
   });
 
+  test('claim-ready exhibition deep links preserve attendance marker in startup routing', () {
+    const pending = ShareDeepLinkTarget(
+      type: ShareEntityType.exhibition,
+      id: 'expo-1',
+      attendanceMarkerId: 'marker-1',
+      claimReady: true,
+    );
+
+    final decision = router.decide(pending: pending, shouldShowSignIn: false);
+    expect(
+      decision?.canonicalPath,
+      '/x/expo-1?handoff=claim-ready&attendanceMarkerId=marker-1',
+    );
+    expect(decision?.preferredShellRoute, '/main');
+  });
+
   test('sign-in replay arguments use canonical entity paths', () {
     const cases = <ShareDeepLinkTarget, String>{
       ShareDeepLinkTarget(type: ShareEntityType.artwork, id: 'a1'): '/a/a1',

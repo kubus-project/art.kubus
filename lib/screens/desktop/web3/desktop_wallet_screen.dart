@@ -1540,8 +1540,8 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
           style: DetailTypography.sectionTitle(context),
         ),
         SizedBox(height: DetailSpacing.lg + DetailSpacing.xs),
-        const AttestationBadgePanel(
-          title: 'Attestation badges',
+        AttestationBadgePanel(
+          title: l10n.desktopSettingsAchievementsTitle,
           compact: true,
         ),
         SizedBox(height: DetailSpacing.lg),

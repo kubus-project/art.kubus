@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
+import '../../models/exhibition.dart';
 import '../../models/event.dart';
 import '../../models/promotion.dart';
 import '../../providers/events_provider.dart';
+import '../../providers/exhibitions_provider.dart';
 import '../../screens/collab/invites_inbox_screen.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
@@ -15,6 +17,7 @@ import '../../utils/media_url_resolver.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/promotion/promotion_builder_sheet.dart';
 import '../../widgets/detail/detail_shell_components.dart';
+import '../../widgets/detail/poap_detail_card.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../widgets/glass_components.dart';
 import '../../utils/design_tokens.dart';
@@ -47,9 +50,14 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 
   Future<void> _load() async {
     final events = context.read<EventsProvider>();
+    final exhibitions = context.read<ExhibitionsProvider>();
     try {
       await events.fetchEvent(widget.eventId, force: true);
       await events.loadEventExhibitions(widget.eventId, refresh: true);
+      final loadedExhibitions = events.exhibitionsForEvent(widget.eventId);
+      for (final exhibition in loadedExhibitions) {
+        await exhibitions.fetchExhibitionPoap(exhibition.id, force: true);
+      }
     } catch (_) {
       // Provider handles errors.
     }
@@ -85,6 +93,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     );
 
     final exhibitions = events.exhibitionsForEvent(widget.eventId);
+    final exhibitionsProvider = context.watch<ExhibitionsProvider>();
     final canPromote = _canPromoteEvent(event);
 
     return AnimatedGradientBackground(
@@ -187,6 +196,11 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                               const SizedBox(height: 14),
                               details,
                               const SizedBox(height: 14),
+                              _EventPoapSection(
+                                exhibitions: exhibitions,
+                                exhibitionsProvider: exhibitionsProvider,
+                              ),
+                              const SizedBox(height: 14),
                               _ExhibitionsPreview(
                                 exhibitionsCount: exhibitions.length,
                               ),
@@ -211,6 +225,11 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                       secondaryActions,
                       const SizedBox(height: 14),
                       details,
+                      const SizedBox(height: 14),
+                      _EventPoapSection(
+                        exhibitions: exhibitions,
+                        exhibitionsProvider: exhibitionsProvider,
+                      ),
                       const SizedBox(height: 14),
                       collab,
                       const SizedBox(height: 14),
@@ -379,6 +398,85 @@ class _ExhibitionsPreview extends StatelessWidget {
               style: DetailTypography.caption(context),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EventPoapSection extends StatelessWidget {
+  const _EventPoapSection({
+    required this.exhibitions,
+    required this.exhibitionsProvider,
+  });
+
+  final List<Exhibition> exhibitions;
+  final ExhibitionsProvider exhibitionsProvider;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    final cards = <Widget>[];
+    for (final exhibition in exhibitions) {
+      final poap = exhibitionsProvider.poapStatusFor(exhibition.id);
+      if (poap?.poap == null) continue;
+
+      final descriptionParts = <String>[
+        if ((poap!.poap.title).trim().isNotEmpty) poap.poap.title.trim(),
+        if ((poap.poap.description ?? '').trim().isNotEmpty)
+          poap.poap.description!.trim(),
+      ];
+
+      cards.add(
+        PoapDetailCard(
+          title: exhibition.title,
+          description: descriptionParts.join(' • '),
+          code: poap.poap.code,
+          iconUrl: poap.poap.iconUrl,
+          rarityLabel: poap.poap.rarity,
+          rewardLabel: poap.poap.rewardKub8 > 0
+              ? '+${poap.poap.rewardKub8} KUB8'
+              : null,
+          stateLabel: poap.claimed
+              ? l10n.exhibitionDetailPoapClaimedStatus
+              : l10n.exhibitionDetailPoapNotClaimedStatus,
+          eligibilityLabel: poap.claimed
+              ? l10n.exhibitionDetailPoapEligibilityClaimed
+              : (poap.canClaim
+                  ? l10n.exhibitionDetailPoapEligibilityVerified
+                  : l10n.exhibitionDetailPoapEligibilityVisitRequired),
+          eligibilityHint: poap.claimed
+              ? null
+              : (poap.canClaim
+                  ? l10n.exhibitionDetailPoapEligibilityClaimReadyHint
+                  : l10n.exhibitionDetailPoapEligibilityVisitRequired),
+          signedOutHint: null,
+          isClaimed: poap.claimed,
+          canClaim: false,
+          isClaiming: false,
+          onClaim: null,
+          claimActionLabel: l10n.exhibitionDetailPoapClaimAction,
+          claimingActionLabel: l10n.exhibitionDetailPoapClaimingAction,
+        ),
+      );
+      cards.add(const SizedBox(height: DetailSpacing.sm));
+    }
+
+    if (cards.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    cards.removeLast();
+
+    return DetailCard(
+      borderRadius: DetailRadius.md,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          DetailSectionLabel(label: l10n.exhibitionDetailPoapTitle),
+          const SizedBox(height: DetailSpacing.sm),
+          ...cards,
         ],
       ),
     );

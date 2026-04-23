@@ -10912,4 +10912,113 @@ class AppLocalizationsSl extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get attestationBadgePanelLoadFailed => 'Priznanj trenutno ni bilo mogoče naložiti.';
+
+  @override
+  String get attestationBadgePanelEmpty => 'Za zdaj še ni priznanj. Udeleži se dogodkov ali dokončaj odobritve, da odklenes značke.';
+
+  @override
+  String get attestationBadgePanelAttendance => 'Udeležba';
+
+  @override
+  String get attestationBadgePanelParticipation => 'Sodelovanje';
+
+  @override
+  String get attestationBadgePanelApproval => 'Odobritev';
+
+  @override
+  String get attestationBadgePanelCuratorial => 'Kuratorsko';
+
+  @override
+  String get attestationBadgePanelInstitutional => 'Institucionalno';
+
+  @override
+  String get attestationBadgePanelCollectibleProof => 'Dokaz zbirateljskega predmeta';
+
+  @override
+  String get attestationBadgePanelMinted => 'Izdano';
+
+  @override
+  String get exhibitionDetailPromoteTooltip => 'Promoviraj razstavo';
+
+  @override
+  String exhibitionDetailHostedBy(Object name) {
+    return 'Gostitelj: $name';
+  }
+
+  @override
+  String get exhibitionDetailManagementTitle => 'Upravljanje';
+
+  @override
+  String get exhibitionDetailPoapTitle => 'POAP';
+
+  @override
+  String get exhibitionDetailPoapDescription => 'Prevzemi ta dokaz obiska in ga dodaj v svojo zgodovino priznanj.';
+
+  @override
+  String get exhibitionDetailPoapClaimedStatus => 'Prevzeto';
+
+  @override
+  String get exhibitionDetailPoapNotClaimedStatus => 'Na voljo za prevzem';
+
+  @override
+  String get exhibitionDetailPoapSignedOutHint => 'Za prevzem dokaza obiska se prijavi.';
+
+  @override
+  String get exhibitionDetailPoapClaimAction => 'Prevzemi POAP';
+
+  @override
+  String get exhibitionDetailPoapClaimingAction => 'Prevzemanje…';
+
+  @override
+  String get exhibitionDetailPoapClaimSuccessToast => 'POAP prevzet.';
+
+  @override
+  String get exhibitionDetailPoapClaimFailedToast => 'POAP trenutno ni mogoče prevzeti.';
+
+  @override
+  String get exhibitionDetailPoapAttendanceHint => 'Potrditev prisotnosti je spodaj na voljo za dogodke v živo.';
+
+  @override
+  String get exhibitionDetailPoapEligibilityClaimed => 'Že prevzeto';
+
+  @override
+  String get exhibitionDetailPoapEligibilityVerified => 'Prisotnost potrjena';
+
+  @override
+  String get exhibitionDetailPoapEligibilityVisitRequired => 'Zahtevan je dokaz obiska';
+
+  @override
+  String get exhibitionDetailPoapEligibilitySignedOut => 'Zahtevana je prijava';
+
+  @override
+  String get exhibitionDetailPoapEligibilityClaimReadyHint => 'Tvoja prisotnost je potrjena. POAP lahko zdaj prevzameš.';
+
+  @override
+  String get exhibitionDetailAttendanceConfirmAction => 'Potrdi prisotnost';
+
+  @override
+  String get exhibitionDetailAttendanceConfirmingAction => 'Potrjujem…';
+
+  @override
+  String get exhibitionDetailAttendanceAlreadyCheckedIn => 'Že prijavljen/-a';
+
+  @override
+  String get exhibitionDetailAttendanceMoveCloserHint => 'Približaj se za potrditev prisotnosti.';
+
+  @override
+  String get exhibitionDetailAttendanceConfirmedToast => 'Prisotnost potrjena.';
+
+  @override
+  String get exhibitionDetailAttendanceAlreadyCheckedInToast => 'Že prijavljen/-a.';
+
+  @override
+  String get exhibitionDetailAttendanceUnableToConfirmToast => 'Prisotnosti ni mogoče potrditi.';
+
+  @override
+  String exhibitionDetailAttendanceRewardPending(Object amount) {
+    return '+$amount KUB8 (v obdelavi)';
+  }
 }

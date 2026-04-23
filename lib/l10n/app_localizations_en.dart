@@ -10874,4 +10874,113 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get attestationBadgePanelLoadFailed => 'Unable to load recognition right now.';
+
+  @override
+  String get attestationBadgePanelEmpty => 'No recognition yet. Attend events or complete approvals to unlock badges.';
+
+  @override
+  String get attestationBadgePanelAttendance => 'Attendance';
+
+  @override
+  String get attestationBadgePanelParticipation => 'Participation';
+
+  @override
+  String get attestationBadgePanelApproval => 'Approval';
+
+  @override
+  String get attestationBadgePanelCuratorial => 'Curatorial';
+
+  @override
+  String get attestationBadgePanelInstitutional => 'Institutional';
+
+  @override
+  String get attestationBadgePanelCollectibleProof => 'Collectible proof';
+
+  @override
+  String get attestationBadgePanelMinted => 'Minted';
+
+  @override
+  String get exhibitionDetailPromoteTooltip => 'Promote exhibition';
+
+  @override
+  String exhibitionDetailHostedBy(Object name) {
+    return 'Hosted by $name';
+  }
+
+  @override
+  String get exhibitionDetailManagementTitle => 'Management';
+
+  @override
+  String get exhibitionDetailPoapTitle => 'POAP';
+
+  @override
+  String get exhibitionDetailPoapDescription => 'Claim this proof of visit to add it to your recognition history.';
+
+  @override
+  String get exhibitionDetailPoapClaimedStatus => 'Claimed';
+
+  @override
+  String get exhibitionDetailPoapNotClaimedStatus => 'Ready to claim';
+
+  @override
+  String get exhibitionDetailPoapSignedOutHint => 'Sign in to claim this proof of visit.';
+
+  @override
+  String get exhibitionDetailPoapClaimAction => 'Claim POAP';
+
+  @override
+  String get exhibitionDetailPoapClaimingAction => 'Claiming…';
+
+  @override
+  String get exhibitionDetailPoapClaimSuccessToast => 'POAP claimed.';
+
+  @override
+  String get exhibitionDetailPoapClaimFailedToast => 'Unable to claim POAP right now.';
+
+  @override
+  String get exhibitionDetailPoapAttendanceHint => 'Attendance check-in appears below for live events.';
+
+  @override
+  String get exhibitionDetailPoapEligibilityClaimed => 'Already claimed';
+
+  @override
+  String get exhibitionDetailPoapEligibilityVerified => 'Attendance verified';
+
+  @override
+  String get exhibitionDetailPoapEligibilityVisitRequired => 'Visit proof required';
+
+  @override
+  String get exhibitionDetailPoapEligibilitySignedOut => 'Sign in required';
+
+  @override
+  String get exhibitionDetailPoapEligibilityClaimReadyHint => 'Your attendance is verified. You can claim this POAP now.';
+
+  @override
+  String get exhibitionDetailAttendanceConfirmAction => 'Confirm attendance';
+
+  @override
+  String get exhibitionDetailAttendanceConfirmingAction => 'Confirming…';
+
+  @override
+  String get exhibitionDetailAttendanceAlreadyCheckedIn => 'Already checked in';
+
+  @override
+  String get exhibitionDetailAttendanceMoveCloserHint => 'Move closer to confirm attendance.';
+
+  @override
+  String get exhibitionDetailAttendanceConfirmedToast => 'Attendance confirmed.';
+
+  @override
+  String get exhibitionDetailAttendanceAlreadyCheckedInToast => 'Already checked in.';
+
+  @override
+  String get exhibitionDetailAttendanceUnableToConfirmToast => 'Unable to confirm attendance.';
+
+  @override
+  String exhibitionDetailAttendanceRewardPending(Object amount) {
+    return '+$amount KUB8 (pending)';
+  }
 }

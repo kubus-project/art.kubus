@@ -4648,6 +4648,51 @@
       "count": {}
     }
   },
+  "attestationBadgePanelLoadFailed": "Priznanj trenutno ni bilo mogoče naložiti.",
+  "attestationBadgePanelEmpty": "Za zdaj še ni priznanj. Udeleži se dogodkov ali dokončaj odobritve, da odklenes značke.",
+  "attestationBadgePanelAttendance": "Udeležba",
+  "attestationBadgePanelParticipation": "Sodelovanje",
+  "attestationBadgePanelApproval": "Odobritev",
+  "attestationBadgePanelCuratorial": "Kuratorsko",
+  "attestationBadgePanelInstitutional": "Institucionalno",
+  "attestationBadgePanelCollectibleProof": "Dokaz zbirateljskega predmeta",
+  "attestationBadgePanelMinted": "Izdano",
+  "exhibitionDetailPromoteTooltip": "Promoviraj razstavo",
+  "exhibitionDetailHostedBy": "Gostitelj: {name}",
+  "@exhibitionDetailHostedBy": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "exhibitionDetailManagementTitle": "Upravljanje",
+  "exhibitionDetailPoapTitle": "Značka prisotnosti (POAP)",
+  "exhibitionDetailPoapDescription": "Prevzemi ta dokaz obiska in ga dodaj v svojo zgodovino priznanj.",
+  "exhibitionDetailPoapClaimedStatus": "Prevzeto",
+  "exhibitionDetailPoapNotClaimedStatus": "Na voljo za prevzem",
+  "exhibitionDetailPoapSignedOutHint": "Za prevzem značke obiska se prijavi.",
+  "exhibitionDetailPoapClaimAction": "Prevzemi Značko",
+  "exhibitionDetailPoapClaimingAction": "Prevzemanje…",
+  "exhibitionDetailPoapClaimSuccessToast": "Značka prevzeta.",
+  "exhibitionDetailPoapClaimFailedToast": "Značka trenutno ni mogoče prevzeti.",
+  "exhibitionDetailPoapAttendanceHint": "Potrditev prisotnosti je spodaj na voljo za dogodke v živo.",
+  "exhibitionDetailPoapEligibilityClaimed": "Že prevzeto",
+  "exhibitionDetailPoapEligibilityVerified": "Prisotnost potrjena",
+  "exhibitionDetailPoapEligibilityVisitRequired": "Zahtevan je dokaz obiska",
+  "exhibitionDetailPoapEligibilitySignedOut": "Zahtevana je prijava",
+  "exhibitionDetailPoapEligibilityClaimReadyHint": "Tvoja prisotnost je potrjena. Značko lahko zdaj prevzameš.",
+  "exhibitionDetailAttendanceConfirmAction": "Potrdi prisotnost",
+  "exhibitionDetailAttendanceConfirmingAction": "Potrjujem…",
+  "exhibitionDetailAttendanceAlreadyCheckedIn": "Že prijavljen/-a",
+  "exhibitionDetailAttendanceMoveCloserHint": "Približaj se za potrditev prisotnosti.",
+  "exhibitionDetailAttendanceConfirmedToast": "Prisotnost potrjena.",
+  "exhibitionDetailAttendanceAlreadyCheckedInToast": "Že prijavljen/-a.",
+  "exhibitionDetailAttendanceUnableToConfirmToast": "Prisotnosti ni mogoče potrditi.",
+  "exhibitionDetailAttendanceRewardPending": "+{amount} KUB8 (v obdelavi)",
+  "@exhibitionDetailAttendanceRewardPending": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
   "savedItemsArtworkLabel": "umetnine",
   "savedItemsEventLabel": "dogodki",
   "savedItemsCollectionLabel": "zbirke",

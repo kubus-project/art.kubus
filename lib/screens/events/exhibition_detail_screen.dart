@@ -10,6 +10,7 @@ import '../../models/promotion.dart';
 import '../../models/artwork.dart';
 import '../../providers/artwork_provider.dart';
 import '../../providers/attendance_provider.dart';
+import '../../providers/attestation_provider.dart';
 import '../../providers/collab_provider.dart';
 import '../../providers/exhibitions_provider.dart';
 import '../../providers/profile_provider.dart';
@@ -23,6 +24,7 @@ import '../../utils/artwork_media_resolver.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/detail/detail_shell_components.dart';
+import '../../widgets/detail/poap_detail_card.dart';
 import '../../utils/artwork_navigation.dart';
 import '../../utils/design_tokens.dart';
 import '../../config/config.dart';
@@ -49,6 +51,7 @@ class ExhibitionDetailScreen extends StatefulWidget {
 
 class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
   String? _prefetchedAttendanceMarkerId;
+  bool _isClaimingPoap = false;
 
   @override
   void initState() {
@@ -115,7 +118,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     return [
       if (canPromote)
         IconButton(
-          tooltip: 'Promote exhibition',
+          tooltip: l10n.exhibitionDetailPromoteTooltip,
           onPressed: () => _openPromotionFlow(ex),
           icon: const Icon(Icons.campaign_outlined),
         ),
@@ -179,6 +182,93 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
           behavior: SnackBarBehavior.floating,
         ),
       );
+    }
+  }
+
+  Future<void> _claimExhibitionPoap() async {
+    if (_isClaimingPoap) return;
+
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final messenger = ScaffoldMessenger.of(context);
+    final provider = context.read<ExhibitionsProvider>();
+    final attestationProvider = context.read<AttestationProvider>();
+
+    setState(() {
+      _isClaimingPoap = true;
+    });
+
+    try {
+      final status = await provider.claimExhibitionPoap(widget.exhibitionId);
+      if (!mounted) return;
+
+      if (status == null) {
+        messenger.showKubusSnackBar(
+          SnackBar(
+            content: Text(l10n.exhibitionDetailPoapClaimFailedToast,
+                style: KubusTypography.inter()),
+            behavior: SnackBarBehavior.floating,
+          ),
+          tone: KubusSnackBarTone.warning,
+        );
+        return;
+      }
+
+      unawaited(attestationProvider.refresh(force: true));
+
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(l10n.exhibitionDetailPoapClaimSuccessToast,
+              style: KubusTypography.inter()),
+          behavior: SnackBarBehavior.floating,
+        ),
+        tone: KubusSnackBarTone.success,
+      );
+    } on BackendApiRequestException catch (e) {
+      if (!mounted) return;
+      String? backendMessage;
+      try {
+        final raw = (e.body ?? '').trim();
+        if (raw.isNotEmpty) {
+          final decoded = jsonDecode(raw);
+          if (decoded is Map<String, dynamic>) {
+            final msg = (decoded['error'] ?? decoded['message'] ?? '')
+                .toString()
+                .trim();
+            if (msg.isNotEmpty) backendMessage = msg;
+          }
+        }
+      } catch (_) {
+        // ignore
+      }
+
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(
+            backendMessage ?? l10n.exhibitionDetailPoapClaimFailedToast,
+            style: KubusTypography.inter(),
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+        tone: KubusSnackBarTone.error,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(l10n.exhibitionDetailPoapClaimFailedToast,
+              style: KubusTypography.inter()),
+          backgroundColor: scheme.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+        tone: KubusSnackBarTone.error,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isClaimingPoap = false;
+        });
+      }
     }
   }
 
@@ -418,6 +508,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
   }
 
   Widget _buildAttendanceConfirmSection() {
+    final l10n = AppLocalizations.of(context)!;
     if (!AppConfig.isFeatureEnabled('attendance')) {
       return const SizedBox.shrink();
     }
@@ -459,8 +550,10 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
         final isConfirming = state.isConfirming;
 
         final label = isConfirming
-            ? 'Confirming…'
-            : (alreadyAttended ? 'Already checked in' : 'Confirm attendance');
+            ? l10n.exhibitionDetailAttendanceConfirmingAction
+            : (alreadyAttended
+                ? l10n.exhibitionDetailAttendanceAlreadyCheckedIn
+                : l10n.exhibitionDetailAttendanceConfirmAction);
         final icon = isConfirming
             ? Icons.hourglass_top
             : (alreadyAttended ? Icons.check_circle : Icons.verified_user);
@@ -496,6 +589,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
   }
 
   Future<void> _confirmAttendance(String markerId) async {
+    final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final attendanceProvider = context.read<AttendanceProvider>();
     final state = attendanceProvider.stateFor(markerId);
@@ -505,7 +599,9 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
         !state.hasFreshProximity ||
         !proximity.withinRadius) {
       messenger.showKubusSnackBar(
-        const SnackBar(content: Text('Move closer to confirm attendance.')),
+        SnackBar(
+          content: Text(l10n.exhibitionDetailAttendanceMoveCloserHint),
+        ),
         tone: KubusSnackBarTone.warning,
       );
       return;
@@ -517,7 +613,9 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
 
       if (result == null) {
         messenger.showKubusSnackBar(
-          const SnackBar(content: Text('Unable to confirm attendance.')),
+          SnackBar(
+            content: Text(l10n.exhibitionDetailAttendanceUnableToConfirmToast),
+          ),
           tone: KubusSnackBarTone.warning,
         );
         return;
@@ -532,11 +630,15 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       final wasIdempotent =
           result.attendanceRecorded != true && result.viewedAdded != true;
       final parts = <String>[
-        wasIdempotent ? 'Already checked in.' : 'Attendance confirmed.'
+        wasIdempotent
+            ? l10n.exhibitionDetailAttendanceAlreadyCheckedInToast
+            : l10n.exhibitionDetailAttendanceConfirmedToast
       ];
       if (awarded != null && awarded > 0) {
         parts.add(
-          '+${awarded.toStringAsFixed(awarded % 1 == 0 ? 0 : 1)} KUB8 (pending)',
+          l10n.exhibitionDetailAttendanceRewardPending(
+            awarded.toStringAsFixed(awarded % 1 == 0 ? 0 : 1),
+          ),
         );
       }
 
@@ -547,6 +649,15 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
         ),
         tone: KubusSnackBarTone.success,
       );
+
+      final subject = result.subject;
+      final subjectType = (subject?['subjectType'] ?? '').toString().trim().toLowerCase();
+      final subjectId = (subject?['subjectId'] ?? '').toString().trim();
+      if (subjectType == 'exhibition' &&
+          subjectId.isNotEmpty &&
+          subjectId == widget.exhibitionId) {
+        unawaited(_claimExhibitionPoap());
+      }
     } on BackendApiRequestException catch (e) {
       if (!mounted) return;
       String? backendMessage;
@@ -567,14 +678,17 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
 
       messenger.showKubusSnackBar(
         SnackBar(
-          content: Text(backendMessage ?? 'Unable to confirm attendance.'),
+          content: Text(
+            backendMessage ??
+                l10n.exhibitionDetailAttendanceUnableToConfirmToast,
+          ),
         ),
         tone: KubusSnackBarTone.error,
       );
     } catch (_) {
       if (!mounted) return;
       messenger.showKubusSnackBar(
-        const SnackBar(content: Text('Something went wrong.')),
+        SnackBar(content: Text(l10n.commonSomethingWentWrong)),
         tone: KubusSnackBarTone.error,
       );
     }
@@ -585,12 +699,13 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final provider = context.watch<ExhibitionsProvider>();
+    final isSignedIn = context.watch<ProfileProvider>().isSignedIn;
 
     final ex = provider.exhibitions.firstWhere(
       (e) => e.id == widget.exhibitionId,
       orElse: () =>
           widget.initialExhibition ??
-          Exhibition(id: widget.exhibitionId, title: 'Exhibition'),
+          Exhibition(id: widget.exhibitionId, title: l10n.commonExhibition),
     );
 
     final poap = provider.poapStatusFor(widget.exhibitionId);
@@ -633,6 +748,12 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                     _ExhibitionDetailsCard(
                       exhibition: ex,
                       poap: poap,
+                      isSignedIn: isSignedIn,
+                      isClaimingPoap: _isClaimingPoap,
+                      onClaimPoap:
+                          poap?.claimed == true ? null : _claimExhibitionPoap,
+                      showAttendanceHint:
+                          (widget.attendanceMarkerId ?? '').trim().isNotEmpty,
                       canManage: canManage,
                       canPublish: canPublish,
                       onPublishChanged: (v) => _togglePublish(ex, v),
@@ -831,6 +952,10 @@ class _ExhibitionDetailsCard extends StatelessWidget {
   const _ExhibitionDetailsCard({
     required this.exhibition,
     required this.poap,
+    required this.isSignedIn,
+    required this.isClaimingPoap,
+    required this.onClaimPoap,
+    required this.showAttendanceHint,
     required this.canManage,
     required this.canPublish,
     required this.onPublishChanged,
@@ -839,6 +964,10 @@ class _ExhibitionDetailsCard extends StatelessWidget {
 
   final Exhibition exhibition;
   final ExhibitionPoapStatus? poap;
+  final bool isSignedIn;
+  final bool isClaimingPoap;
+  final VoidCallback? onClaimPoap;
+  final bool showAttendanceHint;
   final bool canManage;
   final bool canPublish;
   final ValueChanged<bool> onPublishChanged;
@@ -865,9 +994,13 @@ class _ExhibitionDetailsCard extends StatelessWidget {
         ? exhibition.locationName!.trim()
         : null;
 
-    final hostLabel = exhibition.host == null
+    final hostName = exhibition.host == null
         ? null
-        : 'Hosted by ${exhibition.host!.displayName ?? exhibition.host!.username ?? 'Unknown'}';
+        : (exhibition.host!.displayName ??
+            exhibition.host!.username ??
+            l10n.commonUnknown);
+    final hostLabel =
+        hostName == null ? null : l10n.exhibitionDetailHostedBy(hostName);
 
     return DetailCard(
       borderRadius: DetailRadius.md,
@@ -910,7 +1043,6 @@ class _ExhibitionDetailsCard extends StatelessWidget {
             ),
             const SizedBox(height: DetailSpacing.lg),
           ],
-
           DetailMetadataBlock(
             items: [
               if (dateRange != null)
@@ -936,7 +1068,6 @@ class _ExhibitionDetailsCard extends StatelessWidget {
             ],
             compact: true,
           ),
-
           if ((exhibition.description ?? '').trim().isNotEmpty) ...[
             const SizedBox(height: DetailSpacing.md),
             Text(
@@ -946,31 +1077,56 @@ class _ExhibitionDetailsCard extends StatelessWidget {
               style: DetailTypography.body(context),
             ),
           ],
-
           if (poap?.poap != null) ...[
             const SizedBox(height: DetailSpacing.lg),
             Divider(color: scheme.outlineVariant.withValues(alpha: 0.4)),
             const SizedBox(height: DetailSpacing.md),
-            Text(l10n.exhibitionDetailBadgeTitle,
-                style: DetailTypography.cardTitle(context)),
-            const SizedBox(height: DetailSpacing.sm),
-            Text(
-              poap!.claimed == true
-                  ? l10n.exhibitionDetailBadgeClaimed
-                  : l10n.exhibitionDetailBadgeNotClaimed,
-              style: DetailTypography.caption(context),
+            PoapDetailCard(
+              title: l10n.exhibitionDetailPoapTitle,
+              description: poap!.poap.description?.trim().isNotEmpty == true
+                  ? poap!.poap.description!.trim()
+                  : l10n.exhibitionDetailPoapDescription,
+              code: poap!.poap.code,
+              iconUrl: poap!.poap.iconUrl,
+              rarityLabel: poap!.poap.rarity,
+              rewardLabel: poap!.poap.rewardKub8 > 0
+                  ? '+${poap!.poap.rewardKub8} KUB8'
+                  : null,
+              stateLabel: poap!.claimed
+                  ? l10n.exhibitionDetailPoapClaimedStatus
+                  : l10n.exhibitionDetailPoapNotClaimedStatus,
+              eligibilityLabel: poap!.claimed
+                  ? l10n.exhibitionDetailPoapEligibilityClaimed
+                  : (poap!.canClaim
+                      ? l10n.exhibitionDetailPoapEligibilityVerified
+                      : (isSignedIn
+                          ? l10n.exhibitionDetailPoapEligibilityVisitRequired
+                          : l10n.exhibitionDetailPoapEligibilitySignedOut)),
+              eligibilityHint: poap!.claimed
+                  ? null
+                  : (poap!.canClaim
+                      ? l10n.exhibitionDetailPoapEligibilityClaimReadyHint
+                      : (showAttendanceHint
+                          ? l10n.exhibitionDetailPoapAttendanceHint
+                          : null)),
+              signedOutHint: isSignedIn ? null : l10n.exhibitionDetailPoapSignedOutHint,
+              isClaimed: poap!.claimed,
+              canClaim: !poap!.claimed && poap!.canClaim && isSignedIn,
+              isClaiming: isClaimingPoap,
+              onClaim: onClaimPoap,
+              claimActionLabel: l10n.exhibitionDetailPoapClaimAction,
+              claimingActionLabel: l10n.exhibitionDetailPoapClaimingAction,
             ),
           ],
-
           if (canPublish) ...[
             const SizedBox(height: DetailSpacing.lg),
             DetailManagementSection(
-              title: 'Management',
+              title: l10n.exhibitionDetailManagementTitle,
               initiallyExpanded: false,
               child: SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                value:
-                    (exhibition.status ?? '').trim().toLowerCase() == 'published',
+                value: (exhibition.status ?? '').trim().toLowerCase() ==
+                    'published',
                 onChanged: onPublishChanged,
                 title: Text(
                   l10n.commonPublish,

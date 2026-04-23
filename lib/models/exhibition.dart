@@ -214,21 +214,54 @@ class ExhibitionPoapStatus {
   final String? exhibitionStatus;
   final ExhibitionPoap poap;
   final bool claimed;
+  final String? eligibilityState;
+  final String? eligibilityReason;
+  final bool canClaim;
+  final String? proofType;
+  final int linkedMarkerCount;
+  final String? latestAttendanceMarkerId;
+  final DateTime? latestAttendanceAt;
 
   const ExhibitionPoapStatus({
     required this.exhibitionId,
     required this.exhibitionStatus,
     required this.poap,
     required this.claimed,
+    this.eligibilityState,
+    this.eligibilityReason,
+    this.canClaim = false,
+    this.proofType,
+    this.linkedMarkerCount = 0,
+    this.latestAttendanceMarkerId,
+    this.latestAttendanceAt,
   });
 
   factory ExhibitionPoapStatus.fromJson(Map<String, dynamic> json) {
     final poapRaw = json['poap'];
+    final eligibilityRaw = json['eligibility'];
+    final eligibility = eligibilityRaw is Map<String, dynamic>
+        ? eligibilityRaw
+        : (eligibilityRaw is Map ? Map<String, dynamic>.from(eligibilityRaw) : null);
+    final latestAttendanceRaw = eligibility?['latestAttendance'];
+    final latestAttendance = latestAttendanceRaw is Map<String, dynamic>
+        ? latestAttendanceRaw
+        : (latestAttendanceRaw is Map
+            ? Map<String, dynamic>.from(latestAttendanceRaw)
+            : null);
     return ExhibitionPoapStatus(
       exhibitionId: (json['exhibitionId'] ?? json['exhibition_id'] ?? '').toString(),
       exhibitionStatus: (json['exhibitionStatus'] ?? json['exhibition_status'])?.toString(),
       poap: poapRaw is Map<String, dynamic> ? ExhibitionPoap.fromJson(poapRaw) : ExhibitionPoap.fromJson(const {}),
       claimed: json['claimed'] == true,
+      eligibilityState: (eligibility?['state'] ?? eligibility?['eligibilityState'])?.toString(),
+      eligibilityReason: (eligibility?['reason'] ?? eligibility?['eligibilityReason'])?.toString(),
+      canClaim: (eligibility?['canClaim'] == true) || (eligibility?['can_claim'] == true),
+      proofType: (eligibility?['proofType'] ?? eligibility?['proof_type'])?.toString(),
+      linkedMarkerCount: (eligibility?['linkedMarkerCount'] ?? eligibility?['linked_marker_count']) is num
+          ? (eligibility?['linkedMarkerCount'] ?? eligibility?['linked_marker_count']).toInt()
+          : int.tryParse((eligibility?['linkedMarkerCount'] ?? eligibility?['linked_marker_count'] ?? '0').toString()) ?? 0,
+      latestAttendanceMarkerId: (latestAttendance?['markerId'] ?? latestAttendance?['marker_id'])?.toString(),
+      latestAttendanceAt: _parseDateTime(latestAttendance?['attendedAt'] ?? latestAttendance?['attended_at']),
     );
   }
 }

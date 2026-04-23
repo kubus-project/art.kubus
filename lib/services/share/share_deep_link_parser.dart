@@ -66,8 +66,31 @@ class AppRouteIntent {
 class ShareDeepLinkTarget {
   final ShareEntityType type;
   final String id;
+  final String? attendanceMarkerId;
+  final bool claimReady;
 
-  const ShareDeepLinkTarget({required this.type, required this.id});
+  const ShareDeepLinkTarget({
+    required this.type,
+    required this.id,
+    this.attendanceMarkerId,
+    this.claimReady = false,
+  });
+
+  const ShareDeepLinkTarget.exhibitionClaimReady({
+    required String exhibitionId,
+    required String attendanceMarkerId,
+  }) : this(
+          type: ShareEntityType.exhibition,
+          id: exhibitionId,
+          attendanceMarkerId: attendanceMarkerId,
+          claimReady: true,
+        );
+
+  bool get isClaimReadyExhibition {
+    return type == ShareEntityType.exhibition &&
+        claimReady &&
+        (attendanceMarkerId ?? '').trim().isNotEmpty;
+  }
 }
 
 class ShareDeepLinkCodec {
@@ -102,14 +125,19 @@ class ShareDeepLinkCodec {
         final id = Uri.decodeComponent(rawId).trim();
         if (id.isEmpty) continue;
 
-        return _intentFromType(intentType, id);
+        return _intentFromType(
+          intentType,
+          id,
+          uri: uri,
+          segmentIndex: i,
+        );
       }
     }
 
     final queryType = _intentTypeForHead((uri.queryParameters['type'] ?? ''));
     final queryId = Uri.decodeComponent((uri.queryParameters['id'] ?? '').trim());
     if (queryType != null && queryId.isNotEmpty) {
-      return _intentFromType(queryType, queryId);
+      return _intentFromType(queryType, queryId, uri: uri);
     }
 
     return null;
@@ -121,7 +149,21 @@ class ShareDeepLinkCodec {
     final mapped = _shareTypeForIntent(intent.type);
     final id = intent.id;
     if (mapped == null || id == null || id.isEmpty) return null;
-    return ShareDeepLinkTarget(type: mapped, id: id);
+    final claimReady = intent.type == AppRouteIntentType.exhibition &&
+        (uri.queryParameters['handoff']?.toLowerCase() == 'claim-ready' ||
+            uri.queryParameters['claimReady'] == 'true' ||
+            uri.queryParameters['claim_ready'] == 'true' ||
+            _claimReadyMarkerFromUri(uri) != null);
+    final attendanceMarkerId = intent.type == AppRouteIntentType.exhibition
+        ? _claimReadyMarkerFromUri(uri)
+        : null;
+
+    return ShareDeepLinkTarget(
+      type: mapped,
+      id: id,
+      attendanceMarkerId: attendanceMarkerId,
+      claimReady: claimReady,
+    );
   }
 
   Uri buildUriForTarget(Uri baseUri, ShareTarget target) {
@@ -129,11 +171,22 @@ class ShareDeepLinkCodec {
         ? baseUri.path.substring(0, baseUri.path.length - 1)
         : baseUri.path;
     final relativePath = canonicalPathFor(target.type, target.shareId);
-    return baseUri.replace(path: '$normalizedPath$relativePath');
+    final parsed = Uri.parse(relativePath);
+    return baseUri.replace(
+      path: '$normalizedPath${parsed.path}',
+      queryParameters: parsed.queryParameters.isEmpty
+          ? null
+          : parsed.queryParameters,
+    );
   }
 
   String canonicalPathForTarget(ShareDeepLinkTarget target) {
-    return canonicalPathFor(target.type, target.id);
+    final basePath = canonicalPathFor(target.type, target.id);
+    if (target.isClaimReadyExhibition) {
+      final markerId = Uri.encodeComponent(target.attendanceMarkerId!.trim());
+      return '$basePath?handoff=claim-ready&attendanceMarkerId=$markerId';
+    }
+    return basePath;
   }
 
   String canonicalPathFor(ShareEntityType type, String id) {
@@ -141,7 +194,12 @@ class ShareDeepLinkCodec {
     return '/${_canonicalHeadForType(type)}/$encodedId';
   }
 
-  AppRouteIntent _intentFromType(AppRouteIntentType type, String id) {
+  AppRouteIntent _intentFromType(
+    AppRouteIntentType type,
+    String id, {
+    Uri? uri,
+    int? segmentIndex,
+  }) {
     switch (type) {
       case AppRouteIntentType.marker:
         return AppRouteIntent.marker(id);
@@ -154,6 +212,11 @@ class ShareDeepLinkCodec {
       case AppRouteIntentType.profile:
         return AppRouteIntent.profile(id);
       case AppRouteIntentType.exhibition:
+        final claimReady = _isClaimReadyUri(uri, segmentIndex: segmentIndex);
+        final markerId = _claimReadyMarkerFromUri(uri);
+        if (claimReady && (markerId ?? '').trim().isNotEmpty) {
+          return AppRouteIntent.exhibition(id);
+        }
         return AppRouteIntent.exhibition(id);
       case AppRouteIntentType.collection:
         return AppRouteIntent.collection(id);
@@ -162,6 +225,50 @@ class ShareDeepLinkCodec {
       case AppRouteIntentType.map:
         return const AppRouteIntent.map();
     }
+  }
+
+  bool _isClaimReadyUri(Uri? uri, {int? segmentIndex}) {
+    if (uri == null) return false;
+    final handoff = (uri.queryParameters['handoff'] ?? '').trim().toLowerCase();
+    if (handoff == 'claim-ready') return true;
+    final claimReady = (uri.queryParameters['claimReady'] ?? uri.queryParameters['claim_ready'])
+        ?.toString()
+        .trim()
+        .toLowerCase();
+    if (claimReady == 'true') return true;
+    if (segmentIndex != null && uri.pathSegments.length > segmentIndex + 2) {
+      final segment = uri.pathSegments[segmentIndex + 2].trim().toLowerCase();
+      if (segment == 'claim-ready' || segment == 'claim_ready') return true;
+    }
+    return false;
+  }
+
+  String? _claimReadyMarkerFromUri(Uri? uri) {
+    if (uri == null) return null;
+    final markerFromQuery = (uri.queryParameters['attendanceMarkerId'] ??
+            uri.queryParameters['attendance_marker_id'] ??
+            uri.queryParameters['markerId'] ??
+            uri.queryParameters['marker_id'])
+        ?.trim();
+    if (markerFromQuery != null && markerFromQuery.isNotEmpty) {
+      return markerFromQuery;
+    }
+
+    final segments = uri.pathSegments
+        .map((segment) => segment.trim())
+        .where((segment) => segment.isNotEmpty)
+        .toList(growable: false);
+    for (var i = 0; i < segments.length - 1; i++) {
+      final segment = segments[i].toLowerCase();
+      if (segment == 'claim-ready' || segment == 'claim_ready') {
+        final candidate = segments[i + 1].trim();
+        if (candidate.isNotEmpty) {
+          return candidate;
+        }
+      }
+    }
+
+    return null;
   }
 
   ShareEntityType? _shareTypeForIntent(AppRouteIntentType type) {
