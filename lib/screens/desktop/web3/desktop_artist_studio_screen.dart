@@ -27,7 +27,6 @@ import '../../web3/artist/artwork_creator.dart';
 import '../../web3/artist/artist_portfolio_screen.dart';
 import '../../web3/artist/artist_analytics.dart';
 import '../../web3/artist/collection_creator.dart';
-import '../../art/collection_detail_screen.dart';
 import '../../events/exhibition_creator_screen.dart';
 import '../../events/exhibition_detail_screen.dart';
 import '../../events/exhibition_list_screen.dart';
@@ -165,7 +164,6 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final animationTheme = context.animationTheme;
-    final l10n = AppLocalizations.of(context)!;
     final screenWidth = MediaQuery.of(context).size.width;
     final isLarge = screenWidth >= 1200;
 
@@ -174,11 +172,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
       if (shellScope == null) return;
       final draftId = context.read<ArtworkDraftsProvider>().createDraft();
       shellScope.pushScreen(
-        DesktopSubScreen(
-          title: l10n.artistStudioCreateOptionArtworkTitle,
-          child: ArtworkCreator(
-              draftId: draftId, showAppBar: false, embedded: true),
-        ),
+        ArtworkCreator(draftId: draftId, showAppBar: false, embedded: true),
       );
     }
 
@@ -186,24 +180,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
       final shellScope = DesktopShellScope.of(context);
       if (shellScope == null) return;
       shellScope.pushScreen(
-        DesktopSubScreen(
-          title: l10n.collectionCreatorTitle,
-          child: CollectionCreator(
-            embedded: true,
-            onCreated: (collectionId) {
-              shellScope.popScreen();
-              shellScope.pushScreen(
-                DesktopSubScreen(
-                  title: l10n.userProfileCollectionFallbackTitle,
-                  child: CollectionDetailScreen(
-                    collectionId: collectionId,
-                    embedded: true,
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
+        const CollectionCreator(embedded: true),
       );
     }
 
@@ -211,10 +188,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
       final shellScope = DesktopShellScope.of(context);
       if (shellScope == null) return;
       shellScope.pushScreen(
-        DesktopSubScreen(
-          title: l10n.exhibitionCreatorAppBarTitle,
-          child: const ExhibitionCreatorScreen(embedded: true),
-        ),
+        const ExhibitionCreatorScreen(embedded: true),
       );
     }
 
@@ -425,15 +399,10 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                 semantic: KubusActionSemantic.create,
                 onTap: () {
                   DesktopShellScope.of(context)?.pushScreen(
-                    DesktopSubScreen(
-                      title:
-                          l10n.desktopArtistStudioQuickActionCreateArtworkTitle,
-                      child: ArtworkCreator(
-                        draftId:
-                            context.read<ArtworkDraftsProvider>().createDraft(),
-                        showAppBar: false,
-                        embedded: true,
-                      ),
+                    ArtworkCreator(
+                      draftId: context.read<ArtworkDraftsProvider>().createDraft(),
+                      showAppBar: false,
+                      embedded: true,
                     ),
                   );
                 },
@@ -449,24 +418,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                   final shellScope = DesktopShellScope.of(context);
                   if (shellScope == null) return;
                   shellScope.pushScreen(
-                    DesktopSubScreen(
-                      title: l10n.collectionCreatorTitle,
-                      child: CollectionCreator(
-                        embedded: true,
-                        onCreated: (collectionId) {
-                          shellScope.popScreen();
-                          shellScope.pushScreen(
-                            DesktopSubScreen(
-                              title: l10n.userProfileCollectionFallbackTitle,
-                              child: CollectionDetailScreen(
-                                collectionId: collectionId,
-                                embedded: true,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+                    const CollectionCreator(embedded: true),
                   );
                 },
               ),
@@ -522,11 +474,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                         canCreate: true,
                         onCreateExhibition: () {
                           DesktopShellScope.of(context)?.pushScreen(
-                            DesktopSubScreen(
-                              title: l10n.exhibitionCreatorAppBarTitle,
-                              child:
-                                  const ExhibitionCreatorScreen(embedded: true),
-                            ),
+                            const ExhibitionCreatorScreen(embedded: true),
                           );
                         },
                         onOpenExhibition: (exhibition) {

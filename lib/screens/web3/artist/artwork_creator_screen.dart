@@ -23,6 +23,7 @@ import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/maplibre_style_utils.dart';
 import '../../../utils/wallet_utils.dart';
+import '../../../widgets/collaboration_panel.dart';
 import '../../../widgets/art_map_view.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/creator/creator_kit.dart';
@@ -1590,6 +1591,215 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     );
   }
 
+  Widget _buildDesktopSidebar({
+    required ArtworkDraftsProvider drafts,
+    required ArtworkDraftState draft,
+    required Color accent,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    final isSignedIn = context.read<ProfileProvider>().isSignedIn == true;
+    final persistedArtwork = _createdArtwork;
+    final artworkId = persistedArtwork?.id ?? '';
+    final canUseCollab = AppConfig.isFeatureEnabled('collabInvites') &&
+        isSignedIn &&
+        artworkId.isNotEmpty;
+    final canUseAr = AppConfig.isFeatureEnabled('ar') &&
+        artworkId.isNotEmpty &&
+        draft.arEnabled;
+    final hasCover = draft.coverBytes != null;
+    final hasBasicInfo = draft.title.trim().isNotEmpty &&
+        draft.description.trim().isNotEmpty;
+    final hasLocation = _isLocationEnabled(draft)
+        ? (_latController.text.trim().isNotEmpty &&
+            _lngController.text.trim().isNotEmpty)
+        : true;
+    final hasGallery = draft.gallery.isNotEmpty;
+    final readyItems = <DesktopCreatorReadinessItem>[
+      DesktopCreatorReadinessItem(
+        label: 'Basics complete',
+        description: 'Title, description, and category are filled in.',
+        complete: hasBasicInfo,
+        icon: Icons.subject_outlined,
+      ),
+      DesktopCreatorReadinessItem(
+        label: 'Cover image added',
+        description: hasCover
+            ? 'Your cover image is ready to publish.'
+            : 'Add a strong cover for the artwork.',
+        complete: hasCover,
+        icon: Icons.image_outlined,
+      ),
+      DesktopCreatorReadinessItem(
+        label: 'Location checked',
+        description: _isLocationEnabled(draft)
+            ? 'Coordinates are set for map placement.'
+            : 'Optional for draft-only submissions.',
+        complete: hasLocation,
+        icon: Icons.place_outlined,
+      ),
+      DesktopCreatorReadinessItem(
+        label: 'Gallery is prepared',
+        description: hasGallery
+            ? '${draft.gallery.length} supporting image(s) attached.'
+            : 'Optional but helpful for richer presentation.',
+        complete: hasGallery,
+        icon: Icons.collections_outlined,
+      ),
+    ];
+
+    return ListView(
+      padding: EdgeInsets.zero,
+      children: [
+        DesktopCreatorSidebarSection(
+          title: 'Status',
+          subtitle: persistedArtwork == null
+              ? 'Draft in progress'
+              : (persistedArtwork.isPublic
+                  ? 'Published artwork'
+                  : 'Saved draft artwork'),
+          icon: persistedArtwork == null
+              ? Icons.edit_outlined
+              : (persistedArtwork.isPublic
+                  ? Icons.public_outlined
+                  : Icons.bookmark_outline),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CreatorStatusBadge(
+                label: persistedArtwork == null
+                    ? 'Draft'
+                    : (persistedArtwork.isPublic ? 'Live' : 'Draft saved'),
+                color: persistedArtwork == null
+                    ? scheme.primary
+                    : (persistedArtwork.isPublic
+                        ? scheme.primary
+                        : scheme.tertiary),
+              ),
+              const SizedBox(height: KubusSpacing.sm),
+              DesktopCreatorSummaryRow(
+                label: 'Artwork ID',
+                value: persistedArtwork?.id ?? 'Not created yet',
+                valueColor: persistedArtwork == null
+                    ? scheme.onSurface.withValues(alpha: 0.6)
+                    : scheme.onSurface,
+              ),
+              DesktopCreatorSummaryRow(
+                label: 'Visibility',
+                value: widget.forceDraftOnly
+                    ? 'Draft only'
+                    : (draft.isPublic ? 'Public' : 'Private'),
+                icon: draft.isPublic
+                    ? Icons.public_outlined
+                    : Icons.lock_outline,
+              ),
+              DesktopCreatorSummaryRow(
+                label: 'Media',
+                value: hasCover
+                    ? '${draft.gallery.length + 1} item(s)'
+                    : 'Cover missing',
+                icon: Icons.perm_media_outlined,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: KubusSpacing.md),
+        DesktopCreatorSidebarSection(
+          title: 'Readiness',
+          subtitle: 'Complete the essentials before you publish.',
+          icon: Icons.fact_check_outlined,
+          child: DesktopCreatorReadinessChecklist(items: readyItems),
+        ),
+        const SizedBox(height: KubusSpacing.md),
+        DesktopCreatorSidebarSection(
+          title: 'Quick actions',
+          subtitle: 'Keep the workflow inside this creator.',
+          icon: Icons.flash_on_outlined,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ElevatedButton.icon(
+                onPressed: draft.isSubmitting ? null : () => unawaited(_publishDraft(drafts)),
+                icon: Icon(persistedArtwork == null
+                    ? Icons.save_outlined
+                    : Icons.publish_outlined),
+                label: Text(persistedArtwork == null
+                    ? (widget.forceDraftOnly ? 'Save draft' : 'Publish artwork')
+                    : 'Update and republish'),
+              ),
+              const SizedBox(height: KubusSpacing.sm),
+              OutlinedButton.icon(
+                onPressed: canUseAr
+                    ? () async {
+                        final id = persistedArtwork?.id;
+                        if (id == null || id.isEmpty) return;
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => ArtworkArManagerScreen(artworkId: id),
+                          ),
+                        );
+                      }
+                    : null,
+                icon: const Icon(Icons.qr_code_2_outlined),
+                label: Text(canUseAr ? 'Open AR setup' : 'Save first to unlock AR'),
+              ),
+            ],
+          ),
+        ),
+        if (canUseCollab) ...[
+          const SizedBox(height: KubusSpacing.md),
+          DesktopCreatorSidebarSection(
+            title: 'Collaboration',
+            subtitle: 'Invite collaborators without leaving the creator.',
+            icon: Icons.group_add_outlined,
+            child: CollaborationPanel(
+              entityType: 'artwork',
+              entityId: artworkId,
+            ),
+          ),
+        ] else ...[
+          const SizedBox(height: KubusSpacing.md),
+          DesktopCreatorSidebarSection(
+            title: 'Collaboration',
+            subtitle: 'Unlock after the first save.',
+            icon: Icons.group_add_outlined,
+            child: Text(
+              'Once the artwork is saved, collaborators can be invited here without leaving the creator.',
+              style: KubusTextStyles.detailCaption.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.72),
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: KubusSpacing.md),
+        DesktopCreatorSidebarSection(
+          title: 'Art direction',
+          subtitle: 'What the creator already knows about this piece.',
+          icon: Icons.auto_awesome_outlined,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              DesktopCreatorSummaryRow(
+                label: 'Category',
+                value: draft.category,
+                icon: Icons.category_outlined,
+              ),
+              DesktopCreatorSummaryRow(
+                label: 'Badge mode',
+                value: draft.poapMode.apiValue,
+                icon: Icons.verified_outlined,
+              ),
+              DesktopCreatorSummaryRow(
+                label: 'AR',
+                value: draft.arEnabled ? 'Enabled' : 'Off',
+                icon: Icons.view_in_ar_outlined,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   // ---------------------------------------------------------------------------
   // Build
   // ---------------------------------------------------------------------------
@@ -1598,6 +1808,8 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final accent = KubusColorRoles.of(context).web3ArtistStudioAccent;
+    final scheme = Theme.of(context).colorScheme;
+    final shellScope = DesktopShellScope.of(context);
 
     return Consumer<ArtworkDraftsProvider>(
       builder: (context, drafts, _) {
@@ -1660,7 +1872,47 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
           ),
         );
 
-        if (widget.embedded) return CreatorGlassBody(child: formBody);
+        if (widget.embedded) {
+          return DesktopCreatorShell(
+            title: l10n.artistStudioCreateOptionArtworkTitle,
+            subtitle: _createdArtwork == null
+                ? 'Compose the artwork, then unlock collaboration and AR from the sidebar.'
+                : (_createdArtwork!.isPublic
+                    ? 'The artwork is live and can still be refined from this workspace.'
+                    : 'Draft saved. Collaboration and AR are available in-context.'),
+            onBack: shellScope?.popScreen,
+            headerBadge: CreatorStatusBadge(
+              label: _createdArtwork == null
+                  ? 'Draft'
+                  : (_createdArtwork!.isPublic ? 'Live' : 'Saved draft'),
+              color: _createdArtwork == null
+                  ? accent
+                  : (_createdArtwork!.isPublic ? scheme.primary : scheme.tertiary),
+            ),
+            actions: [
+              if (_createdArtwork != null && draft.arEnabled)
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final artworkId = _createdArtwork?.id;
+                    if (artworkId == null || artworkId.isEmpty) return;
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ArtworkArManagerScreen(artworkId: artworkId),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.qr_code_2_outlined),
+                  label: const Text('AR setup'),
+                ),
+            ],
+            mainContent: formBody,
+            sidebar: _buildDesktopSidebar(
+              drafts: drafts,
+              draft: draft,
+              accent: accent,
+            ),
+          );
+        }
 
         return CreatorScaffold(
           title: l10n.artistStudioCreateOptionArtworkTitle,

@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 import 'dart:async';
 import 'dart:typed_data';
 
+import '../../../config/config.dart';
+import '../../art/collection_detail_screen.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../providers/collections_provider.dart';
 import '../../../providers/artwork_provider.dart';
@@ -15,7 +17,9 @@ import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/wallet_utils.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/collaboration_panel.dart';
 import 'package:art_kubus/widgets/creator/creator_kit.dart';
+import '../../desktop/desktop_shell.dart';
 import 'package:art_kubus/widgets/artwork_creator_byline.dart';
 import 'package:art_kubus/widgets/common/kubus_cached_image.dart';
 
@@ -50,6 +54,7 @@ class _CollectionCreatorState extends State<CollectionCreator> {
   final Set<String> _selectedArtworkIds = <String>{};
   String _artworkSearchQuery = '';
   bool _artworksLoading = false;
+  String? _createdCollectionId;
   String _attemptedWalletAddress = '';
   String _inflightWalletAddress = '';
   String _scheduledWalletAddress = '';
@@ -185,6 +190,14 @@ class _CollectionCreatorState extends State<CollectionCreator> {
 
       if (!mounted) return;
 
+      if (widget.embedded) {
+        setState(() => _createdCollectionId = id);
+        messenger.showKubusSnackBar(
+          const SnackBar(content: Text('Collection saved successfully.')),
+        );
+        return;
+      }
+
       widget.onCreated?.call(id);
 
       if (widget.onCreated == null) {
@@ -206,6 +219,7 @@ class _CollectionCreatorState extends State<CollectionCreator> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final studioAccent = KubusColorRoles.of(context).web3ArtistStudioAccent;
+    final shellScope = DesktopShellScope.of(context);
     final profileProvider = context.watch<ProfileProvider>();
     final web3Provider = context.watch<Web3Provider>();
     final walletAddress = WalletUtils.coalesce(
@@ -221,6 +235,15 @@ class _CollectionCreatorState extends State<CollectionCreator> {
           KubusSpacing.md, KubusSpacing.md, KubusSpacing.md, KubusSpacing.lg,
         ),
         children: [
+            if (_createdCollectionId != null) ...[
+              CreatorInfoBox(
+                text:
+                    'Collection saved. Collaboration is available from the sidebar, and you can keep refining the selection below.',
+                icon: Icons.check_circle_outline,
+                accentColor: studioAccent,
+              ),
+              const CreatorSectionSpacing(),
+            ],
             // --- Basics section ---
             CreatorSection(
               title: l10n.collectionSettingsBasicInfo,
@@ -299,11 +322,173 @@ class _CollectionCreatorState extends State<CollectionCreator> {
       ),
     );
 
-    if (widget.embedded) return CreatorGlassBody(child: formBody);
+    if (widget.embedded) {
+      return DesktopCreatorShell(
+        title: l10n.collectionCreatorTitle,
+        subtitle: _createdCollectionId == null
+            ? 'Shape the collection, then save it to unlock collaboration.'
+            : 'Collection saved. Keep curating or invite collaborators in-context.',
+        onBack: shellScope?.popScreen,
+        headerBadge: CreatorStatusBadge(
+          label: _createdCollectionId == null ? 'Draft' : 'Saved',
+          color: _createdCollectionId == null ? studioAccent : Theme.of(context).colorScheme.primary,
+        ),
+        mainContent: formBody,
+        sidebar: _buildDesktopSidebar(
+          l10n,
+          studioAccent,
+          walletAddress,
+        ),
+      );
+    }
 
     return CreatorScaffold(
       title: l10n.collectionCreatorTitle,
       body: formBody,
+    );
+  }
+
+  Widget _buildDesktopSidebar(
+    AppLocalizations l10n,
+    Color accent,
+    String walletAddress,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    final createdId = _createdCollectionId ?? '';
+    final created = createdId.isNotEmpty;
+    final selectedCount = _selectedArtworkIds.length;
+    final hasCover = _coverBytes != null;
+    final hasBasics = _nameController.text.trim().isNotEmpty &&
+        _descriptionController.text.trim().isNotEmpty;
+
+    final readyItems = <DesktopCreatorReadinessItem>[
+      DesktopCreatorReadinessItem(
+        label: 'Basics complete',
+        description: 'Name and description are filled in.',
+        complete: hasBasics,
+        icon: Icons.subject_outlined,
+      ),
+      DesktopCreatorReadinessItem(
+        label: 'Cover image added',
+        description: hasCover
+            ? 'Collection cover is ready.'
+            : 'Optional, but strongly recommended on desktop.',
+        complete: hasCover,
+        icon: Icons.image_outlined,
+      ),
+      DesktopCreatorReadinessItem(
+        label: 'Artwork selection ready',
+        description: selectedCount > 0
+            ? '$selectedCount artwork(s) selected.'
+            : 'Choose artworks to anchor the collection.',
+        complete: selectedCount > 0,
+        icon: Icons.collections_bookmark_outlined,
+      ),
+      DesktopCreatorReadinessItem(
+        label: 'Visibility chosen',
+        description: _isPublic
+            ? 'Public collection visible to everyone.'
+            : 'Private collection is still available to collaborators.',
+        complete: true,
+        icon: _isPublic ? Icons.public_outlined : Icons.lock_outline,
+      ),
+    ];
+
+    return ListView(
+      padding: EdgeInsets.zero,
+      children: [
+        DesktopCreatorSidebarSection(
+          title: 'Status',
+          subtitle: created ? 'Saved collection' : 'Draft in progress',
+          icon: created ? Icons.bookmark_added_outlined : Icons.edit_outlined,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CreatorStatusBadge(
+                label: created ? 'Saved' : 'Draft',
+                color: created ? scheme.primary : accent,
+              ),
+              const SizedBox(height: KubusSpacing.sm),
+              DesktopCreatorSummaryRow(
+                label: 'Collection ID',
+                value: created ? createdId : 'Not created yet',
+                valueColor: created ? scheme.onSurface : scheme.onSurface.withValues(alpha: 0.6),
+              ),
+              DesktopCreatorSummaryRow(
+                label: 'Selected artworks',
+                value: '$selectedCount',
+                icon: Icons.collections_outlined,
+              ),
+              DesktopCreatorSummaryRow(
+                label: 'Visibility',
+                value: _isPublic ? 'Public' : 'Private',
+                icon: _isPublic ? Icons.public_outlined : Icons.lock_outline,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: KubusSpacing.md),
+        DesktopCreatorSidebarSection(
+          title: 'Readiness',
+          subtitle: 'A quick sanity check before saving.',
+          icon: Icons.fact_check_outlined,
+          child: DesktopCreatorReadinessChecklist(items: readyItems),
+        ),
+        const SizedBox(height: KubusSpacing.md),
+        DesktopCreatorSidebarSection(
+          title: 'Quick actions',
+          subtitle: 'Keep the workflow in this creator.',
+          icon: Icons.flash_on_outlined,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ElevatedButton.icon(
+                onPressed: _isSubmitting ? null : _submit,
+                icon: Icon(created ? Icons.refresh_outlined : Icons.save_outlined),
+                label: Text(created ? 'Update collection' : 'Save collection'),
+              ),
+              if (created) ...[
+                const SizedBox(height: KubusSpacing.sm),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    if (createdId.isEmpty) return;
+                    DesktopShellScope.of(context)?.pushScreen(
+                      DesktopSubScreen(
+                        title: l10n.collectionCreatorTitle,
+                        child: CollectionDetailScreen(
+                          collectionId: createdId,
+                          embedded: true,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.open_in_new_outlined),
+                  label: const Text('Open collection'),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: KubusSpacing.md),
+        DesktopCreatorSidebarSection(
+          title: 'Collaboration',
+          subtitle: created
+              ? 'Invite co-curators without leaving the workspace.'
+              : 'Save once to unlock collaboration.',
+          icon: Icons.group_add_outlined,
+          child: created && AppConfig.isFeatureEnabled('collabInvites')
+              ? CollaborationPanel(
+                  entityType: 'collections',
+                  entityId: createdId,
+                )
+              : Text(
+                  'Once saved, collaborators can be invited here so curation stays in context.',
+                  style: KubusTextStyles.detailCaption.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.72),
+                  ),
+                ),
+        ),
+      ],
     );
   }
 

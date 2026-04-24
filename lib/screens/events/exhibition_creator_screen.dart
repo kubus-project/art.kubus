@@ -7,9 +7,12 @@ import 'dart:typed_data';
 import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../../config/config.dart';
+import '../../models/exhibition.dart';
 import '../../providers/exhibitions_provider.dart';
 import '../../utils/design_tokens.dart';
 import 'exhibition_detail_screen.dart';
+import '../desktop/desktop_shell.dart';
+import '../../widgets/collaboration_panel.dart';
 import '../../widgets/creator/creator_kit.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
@@ -42,6 +45,7 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
   DateTime? _endsAt;
   bool _published = false;
   bool _submitting = false;
+  Exhibition? _createdExhibition;
 
   Uint8List? _coverBytes;
   String? _coverFileName;
@@ -93,6 +97,7 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    final shellScope = DesktopShellScope.of(context);
 
     if (!AppConfig.isFeatureEnabled('exhibitions')) {
       final disabledBody = Center(
@@ -127,6 +132,15 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
         key: _formKey,
         child: ListView(
           children: [
+            if (_createdExhibition != null) ...[
+              CreatorInfoBox(
+                text:
+                    'Exhibition saved. Collaboration is available from the sidebar, and you can keep refining the details below.',
+                icon: Icons.check_circle_outline,
+                accentColor: scheme.primary,
+              ),
+              const CreatorSectionSpacing(),
+            ],
             // --- Basics section ---
             CreatorSection(
               title: l10n.exhibitionCreatorBasicsTitle,
@@ -241,11 +255,173 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
       ),
     );
 
-    if (widget.embedded) return CreatorGlassBody(child: formBody);
+    if (widget.embedded) {
+      return DesktopCreatorShell(
+        title: l10n.exhibitionCreatorAppBarTitle,
+        subtitle: _createdExhibition == null
+            ? 'Curate the exhibition, then save it to unlock collaboration.'
+            : 'Exhibition saved. Keep refining or open the detail view from the sidebar.',
+        onBack: shellScope?.popScreen,
+        headerBadge: CreatorStatusBadge(
+          label: _createdExhibition == null ? 'Draft' : 'Saved',
+          color: _createdExhibition == null ? scheme.primary : scheme.tertiary,
+        ),
+        mainContent: formBody,
+        sidebar: _buildDesktopSidebar(l10n, scheme),
+      );
+    }
 
     return CreatorScaffold(
       title: l10n.exhibitionCreatorAppBarTitle,
       body: formBody,
+    );
+  }
+
+  Widget _buildDesktopSidebar(AppLocalizations l10n, ColorScheme scheme) {
+    final created = _createdExhibition;
+    final createdId = created?.id ?? '';
+    final hasCover = _coverBytes != null;
+    final hasBasics = _titleController.text.trim().isNotEmpty &&
+        _descriptionController.text.trim().isNotEmpty;
+    final hasDates = _startsAt != null && _endsAt != null;
+    final isPublic = widget.forceDraftOnly ? false : _published;
+    final collabEnabled = AppConfig.isFeatureEnabled('collabInvites') &&
+        createdId.isNotEmpty;
+
+    final readyItems = <DesktopCreatorReadinessItem>[
+      DesktopCreatorReadinessItem(
+        label: 'Basics complete',
+        description: 'Title, description, and location are filled in.',
+        complete: hasBasics,
+        icon: Icons.subject_outlined,
+      ),
+      DesktopCreatorReadinessItem(
+        label: 'Date range set',
+        description: hasDates
+            ? 'The exhibition has a start and end date.'
+            : 'Set both dates before saving.',
+        complete: hasDates,
+        icon: Icons.date_range_outlined,
+      ),
+      DesktopCreatorReadinessItem(
+        label: 'Cover image added',
+        description: hasCover
+            ? 'Cover image is ready.'
+            : 'Optional, but it improves the showcase.',
+        complete: hasCover,
+        icon: Icons.image_outlined,
+      ),
+      DesktopCreatorReadinessItem(
+        label: 'Visibility chosen',
+        description: isPublic
+            ? 'Public exhibition will be discoverable.'
+            : 'Private exhibitions stay restricted.',
+        complete: true,
+        icon: isPublic ? Icons.public_outlined : Icons.lock_outline,
+      ),
+    ];
+
+    return ListView(
+      padding: EdgeInsets.zero,
+      children: [
+        DesktopCreatorSidebarSection(
+          title: 'Status',
+          subtitle: created == null ? 'Draft in progress' : 'Saved exhibition',
+          icon: created == null ? Icons.edit_outlined : Icons.museum_outlined,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CreatorStatusBadge(
+                label: created == null ? 'Draft' : 'Saved',
+                color: created == null ? scheme.primary : scheme.tertiary,
+              ),
+              const SizedBox(height: KubusSpacing.sm),
+              DesktopCreatorSummaryRow(
+                label: 'Exhibition ID',
+                value: createdId.isNotEmpty ? createdId : 'Not created yet',
+                valueColor: createdId.isNotEmpty
+                    ? scheme.onSurface
+                    : scheme.onSurface.withValues(alpha: 0.6),
+              ),
+              DesktopCreatorSummaryRow(
+                label: 'Schedule',
+                value: hasDates ? 'Ready' : 'Incomplete',
+                icon: Icons.event_outlined,
+              ),
+              DesktopCreatorSummaryRow(
+                label: 'Visibility',
+                value: isPublic ? 'Public' : 'Private',
+                icon: isPublic ? Icons.public_outlined : Icons.lock_outline,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: KubusSpacing.md),
+        DesktopCreatorSidebarSection(
+          title: 'Readiness',
+          subtitle: 'A quick sanity check before saving.',
+          icon: Icons.fact_check_outlined,
+          child: DesktopCreatorReadinessChecklist(items: readyItems),
+        ),
+        const SizedBox(height: KubusSpacing.md),
+        DesktopCreatorSidebarSection(
+          title: 'Quick actions',
+          subtitle: 'Stay inside the creator while you work.',
+          icon: Icons.flash_on_outlined,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ElevatedButton.icon(
+                onPressed: _submitting ? null : _submit,
+                icon: Icon(created == null
+                    ? Icons.save_outlined
+                    : Icons.refresh_outlined),
+                label: Text(created == null
+                    ? 'Save exhibition'
+                    : 'Update exhibition'),
+              ),
+              if (created != null) ...[
+                const SizedBox(height: KubusSpacing.sm),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    DesktopShellScope.of(context)?.pushScreen(
+                      DesktopSubScreen(
+                        title: l10n.exhibitionCreatorAppBarTitle,
+                        child: ExhibitionDetailScreen(
+                          exhibitionId: createdId,
+                          initialExhibition: created,
+                          embedded: true,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.open_in_new_outlined),
+                  label: const Text('Open exhibition'),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: KubusSpacing.md),
+        DesktopCreatorSidebarSection(
+          title: 'Collaboration',
+          subtitle: created != null
+              ? 'Invite co-curators without leaving the workspace.'
+              : 'Save once to unlock collaboration.',
+          icon: Icons.group_add_outlined,
+          child: collabEnabled
+              ? CollaborationPanel(
+                  entityType: 'exhibitions',
+                  entityId: createdId,
+                )
+              : Text(
+                  'Once saved, collaborators can be invited here so curation stays in context.',
+                  style: KubusTextStyles.detailCaption.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.72),
+                  ),
+                ),
+        ),
+      ],
     );
   }
 
@@ -326,6 +502,16 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
       if (created == null) {
         messenger.showKubusSnackBar(
             SnackBar(content: Text(l10n.exhibitionCreatorCreateFailed)));
+        return;
+      }
+
+      if (widget.embedded) {
+        setState(() {
+          _createdExhibition = created;
+        });
+        messenger.showKubusSnackBar(
+          const SnackBar(content: Text('Exhibition saved successfully.')),
+        );
         return;
       }
 

@@ -2,14 +2,18 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import '../../../config/config.dart';
 import '../../../models/institution.dart';
 import '../../../providers/institution_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/web3provider.dart';
+import '../../events/event_detail_screen.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/wallet_utils.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import '../../desktop/desktop_shell.dart';
+import '../../../widgets/collaboration_panel.dart';
 import '../../../widgets/creator/creator_kit.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 
@@ -51,6 +55,8 @@ class _EventCreatorState extends State<EventCreator>
   bool _isPublic = true;
   bool _allowRegistration = true;
   int _currentStep = 0;
+  bool _submitting = false;
+  Event? _createdEvent;
 
   bool get _isEditing => widget.initialEvent != null;
 
@@ -129,6 +135,7 @@ class _EventCreatorState extends State<EventCreator>
 
   @override
   Widget build(BuildContext context) {
+    final shellScope = DesktopShellScope.of(context);
     Widget body = FadeTransition(
       opacity: _fadeAnimation,
       child: SlideTransition(
@@ -147,8 +154,182 @@ class _EventCreatorState extends State<EventCreator>
       ),
     );
 
-    if (widget.embedded) return CreatorGlassBody(child: body);
+    if (widget.embedded) {
+      return DesktopCreatorShell(
+        title: _isEditing ? 'Edit Event' : 'Create New Event',
+        subtitle: _createdEvent == null
+            ? 'Complete the wizard here, then save to unlock collaboration.'
+            : 'Event saved. Keep refining or open collaboration from the sidebar.',
+        onBack: shellScope?.popScreen,
+        headerBadge: CreatorStatusBadge(
+          label: _createdEvent == null
+              ? 'Step ${_currentStep + 1} of 4'
+              : 'Saved',
+          color: KubusColorRoles.of(context).web3InstitutionAccent,
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Help',
+            onPressed: _showHelp,
+            icon: Icon(
+              Icons.help_outline,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+        ],
+        mainContent: body,
+        sidebar: _buildDesktopSidebar(),
+      );
+    }
+
     return body;
+  }
+
+  Widget _buildDesktopSidebar() {
+    final scheme = Theme.of(context).colorScheme;
+    final institutionProvider = context.watch<InstitutionProvider>();
+    final selectedInstitution = _institutionId == null || _institutionId!.isEmpty
+        ? institutionProvider.selectedInstitution
+        : institutionProvider.getInstitutionById(_institutionId!);
+    final created = _createdEvent;
+    final createdId = created?.id ?? '';
+    final hasInstitution = selectedInstitution != null;
+    final hasBasics = _titleController.text.trim().isNotEmpty &&
+        _descriptionController.text.trim().isNotEmpty;
+    final hasDates = _startDate != null && _endDate != null;
+    final hasCapacity = _capacityController.text.trim().isNotEmpty;
+    final collabEnabled =
+        AppConfig.isFeatureEnabled('collabInvites') && createdId.isNotEmpty;
+
+    final readyItems = <DesktopCreatorReadinessItem>[
+      DesktopCreatorReadinessItem(
+        label: 'Institution selected',
+        description: hasInstitution
+            ? 'The event will belong to ${selectedInstitution.name}.'
+            : 'Choose the institution first.',
+        complete: hasInstitution,
+        icon: Icons.apartment_outlined,
+      ),
+      DesktopCreatorReadinessItem(
+        label: 'Basics complete',
+        description: 'Title, description, and event type are in place.',
+        complete: hasBasics,
+        icon: Icons.subject_outlined,
+      ),
+      DesktopCreatorReadinessItem(
+        label: 'Dates selected',
+        description: hasDates
+            ? 'Start and end dates are set.'
+            : 'Pick both dates before saving.',
+        complete: hasDates,
+        icon: Icons.date_range_outlined,
+      ),
+      DesktopCreatorReadinessItem(
+        label: 'Capacity set',
+        description: hasCapacity
+            ? 'Registration limit is ready.'
+            : 'Add a capacity to complete the setup.',
+        complete: hasCapacity,
+        icon: Icons.groups_outlined,
+      ),
+    ];
+
+    return ListView(
+      padding: EdgeInsets.zero,
+      children: [
+        DesktopCreatorSidebarSection(
+          title: 'Status',
+          subtitle: created == null ? 'Draft in progress' : 'Saved event',
+          icon: created == null ? Icons.edit_outlined : Icons.event_available_outlined,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CreatorStatusBadge(
+                label: created == null ? 'Draft' : 'Saved',
+                color: KubusColorRoles.of(context).web3InstitutionAccent,
+              ),
+              const SizedBox(height: KubusSpacing.sm),
+              DesktopCreatorSummaryRow(
+                label: 'Event ID',
+                value: createdId.isNotEmpty ? createdId : 'Not created yet',
+                valueColor: createdId.isNotEmpty
+                    ? scheme.onSurface
+                    : scheme.onSurface.withValues(alpha: 0.6),
+              ),
+              DesktopCreatorSummaryRow(
+                label: 'Event type',
+                value: _eventType,
+                icon: Icons.category_outlined,
+              ),
+              DesktopCreatorSummaryRow(
+                label: 'Registration',
+                value: _allowRegistration ? 'Enabled' : 'Off',
+                icon: Icons.how_to_reg_outlined,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: KubusSpacing.md),
+        DesktopCreatorSidebarSection(
+          title: 'Readiness',
+          subtitle: 'A quick sanity check before saving.',
+          icon: Icons.fact_check_outlined,
+          child: DesktopCreatorReadinessChecklist(items: readyItems),
+        ),
+        const SizedBox(height: KubusSpacing.md),
+        DesktopCreatorSidebarSection(
+          title: 'Quick actions',
+          subtitle: 'Keep the whole workflow in one workspace.',
+          icon: Icons.flash_on_outlined,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ElevatedButton.icon(
+                onPressed: _submitting
+                    ? null
+                    : (_currentStep < 3 ? _nextStep : _createEvent),
+                icon: Icon(_currentStep < 3 ? Icons.arrow_forward : Icons.save_outlined),
+                label: Text(_currentStep < 3 ? 'Next step' : (created == null ? 'Create event' : 'Update event')),
+              ),
+              if (created != null) ...[
+                const SizedBox(height: KubusSpacing.sm),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    DesktopShellScope.of(context)?.pushScreen(
+                      DesktopSubScreen(
+                        title: _isEditing ? 'Edit Event' : 'Create New Event',
+                        child: EventDetailScreen(eventId: createdId),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.open_in_new_outlined),
+                  label: const Text('Open event'),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: KubusSpacing.md),
+        DesktopCreatorSidebarSection(
+          title: 'Collaboration',
+          subtitle: created != null
+              ? 'Invite collaborators without leaving the creator.'
+              : 'Save once to unlock collaboration.',
+          icon: Icons.group_add_outlined,
+          child: collabEnabled
+              ? CollaborationPanel(
+                  entityType: 'events',
+                  entityId: createdId,
+                )
+              : Text(
+                  'Once saved, collaborators can be invited here so event planning stays in context.',
+                  style: KubusTextStyles.detailCaption.copyWith(
+                    color: scheme.onSurface.withValues(alpha: 0.72),
+                  ),
+                ),
+        ),
+      ],
+    );
   }
 
   Widget _buildHeader() {
@@ -419,6 +600,14 @@ class _EventCreatorState extends State<EventCreator>
           _buildSectionTitle('Review & Confirm'),
           const SizedBox(height: KubusSpacing.lg),
           _buildReviewCard(),
+          if (_createdEvent != null) ...[
+            const SizedBox(height: KubusSpacing.lg),
+            CreatorInfoBox(
+              text:
+                  'Event saved. Collaboration is available in the sidebar, and you can keep refining the wizard if needed.',
+              icon: Icons.check_circle_outline,
+            ),
+          ],
           const SizedBox(height: KubusSpacing.lg),
           CreatorInfoBox(
             text: 'Your event will be reviewed and published within 24 hours.',
@@ -920,6 +1109,9 @@ class _EventCreatorState extends State<EventCreator>
       return;
     }
 
+    if (_submitting) return;
+    setState(() => _submitting = true);
+
     final startTime = _startTime ?? const TimeOfDay(hour: 10, minute: 0);
     final endTime = _endTime ?? const TimeOfDay(hour: 12, minute: 0);
 
@@ -982,6 +1174,9 @@ class _EventCreatorState extends State<EventCreator>
       }
 
       if (!mounted) return;
+      setState(() {
+        _createdEvent = event;
+      });
       final l10n = AppLocalizations.of(context)!;
       showKubusDialog(
         context: context,
@@ -1010,7 +1205,7 @@ class _EventCreatorState extends State<EventCreator>
                 Navigator.pop(context);
                 if (_isEditing) {
                   Navigator.pop(context);
-                } else {
+                } else if (!widget.embedded) {
                   _resetForm();
                 }
               },
@@ -1031,6 +1226,8 @@ class _EventCreatorState extends State<EventCreator>
             content: Text(
                 AppLocalizations.of(context)!.eventCreatorSaveFailedToast)),
       );
+    } finally {
+      if (mounted) setState(() => _submitting = false);
     }
   }
 

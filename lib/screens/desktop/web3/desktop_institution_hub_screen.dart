@@ -382,10 +382,7 @@ class _DesktopInstitutionHubScreenState
                 semantic: KubusActionSemantic.create,
                 onTap: () {
                   DesktopShellScope.of(context)?.pushScreen(
-                    DesktopSubScreen(
-                      title: l10n.desktopInstitutionCreateEventTitle,
-                      child: const EventCreator(embedded: true),
-                    ),
+                    const EventCreator(embedded: true),
                   );
                 },
               ),
@@ -400,10 +397,7 @@ class _DesktopInstitutionHubScreenState
                 semantic: KubusActionSemantic.publish,
                 onTap: () {
                   DesktopShellScope.of(context)?.pushScreen(
-                    DesktopSubScreen(
-                      title: l10n.exhibitionCreatorAppBarTitle,
-                      child: const ExhibitionCreatorScreen(embedded: true),
-                    ),
+                    const ExhibitionCreatorScreen(embedded: true),
                   );
                 },
               ),
@@ -457,11 +451,7 @@ class _DesktopInstitutionHubScreenState
                         canCreate: true,
                         onCreateExhibition: () {
                           DesktopShellScope.of(context)?.pushScreen(
-                            DesktopSubScreen(
-                              title: l10n.exhibitionCreatorAppBarTitle,
-                              child:
-                                  const ExhibitionCreatorScreen(embedded: true),
-                            ),
+                            const ExhibitionCreatorScreen(embedded: true),
                           );
                         },
                         onOpenExhibition: (exhibition) {
