@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 
 import '../../utils/media_url_resolver.dart';
-import 'detail_shell_primitives.dart';
 import 'detail_shell_components.dart';
 
 class PoapDetailCard extends StatelessWidget {

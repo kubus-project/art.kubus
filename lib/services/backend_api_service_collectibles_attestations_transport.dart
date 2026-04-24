@@ -60,3 +60,40 @@ Future<BackendAttestationTaxonomyDto?> _backendApiGetAttestationTaxonomy(
 		return null;
 	}
 }
+
+Future<Map<String, dynamic>> _backendApiGetWalletCollectibleIndex(
+	BackendApiService service,
+	String walletAddress,
+) async {
+	final canonicalWallet = WalletUtils.canonical(walletAddress);
+	if (canonicalWallet.isEmpty) {
+		throw ArgumentError('walletAddress is required');
+	}
+
+	final uri = Uri.parse('${service.baseUrl}/api/profiles/$canonicalWallet/collectibles');
+	final response = await service._get(
+		uri,
+		headers: service._getHeaders(includeAuth: false),
+		includeAuth: false,
+	);
+	if (response.statusCode != 200) {
+		throw BackendApiRequestException(
+			statusCode: response.statusCode,
+			path: uri.path,
+			body: response.body,
+		);
+	}
+
+	final decoded = jsonDecode(response.body);
+	if (decoded is Map<String, dynamic>) {
+		return decoded;
+	}
+	if (decoded is Map) {
+		return Map<String, dynamic>.from(decoded);
+	}
+	throw BackendApiRequestException(
+		statusCode: response.statusCode,
+		path: uri.path,
+		body: response.body,
+	);
+}

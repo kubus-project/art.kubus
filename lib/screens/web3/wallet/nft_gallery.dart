@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../utils/design_tokens.dart';
 
-import '../../../config/config.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../models/collectible.dart';
 import '../../../providers/collectibles_provider.dart';
@@ -36,7 +35,16 @@ class _NFTGalleryState extends State<NFTGallery> {
         provider.allSeries.isEmpty &&
         provider.allCollectibles.isEmpty) {
       unawaited(
-        provider.initialize(loadMockIfEmpty: AppConfig.isDevelopment),
+        provider.initialize(),
+      );
+    }
+
+    final walletAddress =
+        (Provider.of<WalletProvider>(context, listen: false).currentWalletAddress ?? '')
+            .trim();
+    if (walletAddress.isNotEmpty) {
+      unawaited(
+        provider.refreshWalletCollectibleIndex(walletAddress),
       );
     }
   }
@@ -72,8 +80,16 @@ class _NFTGalleryState extends State<NFTGallery> {
               final provider =
                   Provider.of<CollectiblesProvider>(context, listen: false);
               unawaited(
-                provider.initialize(loadMockIfEmpty: AppConfig.isDevelopment),
+                provider.initialize(),
               );
+              final walletAddress =
+                  (Provider.of<WalletProvider>(context, listen: false).currentWalletAddress ?? '')
+                      .trim();
+              if (walletAddress.isNotEmpty) {
+                unawaited(
+                  provider.refreshWalletCollectibleIndex(walletAddress, force: true),
+                );
+              }
             },
             tooltip: l10n.commonRefresh,
           ),

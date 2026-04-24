@@ -17,7 +17,6 @@ import '../../utils/media_url_resolver.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/promotion/promotion_builder_sheet.dart';
 import '../../widgets/detail/detail_shell_components.dart';
-import '../../widgets/detail/detail_shell_primitives.dart';
 import '../../widgets/detail/poap_detail_card.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../widgets/glass_components.dart';

@@ -1228,9 +1228,11 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
       if (!collectiblesProvider.isLoading &&
           collectiblesProvider.allSeries.isEmpty &&
           collectiblesProvider.allCollectibles.isEmpty) {
-        await collectiblesProvider.initialize(
-          loadMockIfEmpty: AppConfig.isDevelopment,
-        );
+        await collectiblesProvider.initialize();
+      }
+
+      if (walletAddress.isNotEmpty) {
+        await collectiblesProvider.refreshWalletCollectibleIndex(walletAddress);
       }
 
       final seriesById = <String, CollectibleSeries>{

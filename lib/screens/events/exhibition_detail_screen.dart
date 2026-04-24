@@ -24,7 +24,6 @@ import '../../utils/artwork_media_resolver.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/detail/detail_shell_components.dart';
-import '../../widgets/detail/detail_shell_primitives.dart';
 import '../../widgets/detail/poap_detail_card.dart';
 import '../../utils/artwork_navigation.dart';
 import '../../utils/design_tokens.dart';

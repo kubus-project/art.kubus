@@ -2501,6 +2501,11 @@ class BackendApiService
   Future<Map<String, dynamic>> getProfileByWallet(String walletAddress) =>
       _backendApiGetProfileByWalletImpl(this, walletAddress);
 
+  /// Get wallet-scoped collectible ownership index
+  /// GET /api/profiles/:walletAddress/collectibles
+  Future<Map<String, dynamic>> getWalletCollectibleIndex(String walletAddress) =>
+      _backendApiGetWalletCollectibleIndex(this, walletAddress);
+
   /// Fetch multiple profiles in a single batch call
   /// POST /api/profiles/batch { wallets: [wallet1,wallet2] }
   Future<Map<String, dynamic>> getProfilesBatch(List<String> wallets) =>

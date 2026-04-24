@@ -1,23 +1,30 @@
 import 'package:flutter/foundation.dart';
-import 'package:latlong2/latlong.dart';
 import '../models/artwork.dart';
 import '../models/collectible.dart';
+import '../services/backend_api_service.dart';
 import '../services/collectibles_storage.dart';
 import '../utils/artwork_media_resolver.dart';
 import 'artwork_provider.dart';
 
 class CollectiblesProvider with ChangeNotifier {
-  final List<CollectibleSeries> _series = [];
-  final List<Collectible> _collectibles = [];
+  CollectiblesProvider({BackendApiService? backendApiService})
+      : _backendApiService = backendApiService ?? BackendApiService();
+
+  final List<CollectibleSeries> _legacySeries = [];
+  final List<Collectible> _legacyCollectibles = [];
   final CollectiblesStorage _storage = CollectiblesStorage();
+  final BackendApiService _backendApiService;
   ArtworkProvider? _artworkProvider;
+  final Map<String, List<Map<String, dynamic>>> _walletCollectibleIndex = {};
 
   bool _isLoading = false;
   String? _error;
 
   // Getters
-  List<CollectibleSeries> get allSeries => List.unmodifiable(_series);
-  List<Collectible> get allCollectibles => List.unmodifiable(_collectibles);
+  List<CollectibleSeries> get allSeries =>
+      List.unmodifiable(_buildCanonicalSeries());
+  List<Collectible> get allCollectibles =>
+      List.unmodifiable(_applyWalletCollectibleIndex(_buildCanonicalCollectibles()));
   bool get isLoading => _isLoading;
   String? get error => _error;
   List<MarketplaceArtworkEntry> get marketplaceEntries =>
@@ -35,11 +42,15 @@ class CollectiblesProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  String _nextSeriesId() =>
-      'series_${DateTime.now().microsecondsSinceEpoch}_${_series.length + 1}';
+  static const String _ownershipStatusCreatorIndexedUnverified =
+      'creator_wallet_indexed_unverified_transfer_history';
 
-  String _nextCollectibleId() =>
-      'collectible_${DateTime.now().microsecondsSinceEpoch}_${_collectibles.length + 1}';
+  String _seriesIdForArtwork(String artworkId) => 'artwork_series_$artworkId';
+
+  String _collectibleIdForArtwork(String artworkId) =>
+      'artwork_collectible_$artworkId';
+
+  String _canonicalWallet(String raw) => raw.trim().toLowerCase();
 
   Future<void> initialize({bool loadMockIfEmpty = false}) async {
     _setLoading(true);
@@ -48,18 +59,20 @@ class CollectiblesProvider with ChangeNotifier {
       final loadedSeries = await _storage.loadSeries();
       final loadedCollectibles = await _storage.loadCollectibles();
 
-      _series
+      _legacySeries
         ..clear()
         ..addAll(loadedSeries);
-      _collectibles
+      _legacyCollectibles
         ..clear()
         ..addAll(loadedCollectibles);
 
-      if (loadMockIfEmpty && _series.isEmpty) {
-        await initializeMockData();
-      } else {
-        notifyListeners();
+      if (loadMockIfEmpty && kDebugMode) {
+        debugPrint(
+          'CollectiblesProvider: mock collectible mode is disabled; using canonical indexed artwork truth only.',
+        );
       }
+
+      notifyListeners();
     } catch (e) {
       _setError('Failed to load collectibles: $e');
     } finally {
@@ -67,18 +80,43 @@ class CollectiblesProvider with ChangeNotifier {
     }
   }
 
+  Future<void> refreshWalletCollectibleIndex(
+    String walletAddress, {
+    bool force = false,
+  }) async {
+    final normalized = _canonicalWallet(walletAddress);
+    if (normalized.isEmpty) return;
+    if (!force && _walletCollectibleIndex.containsKey(normalized)) return;
+
+    try {
+      final response = await _backendApiService.getWalletCollectibleIndex(
+        normalized,
+      );
+      final payload = response['data'];
+      final rawCollectibles = payload is Map<String, dynamic>
+          ? payload['collectibles']
+          : response['collectibles'];
+      final records = _normalizeBackendCollectibleRecords(rawCollectibles);
+      _walletCollectibleIndex[normalized] = records;
+      notifyListeners();
+    } catch (_) {
+      // The provider must keep working when the dedicated index is unavailable.
+    }
+  }
+
   // Get series by artwork ID
   CollectibleSeries? getSeriesByArtworkId(String artworkId) {
-    try {
-      return _series.firstWhere((series) => series.artworkId == artworkId);
-    } catch (e) {
-      return null;
+    for (final series in allSeries) {
+      if (series.artworkId == artworkId) {
+        return series;
+      }
     }
+    return null;
   }
 
   // Get all series for AR-enabled artworks
   List<CollectibleSeries> getARSeries() {
-    return _series.where((series) => series.requiresARInteraction).toList();
+    return allSeries.where((series) => series.requiresARInteraction).toList();
   }
 
   List<MarketplaceArtworkEntry> getFeaturedMarketplaceEntries({int limit = 6}) {
@@ -111,28 +149,20 @@ class CollectiblesProvider with ChangeNotifier {
 
   MarketplaceArtworkEntry? getMarketplaceEntryForCollectible(
       Collectible collectible) {
-    CollectibleSeries? series;
-    for (final candidate in _series) {
-      if (candidate.id == collectible.seriesId) {
-        series = candidate;
-        break;
-      }
-    }
-    if (series == null) return null;
-
-    final artwork = _resolveArtworkForSeries(
-      series,
-      allowFallback: true,
-      includeNonPublic: true,
-    );
+    final artworkId = _resolveArtworkIdForCollectible(collectible);
+    if (artworkId == null || artworkId.isEmpty) return null;
+    final artwork = _artworkProvider?.getArtworkById(artworkId);
     if (artwork == null) return null;
-    final seriesId = series.id;
 
-    final linkedCollectibles = _collectibles
-        .where((candidate) =>
-            candidate.seriesId == seriesId &&
-            candidate.status != CollectibleStatus.burned)
+    final linkedCollectibles = allCollectibles
+        .where((candidate) {
+          final candidateArtworkId = _resolveArtworkIdForCollectible(candidate);
+          return candidateArtworkId == artworkId &&
+              candidate.status != CollectibleStatus.burned;
+        })
         .toList(growable: false);
+
+    final series = getSeriesByArtworkId(artworkId);
 
     final hasMintedProof =
         _hasBackendMintedProof(artwork) || linkedCollectibles.isNotEmpty;
@@ -150,7 +180,7 @@ class CollectiblesProvider with ChangeNotifier {
     Collectible collectible,
   ) {
     var resolvedCollectible = collectible;
-    for (final candidate in _collectibles) {
+    for (final candidate in allCollectibles) {
       final sameIdentity = candidate.id == collectible.id ||
           (candidate.seriesId == collectible.seriesId &&
               candidate.tokenId == collectible.tokenId);
@@ -161,7 +191,7 @@ class CollectiblesProvider with ChangeNotifier {
     }
 
     CollectibleSeries? series;
-    for (final candidate in _series) {
+    for (final candidate in allSeries) {
       if (candidate.id == resolvedCollectible.seriesId) {
         series = candidate;
         break;
@@ -182,26 +212,31 @@ class CollectiblesProvider with ChangeNotifier {
 
   // Get collectibles by owner
   List<Collectible> getCollectiblesByOwner(String ownerAddress) {
-    return _collectibles
-        .where((collectible) => collectible.ownerAddress == ownerAddress)
-        .toList();
+    final normalized = _canonicalWallet(ownerAddress);
+    if (normalized.isEmpty) return const <Collectible>[];
+    return allCollectibles
+      .where((collectible) =>
+        _canonicalWallet(collectible.ownerAddress) == normalized)
+      .toList(growable: false);
   }
 
   // Get collectibles for sale
   List<Collectible> getCollectiblesForSale() {
-    return _collectibles.where((collectible) => collectible.isForSale).toList();
+    return allCollectibles
+        .where((collectible) => collectible.isForSale)
+        .toList(growable: false);
   }
 
   // Get trending series (most recent activity)
   List<CollectibleSeries> getTrendingSeries({int limit = 10}) {
-    final sortedSeries = List<CollectibleSeries>.from(_series);
+    final sortedSeries = List<CollectibleSeries>.from(allSeries);
     sortedSeries.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return sortedSeries.take(limit).toList();
   }
 
   // Get featured series (high activity, limited edition, etc.)
   List<CollectibleSeries> getFeaturedSeries({int limit = 6}) {
-    final featuredSeries = _series
+    final featuredSeries = allSeries
         .where((series) =>
             series.isLimitedEdition ||
             series.rarity == CollectibleRarity.legendary ||
@@ -228,38 +263,9 @@ class CollectiblesProvider with ChangeNotifier {
     bool requiresARInteraction = false,
     double? royaltyPercentage,
   }) async {
-    _setLoading(true);
-
-    try {
-      final series = CollectibleSeries(
-        id: _nextSeriesId(),
-        name: name,
-        description: description,
-        artworkId: artworkId,
-        creatorAddress: creatorAddress,
-        totalSupply: totalSupply,
-        rarity: rarity,
-        type: CollectibleType.nft,
-        mintPrice: mintPrice,
-        imageUrl: imageUrl,
-        animationUrl: animationUrl,
-        metadata: metadata,
-        createdAt: DateTime.now(),
-        requiresARInteraction: requiresARInteraction,
-        royaltyPercentage: royaltyPercentage,
-      );
-
-      _series.add(series);
-      notifyListeners();
-      await _persist();
-
-      return series;
-    } catch (e) {
-      _setError('Failed to create NFT series: $e');
-      rethrow;
-    } finally {
-      _setLoading(false);
-    }
+    throw UnsupportedError(
+      'Create series is disabled in canonical mode. Minting must happen through wallet-native on-chain flow and backend indexing.',
+    );
   }
 
   // Mint a new collectible from a series
@@ -269,44 +275,9 @@ class CollectiblesProvider with ChangeNotifier {
     required String transactionHash,
     Map<String, dynamic> properties = const {},
   }) async {
-    _setLoading(true);
-
-    try {
-      final series = _series.firstWhere((s) => s.id == seriesId);
-
-      if (series.isSoldOut) {
-        throw Exception('Series is sold out');
-      }
-
-      final collectible = Collectible(
-        id: _nextCollectibleId(),
-        seriesId: seriesId,
-        tokenId: '${series.mintedCount + 1}',
-        ownerAddress: ownerAddress,
-        status: CollectibleStatus.minted,
-        mintedAt: DateTime.now(),
-        properties: properties,
-        transactionHash: transactionHash,
-      );
-
-      _collectibles.add(collectible);
-
-      // Update series minted count
-      final updatedSeries =
-          series.copyWith(mintedCount: series.mintedCount + 1);
-      final seriesIndex = _series.indexWhere((s) => s.id == seriesId);
-      _series[seriesIndex] = updatedSeries;
-
-      notifyListeners();
-      await _persist();
-
-      return collectible;
-    } catch (e) {
-      _setError('Failed to mint collectible: $e');
-      rethrow;
-    } finally {
-      _setLoading(false);
-    }
+    throw UnsupportedError(
+      'Local mint simulation is disabled in canonical mode. Use wallet-native minting and wait for backend-indexed mint proof.',
+    );
   }
 
   // List collectible for sale
@@ -317,21 +288,36 @@ class CollectiblesProvider with ChangeNotifier {
     _setLoading(true);
 
     try {
-      final collectibleIndex =
-          _collectibles.indexWhere((c) => c.id == collectibleId);
-      if (collectibleIndex == -1) {
+      final collectible = allCollectibles.firstWhere(
+        (c) => c.id == collectibleId,
+        orElse: () => throw StateError('Collectible not found'),
+      );
+
+      final artworkId = _resolveArtworkIdForCollectible(collectible);
+      if (artworkId == null || artworkId.isEmpty) {
         throw Exception('Collectible not found');
       }
 
-      final updatedCollectible = _collectibles[collectibleIndex].copyWith(
-        status: CollectibleStatus.listed,
-        currentListingPrice: price,
-        listedAt: DateTime.now(),
-      );
+      final parsed = double.tryParse(price.trim());
+      if (parsed == null || parsed <= 0) {
+        throw Exception('Invalid listing price');
+      }
 
-      _collectibles[collectibleIndex] = updatedCollectible;
+      final artworkProvider = _artworkProvider;
+      if (artworkProvider == null) {
+        throw Exception('Artwork provider is unavailable');
+      }
+
+      final updated = await artworkProvider.updateArtwork(artworkId, {
+        'price': parsed,
+        'currency': 'KUB8',
+      });
+
+      if (updated == null) {
+        throw Exception('Failed to update listing on canonical artwork record');
+      }
+
       notifyListeners();
-      await _persist();
     } catch (e) {
       _setError('Failed to list collectible: $e');
       rethrow;
@@ -346,31 +332,30 @@ class CollectiblesProvider with ChangeNotifier {
     _setLoading(true);
 
     try {
-      final collectibleIndex =
-          _collectibles.indexWhere((c) => c.id == collectibleId);
-      if (collectibleIndex == -1) {
+      final collectible = allCollectibles.firstWhere(
+        (c) => c.id == collectibleId,
+        orElse: () => throw StateError('Collectible not found'),
+      );
+
+      final artworkId = _resolveArtworkIdForCollectible(collectible);
+      if (artworkId == null || artworkId.isEmpty) {
         throw Exception('Collectible not found');
       }
 
-      final collectible = _collectibles[collectibleIndex];
-      final updatedCollectible = Collectible(
-        id: collectible.id,
-        seriesId: collectible.seriesId,
-        tokenId: collectible.tokenId,
-        ownerAddress: collectible.ownerAddress,
-        status: CollectibleStatus.minted,
-        mintedAt: collectible.mintedAt,
-        lastSalePrice: collectible.lastSalePrice,
-        lastSaleAt: collectible.lastSaleAt,
-        properties: collectible.properties,
-        transactionHash: collectible.transactionHash,
-        isAuthentic: collectible.isAuthentic,
-        lastTransferAt: collectible.lastTransferAt,
-      );
+      final artworkProvider = _artworkProvider;
+      if (artworkProvider == null) {
+        throw Exception('Artwork provider is unavailable');
+      }
 
-      _collectibles[collectibleIndex] = updatedCollectible;
+      final updated = await artworkProvider.updateArtwork(artworkId, {
+        'price': null,
+      });
+
+      if (updated == null) {
+        throw Exception('Failed to update listing on canonical artwork record');
+      }
+
       notifyListeners();
-      await _persist();
     } catch (e) {
       _setError('Failed to remove collectible from sale: $e');
       rethrow;
@@ -386,192 +371,16 @@ class CollectiblesProvider with ChangeNotifier {
     required double salePrice,
     required String transactionHash,
   }) async {
-    _setLoading(true);
-
-    try {
-      final collectibleIndex =
-          _collectibles.indexWhere((c) => c.id == collectibleId);
-      if (collectibleIndex == -1) {
-        throw Exception('Collectible not found');
-      }
-
-      final updatedCollectible = _collectibles[collectibleIndex].copyWith(
-        ownerAddress: buyerAddress,
-        status: CollectibleStatus.sold,
-        lastSalePrice: salePrice,
-        lastSaleAt: DateTime.now(),
-        currentListingPrice: null,
-        listedAt: null,
-        lastTransferAt: DateTime.now(),
-      );
-
-      _collectibles[collectibleIndex] = updatedCollectible;
-      notifyListeners();
-      await _persist();
-    } catch (e) {
-      _setError('Failed to purchase collectible: $e');
-      rethrow;
-    } finally {
-      _setLoading(false);
-    }
+    throw UnsupportedError(
+      'Purchase transfer simulation is disabled in canonical mode. Ownership transfer must come from indexed on-chain settlement.',
+    );
   }
 
   // Initialize with mock data
   Future<void> initializeMockData() async {
-    _setLoading(true);
-
-    try {
-      _series.clear();
-      _collectibles.clear();
-      // Create some mock NFT series for AR artworks
-      await _createMockSeries();
-      await _createMockCollectibles();
-      await _persist();
-    } catch (e) {
-      _setError('Failed to initialize mock data: $e');
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  Future<void> _persist() async {
-    try {
-      await _storage.saveSeries(_series);
-      await _storage.saveCollectibles(_collectibles);
-    } catch (e) {
-      debugPrint('CollectiblesProvider: persist failed: $e');
-    }
-  }
-
-  Future<void> _createMockSeries() async {
-    final mockSeries = [
-      CollectibleSeries(
-        id: 'series_1',
-        name: 'Digital Echoes Collection',
-        description:
-            'Interactive AR sculptures that respond to viewer presence',
-        artworkId: 'artwork_1',
-        creatorAddress: '0x1234...5678',
-        totalSupply: 100,
-        mintedCount: 45,
-        rarity: CollectibleRarity.rare,
-        type: CollectibleType.nft,
-        mintPrice: 50.0,
-        imageUrl: 'https://example.com/digital_echoes.jpg',
-        animationUrl: 'https://example.com/digital_echoes.glb',
-        metadata: {
-          'artist': 'Maya Chen',
-          'medium': 'Digital AR Sculpture',
-          'year': '2025',
-          'interactive': true,
-        },
-        createdAt: DateTime.now().subtract(const Duration(days: 7)),
-        requiresARInteraction: true,
-        royaltyPercentage: 10.0,
-      ),
-      CollectibleSeries(
-        id: 'series_2',
-        name: 'Urban Metamorphosis',
-        description: 'Street art that transforms through AR overlay',
-        artworkId: 'artwork_2',
-        creatorAddress: '0xabcd...efgh',
-        totalSupply: 50,
-        mintedCount: 50,
-        rarity: CollectibleRarity.legendary,
-        type: CollectibleType.nft,
-        mintPrice: 150.0,
-        imageUrl: 'https://example.com/urban_meta.jpg',
-        animationUrl: 'https://example.com/urban_meta.mp4',
-        metadata: {
-          'artist': 'Street Vision Collective',
-          'medium': 'AR Street Art',
-          'year': '2025',
-          'location': 'Downtown District',
-        },
-        createdAt: DateTime.now().subtract(const Duration(days: 3)),
-        requiresARInteraction: true,
-        royaltyPercentage: 7.5,
-      ),
-      CollectibleSeries(
-        id: 'series_3',
-        name: 'Quantum Gardens',
-        description: 'Botanical AR installations that bloom over time',
-        artworkId: 'artwork_3',
-        creatorAddress: '0x9876...5432',
-        totalSupply: 25,
-        mintedCount: 12,
-        rarity: CollectibleRarity.mythic,
-        type: CollectibleType.nft,
-        mintPrice: 300.0,
-        imageUrl: 'https://example.com/quantum_gardens.jpg',
-        animationUrl: 'https://example.com/quantum_gardens.glb',
-        metadata: {
-          'artist': 'Bio-Digital Labs',
-          'medium': 'Living AR Installation',
-          'year': '2025',
-          'interactive': true,
-          'evolving': true,
-        },
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-        requiresARInteraction: true,
-        royaltyPercentage: 15.0,
-      ),
-    ];
-
-    _series.addAll(mockSeries);
-  }
-
-  Future<void> _createMockCollectibles() async {
-    final mockCollectibles = [
-      Collectible(
-        id: 'collectible_1',
-        seriesId: 'series_1',
-        tokenId: '1',
-        ownerAddress: '0xuser1...1234',
-        status: CollectibleStatus.minted,
-        mintedAt: DateTime.now().subtract(const Duration(days: 5)),
-        properties: {
-          'color_scheme': 'Cosmic Blue',
-          'interaction_level': 'High',
-          'rarity_trait': 'First Edition',
-        },
-        transactionHash: '0xtx1...hash',
-      ),
-      Collectible(
-        id: 'collectible_2',
-        seriesId: 'series_1',
-        tokenId: '15',
-        ownerAddress: '0xuser2...5678',
-        status: CollectibleStatus.listed,
-        mintedAt: DateTime.now().subtract(const Duration(days: 3)),
-        currentListingPrice: '75.0',
-        listedAt: DateTime.now().subtract(const Duration(hours: 12)),
-        properties: {
-          'color_scheme': 'Sunset Orange',
-          'interaction_level': 'Medium',
-          'rarity_trait': 'Animated Variant',
-        },
-        transactionHash: '0xtx2...hash',
-      ),
-      Collectible(
-        id: 'collectible_3',
-        seriesId: 'series_2',
-        tokenId: '1',
-        ownerAddress: '0xuser3...9999',
-        status: CollectibleStatus.minted,
-        mintedAt: DateTime.now().subtract(const Duration(days: 2)),
-        lastSalePrice: 200.0,
-        lastSaleAt: DateTime.now().subtract(const Duration(hours: 6)),
-        properties: {
-          'transformation': 'Day/Night Cycle',
-          'location': 'Main Street Corner',
-          'rarity_trait': 'Genesis Edition',
-        },
-        transactionHash: '0xtx3...hash',
-      ),
-    ];
-
-    _collectibles.addAll(mockCollectibles);
+    _setError(
+      'Mock collectible data is disabled in canonical mode. Use indexed artwork mint records.',
+    );
   }
 
   void _setLoading(bool loading) {
@@ -599,59 +408,26 @@ class CollectiblesProvider with ChangeNotifier {
     final artworkProvider = _artworkProvider;
     if (artworkProvider == null) return const <MarketplaceArtworkEntry>[];
 
-    final artworksById = <String, Artwork>{
-      for (final artwork in artworkProvider.artworks) artwork.id: artwork,
-    };
-
-    final publicArtworksById = <String, Artwork>{
-      for (final artwork in artworksById.values)
-        if (artwork.isActive && artwork.isPublic) artwork.id: artwork,
-    };
-
-    final collectiblesBySeriesId = <String, List<Collectible>>{};
-    for (final collectible in _collectibles) {
-      if (collectible.status == CollectibleStatus.burned) continue;
-      collectiblesBySeriesId
-          .putIfAbsent(collectible.seriesId, () => <Collectible>[])
-          .add(collectible);
-    }
-
+    final canonicalCollectibles = _buildCanonicalCollectibles();
     final entries = <MarketplaceArtworkEntry>[];
-    final artworkIdsWithSeriesEntries = <String>{};
+    for (final artwork in artworkProvider.artworks) {
+      if (!artwork.isActive || !artwork.isPublic || !_hasBackendMintedProof(artwork)) {
+        continue;
+      }
 
-    for (final series in _series) {
-      final artwork = publicArtworksById[series.artworkId];
-      if (artwork == null) continue;
+      final series = getSeriesByArtworkId(artwork.id);
+      final linkedCollectibles = canonicalCollectibles
+          .where((candidate) {
+            final candidateArtworkId = _resolveArtworkIdForCollectible(candidate);
+            return candidateArtworkId == artwork.id;
+          })
+          .toList(growable: false);
 
-      final linkedCollectibles = List<Collectible>.unmodifiable(
-        collectiblesBySeriesId[series.id] ?? const <Collectible>[],
-      );
-      final hasMintedProof =
-          _hasBackendMintedProof(artwork) || linkedCollectibles.isNotEmpty;
-      if (!hasMintedProof) continue;
-
-      artworkIdsWithSeriesEntries.add(artwork.id);
       entries.add(
         _createMarketplaceEntry(
           artwork: artwork,
           series: series,
           linkedCollectibles: linkedCollectibles,
-          hasMintedProof: hasMintedProof,
-        ),
-      );
-    }
-
-    for (final artwork in publicArtworksById.values) {
-      if (artworkIdsWithSeriesEntries.contains(artwork.id) ||
-          !_hasBackendMintedProof(artwork)) {
-        continue;
-      }
-
-      entries.add(
-        _createMarketplaceEntry(
-          artwork: artwork,
-          series: null,
-          linkedCollectibles: const <Collectible>[],
           hasMintedProof: true,
         ),
       );
@@ -693,35 +469,296 @@ class CollectiblesProvider with ChangeNotifier {
     return mintAddress.isNotEmpty;
   }
 
-  Artwork? _resolveArtworkForSeries(
-    CollectibleSeries series, {
-    bool allowFallback = false,
-    bool includeNonPublic = false,
-  }) {
-    final artwork = _artworkProvider?.getArtworkById(series.artworkId);
-    if (artwork != null) {
-      if (includeNonPublic || (artwork.isActive && artwork.isPublic)) {
-        return artwork;
+  List<CollectibleSeries> _buildCanonicalSeries() {
+    final artworkProvider = _artworkProvider;
+    if (artworkProvider == null) return const <CollectibleSeries>[];
+
+    final series = <CollectibleSeries>[];
+    for (final artwork in artworkProvider.artworks) {
+      if (!artwork.isActive || !_hasBackendMintedProof(artwork)) continue;
+      final walletAddress = (artwork.walletAddress ?? '').trim();
+      final mintedAt = artwork.updatedAt ?? artwork.createdAt;
+      series.add(
+        CollectibleSeries(
+          id: _seriesIdForArtwork(artwork.id),
+          name: artwork.title,
+          description: artwork.description,
+          artworkId: artwork.id,
+          creatorAddress: walletAddress,
+          totalSupply: 1,
+          mintedCount: 1,
+          rarity: _inferRarity(artwork),
+          type: CollectibleType.nft,
+          mintPrice: artwork.price ?? 0,
+          imageUrl: artwork.imageUrl,
+          animationUrl: artwork.model3DURL,
+          metadata: {
+            'mintAddress': artwork.nftMintAddress,
+            'metadataUri': artwork.nftMetadataUri,
+            'ownershipStatus': _ownershipStatusCreatorIndexedUnverified,
+            'collectionIds': _extractStringListFromMetadata(
+              artwork,
+              const ['collectionIds', 'collection_ids'],
+            ),
+            'exhibitionIds': _extractStringListFromMetadata(
+              artwork,
+              const ['exhibitionIds', 'exhibition_ids'],
+            ),
+            'eventIds': _extractStringListFromMetadata(
+              artwork,
+              const ['eventIds', 'event_ids'],
+            ),
+          },
+          createdAt: mintedAt,
+          requiresARInteraction: artwork.arEnabled,
+        ),
+      );
+    }
+    return series;
+  }
+
+  List<Collectible> _buildCanonicalCollectibles() {
+    final artworkProvider = _artworkProvider;
+    if (artworkProvider == null) return const <Collectible>[];
+
+    final collectibles = <Collectible>[];
+    for (final artwork in artworkProvider.artworks) {
+      if (!artwork.isActive || !_hasBackendMintedProof(artwork)) continue;
+      final walletAddress = (artwork.walletAddress ?? '').trim();
+      final mintedAt = artwork.updatedAt ?? artwork.createdAt;
+      collectibles.add(
+        Collectible(
+          id: _collectibleIdForArtwork(artwork.id),
+          seriesId: _seriesIdForArtwork(artwork.id),
+          tokenId: '1',
+          ownerAddress: walletAddress,
+          status:
+              artwork.isForSale ? CollectibleStatus.listed : CollectibleStatus.minted,
+          mintedAt: mintedAt,
+          currentListingPrice:
+              artwork.isForSale && artwork.price != null ? '${artwork.price}' : null,
+          listedAt: artwork.isForSale ? (artwork.updatedAt ?? artwork.createdAt) : null,
+          properties: {
+            'artwork_id': artwork.id,
+            'mint_address': artwork.nftMintAddress,
+            'metadata_uri': artwork.nftMetadataUri,
+            'ownership_status': _ownershipStatusCreatorIndexedUnverified,
+            'collection_ids': _extractStringListFromMetadata(
+              artwork,
+              const ['collectionIds', 'collection_ids'],
+            ),
+            'exhibition_ids': _extractStringListFromMetadata(
+              artwork,
+              const ['exhibitionIds', 'exhibition_ids'],
+            ),
+            'event_ids': _extractStringListFromMetadata(
+              artwork,
+              const ['eventIds', 'event_ids'],
+            ),
+          },
+          transactionHash: null,
+        ),
+      );
+    }
+
+    collectibles.sort((a, b) => b.mintedAt.compareTo(a.mintedAt));
+    return collectibles;
+  }
+
+  List<Collectible> _applyWalletCollectibleIndex(List<Collectible> collectibles) {
+    if (_walletCollectibleIndex.isEmpty) return collectibles;
+
+    final overrides = <String, Map<String, dynamic>>{};
+    for (final records in _walletCollectibleIndex.values) {
+      for (final record in records) {
+        final collectibleId = _resolveCollectibleIdFromIndexRecord(record);
+        if (collectibleId == null || collectibleId.isEmpty) continue;
+        overrides[collectibleId] = record;
       }
     }
 
-    if (!allowFallback) return null;
+    if (overrides.isEmpty) return collectibles;
 
-    return Artwork(
-      id: series.artworkId,
-      title: series.name,
-      artist: series.creatorAddress.isNotEmpty
-          ? series.creatorAddress
-          : 'Unknown artist',
-      description: series.description,
-      imageUrl: series.imageUrl,
-      position: const LatLng(0, 0),
-      rewards: 0,
-      createdAt: series.createdAt,
-      isActive: series.isActive,
-      isPublic: includeNonPublic,
-      currency: 'KUB8',
+    return collectibles.map((collectible) {
+      final record = overrides[collectible.id];
+      if (record == null) return collectible;
+      return _overlayCollectibleWithIndex(collectible, record);
+    }).toList(growable: false);
+  }
+
+  Collectible _overlayCollectibleWithIndex(
+    Collectible collectible,
+    Map<String, dynamic> record,
+  ) {
+    final ownershipState = _mapOrNull(record['ownershipState']) ??
+        _mapOrNull(record['ownership_state']);
+    final provenance = _mapOrNull(record['provenance']) ??
+        _mapOrNull(record['provenanceContext']);
+
+    final mergedProperties = Map<String, dynamic>.from(collectible.properties)
+      ..addAll({
+        if (record['artworkId'] != null) 'artwork_id': record['artworkId'],
+        if (record['artwork_id'] != null) 'artwork_id': record['artwork_id'],
+        if (record['mintAddress'] != null) 'mint_address': record['mintAddress'],
+        if (record['mint_address'] != null) 'mint_address': record['mint_address'],
+        if (record['metadataUri'] != null) 'metadata_uri': record['metadataUri'],
+        if (record['metadata_uri'] != null) 'metadata_uri': record['metadata_uri'],
+        if (ownershipState != null) 'ownership_state': ownershipState,
+        if (provenance != null) 'provenance': provenance,
+      });
+
+    final status = _parseCollectibleStatus(record['status']) ?? collectible.status;
+    final mintedAt = _parseDateTime(record['mintedAt']) ??
+        _parseDateTime(record['minted_at']) ??
+        collectible.mintedAt;
+    final listedAt = _parseDateTime(record['listedAt']) ??
+        _parseDateTime(record['listed_at']) ??
+        collectible.listedAt;
+    final lastSaleAt = _parseDateTime(record['lastSaleAt']) ??
+        _parseDateTime(record['last_sale_at']) ??
+        collectible.lastSaleAt;
+    final lastTransferAt = _parseDateTime(record['lastTransferAt']) ??
+        _parseDateTime(record['last_transfer_at']) ??
+        collectible.lastTransferAt;
+    final currentListingPrice =
+        (record['currentListingPrice'] ?? record['current_listing_price'] ?? collectible.currentListingPrice)
+            ?.toString();
+
+    return collectible.copyWith(
+      ownerAddress: (record['ownerAddress'] ?? record['owner_address'] ?? collectible.ownerAddress)
+          .toString(),
+      status: status,
+      mintedAt: mintedAt,
+      currentListingPrice: currentListingPrice,
+      listedAt: listedAt,
+      properties: mergedProperties,
+      transactionHash: (record['transactionHash'] ?? record['transaction_hash'] ?? collectible.transactionHash)
+          ?.toString(),
+      lastSalePrice: _parseNullableDouble(record['lastSalePrice'] ?? record['last_sale_price']) ??
+          collectible.lastSalePrice,
+      lastSaleAt: lastSaleAt,
+      lastTransferAt: lastTransferAt,
     );
+  }
+
+  List<Map<String, dynamic>> _normalizeBackendCollectibleRecords(dynamic raw) {
+    if (raw is! List) return const <Map<String, dynamic>>[];
+    return raw
+        .whereType<Map>()
+        .map((entry) => Map<String, dynamic>.from(entry))
+        .toList(growable: false);
+  }
+
+  Map<String, dynamic>? _mapOrNull(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) return Map<String, dynamic>.from(value);
+    return null;
+  }
+
+  String? _resolveCollectibleIdFromIndexRecord(Map<String, dynamic> record) {
+    final collectibleId = (record['collectibleId'] ?? record['collectible_id'] ?? '').toString().trim();
+    if (collectibleId.isNotEmpty) return collectibleId;
+
+    final artworkId = (record['artworkId'] ?? record['artwork_id'] ?? '').toString().trim();
+    if (artworkId.isNotEmpty) {
+      return _collectibleIdForArtwork(artworkId);
+    }
+
+    return null;
+  }
+
+  CollectibleStatus? _parseCollectibleStatus(dynamic raw) {
+    if (raw == null) return null;
+    final normalized = raw.toString().trim().toLowerCase();
+    switch (normalized) {
+      case 'listed':
+        return CollectibleStatus.listed;
+      case 'sold':
+        return CollectibleStatus.sold;
+      case 'burned':
+        return CollectibleStatus.burned;
+      case 'minted':
+      default:
+        return CollectibleStatus.minted;
+    }
+  }
+
+  DateTime? _parseDateTime(dynamic raw) {
+    if (raw is DateTime) return raw;
+    if (raw is String) {
+      final parsed = DateTime.tryParse(raw);
+      if (parsed != null) return parsed;
+    }
+    return null;
+  }
+
+  double? _parseNullableDouble(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is num) return raw.toDouble();
+    if (raw is String) return double.tryParse(raw);
+    return null;
+  }
+
+  CollectibleRarity _inferRarity(Artwork artwork) {
+    if (artwork.likesCount >= 200) return CollectibleRarity.legendary;
+    if (artwork.likesCount >= 100) return CollectibleRarity.epic;
+    if (artwork.likesCount >= 50) return CollectibleRarity.rare;
+    if (artwork.likesCount >= 20) return CollectibleRarity.uncommon;
+    return CollectibleRarity.common;
+  }
+
+  String? _resolveArtworkIdForCollectible(Collectible collectible) {
+    final rawFromProps = collectible.properties['artwork_id']?.toString().trim();
+    if (rawFromProps != null && rawFromProps.isNotEmpty) {
+      return rawFromProps;
+    }
+
+    const seriesPrefix = 'artwork_series_';
+    if (collectible.seriesId.startsWith(seriesPrefix)) {
+      final artworkId = collectible.seriesId.substring(seriesPrefix.length);
+      if (artworkId.trim().isNotEmpty) {
+        return artworkId;
+      }
+    }
+
+    const collectiblePrefix = 'artwork_collectible_';
+    if (collectible.id.startsWith(collectiblePrefix)) {
+      final artworkId = collectible.id.substring(collectiblePrefix.length);
+      if (artworkId.trim().isNotEmpty) {
+        return artworkId;
+      }
+    }
+
+    return null;
+  }
+
+  List<String> _extractStringListFromMetadata(
+    Artwork artwork,
+    List<String> keys,
+  ) {
+    final metadata = artwork.metadata;
+    if (metadata == null) return const <String>[];
+
+    for (final key in keys) {
+      final raw = metadata[key];
+      if (raw is List) {
+        return raw
+            .map((item) => item.toString().trim())
+            .where((item) => item.isNotEmpty)
+            .toList(growable: false);
+      }
+      if (raw is String) {
+        final trimmed = raw.trim();
+        if (trimmed.isNotEmpty) {
+          return trimmed
+              .split(',')
+              .map((item) => item.trim())
+              .where((item) => item.isNotEmpty)
+              .toList(growable: false);
+        }
+      }
+    }
+    return const <String>[];
   }
 
   MarketplaceDisplayValue? _resolveDisplayValue({

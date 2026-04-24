@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
-import '../../../config/config.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
@@ -63,8 +62,14 @@ class _MarketplaceState extends State<Marketplace>
       final collectiblesProvider = context.read<CollectiblesProvider>();
       if (!collectiblesProvider.isLoading &&
           collectiblesProvider.allSeries.isEmpty) {
-        await collectiblesProvider.initialize(
-          loadMockIfEmpty: AppConfig.isDevelopment,
+        await collectiblesProvider.initialize();
+      }
+
+      final walletAddress =
+          (context.read<WalletProvider>().currentWalletAddress ?? '').trim();
+      if (walletAddress.isNotEmpty) {
+        unawaited(
+          collectiblesProvider.refreshWalletCollectibleIndex(walletAddress),
         );
       }
     });
