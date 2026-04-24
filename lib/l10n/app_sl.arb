@@ -1876,6 +1876,42 @@
   "collectionCreatorNameRequiredError": "Ime zbirke je obvezno",
   "collectionCreatorCreateFailed": "Ustvarjanje zbirke ni uspelo.",
   "collectionCreatorCreateFailedWithError": "Ustvarjanje zbirke ni uspelo. Poskusi znova.",
+  "collectionCreatorShellDraftSubtitle": "Oblikuj zbirko in jo shrani za odklep sodelovanja.",
+  "collectionCreatorShellSavedSubtitle": "Zbirka je shranjena. Nadaljuj kuriranje ali povabi sodelavce v istem kontekstu.",
+  "collectionCreatorReadyBasicsLabel": "Osnove zaključene",
+  "collectionCreatorReadyBasicsDescription": "Ime in opis sta izpolnjena.",
+  "collectionCreatorReadyCoverLabel": "Naslovna slika dodana",
+  "collectionCreatorReadyCoverComplete": "Naslovnica zbirke je pripravljena.",
+  "collectionCreatorReadyCoverPending": "Neobvezno, a na namizju močno priporočeno.",
+  "collectionCreatorReadySelectionLabel": "Izbor umetnin pripravljen",
+  "collectionCreatorReadySelectionComplete": "Izbranih je {count} umetnin.",
+  "@collectionCreatorReadySelectionComplete": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "collectionCreatorReadySelectionPending": "Izberi umetnine za jedro zbirke.",
+  "collectionCreatorReadyVisibilityLabel": "Vidnost izbrana",
+  "collectionCreatorReadyVisibilityPublic": "Javna zbirka je vidna vsem.",
+  "collectionCreatorReadyVisibilityPrivate": "Zasebna zbirka je še vedno dostopna sodelavcem.",
+  "collectionCreatorStatusSavedSubtitle": "Shranjena zbirka",
+  "collectionCreatorStatusDraftSubtitle": "Osnutek v pripravi",
+  "collectionCreatorSummaryIdLabel": "ID zbirke",
+  "collectionCreatorSummaryNotCreatedYet": "Še ni ustvarjena",
+  "collectionCreatorSummarySelectedArtworksLabel": "Izbrane umetnine",
+  "collectionCreatorSummaryVisibilityLabel": "Vidnost",
+  "collectionCreatorReadinessTitle": "Pripravljenost",
+  "collectionCreatorReadinessSubtitle": "Hiter pregled pred shranjevanjem.",
+  "collectionCreatorQuickActionsTitle": "Hitre akcije",
+  "collectionCreatorQuickActionsSubtitle": "Ohrani potek dela v tem ustvarjalniku.",
+  "collectionCreatorQuickActionUpdate": "Posodobi zbirko",
+  "collectionCreatorQuickActionSave": "Shrani zbirko",
+  "collectionCreatorQuickActionOpen": "Odpri zbirko",
+  "collectionCreatorCollaborationReadySubtitle": "Povabi sokuratorje brez zapuščanja delovnega prostora.",
+  "collectionCreatorCollaborationLockedSubtitle": "Za odklep sodelovanja najprej shrani.",
+  "collectionCreatorCollaborationLockedMessage": "Ko je zbirka shranjena, lahko tukaj povabiš sodelavce, da kuriranje ostane v kontekstu.",
   "collectionDetailLoadFailedMessage": "Nalaganje podrobnosti zbirke ni uspelo. Poskusi znova.",
   "collectionDetailNoArtworksYet": "Zaenkrat ni umetnin.",
   "collectionDetailAddArtwork": "Dodaj umetnino",
@@ -2439,6 +2475,60 @@
   "eventCreatorEventCreatedBody": "Tvoj dogodek je bil uspešno ustvarjen.",
   "eventCreatorCreateAnotherButton": "Ustvari še enega",
   "eventCreatorSaveFailedToast": "Shranjevanje dogodka ni uspelo. Poskusi znova.",
+  "eventCreatorShellEditTitle": "Uredi dogodek",
+  "eventCreatorShellCreateTitle": "Ustvari nov dogodek",
+  "eventCreatorShellDraftSubtitle": "Izpolni čarovnika tukaj, nato shrani za odklep sodelovanja.",
+  "eventCreatorShellSavedSubtitle": "Dogodek je shranjen. Nadaljuj z urejanjem ali odpri sodelovanje iz stranske vrstice.",
+  "eventCreatorStepBadge": "Korak {step} od 4",
+  "@eventCreatorStepBadge": {
+    "placeholders": {
+      "step": {
+        "type": "int"
+      }
+    }
+  },
+  "eventCreatorHelpTooltip": "Pomoč",
+  "eventCreatorReadyInstitutionLabel": "Institucija izbrana",
+  "eventCreatorReadyInstitutionComplete": "Dogodek bo pripadal instituciji {institutionName}.",
+  "@eventCreatorReadyInstitutionComplete": {
+    "placeholders": {
+      "institutionName": {}
+    }
+  },
+  "eventCreatorReadyInstitutionPending": "Najprej izberi institucijo.",
+  "eventCreatorReadyBasicsLabel": "Osnove zaključene",
+  "eventCreatorReadyBasicsDescription": "Naslov, opis in tip dogodka so pripravljeni.",
+  "eventCreatorReadyDatesLabel": "Datumi izbrani",
+  "eventCreatorReadyDatesComplete": "Začetni in končni datum sta nastavljena.",
+  "eventCreatorReadyDatesPending": "Pred shranjevanjem izberi oba datuma.",
+  "eventCreatorReadyCapacityLabel": "Kapaciteta nastavljena",
+  "eventCreatorReadyCapacityComplete": "Omejitev prijav je pripravljena.",
+  "eventCreatorReadyCapacityPending": "Dodaj kapaciteto za dokončanje nastavitve.",
+  "eventCreatorStatusDraftSubtitle": "Osnutek v pripravi",
+  "eventCreatorStatusSavedSubtitle": "Dogodek shranjen",
+  "eventCreatorSummaryEventId": "ID dogodka",
+  "eventCreatorSummaryNotCreatedYet": "Še ni ustvarjen",
+  "eventCreatorSummaryEventType": "Tip dogodka",
+  "eventCreatorSummaryRegistration": "Prijava",
+  "eventCreatorReadinessTitle": "Pripravljenost",
+  "eventCreatorReadinessSubtitle": "Hiter pregled pred shranjevanjem.",
+  "eventCreatorQuickActionsTitle": "Hitre akcije",
+  "eventCreatorQuickActionsSubtitle": "Ohrani celoten potek dela v enem delovnem prostoru.",
+  "eventCreatorQuickActionNextStep": "Naslednji korak",
+  "eventCreatorQuickActionCreateEvent": "Ustvari dogodek",
+  "eventCreatorQuickActionUpdateEvent": "Posodobi dogodek",
+  "eventCreatorQuickActionOpenEvent": "Odpri dogodek",
+  "eventCreatorCollaborationReadySubtitle": "Povabi sodelavce brez izhoda iz urejevalnika.",
+  "eventCreatorCollaborationLockedSubtitle": "Za odklep sodelovanja najprej shrani.",
+  "eventCreatorCollaborationLockedMessage": "Ko je dogodek shranjen, lahko tukaj povabiš sodelavce, da načrtovanje ostane v kontekstu.",
+  "eventCreatorStepLabel": "Korak {step} od 4",
+  "@eventCreatorStepLabel": {
+    "placeholders": {
+      "step": {
+        "type": "int"
+      }
+    }
+  },
   "activityNavigationUnableToOpenToast": "Trenutno ni mogoče odpreti te dejavnosti.",
   "navigationUnableToNavigateToScreen": "Ni mogoče odpreti zaslona »{screenName}«.",
   "@navigationUnableToNavigateToScreen": {
@@ -2666,7 +2756,97 @@
   "desktopInstitutionStatRevenue": "Prihodki",
   "desktopInstitutionNoUpcomingEventsLabel": "Ni prihajajočih dogodkov",
   "commonRemove": "Odstrani",
+  "commonNow": "Zdaj",
   "commonNotAvailableShort": "N/A",
+  "eventManagerTitle": "Upravitelj dogodkov",
+  "eventManagerSubtitle": "Upravljaj dogodke svoje institucije",
+  "eventManagerStatTotalEvents": "Skupaj dogodkov",
+  "eventManagerStatActiveNow": "Aktivni zdaj",
+  "eventManagerStatRegistrations": "Prijave",
+  "eventManagerEmptyTitle": "Ni najdenih dogodkov",
+  "eventManagerEmptyDescription": "Ustvari svoj prvi dogodek za začetek",
+  "eventManagerOccupancyLabel": "Zasedenost: {current}/{capacity}",
+  "@eventManagerOccupancyLabel": {
+    "placeholders": {
+      "current": {},
+      "capacity": {}
+    }
+  },
+  "eventManagerAttendeesLabel": "Udeleženci: {count}",
+  "@eventManagerAttendeesLabel": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "eventManagerStatusUpcoming": "PRIHAJA",
+  "eventManagerStatusActive": "AKTIVNO",
+  "eventManagerStatusCompleted": "ZAKLJUČENO",
+  "eventManagerFilterAll": "Vsi",
+  "eventManagerFilterUpcoming": "Prihajajoči",
+  "eventManagerFilterActive": "Aktivni",
+  "eventManagerFilterCompleted": "Zaključeni",
+  "eventManagerOptionsSubtitle": "Izberi dejanje za ta dogodek",
+  "eventManagerCapacityAlert": "\"{title}\" ima zasedenost {percent}%",
+  "@eventManagerCapacityAlert": {
+    "placeholders": {
+      "title": {},
+      "percent": {}
+    }
+  },
+  "eventManagerStartsSoonAlert": "\"{title}\" se začne čez {hours}h",
+  "@eventManagerStartsSoonAlert": {
+    "placeholders": {
+      "title": {},
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "eventManagerSoonLabel": "Kmalu",
+  "eventManagerNoAlerts": "Trenutno ni opozoril.",
+  "eventManagerSearchTitle": "Išči dogodke",
+  "eventManagerSearchHint": "Vnesi ime dogodka ali ključno besedo...",
+  "eventManagerDeleteTitle": "Izbriši dogodek",
+  "eventManagerDeleteBody": "Ali si prepričan/a, da želiš izbrisati \"{title}\"? Tega dejanja ni mogoče razveljaviti.",
+  "@eventManagerDeleteBody": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "eventManagerDeletedToast": "Dogodek \"{title}\" je izbrisan",
+  "@eventManagerDeletedToast": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "collabRoleLabel": "Vloga",
+  "collabRoleViewer": "Opazovalec",
+  "collabRoleCurator": "Kustos",
+  "collabRoleEditor": "Urednik",
+  "collabRolePublisher": "Objavljalec",
+  "collabRoleAdmin": "Administrator",
+  "collabPanelNoInvitePermission": "Nimaš dovoljenja za vabljenje sodelavcev.",
+  "collabPanelEnterUsernameOrEmail": "Vnesi uporabniško ime ali e-poštni naslov.",
+  "collabPanelUseUsernameOrEmail": "Za povabilo uporabi uporabniško ime ali e-pošto.",
+  "collabPanelInviteSent": "Povabilo je poslano.",
+  "collabPanelInviteFailed": "Pošiljanje povabila ni uspelo. Poskusi znova.",
+  "collabPanelRoleUpdated": "Vloga je posodobljena.",
+  "collabPanelRoleUpdateFailed": "Posodobitev vloge ni uspela.",
+  "collabPanelRemoveConfirmTitle": "Odstranim sodelavca?",
+  "collabPanelRemoveConfirmBody": "S tem boš odvzel/a dostop uporabniku {name}.",
+  "@collabPanelRemoveConfirmBody": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "collabPanelGenericUser": "tej osebi",
+  "collabPanelRemoved": "Odstranjeno.",
+  "collabPanelRemoveFailed": "Odstranitev sodelavca ni uspela.",
+  "collabPanelLoadFailed": "Nalaganje sodelavcev ni uspelo.",
+  "collabPanelNoCollaborators": "Sodelavcev še ni.",
+  "collabPanelInviteTitle": "Povabi osebo",
+  "collabPanelUsernameOrEmailHint": "Uporabniško ime ali e-pošta",
+  "collabPanelInviteHint": "Povabi sodelavce z uporabniškim imenom ali e-pošto.",
   "marketplaceNetworkLabel": "Omrežje: {network}",
   "@marketplaceNetworkLabel": {
     "placeholders": {

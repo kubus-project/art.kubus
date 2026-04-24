@@ -343,11 +343,13 @@ class _CollectionCreatorState extends State<CollectionCreator> {
       return DesktopCreatorShell(
         title: l10n.collectionCreatorTitle,
         subtitle: _createdCollectionId == null
-            ? 'Shape the collection, then save it to unlock collaboration.'
-            : 'Collection saved. Keep curating or invite collaborators in-context.',
+            ? l10n.collectionCreatorShellDraftSubtitle
+            : l10n.collectionCreatorShellSavedSubtitle,
         onBack: shellScope?.popScreen,
         headerBadge: CreatorStatusBadge(
-          label: _createdCollectionId == null ? 'Draft' : 'Saved',
+          label: _createdCollectionId == null
+              ? l10n.commonDraft
+              : l10n.commonSavedToast,
           color: _createdCollectionId == null ? studioAccent : Theme.of(context).colorScheme.primary,
         ),
         sidebarAccentColor: studioAccent,
@@ -381,32 +383,32 @@ class _CollectionCreatorState extends State<CollectionCreator> {
 
     final readyItems = <DesktopCreatorReadinessItem>[
       DesktopCreatorReadinessItem(
-        label: 'Basics complete',
-        description: 'Name and description are filled in.',
+        label: l10n.collectionCreatorReadyBasicsLabel,
+        description: l10n.collectionCreatorReadyBasicsDescription,
         complete: hasBasics,
         icon: Icons.subject_outlined,
       ),
       DesktopCreatorReadinessItem(
-        label: 'Cover image added',
+        label: l10n.collectionCreatorReadyCoverLabel,
         description: hasCover
-            ? 'Collection cover is ready.'
-            : 'Optional, but strongly recommended on desktop.',
+            ? l10n.collectionCreatorReadyCoverComplete
+            : l10n.collectionCreatorReadyCoverPending,
         complete: hasCover,
         icon: Icons.image_outlined,
       ),
       DesktopCreatorReadinessItem(
-        label: 'Artwork selection ready',
+        label: l10n.collectionCreatorReadySelectionLabel,
         description: selectedCount > 0
-            ? '$selectedCount artwork(s) selected.'
-            : 'Choose artworks to anchor the collection.',
+            ? l10n.collectionCreatorReadySelectionComplete(selectedCount)
+            : l10n.collectionCreatorReadySelectionPending,
         complete: selectedCount > 0,
         icon: Icons.collections_bookmark_outlined,
       ),
       DesktopCreatorReadinessItem(
-        label: 'Visibility chosen',
+        label: l10n.collectionCreatorReadyVisibilityLabel,
         description: _isPublic
-            ? 'Public collection visible to everyone.'
-            : 'Private collection is still available to collaborators.',
+            ? l10n.collectionCreatorReadyVisibilityPublic
+            : l10n.collectionCreatorReadyVisibilityPrivate,
         complete: true,
         icon: _isPublic ? Icons.public_outlined : Icons.lock_outline,
       ),
@@ -416,31 +418,35 @@ class _CollectionCreatorState extends State<CollectionCreator> {
       padding: EdgeInsets.zero,
       children: [
         DesktopCreatorSidebarSection(
-          title: 'Status',
-          subtitle: created ? 'Saved collection' : 'Draft in progress',
+          title: l10n.commonStatus,
+          subtitle: created
+              ? l10n.collectionCreatorStatusSavedSubtitle
+              : l10n.collectionCreatorStatusDraftSubtitle,
           icon: created ? Icons.bookmark_added_outlined : Icons.edit_outlined,
           accentColor: accent,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CreatorStatusBadge(
-                label: created ? 'Saved' : 'Draft',
+                label: created ? l10n.commonSavedToast : l10n.commonDraft,
                 color: created ? scheme.primary : accent,
               ),
               const SizedBox(height: KubusSpacing.sm),
               DesktopCreatorSummaryRow(
-                label: 'Collection ID',
-                value: created ? createdId : 'Not created yet',
+                label: l10n.collectionCreatorSummaryIdLabel,
+                value: created
+                    ? createdId
+                    : l10n.collectionCreatorSummaryNotCreatedYet,
                 valueColor: created ? scheme.onSurface : scheme.onSurface.withValues(alpha: 0.6),
               ),
               DesktopCreatorSummaryRow(
-                label: 'Selected artworks',
+                label: l10n.collectionCreatorSummarySelectedArtworksLabel,
                 value: '$selectedCount',
                 icon: Icons.collections_outlined,
               ),
               DesktopCreatorSummaryRow(
-                label: 'Visibility',
-                value: _isPublic ? 'Public' : 'Private',
+                label: l10n.collectionCreatorSummaryVisibilityLabel,
+                value: _isPublic ? l10n.commonPublic : l10n.commonPrivate,
                 icon: _isPublic ? Icons.public_outlined : Icons.lock_outline,
               ),
             ],
@@ -448,8 +454,8 @@ class _CollectionCreatorState extends State<CollectionCreator> {
         ),
         const SizedBox(height: KubusSpacing.md),
         DesktopCreatorSidebarSection(
-          title: 'Readiness',
-          subtitle: 'A quick sanity check before saving.',
+          title: l10n.collectionCreatorReadinessTitle,
+          subtitle: l10n.collectionCreatorReadinessSubtitle,
           icon: Icons.fact_check_outlined,
           accentColor: accent,
           child: DesktopCreatorReadinessChecklist(
@@ -459,8 +465,8 @@ class _CollectionCreatorState extends State<CollectionCreator> {
         ),
         const SizedBox(height: KubusSpacing.md),
         DesktopCreatorSidebarSection(
-          title: 'Quick actions',
-          subtitle: 'Keep the workflow in this creator.',
+          title: l10n.collectionCreatorQuickActionsTitle,
+          subtitle: l10n.collectionCreatorQuickActionsSubtitle,
           icon: Icons.flash_on_outlined,
           accentColor: accent,
           child: Column(
@@ -469,7 +475,9 @@ class _CollectionCreatorState extends State<CollectionCreator> {
               ElevatedButton.icon(
                 onPressed: _isSubmitting ? null : _submit,
                 icon: Icon(created ? Icons.refresh_outlined : Icons.save_outlined),
-                label: Text(created ? 'Update collection' : 'Save collection'),
+                label: Text(created
+                    ? l10n.collectionCreatorQuickActionUpdate
+                    : l10n.collectionCreatorQuickActionSave),
               ),
               if (created) ...[
                 const SizedBox(height: KubusSpacing.sm),
@@ -487,7 +495,7 @@ class _CollectionCreatorState extends State<CollectionCreator> {
                     );
                   },
                   icon: const Icon(Icons.open_in_new_outlined),
-                  label: const Text('Open collection'),
+                  label: Text(l10n.collectionCreatorQuickActionOpen),
                 ),
               ],
             ],
@@ -495,15 +503,14 @@ class _CollectionCreatorState extends State<CollectionCreator> {
         ),
         const SizedBox(height: KubusSpacing.md),
         DesktopCreatorCollaborationSection(
-          title: 'Collaboration',
+          title: l10n.collectionSettingsCollaboration,
           subtitle: created
-              ? 'Invite co-curators without leaving the workspace.'
-              : 'Save once to unlock collaboration.',
+              ? l10n.collectionCreatorCollaborationReadySubtitle
+              : l10n.collectionCreatorCollaborationLockedSubtitle,
           entityType: 'collections',
           entityId: createdId,
           enabled: created && AppConfig.isFeatureEnabled('collabInvites'),
-          lockedMessage:
-              'Once saved, collaborators can be invited here so curation stays in context.',
+          lockedMessage: l10n.collectionCreatorCollaborationLockedMessage,
           accentColor: accent,
         ),
       ],

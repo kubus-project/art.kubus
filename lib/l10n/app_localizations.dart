@@ -8609,6 +8609,180 @@ abstract class AppLocalizations {
   /// **'Failed to create collection. Please try again.'**
   String get collectionCreatorCreateFailedWithError;
 
+  /// No description provided for @collectionCreatorShellDraftSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Shape the collection, then save it to unlock collaboration.'**
+  String get collectionCreatorShellDraftSubtitle;
+
+  /// No description provided for @collectionCreatorShellSavedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Collection saved. Keep curating or invite collaborators in-context.'**
+  String get collectionCreatorShellSavedSubtitle;
+
+  /// No description provided for @collectionCreatorReadyBasicsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Basics complete'**
+  String get collectionCreatorReadyBasicsLabel;
+
+  /// No description provided for @collectionCreatorReadyBasicsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Name and description are filled in.'**
+  String get collectionCreatorReadyBasicsDescription;
+
+  /// No description provided for @collectionCreatorReadyCoverLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover image added'**
+  String get collectionCreatorReadyCoverLabel;
+
+  /// No description provided for @collectionCreatorReadyCoverComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Collection cover is ready.'**
+  String get collectionCreatorReadyCoverComplete;
+
+  /// No description provided for @collectionCreatorReadyCoverPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional, but strongly recommended on desktop.'**
+  String get collectionCreatorReadyCoverPending;
+
+  /// No description provided for @collectionCreatorReadySelectionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork selection ready'**
+  String get collectionCreatorReadySelectionLabel;
+
+  /// No description provided for @collectionCreatorReadySelectionComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} artwork(s) selected.'**
+  String collectionCreatorReadySelectionComplete(int count);
+
+  /// No description provided for @collectionCreatorReadySelectionPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose artworks to anchor the collection.'**
+  String get collectionCreatorReadySelectionPending;
+
+  /// No description provided for @collectionCreatorReadyVisibilityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Visibility chosen'**
+  String get collectionCreatorReadyVisibilityLabel;
+
+  /// No description provided for @collectionCreatorReadyVisibilityPublic.
+  ///
+  /// In en, this message translates to:
+  /// **'Public collection visible to everyone.'**
+  String get collectionCreatorReadyVisibilityPublic;
+
+  /// No description provided for @collectionCreatorReadyVisibilityPrivate.
+  ///
+  /// In en, this message translates to:
+  /// **'Private collection is still available to collaborators.'**
+  String get collectionCreatorReadyVisibilityPrivate;
+
+  /// No description provided for @collectionCreatorStatusSavedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved collection'**
+  String get collectionCreatorStatusSavedSubtitle;
+
+  /// No description provided for @collectionCreatorStatusDraftSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft in progress'**
+  String get collectionCreatorStatusDraftSubtitle;
+
+  /// No description provided for @collectionCreatorSummaryIdLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Collection ID'**
+  String get collectionCreatorSummaryIdLabel;
+
+  /// No description provided for @collectionCreatorSummaryNotCreatedYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not created yet'**
+  String get collectionCreatorSummaryNotCreatedYet;
+
+  /// No description provided for @collectionCreatorSummarySelectedArtworksLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected artworks'**
+  String get collectionCreatorSummarySelectedArtworksLabel;
+
+  /// No description provided for @collectionCreatorSummaryVisibilityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Visibility'**
+  String get collectionCreatorSummaryVisibilityLabel;
+
+  /// No description provided for @collectionCreatorReadinessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Readiness'**
+  String get collectionCreatorReadinessTitle;
+
+  /// No description provided for @collectionCreatorReadinessSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A quick sanity check before saving.'**
+  String get collectionCreatorReadinessSubtitle;
+
+  /// No description provided for @collectionCreatorQuickActionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick actions'**
+  String get collectionCreatorQuickActionsTitle;
+
+  /// No description provided for @collectionCreatorQuickActionsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the workflow in this creator.'**
+  String get collectionCreatorQuickActionsSubtitle;
+
+  /// No description provided for @collectionCreatorQuickActionUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Update collection'**
+  String get collectionCreatorQuickActionUpdate;
+
+  /// No description provided for @collectionCreatorQuickActionSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save collection'**
+  String get collectionCreatorQuickActionSave;
+
+  /// No description provided for @collectionCreatorQuickActionOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open collection'**
+  String get collectionCreatorQuickActionOpen;
+
+  /// No description provided for @collectionCreatorCollaborationReadySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite co-curators without leaving the workspace.'**
+  String get collectionCreatorCollaborationReadySubtitle;
+
+  /// No description provided for @collectionCreatorCollaborationLockedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Save once to unlock collaboration.'**
+  String get collectionCreatorCollaborationLockedSubtitle;
+
+  /// No description provided for @collectionCreatorCollaborationLockedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Once saved, collaborators can be invited here so curation stays in context.'**
+  String get collectionCreatorCollaborationLockedMessage;
+
   /// No description provided for @collectionDetailLoadFailedMessage.
   ///
   /// In en, this message translates to:
@@ -10901,6 +11075,216 @@ abstract class AppLocalizations {
   /// **'Failed to save event. Please try again.'**
   String get eventCreatorSaveFailedToast;
 
+  /// No description provided for @eventCreatorShellEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Event'**
+  String get eventCreatorShellEditTitle;
+
+  /// No description provided for @eventCreatorShellCreateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create New Event'**
+  String get eventCreatorShellCreateTitle;
+
+  /// No description provided for @eventCreatorShellDraftSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete the wizard here, then save to unlock collaboration.'**
+  String get eventCreatorShellDraftSubtitle;
+
+  /// No description provided for @eventCreatorShellSavedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Event saved. Keep refining or open collaboration from the sidebar.'**
+  String get eventCreatorShellSavedSubtitle;
+
+  /// No description provided for @eventCreatorStepBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {step} of 4'**
+  String eventCreatorStepBadge(int step);
+
+  /// No description provided for @eventCreatorHelpTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Help'**
+  String get eventCreatorHelpTooltip;
+
+  /// No description provided for @eventCreatorReadyInstitutionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution selected'**
+  String get eventCreatorReadyInstitutionLabel;
+
+  /// No description provided for @eventCreatorReadyInstitutionComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'The event will belong to {institutionName}.'**
+  String eventCreatorReadyInstitutionComplete(Object institutionName);
+
+  /// No description provided for @eventCreatorReadyInstitutionPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the institution first.'**
+  String get eventCreatorReadyInstitutionPending;
+
+  /// No description provided for @eventCreatorReadyBasicsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Basics complete'**
+  String get eventCreatorReadyBasicsLabel;
+
+  /// No description provided for @eventCreatorReadyBasicsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Title, description, and event type are in place.'**
+  String get eventCreatorReadyBasicsDescription;
+
+  /// No description provided for @eventCreatorReadyDatesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Dates selected'**
+  String get eventCreatorReadyDatesLabel;
+
+  /// No description provided for @eventCreatorReadyDatesComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Start and end dates are set.'**
+  String get eventCreatorReadyDatesComplete;
+
+  /// No description provided for @eventCreatorReadyDatesPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick both dates before saving.'**
+  String get eventCreatorReadyDatesPending;
+
+  /// No description provided for @eventCreatorReadyCapacityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Capacity set'**
+  String get eventCreatorReadyCapacityLabel;
+
+  /// No description provided for @eventCreatorReadyCapacityComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Registration limit is ready.'**
+  String get eventCreatorReadyCapacityComplete;
+
+  /// No description provided for @eventCreatorReadyCapacityPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a capacity to complete the setup.'**
+  String get eventCreatorReadyCapacityPending;
+
+  /// No description provided for @eventCreatorStatusDraftSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft in progress'**
+  String get eventCreatorStatusDraftSubtitle;
+
+  /// No description provided for @eventCreatorStatusSavedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved event'**
+  String get eventCreatorStatusSavedSubtitle;
+
+  /// No description provided for @eventCreatorSummaryEventId.
+  ///
+  /// In en, this message translates to:
+  /// **'Event ID'**
+  String get eventCreatorSummaryEventId;
+
+  /// No description provided for @eventCreatorSummaryNotCreatedYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not created yet'**
+  String get eventCreatorSummaryNotCreatedYet;
+
+  /// No description provided for @eventCreatorSummaryEventType.
+  ///
+  /// In en, this message translates to:
+  /// **'Event type'**
+  String get eventCreatorSummaryEventType;
+
+  /// No description provided for @eventCreatorSummaryRegistration.
+  ///
+  /// In en, this message translates to:
+  /// **'Registration'**
+  String get eventCreatorSummaryRegistration;
+
+  /// No description provided for @eventCreatorReadinessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Readiness'**
+  String get eventCreatorReadinessTitle;
+
+  /// No description provided for @eventCreatorReadinessSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A quick sanity check before saving.'**
+  String get eventCreatorReadinessSubtitle;
+
+  /// No description provided for @eventCreatorQuickActionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick actions'**
+  String get eventCreatorQuickActionsTitle;
+
+  /// No description provided for @eventCreatorQuickActionsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the whole workflow in one workspace.'**
+  String get eventCreatorQuickActionsSubtitle;
+
+  /// No description provided for @eventCreatorQuickActionNextStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Next step'**
+  String get eventCreatorQuickActionNextStep;
+
+  /// No description provided for @eventCreatorQuickActionCreateEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Create event'**
+  String get eventCreatorQuickActionCreateEvent;
+
+  /// No description provided for @eventCreatorQuickActionUpdateEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Update event'**
+  String get eventCreatorQuickActionUpdateEvent;
+
+  /// No description provided for @eventCreatorQuickActionOpenEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Open event'**
+  String get eventCreatorQuickActionOpenEvent;
+
+  /// No description provided for @eventCreatorCollaborationReadySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite collaborators without leaving the creator.'**
+  String get eventCreatorCollaborationReadySubtitle;
+
+  /// No description provided for @eventCreatorCollaborationLockedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Save once to unlock collaboration.'**
+  String get eventCreatorCollaborationLockedSubtitle;
+
+  /// No description provided for @eventCreatorCollaborationLockedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Once saved, collaborators can be invited here so event planning stays in context.'**
+  String get eventCreatorCollaborationLockedMessage;
+
+  /// No description provided for @eventCreatorStepLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {step} of 4'**
+  String eventCreatorStepLabel(int step);
+
   /// No description provided for @activityNavigationUnableToOpenToast.
   ///
   /// In en, this message translates to:
@@ -11945,11 +12329,311 @@ abstract class AppLocalizations {
   /// **'Remove'**
   String get commonRemove;
 
+  /// No description provided for @commonNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Now'**
+  String get commonNow;
+
   /// No description provided for @commonNotAvailableShort.
   ///
   /// In en, this message translates to:
   /// **'N/A'**
   String get commonNotAvailableShort;
+
+  /// No description provided for @eventManagerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Event Manager'**
+  String get eventManagerTitle;
+
+  /// No description provided for @eventManagerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage your institution\'s events'**
+  String get eventManagerSubtitle;
+
+  /// No description provided for @eventManagerStatTotalEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'Total events'**
+  String get eventManagerStatTotalEvents;
+
+  /// No description provided for @eventManagerStatActiveNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Active now'**
+  String get eventManagerStatActiveNow;
+
+  /// No description provided for @eventManagerStatRegistrations.
+  ///
+  /// In en, this message translates to:
+  /// **'Registrations'**
+  String get eventManagerStatRegistrations;
+
+  /// No description provided for @eventManagerEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No events found'**
+  String get eventManagerEmptyTitle;
+
+  /// No description provided for @eventManagerEmptyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your first event to get started'**
+  String get eventManagerEmptyDescription;
+
+  /// No description provided for @eventManagerOccupancyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Occupancy: {current}/{capacity}'**
+  String eventManagerOccupancyLabel(Object current, Object capacity);
+
+  /// No description provided for @eventManagerAttendeesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Attendees: {count}'**
+  String eventManagerAttendeesLabel(Object count);
+
+  /// No description provided for @eventManagerStatusUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'UPCOMING'**
+  String get eventManagerStatusUpcoming;
+
+  /// No description provided for @eventManagerStatusActive.
+  ///
+  /// In en, this message translates to:
+  /// **'ACTIVE'**
+  String get eventManagerStatusActive;
+
+  /// No description provided for @eventManagerStatusCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'COMPLETED'**
+  String get eventManagerStatusCompleted;
+
+  /// No description provided for @eventManagerFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get eventManagerFilterAll;
+
+  /// No description provided for @eventManagerFilterUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming'**
+  String get eventManagerFilterUpcoming;
+
+  /// No description provided for @eventManagerFilterActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get eventManagerFilterActive;
+
+  /// No description provided for @eventManagerFilterCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get eventManagerFilterCompleted;
+
+  /// No description provided for @eventManagerOptionsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose what to do with this event'**
+  String get eventManagerOptionsSubtitle;
+
+  /// No description provided for @eventManagerCapacityAlert.
+  ///
+  /// In en, this message translates to:
+  /// **'\"{title}\" capacity at {percent}%'**
+  String eventManagerCapacityAlert(Object title, Object percent);
+
+  /// No description provided for @eventManagerStartsSoonAlert.
+  ///
+  /// In en, this message translates to:
+  /// **'\"{title}\" starts in {hours}h'**
+  String eventManagerStartsSoonAlert(Object title, int hours);
+
+  /// No description provided for @eventManagerSoonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Soon'**
+  String get eventManagerSoonLabel;
+
+  /// No description provided for @eventManagerNoAlerts.
+  ///
+  /// In en, this message translates to:
+  /// **'No alerts right now.'**
+  String get eventManagerNoAlerts;
+
+  /// No description provided for @eventManagerSearchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Search Events'**
+  String get eventManagerSearchTitle;
+
+  /// No description provided for @eventManagerSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter event name or keyword...'**
+  String get eventManagerSearchHint;
+
+  /// No description provided for @eventManagerDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Event'**
+  String get eventManagerDeleteTitle;
+
+  /// No description provided for @eventManagerDeleteBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete \"{title}\"? This action cannot be undone.'**
+  String eventManagerDeleteBody(Object title);
+
+  /// No description provided for @eventManagerDeletedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} deleted'**
+  String eventManagerDeletedToast(Object title);
+
+  /// No description provided for @collabRoleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Role'**
+  String get collabRoleLabel;
+
+  /// No description provided for @collabRoleViewer.
+  ///
+  /// In en, this message translates to:
+  /// **'Viewer'**
+  String get collabRoleViewer;
+
+  /// No description provided for @collabRoleCurator.
+  ///
+  /// In en, this message translates to:
+  /// **'Curator'**
+  String get collabRoleCurator;
+
+  /// No description provided for @collabRoleEditor.
+  ///
+  /// In en, this message translates to:
+  /// **'Editor'**
+  String get collabRoleEditor;
+
+  /// No description provided for @collabRolePublisher.
+  ///
+  /// In en, this message translates to:
+  /// **'Publisher'**
+  String get collabRolePublisher;
+
+  /// No description provided for @collabRoleAdmin.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin'**
+  String get collabRoleAdmin;
+
+  /// No description provided for @collabPanelNoInvitePermission.
+  ///
+  /// In en, this message translates to:
+  /// **'You do not have permission to invite collaborators.'**
+  String get collabPanelNoInvitePermission;
+
+  /// No description provided for @collabPanelEnterUsernameOrEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a username or email.'**
+  String get collabPanelEnterUsernameOrEmail;
+
+  /// No description provided for @collabPanelUseUsernameOrEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Use a username or email to invite someone.'**
+  String get collabPanelUseUsernameOrEmail;
+
+  /// No description provided for @collabPanelInviteSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite sent.'**
+  String get collabPanelInviteSent;
+
+  /// No description provided for @collabPanelInviteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not send invite. Try again.'**
+  String get collabPanelInviteFailed;
+
+  /// No description provided for @collabPanelRoleUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Role updated.'**
+  String get collabPanelRoleUpdated;
+
+  /// No description provided for @collabPanelRoleUpdateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not update role.'**
+  String get collabPanelRoleUpdateFailed;
+
+  /// No description provided for @collabPanelRemoveConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove collaborator?'**
+  String get collabPanelRemoveConfirmTitle;
+
+  /// No description provided for @collabPanelRemoveConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This will revoke access for {name}.'**
+  String collabPanelRemoveConfirmBody(Object name);
+
+  /// No description provided for @collabPanelGenericUser.
+  ///
+  /// In en, this message translates to:
+  /// **'this person'**
+  String get collabPanelGenericUser;
+
+  /// No description provided for @collabPanelRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed.'**
+  String get collabPanelRemoved;
+
+  /// No description provided for @collabPanelRemoveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not remove collaborator.'**
+  String get collabPanelRemoveFailed;
+
+  /// No description provided for @collabPanelLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load collaborators.'**
+  String get collabPanelLoadFailed;
+
+  /// No description provided for @collabPanelNoCollaborators.
+  ///
+  /// In en, this message translates to:
+  /// **'No collaborators yet.'**
+  String get collabPanelNoCollaborators;
+
+  /// No description provided for @collabPanelInviteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite someone'**
+  String get collabPanelInviteTitle;
+
+  /// No description provided for @collabPanelUsernameOrEmailHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Username or email'**
+  String get collabPanelUsernameOrEmailHint;
+
+  /// No description provided for @collabPanelInviteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite collaborators by username or email.'**
+  String get collabPanelInviteHint;
 
   /// No description provided for @marketplaceNetworkLabel.
   ///

@@ -1915,6 +1915,42 @@
   "collectionCreatorNameRequiredError": "Collection name is required",
   "collectionCreatorCreateFailed": "Failed to create collection.",
   "collectionCreatorCreateFailedWithError": "Failed to create collection. Please try again.",
+  "collectionCreatorShellDraftSubtitle": "Shape the collection, then save it to unlock collaboration.",
+  "collectionCreatorShellSavedSubtitle": "Collection saved. Keep curating or invite collaborators in-context.",
+  "collectionCreatorReadyBasicsLabel": "Basics complete",
+  "collectionCreatorReadyBasicsDescription": "Name and description are filled in.",
+  "collectionCreatorReadyCoverLabel": "Cover image added",
+  "collectionCreatorReadyCoverComplete": "Collection cover is ready.",
+  "collectionCreatorReadyCoverPending": "Optional, but strongly recommended on desktop.",
+  "collectionCreatorReadySelectionLabel": "Artwork selection ready",
+  "collectionCreatorReadySelectionComplete": "{count} artwork(s) selected.",
+  "@collectionCreatorReadySelectionComplete": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "collectionCreatorReadySelectionPending": "Choose artworks to anchor the collection.",
+  "collectionCreatorReadyVisibilityLabel": "Visibility chosen",
+  "collectionCreatorReadyVisibilityPublic": "Public collection visible to everyone.",
+  "collectionCreatorReadyVisibilityPrivate": "Private collection is still available to collaborators.",
+  "collectionCreatorStatusSavedSubtitle": "Saved collection",
+  "collectionCreatorStatusDraftSubtitle": "Draft in progress",
+  "collectionCreatorSummaryIdLabel": "Collection ID",
+  "collectionCreatorSummaryNotCreatedYet": "Not created yet",
+  "collectionCreatorSummarySelectedArtworksLabel": "Selected artworks",
+  "collectionCreatorSummaryVisibilityLabel": "Visibility",
+  "collectionCreatorReadinessTitle": "Readiness",
+  "collectionCreatorReadinessSubtitle": "A quick sanity check before saving.",
+  "collectionCreatorQuickActionsTitle": "Quick actions",
+  "collectionCreatorQuickActionsSubtitle": "Keep the workflow in this creator.",
+  "collectionCreatorQuickActionUpdate": "Update collection",
+  "collectionCreatorQuickActionSave": "Save collection",
+  "collectionCreatorQuickActionOpen": "Open collection",
+  "collectionCreatorCollaborationReadySubtitle": "Invite co-curators without leaving the workspace.",
+  "collectionCreatorCollaborationLockedSubtitle": "Save once to unlock collaboration.",
+  "collectionCreatorCollaborationLockedMessage": "Once saved, collaborators can be invited here so curation stays in context.",
   "collectionDetailLoadFailedMessage": "Failed to load collection details. Please try again.",
   "collectionDetailNoArtworksYet": "No artworks yet.",
   "collectionDetailAddArtwork": "Add Artwork",
@@ -2522,6 +2558,60 @@
   "eventCreatorEventCreatedBody": "Your event has been created successfully.",
   "eventCreatorCreateAnotherButton": "Create another",
   "eventCreatorSaveFailedToast": "Failed to save event. Please try again.",
+  "eventCreatorShellEditTitle": "Edit Event",
+  "eventCreatorShellCreateTitle": "Create New Event",
+  "eventCreatorShellDraftSubtitle": "Complete the wizard here, then save to unlock collaboration.",
+  "eventCreatorShellSavedSubtitle": "Event saved. Keep refining or open collaboration from the sidebar.",
+  "eventCreatorStepBadge": "Step {step} of 4",
+  "@eventCreatorStepBadge": {
+    "placeholders": {
+      "step": {
+        "type": "int"
+      }
+    }
+  },
+  "eventCreatorHelpTooltip": "Help",
+  "eventCreatorReadyInstitutionLabel": "Institution selected",
+  "eventCreatorReadyInstitutionComplete": "The event will belong to {institutionName}.",
+  "@eventCreatorReadyInstitutionComplete": {
+    "placeholders": {
+      "institutionName": {}
+    }
+  },
+  "eventCreatorReadyInstitutionPending": "Choose the institution first.",
+  "eventCreatorReadyBasicsLabel": "Basics complete",
+  "eventCreatorReadyBasicsDescription": "Title, description, and event type are in place.",
+  "eventCreatorReadyDatesLabel": "Dates selected",
+  "eventCreatorReadyDatesComplete": "Start and end dates are set.",
+  "eventCreatorReadyDatesPending": "Pick both dates before saving.",
+  "eventCreatorReadyCapacityLabel": "Capacity set",
+  "eventCreatorReadyCapacityComplete": "Registration limit is ready.",
+  "eventCreatorReadyCapacityPending": "Add a capacity to complete the setup.",
+  "eventCreatorStatusDraftSubtitle": "Draft in progress",
+  "eventCreatorStatusSavedSubtitle": "Saved event",
+  "eventCreatorSummaryEventId": "Event ID",
+  "eventCreatorSummaryNotCreatedYet": "Not created yet",
+  "eventCreatorSummaryEventType": "Event type",
+  "eventCreatorSummaryRegistration": "Registration",
+  "eventCreatorReadinessTitle": "Readiness",
+  "eventCreatorReadinessSubtitle": "A quick sanity check before saving.",
+  "eventCreatorQuickActionsTitle": "Quick actions",
+  "eventCreatorQuickActionsSubtitle": "Keep the whole workflow in one workspace.",
+  "eventCreatorQuickActionNextStep": "Next step",
+  "eventCreatorQuickActionCreateEvent": "Create event",
+  "eventCreatorQuickActionUpdateEvent": "Update event",
+  "eventCreatorQuickActionOpenEvent": "Open event",
+  "eventCreatorCollaborationReadySubtitle": "Invite collaborators without leaving the creator.",
+  "eventCreatorCollaborationLockedSubtitle": "Save once to unlock collaboration.",
+  "eventCreatorCollaborationLockedMessage": "Once saved, collaborators can be invited here so event planning stays in context.",
+  "eventCreatorStepLabel": "Step {step} of 4",
+  "@eventCreatorStepLabel": {
+    "placeholders": {
+      "step": {
+        "type": "int"
+      }
+    }
+  },
   "activityNavigationUnableToOpenToast": "Unable to open this activity right now.",
   "navigationUnableToNavigateToScreen": "Unable to navigate to {screenName}",
   "@navigationUnableToNavigateToScreen": {
@@ -2756,7 +2846,97 @@
   "desktopInstitutionStatRevenue": "Revenue",
   "desktopInstitutionNoUpcomingEventsLabel": "No upcoming events",
   "commonRemove": "Remove",
+  "commonNow": "Now",
   "commonNotAvailableShort": "N/A",
+  "eventManagerTitle": "Event Manager",
+  "eventManagerSubtitle": "Manage your institution's events",
+  "eventManagerStatTotalEvents": "Total events",
+  "eventManagerStatActiveNow": "Active now",
+  "eventManagerStatRegistrations": "Registrations",
+  "eventManagerEmptyTitle": "No events found",
+  "eventManagerEmptyDescription": "Create your first event to get started",
+  "eventManagerOccupancyLabel": "Occupancy: {current}/{capacity}",
+  "@eventManagerOccupancyLabel": {
+    "placeholders": {
+      "current": {},
+      "capacity": {}
+    }
+  },
+  "eventManagerAttendeesLabel": "Attendees: {count}",
+  "@eventManagerAttendeesLabel": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "eventManagerStatusUpcoming": "UPCOMING",
+  "eventManagerStatusActive": "ACTIVE",
+  "eventManagerStatusCompleted": "COMPLETED",
+  "eventManagerFilterAll": "All",
+  "eventManagerFilterUpcoming": "Upcoming",
+  "eventManagerFilterActive": "Active",
+  "eventManagerFilterCompleted": "Completed",
+  "eventManagerOptionsSubtitle": "Choose what to do with this event",
+  "eventManagerCapacityAlert": "\"{title}\" capacity at {percent}%",
+  "@eventManagerCapacityAlert": {
+    "placeholders": {
+      "title": {},
+      "percent": {}
+    }
+  },
+  "eventManagerStartsSoonAlert": "\"{title}\" starts in {hours}h",
+  "@eventManagerStartsSoonAlert": {
+    "placeholders": {
+      "title": {},
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "eventManagerSoonLabel": "Soon",
+  "eventManagerNoAlerts": "No alerts right now.",
+  "eventManagerSearchTitle": "Search Events",
+  "eventManagerSearchHint": "Enter event name or keyword...",
+  "eventManagerDeleteTitle": "Delete Event",
+  "eventManagerDeleteBody": "Are you sure you want to delete \"{title}\"? This action cannot be undone.",
+  "@eventManagerDeleteBody": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "eventManagerDeletedToast": "{title} deleted",
+  "@eventManagerDeletedToast": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "collabRoleLabel": "Role",
+  "collabRoleViewer": "Viewer",
+  "collabRoleCurator": "Curator",
+  "collabRoleEditor": "Editor",
+  "collabRolePublisher": "Publisher",
+  "collabRoleAdmin": "Admin",
+  "collabPanelNoInvitePermission": "You do not have permission to invite collaborators.",
+  "collabPanelEnterUsernameOrEmail": "Enter a username or email.",
+  "collabPanelUseUsernameOrEmail": "Use a username or email to invite someone.",
+  "collabPanelInviteSent": "Invite sent.",
+  "collabPanelInviteFailed": "Could not send invite. Try again.",
+  "collabPanelRoleUpdated": "Role updated.",
+  "collabPanelRoleUpdateFailed": "Could not update role.",
+  "collabPanelRemoveConfirmTitle": "Remove collaborator?",
+  "collabPanelRemoveConfirmBody": "This will revoke access for {name}.",
+  "@collabPanelRemoveConfirmBody": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "collabPanelGenericUser": "this person",
+  "collabPanelRemoved": "Removed.",
+  "collabPanelRemoveFailed": "Could not remove collaborator.",
+  "collabPanelLoadFailed": "Could not load collaborators.",
+  "collabPanelNoCollaborators": "No collaborators yet.",
+  "collabPanelInviteTitle": "Invite someone",
+  "collabPanelUsernameOrEmailHint": "Username or email",
+  "collabPanelInviteHint": "Invite collaborators by username or email.",
   "marketplaceNetworkLabel": "Network: {network}",
   "@marketplaceNetworkLabel": {
     "placeholders": {

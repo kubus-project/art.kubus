@@ -11,6 +11,7 @@ import '../../../utils/kubus_color_roles.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/creator/creator_kit.dart';
+import '../../../widgets/common/subject_options_sheet.dart';
 import 'event_creator.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
@@ -31,7 +32,7 @@ class _EventManagerState extends State<EventManager>
     with TickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
-  String _selectedFilter = 'All';
+  String _selectedFilter = 'all';
   String _searchQuery = '';
 
   @override
@@ -61,6 +62,7 @@ class _EventManagerState extends State<EventManager>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final institutionProvider = context.watch<InstitutionProvider>();
     final filteredEvents = _getFilteredEvents(institutionProvider.events);
 
@@ -70,10 +72,10 @@ class _EventManagerState extends State<EventManager>
         color: Colors.transparent,
         child: Column(
           children: [
-            _buildHeader(),
-            _buildFilterBar(),
-            _buildStatsRow(institutionProvider.events),
-            Expanded(child: _buildEventsList(filteredEvents)),
+            _buildHeader(l10n),
+            _buildFilterBar(l10n),
+            _buildStatsRow(institutionProvider.events, l10n),
+            Expanded(child: _buildEventsList(filteredEvents, l10n)),
           ],
         ),
       ),
@@ -83,7 +85,7 @@ class _EventManagerState extends State<EventManager>
     return body;
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(AppLocalizations l10n) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.all(KubusSpacing.md),
@@ -91,14 +93,14 @@ class _EventManagerState extends State<EventManager>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Event Manager',
+            l10n.eventManagerTitle,
             style: KubusTextStyles.mobileAppBarTitle.copyWith(
               color: scheme.onSurface,
             ),
           ),
           const SizedBox(height: KubusSpacing.xs),
           Text(
-            'Manage your institution\'s events',
+            l10n.eventManagerSubtitle,
             style: KubusTextStyles.detailCaption.copyWith(
               color: scheme.onSurface.withValues(alpha: 0.7),
             ),
@@ -122,8 +124,8 @@ class _EventManagerState extends State<EventManager>
     );
   }
 
-  Widget _buildFilterBar() {
-    final filters = ['All', 'Upcoming', 'Active', 'Completed'];
+  Widget _buildFilterBar(AppLocalizations l10n) {
+    final filters = ['all', 'upcoming', 'active', 'completed'];
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
@@ -137,7 +139,7 @@ class _EventManagerState extends State<EventManager>
               child: FilterChip(
                 selected: isSelected,
                 label: Text(
-                  filter,
+                  _filterLabel(filter, l10n),
                   style: KubusTextStyles.detailCaption.copyWith(
                     color: isSelected
                         ? Theme.of(context).colorScheme.onPrimary
@@ -160,7 +162,7 @@ class _EventManagerState extends State<EventManager>
     );
   }
 
-  Widget _buildStatsRow(List<Event> events) {
+  Widget _buildStatsRow(List<Event> events, AppLocalizations l10n) {
     final totalEvents = events.length;
     final activeEvents = events.where((e) => e.isActive).length;
     final totalRegistrations =
@@ -171,12 +173,14 @@ class _EventManagerState extends State<EventManager>
       child: Row(
         children: [
           Expanded(
-              child: _buildStatItem('Total Events', totalEvents.toString())),
-          Expanded(
-              child: _buildStatItem('Active Now', activeEvents.toString())),
+              child: _buildStatItem(
+                l10n.eventManagerStatTotalEvents, totalEvents.toString())),
           Expanded(
               child: _buildStatItem(
-                  'Registrations', totalRegistrations.toString())),
+                l10n.eventManagerStatActiveNow, activeEvents.toString())),
+          Expanded(
+              child: _buildStatItem(l10n.eventManagerStatRegistrations,
+                totalRegistrations.toString())),
         ],
       ),
     );
@@ -211,13 +215,13 @@ class _EventManagerState extends State<EventManager>
     );
   }
 
-  Widget _buildEventsList(List<Event> events) {
+  Widget _buildEventsList(List<Event> events, AppLocalizations l10n) {
     if (events.isEmpty) {
       return Center(
         child: EmptyStateCard(
           icon: Icons.event_busy,
-          title: 'No events found',
-          description: 'Create your first event to get started',
+          title: l10n.eventManagerEmptyTitle,
+          description: l10n.eventManagerEmptyDescription,
         ),
       );
     }
@@ -226,12 +230,12 @@ class _EventManagerState extends State<EventManager>
       padding: const EdgeInsets.symmetric(horizontal: KubusSpacing.md),
       itemCount: events.length,
       itemBuilder: (context, index) {
-        return _buildEventCard(events[index]);
+        return _buildEventCard(events[index], l10n);
       },
     );
   }
 
-  Widget _buildEventCard(Event event) {
+  Widget _buildEventCard(Event event, AppLocalizations l10n) {
     final scheme = Theme.of(context).colorScheme;
     final status = _statusForEvent(event);
     final statusColor = _statusColor(status, scheme);
@@ -262,7 +266,7 @@ class _EventManagerState extends State<EventManager>
               ),
               const SizedBox(width: KubusSpacing.sm),
               CreatorStatusBadge(
-                label: _statusLabel(status),
+                label: _statusLabel(status, l10n),
                 color: statusColor,
               ),
             ],
@@ -315,8 +319,13 @@ class _EventManagerState extends State<EventManager>
                   children: [
                     Text(
                       hasCapacity
-                          ? 'Occupancy: ${event.currentAttendees}/$capacity'
-                          : 'Attendees: ${event.currentAttendees}',
+                          ? l10n.eventManagerOccupancyLabel(
+                              event.currentAttendees,
+                              capacity,
+                            )
+                          : l10n.eventManagerAttendeesLabel(
+                              event.currentAttendees,
+                            ),
                       style: KubusTextStyles.detailCaption.copyWith(
                         color: scheme.onSurface.withValues(alpha: 0.7),
                       ),
@@ -353,34 +362,19 @@ class _EventManagerState extends State<EventManager>
           ),
           const SizedBox(height: KubusSpacing.sm),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              _buildActionButton('Edit', Icons.edit, () => _editEvent(event)),
-              _buildActionButton(
-                  'View', Icons.visibility, () => _viewEvent(event)),
-              _buildActionButton(
-                  'Share', Icons.share, () => _shareEvent(event)),
-              _buildActionButton(
-                  'Delete', Icons.delete, () => _deleteEvent(event)),
+              IconButton(
+                tooltip: l10n.commonMore,
+                onPressed: () => _showEventOptions(event),
+                icon: Icon(
+                  Icons.more_horiz,
+                  color: scheme.onSurface.withValues(alpha: 0.75),
+                ),
+              ),
             ],
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildActionButton(
-      String label, IconData icon, VoidCallback onPressed) {
-    final scheme = Theme.of(context).colorScheme;
-    return TextButton.icon(
-      onPressed: onPressed,
-      icon:
-          Icon(icon, color: scheme.onSurface.withValues(alpha: 0.7), size: 16),
-      label: Text(
-        label,
-        style: KubusTextStyles.detailCaption.copyWith(
-          color: scheme.onSurface.withValues(alpha: 0.7),
-        ),
       ),
     );
   }
@@ -391,14 +385,28 @@ class _EventManagerState extends State<EventManager>
     return _EventStatus.completed;
   }
 
-  String _statusLabel(_EventStatus status) {
+  String _statusLabel(_EventStatus status, AppLocalizations l10n) {
     switch (status) {
       case _EventStatus.upcoming:
-        return 'UPCOMING';
+        return l10n.eventManagerStatusUpcoming;
       case _EventStatus.active:
-        return 'ACTIVE';
+        return l10n.eventManagerStatusActive;
       case _EventStatus.completed:
-        return 'COMPLETED';
+        return l10n.eventManagerStatusCompleted;
+    }
+  }
+
+  String _filterLabel(String filter, AppLocalizations l10n) {
+    switch (filter) {
+      case 'upcoming':
+        return l10n.eventManagerFilterUpcoming;
+      case 'active':
+        return l10n.eventManagerFilterActive;
+      case 'completed':
+        return l10n.eventManagerFilterCompleted;
+      case 'all':
+      default:
+        return l10n.eventManagerFilterAll;
     }
   }
 
@@ -427,18 +435,55 @@ class _EventManagerState extends State<EventManager>
     }).toList();
 
     switch (_selectedFilter) {
-      case 'Upcoming':
+      case 'upcoming':
         return filtered.where((e) => e.isUpcoming).toList();
-      case 'Active':
+      case 'active':
         return filtered.where((e) => e.isActive).toList();
-      case 'Completed':
+      case 'completed':
         return filtered.where((e) => !e.isUpcoming && !e.isActive).toList();
       default:
         return filtered;
     }
   }
 
+  Future<void> _showEventOptions(Event event) async {
+    final l10n = AppLocalizations.of(context)!;
+    await showSubjectOptionsSheet(
+      context: context,
+      title: event.title,
+      subtitle: l10n.eventManagerOptionsSubtitle,
+      actions: [
+        SubjectOptionsAction(
+          id: 'edit',
+          icon: Icons.edit_outlined,
+          label: l10n.commonEdit,
+          onSelected: () => _editEvent(event),
+        ),
+        SubjectOptionsAction(
+          id: 'view',
+          icon: Icons.visibility_outlined,
+          label: l10n.commonView,
+          onSelected: () => _viewEvent(event),
+        ),
+        SubjectOptionsAction(
+          id: 'share',
+          icon: Icons.share_outlined,
+          label: l10n.commonShare,
+          onSelected: () => _shareEvent(event),
+        ),
+        SubjectOptionsAction(
+          id: 'delete',
+          icon: Icons.delete_outline,
+          label: l10n.commonDelete,
+          isDestructive: true,
+          onSelected: () => _deleteEvent(event),
+        ),
+      ],
+    );
+  }
+
   void _showNotifications() {
+    final l10n = AppLocalizations.of(context)!;
     final provider = context.read<InstitutionProvider>();
     final now = DateTime.now();
     final alerts = <Map<String, String>>[];
@@ -449,17 +494,19 @@ class _EventManagerState extends State<EventManager>
         final pct = event.currentAttendees / capacity;
         if (pct >= 0.9) {
           alerts.add({
-            'message':
-                '"${event.title}" capacity at ${(pct * 100).toStringAsFixed(0)}%',
-            'time': 'Now'
+            'message': l10n.eventManagerCapacityAlert(
+              event.title,
+              (pct * 100).toStringAsFixed(0),
+            ),
+            'time': l10n.commonNow,
           });
         }
       }
       final diff = event.startDate.difference(now);
       if (diff.inHours >= 0 && diff.inHours <= 48) {
         alerts.add({
-          'message': '"${event.title}" starts in ${diff.inHours}h',
-          'time': 'Soon'
+          'message': l10n.eventManagerStartsSoonAlert(event.title, diff.inHours),
+          'time': l10n.eventManagerSoonLabel,
         });
       }
     }
@@ -469,7 +516,7 @@ class _EventManagerState extends State<EventManager>
       context: context,
       builder: (context) => KubusAlertDialog(
         backgroundColor: scheme.surfaceContainerHighest,
-        title: Text('Notifications',
+        title: Text(l10n.commonNotifications,
             style: KubusTextStyles.detailSectionTitle.copyWith(
               color: scheme.onSurface,
             )),
@@ -480,7 +527,7 @@ class _EventManagerState extends State<EventManager>
               Padding(
                 padding: const EdgeInsets.only(top: KubusSpacing.sm),
                 child: Text(
-                  'No alerts right now.',
+                  l10n.eventManagerNoAlerts,
                   style: KubusTextStyles.detailCaption.copyWith(
                     color: scheme.onSurface.withValues(alpha: 0.7),
                   ),
@@ -541,18 +588,19 @@ class _EventManagerState extends State<EventManager>
   }
 
   void _showSearchDialog() {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     showKubusDialog(
       context: context,
       builder: (context) => KubusAlertDialog(
         backgroundColor: scheme.surfaceContainerHighest,
-        title: Text('Search Events',
+        title: Text(l10n.eventManagerSearchTitle,
             style: KubusTextStyles.detailSectionTitle.copyWith(
               color: scheme.onSurface,
             )),
         content: TextField(
           decoration: InputDecoration(
-            hintText: 'Enter event name or keyword...',
+            hintText: l10n.eventManagerSearchHint,
             hintStyle: KubusTextStyles.detailCaption.copyWith(
               color: scheme.onSurface.withValues(alpha: 0.54),
             ),
@@ -586,7 +634,7 @@ class _EventManagerState extends State<EventManager>
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Search'),
+            child: Text(l10n.commonSearch),
           ),
         ],
       ),
@@ -615,6 +663,7 @@ class _EventManagerState extends State<EventManager>
   }
 
   void _viewEvent(Event event) {
+    final l10n = AppLocalizations.of(context)!;
     showKubusDialog(
       context: context,
       builder: (context) {
@@ -636,16 +685,16 @@ class _EventManagerState extends State<EventManager>
                     color: scheme.onSurface.withValues(alpha: 0.8),
                   )),
               const SizedBox(height: KubusSpacing.sm),
-              Text('Location: ${event.location}',
+              Text('${l10n.exhibitionCreatorLocationLabel}: ${event.location}',
                   style: KubusTextStyles.detailBody.copyWith(
                     color: scheme.onSurface.withValues(alpha: 0.8),
                   )),
               Text(
-                  'Dates: ${_formatDate(event.startDate)} - ${_formatDate(event.endDate)}',
+                  '${l10n.exhibitionCreatorScheduleTitle}: ${_formatDate(event.startDate)} - ${_formatDate(event.endDate)}',
                   style: KubusTextStyles.detailBody.copyWith(
                     color: scheme.onSurface.withValues(alpha: 0.8),
                   )),
-              Text('Price: ${event.formattedPrice}',
+              Text('${l10n.commonPrice}: ${event.formattedPrice}',
                   style: KubusTextStyles.detailBody.copyWith(
                     color: scheme.onSurface.withValues(alpha: 0.8),
                   )),
@@ -670,17 +719,18 @@ class _EventManagerState extends State<EventManager>
   }
 
   void _deleteEvent(Event event) {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     showKubusDialog(
       context: context,
       builder: (context) => KubusAlertDialog(
         backgroundColor: scheme.surfaceContainerHighest,
-        title: Text('Delete Event',
+        title: Text(l10n.eventManagerDeleteTitle,
             style: KubusTextStyles.detailSectionTitle.copyWith(
               color: scheme.onSurface,
             )),
         content: Text(
-          'Are you sure you want to delete "${event.title}"? This action cannot be undone.',
+          l10n.eventManagerDeleteBody(event.title),
           style: KubusTextStyles.detailBody.copyWith(
             color: scheme.onSurface.withValues(alpha: 0.7),
           ),
@@ -696,10 +746,11 @@ class _EventManagerState extends State<EventManager>
               context.read<InstitutionProvider>().deleteEvent(event.id);
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showKubusSnackBar(
-                SnackBar(content: Text('${event.title} deleted')),
+                SnackBar(content: Text(l10n.eventManagerDeletedToast(event.title))),
               );
             },
-            child: Text('Delete', style: TextStyle(color: scheme.onError)),
+            child: Text(l10n.commonDelete,
+                style: TextStyle(color: scheme.onError)),
           ),
         ],
       ),

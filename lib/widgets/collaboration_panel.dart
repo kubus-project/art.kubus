@@ -359,6 +359,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
   }
 
   Future<void> _sendInvite() async {
+    final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final scheme = Theme.of(context).colorScheme;
     final collab = context.read<CollabProvider>();
@@ -375,8 +376,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
     if (!_canManageMembers(myRole)) {
       messenger.showKubusSnackBar(
         SnackBar(
-          content:
-              const Text('You do not have permission to invite collaborators.'),
+          content: Text(l10n.collabPanelNoInvitePermission),
           backgroundColor: scheme.surface,
         ),
       );
@@ -389,7 +389,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
     if (identifier.isEmpty) {
       messenger.showKubusSnackBar(
         SnackBar(
-          content: const Text('Enter a username or email.'),
+          content: Text(l10n.collabPanelEnterUsernameOrEmail),
           backgroundColor: scheme.surface,
         ),
       );
@@ -403,7 +403,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
     if (looksLikeWallet) {
       messenger.showKubusSnackBar(
         SnackBar(
-          content: const Text('Use a username or email to invite someone.'),
+          content: Text(l10n.collabPanelUseUsernameOrEmail),
           backgroundColor: scheme.surface,
         ),
       );
@@ -425,14 +425,14 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
       });
       messenger.showKubusSnackBar(
         SnackBar(
-          content: const Text('Invite sent.'),
+          content: Text(l10n.collabPanelInviteSent),
           backgroundColor: scheme.surface,
         ),
       );
     } catch (_) {
       messenger.showKubusSnackBar(
         SnackBar(
-          content: const Text('Could not send invite. Try again.'),
+          content: Text(l10n.collabPanelInviteFailed),
           backgroundColor: scheme.surface,
         ),
       );
@@ -440,6 +440,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
   }
 
   Future<void> _updateMemberRole(CollabMember member, String newRole) async {
+    final l10n = AppLocalizations.of(context)!;
     final collab = context.read<CollabProvider>();
     final profile = context.read<ProfileProvider>();
     final members = collab.collaboratorsFor(widget.entityType, widget.entityId);
@@ -461,14 +462,15 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
       );
       if (!mounted) return;
       messenger
-          .showKubusSnackBar(const SnackBar(content: Text('Role updated.')));
+          .showKubusSnackBar(SnackBar(content: Text(l10n.collabPanelRoleUpdated)));
     } catch (_) {
-      messenger.showKubusSnackBar(
-          const SnackBar(content: Text('Could not update role.')));
+        messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.collabPanelRoleUpdateFailed)));
     }
   }
 
   Future<void> _removeMember(CollabMember member) async {
+    final l10n = AppLocalizations.of(context)!;
     final collab = context.read<CollabProvider>();
     final profile = context.read<ProfileProvider>();
     final members = collab.collaboratorsFor(widget.entityType, widget.entityId);
@@ -483,9 +485,13 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
       builder: (ctx) {
         final l10n = AppLocalizations.of(ctx)!;
         return KubusAlertDialog(
-          title: const Text('Remove collaborator?'),
+          title: Text(l10n.collabPanelRemoveConfirmTitle),
           content: Text(
-              'This will revoke access for ${member.user?.displayName ?? member.user?.username ?? 'this person'}.'),
+              l10n.collabPanelRemoveConfirmBody(
+                member.user?.displayName ??
+                    member.user?.username ??
+                    l10n.collabPanelGenericUser,
+              )),
           actions: [
             TextButton(
                 onPressed: () => Navigator.of(ctx).pop(false),
@@ -506,15 +512,16 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
         entityId: widget.entityId,
         memberUserId: member.userId,
       );
-      messenger.showKubusSnackBar(const SnackBar(content: Text('Removed.')));
+      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.collabPanelRemoved)));
     } catch (_) {
       messenger.showKubusSnackBar(
-          const SnackBar(content: Text('Could not remove collaborator.')));
+          SnackBar(content: Text(l10n.collabPanelRemoveFailed)));
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final profile = context.watch<ProfileProvider>();
     if (profile.isSignedIn != true) {
@@ -543,7 +550,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
             children: [
               Expanded(
                 child: Text(
-                  'Collaboration',
+                  l10n.collectionSettingsCollaboration,
                   style: KubusTextStyles.detailSectionTitle.copyWith(
                     color: scheme.onSurface,
                   ),
@@ -573,7 +580,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
             Padding(
               padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
               child: Text(
-                'Could not load collaborators.',
+                l10n.collabPanelLoadFailed,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: scheme.error,
                     ),
@@ -587,7 +594,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: KubusSpacing.sm),
               child: Text(
-                'No collaborators yet.',
+                l10n.collabPanelNoCollaborators,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: scheme.onSurface.withValues(alpha: 0.65),
                     ),
@@ -610,13 +617,14 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
   }
 
   Widget _buildInviteSection(ColorScheme scheme, {required String? myRole}) {
+    final l10n = AppLocalizations.of(context)!;
     final canPickRole = _canManageMembers(myRole);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Invite someone',
+          l10n.collabPanelInviteTitle,
           style: Theme.of(context).textTheme.labelLarge?.copyWith(
                 color: scheme.onSurface,
               ),
@@ -631,7 +639,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                   TextField(
                     controller: _inviteController,
                     decoration: InputDecoration(
-                      hintText: 'Username or email',
+                      hintText: l10n.collabPanelUsernameOrEmailHint,
                       prefixIcon: const Icon(Icons.person_add_alt_1),
                       suffixIcon: _loadingSuggestions
                           ? Padding(
@@ -652,7 +660,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                             )
                           : (_inviteController.text.isNotEmpty
                               ? IconButton(
-                                  tooltip: 'Clear',
+                                  tooltip: l10n.commonClear,
                                   onPressed: () {
                                     setState(() {
                                       _inviteController.clear();
@@ -748,16 +756,16 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                     DropdownButtonFormField<String>(
                       key: ValueKey<String>('inviteRole:$_inviteRole'),
                       initialValue: _inviteRole,
-                      items: const [
+                      items: [
                         DropdownMenuItem(
-                            value: 'viewer', child: Text('Viewer')),
+                          value: 'viewer', child: Text(l10n.collabRoleViewer)),
                         DropdownMenuItem(
-                            value: 'curator', child: Text('Curator')),
+                          value: 'curator', child: Text(l10n.collabRoleCurator)),
                         DropdownMenuItem(
-                            value: 'editor', child: Text('Editor')),
+                          value: 'editor', child: Text(l10n.collabRoleEditor)),
                         DropdownMenuItem(
-                            value: 'publisher', child: Text('Publisher')),
-                        DropdownMenuItem(value: 'admin', child: Text('Admin')),
+                          value: 'publisher', child: Text(l10n.collabRolePublisher)),
+                        DropdownMenuItem(value: 'admin', child: Text(l10n.collabRoleAdmin)),
                       ],
                       onChanged: (v) {
                         if (v == null) return;
@@ -765,7 +773,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                         setState(() => _inviteRole = v);
                       },
                       decoration: InputDecoration(
-                        labelText: 'Role',
+                        labelText: l10n.collabRoleLabel,
                         filled: true,
                         fillColor: scheme.surfaceContainerHighest
                             .withValues(alpha: 0.35),
@@ -793,7 +801,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
         ),
         const SizedBox(height: 6),
         Text(
-          'Invite collaborators by username or email.',
+          l10n.collabPanelInviteHint,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: scheme.onSurface.withValues(alpha: 0.6),
               ),
@@ -808,6 +816,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
     required bool canManageMembers,
     required String? myRole,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     final user = member.user;
     final wallet = WalletUtils.canonical(user?.walletAddress ?? member.userId);
     final resolved = wallet.isNotEmpty ? _resolvedUsersByWallet[wallet] : null;
@@ -911,20 +920,25 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                 key: ValueKey<String>(
                     'memberRole:${member.userId}:${member.role}'),
                 initialValue: member.role,
-                items: const [
-                  DropdownMenuItem(value: 'viewer', child: Text('Viewer')),
-                  DropdownMenuItem(value: 'curator', child: Text('Curator')),
-                  DropdownMenuItem(value: 'editor', child: Text('Editor')),
+                items: [
                   DropdownMenuItem(
-                      value: 'publisher', child: Text('Publisher')),
-                  DropdownMenuItem(value: 'admin', child: Text('Admin')),
+                    value: 'viewer', child: Text(l10n.collabRoleViewer)),
+                  DropdownMenuItem(
+                    value: 'curator', child: Text(l10n.collabRoleCurator)),
+                  DropdownMenuItem(
+                    value: 'editor', child: Text(l10n.collabRoleEditor)),
+                  DropdownMenuItem(
+                    value: 'publisher',
+                    child: Text(l10n.collabRolePublisher)),
+                  DropdownMenuItem(
+                    value: 'admin', child: Text(l10n.collabRoleAdmin)),
                 ],
                 onChanged: (v) {
                   if (v == null) return;
                   unawaited(_updateMemberRole(member, v));
                 },
                 decoration: InputDecoration(
-                  labelText: 'Role',
+                  labelText: AppLocalizations.of(context)!.collabRoleLabel,
                   filled: true,
                   fillColor: scheme.surface.withValues(alpha: 0.2),
                   border: OutlineInputBorder(
@@ -956,23 +970,24 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
   }
 
   String _roleLabel(String raw) {
+    final l10n = AppLocalizations.of(context)!;
     final r = raw.trim().toLowerCase();
     switch (r) {
       case 'owner':
       case 'author':
       case 'creator':
-        return 'Owner';
+        return l10n.commonOwner;
       case 'admin':
-        return 'Admin';
+        return l10n.collabRoleAdmin;
       case 'publisher':
-        return 'Publisher';
+        return l10n.collabRolePublisher;
       case 'editor':
-        return 'Editor';
+        return l10n.collabRoleEditor;
       case 'curator':
-        return 'Curator';
+        return l10n.collabRoleCurator;
       case 'viewer':
       default:
-        return 'Viewer';
+        return l10n.collabRoleViewer;
     }
   }
 }

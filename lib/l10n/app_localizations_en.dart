@@ -4452,6 +4452,95 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collectionCreatorCreateFailedWithError => 'Failed to create collection. Please try again.';
 
   @override
+  String get collectionCreatorShellDraftSubtitle => 'Shape the collection, then save it to unlock collaboration.';
+
+  @override
+  String get collectionCreatorShellSavedSubtitle => 'Collection saved. Keep curating or invite collaborators in-context.';
+
+  @override
+  String get collectionCreatorReadyBasicsLabel => 'Basics complete';
+
+  @override
+  String get collectionCreatorReadyBasicsDescription => 'Name and description are filled in.';
+
+  @override
+  String get collectionCreatorReadyCoverLabel => 'Cover image added';
+
+  @override
+  String get collectionCreatorReadyCoverComplete => 'Collection cover is ready.';
+
+  @override
+  String get collectionCreatorReadyCoverPending => 'Optional, but strongly recommended on desktop.';
+
+  @override
+  String get collectionCreatorReadySelectionLabel => 'Artwork selection ready';
+
+  @override
+  String collectionCreatorReadySelectionComplete(int count) {
+    return '$count artwork(s) selected.';
+  }
+
+  @override
+  String get collectionCreatorReadySelectionPending => 'Choose artworks to anchor the collection.';
+
+  @override
+  String get collectionCreatorReadyVisibilityLabel => 'Visibility chosen';
+
+  @override
+  String get collectionCreatorReadyVisibilityPublic => 'Public collection visible to everyone.';
+
+  @override
+  String get collectionCreatorReadyVisibilityPrivate => 'Private collection is still available to collaborators.';
+
+  @override
+  String get collectionCreatorStatusSavedSubtitle => 'Saved collection';
+
+  @override
+  String get collectionCreatorStatusDraftSubtitle => 'Draft in progress';
+
+  @override
+  String get collectionCreatorSummaryIdLabel => 'Collection ID';
+
+  @override
+  String get collectionCreatorSummaryNotCreatedYet => 'Not created yet';
+
+  @override
+  String get collectionCreatorSummarySelectedArtworksLabel => 'Selected artworks';
+
+  @override
+  String get collectionCreatorSummaryVisibilityLabel => 'Visibility';
+
+  @override
+  String get collectionCreatorReadinessTitle => 'Readiness';
+
+  @override
+  String get collectionCreatorReadinessSubtitle => 'A quick sanity check before saving.';
+
+  @override
+  String get collectionCreatorQuickActionsTitle => 'Quick actions';
+
+  @override
+  String get collectionCreatorQuickActionsSubtitle => 'Keep the workflow in this creator.';
+
+  @override
+  String get collectionCreatorQuickActionUpdate => 'Update collection';
+
+  @override
+  String get collectionCreatorQuickActionSave => 'Save collection';
+
+  @override
+  String get collectionCreatorQuickActionOpen => 'Open collection';
+
+  @override
+  String get collectionCreatorCollaborationReadySubtitle => 'Invite co-curators without leaving the workspace.';
+
+  @override
+  String get collectionCreatorCollaborationLockedSubtitle => 'Save once to unlock collaboration.';
+
+  @override
+  String get collectionCreatorCollaborationLockedMessage => 'Once saved, collaborators can be invited here so curation stays in context.';
+
+  @override
   String get collectionDetailLoadFailedMessage => 'Failed to load collection details. Please try again.';
 
   @override
@@ -5678,6 +5767,117 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eventCreatorSaveFailedToast => 'Failed to save event. Please try again.';
 
   @override
+  String get eventCreatorShellEditTitle => 'Edit Event';
+
+  @override
+  String get eventCreatorShellCreateTitle => 'Create New Event';
+
+  @override
+  String get eventCreatorShellDraftSubtitle => 'Complete the wizard here, then save to unlock collaboration.';
+
+  @override
+  String get eventCreatorShellSavedSubtitle => 'Event saved. Keep refining or open collaboration from the sidebar.';
+
+  @override
+  String eventCreatorStepBadge(int step) {
+    return 'Step $step of 4';
+  }
+
+  @override
+  String get eventCreatorHelpTooltip => 'Help';
+
+  @override
+  String get eventCreatorReadyInstitutionLabel => 'Institution selected';
+
+  @override
+  String eventCreatorReadyInstitutionComplete(Object institutionName) {
+    return 'The event will belong to $institutionName.';
+  }
+
+  @override
+  String get eventCreatorReadyInstitutionPending => 'Choose the institution first.';
+
+  @override
+  String get eventCreatorReadyBasicsLabel => 'Basics complete';
+
+  @override
+  String get eventCreatorReadyBasicsDescription => 'Title, description, and event type are in place.';
+
+  @override
+  String get eventCreatorReadyDatesLabel => 'Dates selected';
+
+  @override
+  String get eventCreatorReadyDatesComplete => 'Start and end dates are set.';
+
+  @override
+  String get eventCreatorReadyDatesPending => 'Pick both dates before saving.';
+
+  @override
+  String get eventCreatorReadyCapacityLabel => 'Capacity set';
+
+  @override
+  String get eventCreatorReadyCapacityComplete => 'Registration limit is ready.';
+
+  @override
+  String get eventCreatorReadyCapacityPending => 'Add a capacity to complete the setup.';
+
+  @override
+  String get eventCreatorStatusDraftSubtitle => 'Draft in progress';
+
+  @override
+  String get eventCreatorStatusSavedSubtitle => 'Saved event';
+
+  @override
+  String get eventCreatorSummaryEventId => 'Event ID';
+
+  @override
+  String get eventCreatorSummaryNotCreatedYet => 'Not created yet';
+
+  @override
+  String get eventCreatorSummaryEventType => 'Event type';
+
+  @override
+  String get eventCreatorSummaryRegistration => 'Registration';
+
+  @override
+  String get eventCreatorReadinessTitle => 'Readiness';
+
+  @override
+  String get eventCreatorReadinessSubtitle => 'A quick sanity check before saving.';
+
+  @override
+  String get eventCreatorQuickActionsTitle => 'Quick actions';
+
+  @override
+  String get eventCreatorQuickActionsSubtitle => 'Keep the whole workflow in one workspace.';
+
+  @override
+  String get eventCreatorQuickActionNextStep => 'Next step';
+
+  @override
+  String get eventCreatorQuickActionCreateEvent => 'Create event';
+
+  @override
+  String get eventCreatorQuickActionUpdateEvent => 'Update event';
+
+  @override
+  String get eventCreatorQuickActionOpenEvent => 'Open event';
+
+  @override
+  String get eventCreatorCollaborationReadySubtitle => 'Invite collaborators without leaving the creator.';
+
+  @override
+  String get eventCreatorCollaborationLockedSubtitle => 'Save once to unlock collaboration.';
+
+  @override
+  String get eventCreatorCollaborationLockedMessage => 'Once saved, collaborators can be invited here so event planning stays in context.';
+
+  @override
+  String eventCreatorStepLabel(int step) {
+    return 'Step $step of 4';
+  }
+
+  @override
   String get activityNavigationUnableToOpenToast => 'Unable to open this activity right now.';
 
   @override
@@ -6230,7 +6430,171 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonRemove => 'Remove';
 
   @override
+  String get commonNow => 'Now';
+
+  @override
   String get commonNotAvailableShort => 'N/A';
+
+  @override
+  String get eventManagerTitle => 'Event Manager';
+
+  @override
+  String get eventManagerSubtitle => 'Manage your institution\'s events';
+
+  @override
+  String get eventManagerStatTotalEvents => 'Total events';
+
+  @override
+  String get eventManagerStatActiveNow => 'Active now';
+
+  @override
+  String get eventManagerStatRegistrations => 'Registrations';
+
+  @override
+  String get eventManagerEmptyTitle => 'No events found';
+
+  @override
+  String get eventManagerEmptyDescription => 'Create your first event to get started';
+
+  @override
+  String eventManagerOccupancyLabel(Object current, Object capacity) {
+    return 'Occupancy: $current/$capacity';
+  }
+
+  @override
+  String eventManagerAttendeesLabel(Object count) {
+    return 'Attendees: $count';
+  }
+
+  @override
+  String get eventManagerStatusUpcoming => 'UPCOMING';
+
+  @override
+  String get eventManagerStatusActive => 'ACTIVE';
+
+  @override
+  String get eventManagerStatusCompleted => 'COMPLETED';
+
+  @override
+  String get eventManagerFilterAll => 'All';
+
+  @override
+  String get eventManagerFilterUpcoming => 'Upcoming';
+
+  @override
+  String get eventManagerFilterActive => 'Active';
+
+  @override
+  String get eventManagerFilterCompleted => 'Completed';
+
+  @override
+  String get eventManagerOptionsSubtitle => 'Choose what to do with this event';
+
+  @override
+  String eventManagerCapacityAlert(Object title, Object percent) {
+    return '\"$title\" capacity at $percent%';
+  }
+
+  @override
+  String eventManagerStartsSoonAlert(Object title, int hours) {
+    return '\"$title\" starts in ${hours}h';
+  }
+
+  @override
+  String get eventManagerSoonLabel => 'Soon';
+
+  @override
+  String get eventManagerNoAlerts => 'No alerts right now.';
+
+  @override
+  String get eventManagerSearchTitle => 'Search Events';
+
+  @override
+  String get eventManagerSearchHint => 'Enter event name or keyword...';
+
+  @override
+  String get eventManagerDeleteTitle => 'Delete Event';
+
+  @override
+  String eventManagerDeleteBody(Object title) {
+    return 'Are you sure you want to delete \"$title\"? This action cannot be undone.';
+  }
+
+  @override
+  String eventManagerDeletedToast(Object title) {
+    return '$title deleted';
+  }
+
+  @override
+  String get collabRoleLabel => 'Role';
+
+  @override
+  String get collabRoleViewer => 'Viewer';
+
+  @override
+  String get collabRoleCurator => 'Curator';
+
+  @override
+  String get collabRoleEditor => 'Editor';
+
+  @override
+  String get collabRolePublisher => 'Publisher';
+
+  @override
+  String get collabRoleAdmin => 'Admin';
+
+  @override
+  String get collabPanelNoInvitePermission => 'You do not have permission to invite collaborators.';
+
+  @override
+  String get collabPanelEnterUsernameOrEmail => 'Enter a username or email.';
+
+  @override
+  String get collabPanelUseUsernameOrEmail => 'Use a username or email to invite someone.';
+
+  @override
+  String get collabPanelInviteSent => 'Invite sent.';
+
+  @override
+  String get collabPanelInviteFailed => 'Could not send invite. Try again.';
+
+  @override
+  String get collabPanelRoleUpdated => 'Role updated.';
+
+  @override
+  String get collabPanelRoleUpdateFailed => 'Could not update role.';
+
+  @override
+  String get collabPanelRemoveConfirmTitle => 'Remove collaborator?';
+
+  @override
+  String collabPanelRemoveConfirmBody(Object name) {
+    return 'This will revoke access for $name.';
+  }
+
+  @override
+  String get collabPanelGenericUser => 'this person';
+
+  @override
+  String get collabPanelRemoved => 'Removed.';
+
+  @override
+  String get collabPanelRemoveFailed => 'Could not remove collaborator.';
+
+  @override
+  String get collabPanelLoadFailed => 'Could not load collaborators.';
+
+  @override
+  String get collabPanelNoCollaborators => 'No collaborators yet.';
+
+  @override
+  String get collabPanelInviteTitle => 'Invite someone';
+
+  @override
+  String get collabPanelUsernameOrEmailHint => 'Username or email';
+
+  @override
+  String get collabPanelInviteHint => 'Invite collaborators by username or email.';
 
   @override
   String marketplaceNetworkLabel(Object network) {

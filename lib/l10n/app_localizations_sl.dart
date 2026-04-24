@@ -4466,6 +4466,95 @@ class AppLocalizationsSl extends AppLocalizations {
   String get collectionCreatorCreateFailedWithError => 'Ustvarjanje zbirke ni uspelo. Poskusi znova.';
 
   @override
+  String get collectionCreatorShellDraftSubtitle => 'Oblikuj zbirko in jo shrani za odklep sodelovanja.';
+
+  @override
+  String get collectionCreatorShellSavedSubtitle => 'Zbirka je shranjena. Nadaljuj kuriranje ali povabi sodelavce v istem kontekstu.';
+
+  @override
+  String get collectionCreatorReadyBasicsLabel => 'Osnove zaključene';
+
+  @override
+  String get collectionCreatorReadyBasicsDescription => 'Ime in opis sta izpolnjena.';
+
+  @override
+  String get collectionCreatorReadyCoverLabel => 'Naslovna slika dodana';
+
+  @override
+  String get collectionCreatorReadyCoverComplete => 'Naslovnica zbirke je pripravljena.';
+
+  @override
+  String get collectionCreatorReadyCoverPending => 'Neobvezno, a na namizju močno priporočeno.';
+
+  @override
+  String get collectionCreatorReadySelectionLabel => 'Izbor umetnin pripravljen';
+
+  @override
+  String collectionCreatorReadySelectionComplete(int count) {
+    return 'Izbranih je $count umetnin.';
+  }
+
+  @override
+  String get collectionCreatorReadySelectionPending => 'Izberi umetnine za jedro zbirke.';
+
+  @override
+  String get collectionCreatorReadyVisibilityLabel => 'Vidnost izbrana';
+
+  @override
+  String get collectionCreatorReadyVisibilityPublic => 'Javna zbirka je vidna vsem.';
+
+  @override
+  String get collectionCreatorReadyVisibilityPrivate => 'Zasebna zbirka je še vedno dostopna sodelavcem.';
+
+  @override
+  String get collectionCreatorStatusSavedSubtitle => 'Shranjena zbirka';
+
+  @override
+  String get collectionCreatorStatusDraftSubtitle => 'Osnutek v pripravi';
+
+  @override
+  String get collectionCreatorSummaryIdLabel => 'ID zbirke';
+
+  @override
+  String get collectionCreatorSummaryNotCreatedYet => 'Še ni ustvarjena';
+
+  @override
+  String get collectionCreatorSummarySelectedArtworksLabel => 'Izbrane umetnine';
+
+  @override
+  String get collectionCreatorSummaryVisibilityLabel => 'Vidnost';
+
+  @override
+  String get collectionCreatorReadinessTitle => 'Pripravljenost';
+
+  @override
+  String get collectionCreatorReadinessSubtitle => 'Hiter pregled pred shranjevanjem.';
+
+  @override
+  String get collectionCreatorQuickActionsTitle => 'Hitre akcije';
+
+  @override
+  String get collectionCreatorQuickActionsSubtitle => 'Ohrani potek dela v tem ustvarjalniku.';
+
+  @override
+  String get collectionCreatorQuickActionUpdate => 'Posodobi zbirko';
+
+  @override
+  String get collectionCreatorQuickActionSave => 'Shrani zbirko';
+
+  @override
+  String get collectionCreatorQuickActionOpen => 'Odpri zbirko';
+
+  @override
+  String get collectionCreatorCollaborationReadySubtitle => 'Povabi sokuratorje brez zapuščanja delovnega prostora.';
+
+  @override
+  String get collectionCreatorCollaborationLockedSubtitle => 'Za odklep sodelovanja najprej shrani.';
+
+  @override
+  String get collectionCreatorCollaborationLockedMessage => 'Ko je zbirka shranjena, lahko tukaj povabiš sodelavce, da kuriranje ostane v kontekstu.';
+
+  @override
   String get collectionDetailLoadFailedMessage => 'Nalaganje podrobnosti zbirke ni uspelo. Poskusi znova.';
 
   @override
@@ -5692,6 +5781,117 @@ class AppLocalizationsSl extends AppLocalizations {
   String get eventCreatorSaveFailedToast => 'Shranjevanje dogodka ni uspelo. Poskusi znova.';
 
   @override
+  String get eventCreatorShellEditTitle => 'Uredi dogodek';
+
+  @override
+  String get eventCreatorShellCreateTitle => 'Ustvari nov dogodek';
+
+  @override
+  String get eventCreatorShellDraftSubtitle => 'Izpolni čarovnika tukaj, nato shrani za odklep sodelovanja.';
+
+  @override
+  String get eventCreatorShellSavedSubtitle => 'Dogodek je shranjen. Nadaljuj z urejanjem ali odpri sodelovanje iz stranske vrstice.';
+
+  @override
+  String eventCreatorStepBadge(int step) {
+    return 'Korak $step od 4';
+  }
+
+  @override
+  String get eventCreatorHelpTooltip => 'Pomoč';
+
+  @override
+  String get eventCreatorReadyInstitutionLabel => 'Institucija izbrana';
+
+  @override
+  String eventCreatorReadyInstitutionComplete(Object institutionName) {
+    return 'Dogodek bo pripadal instituciji $institutionName.';
+  }
+
+  @override
+  String get eventCreatorReadyInstitutionPending => 'Najprej izberi institucijo.';
+
+  @override
+  String get eventCreatorReadyBasicsLabel => 'Osnove zaključene';
+
+  @override
+  String get eventCreatorReadyBasicsDescription => 'Naslov, opis in tip dogodka so pripravljeni.';
+
+  @override
+  String get eventCreatorReadyDatesLabel => 'Datumi izbrani';
+
+  @override
+  String get eventCreatorReadyDatesComplete => 'Začetni in končni datum sta nastavljena.';
+
+  @override
+  String get eventCreatorReadyDatesPending => 'Pred shranjevanjem izberi oba datuma.';
+
+  @override
+  String get eventCreatorReadyCapacityLabel => 'Kapaciteta nastavljena';
+
+  @override
+  String get eventCreatorReadyCapacityComplete => 'Omejitev prijav je pripravljena.';
+
+  @override
+  String get eventCreatorReadyCapacityPending => 'Dodaj kapaciteto za dokončanje nastavitve.';
+
+  @override
+  String get eventCreatorStatusDraftSubtitle => 'Osnutek v pripravi';
+
+  @override
+  String get eventCreatorStatusSavedSubtitle => 'Dogodek shranjen';
+
+  @override
+  String get eventCreatorSummaryEventId => 'ID dogodka';
+
+  @override
+  String get eventCreatorSummaryNotCreatedYet => 'Še ni ustvarjen';
+
+  @override
+  String get eventCreatorSummaryEventType => 'Tip dogodka';
+
+  @override
+  String get eventCreatorSummaryRegistration => 'Prijava';
+
+  @override
+  String get eventCreatorReadinessTitle => 'Pripravljenost';
+
+  @override
+  String get eventCreatorReadinessSubtitle => 'Hiter pregled pred shranjevanjem.';
+
+  @override
+  String get eventCreatorQuickActionsTitle => 'Hitre akcije';
+
+  @override
+  String get eventCreatorQuickActionsSubtitle => 'Ohrani celoten potek dela v enem delovnem prostoru.';
+
+  @override
+  String get eventCreatorQuickActionNextStep => 'Naslednji korak';
+
+  @override
+  String get eventCreatorQuickActionCreateEvent => 'Ustvari dogodek';
+
+  @override
+  String get eventCreatorQuickActionUpdateEvent => 'Posodobi dogodek';
+
+  @override
+  String get eventCreatorQuickActionOpenEvent => 'Odpri dogodek';
+
+  @override
+  String get eventCreatorCollaborationReadySubtitle => 'Povabi sodelavce brez izhoda iz urejevalnika.';
+
+  @override
+  String get eventCreatorCollaborationLockedSubtitle => 'Za odklep sodelovanja najprej shrani.';
+
+  @override
+  String get eventCreatorCollaborationLockedMessage => 'Ko je dogodek shranjen, lahko tukaj povabiš sodelavce, da načrtovanje ostane v kontekstu.';
+
+  @override
+  String eventCreatorStepLabel(int step) {
+    return 'Korak $step od 4';
+  }
+
+  @override
   String get activityNavigationUnableToOpenToast => 'Trenutno ni mogoče odpreti te dejavnosti.';
 
   @override
@@ -6246,7 +6446,171 @@ class AppLocalizationsSl extends AppLocalizations {
   String get commonRemove => 'Odstrani';
 
   @override
+  String get commonNow => 'Zdaj';
+
+  @override
   String get commonNotAvailableShort => 'N/A';
+
+  @override
+  String get eventManagerTitle => 'Upravitelj dogodkov';
+
+  @override
+  String get eventManagerSubtitle => 'Upravljaj dogodke svoje institucije';
+
+  @override
+  String get eventManagerStatTotalEvents => 'Skupaj dogodkov';
+
+  @override
+  String get eventManagerStatActiveNow => 'Aktivni zdaj';
+
+  @override
+  String get eventManagerStatRegistrations => 'Prijave';
+
+  @override
+  String get eventManagerEmptyTitle => 'Ni najdenih dogodkov';
+
+  @override
+  String get eventManagerEmptyDescription => 'Ustvari svoj prvi dogodek za začetek';
+
+  @override
+  String eventManagerOccupancyLabel(Object current, Object capacity) {
+    return 'Zasedenost: $current/$capacity';
+  }
+
+  @override
+  String eventManagerAttendeesLabel(Object count) {
+    return 'Udeleženci: $count';
+  }
+
+  @override
+  String get eventManagerStatusUpcoming => 'PRIHAJA';
+
+  @override
+  String get eventManagerStatusActive => 'AKTIVNO';
+
+  @override
+  String get eventManagerStatusCompleted => 'ZAKLJUČENO';
+
+  @override
+  String get eventManagerFilterAll => 'Vsi';
+
+  @override
+  String get eventManagerFilterUpcoming => 'Prihajajoči';
+
+  @override
+  String get eventManagerFilterActive => 'Aktivni';
+
+  @override
+  String get eventManagerFilterCompleted => 'Zaključeni';
+
+  @override
+  String get eventManagerOptionsSubtitle => 'Izberi dejanje za ta dogodek';
+
+  @override
+  String eventManagerCapacityAlert(Object title, Object percent) {
+    return '\"$title\" ima zasedenost $percent%';
+  }
+
+  @override
+  String eventManagerStartsSoonAlert(Object title, int hours) {
+    return '\"$title\" se začne čez ${hours}h';
+  }
+
+  @override
+  String get eventManagerSoonLabel => 'Kmalu';
+
+  @override
+  String get eventManagerNoAlerts => 'Trenutno ni opozoril.';
+
+  @override
+  String get eventManagerSearchTitle => 'Išči dogodke';
+
+  @override
+  String get eventManagerSearchHint => 'Vnesi ime dogodka ali ključno besedo...';
+
+  @override
+  String get eventManagerDeleteTitle => 'Izbriši dogodek';
+
+  @override
+  String eventManagerDeleteBody(Object title) {
+    return 'Ali si prepričan/a, da želiš izbrisati \"$title\"? Tega dejanja ni mogoče razveljaviti.';
+  }
+
+  @override
+  String eventManagerDeletedToast(Object title) {
+    return 'Dogodek \"$title\" je izbrisan';
+  }
+
+  @override
+  String get collabRoleLabel => 'Vloga';
+
+  @override
+  String get collabRoleViewer => 'Opazovalec';
+
+  @override
+  String get collabRoleCurator => 'Kustos';
+
+  @override
+  String get collabRoleEditor => 'Urednik';
+
+  @override
+  String get collabRolePublisher => 'Objavljalec';
+
+  @override
+  String get collabRoleAdmin => 'Administrator';
+
+  @override
+  String get collabPanelNoInvitePermission => 'Nimaš dovoljenja za vabljenje sodelavcev.';
+
+  @override
+  String get collabPanelEnterUsernameOrEmail => 'Vnesi uporabniško ime ali e-poštni naslov.';
+
+  @override
+  String get collabPanelUseUsernameOrEmail => 'Za povabilo uporabi uporabniško ime ali e-pošto.';
+
+  @override
+  String get collabPanelInviteSent => 'Povabilo je poslano.';
+
+  @override
+  String get collabPanelInviteFailed => 'Pošiljanje povabila ni uspelo. Poskusi znova.';
+
+  @override
+  String get collabPanelRoleUpdated => 'Vloga je posodobljena.';
+
+  @override
+  String get collabPanelRoleUpdateFailed => 'Posodobitev vloge ni uspela.';
+
+  @override
+  String get collabPanelRemoveConfirmTitle => 'Odstranim sodelavca?';
+
+  @override
+  String collabPanelRemoveConfirmBody(Object name) {
+    return 'S tem boš odvzel/a dostop uporabniku $name.';
+  }
+
+  @override
+  String get collabPanelGenericUser => 'tej osebi';
+
+  @override
+  String get collabPanelRemoved => 'Odstranjeno.';
+
+  @override
+  String get collabPanelRemoveFailed => 'Odstranitev sodelavca ni uspela.';
+
+  @override
+  String get collabPanelLoadFailed => 'Nalaganje sodelavcev ni uspelo.';
+
+  @override
+  String get collabPanelNoCollaborators => 'Sodelavcev še ni.';
+
+  @override
+  String get collabPanelInviteTitle => 'Povabi osebo';
+
+  @override
+  String get collabPanelUsernameOrEmailHint => 'Uporabniško ime ali e-pošta';
+
+  @override
+  String get collabPanelInviteHint => 'Povabi sodelavce z uporabniškim imenom ali e-pošto.';
 
   @override
   String marketplaceNetworkLabel(Object network) {

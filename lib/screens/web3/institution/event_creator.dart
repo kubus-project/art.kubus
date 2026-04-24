@@ -134,6 +134,7 @@ class _EventCreatorState extends State<EventCreator>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final shellScope = DesktopShellScope.of(context);
     Widget body = FadeTransition(
       opacity: _fadeAnimation,
@@ -155,21 +156,23 @@ class _EventCreatorState extends State<EventCreator>
 
     if (widget.embedded) {
       return DesktopCreatorShell(
-        title: _isEditing ? 'Edit Event' : 'Create New Event',
+        title: _isEditing
+            ? l10n.eventCreatorShellEditTitle
+            : l10n.eventCreatorShellCreateTitle,
         subtitle: _createdEvent == null
-            ? 'Complete the wizard here, then save to unlock collaboration.'
-            : 'Event saved. Keep refining or open collaboration from the sidebar.',
+            ? l10n.eventCreatorShellDraftSubtitle
+            : l10n.eventCreatorShellSavedSubtitle,
         onBack: shellScope?.popScreen,
         headerBadge: CreatorStatusBadge(
           label: _createdEvent == null
-              ? 'Step ${_currentStep + 1} of 4'
-              : 'Saved',
+              ? l10n.eventCreatorStepBadge(_currentStep + 1)
+              : l10n.commonSavedToast,
           color: KubusColorRoles.of(context).web3InstitutionAccent,
         ),
         sidebarAccentColor: KubusColorRoles.of(context).web3InstitutionAccent,
         actions: [
           IconButton(
-            tooltip: 'Help',
+            tooltip: l10n.eventCreatorHelpTooltip,
             onPressed: _showHelp,
             icon: Icon(
               Icons.help_outline,
@@ -178,14 +181,14 @@ class _EventCreatorState extends State<EventCreator>
           ),
         ],
         mainContent: body,
-        sidebar: _buildDesktopSidebar(),
+        sidebar: _buildDesktopSidebar(l10n),
       );
     }
 
     return body;
   }
 
-  Widget _buildDesktopSidebar() {
+  Widget _buildDesktopSidebar(AppLocalizations l10n) {
     final scheme = Theme.of(context).colorScheme;
     final institutionProvider = context.watch<InstitutionProvider>();
     final selectedInstitution = _institutionId == null || _institutionId!.isEmpty
@@ -204,32 +207,34 @@ class _EventCreatorState extends State<EventCreator>
 
     final readyItems = <DesktopCreatorReadinessItem>[
       DesktopCreatorReadinessItem(
-        label: 'Institution selected',
+        label: l10n.eventCreatorReadyInstitutionLabel,
         description: hasInstitution
-            ? 'The event will belong to ${selectedInstitution.name}.'
-            : 'Choose the institution first.',
+            ? l10n.eventCreatorReadyInstitutionComplete(
+                selectedInstitution.name,
+              )
+            : l10n.eventCreatorReadyInstitutionPending,
         complete: hasInstitution,
         icon: Icons.apartment_outlined,
       ),
       DesktopCreatorReadinessItem(
-        label: 'Basics complete',
-        description: 'Title, description, and event type are in place.',
+        label: l10n.eventCreatorReadyBasicsLabel,
+        description: l10n.eventCreatorReadyBasicsDescription,
         complete: hasBasics,
         icon: Icons.subject_outlined,
       ),
       DesktopCreatorReadinessItem(
-        label: 'Dates selected',
+        label: l10n.eventCreatorReadyDatesLabel,
         description: hasDates
-            ? 'Start and end dates are set.'
-            : 'Pick both dates before saving.',
+            ? l10n.eventCreatorReadyDatesComplete
+            : l10n.eventCreatorReadyDatesPending,
         complete: hasDates,
         icon: Icons.date_range_outlined,
       ),
       DesktopCreatorReadinessItem(
-        label: 'Capacity set',
+        label: l10n.eventCreatorReadyCapacityLabel,
         description: hasCapacity
-            ? 'Registration limit is ready.'
-            : 'Add a capacity to complete the setup.',
+            ? l10n.eventCreatorReadyCapacityComplete
+            : l10n.eventCreatorReadyCapacityPending,
         complete: hasCapacity,
         icon: Icons.groups_outlined,
       ),
@@ -239,33 +244,41 @@ class _EventCreatorState extends State<EventCreator>
       padding: EdgeInsets.zero,
       children: [
         DesktopCreatorSidebarSection(
-          title: 'Status',
-          subtitle: created == null ? 'Draft in progress' : 'Saved event',
+          title: l10n.commonStatus,
+          subtitle: created == null
+              ? l10n.eventCreatorStatusDraftSubtitle
+              : l10n.eventCreatorStatusSavedSubtitle,
           icon: created == null ? Icons.edit_outlined : Icons.event_available_outlined,
           accentColor: accent,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CreatorStatusBadge(
-                label: created == null ? 'Draft' : 'Saved',
+                label: created == null
+                    ? l10n.commonDraft
+                    : l10n.commonSavedToast,
                 color: KubusColorRoles.of(context).web3InstitutionAccent,
               ),
               const SizedBox(height: KubusSpacing.sm),
               DesktopCreatorSummaryRow(
-                label: 'Event ID',
-                value: createdId.isNotEmpty ? createdId : 'Not created yet',
+                label: l10n.eventCreatorSummaryEventId,
+                value: createdId.isNotEmpty
+                    ? createdId
+                    : l10n.eventCreatorSummaryNotCreatedYet,
                 valueColor: createdId.isNotEmpty
                     ? scheme.onSurface
                     : scheme.onSurface.withValues(alpha: 0.6),
               ),
               DesktopCreatorSummaryRow(
-                label: 'Event type',
+                label: l10n.eventCreatorSummaryEventType,
                 value: _eventType,
                 icon: Icons.category_outlined,
               ),
               DesktopCreatorSummaryRow(
-                label: 'Registration',
-                value: _allowRegistration ? 'Enabled' : 'Off',
+                label: l10n.eventCreatorSummaryRegistration,
+                value: _allowRegistration
+                    ? l10n.commonEnabled
+                    : l10n.commonOff,
                 icon: Icons.how_to_reg_outlined,
               ),
             ],
@@ -273,8 +286,8 @@ class _EventCreatorState extends State<EventCreator>
         ),
         const SizedBox(height: KubusSpacing.md),
         DesktopCreatorSidebarSection(
-          title: 'Readiness',
-          subtitle: 'A quick sanity check before saving.',
+          title: l10n.eventCreatorReadinessTitle,
+          subtitle: l10n.eventCreatorReadinessSubtitle,
           icon: Icons.fact_check_outlined,
           accentColor: accent,
           child: DesktopCreatorReadinessChecklist(
@@ -284,8 +297,8 @@ class _EventCreatorState extends State<EventCreator>
         ),
         const SizedBox(height: KubusSpacing.md),
         DesktopCreatorSidebarSection(
-          title: 'Quick actions',
-          subtitle: 'Keep the whole workflow in one workspace.',
+          title: l10n.eventCreatorQuickActionsTitle,
+          subtitle: l10n.eventCreatorQuickActionsSubtitle,
           icon: Icons.flash_on_outlined,
           accentColor: accent,
           child: Column(
@@ -296,7 +309,11 @@ class _EventCreatorState extends State<EventCreator>
                     ? null
                     : (_currentStep < 3 ? _nextStep : _createEvent),
                 icon: Icon(_currentStep < 3 ? Icons.arrow_forward : Icons.save_outlined),
-                label: Text(_currentStep < 3 ? 'Next step' : (created == null ? 'Create event' : 'Update event')),
+                label: Text(_currentStep < 3
+                    ? l10n.eventCreatorQuickActionNextStep
+                    : (created == null
+                        ? l10n.eventCreatorQuickActionCreateEvent
+                        : l10n.eventCreatorQuickActionUpdateEvent)),
               ),
               if (created != null) ...[
                 const SizedBox(height: KubusSpacing.sm),
@@ -304,13 +321,15 @@ class _EventCreatorState extends State<EventCreator>
                   onPressed: () {
                     DesktopShellScope.of(context)?.pushScreen(
                       DesktopSubScreen(
-                        title: _isEditing ? 'Edit Event' : 'Create New Event',
+                        title: _isEditing
+                            ? l10n.eventCreatorShellEditTitle
+                            : l10n.eventCreatorShellCreateTitle,
                         child: EventDetailScreen(eventId: createdId),
                       ),
                     );
                   },
                   icon: const Icon(Icons.open_in_new_outlined),
-                  label: const Text('Open event'),
+                  label: Text(l10n.eventCreatorQuickActionOpenEvent),
                 ),
               ],
             ],
@@ -318,15 +337,14 @@ class _EventCreatorState extends State<EventCreator>
         ),
         const SizedBox(height: KubusSpacing.md),
         DesktopCreatorCollaborationSection(
-          title: 'Collaboration',
+          title: l10n.collectionSettingsCollaboration,
           subtitle: created != null
-              ? 'Invite collaborators without leaving the creator.'
-              : 'Save once to unlock collaboration.',
+              ? l10n.eventCreatorCollaborationReadySubtitle
+              : l10n.eventCreatorCollaborationLockedSubtitle,
           entityType: 'events',
           entityId: createdId,
           enabled: collabEnabled,
-          lockedMessage:
-              'Once saved, collaborators can be invited here so event planning stays in context.',
+          lockedMessage: l10n.eventCreatorCollaborationLockedMessage,
           accentColor: accent,
         ),
       ],
@@ -334,6 +352,7 @@ class _EventCreatorState extends State<EventCreator>
   }
 
   Widget _buildHeader() {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.all(KubusSpacing.lg),
@@ -343,13 +362,15 @@ class _EventCreatorState extends State<EventCreator>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                _isEditing ? 'Edit Event' : 'Create New Event',
+                _isEditing
+                    ? l10n.eventCreatorShellEditTitle
+                    : l10n.eventCreatorShellCreateTitle,
                 style: KubusTextStyles.mobileAppBarTitle.copyWith(
                   color: scheme.onSurface,
                 ),
               ),
               Text(
-                'Step ${_currentStep + 1} of 4',
+                l10n.eventCreatorStepLabel(_currentStep + 1),
                 style: KubusTextStyles.detailCaption.copyWith(
                   color: scheme.onSurface.withValues(alpha: 0.7),
                 ),
