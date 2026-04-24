@@ -142,5 +142,6 @@ void main() {
     final detailScreen = subScreen.child as ExhibitionDetailScreen;
     expect(detailScreen.exhibitionId, 'expo-1');
     expect(detailScreen.attendanceMarkerId, 'marker-1');
+    expect(detailScreen.autoClaimPoap, isTrue);
   });
 }

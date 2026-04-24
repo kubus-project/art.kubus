@@ -54,19 +54,20 @@ class _MarketplaceState extends State<Marketplace>
     // Track this screen visit for quick actions
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      context.read<NavigationProvider>().trackScreenVisit('marketplace');
+      final navigationProvider = context.read<NavigationProvider>();
+      final collectiblesProvider = context.read<CollectiblesProvider>();
+      final walletAddress =
+          (context.read<WalletProvider>().currentWalletAddress ?? '').trim();
+
+      navigationProvider.trackScreenVisit('marketplace');
 
       if (_didRequestCollectiblesInit) return;
       _didRequestCollectiblesInit = true;
-
-      final collectiblesProvider = context.read<CollectiblesProvider>();
       if (!collectiblesProvider.isLoading &&
           collectiblesProvider.allSeries.isEmpty) {
         await collectiblesProvider.initialize();
       }
 
-      final walletAddress =
-          (context.read<WalletProvider>().currentWalletAddress ?? '').trim();
       if (walletAddress.isNotEmpty) {
         unawaited(
           collectiblesProvider.refreshWalletCollectibleIndex(walletAddress),

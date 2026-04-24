@@ -591,9 +591,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   }
 
   Widget _buildPoapInfoCard(Artwork artwork) {
+    final l10n = AppLocalizations.of(context)!;
     final metadata = artwork.metadata;
     if (metadata == null) return const SizedBox.shrink();
-    final raw = metadata['poap'];
+    final raw = metadata['poap'] ?? {};
     if (raw is! Map) return const SizedBox.shrink();
 
     final poap = Map<String, dynamic>.from(raw);
@@ -621,11 +622,12 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
 
     final scheme = Theme.of(context).colorScheme;
     final infoLines = <String>[
-      'Claimable after attendance confirmation.',
-      if (rewardAmount != null) 'Reward: $rewardAmount',
+      l10n.exhibitionDetailPoapAttendanceHint,
+      if (rewardAmount != null)
+        l10n.exhibitionDetailAttendanceRewardPending(rewardAmount.toString()),
       if (validFrom != null || validTo != null)
-        'Valid: ${(validFrom != null) ? validFrom.toLocal().toIso8601String().split('T').first : '…'} → ${(validTo != null) ? validTo.toLocal().toIso8601String().split('T').first : '…'}',
-      if (eventId != null && eventId.isNotEmpty) 'Event ID: $eventId',
+        '${l10n.commonAvailable}: ${(validFrom != null) ? validFrom.toLocal().toIso8601String().split('T').first : '…'} → ${(validTo != null) ? validTo.toLocal().toIso8601String().split('T').first : '…'}',
+      if (eventId != null && eventId.isNotEmpty) '${l10n.commonEvent}: $eventId',
     ];
 
     final uri = (claimUrl != null && claimUrl.isNotEmpty)
@@ -645,7 +647,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('POAP', style: DetailTypography.sectionTitle(context)),
+              Text(l10n.exhibitionDetailPoapTitle,
+                  style: DetailTypography.sectionTitle(context)),
               const SizedBox(height: DetailSpacing.sm),
               Text(infoLines.join('\n'), style: DetailTypography.body(context)),
               if (canOpenClaim) ...[
@@ -657,7 +660,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                       launchUrl(uri, mode: LaunchMode.externalApplication),
                     ),
                     icon: const Icon(Icons.open_in_new, size: 18),
-                    label: const Text('Open claim link'),
+                    label: Text(l10n.commonOpen),
                   ),
                 ),
               ],
@@ -1089,7 +1092,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         !state.hasFreshProximity ||
         !proximity.withinRadius) {
       messenger.showKubusSnackBar(
-        const SnackBar(content: Text('Move closer to confirm attendance.')),
+        SnackBar(content: Text(l10n.exhibitionDetailAttendanceMoveCloserHint)),
         tone: KubusSnackBarTone.warning,
       );
       return;
@@ -1101,7 +1104,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
 
       if (result == null) {
         messenger.showKubusSnackBar(
-          const SnackBar(content: Text('Unable to confirm attendance.')),
+          SnackBar(
+            content:
+                Text(l10n.exhibitionDetailAttendanceUnableToConfirmToast),
+          ),
           tone: KubusSnackBarTone.warning,
         );
         return;
@@ -1121,16 +1127,19 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       final wasIdempotent =
           result.attendanceRecorded != true && result.viewedAdded != true;
       final parts = <String>[
-        wasIdempotent ? 'Already checked in.' : 'Attendance confirmed.'
+        wasIdempotent
+            ? l10n.exhibitionDetailAttendanceAlreadyCheckedIn
+            : l10n.exhibitionDetailAttendanceConfirmedToast
       ];
       if (awarded != null && awarded > 0) {
-        parts.add(
-            '+${awarded.toStringAsFixed(awarded % 1 == 0 ? 0 : 1)} KUB8 (pending)');
+        parts.add(l10n.exhibitionDetailAttendanceRewardPending(
+          awarded.toStringAsFixed(awarded % 1 == 0 ? 0 : 1),
+        ));
       }
       if (poapStatus.isNotEmpty &&
           poapStatus != 'none' &&
           poapStatus != 'not_configured') {
-        parts.add('POAP: $poapStatus');
+        parts.add('${l10n.exhibitionDetailPoapTitle}: $poapStatus');
       }
 
       SnackBarAction? action;
@@ -1138,7 +1147,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         final uri = Uri.tryParse(claimUrl);
         if (uri != null && (uri.scheme == 'https' || uri.scheme == 'http')) {
           action = SnackBarAction(
-            label: 'Claim POAP',
+            label: l10n.exhibitionDetailPoapClaimAction,
             onPressed: () => unawaited(
               launchUrl(uri, mode: LaunchMode.externalApplication),
             ),

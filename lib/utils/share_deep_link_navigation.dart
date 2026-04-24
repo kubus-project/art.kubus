@@ -124,6 +124,7 @@ class ShareDeepLinkNavigation {
             builder: (_) => ExhibitionDetailScreen(
                   exhibitionId: target.id,
                   attendanceMarkerId: target.attendanceMarkerId,
+                  autoClaimPoap: target.isClaimReadyExhibition,
                 )));
         if (!context.mounted) return;
         _maybePromptDeferredOnboarding(context);
@@ -206,6 +207,7 @@ class ShareDeepLinkNavigation {
             child: ExhibitionDetailScreen(
               exhibitionId: target.id,
               attendanceMarkerId: target.attendanceMarkerId,
+              autoClaimPoap: target.isClaimReadyExhibition,
             ),
           ),
         );

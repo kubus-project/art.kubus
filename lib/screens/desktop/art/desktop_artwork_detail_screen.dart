@@ -461,6 +461,7 @@ class _DesktopArtworkDetailScreenState
   Widget _buildArSetupSection(Artwork artwork) {
     if (!artwork.arEnabled) return const SizedBox.shrink();
 
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final profileProvider = context.read<ProfileProvider>();
     final walletProvider = context.read<WalletProvider>();
@@ -514,7 +515,8 @@ class _DesktopArtworkDetailScreenState
               children: [
                 Icon(Icons.view_in_ar_rounded, color: color),
                 const SizedBox(width: KubusSpacing.sm),
-                Text('AR experience', style: KubusTextStyles.sectionTitle),
+                Text(l10n.mapMarkerLayerArExperience,
+                  style: KubusTextStyles.sectionTitle),
                 const Spacer(),
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -538,7 +540,7 @@ class _DesktopArtworkDetailScreenState
             ),
             const SizedBox(height: KubusSpacing.sm),
             Text(
-              'Print or share a marker so people can scan and unlock AR.',
+              l10n.arModeScanDescription,
               style: KubusTextStyles.sectionSubtitle.copyWith(
                 color: scheme.onSurface.withValues(alpha: 0.7),
               ),
@@ -548,7 +550,7 @@ class _DesktopArtworkDetailScreenState
               OutlinedButton.icon(
                 onPressed: () => Navigator.pushNamed(context, '/ar'),
                 icon: const Icon(Icons.qr_code_scanner_rounded),
-                label: const Text('Scan AR'),
+                label: Text(l10n.commonViewInAr),
               )
             else if (isOwner)
               OutlinedButton.icon(
@@ -562,7 +564,7 @@ class _DesktopArtworkDetailScreenState
                   );
                 },
                 icon: const Icon(Icons.qr_code_2),
-                label: const Text('Finish AR setup'),
+                label: Text(l10n.commonOpen),
               ),
           ],
         ),
@@ -609,9 +611,10 @@ class _DesktopArtworkDetailScreenState
   }
 
   Widget _buildPoapInfoCard(Artwork artwork) {
+    final l10n = AppLocalizations.of(context)!;
     final metadata = artwork.metadata;
     if (metadata == null) return const SizedBox.shrink();
-    final raw = metadata['poap'];
+    final raw = metadata['poap'] ?? {};
     if (raw is! Map) return const SizedBox.shrink();
 
     final poap = Map<String, dynamic>.from(raw);
@@ -639,11 +642,12 @@ class _DesktopArtworkDetailScreenState
 
     final scheme = Theme.of(context).colorScheme;
     final infoLines = <String>[
-      'Claimable after attendance confirmation.',
-      if (rewardAmount != null) 'Reward: $rewardAmount',
+      l10n.exhibitionDetailPoapAttendanceHint,
+      if (rewardAmount != null)
+        l10n.exhibitionDetailAttendanceRewardPending(rewardAmount.toString()),
       if (validFrom != null || validTo != null)
-        'Valid: ${(validFrom != null) ? validFrom.toLocal().toIso8601String().split('T').first : '…'} → ${(validTo != null) ? validTo.toLocal().toIso8601String().split('T').first : '…'}',
-      if (eventId != null && eventId.isNotEmpty) 'Event ID: $eventId',
+        '${l10n.commonAvailable}: ${(validFrom != null) ? validFrom.toLocal().toIso8601String().split('T').first : '…'} → ${(validTo != null) ? validTo.toLocal().toIso8601String().split('T').first : '…'}',
+      if (eventId != null && eventId.isNotEmpty) '${l10n.commonEvent}: $eventId',
     ];
 
     final uri = (claimUrl != null && claimUrl.isNotEmpty)
@@ -660,7 +664,8 @@ class _DesktopArtworkDetailScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('POAP', style: KubusTextStyles.sectionTitle),
+            Text(l10n.exhibitionDetailPoapTitle,
+                style: KubusTextStyles.sectionTitle),
             const SizedBox(height: DetailSpacing.sm),
             Text(infoLines.join('\n'), style: DetailTypography.body(context)),
             if (canOpenClaim) ...[
@@ -672,7 +677,7 @@ class _DesktopArtworkDetailScreenState
                     launchUrl(uri, mode: LaunchMode.externalApplication),
                   ),
                   icon: const Icon(Icons.open_in_new, size: 18),
-                  label: const Text('Open claim link'),
+                  label: Text(l10n.commonOpen),
                 ),
               ),
             ],
@@ -836,6 +841,8 @@ class _DesktopArtworkDetailScreenState
       return const SizedBox.shrink();
     }
 
+    final l10n = AppLocalizations.of(context)!;
+
     return Consumer<AttendanceProvider>(
       builder: (context, attendanceProvider, _) {
         final state = attendanceProvider.stateFor(markerIdCandidate);
@@ -863,8 +870,10 @@ class _DesktopArtworkDetailScreenState
         final isConfirming = state.isConfirming;
 
         final label = isConfirming
-            ? 'Confirming…'
-            : (alreadyAttended ? 'Already checked in' : 'Confirm attendance');
+          ? l10n.exhibitionDetailAttendanceConfirmingAction
+          : (alreadyAttended
+            ? l10n.exhibitionDetailAttendanceAlreadyCheckedIn
+            : l10n.exhibitionDetailAttendanceConfirmAction);
         final icon = isConfirming
             ? Icons.hourglass_top
             : (alreadyAttended ? Icons.check_circle : Icons.verified_user);
@@ -909,7 +918,7 @@ class _DesktopArtworkDetailScreenState
         !state.hasFreshProximity ||
         !proximity.withinRadius) {
       messenger.showKubusSnackBar(
-        const SnackBar(content: Text('Move closer to confirm attendance.')),
+        SnackBar(content: Text(l10n.exhibitionDetailAttendanceMoveCloserHint)),
         tone: KubusSnackBarTone.warning,
       );
       return;
@@ -921,7 +930,10 @@ class _DesktopArtworkDetailScreenState
 
       if (result == null) {
         messenger.showKubusSnackBar(
-          const SnackBar(content: Text('Unable to confirm attendance.')),
+          SnackBar(
+            content:
+                Text(l10n.exhibitionDetailAttendanceUnableToConfirmToast),
+          ),
           tone: KubusSnackBarTone.warning,
         );
         return;
@@ -941,16 +953,19 @@ class _DesktopArtworkDetailScreenState
       final wasIdempotent =
           result.attendanceRecorded != true && result.viewedAdded != true;
       final parts = <String>[
-        wasIdempotent ? 'Already checked in.' : 'Attendance confirmed.'
+        wasIdempotent
+            ? l10n.exhibitionDetailAttendanceAlreadyCheckedIn
+            : l10n.exhibitionDetailAttendanceConfirmedToast
       ];
       if (awarded != null && awarded > 0) {
-        parts.add(
-            '+${awarded.toStringAsFixed(awarded % 1 == 0 ? 0 : 1)} KUB8 (pending)');
+        parts.add(l10n.exhibitionDetailAttendanceRewardPending(
+          awarded.toStringAsFixed(awarded % 1 == 0 ? 0 : 1),
+        ));
       }
       if (poapStatus.isNotEmpty &&
           poapStatus != 'none' &&
           poapStatus != 'not_configured') {
-        parts.add('POAP: $poapStatus');
+        parts.add('${l10n.exhibitionDetailPoapTitle}: $poapStatus');
       }
 
       SnackBarAction? action;
@@ -958,7 +973,7 @@ class _DesktopArtworkDetailScreenState
         final uri = Uri.tryParse(claimUrl);
         if (uri != null && (uri.scheme == 'https' || uri.scheme == 'http')) {
           action = SnackBarAction(
-            label: 'Claim POAP',
+            label: l10n.exhibitionDetailPoapClaimAction,
             onPressed: () => unawaited(
               launchUrl(uri, mode: LaunchMode.externalApplication),
             ),

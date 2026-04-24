@@ -35,6 +35,7 @@ class ExhibitionDetailScreen extends StatefulWidget {
   final String exhibitionId;
   final Exhibition? initialExhibition;
   final String? attendanceMarkerId;
+  final bool autoClaimPoap;
   final bool embedded;
 
   const ExhibitionDetailScreen({
@@ -42,6 +43,7 @@ class ExhibitionDetailScreen extends StatefulWidget {
     required this.exhibitionId,
     this.initialExhibition,
     this.attendanceMarkerId,
+    this.autoClaimPoap = false,
     this.embedded = false,
   });
 
@@ -52,6 +54,7 @@ class ExhibitionDetailScreen extends StatefulWidget {
 class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
   String? _prefetchedAttendanceMarkerId;
   bool _isClaimingPoap = false;
+  bool _autoClaimAttempted = false;
 
   @override
   void initState() {
@@ -70,9 +73,26 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     try {
       await provider.fetchExhibition(widget.exhibitionId, force: true);
       await provider.fetchExhibitionPoap(widget.exhibitionId, force: true);
+      await _maybeAutoClaimPoap();
     } catch (_) {
       // Provider handles errors.
     }
+  }
+
+  Future<void> _maybeAutoClaimPoap() async {
+    if (!widget.autoClaimPoap || _autoClaimAttempted) return;
+
+    final markerId = (widget.attendanceMarkerId ?? '').trim();
+    if (markerId.isEmpty) return;
+
+    final provider = context.read<ExhibitionsProvider>();
+    final currentPoap = provider.poapStatusFor(widget.exhibitionId);
+    if (currentPoap == null || currentPoap.claimed || !currentPoap.canClaim) {
+      return;
+    }
+
+    _autoClaimAttempted = true;
+    await _claimExhibitionPoap();
   }
 
   bool _canManageExhibition(String? myRole) {

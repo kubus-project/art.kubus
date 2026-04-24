@@ -8,6 +8,7 @@ import 'package:art_kubus/providers/attendance_provider.dart';
 import 'package:art_kubus/providers/artwork_provider.dart';
 import 'package:art_kubus/providers/collab_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
+import 'package:art_kubus/providers/saved_items_provider.dart';
 import 'package:art_kubus/providers/task_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/screens/art/art_detail_screen.dart';
@@ -230,6 +231,7 @@ void main() {
           ChangeNotifierProvider.value(value: profileProvider),
           ChangeNotifierProvider.value(value: walletProvider),
           ChangeNotifierProvider.value(value: TaskProvider()),
+          ChangeNotifierProvider(create: (_) => SavedItemsProvider()),
           ChangeNotifierProvider(
             create: (_) => CollabProvider(api: _FakeCollabApi()),
           ),
@@ -246,6 +248,8 @@ void main() {
       ),
     );
 
+    final l10n = AppLocalizations.of(tester.element(find.byType(ArtDetailScreen)))!;
+
     // Wait for the detail screen to complete its post-frame artwork load.
     for (var i = 0; i < 8; i++) {
       await tester.pump(const Duration(milliseconds: 50));
@@ -253,13 +257,13 @@ void main() {
     }
 
     await tester.scrollUntilVisible(
-      find.text('Confirm attendance'),
+      find.text(l10n.exhibitionDetailAttendanceConfirmAction),
       800,
       scrollable: find.byType(Scrollable),
     );
     await tester.pump(const Duration(milliseconds: 50));
 
-    expect(find.text('Confirm attendance'), findsOneWidget);
+    expect(find.text(l10n.exhibitionDetailAttendanceConfirmAction), findsOneWidget);
 
     attendanceProvider.updateProximity(
       markerId: markerId,
@@ -272,6 +276,6 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Confirm attendance'), findsNothing);
+    expect(find.text(l10n.exhibitionDetailAttendanceConfirmAction), findsNothing);
   });
 }
