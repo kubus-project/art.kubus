@@ -579,7 +579,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                       padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
                       child: SizedBox(width: double.infinity, child: child),
                     ))
-                .toList(growable: false),
+                ,
           ],
         ),
       ),

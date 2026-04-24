@@ -34,34 +34,31 @@ class CommunitySubjectPicker {
     final isDesktop = MediaQuery.of(context).size.width >= 900;
     final content = _CommunitySubjectPickerContent(initialType: initialType);
 
-    if (isDesktop) {
-      return showDialog<CommunitySubjectSelection>(
-        context: context,
-        builder: (dialogContext) => Dialog(
-          insetPadding: const EdgeInsets.all(KubusSpacing.lg),
-          backgroundColor: Theme.of(dialogContext).colorScheme.surface,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720, maxHeight: 720),
-            child: content,
-          ),
-        ),
-      );
-    }
-
     return showModalBottomSheet<CommunitySubjectSelection>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (sheetContext) => KeyboardInsetPadding(
-        child: Container(
-          height: MediaQuery.of(sheetContext).size.height * 0.75,
-          decoration: BoxDecoration(
-            color: Theme.of(sheetContext).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(KubusRadius.xl),
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth:
+                  isDesktop ? 720 : MediaQuery.of(sheetContext).size.width,
+              maxHeight: isDesktop
+                  ? 720
+                  : MediaQuery.of(sheetContext).size.height * 0.75,
+            ),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Theme.of(sheetContext).colorScheme.surface,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(KubusRadius.xl),
+                ),
+              ),
+              child: content,
             ),
           ),
-          child: content,
         ),
       ),
     );

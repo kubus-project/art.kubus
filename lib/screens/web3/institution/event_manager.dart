@@ -5,6 +5,7 @@ import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
 import '../../../models/institution.dart';
 import '../../../providers/institution_provider.dart';
+import '../../desktop/desktop_shell.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../widgets/inline_loading.dart';
@@ -593,6 +594,20 @@ class _EventManagerState extends State<EventManager>
   }
 
   void _editEvent(Event event) {
+    final shellScope = DesktopShellScope.of(context);
+    if (shellScope != null) {
+      shellScope.pushScreen(
+        DesktopSubScreen(
+          title: event.title,
+          child: EventCreator(
+            initialEvent: event,
+            embedded: true,
+          ),
+        ),
+      );
+      return;
+    }
+
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => EventCreator(initialEvent: event)),

@@ -1,3 +1,5 @@
+import 'package:art_kubus/models/artwork.dart';
+import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -13,21 +15,25 @@ import '../../providers/wallet_provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/wallet_action_guard.dart';
+import '../../widgets/creator/creator_kit.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/glass_components.dart';
+import '../desktop/desktop_shell.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
  
 
 class ArtworkEditScreen extends StatefulWidget {
   final String artworkId;
   final bool showAppBar;
+  final bool embedded;
 
   const ArtworkEditScreen({
     super.key,
     required this.artworkId,
     this.showAppBar = true,
+    this.embedded = false,
   });
 
   @override
@@ -87,6 +93,83 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     _priceController.dispose();
     _arScaleController.dispose();
     super.dispose();
+  }
+
+  Widget _buildDesktopSidebar(AppLocalizations l10n, Artwork art) {
+    final scheme = Theme.of(context).colorScheme;
+    final hasTitle = _titleController.text.trim().isNotEmpty;
+    final hasDescription = _descriptionController.text.trim().isNotEmpty;
+    final hasCover = _nextCoverBytes != null ||
+        (ArtworkMediaResolver.resolveCover(artwork: art) ?? '').isNotEmpty;
+    final hasAr = !AppConfig.enableARViewer ||
+        (_arEnabled && _arScaleController.text.trim().isNotEmpty);
+
+    final readinessItems = <DesktopCreatorReadinessItem>[
+      DesktopCreatorReadinessItem(
+        label: l10n.commonTitle,
+        complete: hasTitle,
+        icon: Icons.title,
+      ),
+      DesktopCreatorReadinessItem(
+        label: l10n.commonDescription,
+        complete: hasDescription,
+        icon: Icons.subject_outlined,
+      ),
+      DesktopCreatorReadinessItem(
+        label: l10n.commonCoverImage,
+        complete: hasCover,
+        icon: Icons.image_outlined,
+      ),
+      if (AppConfig.enableARViewer)
+        DesktopCreatorReadinessItem(
+          label: l10n.mapArReadyChipLabel,
+          complete: hasAr,
+          icon: Icons.view_in_ar_outlined,
+        ),
+    ];
+
+    return ListView(
+      padding: EdgeInsets.zero,
+      children: [
+        DesktopCreatorSidebarSection(
+          title: l10n.collectionSettingsBasicInfo,
+          subtitle: l10n.commonEdit,
+          icon: Icons.fact_check_outlined,
+          child: DesktopCreatorReadinessChecklist(
+            items: readinessItems,
+          ),
+        ),
+        const SizedBox(height: KubusSpacing.md),
+        DesktopCreatorSidebarSection(
+          title: l10n.collectionDetailManage,
+          subtitle: l10n.commonSave,
+          icon: Icons.save_outlined,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              FilledButton.icon(
+                onPressed: _isSaving ? null : _save,
+                icon: _isSaving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: InlineLoading(tileSize: 6),
+                      )
+                    : const Icon(Icons.save),
+                label: Text(l10n.commonSave),
+              ),
+              const SizedBox(height: KubusSpacing.sm),
+              Text(
+                l10n.collectionSettingsCollaboration,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurface.withValues(alpha: 0.68),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   Future<void> _load() async {
@@ -523,11 +606,18 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
           CollaborationPanel(entityType: 'artworks', entityId: art.id),
           const SizedBox(height: DetailSpacing.lg),
         ],
-        FilledButton.icon(
-          onPressed: _isSaving ? null : _save,
-          icon: _isSaving ? const SizedBox(width: 18, height: 18, child: InlineLoading(tileSize: 6)) : const Icon(Icons.save),
-          label: Text(l10n.commonSave),
-        ),
+        if (!widget.embedded)
+          FilledButton.icon(
+            onPressed: _isSaving ? null : _save,
+            icon: _isSaving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: InlineLoading(tileSize: 6),
+                  )
+                : const Icon(Icons.save),
+            label: Text(l10n.commonSave),
+          ),
             ],
           );
 
@@ -545,6 +635,18 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
       content = Center(child: Text(l10n.artworkNotFound));
     } else {
       content = body!;
+    }
+
+    if (widget.embedded && art != null) {
+      final shellScope = DesktopShellScope.of(context);
+      return DesktopCreatorShell(
+        title: art.title.isNotEmpty ? art.title : l10n.commonEdit,
+        subtitle: l10n.collectionSettingsBasicInfo,
+        onBack: shellScope?.popScreen,
+        backTooltip: l10n.commonBack,
+        mainContent: content,
+        sidebar: _buildDesktopSidebar(l10n, art),
+      );
     }
 
     if (!widget.showAppBar) {

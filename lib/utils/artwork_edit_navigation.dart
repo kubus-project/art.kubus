@@ -35,7 +35,11 @@ Future<void> openArtworkEditor(
     shellScope.pushScreen(
       DesktopSubScreen(
         title: title,
-        child: ArtworkEditScreen(artworkId: id, showAppBar: false),
+        child: ArtworkEditScreen(
+          artworkId: id,
+          showAppBar: false,
+          embedded: true,
+        ),
       ),
     );
     return;

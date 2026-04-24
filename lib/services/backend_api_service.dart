@@ -1890,6 +1890,84 @@ class BackendApiService
   Map<String, dynamic>? _decodeResponseMap(http.Response response) =>
       _backendApiDecodeResponseMap(response);
 
+  Map<String, dynamic>? _extractResponseEntityMap(
+    dynamic payload, {
+    Iterable<String> preferredKeys = const <String>[],
+  }) {
+    if (payload is Map<String, dynamic>) {
+      for (final key in preferredKeys) {
+        final extracted = _extractResponseEntityMap(
+          payload[key],
+          preferredKeys: preferredKeys,
+        );
+        if (extracted != null) return extracted;
+      }
+
+      for (final alias in const <String>[
+        'data',
+        'item',
+        'result',
+        'payload',
+        'entity',
+      ]) {
+        final extracted = _extractResponseEntityMap(
+          payload[alias],
+          preferredKeys: preferredKeys,
+        );
+        if (extracted != null) return extracted;
+      }
+
+      if (payload.containsKey('id')) {
+        return payload;
+      }
+
+      for (final nested in payload.values) {
+        final extracted = _extractResponseEntityMap(
+          nested,
+          preferredKeys: preferredKeys,
+        );
+        if (extracted != null) return extracted;
+      }
+      return null;
+    }
+
+    if (payload is Map) {
+      return _extractResponseEntityMap(
+        Map<String, dynamic>.from(payload),
+        preferredKeys: preferredKeys,
+      );
+    }
+
+    if (payload is List) {
+      for (final item in payload) {
+        final extracted = _extractResponseEntityMap(
+          item,
+          preferredKeys: preferredKeys,
+        );
+        if (extracted != null) return extracted;
+      }
+    }
+
+    return null;
+  }
+
+  Map<String, dynamic>? _extractSuccessfulEntityMap(
+    http.Response response, {
+    Iterable<String> preferredKeys = const <String>[],
+  }) {
+    if (!_isSuccessStatus(response.statusCode)) return null;
+    if (response.body.isEmpty) return null;
+
+    final decoded = _decodeResponseMap(response);
+    if (decoded == null) return null;
+
+    return _extractResponseEntityMap(
+          decoded,
+          preferredKeys: preferredKeys,
+        ) ??
+        decoded;
+  }
+
 
   bool? _tryBoolValue(dynamic value) => _backendApiTryBoolValue(value);
 
@@ -4026,14 +4104,19 @@ class BackendApiService
       final uri = Uri.parse('$baseUrl/api/artworks/$artworkId');
       final response =
           await _put(uri, headers: _getHeaders(), body: jsonEncode(updates));
-      final decoded =
-          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 200) {
-        if (decoded is Map<String, dynamic>) {
-          final payload = decoded['data'] ?? decoded['artwork'] ?? decoded;
-          if (payload is Map<String, dynamic>) {
-            return parseArtworkFromBackendJson(payload);
-          }
+        final payload = _extractSuccessfulEntityMap(
+          response,
+          preferredKeys: const <String>['artwork'],
+        );
+        if (payload != null) {
+          return parseArtworkFromBackendJson(payload);
+        }
+        try {
+          return await getArtwork(artworkId);
+        } catch (_) {
+          // If the backend returned a successful status but an unexpected
+          // payload shape, keep the UI from reporting a false failure.
         }
         return null;
       }
@@ -4407,11 +4490,10 @@ class BackendApiService
       );
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        if (response.body.isEmpty) {
-          return null;
-        }
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final payload = data['data'] ?? data['artwork'] ?? data;
+        final payload = _extractSuccessfulEntityMap(
+          response,
+          preferredKeys: const <String>['artwork'],
+        );
         if (payload is Map<String, dynamic>) {
           return parseArtworkFromBackendJson(payload);
         }
@@ -6941,16 +7023,13 @@ class BackendApiService
       final uri = Uri.parse('$baseUrl/api/events');
       final response =
           await _post(uri, headers: _getHeaders(), body: jsonEncode(payload));
-      final decoded =
-          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 200 || response.statusCode == 201) {
-        if (decoded is Map<String, dynamic>) {
-          final data = decoded['data'] ?? decoded;
-          final eventRaw =
-              data is Map<String, dynamic> ? (data['event'] ?? data) : null;
-          if (eventRaw is Map<String, dynamic>) {
-            return KubusEvent.fromJson(eventRaw);
-          }
+        final eventRaw = _extractSuccessfulEntityMap(
+          response,
+          preferredKeys: const <String>['event'],
+        );
+        if (eventRaw != null) {
+          return KubusEvent.fromJson(eventRaw);
         }
         return null;
       }
@@ -6974,16 +7053,19 @@ class BackendApiService
           headers: _getHeaders(),
           body: jsonEncode(updates),
           isIdempotent: true);
-      final decoded =
-          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 200) {
-        if (decoded is Map<String, dynamic>) {
-          final data = decoded['data'] ?? decoded;
-          final eventRaw =
-              data is Map<String, dynamic> ? (data['event'] ?? data) : null;
-          if (eventRaw is Map<String, dynamic>) {
-            return KubusEvent.fromJson(eventRaw);
-          }
+        final eventRaw = _extractSuccessfulEntityMap(
+          response,
+          preferredKeys: const <String>['event'],
+        );
+        if (eventRaw != null) {
+          return KubusEvent.fromJson(eventRaw);
+        }
+        try {
+          return await getEvent(id);
+        } catch (_) {
+          // Keep save flows from surfacing a false failure if the update
+          // succeeded but the response payload shape was unexpected.
         }
         return null;
       }
@@ -7174,17 +7256,13 @@ class BackendApiService
       final uri = Uri.parse('$baseUrl/api/exhibitions');
       final response =
           await _post(uri, headers: _getHeaders(), body: jsonEncode(payload));
-      final decoded =
-          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 200 || response.statusCode == 201) {
-        if (decoded is Map<String, dynamic>) {
-          final data = decoded['data'] ?? decoded;
-          final exhibitionRaw = data is Map<String, dynamic>
-              ? (data['exhibition'] ?? data)
-              : null;
-          if (exhibitionRaw is Map<String, dynamic>) {
-            return Exhibition.fromJson(exhibitionRaw);
-          }
+        final exhibitionRaw = _extractSuccessfulEntityMap(
+          response,
+          preferredKeys: const <String>['exhibition'],
+        );
+        if (exhibitionRaw != null) {
+          return Exhibition.fromJson(exhibitionRaw);
         }
         return null;
       }
@@ -7223,17 +7301,19 @@ class BackendApiService
           headers: _getHeaders(),
           body: jsonEncode(updates),
           isIdempotent: true);
-      final decoded =
-          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 200) {
-        if (decoded is Map<String, dynamic>) {
-          final data = decoded['data'] ?? decoded;
-          final exhibitionRaw = data is Map<String, dynamic>
-              ? (data['exhibition'] ?? data)
-              : null;
-          if (exhibitionRaw is Map<String, dynamic>) {
-            return Exhibition.fromJson(exhibitionRaw);
-          }
+        final exhibitionRaw = _extractSuccessfulEntityMap(
+          response,
+          preferredKeys: const <String>['exhibition'],
+        );
+        if (exhibitionRaw != null) {
+          return Exhibition.fromJson(exhibitionRaw);
+        }
+        try {
+          return await getExhibition(id);
+        } catch (_) {
+          // A successful update should still behave like success even if the
+          // backend returned a slightly unexpected response envelope.
         }
         return null;
       }
@@ -7412,17 +7492,13 @@ class BackendApiService
         headers: _getHeaders(),
         body: jsonEncode({'invited': invitedIdentifier, 'role': role}),
       );
-      final decoded =
-          response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (_isSuccessStatus(response.statusCode)) {
-        if (decoded is Map<String, dynamic>) {
-          final payload = decoded['data'] ?? decoded;
-          final inviteRaw = payload is Map<String, dynamic>
-              ? (payload['invite'] ?? payload)
-              : null;
-          if (inviteRaw is Map<String, dynamic>) {
-            return CollabInvite.fromJson(inviteRaw);
-          }
+        final inviteRaw = _extractSuccessfulEntityMap(
+          response,
+          preferredKeys: const <String>['invite'],
+        );
+        if (inviteRaw != null) {
+          return CollabInvite.fromJson(inviteRaw);
         }
         return null;
       }
@@ -7966,8 +8042,13 @@ class BackendApiService
       );
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
-        return jsonData['data'] as Map<String, dynamic>;
+        final payload = _extractSuccessfulEntityMap(
+              response,
+              preferredKeys: const <String>['collection'],
+            ) ??
+            _decodeResponseMap(response) ??
+            const <String, dynamic>{};
+        return payload;
       } else {
         throw Exception('Failed to create collection: ${response.statusCode}');
       }
@@ -8016,16 +8097,13 @@ class BackendApiService
       );
 
       if (response.statusCode == 200) {
-        final jsonData =
-            response.body.isNotEmpty ? jsonDecode(response.body) : null;
-        if (jsonData is Map<String, dynamic>) {
-          final data = jsonData['data'];
-          if (data is Map<String, dynamic>) {
-            return data;
-          }
-          return jsonData;
-        }
-        return const <String, dynamic>{};
+        final payload = _extractSuccessfulEntityMap(
+              response,
+              preferredKeys: const <String>['collection'],
+            ) ??
+            _decodeResponseMap(response) ??
+            const <String, dynamic>{};
+        return payload;
       }
       throw Exception(
           'Failed to update collection: ${response.statusCode} ${response.body}');
