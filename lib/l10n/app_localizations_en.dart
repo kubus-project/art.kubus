@@ -129,6 +129,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonNavigate => 'Navigate';
 
   @override
+  String get commonFree => 'Free';
+
+  @override
   String get commonOpenOnMap => 'Open on map';
 
   @override
@@ -5732,6 +5735,183 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get artworkDetailMintNft => 'Mint as NFT';
+
+  @override
+  String get eventCreatorNoInstitutionAvailableMessage => 'No institution is available for this event yet.';
+
+  @override
+  String get eventCreatorInstitutionLabel => 'Institution';
+
+  @override
+  String get eventCreatorSelectDateLabel => 'Select date';
+
+  @override
+  String get eventCreatorSelectTimeLabel => 'Select time';
+
+  @override
+  String get eventCreatorNotSelectedLabel => 'Not selected';
+
+  @override
+  String get eventCreatorEventTypeWorkshop => 'Workshop';
+
+  @override
+  String get eventCreatorEventTypeTalk => 'Talk';
+
+  @override
+  String get eventCreatorEventTypePerformance => 'Performance';
+
+  @override
+  String get eventCreatorEventTypeConference => 'Conference';
+
+  @override
+  String get eventCreatorEventTypeGalleryOpening => 'Gallery opening';
+
+  @override
+  String get eventCreatorEventTypeAuction => 'Auction';
+
+  @override
+  String get eventCreatorEventTypeExhibition => 'Exhibition';
+
+  @override
+  String get eventCreatorCategoryDigitalArt => 'Digital art';
+
+  @override
+  String get eventCreatorCategoryPhotography => 'Photography';
+
+  @override
+  String get eventCreatorCategorySculpture => 'Sculpture';
+
+  @override
+  String get eventCreatorCategoryMixedMedia => 'Mixed media';
+
+  @override
+  String get eventCreatorCategoryInstallation => 'Installation';
+
+  @override
+  String get eventCreatorCategoryArt => 'Art';
+
+  @override
+  String get eventCreatorHelpTitle => 'Event creator help';
+
+  @override
+  String get eventCreatorHelpBody => 'Fill in the basics, choose the date and time, then review everything before saving. Collaboration unlocks after the event is created.';
+
+  @override
+  String get eventCreatorCapacityLabel => 'Capacity';
+
+  @override
+  String get eventCreatorCapacityHint => 'Enter capacity';
+
+  @override
+  String get eventCreatorCapacityRequiredError => 'Event capacity is required';
+
+  @override
+  String get eventCreatorPriceLabel => 'Price';
+
+  @override
+  String get eventCreatorPriceHint => 'Optional ticket price';
+
+  @override
+  String get eventCreatorPublicEventTitle => 'Public event';
+
+  @override
+  String get eventCreatorPublicEventSubtitle => 'Make this event visible to everyone';
+
+  @override
+  String get eventCreatorAllowRegistrationTitle => 'Allow registration';
+
+  @override
+  String get eventCreatorAllowRegistrationSubtitle => 'Let attendees register for this event';
+
+  @override
+  String get eventCreatorReviewTitle => 'Review';
+
+  @override
+  String get eventCreatorSavedCollaborationHint => 'Event saved. You can now manage collaboration from the sidebar.';
+
+  @override
+  String get eventCreatorReviewNotice => 'Please review all details before saving.';
+
+  @override
+  String get eventCreatorBasicsTitle => 'Basics';
+
+  @override
+  String get eventCreatorTitleHint => 'Enter event title';
+
+  @override
+  String get eventCreatorTitleRequiredError => 'Event title is required';
+
+  @override
+  String get eventCreatorDescriptionHint => 'Describe the event...';
+
+  @override
+  String get eventCreatorDescriptionRequiredError => 'Event description is required';
+
+  @override
+  String get eventCreatorTitleLabel => 'Title';
+
+  @override
+  String get eventCreatorDescriptionPlaceholder => 'Describe the event...';
+
+  @override
+  String get eventCreatorEventTypeLabel => 'Event type';
+
+  @override
+  String get eventCreatorCategoryLabel => 'Category';
+
+  @override
+  String get eventCreatorDateTimeTitle => 'Date & time';
+
+  @override
+  String get eventCreatorStartDateLabel => 'Start date';
+
+  @override
+  String get eventCreatorStartTimeLabel => 'Start time';
+
+  @override
+  String get eventCreatorEndDateLabel => 'End date';
+
+  @override
+  String get eventCreatorEndTimeLabel => 'End time';
+
+  @override
+  String get eventCreatorLocationHint => 'Enter event location';
+
+  @override
+  String get eventCreatorLocationRequiredError => 'Event location is required';
+
+  @override
+  String get eventCreatorDetailsTitle => 'Details';
+
+  @override
+  String get eventCreatorReviewTypeLabel => 'Type';
+
+  @override
+  String get eventCreatorReviewCategoryLabel => 'Category';
+
+  @override
+  String get eventCreatorReviewLocationLabel => 'Location';
+
+  @override
+  String get eventCreatorLocationLabel => 'Location';
+
+  @override
+  String get eventCreatorReviewDateLabel => 'Date';
+
+  @override
+  String get eventCreatorReviewTimeLabel => 'Time';
+
+  @override
+  String get eventCreatorReviewCapacityLabel => 'Capacity';
+
+  @override
+  String get eventCreatorReviewPriceLabel => 'Price';
+
+  @override
+  String get eventCreatorReviewPublicLabel => 'Public';
+
+  @override
+  String get eventCreatorReviewRegistrationLabel => 'Registration';
 
   @override
   String get eventCreatorSelectStartEndDatesToast => 'Please select start and end dates';

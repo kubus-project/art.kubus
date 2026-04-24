@@ -17,12 +17,15 @@ import '../../utils/artwork_media_resolver.dart';
 import '../../utils/artwork_navigation.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/wallet_utils.dart';
+import '../../widgets/common/subject_options_sheet.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/common/keyboard_inset_padding.dart';
 import '../../config/config.dart';
 import '../../utils/design_tokens.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import '../desktop/desktop_shell.dart';
+import 'collection_settings_screen.dart';
 
 class CollectionDetailScreen extends StatefulWidget {
   final String collectionId;
@@ -95,24 +98,9 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                 ),
               ),
               IconButton(
-                tooltip: l10n.commonShare,
-                onPressed: () {
-                  ShareService().showShareSheet(
-                    context,
-                    target: ShareTarget.collection(
-                      collectionId: widget.collectionId,
-                      title: name,
-                    ),
-                    sourceScreen: 'collection_detail',
-                  );
-                },
-                icon: const Icon(Icons.share_outlined),
-              ),
-              if (canEdit)
-                IconButton(
-                  tooltip: l10n.commonEdit,
-                  onPressed: () => _openEditor(collection),
-                  icon: const Icon(Icons.edit),
+                tooltip: l10n.commonActions,
+                onPressed: () => _showCollectionOptions(collection, canEdit),
+                icon: const Icon(Icons.more_horiz),
                 ),
             ],
           ),
@@ -160,19 +148,117 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
   }
 
   Future<void> _openEditor(CollectionRecord collection) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(KubusRadius.xl)),
-      ),
-      builder: (_) => _CollectionEditSheet(
-        collectionId: collection.id,
-        initialCollection: collection,
+    final shellScope = DesktopShellScope.of(context);
+    if (shellScope != null) {
+      shellScope.pushScreen(
+        DesktopSubScreen(
+          title: AppLocalizations.of(context)!.collectionSettingsTitle,
+          child: CollectionSettingsScreen(
+            collectionId: collection.id,
+            collectionIndex: -1,
+            collectionName: collection.name,
+            embedded: true,
+          ),
+        ),
+      );
+      return;
+    }
+
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CollectionSettingsScreen(
+          collectionId: collection.id,
+          collectionIndex: -1,
+          collectionName: collection.name,
+        ),
       ),
     );
+  }
+
+  Future<void> _showCollectionOptions(
+    CollectionRecord collection,
+    bool canEdit,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    await showSubjectOptionsSheet(
+      context: context,
+      title: collection.name,
+      subtitle: l10n.collectionSettingsTitle,
+      actions: [
+        if (canEdit)
+          SubjectOptionsAction(
+            id: 'edit',
+            icon: Icons.edit_outlined,
+            label: l10n.commonEdit,
+            onSelected: () => _openEditor(collection),
+          ),
+        SubjectOptionsAction(
+          id: 'share',
+          icon: Icons.share_outlined,
+          label: l10n.commonShare,
+          onSelected: () {
+            ShareService().showShareSheet(
+              context,
+              target: ShareTarget.collection(
+                collectionId: collection.id,
+                title: collection.name,
+              ),
+              sourceScreen: 'collection_detail',
+            );
+          },
+        ),
+        if (canEdit)
+          SubjectOptionsAction(
+            id: 'delete',
+            icon: Icons.delete_outline,
+            label: l10n.commonDelete,
+            isDestructive: true,
+            onSelected: () => _deleteCollection(collection),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _deleteCollection(CollectionRecord collection) async {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final collectionsProvider = context.read<CollectionsProvider>();
+    final confirmed = await showKubusDialog<bool>(
+      context: context,
+      builder: (dialogContext) => KubusAlertDialog(
+        backgroundColor: scheme.surfaceContainerHighest,
+        title: Text(l10n.collectionSettingsDeleteDialogTitle),
+        content: Text(
+          l10n.collectionSettingsDeleteDialogContent(collection.name),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.commonCancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: scheme.error),
+            child: Text(l10n.commonDelete),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await collectionsProvider.deleteCollection(collection.id);
+      if (!mounted) return;
+      Navigator.of(context).maybePop();
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(l10n.collectionSettingsDeletedToast)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(l10n.commonActionFailedToast)),
+      );
+    }
   }
 
   @override

@@ -335,6 +335,12 @@ abstract class AppLocalizations {
   /// **'Navigate'**
   String get commonNavigate;
 
+  /// No description provided for @commonFree.
+  ///
+  /// In en, this message translates to:
+  /// **'Free'**
+  String get commonFree;
+
   /// Label for an action that opens the in-app map centered on the current item (artwork/event/exhibition).
   ///
   /// In en, this message translates to:
@@ -11008,6 +11014,360 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Mint as NFT'**
   String get artworkDetailMintNft;
+
+  /// No description provided for @eventCreatorNoInstitutionAvailableMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'No institution is available for this event yet.'**
+  String get eventCreatorNoInstitutionAvailableMessage;
+
+  /// No description provided for @eventCreatorInstitutionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution'**
+  String get eventCreatorInstitutionLabel;
+
+  /// No description provided for @eventCreatorSelectDateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Select date'**
+  String get eventCreatorSelectDateLabel;
+
+  /// No description provided for @eventCreatorSelectTimeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Select time'**
+  String get eventCreatorSelectTimeLabel;
+
+  /// No description provided for @eventCreatorNotSelectedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Not selected'**
+  String get eventCreatorNotSelectedLabel;
+
+  /// No description provided for @eventCreatorEventTypeWorkshop.
+  ///
+  /// In en, this message translates to:
+  /// **'Workshop'**
+  String get eventCreatorEventTypeWorkshop;
+
+  /// No description provided for @eventCreatorEventTypeTalk.
+  ///
+  /// In en, this message translates to:
+  /// **'Talk'**
+  String get eventCreatorEventTypeTalk;
+
+  /// No description provided for @eventCreatorEventTypePerformance.
+  ///
+  /// In en, this message translates to:
+  /// **'Performance'**
+  String get eventCreatorEventTypePerformance;
+
+  /// No description provided for @eventCreatorEventTypeConference.
+  ///
+  /// In en, this message translates to:
+  /// **'Conference'**
+  String get eventCreatorEventTypeConference;
+
+  /// No description provided for @eventCreatorEventTypeGalleryOpening.
+  ///
+  /// In en, this message translates to:
+  /// **'Gallery opening'**
+  String get eventCreatorEventTypeGalleryOpening;
+
+  /// No description provided for @eventCreatorEventTypeAuction.
+  ///
+  /// In en, this message translates to:
+  /// **'Auction'**
+  String get eventCreatorEventTypeAuction;
+
+  /// No description provided for @eventCreatorEventTypeExhibition.
+  ///
+  /// In en, this message translates to:
+  /// **'Exhibition'**
+  String get eventCreatorEventTypeExhibition;
+
+  /// No description provided for @eventCreatorCategoryDigitalArt.
+  ///
+  /// In en, this message translates to:
+  /// **'Digital art'**
+  String get eventCreatorCategoryDigitalArt;
+
+  /// No description provided for @eventCreatorCategoryPhotography.
+  ///
+  /// In en, this message translates to:
+  /// **'Photography'**
+  String get eventCreatorCategoryPhotography;
+
+  /// No description provided for @eventCreatorCategorySculpture.
+  ///
+  /// In en, this message translates to:
+  /// **'Sculpture'**
+  String get eventCreatorCategorySculpture;
+
+  /// No description provided for @eventCreatorCategoryMixedMedia.
+  ///
+  /// In en, this message translates to:
+  /// **'Mixed media'**
+  String get eventCreatorCategoryMixedMedia;
+
+  /// No description provided for @eventCreatorCategoryInstallation.
+  ///
+  /// In en, this message translates to:
+  /// **'Installation'**
+  String get eventCreatorCategoryInstallation;
+
+  /// No description provided for @eventCreatorCategoryArt.
+  ///
+  /// In en, this message translates to:
+  /// **'Art'**
+  String get eventCreatorCategoryArt;
+
+  /// No description provided for @eventCreatorHelpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Event creator help'**
+  String get eventCreatorHelpTitle;
+
+  /// No description provided for @eventCreatorHelpBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill in the basics, choose the date and time, then review everything before saving. Collaboration unlocks after the event is created.'**
+  String get eventCreatorHelpBody;
+
+  /// No description provided for @eventCreatorCapacityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Capacity'**
+  String get eventCreatorCapacityLabel;
+
+  /// No description provided for @eventCreatorCapacityHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter capacity'**
+  String get eventCreatorCapacityHint;
+
+  /// No description provided for @eventCreatorCapacityRequiredError.
+  ///
+  /// In en, this message translates to:
+  /// **'Event capacity is required'**
+  String get eventCreatorCapacityRequiredError;
+
+  /// No description provided for @eventCreatorPriceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Price'**
+  String get eventCreatorPriceLabel;
+
+  /// No description provided for @eventCreatorPriceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional ticket price'**
+  String get eventCreatorPriceHint;
+
+  /// No description provided for @eventCreatorPublicEventTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Public event'**
+  String get eventCreatorPublicEventTitle;
+
+  /// No description provided for @eventCreatorPublicEventSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Make this event visible to everyone'**
+  String get eventCreatorPublicEventSubtitle;
+
+  /// No description provided for @eventCreatorAllowRegistrationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow registration'**
+  String get eventCreatorAllowRegistrationTitle;
+
+  /// No description provided for @eventCreatorAllowRegistrationSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Let attendees register for this event'**
+  String get eventCreatorAllowRegistrationSubtitle;
+
+  /// No description provided for @eventCreatorReviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review'**
+  String get eventCreatorReviewTitle;
+
+  /// No description provided for @eventCreatorSavedCollaborationHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Event saved. You can now manage collaboration from the sidebar.'**
+  String get eventCreatorSavedCollaborationHint;
+
+  /// No description provided for @eventCreatorReviewNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Please review all details before saving.'**
+  String get eventCreatorReviewNotice;
+
+  /// No description provided for @eventCreatorBasicsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Basics'**
+  String get eventCreatorBasicsTitle;
+
+  /// No description provided for @eventCreatorTitleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter event title'**
+  String get eventCreatorTitleHint;
+
+  /// No description provided for @eventCreatorTitleRequiredError.
+  ///
+  /// In en, this message translates to:
+  /// **'Event title is required'**
+  String get eventCreatorTitleRequiredError;
+
+  /// No description provided for @eventCreatorDescriptionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe the event...'**
+  String get eventCreatorDescriptionHint;
+
+  /// No description provided for @eventCreatorDescriptionRequiredError.
+  ///
+  /// In en, this message translates to:
+  /// **'Event description is required'**
+  String get eventCreatorDescriptionRequiredError;
+
+  /// No description provided for @eventCreatorTitleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get eventCreatorTitleLabel;
+
+  /// No description provided for @eventCreatorDescriptionPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe the event...'**
+  String get eventCreatorDescriptionPlaceholder;
+
+  /// No description provided for @eventCreatorEventTypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Event type'**
+  String get eventCreatorEventTypeLabel;
+
+  /// No description provided for @eventCreatorCategoryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get eventCreatorCategoryLabel;
+
+  /// No description provided for @eventCreatorDateTimeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Date & time'**
+  String get eventCreatorDateTimeTitle;
+
+  /// No description provided for @eventCreatorStartDateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Start date'**
+  String get eventCreatorStartDateLabel;
+
+  /// No description provided for @eventCreatorStartTimeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Start time'**
+  String get eventCreatorStartTimeLabel;
+
+  /// No description provided for @eventCreatorEndDateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'End date'**
+  String get eventCreatorEndDateLabel;
+
+  /// No description provided for @eventCreatorEndTimeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'End time'**
+  String get eventCreatorEndTimeLabel;
+
+  /// No description provided for @eventCreatorLocationHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter event location'**
+  String get eventCreatorLocationHint;
+
+  /// No description provided for @eventCreatorLocationRequiredError.
+  ///
+  /// In en, this message translates to:
+  /// **'Event location is required'**
+  String get eventCreatorLocationRequiredError;
+
+  /// No description provided for @eventCreatorDetailsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get eventCreatorDetailsTitle;
+
+  /// No description provided for @eventCreatorReviewTypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get eventCreatorReviewTypeLabel;
+
+  /// No description provided for @eventCreatorReviewCategoryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get eventCreatorReviewCategoryLabel;
+
+  /// No description provided for @eventCreatorReviewLocationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get eventCreatorReviewLocationLabel;
+
+  /// No description provided for @eventCreatorLocationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get eventCreatorLocationLabel;
+
+  /// No description provided for @eventCreatorReviewDateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get eventCreatorReviewDateLabel;
+
+  /// No description provided for @eventCreatorReviewTimeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Time'**
+  String get eventCreatorReviewTimeLabel;
+
+  /// No description provided for @eventCreatorReviewCapacityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Capacity'**
+  String get eventCreatorReviewCapacityLabel;
+
+  /// No description provided for @eventCreatorReviewPriceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Price'**
+  String get eventCreatorReviewPriceLabel;
+
+  /// No description provided for @eventCreatorReviewPublicLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Public'**
+  String get eventCreatorReviewPublicLabel;
+
+  /// No description provided for @eventCreatorReviewRegistrationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Registration'**
+  String get eventCreatorReviewRegistrationLabel;
 
   /// No description provided for @eventCreatorSelectStartEndDatesToast.
   ///

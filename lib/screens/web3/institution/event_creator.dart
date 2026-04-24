@@ -49,8 +49,8 @@ class _EventCreatorState extends State<EventCreator>
   DateTime? _endDate;
   TimeOfDay? _startTime;
   TimeOfDay? _endTime;
-  String _eventType = 'Exhibition';
-  String _category = 'Art';
+  String _eventType = 'exhibition';
+  String _category = 'art';
   bool _isPublic = true;
   bool _allowRegistration = true;
   int _currentStep = 0;
@@ -99,8 +99,8 @@ class _EventCreatorState extends State<EventCreator>
           initial.endDate.year, initial.endDate.month, initial.endDate.day);
       _startTime = TimeOfDay.fromDateTime(initial.startDate);
       _endTime = TimeOfDay.fromDateTime(initial.endDate);
-      _eventType = _eventTypeLabel(initial.type);
-      _category = _categoryLabel(initial.category);
+      _eventType = _eventTypeCode(initial.type);
+      _category = _categoryCode(initial.category);
       _isPublic = initial.isPublic;
       _allowRegistration = initial.allowRegistration;
     }
@@ -426,6 +426,7 @@ class _EventCreatorState extends State<EventCreator>
   }
 
   Widget _buildBasicInfoStep() {
+    final l10n = AppLocalizations.of(context)!;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(KubusSpacing.lg),
       child: Form(
@@ -433,17 +434,17 @@ class _EventCreatorState extends State<EventCreator>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionTitle('Basic Information'),
+              _buildSectionTitle(l10n.eventCreatorBasicsTitle),
             const SizedBox(height: KubusSpacing.lg),
             _buildInstitutionSelector(),
             const SizedBox(height: KubusSpacing.md),
             _buildTextField(
               controller: _titleController,
-              label: 'Event Title',
-              hint: 'Enter event title',
+              label: l10n.eventCreatorTitleLabel,
+              hint: l10n.eventCreatorTitleHint,
               validator: (value) {
                 if (value?.isEmpty ?? true) {
-                  return 'Please enter event title';
+                  return l10n.eventCreatorTitleRequiredError;
                 }
                 return null;
               },
@@ -451,40 +452,30 @@ class _EventCreatorState extends State<EventCreator>
             const SizedBox(height: KubusSpacing.md),
             _buildTextField(
               controller: _descriptionController,
-              label: 'Description',
-              hint: 'Describe your event',
+              label: l10n.commonDescription,
+              hint: l10n.eventCreatorDescriptionHint,
               maxLines: 4,
               validator: (value) {
                 if (value?.isEmpty ?? true) {
-                  return 'Please enter event description';
+                  return l10n.eventCreatorDescriptionRequiredError;
                 }
                 return null;
               },
             ),
             const SizedBox(height: KubusSpacing.md),
             _buildDropdown(
-              label: 'Event Type',
+              label: l10n.eventCreatorEventTypeLabel,
               value: _eventType,
-              items: [
-                'Exhibition',
-                'Workshop',
-                'Talk',
-                'Performance',
-                'Conference'
-              ],
+              items: _eventTypeOptions(),
+              itemLabelBuilder: (code) => _eventTypeLabel(code, l10n),
               onChanged: (value) => setState(() => _eventType = value!),
             ),
             const SizedBox(height: KubusSpacing.md),
             _buildDropdown(
-              label: 'Category',
+              label: l10n.eventCreatorCategoryLabel,
               value: _category,
-              items: [
-                'Art',
-                'Digital Art',
-                'Photography',
-                'Sculpture',
-                'Mixed Media'
-              ],
+              items: _categoryOptions(),
+              itemLabelBuilder: (code) => _categoryLabel(code, l10n),
               onChanged: (value) => setState(() => _category = value!),
             ),
           ],
@@ -494,18 +485,19 @@ class _EventCreatorState extends State<EventCreator>
   }
 
   Widget _buildDateTimeStep() {
+    final l10n = AppLocalizations.of(context)!;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(KubusSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionTitle('Date & Time'),
+          _buildSectionTitle(l10n.eventCreatorDateTimeTitle),
           const SizedBox(height: KubusSpacing.lg),
           Row(
             children: [
               Expanded(
                 child: _buildDateField(
-                  label: 'Start Date',
+                  label: l10n.eventCreatorStartDateLabel,
                   date: _startDate,
                   onTap: () => _selectDate(true),
                 ),
@@ -513,7 +505,7 @@ class _EventCreatorState extends State<EventCreator>
               const SizedBox(width: KubusSpacing.md),
               Expanded(
                 child: _buildTimeField(
-                  label: 'Start Time',
+                  label: l10n.eventCreatorStartTimeLabel,
                   time: _startTime,
                   onTap: () => _selectTime(true),
                 ),
@@ -525,7 +517,7 @@ class _EventCreatorState extends State<EventCreator>
             children: [
               Expanded(
                 child: _buildDateField(
-                  label: 'End Date',
+                  label: l10n.eventCreatorEndDateLabel,
                   date: _endDate,
                   onTap: () => _selectDate(false),
                 ),
@@ -533,7 +525,7 @@ class _EventCreatorState extends State<EventCreator>
               const SizedBox(width: KubusSpacing.md),
               Expanded(
                 child: _buildTimeField(
-                  label: 'End Time',
+                  label: l10n.eventCreatorEndTimeLabel,
                   time: _endTime,
                   onTap: () => _selectTime(false),
                 ),
@@ -543,11 +535,11 @@ class _EventCreatorState extends State<EventCreator>
           const SizedBox(height: KubusSpacing.lg),
           _buildTextField(
             controller: _locationController,
-            label: 'Location',
-            hint: 'Enter venue or location',
+            label: l10n.eventCreatorLocationLabel,
+            hint: l10n.eventCreatorLocationHint,
             validator: (value) {
               if (value?.isEmpty ?? true) {
-                return 'Please enter location';
+                return l10n.eventCreatorLocationRequiredError;
               }
               return null;
             },
@@ -558,24 +550,25 @@ class _EventCreatorState extends State<EventCreator>
   }
 
   Widget _buildDetailsStep() {
+    final l10n = AppLocalizations.of(context)!;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(KubusSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionTitle('Event Details'),
+          _buildSectionTitle(l10n.eventCreatorDetailsTitle),
           const SizedBox(height: KubusSpacing.lg),
           Row(
             children: [
               Expanded(
                 child: _buildTextField(
                   controller: _capacityController,
-                  label: 'Capacity',
-                  hint: 'Maximum attendees',
+                  label: l10n.eventCreatorCapacityLabel,
+                  hint: l10n.eventCreatorCapacityHint,
                   keyboardType: TextInputType.number,
                   validator: (value) {
                     if (value?.isEmpty ?? true) {
-                      return 'Please enter capacity';
+                      return l10n.eventCreatorCapacityRequiredError;
                     }
                     return null;
                   },
@@ -585,8 +578,8 @@ class _EventCreatorState extends State<EventCreator>
               Expanded(
                 child: _buildTextField(
                   controller: _priceController,
-                  label: 'Price (\$)',
-                  hint: '0.00',
+                  label: l10n.eventCreatorPriceLabel,
+                  hint: l10n.eventCreatorPriceHint,
                   keyboardType: TextInputType.number,
                 ),
               ),
@@ -594,16 +587,16 @@ class _EventCreatorState extends State<EventCreator>
           ),
           const SizedBox(height: KubusSpacing.lg),
           CreatorSwitchTile(
-            title: 'Public Event',
-            subtitle: 'Allow public discovery and registration',
+            title: l10n.eventCreatorPublicEventTitle,
+            subtitle: l10n.eventCreatorPublicEventSubtitle,
             value: _isPublic,
             onChanged: (value) => setState(() => _isPublic = value),
             activeColor: KubusColorRoles.of(context).web3InstitutionAccent,
           ),
           const SizedBox(height: KubusSpacing.md),
           CreatorSwitchTile(
-            title: 'Allow Registration',
-            subtitle: 'Enable online registration for this event',
+            title: l10n.eventCreatorAllowRegistrationTitle,
+            subtitle: l10n.eventCreatorAllowRegistrationSubtitle,
             value: _allowRegistration,
             onChanged: (value) => setState(() => _allowRegistration = value),
             activeColor: KubusColorRoles.of(context).web3InstitutionAccent,
@@ -614,25 +607,25 @@ class _EventCreatorState extends State<EventCreator>
   }
 
   Widget _buildReviewStep() {
+    final l10n = AppLocalizations.of(context)!;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(KubusSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionTitle('Review & Confirm'),
+          _buildSectionTitle(l10n.eventCreatorReviewTitle),
           const SizedBox(height: KubusSpacing.lg),
           _buildReviewCard(),
           if (_createdEvent != null) ...[
             const SizedBox(height: KubusSpacing.lg),
             CreatorInfoBox(
-              text:
-                  'Event saved. Collaboration is available in the sidebar, and you can keep refining the wizard if needed.',
+              text: l10n.eventCreatorSavedCollaborationHint,
               icon: Icons.check_circle_outline,
             ),
           ],
           const SizedBox(height: KubusSpacing.lg),
           CreatorInfoBox(
-            text: 'Your event will be reviewed and published within 24 hours.',
+            text: l10n.eventCreatorReviewNotice,
             icon: Icons.info_outline,
           ),
         ],
@@ -641,6 +634,7 @@ class _EventCreatorState extends State<EventCreator>
   }
 
   Widget _buildReviewCard() {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     return LiquidGlassCard(
       padding: const EdgeInsets.all(KubusSpacing.md + KubusSpacing.xs),
@@ -651,7 +645,7 @@ class _EventCreatorState extends State<EventCreator>
           Text(
             _titleController.text.isNotEmpty
                 ? _titleController.text
-                : 'Event Title',
+                : l10n.eventCreatorTitleLabel,
             style: KubusTextStyles.screenTitle.copyWith(
               color: scheme.onSurface,
             ),
@@ -660,34 +654,37 @@ class _EventCreatorState extends State<EventCreator>
           Text(
             _descriptionController.text.isNotEmpty
                 ? _descriptionController.text
-                : 'Event Description',
+              : l10n.eventCreatorDescriptionPlaceholder,
             style: KubusTextStyles.detailBody.copyWith(
               color: scheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: KubusSpacing.md),
-          _buildReviewItem('Type', _eventType),
-          _buildReviewItem('Category', _category),
+            _buildReviewItem(l10n.eventCreatorReviewTypeLabel, _eventTypeLabel(_eventType, l10n)),
+            _buildReviewItem(l10n.eventCreatorReviewCategoryLabel, _categoryLabel(_category, l10n)),
           _buildReviewItem(
-              'Location',
+              l10n.eventCreatorReviewLocationLabel,
               _locationController.text.isNotEmpty
                   ? _locationController.text
-                  : 'Location'),
-          _buildReviewItem('Date', _formatDateRange()),
-          _buildReviewItem('Time', _formatTimeRange()),
+                : l10n.eventCreatorLocationLabel),
+            _buildReviewItem(l10n.eventCreatorReviewDateLabel, _formatDateRange(l10n)),
+            _buildReviewItem(l10n.eventCreatorReviewTimeLabel, _formatTimeRange(l10n)),
           _buildReviewItem(
-              'Capacity',
+              l10n.eventCreatorReviewCapacityLabel,
               _capacityController.text.isNotEmpty
                   ? _capacityController.text
-                  : '0'),
+                : '0'),
           _buildReviewItem(
-              'Price',
+              l10n.eventCreatorReviewPriceLabel,
               _priceController.text.isNotEmpty
                   ? '\$${_priceController.text}'
-                  : 'Free'),
-          _buildReviewItem('Public', _isPublic ? 'Yes' : 'No'),
+                : l10n.commonFree),
+            _buildReviewItem(
+              l10n.eventCreatorReviewPublicLabel,
+              _isPublic ? l10n.commonEnabled : l10n.commonDisabled),
           _buildReviewItem(
-              'Registration', _allowRegistration ? 'Enabled' : 'Disabled'),
+              l10n.eventCreatorReviewRegistrationLabel,
+              _allowRegistration ? l10n.commonEnabled : l10n.commonDisabled),
         ],
       ),
     );
@@ -786,6 +783,7 @@ class _EventCreatorState extends State<EventCreator>
   Widget _buildInstitutionSelector() {
     return Consumer<InstitutionProvider>(
       builder: (context, provider, _) {
+        final l10n = AppLocalizations.of(context)!;
         final scheme = Theme.of(context).colorScheme;
         final institutions = provider.institutions;
         if (institutions.isEmpty) {
@@ -803,7 +801,7 @@ class _EventCreatorState extends State<EventCreator>
                 const SizedBox(width: KubusSpacing.sm),
                 Expanded(
                   child: Text(
-                    'No institutions available. Load or create an institution first.',
+                    l10n.eventCreatorNoInstitutionAvailableMessage,
                     style: KubusTextStyles.detailLabel.copyWith(
                       color: scheme.onSurface.withValues(alpha: 0.8),
                     ),
@@ -829,7 +827,7 @@ class _EventCreatorState extends State<EventCreator>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Institution',
+              l10n.eventCreatorInstitutionLabel,
               style: KubusTextStyles.detailLabel.copyWith(
                 color: scheme.onSurface,
               ),
@@ -873,6 +871,7 @@ class _EventCreatorState extends State<EventCreator>
     required String label,
     required String value,
     required List<String> items,
+    required String Function(String) itemLabelBuilder,
     required void Function(String?) onChanged,
   }) {
     final scheme = Theme.of(context).colorScheme;
@@ -904,7 +903,7 @@ class _EventCreatorState extends State<EventCreator>
             items: items.map((item) {
               return DropdownMenuItem<String>(
                 value: item,
-                child: Text(item),
+                child: Text(itemLabelBuilder(item)),
               );
             }).toList(),
             onChanged: onChanged,
@@ -946,8 +945,8 @@ class _EventCreatorState extends State<EventCreator>
                 const SizedBox(width: KubusSpacing.sm),
                 Text(
                   date != null
-                      ? '${date.day}/${date.month}/${date.year}'
-                      : 'Select date',
+                      ? MaterialLocalizations.of(context).formatShortDate(date)
+                      : AppLocalizations.of(context)!.eventCreatorSelectDateLabel,
                   style: TextStyle(
                     color: date != null
                         ? scheme.onSurface
@@ -993,7 +992,9 @@ class _EventCreatorState extends State<EventCreator>
                     color: scheme.onSurface.withValues(alpha: 0.6), size: 16),
                 const SizedBox(width: KubusSpacing.sm),
                 Text(
-                  time != null ? time.format(context) : 'Select time',
+                  time != null
+                      ? time.format(context)
+                      : AppLocalizations.of(context)!.eventCreatorSelectTimeLabel,
                   style: TextStyle(
                     color: time != null
                         ? scheme.onSurface
@@ -1011,6 +1012,7 @@ class _EventCreatorState extends State<EventCreator>
   Widget _buildNavigationButtons() {
     final scheme = Theme.of(context).colorScheme;
     final accent = KubusColorRoles.of(context).web3InstitutionAccent;
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.all(KubusSpacing.lg),
       child: Row(
@@ -1028,7 +1030,7 @@ class _EventCreatorState extends State<EventCreator>
                   ),
                 ),
                 child: Text(
-                  'Previous',
+                  l10n.commonBack,
                   style: KubusTextStyles.detailButton.copyWith(
                     color: scheme.onSurface,
                   ),
@@ -1048,7 +1050,7 @@ class _EventCreatorState extends State<EventCreator>
                 ),
               ),
               child: Text(
-                _currentStep < 3 ? 'Next' : 'Create Event',
+                _currentStep < 3 ? l10n.commonNext : l10n.commonCreate,
                 style: KubusTextStyles.detailButton.copyWith(
                   color: scheme.onSurface,
                 ),
@@ -1131,9 +1133,6 @@ class _EventCreatorState extends State<EventCreator>
       return;
     }
 
-    if (_submitting) return;
-    setState(() => _submitting = true);
-
     final startTime = _startTime ?? const TimeOfDay(hour: 10, minute: 0);
     final endTime = _endTime ?? const TimeOfDay(hour: 12, minute: 0);
 
@@ -1147,6 +1146,9 @@ class _EventCreatorState extends State<EventCreator>
       );
       return;
     }
+
+    if (_submitting) return;
+    setState(() => _submitting = true);
 
     final priceText = _priceController.text.trim();
     final capacityText = _capacityController.text.trim();
@@ -1265,8 +1267,8 @@ class _EventCreatorState extends State<EventCreator>
       _endDate = null;
       _startTime = null;
       _endTime = null;
-      _eventType = 'Exhibition';
-      _category = 'Art';
+      _eventType = 'exhibition';
+      _category = 'art';
       _isPublic = true;
       _allowRegistration = true;
     });
@@ -1306,111 +1308,171 @@ class _EventCreatorState extends State<EventCreator>
     }
   }
 
-  String _formatDateRange() {
-    if (_startDate == null || _endDate == null) return 'Not selected';
+  String _formatDateRange(AppLocalizations l10n) {
+    if (_startDate == null || _endDate == null) return l10n.eventCreatorNotSelectedLabel;
+    final localizations = MaterialLocalizations.of(context);
     if (_startDate == _endDate) {
-      return '${_startDate!.day}/${_startDate!.month}/${_startDate!.year}';
+      return localizations.formatShortDate(_startDate!);
     }
-    return '${_startDate!.day}/${_startDate!.month}/${_startDate!.year} - ${_endDate!.day}/${_endDate!.month}/${_endDate!.year}';
+    return '${localizations.formatShortDate(_startDate!)} - ${localizations.formatShortDate(_endDate!)}';
   }
 
-  String _formatTimeRange() {
-    if (_startTime == null || _endTime == null) return 'Not selected';
+  String _formatTimeRange(AppLocalizations l10n) {
+    if (_startTime == null || _endTime == null) return l10n.eventCreatorNotSelectedLabel;
     return '${_startTime!.format(context)} - ${_endTime!.format(context)}';
   }
 
-  EventType _parseEventType(String label) {
-    switch (label.toLowerCase()) {
-      case 'exhibition':
-        return EventType.exhibition;
+  EventType _parseEventType(String code) {
+    switch (code.toLowerCase()) {
       case 'workshop':
         return EventType.workshop;
+      case 'conference':
+      case 'talk':
+        return EventType.conference;
       case 'performance':
         return EventType.performance;
-      case 'talk':
-      case 'conference':
-        return EventType.conference;
+      case 'gallery_opening':
+        return EventType.galleryOpening;
+      case 'auction':
+        return EventType.auction;
+      case 'exhibition':
       default:
         return EventType.exhibition;
     }
   }
 
-  EventCategory _parseEventCategory(String label) {
-    switch (label.toLowerCase()) {
+  EventCategory _parseEventCategory(String code) {
+    switch (code.toLowerCase()) {
       case 'art':
         return EventCategory.art;
-      case 'digital art':
+      case 'digital_art':
       case 'digital':
         return EventCategory.digital;
       case 'photography':
         return EventCategory.photography;
       case 'sculpture':
         return EventCategory.sculpture;
-      case 'mixed media':
+      case 'mixed_media':
       case 'mixedmedia':
         return EventCategory.mixedMedia;
+      case 'installation':
+        return EventCategory.installation;
       default:
         return EventCategory.art;
     }
   }
 
-  String _eventTypeLabel(EventType type) {
+  String _eventTypeCode(EventType type) {
     switch (type) {
       case EventType.exhibition:
-        return 'Exhibition';
+        return 'exhibition';
       case EventType.workshop:
-        return 'Workshop';
+        return 'workshop';
       case EventType.conference:
-        return 'Conference';
+        return 'conference';
       case EventType.performance:
-        return 'Performance';
+        return 'performance';
       case EventType.galleryOpening:
-        return 'Gallery Opening';
+        return 'gallery_opening';
       case EventType.auction:
-        return 'Auction';
+        return 'auction';
     }
   }
 
-  String _categoryLabel(EventCategory category) {
+  String _categoryCode(EventCategory category) {
     switch (category) {
       case EventCategory.art:
-        return 'Art';
+        return 'art';
       case EventCategory.photography:
-        return 'Photography';
+        return 'photography';
       case EventCategory.sculpture:
-        return 'Sculpture';
+        return 'sculpture';
       case EventCategory.digital:
-        return 'Digital Art';
+        return 'digital_art';
       case EventCategory.mixedMedia:
-        return 'Mixed Media';
+        return 'mixed_media';
       case EventCategory.installation:
-        return 'Installation';
+        return 'installation';
+    }
+  }
+
+  List<String> _eventTypeOptions() => const <String>[
+        'exhibition',
+        'workshop',
+        'talk',
+        'performance',
+        'conference',
+        'gallery_opening',
+        'auction',
+      ];
+
+  List<String> _categoryOptions() => const <String>[
+        'art',
+        'digital_art',
+        'photography',
+        'sculpture',
+        'mixed_media',
+        'installation',
+      ];
+
+  String _eventTypeLabel(String code, AppLocalizations l10n) {
+    switch (code) {
+      case 'workshop':
+        return l10n.eventCreatorEventTypeWorkshop;
+      case 'talk':
+        return l10n.eventCreatorEventTypeTalk;
+      case 'performance':
+        return l10n.eventCreatorEventTypePerformance;
+      case 'conference':
+        return l10n.eventCreatorEventTypeConference;
+      case 'gallery_opening':
+        return l10n.eventCreatorEventTypeGalleryOpening;
+      case 'auction':
+        return l10n.eventCreatorEventTypeAuction;
+      case 'exhibition':
+      default:
+        return l10n.eventCreatorEventTypeExhibition;
+    }
+  }
+
+  String _categoryLabel(String code, AppLocalizations l10n) {
+    switch (code) {
+      case 'digital_art':
+        return l10n.eventCreatorCategoryDigitalArt;
+      case 'photography':
+        return l10n.eventCreatorCategoryPhotography;
+      case 'sculpture':
+        return l10n.eventCreatorCategorySculpture;
+      case 'mixed_media':
+        return l10n.eventCreatorCategoryMixedMedia;
+      case 'installation':
+        return l10n.eventCreatorCategoryInstallation;
+      case 'art':
+      default:
+        return l10n.eventCreatorCategoryArt;
     }
   }
 
   void _showHelp() {
+    final l10n = AppLocalizations.of(context)!;
     showKubusDialog(
       context: context,
       builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-        title: Text('Event Creation Help',
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+        title: Text(
+          l10n.eventCreatorHelpTitle,
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+        ),
         content: Text(
-          'Follow the 4-step process to create your event:\n\n'
-          '1. Basic Info: Enter title, description, and type\n'
-          '2. Date & Time: Set when your event occurs\n'
-          '3. Details: Configure capacity, pricing, and settings\n'
-          '4. Review: Confirm all details before creating',
+          l10n.eventCreatorHelpBody,
           style: TextStyle(
-              color: Theme.of(context)
-                  .colorScheme
-                  .onPrimary
-                  .withValues(alpha: 0.7)),
+            color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Got it'),
+            child: Text(l10n.commonGotIt),
           ),
         ],
       ),

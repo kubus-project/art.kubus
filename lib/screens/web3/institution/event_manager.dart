@@ -5,9 +5,12 @@ import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
 import '../../../models/institution.dart';
 import '../../../providers/institution_provider.dart';
+import '../../../providers/profile_provider.dart';
+import '../../../providers/web3provider.dart';
 import '../../desktop/desktop_shell.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
+import '../../../utils/wallet_utils.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/creator/creator_kit.dart';
@@ -352,7 +355,7 @@ class _EventManagerState extends State<EventManager>
               ),
               const SizedBox(width: KubusSpacing.sm),
               Text(
-                event.formattedPrice,
+                _formatPrice(event.price, l10n),
                 style: KubusTextStyles.detailLabel.copyWith(
                   fontWeight: FontWeight.bold,
                   color: KubusColorRoles.of(context).web3InstitutionAccent,
@@ -422,7 +425,12 @@ class _EventManagerState extends State<EventManager>
   }
 
   String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
+    return MaterialLocalizations.of(context).formatShortDate(date);
+  }
+
+  String _formatPrice(double? price, AppLocalizations l10n) {
+    if (price == null || price == 0) return l10n.commonFree;
+    return '\$${price.toStringAsFixed(2)}';
   }
 
   List<Event> _getFilteredEvents(List<Event> events) {
@@ -448,21 +456,23 @@ class _EventManagerState extends State<EventManager>
 
   Future<void> _showEventOptions(Event event) async {
     final l10n = AppLocalizations.of(context)!;
+    final canManage = _canManageEvent(event);
     await showSubjectOptionsSheet(
       context: context,
       title: event.title,
       subtitle: l10n.eventManagerOptionsSubtitle,
       actions: [
-        SubjectOptionsAction(
-          id: 'edit',
-          icon: Icons.edit_outlined,
-          label: l10n.commonEdit,
-          onSelected: () => _editEvent(event),
-        ),
+        if (canManage)
+          SubjectOptionsAction(
+            id: 'edit',
+            icon: Icons.edit_outlined,
+            label: l10n.commonEdit,
+            onSelected: () => _editEvent(event),
+          ),
         SubjectOptionsAction(
           id: 'view',
           icon: Icons.visibility_outlined,
-          label: l10n.commonView,
+          label: l10n.commonViewDetails,
           onSelected: () => _viewEvent(event),
         ),
         SubjectOptionsAction(
@@ -471,15 +481,31 @@ class _EventManagerState extends State<EventManager>
           label: l10n.commonShare,
           onSelected: () => _shareEvent(event),
         ),
-        SubjectOptionsAction(
-          id: 'delete',
-          icon: Icons.delete_outline,
-          label: l10n.commonDelete,
-          isDestructive: true,
-          onSelected: () => _deleteEvent(event),
-        ),
+        if (canManage)
+          SubjectOptionsAction(
+            id: 'delete',
+            icon: Icons.delete_outline,
+            label: l10n.commonDelete,
+            isDestructive: true,
+            onSelected: () => _deleteEvent(event),
+          ),
       ],
     );
+  }
+
+  bool _canManageEvent(Event event) {
+    final createdBy = event.createdBy.trim().toLowerCase();
+    if (createdBy.isEmpty || createdBy == 'local_user') return true;
+
+    final profileProvider = context.read<ProfileProvider>();
+    final web3Provider = context.read<Web3Provider>();
+    final wallet = WalletUtils.coalesce(
+      walletAddress: profileProvider.currentUser?.walletAddress,
+      wallet: web3Provider.walletAddress,
+    );
+    final normalizedWallet = WalletUtils.canonical(wallet);
+    return normalizedWallet.isNotEmpty &&
+        WalletUtils.equals(normalizedWallet, event.createdBy);
   }
 
   void _showNotifications() {
@@ -694,7 +720,7 @@ class _EventManagerState extends State<EventManager>
                   style: KubusTextStyles.detailBody.copyWith(
                     color: scheme.onSurface.withValues(alpha: 0.8),
                   )),
-              Text('${l10n.commonPrice}: ${event.formattedPrice}',
+              Text('${l10n.commonPrice}: ${_formatPrice(event.price, l10n)}',
                   style: KubusTextStyles.detailBody.copyWith(
                     color: scheme.onSurface.withValues(alpha: 0.8),
                   )),

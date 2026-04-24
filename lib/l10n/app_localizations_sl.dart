@@ -129,6 +129,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get commonNavigate => 'Navigiraj';
 
   @override
+  String get commonFree => 'Brezplačno';
+
+  @override
   String get commonOpenOnMap => 'Odpri na zemljevidu';
 
   @override
@@ -5746,6 +5749,183 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get artworkDetailMintNft => 'Izdaj kot NFT';
+
+  @override
+  String get eventCreatorNoInstitutionAvailableMessage => 'Za ta dogodek še ni na voljo institucije.';
+
+  @override
+  String get eventCreatorInstitutionLabel => 'Institucija';
+
+  @override
+  String get eventCreatorSelectDateLabel => 'Izberi datum';
+
+  @override
+  String get eventCreatorSelectTimeLabel => 'Izberi čas';
+
+  @override
+  String get eventCreatorNotSelectedLabel => 'Ni izbrano';
+
+  @override
+  String get eventCreatorEventTypeWorkshop => 'Delavnica';
+
+  @override
+  String get eventCreatorEventTypeTalk => 'Pogovor';
+
+  @override
+  String get eventCreatorEventTypePerformance => 'Nastop';
+
+  @override
+  String get eventCreatorEventTypeConference => 'Konferenca';
+
+  @override
+  String get eventCreatorEventTypeGalleryOpening => 'Otvoritev galerije';
+
+  @override
+  String get eventCreatorEventTypeAuction => 'Aukcija';
+
+  @override
+  String get eventCreatorEventTypeExhibition => 'Razstava';
+
+  @override
+  String get eventCreatorCategoryDigitalArt => 'Digitalna umetnost';
+
+  @override
+  String get eventCreatorCategoryPhotography => 'Fotografija';
+
+  @override
+  String get eventCreatorCategorySculpture => 'Skulptura';
+
+  @override
+  String get eventCreatorCategoryMixedMedia => 'Mešana tehnika';
+
+  @override
+  String get eventCreatorCategoryInstallation => 'Instalacija';
+
+  @override
+  String get eventCreatorCategoryArt => 'Umetnost';
+
+  @override
+  String get eventCreatorHelpTitle => 'Pomoč za ustvarjanje dogodka';
+
+  @override
+  String get eventCreatorHelpBody => 'Izpolni osnove, izberi datum in čas ter preveri povzetek pred shranjevanjem. Sodelovanje se odklene po ustvaritvi dogodka.';
+
+  @override
+  String get eventCreatorCapacityLabel => 'Kapaciteta';
+
+  @override
+  String get eventCreatorCapacityHint => 'Vnesi kapaciteto';
+
+  @override
+  String get eventCreatorCapacityRequiredError => 'Kapaciteta dogodka je obvezna';
+
+  @override
+  String get eventCreatorPriceLabel => 'Cena';
+
+  @override
+  String get eventCreatorPriceHint => 'Neobvezna cena vstopnice';
+
+  @override
+  String get eventCreatorPublicEventTitle => 'Javni dogodek';
+
+  @override
+  String get eventCreatorPublicEventSubtitle => 'Prikaži dogodek vsem';
+
+  @override
+  String get eventCreatorAllowRegistrationTitle => 'Dovoli prijavo';
+
+  @override
+  String get eventCreatorAllowRegistrationSubtitle => 'Omogoči prijavo udeležencev na dogodek';
+
+  @override
+  String get eventCreatorReviewTitle => 'Pregled';
+
+  @override
+  String get eventCreatorSavedCollaborationHint => 'Dogodek je shranjen. Sodelovanje lahko zdaj urejaš iz stranske vrstice.';
+
+  @override
+  String get eventCreatorReviewNotice => 'Pred shranjevanjem preveri vse podrobnosti.';
+
+  @override
+  String get eventCreatorBasicsTitle => 'Osnove';
+
+  @override
+  String get eventCreatorTitleHint => 'Vnesi naslov dogodka';
+
+  @override
+  String get eventCreatorTitleRequiredError => 'Naslov dogodka je obvezen';
+
+  @override
+  String get eventCreatorDescriptionHint => 'Opiši dogodek...';
+
+  @override
+  String get eventCreatorDescriptionRequiredError => 'Opis dogodka je obvezen';
+
+  @override
+  String get eventCreatorTitleLabel => 'Naslov';
+
+  @override
+  String get eventCreatorDescriptionPlaceholder => 'Opiši dogodek...';
+
+  @override
+  String get eventCreatorEventTypeLabel => 'Tip dogodka';
+
+  @override
+  String get eventCreatorCategoryLabel => 'Kategorija';
+
+  @override
+  String get eventCreatorDateTimeTitle => 'Datum in čas';
+
+  @override
+  String get eventCreatorStartDateLabel => 'Začetni datum';
+
+  @override
+  String get eventCreatorStartTimeLabel => 'Začetni čas';
+
+  @override
+  String get eventCreatorEndDateLabel => 'Končni datum';
+
+  @override
+  String get eventCreatorEndTimeLabel => 'Končni čas';
+
+  @override
+  String get eventCreatorLocationHint => 'Vnesi lokacijo dogodka';
+
+  @override
+  String get eventCreatorLocationRequiredError => 'Lokacija dogodka je obvezna';
+
+  @override
+  String get eventCreatorDetailsTitle => 'Podrobnosti';
+
+  @override
+  String get eventCreatorReviewTypeLabel => 'Tip';
+
+  @override
+  String get eventCreatorReviewCategoryLabel => 'Kategorija';
+
+  @override
+  String get eventCreatorReviewLocationLabel => 'Lokacija';
+
+  @override
+  String get eventCreatorLocationLabel => 'Lokacija';
+
+  @override
+  String get eventCreatorReviewDateLabel => 'Datum';
+
+  @override
+  String get eventCreatorReviewTimeLabel => 'Čas';
+
+  @override
+  String get eventCreatorReviewCapacityLabel => 'Kapaciteta';
+
+  @override
+  String get eventCreatorReviewPriceLabel => 'Cena';
+
+  @override
+  String get eventCreatorReviewPublicLabel => 'Javno';
+
+  @override
+  String get eventCreatorReviewRegistrationLabel => 'Prijava';
 
   @override
   String get eventCreatorSelectStartEndDatesToast => 'Prosim, izberi začetni in končni datum';
