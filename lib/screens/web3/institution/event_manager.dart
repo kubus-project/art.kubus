@@ -671,12 +671,9 @@ class _EventManagerState extends State<EventManager>
     final shellScope = DesktopShellScope.of(context);
     if (shellScope != null) {
       shellScope.pushScreen(
-        DesktopSubScreen(
-          title: event.title,
-          child: EventCreator(
-            initialEvent: event,
-            embedded: true,
-          ),
+        EventCreator(
+          initialEvent: event,
+          embedded: true,
         ),
       );
       return;
@@ -711,12 +708,12 @@ class _EventManagerState extends State<EventManager>
                     color: scheme.onSurface.withValues(alpha: 0.8),
                   )),
               const SizedBox(height: KubusSpacing.sm),
-              Text('${l10n.exhibitionCreatorLocationLabel}: ${event.location}',
+              Text('${l10n.eventCreatorLocationLabel}: ${event.location}',
                   style: KubusTextStyles.detailBody.copyWith(
                     color: scheme.onSurface.withValues(alpha: 0.8),
                   )),
               Text(
-                  '${l10n.exhibitionCreatorScheduleTitle}: ${_formatDate(event.startDate)} - ${_formatDate(event.endDate)}',
+                  '${l10n.eventCreatorDateTimeTitle}: ${_formatDate(event.startDate)} - ${_formatDate(event.endDate)}',
                   style: KubusTextStyles.detailBody.copyWith(
                     color: scheme.onSurface.withValues(alpha: 0.8),
                   )),

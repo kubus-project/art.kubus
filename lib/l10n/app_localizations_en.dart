@@ -5725,6 +5725,73 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artDetailLoadFailedMessage => 'Failed to load artwork details. Please try again.';
 
   @override
+  String get artDetailArStatusReady => 'AR: Ready';
+
+  @override
+  String get artDetailArStatusDraft => 'AR: Draft';
+
+  @override
+  String get artDetailArStatusNeedsAttention => 'AR: Needs attention';
+
+  @override
+  String get artDetailArStatusNotSet => 'AR: Not set';
+
+  @override
+  String get artDetailScanArAction => 'Scan AR';
+
+  @override
+  String get artDetailFinishArSetupAction => 'Finish AR setup';
+
+  @override
+  String artDetailNavigateToTitle(Object title) {
+    return 'Navigate to $title';
+  }
+
+  @override
+  String get artDetailNavigationGoogleMaps => 'Google Maps';
+
+  @override
+  String get artDetailNavigationAppleMaps => 'Apple Maps';
+
+  @override
+  String get artDetailNavigationOtherMaps => 'Other Maps';
+
+  @override
+  String get artDetailNavigationCopyCoordinates => 'Copy coordinates';
+
+  @override
+  String get artDetailNavigationCouldNotOpenGoogleMaps => 'Could not open Google Maps';
+
+  @override
+  String get artDetailNavigationCouldNotOpenAppleMaps => 'Could not open Apple Maps';
+
+  @override
+  String get artDetailNavigationCouldNotOpenMaps => 'Could not open maps application';
+
+  @override
+  String artDetailNavigationErrorOpeningGoogleMaps(Object error) {
+    return 'Error opening Google Maps: $error';
+  }
+
+  @override
+  String artDetailNavigationErrorOpeningAppleMaps(Object error) {
+    return 'Error opening Apple Maps: $error';
+  }
+
+  @override
+  String artDetailNavigationErrorOpeningMaps(Object error) {
+    return 'Error opening maps: $error';
+  }
+
+  @override
+  String artDetailCoordinatesCopiedToast(Object coordinates) {
+    return 'Coordinates copied to clipboard: $coordinates';
+  }
+
+  @override
+  String get artDetailNavigationErrorTitle => 'Navigation error';
+
+  @override
   String get artworkDetailLike => 'Like';
 
   @override
@@ -6210,6 +6277,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artistGalleryDeleteArtworkTitle => 'Delete artwork';
 
   @override
+  String get artistGalleryPromoteUnavailableToast => 'Only active public artworks can be promoted.';
+
+  @override
   String artistGalleryDeleteConfirmBody(Object title) {
     return 'Are you sure you want to delete \"$title\"? This action cannot be undone.';
   }
@@ -6496,6 +6566,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get desktopArtistStudioPromoteProfileSubtitle => 'Boost profile visibility with priority placement';
 
   @override
+  String get desktopArtistStudioCreatorWorkspaceSubtitle => 'Open a dedicated creator workspace and stay in flow.';
+
+  @override
   String get desktopArtistStudioMyProfile => 'my profile';
 
   @override
@@ -6557,6 +6630,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get desktopInstitutionPromoteProfileSubtitle => 'Boost institution visibility with priority placement';
+
+  @override
+  String get desktopInstitutionCreatorWorkspaceSubtitle => 'Launch institution creator workspaces as dedicated desktop flows.';
 
   @override
   String get desktopInstitutionCreateEventTitle => 'Create Event';

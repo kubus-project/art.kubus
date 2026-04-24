@@ -17,6 +17,7 @@ import '../../../utils/design_tokens.dart';
 import '../../art/collection_detail_screen.dart';
 import '../../events/exhibition_detail_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import '../../../widgets/common/subject_options_sheet.dart';
 import '../../../widgets/promotion/promotion_builder_sheet.dart';
 
 bool _artworkCanBePromoted(Artwork artwork) =>
@@ -436,11 +437,13 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
                 ),
               ),
               const SizedBox(width: KubusSpacing.xs + KubusSpacing.xxs),
-              _EntryMenu(
-                entry: entry,
-                canPromote: artwork != null && _artworkCanBePromoted(artwork),
-                onSelected: (action) =>
-                    _handleAction(context, provider, entry, action),
+              IconButton(
+                tooltip: l10n.commonMore,
+                onPressed: () => _showEntryOptionsSheet(context, provider, entry),
+                icon: Icon(
+                  Icons.more_horiz,
+                  color: scheme.onSurface.withValues(alpha: 0.75),
+                ),
               ),
             ],
           ),
@@ -453,9 +456,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
       PortfolioProvider provider) async {
     switch (entry.type) {
       case PortfolioEntryType.artwork:
-        final artwork = provider.artworkById(entry.id);
-        if (artwork == null) return;
-        await _showArtworkActionsSheet(context, provider, artwork);
+        await _showEntryOptionsSheet(context, provider, entry);
         return;
       case PortfolioEntryType.collection:
         await Navigator.of(context).push(
@@ -483,8 +484,8 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
 
-    // Handle non-artwork edit first so we don't trip the async context lint.
-    if (action == 'edit' && entry.type != PortfolioEntryType.artwork) {
+    // Handle non-artwork open action first so we don't trip the async context lint.
+    if (action == 'open' && entry.type != PortfolioEntryType.artwork) {
       await _openEntry(context, entry, provider);
       return;
     }
@@ -527,11 +528,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
       case 'promote':
         if (!_artworkCanBePromoted(artwork)) {
           messenger.showKubusSnackBar(
-            const SnackBar(
-              content: Text(
-                'Only active public artworks can be promoted.',
-              ),
-            ),
+            SnackBar(content: Text(l10n.artistGalleryPromoteUnavailableToast)),
           );
           return;
         }
@@ -543,6 +540,76 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
         );
         return;
     }
+  }
+
+  Future<void> _showEntryOptionsSheet(
+    BuildContext context,
+    PortfolioProvider provider,
+    PortfolioEntry entry,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    final artwork = entry.type == PortfolioEntryType.artwork
+        ? provider.artworkById(entry.id)
+        : null;
+
+    final actions = <SubjectOptionsAction>[];
+    if (entry.type == PortfolioEntryType.artwork) {
+      if (artwork == null) return;
+      final isPublished = artwork.isPublic;
+      actions.addAll([
+        SubjectOptionsAction(
+          id: 'edit',
+          icon: Icons.edit_outlined,
+          label: l10n.commonEdit,
+          onSelected: () => _handleAction(context, provider, entry, 'edit'),
+        ),
+        SubjectOptionsAction(
+          id: isPublished ? 'unpublish' : 'publish',
+          icon: isPublished ? Icons.visibility_off_outlined : Icons.publish_outlined,
+          label: isPublished ? l10n.commonUnpublish : l10n.commonPublish,
+          onSelected: () => _handleAction(
+            context,
+            provider,
+            entry,
+            isPublished ? 'unpublish' : 'publish',
+          ),
+        ),
+        if (_artworkCanBePromoted(artwork))
+          SubjectOptionsAction(
+            id: 'promote',
+            icon: Icons.campaign_outlined,
+            label: l10n.eventDetailPromoteLabel,
+            onSelected: () => _handleAction(context, provider, entry, 'promote'),
+          ),
+        SubjectOptionsAction(
+          id: 'delete',
+          icon: Icons.delete_outline,
+          label: l10n.commonDelete,
+          isDestructive: true,
+          onSelected: () => _handleAction(context, provider, entry, 'delete'),
+        ),
+      ]);
+    } else {
+      actions.add(
+        SubjectOptionsAction(
+          id: 'open',
+          icon: Icons.visibility_outlined,
+          label: l10n.commonViewDetails,
+          onSelected: () => _handleAction(context, provider, entry, 'open'),
+        ),
+      );
+    }
+
+    await showSubjectOptionsSheet(
+      context: context,
+      title: entry.title,
+      subtitle: entry.type == PortfolioEntryType.artwork
+          ? l10n.userProfileArtworksTitle
+          : (entry.type == PortfolioEntryType.collection
+              ? l10n.userProfileCollectionsTitle
+              : l10n.artistStudioTabExhibitions),
+      actions: actions,
+    );
   }
 
   Future<bool?> _confirmDeleteArtwork(BuildContext context, String title) {
@@ -563,80 +630,6 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
               child: Text(l10n.commonDelete),
             ),
           ],
-        );
-      },
-    );
-  }
-
-  Future<void> _showArtworkActionsSheet(
-    BuildContext context,
-    PortfolioProvider provider,
-    Artwork artwork,
-  ) async {
-    final l10n = AppLocalizations.of(context)!;
-
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (sheetContext) {
-        final isPublished = artwork.isPublic;
-        return SafeArea(
-          child: ListView(
-            shrinkWrap: true,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.edit),
-                title: Text(l10n.commonEdit),
-                onTap: () {
-                  Navigator.of(sheetContext).pop();
-                  openArtworkEditor(context, artwork.id,
-                      source: 'artist_portfolio_sheet');
-                },
-              ),
-              ListTile(
-                leading:
-                    Icon(isPublished ? Icons.visibility_off : Icons.visibility),
-                title: Text(isPublished
-                    ? l10n.exhibitionCreatorPublishDraft
-                    : l10n.exhibitionCreatorPublishTitle),
-                onTap: () async {
-                  Navigator.of(sheetContext).pop();
-                  await _runPublishActionWithGuard(
-                    context: context,
-                    provider: provider,
-                    artworkId: artwork.id,
-                    publish: !isPublished,
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.delete_outline),
-                title: Text(l10n.commonDelete),
-                onTap: () async {
-                  Navigator.of(sheetContext).pop();
-                  final confirmed =
-                      await _confirmDeleteArtwork(context, artwork.title);
-                  if (confirmed == true) {
-                    await provider.deleteArtwork(artwork.id);
-                  }
-                },
-              ),
-              if (_artworkCanBePromoted(artwork))
-                ListTile(
-                  leading: const Icon(Icons.campaign_outlined),
-                  title: const Text('Promote this artwork'),
-                  onTap: () async {
-                    Navigator.of(sheetContext).pop();
-                    await showPromotionBuilderSheet(
-                      context: context,
-                      entityType: PromotionEntityType.artwork,
-                      entityId: artwork.id,
-                      entityLabel: artwork.title,
-                    );
-                  },
-                ),
-            ],
-          ),
         );
       },
     );
@@ -703,52 +696,6 @@ class _CoverThumb extends StatelessWidget {
                 color: scheme.onSurface.withValues(alpha: 0.45),
               ),
       ),
-    );
-  }
-}
-
-class _EntryMenu extends StatelessWidget {
-  final PortfolioEntry entry;
-  final bool canPromote;
-  final ValueChanged<String> onSelected;
-
-  const _EntryMenu({
-    required this.entry,
-    required this.canPromote,
-    required this.onSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
-    return PopupMenuButton<String>(
-      onSelected: onSelected,
-      itemBuilder: (context) {
-        final items = <PopupMenuEntry<String>>[
-          PopupMenuItem(value: 'edit', child: Text(l10n.commonEdit)),
-        ];
-
-        if (entry.type == PortfolioEntryType.artwork) {
-          if (entry.isPublished) {
-            items.add(PopupMenuItem(
-                value: 'unpublish',
-                child: Text(l10n.exhibitionCreatorPublishDraft)));
-          } else {
-            items.add(PopupMenuItem(
-                value: 'publish',
-                child: Text(l10n.exhibitionCreatorPublishTitle)));
-          }
-          if (canPromote) {
-            items.add(
-                const PopupMenuItem(value: 'promote', child: Text('Promote')));
-          }
-          items.add(
-              PopupMenuItem(value: 'delete', child: Text(l10n.commonDelete)));
-        }
-
-        return items;
-      },
     );
   }
 }

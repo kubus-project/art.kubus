@@ -394,8 +394,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                 section == DesktopArtistStudioSection.create)
               _buildCreatorWorkspaceLaunchCard(
                 title: l10n.desktopArtistStudioQuickActionsTitle,
-                subtitle:
-                    'Open a dedicated creator workspace and stay in flow.',
+                subtitle: l10n.desktopArtistStudioCreatorWorkspaceSubtitle,
                 accent: roles.web3ArtistStudioAccent,
                 children: [
                   FilledButton.tonalIcon(

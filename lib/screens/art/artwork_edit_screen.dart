@@ -396,8 +396,13 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
       final updated = await provider.updateArtwork(widget.artworkId, updates);
       if (!mounted) return;
 
-      if (updated == null) {
-        messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));
+      final resolved = updated ?? await provider.refreshArtwork(widget.artworkId);
+      if (!mounted) return;
+
+      if (resolved == null) {
+        messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.commonActionFailedToast)),
+        );
         setState(() => _isSaving = false);
         return;
       }

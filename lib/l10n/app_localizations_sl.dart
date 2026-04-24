@@ -5739,6 +5739,73 @@ class AppLocalizationsSl extends AppLocalizations {
   String get artDetailLoadFailedMessage => 'Nalaganje podrobnosti umetnine ni uspelo. Poskusi znova.';
 
   @override
+  String get artDetailArStatusReady => 'AR: pripravljeno';
+
+  @override
+  String get artDetailArStatusDraft => 'AR: osnutek';
+
+  @override
+  String get artDetailArStatusNeedsAttention => 'AR: potrebna pozornost';
+
+  @override
+  String get artDetailArStatusNotSet => 'AR: ni nastavljeno';
+
+  @override
+  String get artDetailScanArAction => 'Skeniraj AR';
+
+  @override
+  String get artDetailFinishArSetupAction => 'Dokončaj AR nastavitev';
+
+  @override
+  String artDetailNavigateToTitle(Object title) {
+    return 'Navigiraj do $title';
+  }
+
+  @override
+  String get artDetailNavigationGoogleMaps => 'Google Zemljevidi';
+
+  @override
+  String get artDetailNavigationAppleMaps => 'Apple Zemljevidi';
+
+  @override
+  String get artDetailNavigationOtherMaps => 'Drugi zemljevidi';
+
+  @override
+  String get artDetailNavigationCopyCoordinates => 'Kopiraj koordinate';
+
+  @override
+  String get artDetailNavigationCouldNotOpenGoogleMaps => 'Google Zemljevidov ni bilo mogoče odpreti';
+
+  @override
+  String get artDetailNavigationCouldNotOpenAppleMaps => 'Apple Zemljevidov ni bilo mogoče odpreti';
+
+  @override
+  String get artDetailNavigationCouldNotOpenMaps => 'Aplikacije zemljevidov ni bilo mogoče odpreti';
+
+  @override
+  String artDetailNavigationErrorOpeningGoogleMaps(Object error) {
+    return 'Napaka pri odpiranju Google Zemljevidov: $error';
+  }
+
+  @override
+  String artDetailNavigationErrorOpeningAppleMaps(Object error) {
+    return 'Napaka pri odpiranju Apple Zemljevidov: $error';
+  }
+
+  @override
+  String artDetailNavigationErrorOpeningMaps(Object error) {
+    return 'Napaka pri odpiranju zemljevidov: $error';
+  }
+
+  @override
+  String artDetailCoordinatesCopiedToast(Object coordinates) {
+    return 'Koordinate so kopirane v odložišče: $coordinates';
+  }
+
+  @override
+  String get artDetailNavigationErrorTitle => 'Napaka navigacije';
+
+  @override
   String get artworkDetailLike => 'Všečkaj';
 
   @override
@@ -6226,6 +6293,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get artistGalleryDeleteArtworkTitle => 'Izbriši umetnino';
 
   @override
+  String get artistGalleryPromoteUnavailableToast => 'Promovirati je mogoče le aktivne javne umetnine.';
+
+  @override
   String artistGalleryDeleteConfirmBody(Object title) {
     return 'Ali si prepričan/a, da želiš izbrisati \"$title\"? Tega dejanja ni mogoče razveljaviti.';
   }
@@ -6512,6 +6582,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get desktopArtistStudioPromoteProfileSubtitle => 'Povečaj vidnost profila s prednostno umestitvijo';
 
   @override
+  String get desktopArtistStudioCreatorWorkspaceSubtitle => 'Odpri namenski ustvarjalni delovni prostor in ostani v toku dela.';
+
+  @override
   String get desktopArtistStudioMyProfile => 'moj profil';
 
   @override
@@ -6573,6 +6646,9 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get desktopInstitutionPromoteProfileSubtitle => 'Povečaj vidnost institucije s prednostno umestitvijo';
+
+  @override
+  String get desktopInstitutionCreatorWorkspaceSubtitle => 'Zaženi ustvarjalne delovne prostore institucije kot namenske namizne tokove.';
 
   @override
   String get desktopInstitutionCreateEventTitle => 'Ustvari dogodek';

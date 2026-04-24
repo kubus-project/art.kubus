@@ -301,8 +301,19 @@ class ArtworkProvider extends ChangeNotifier {
       final updated = await _backendApi.updateArtwork(id, updates);
       if (updated != null) {
         addOrUpdateArtwork(updated);
+        return updated;
       }
-      return updated;
+      try {
+        final refreshed = await _backendApi.getArtwork(id);
+        addOrUpdateArtwork(refreshed);
+        return refreshed;
+      } catch (_) {
+        final cached = getArtworkById(id);
+        if (cached != null) {
+          return cached;
+        }
+      }
+      return null;
     } catch (e) {
       _setError('Failed to update artwork: $e');
       return null;

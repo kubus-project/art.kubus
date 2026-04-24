@@ -515,15 +515,16 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   }
 
   String _arStatusLabel(ArtworkArStatus status) {
+    final l10n = AppLocalizations.of(context)!;
     switch (status) {
       case ArtworkArStatus.ready:
-        return 'AR: Ready';
+        return l10n.artDetailArStatusReady;
       case ArtworkArStatus.draft:
-        return 'AR: Draft';
+        return l10n.artDetailArStatusDraft;
       case ArtworkArStatus.error:
-        return 'AR: Needs attention';
+        return l10n.artDetailArStatusNeedsAttention;
       case ArtworkArStatus.none:
-        return 'AR: Not set';
+        return l10n.artDetailArStatusNotSet;
     }
   }
 
@@ -685,22 +686,23 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   }
 
   Widget _buildSocialStats(Artwork artwork) {
+    final l10n = AppLocalizations.of(context)!;
     return DetailCard(
       padding: const EdgeInsets.symmetric(
           vertical: DetailSpacing.lg, horizontal: DetailSpacing.md),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildStatItem(Icons.favorite_rounded, artwork.likesCount, 'Likes'),
+          _buildStatItem(Icons.favorite_rounded, artwork.likesCount, l10n.commonLikes),
           _buildStatDivider(),
           _buildStatItem(Icons.chat_bubble_outline_rounded,
-              artwork.commentsCount, 'Comments'),
+              artwork.commentsCount, l10n.commonComments),
           _buildStatDivider(),
           _buildStatItem(
-              Icons.visibility_outlined, artwork.viewsCount, 'Views'),
+              Icons.visibility_outlined, artwork.viewsCount, l10n.artistGalleryStatViewsLabel),
           _buildStatDivider(),
           _buildStatItem(
-              Icons.explore_outlined, artwork.discoveryCount, 'Discoveries'),
+              Icons.explore_outlined, artwork.discoveryCount, l10n.profilePerformanceDiscoveriesTitle),
         ],
       ),
     );
@@ -874,7 +876,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
               Expanded(
                 child: DetailActionButton(
                   icon: Icons.qr_code_scanner_rounded,
-                  label: 'Scan AR',
+                  label: l10n.artDetailScanArAction,
                   backgroundColor: scheme.primary,
                   foregroundColor: scheme.onPrimary,
                   onPressed: () => Navigator.pushNamed(context, '/ar'),
@@ -884,7 +886,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
               Expanded(
                 child: DetailActionButton(
                   icon: Icons.qr_code_2,
-                  label: 'Finish AR setup',
+                  label: l10n.artDetailFinishArSetupAction,
                   backgroundColor:
                       scheme.primaryContainer.withValues(alpha: 0.35),
                   foregroundColor: scheme.primary,
@@ -1012,6 +1014,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
 
     return Consumer<AttendanceProvider>(
       builder: (context, attendanceProvider, _) {
+        final l10n = AppLocalizations.of(context)!;
         final state = attendanceProvider.stateFor(markerIdCandidate);
         final proximity = state.proximity;
         if (proximity == null || !state.canAttemptConfirm) {
@@ -1037,8 +1040,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         final isConfirming = state.isConfirming;
 
         final label = isConfirming
-            ? 'Confirming…'
-            : (alreadyAttended ? 'Already checked in' : 'Confirm attendance');
+          ? l10n.exhibitionDetailAttendanceConfirmingAction
+          : (alreadyAttended
+            ? l10n.exhibitionDetailAttendanceAlreadyCheckedIn
+            : l10n.exhibitionDetailAttendanceConfirmAction);
         final icon = isConfirming
             ? Icons.hourglass_top
             : (alreadyAttended ? Icons.check_circle : Icons.verified_user);
@@ -2014,7 +2019,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'Navigate to $artTitle',
+                      l10n.artDetailNavigateToTitle(artTitle),
                       style: KubusTypography.inter(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -2038,32 +2043,32 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                     const SizedBox(height: 12),
                     _buildNavigationOption(
                       icon: Icons.map,
-                      title: 'Google Maps',
+                      title: l10n.artDetailNavigationGoogleMaps,
                       onTap: () => _openInGoogleMaps(lat, lng, artTitle),
                     ),
                     const SizedBox(height: 12),
                     _buildNavigationOption(
                       icon: Icons.apple,
-                      title: 'Apple Maps',
+                      title: l10n.artDetailNavigationAppleMaps,
                       onTap: () => _openInAppleMaps(lat, lng, artTitle),
                     ),
                     const SizedBox(height: 12),
                     _buildNavigationOption(
                       icon: Icons.location_on,
-                      title: 'Other Maps',
+                      title: l10n.artDetailNavigationOtherMaps,
                       onTap: () => _openInDefaultMaps(lat, lng, artTitle),
                     ),
                     const SizedBox(height: 12),
                     _buildNavigationOption(
                       icon: Icons.copy,
-                      title: 'Copy Coordinates',
+                      title: l10n.artDetailNavigationCopyCoordinates,
                       onTap: () => _copyCoordinates(lat, lng),
                     ),
                     const SizedBox(height: 16),
                     TextButton(
                       onPressed: () => Navigator.pop(context),
                       child: Text(
-                        'Cancel',
+                        l10n.commonCancel,
                         style: KubusTypography.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -2128,6 +2133,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   }
 
   Future<void> _openInGoogleMaps(double lat, double lng, String title) async {
+    final l10n = AppLocalizations.of(context)!;
     Navigator.pop(context);
     final googleMapsUrl =
         'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
@@ -2140,14 +2146,15 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         await launchUrl(Uri.parse(googleMapsUrl),
             mode: LaunchMode.externalApplication);
       } else {
-        _showErrorDialog('Could not open Google Maps');
+        _showErrorDialog(l10n.artDetailNavigationCouldNotOpenGoogleMaps);
       }
     } catch (e) {
-      _showErrorDialog('Error opening Google Maps: $e');
+      _showErrorDialog(l10n.artDetailNavigationErrorOpeningGoogleMaps(e.toString()));
     }
   }
 
   Future<void> _openInAppleMaps(double lat, double lng, String title) async {
+    final l10n = AppLocalizations.of(context)!;
     Navigator.pop(context);
     final appleMapsUrl = 'https://maps.apple.com/?q=$lat,$lng';
     final appleMapsAppUrl = 'maps://?q=$lat,$lng';
@@ -2159,14 +2166,15 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         await launchUrl(Uri.parse(appleMapsUrl),
             mode: LaunchMode.externalApplication);
       } else {
-        _showErrorDialog('Could not open Apple Maps');
+        _showErrorDialog(l10n.artDetailNavigationCouldNotOpenAppleMaps);
       }
     } catch (e) {
-      _showErrorDialog('Error opening Apple Maps: $e');
+      _showErrorDialog(l10n.artDetailNavigationErrorOpeningAppleMaps(e.toString()));
     }
   }
 
   Future<void> _openInDefaultMaps(double lat, double lng, String title) async {
+    final l10n = AppLocalizations.of(context)!;
     Navigator.pop(context);
     final defaultMapsUrl = 'geo:$lat,$lng?q=$lat,$lng($title)';
 
@@ -2181,15 +2189,16 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           await launchUrl(Uri.parse(webMapsUrl),
               mode: LaunchMode.externalApplication);
         } else {
-          _showErrorDialog('Could not open maps application');
+          _showErrorDialog(l10n.artDetailNavigationCouldNotOpenMaps);
         }
       }
     } catch (e) {
-      _showErrorDialog('Error opening maps: $e');
+      _showErrorDialog(l10n.artDetailNavigationErrorOpeningMaps(e.toString()));
     }
   }
 
   Future<void> _copyCoordinates(double lat, double lng) async {
+    final l10n = AppLocalizations.of(context)!;
     Navigator.pop(context);
     final coordinates = '$lat, $lng';
     await Clipboard.setData(ClipboardData(text: coordinates));
@@ -2198,7 +2207,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       ScaffoldMessenger.of(context).showKubusSnackBar(
         SnackBar(
           content: Text(
-            'Coordinates copied to clipboard: $coordinates',
+            l10n.artDetailCoordinatesCopiedToast(coordinates),
             style: KubusTypography.inter(),
           ),
           duration: const Duration(seconds: 2),
@@ -2209,12 +2218,13 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   }
 
   void _showErrorDialog(String message) {
+    final l10n = AppLocalizations.of(context)!;
     showKubusDialog(
       context: context,
       builder: (context) => KubusAlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
-          'Navigation Error',
+          l10n.artDetailNavigationErrorTitle,
           style: KubusTypography.inter(
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.onSurface,
@@ -2230,7 +2240,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-              'OK',
+              l10n.commonOk,
               style: KubusTypography.inter(
                 fontWeight: FontWeight.w600,
                 color: Theme.of(context).colorScheme.primary,

@@ -2461,6 +2461,50 @@
   "artDetailLoadingTitle": "Nalaganje umetnine",
   "artDetailTitle": "Umetnina",
   "artDetailLoadFailedMessage": "Nalaganje podrobnosti umetnine ni uspelo. Poskusi znova.",
+  "artDetailArStatusReady": "AR: pripravljeno",
+  "artDetailArStatusDraft": "AR: osnutek",
+  "artDetailArStatusNeedsAttention": "AR: potrebna pozornost",
+  "artDetailArStatusNotSet": "AR: ni nastavljeno",
+  "artDetailScanArAction": "Skeniraj AR",
+  "artDetailFinishArSetupAction": "Dokončaj AR nastavitev",
+  "artDetailNavigateToTitle": "Navigiraj do {title}",
+  "@artDetailNavigateToTitle": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "artDetailNavigationGoogleMaps": "Google Zemljevidi",
+  "artDetailNavigationAppleMaps": "Apple Zemljevidi",
+  "artDetailNavigationOtherMaps": "Drugi zemljevidi",
+  "artDetailNavigationCopyCoordinates": "Kopiraj koordinate",
+  "artDetailNavigationCouldNotOpenGoogleMaps": "Google Zemljevidov ni bilo mogoče odpreti",
+  "artDetailNavigationCouldNotOpenAppleMaps": "Apple Zemljevidov ni bilo mogoče odpreti",
+  "artDetailNavigationCouldNotOpenMaps": "Aplikacije zemljevidov ni bilo mogoče odpreti",
+  "artDetailNavigationErrorOpeningGoogleMaps": "Napaka pri odpiranju Google Zemljevidov: {error}",
+  "@artDetailNavigationErrorOpeningGoogleMaps": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "artDetailNavigationErrorOpeningAppleMaps": "Napaka pri odpiranju Apple Zemljevidov: {error}",
+  "@artDetailNavigationErrorOpeningAppleMaps": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "artDetailNavigationErrorOpeningMaps": "Napaka pri odpiranju zemljevidov: {error}",
+  "@artDetailNavigationErrorOpeningMaps": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "artDetailCoordinatesCopiedToast": "Koordinate so kopirane v odložišče: {coordinates}",
+  "@artDetailCoordinatesCopiedToast": {
+    "placeholders": {
+      "coordinates": {}
+    }
+  },
+  "artDetailNavigationErrorTitle": "Napaka navigacije",
   "artworkDetailLike": "Všečkaj",
   "artworkDetailLiked": "Všečkano",
   "artworkDetailHideComments": "Skrij komentarje",
@@ -2681,6 +2725,7 @@
     }
   },
   "artistGalleryDeleteArtworkTitle": "Izbriši umetnino",
+  "artistGalleryPromoteUnavailableToast": "Promovirati je mogoče le aktivne javne umetnine.",
   "artistGalleryDeleteConfirmBody": "Ali si prepričan/a, da želiš izbrisati \"{title}\"? Tega dejanja ni mogoče razveljaviti.",
   "@artistGalleryDeleteConfirmBody": {
     "placeholders": {
@@ -2778,6 +2823,7 @@
   "desktopArtistStudioNoRecentActivityLabel": "Ni nedavne dejavnosti",
   "desktopArtistStudioPromoteProfileTitle": "Promoviraj profil",
   "desktopArtistStudioPromoteProfileSubtitle": "Povečaj vidnost profila s prednostno umestitvijo",
+  "desktopArtistStudioCreatorWorkspaceSubtitle": "Odpri namenski ustvarjalni delovni prostor in ostani v toku dela.",
   "desktopArtistStudioMyProfile": "moj profil",
   "desktopArtistStudioVerificationNotAppliedTitle": "Ni prijave",
   "desktopArtistStudioVerificationNotAppliedDescription": "Prijavi se za preverjanje umetnika",
@@ -2799,6 +2845,7 @@
   "desktopInstitutionPromotionRequiresApprovalReason": "Pred ustvarjanjem promocij je potrebna odobritev institucije.",
   "desktopInstitutionPromoteProfileTitle": "Promoviraj institucijo",
   "desktopInstitutionPromoteProfileSubtitle": "Povečaj vidnost institucije s prednostno umestitvijo",
+  "desktopInstitutionCreatorWorkspaceSubtitle": "Zaženi ustvarjalne delovne prostore institucije kot namenske namizne tokove.",
   "desktopInstitutionCreateEventTitle": "Ustvari dogodek",
   "desktopInstitutionCreateEventSubtitle": "Načrtuj in objavi dogodke institucije",
   "desktopInstitutionCreateExhibitionSubtitle": "Ustvari kurirano razstavno izkušnjo",

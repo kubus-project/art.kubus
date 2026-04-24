@@ -389,8 +389,7 @@ class _DesktopInstitutionHubScreenState
                 showCreateActions)
               _buildCreatorWorkspaceLaunchCard(
                 title: l10n.desktopArtistStudioQuickActionsTitle,
-                subtitle:
-                    'Launch institution creator workspaces as dedicated desktop flows.',
+                subtitle: l10n.desktopInstitutionCreatorWorkspaceSubtitle,
                 accent: roles.web3InstitutionAccent,
                 children: [
                   if (AppConfig.isFeatureEnabled('events'))

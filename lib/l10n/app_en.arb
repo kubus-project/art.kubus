@@ -2544,6 +2544,50 @@
   "artDetailLoadingTitle": "Loading artwork",
   "artDetailTitle": "Artwork",
   "artDetailLoadFailedMessage": "Failed to load artwork details. Please try again.",
+  "artDetailArStatusReady": "AR: Ready",
+  "artDetailArStatusDraft": "AR: Draft",
+  "artDetailArStatusNeedsAttention": "AR: Needs attention",
+  "artDetailArStatusNotSet": "AR: Not set",
+  "artDetailScanArAction": "Scan AR",
+  "artDetailFinishArSetupAction": "Finish AR setup",
+  "artDetailNavigateToTitle": "Navigate to {title}",
+  "@artDetailNavigateToTitle": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "artDetailNavigationGoogleMaps": "Google Maps",
+  "artDetailNavigationAppleMaps": "Apple Maps",
+  "artDetailNavigationOtherMaps": "Other Maps",
+  "artDetailNavigationCopyCoordinates": "Copy coordinates",
+  "artDetailNavigationCouldNotOpenGoogleMaps": "Could not open Google Maps",
+  "artDetailNavigationCouldNotOpenAppleMaps": "Could not open Apple Maps",
+  "artDetailNavigationCouldNotOpenMaps": "Could not open maps application",
+  "artDetailNavigationErrorOpeningGoogleMaps": "Error opening Google Maps: {error}",
+  "@artDetailNavigationErrorOpeningGoogleMaps": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "artDetailNavigationErrorOpeningAppleMaps": "Error opening Apple Maps: {error}",
+  "@artDetailNavigationErrorOpeningAppleMaps": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "artDetailNavigationErrorOpeningMaps": "Error opening maps: {error}",
+  "@artDetailNavigationErrorOpeningMaps": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "artDetailCoordinatesCopiedToast": "Coordinates copied to clipboard: {coordinates}",
+  "@artDetailCoordinatesCopiedToast": {
+    "placeholders": {
+      "coordinates": {}
+    }
+  },
+  "artDetailNavigationErrorTitle": "Navigation error",
   "artworkDetailLike": "Like",
   "artworkDetailLiked": "Liked",
   "artworkDetailHideComments": "Hide comments",
@@ -2764,6 +2808,7 @@
     }
   },
   "artistGalleryDeleteArtworkTitle": "Delete artwork",
+  "artistGalleryPromoteUnavailableToast": "Only active public artworks can be promoted.",
   "artistGalleryDeleteConfirmBody": "Are you sure you want to delete \"{title}\"? This action cannot be undone.",
   "@artistGalleryDeleteConfirmBody": {
     "placeholders": {
@@ -2868,6 +2913,7 @@
   "desktopArtistStudioNoRecentActivityLabel": "No recent activity",
   "desktopArtistStudioPromoteProfileTitle": "Promote Profile",
   "desktopArtistStudioPromoteProfileSubtitle": "Boost profile visibility with priority placement",
+  "desktopArtistStudioCreatorWorkspaceSubtitle": "Open a dedicated creator workspace and stay in flow.",
   "desktopArtistStudioMyProfile": "my profile",
   "desktopArtistStudioVerificationNotAppliedTitle": "Not Applied",
   "desktopArtistStudioVerificationNotAppliedDescription": "Apply for artist verification",
@@ -2889,6 +2935,7 @@
   "desktopInstitutionPromotionRequiresApprovalReason": "Institution approval is required before creating promotions.",
   "desktopInstitutionPromoteProfileTitle": "Promote Institution",
   "desktopInstitutionPromoteProfileSubtitle": "Boost institution visibility with priority placement",
+  "desktopInstitutionCreatorWorkspaceSubtitle": "Launch institution creator workspaces as dedicated desktop flows.",
   "desktopInstitutionCreateEventTitle": "Create Event",
   "desktopInstitutionCreateEventSubtitle": "Schedule and publish institution events",
   "desktopInstitutionCreateExhibitionSubtitle": "Create a curated exhibition experience",

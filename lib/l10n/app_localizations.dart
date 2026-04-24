@@ -10991,6 +10991,120 @@ abstract class AppLocalizations {
   /// **'Failed to load artwork details. Please try again.'**
   String get artDetailLoadFailedMessage;
 
+  /// No description provided for @artDetailArStatusReady.
+  ///
+  /// In en, this message translates to:
+  /// **'AR: Ready'**
+  String get artDetailArStatusReady;
+
+  /// No description provided for @artDetailArStatusDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'AR: Draft'**
+  String get artDetailArStatusDraft;
+
+  /// No description provided for @artDetailArStatusNeedsAttention.
+  ///
+  /// In en, this message translates to:
+  /// **'AR: Needs attention'**
+  String get artDetailArStatusNeedsAttention;
+
+  /// No description provided for @artDetailArStatusNotSet.
+  ///
+  /// In en, this message translates to:
+  /// **'AR: Not set'**
+  String get artDetailArStatusNotSet;
+
+  /// No description provided for @artDetailScanArAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan AR'**
+  String get artDetailScanArAction;
+
+  /// No description provided for @artDetailFinishArSetupAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish AR setup'**
+  String get artDetailFinishArSetupAction;
+
+  /// No description provided for @artDetailNavigateToTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Navigate to {title}'**
+  String artDetailNavigateToTitle(Object title);
+
+  /// No description provided for @artDetailNavigationGoogleMaps.
+  ///
+  /// In en, this message translates to:
+  /// **'Google Maps'**
+  String get artDetailNavigationGoogleMaps;
+
+  /// No description provided for @artDetailNavigationAppleMaps.
+  ///
+  /// In en, this message translates to:
+  /// **'Apple Maps'**
+  String get artDetailNavigationAppleMaps;
+
+  /// No description provided for @artDetailNavigationOtherMaps.
+  ///
+  /// In en, this message translates to:
+  /// **'Other Maps'**
+  String get artDetailNavigationOtherMaps;
+
+  /// No description provided for @artDetailNavigationCopyCoordinates.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy coordinates'**
+  String get artDetailNavigationCopyCoordinates;
+
+  /// No description provided for @artDetailNavigationCouldNotOpenGoogleMaps.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open Google Maps'**
+  String get artDetailNavigationCouldNotOpenGoogleMaps;
+
+  /// No description provided for @artDetailNavigationCouldNotOpenAppleMaps.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open Apple Maps'**
+  String get artDetailNavigationCouldNotOpenAppleMaps;
+
+  /// No description provided for @artDetailNavigationCouldNotOpenMaps.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open maps application'**
+  String get artDetailNavigationCouldNotOpenMaps;
+
+  /// No description provided for @artDetailNavigationErrorOpeningGoogleMaps.
+  ///
+  /// In en, this message translates to:
+  /// **'Error opening Google Maps: {error}'**
+  String artDetailNavigationErrorOpeningGoogleMaps(Object error);
+
+  /// No description provided for @artDetailNavigationErrorOpeningAppleMaps.
+  ///
+  /// In en, this message translates to:
+  /// **'Error opening Apple Maps: {error}'**
+  String artDetailNavigationErrorOpeningAppleMaps(Object error);
+
+  /// No description provided for @artDetailNavigationErrorOpeningMaps.
+  ///
+  /// In en, this message translates to:
+  /// **'Error opening maps: {error}'**
+  String artDetailNavigationErrorOpeningMaps(Object error);
+
+  /// No description provided for @artDetailCoordinatesCopiedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Coordinates copied to clipboard: {coordinates}'**
+  String artDetailCoordinatesCopiedToast(Object coordinates);
+
+  /// No description provided for @artDetailNavigationErrorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Navigation error'**
+  String get artDetailNavigationErrorTitle;
+
   /// No description provided for @artworkDetailLike.
   ///
   /// In en, this message translates to:
@@ -11897,6 +12011,12 @@ abstract class AppLocalizations {
   /// **'Delete artwork'**
   String get artistGalleryDeleteArtworkTitle;
 
+  /// No description provided for @artistGalleryPromoteUnavailableToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Only active public artworks can be promoted.'**
+  String get artistGalleryPromoteUnavailableToast;
+
   /// No description provided for @artistGalleryDeleteConfirmBody.
   ///
   /// In en, this message translates to:
@@ -12461,6 +12581,12 @@ abstract class AppLocalizations {
   /// **'Boost profile visibility with priority placement'**
   String get desktopArtistStudioPromoteProfileSubtitle;
 
+  /// No description provided for @desktopArtistStudioCreatorWorkspaceSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Open a dedicated creator workspace and stay in flow.'**
+  String get desktopArtistStudioCreatorWorkspaceSubtitle;
+
   /// No description provided for @desktopArtistStudioMyProfile.
   ///
   /// In en, this message translates to:
@@ -12586,6 +12712,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Boost institution visibility with priority placement'**
   String get desktopInstitutionPromoteProfileSubtitle;
+
+  /// No description provided for @desktopInstitutionCreatorWorkspaceSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Launch institution creator workspaces as dedicated desktop flows.'**
+  String get desktopInstitutionCreatorWorkspaceSubtitle;
 
   /// No description provided for @desktopInstitutionCreateEventTitle.
   ///
