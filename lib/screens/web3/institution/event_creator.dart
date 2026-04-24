@@ -13,7 +13,6 @@ import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/wallet_utils.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../desktop/desktop_shell.dart';
-import '../../../widgets/collaboration_panel.dart';
 import '../../../widgets/creator/creator_kit.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 
@@ -167,6 +166,7 @@ class _EventCreatorState extends State<EventCreator>
               : 'Saved',
           color: KubusColorRoles.of(context).web3InstitutionAccent,
         ),
+        sidebarAccentColor: KubusColorRoles.of(context).web3InstitutionAccent,
         actions: [
           IconButton(
             tooltip: 'Help',
@@ -200,6 +200,7 @@ class _EventCreatorState extends State<EventCreator>
     final hasCapacity = _capacityController.text.trim().isNotEmpty;
     final collabEnabled =
         AppConfig.isFeatureEnabled('collabInvites') && createdId.isNotEmpty;
+    final accent = KubusColorRoles.of(context).web3InstitutionAccent;
 
     final readyItems = <DesktopCreatorReadinessItem>[
       DesktopCreatorReadinessItem(
@@ -241,6 +242,7 @@ class _EventCreatorState extends State<EventCreator>
           title: 'Status',
           subtitle: created == null ? 'Draft in progress' : 'Saved event',
           icon: created == null ? Icons.edit_outlined : Icons.event_available_outlined,
+          accentColor: accent,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -274,13 +276,18 @@ class _EventCreatorState extends State<EventCreator>
           title: 'Readiness',
           subtitle: 'A quick sanity check before saving.',
           icon: Icons.fact_check_outlined,
-          child: DesktopCreatorReadinessChecklist(items: readyItems),
+          accentColor: accent,
+          child: DesktopCreatorReadinessChecklist(
+            items: readyItems,
+            accentColor: accent,
+          ),
         ),
         const SizedBox(height: KubusSpacing.md),
         DesktopCreatorSidebarSection(
           title: 'Quick actions',
           subtitle: 'Keep the whole workflow in one workspace.',
           icon: Icons.flash_on_outlined,
+          accentColor: accent,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -310,23 +317,17 @@ class _EventCreatorState extends State<EventCreator>
           ),
         ),
         const SizedBox(height: KubusSpacing.md),
-        DesktopCreatorSidebarSection(
+        DesktopCreatorCollaborationSection(
           title: 'Collaboration',
           subtitle: created != null
               ? 'Invite collaborators without leaving the creator.'
               : 'Save once to unlock collaboration.',
-          icon: Icons.group_add_outlined,
-          child: collabEnabled
-              ? CollaborationPanel(
-                  entityType: 'events',
-                  entityId: createdId,
-                )
-              : Text(
-                  'Once saved, collaborators can be invited here so event planning stays in context.',
-                  style: KubusTextStyles.detailCaption.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.72),
-                  ),
-                ),
+          entityType: 'events',
+          entityId: createdId,
+          enabled: collabEnabled,
+          lockedMessage:
+              'Once saved, collaborators can be invited here so event planning stays in context.',
+          accentColor: accent,
         ),
       ],
     );

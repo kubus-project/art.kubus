@@ -23,7 +23,6 @@ import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/maplibre_style_utils.dart';
 import '../../../utils/wallet_utils.dart';
-import '../../../widgets/collaboration_panel.dart';
 import '../../../widgets/art_map_view.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/creator/creator_kit.dart';
@@ -1662,6 +1661,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               : (persistedArtwork.isPublic
                   ? Icons.public_outlined
                   : Icons.bookmark_outline),
+          accentColor: accent,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1707,13 +1707,18 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
           title: 'Readiness',
           subtitle: 'Complete the essentials before you publish.',
           icon: Icons.fact_check_outlined,
-          child: DesktopCreatorReadinessChecklist(items: readyItems),
+          accentColor: accent,
+          child: DesktopCreatorReadinessChecklist(
+            items: readyItems,
+            accentColor: accent,
+          ),
         ),
         const SizedBox(height: KubusSpacing.md),
         DesktopCreatorSidebarSection(
           title: 'Quick actions',
           subtitle: 'Keep the workflow inside this creator.',
           icon: Icons.flash_on_outlined,
+          accentColor: accent,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -1745,36 +1750,25 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
             ],
           ),
         ),
-        if (canUseCollab) ...[
-          const SizedBox(height: KubusSpacing.md),
-          DesktopCreatorSidebarSection(
-            title: 'Collaboration',
-            subtitle: 'Invite collaborators without leaving the creator.',
-            icon: Icons.group_add_outlined,
-            child: CollaborationPanel(
-              entityType: 'artwork',
-              entityId: artworkId,
-            ),
-          ),
-        ] else ...[
-          const SizedBox(height: KubusSpacing.md),
-          DesktopCreatorSidebarSection(
-            title: 'Collaboration',
-            subtitle: 'Unlock after the first save.',
-            icon: Icons.group_add_outlined,
-            child: Text(
+        const SizedBox(height: KubusSpacing.md),
+        DesktopCreatorCollaborationSection(
+          title: 'Collaboration',
+          subtitle: canUseCollab
+              ? 'Invite collaborators without leaving the creator.'
+              : 'Unlock after the first save.',
+          entityType: 'artwork',
+          entityId: artworkId,
+          enabled: canUseCollab,
+          lockedMessage:
               'Once the artwork is saved, collaborators can be invited here without leaving the creator.',
-              style: KubusTextStyles.detailCaption.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.72),
-              ),
-            ),
-          ),
-        ],
+          accentColor: accent,
+        ),
         const SizedBox(height: KubusSpacing.md),
         DesktopCreatorSidebarSection(
           title: 'Art direction',
           subtitle: 'What the creator already knows about this piece.',
           icon: Icons.auto_awesome_outlined,
+          accentColor: accent,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1889,6 +1883,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                   ? accent
                   : (_createdArtwork!.isPublic ? scheme.primary : scheme.tertiary),
             ),
+            sidebarAccentColor: accent,
             actions: [
               if (_createdArtwork != null && draft.arEnabled)
                 OutlinedButton.icon(

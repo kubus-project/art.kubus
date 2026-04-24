@@ -10,6 +10,7 @@ import '../../events/exhibition_creator_screen.dart';
 import '../../map_markers/manage_markers_screen.dart';
 import 'artwork_creator.dart';
 import 'collection_creator.dart';
+import '../../../widgets/glass_components.dart';
 
 class ArtistStudioCreateScreen extends StatelessWidget {
   final VoidCallback? onArtworkCreated;
@@ -159,59 +160,62 @@ class _CreateOptionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: scheme.surface,
+    return LiquidGlassCard(
       borderRadius: BorderRadius.circular(KubusRadius.lg),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(KubusRadius.lg),
-        child: Container(
-          padding: const EdgeInsets.all(KubusSpacing.md),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(KubusRadius.lg),
-            border: Border.all(color: scheme.outline.withValues(alpha: 0.12)),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(KubusRadius.md),
+      backgroundColor: accent.withValues(alpha: 0.05),
+      showBorder: true,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(KubusRadius.lg),
+          child: Container(
+            padding: const EdgeInsets.all(KubusSpacing.md),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(KubusRadius.lg),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(KubusRadius.md),
+                  ),
+                  child: Icon(icon, color: accent),
                 ),
-                child: Icon(icon, color: accent),
-              ),
-              const SizedBox(width: KubusSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: KubusTypography.inter(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: scheme.onSurface,
+                const SizedBox(width: KubusSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: KubusTypography.inter(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurface,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: KubusTypography.inter(
-                        fontSize: 12,
-                        height: 1.25,
-                        color: scheme.onSurface.withValues(alpha: 0.7),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: KubusTypography.inter(
+                          fontSize: 12,
+                          height: 1.25,
+                          color: scheme.onSurface.withValues(alpha: 0.7),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              Icon(
-                Icons.chevron_right,
-                color: scheme.onSurface.withValues(alpha: 0.5),
-              ),
-            ],
+                Icon(
+                  Icons.chevron_right,
+                  color: scheme.onSurface.withValues(alpha: 0.5),
+                ),
+              ],
+            ),
           ),
         ),
       ),

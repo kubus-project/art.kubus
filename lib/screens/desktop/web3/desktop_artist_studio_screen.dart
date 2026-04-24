@@ -56,6 +56,31 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
 
   String _lastStatsWallet = '';
 
+  void _openArtworkWorkspace() {
+    final shellScope = DesktopShellScope.of(context);
+    if (shellScope == null) return;
+    final draftId = context.read<ArtworkDraftsProvider>().createDraft();
+    shellScope.pushScreen(
+      ArtworkCreator(draftId: draftId, showAppBar: false, embedded: true),
+    );
+  }
+
+  void _openCollectionWorkspace() {
+    final shellScope = DesktopShellScope.of(context);
+    if (shellScope == null) return;
+    shellScope.pushScreen(
+      const CollectionCreator(embedded: true),
+    );
+  }
+
+  void _openExhibitionWorkspace() {
+    final shellScope = DesktopShellScope.of(context);
+    if (shellScope == null) return;
+    shellScope.pushScreen(
+      const ExhibitionCreatorScreen(embedded: true),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -167,31 +192,6 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
     final screenWidth = MediaQuery.of(context).size.width;
     final isLarge = screenWidth >= 1200;
 
-    void openArtworkCreator() {
-      final shellScope = DesktopShellScope.of(context);
-      if (shellScope == null) return;
-      final draftId = context.read<ArtworkDraftsProvider>().createDraft();
-      shellScope.pushScreen(
-        ArtworkCreator(draftId: draftId, showAppBar: false, embedded: true),
-      );
-    }
-
-    void openCollectionCreator() {
-      final shellScope = DesktopShellScope.of(context);
-      if (shellScope == null) return;
-      shellScope.pushScreen(
-        const CollectionCreator(embedded: true),
-      );
-    }
-
-    void openExhibitionCreator() {
-      final shellScope = DesktopShellScope.of(context);
-      if (shellScope == null) return;
-      shellScope.pushScreen(
-        const ExhibitionCreatorScreen(embedded: true),
-      );
-    }
-
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: AnimatedBuilder(
@@ -222,9 +222,9 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                     child: ArtistStudio(
                       embedded: true,
                       showVerificationCard: false,
-                      onOpenArtworkCreator: openArtworkCreator,
-                      onOpenCollectionCreator: openCollectionCreator,
-                      onOpenExhibitionCreator: openExhibitionCreator,
+                      onOpenArtworkCreator: _openArtworkWorkspace,
+                      onOpenCollectionCreator: _openCollectionWorkspace,
+                      onOpenExhibitionCreator: _openExhibitionWorkspace,
                       onTabChanged: (tabIndex) {
                         context
                             .read<DesktopDashboardStateProvider>()
@@ -261,6 +261,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
     const blockGap = KubusSpacing.md + KubusSpacing.xs;
     final dashboardState = context.watch<DesktopDashboardStateProvider>();
     final section = dashboardState.artistStudioSection;
+    final roles = KubusColorRoles.of(context);
 
     // Compute approval status for gating quick actions
     final daoProvider = context.watch<DAOProvider>();
@@ -391,37 +392,33 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
 
             if (isApprovedArtist &&
                 section == DesktopArtistStudioSection.create)
-              KubusActionSidebarTile(
-                title: l10n.desktopArtistStudioQuickActionCreateArtworkTitle,
+              _buildCreatorWorkspaceLaunchCard(
+                title: l10n.desktopArtistStudioQuickActionsTitle,
                 subtitle:
-                    l10n.desktopArtistStudioQuickActionCreateArtworkSubtitle,
-                icon: Icons.add_photo_alternate_outlined,
-                semantic: KubusActionSemantic.create,
-                onTap: () {
-                  DesktopShellScope.of(context)?.pushScreen(
-                    ArtworkCreator(
-                      draftId: context.read<ArtworkDraftsProvider>().createDraft(),
-                      showAppBar: false,
-                      embedded: true,
+                    'Open a dedicated creator workspace and stay in flow.',
+                accent: roles.web3ArtistStudioAccent,
+                children: [
+                  FilledButton.tonalIcon(
+                    onPressed: _openArtworkWorkspace,
+                    icon: const Icon(Icons.add_photo_alternate_outlined),
+                    label: Text(
+                      l10n.desktopArtistStudioQuickActionCreateArtworkTitle,
                     ),
-                  );
-                },
+                  ),
+                  FilledButton.tonalIcon(
+                    onPressed: _openCollectionWorkspace,
+                    icon: const Icon(Icons.collections_bookmark_outlined),
+                    label: Text(l10n.collectionCreatorTitle),
+                  ),
+                  if (showExhibitions)
+                    FilledButton.tonalIcon(
+                      onPressed: _openExhibitionWorkspace,
+                      icon: const Icon(Icons.museum_outlined),
+                      label: Text(l10n.exhibitionCreatorAppBarTitle),
+                    ),
+                ],
               ),
-            if (isApprovedArtist &&
-                section == DesktopArtistStudioSection.create)
-              KubusActionSidebarTile(
-                title: l10n.collectionCreatorTitle,
-                subtitle: l10n.artistStudioCreateOptionCollectionSubtitle,
-                icon: Icons.collections_bookmark_outlined,
-                semantic: KubusActionSemantic.create,
-                onTap: () {
-                  final shellScope = DesktopShellScope.of(context);
-                  if (shellScope == null) return;
-                  shellScope.pushScreen(
-                    const CollectionCreator(embedded: true),
-                  );
-                },
-              ),
+
             if (isApprovedArtist &&
                 section == DesktopArtistStudioSection.create)
               KubusActionSidebarTile(
@@ -473,9 +470,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                         embedded: true,
                         canCreate: true,
                         onCreateExhibition: () {
-                          DesktopShellScope.of(context)?.pushScreen(
-                            const ExhibitionCreatorScreen(embedded: true),
-                          );
+                          _openExhibitionWorkspace();
                         },
                         onOpenExhibition: (exhibition) {
                           DesktopShellScope.of(context)?.pushScreen(
@@ -542,6 +537,49 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
               const SizedBox(height: sectionHeaderGap),
               _buildRecentActivity(themeProvider),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCreatorWorkspaceLaunchCard({
+    required String title,
+    required String subtitle,
+    required Color accent,
+    required List<Widget> children,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: KubusSpacing.md),
+      child: LiquidGlassCard(
+        padding: const EdgeInsets.all(KubusSpacing.md),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
+        backgroundColor: accent.withValues(alpha: 0.06),
+        showBorder: true,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: KubusTextStyles.sectionTitle.copyWith(
+                color: scheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: KubusSpacing.xs),
+            Text(
+              subtitle,
+              style: KubusTextStyles.actionTileSubtitle.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+            const SizedBox(height: KubusSpacing.md),
+            ...children
+                .map((child) => Padding(
+                      padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
+                      child: SizedBox(width: double.infinity, child: child),
+                    ))
+                .toList(growable: false),
           ],
         ),
       ),

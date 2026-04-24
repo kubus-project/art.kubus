@@ -7,21 +7,23 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import '../../../config/config.dart';
+import '../../../models/artwork.dart';
 import '../../art/collection_detail_screen.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../providers/collections_provider.dart';
 import '../../../providers/artwork_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/web3provider.dart';
+import '../../../widgets/disk_cached_artwork_image.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/wallet_utils.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
-import 'package:art_kubus/widgets/collaboration_panel.dart';
 import 'package:art_kubus/widgets/creator/creator_kit.dart';
 import '../../desktop/desktop_shell.dart';
 import 'package:art_kubus/widgets/artwork_creator_byline.dart';
 import 'package:art_kubus/widgets/common/kubus_cached_image.dart';
+import 'package:art_kubus/widgets/glass_components.dart';
 
 class CollectionCreator extends StatefulWidget {
   final void Function(String collectionId)? onCreated;
@@ -54,10 +56,9 @@ class _CollectionCreatorState extends State<CollectionCreator> {
   final Set<String> _selectedArtworkIds = <String>{};
   String _artworkSearchQuery = '';
   bool _artworksLoading = false;
+  bool _artworkLibraryLoadRequested = false;
+  String _lastPrefetchedArtworkSignature = '';
   String? _createdCollectionId;
-  String _attemptedWalletAddress = '';
-  String _inflightWalletAddress = '';
-  String _scheduledWalletAddress = '';
 
   @override
   void dispose() {
@@ -66,42 +67,49 @@ class _CollectionCreatorState extends State<CollectionCreator> {
     super.dispose();
   }
 
-  void _scheduleLoadArtworksIfNeeded(String walletAddress) {
-    final normalized = walletAddress.trim();
-    if (normalized.isEmpty) return;
-    if (normalized == _attemptedWalletAddress) return;
-    if (normalized == _inflightWalletAddress) return;
-    if (normalized == _scheduledWalletAddress) return;
-
-    _scheduledWalletAddress = normalized;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final toLoad = _scheduledWalletAddress;
-      _scheduledWalletAddress = '';
-      if (toLoad.isEmpty) return;
-      unawaited(_loadArtworksForWallet(toLoad));
-    });
-  }
-
   Future<void> _loadArtworksForWallet(String walletAddress) async {
     final normalized = walletAddress.trim();
     if (normalized.isEmpty) return;
 
     final artworkProvider = context.read<ArtworkProvider>();
-    _attemptedWalletAddress = normalized;
-    _inflightWalletAddress = normalized;
-
-    setState(() => _artworksLoading = true);
+    setState(() {
+      _artworkLibraryLoadRequested = true;
+      _artworksLoading = true;
+    });
     try {
       await artworkProvider.loadArtworksForWallet(normalized);
+      if (!mounted) return;
+      final loaded = artworkProvider.artworksForWallet(normalized);
+      _prefetchArtworkImages(loaded);
     } catch (_) {
       // Non-fatal; artworks list will be empty.
     } finally {
-      _inflightWalletAddress = '';
       if (mounted) {
         setState(() => _artworksLoading = false);
       }
     }
+  }
+
+  void _prefetchArtworkImages(List<Artwork> artworks) {
+    if (artworks.isEmpty) return;
+    final signature = artworks
+        .take(8)
+      .map((artwork) => (artwork.imageUrl ?? '').trim())
+        .where((url) => url.isNotEmpty)
+        .join('|');
+    if (signature.isEmpty || signature == _lastPrefetchedArtworkSignature) {
+      return;
+    }
+    _lastPrefetchedArtworkSignature = signature;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      for (final artwork in artworks.take(8)) {
+        final url = (artwork.imageUrl ?? '').trim();
+        if (url.isEmpty) continue;
+        unawaited(prefetchDiskCachedArtworkImage(url));
+      }
+    });
   }
 
   Future<void> _pickCoverImage() async {
@@ -226,7 +234,11 @@ class _CollectionCreatorState extends State<CollectionCreator> {
       walletAddress: profileProvider.currentUser?.walletAddress,
       wallet: web3Provider.walletAddress,
     );
-    _scheduleLoadArtworksIfNeeded(walletAddress);
+    final artworkProvider = context.watch<ArtworkProvider>();
+    final allArtworks = artworkProvider.artworks;
+    if (allArtworks.isNotEmpty) {
+      _prefetchArtworkImages(allArtworks);
+    }
 
     final formBody = Form(
       key: _formKey,
@@ -296,7 +308,12 @@ class _CollectionCreatorState extends State<CollectionCreator> {
             const CreatorSectionSpacing(),
 
             // --- Add existing artworks section ---
-            _buildArtworkSelectionSection(l10n, studioAccent),
+            _buildArtworkSelectionSection(
+              l10n,
+              studioAccent,
+              walletAddress,
+              allArtworks,
+            ),
 
             const CreatorSectionSpacing(),
 
@@ -333,6 +350,7 @@ class _CollectionCreatorState extends State<CollectionCreator> {
           label: _createdCollectionId == null ? 'Draft' : 'Saved',
           color: _createdCollectionId == null ? studioAccent : Theme.of(context).colorScheme.primary,
         ),
+        sidebarAccentColor: studioAccent,
         mainContent: formBody,
         sidebar: _buildDesktopSidebar(
           l10n,
@@ -401,6 +419,7 @@ class _CollectionCreatorState extends State<CollectionCreator> {
           title: 'Status',
           subtitle: created ? 'Saved collection' : 'Draft in progress',
           icon: created ? Icons.bookmark_added_outlined : Icons.edit_outlined,
+          accentColor: accent,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -432,13 +451,18 @@ class _CollectionCreatorState extends State<CollectionCreator> {
           title: 'Readiness',
           subtitle: 'A quick sanity check before saving.',
           icon: Icons.fact_check_outlined,
-          child: DesktopCreatorReadinessChecklist(items: readyItems),
+          accentColor: accent,
+          child: DesktopCreatorReadinessChecklist(
+            items: readyItems,
+            accentColor: accent,
+          ),
         ),
         const SizedBox(height: KubusSpacing.md),
         DesktopCreatorSidebarSection(
           title: 'Quick actions',
           subtitle: 'Keep the workflow in this creator.',
           icon: Icons.flash_on_outlined,
+          accentColor: accent,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -470,31 +494,28 @@ class _CollectionCreatorState extends State<CollectionCreator> {
           ),
         ),
         const SizedBox(height: KubusSpacing.md),
-        DesktopCreatorSidebarSection(
+        DesktopCreatorCollaborationSection(
           title: 'Collaboration',
           subtitle: created
               ? 'Invite co-curators without leaving the workspace.'
               : 'Save once to unlock collaboration.',
-          icon: Icons.group_add_outlined,
-          child: created && AppConfig.isFeatureEnabled('collabInvites')
-              ? CollaborationPanel(
-                  entityType: 'collections',
-                  entityId: createdId,
-                )
-              : Text(
-                  'Once saved, collaborators can be invited here so curation stays in context.',
-                  style: KubusTextStyles.detailCaption.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.72),
-                  ),
-                ),
+          entityType: 'collections',
+          entityId: createdId,
+          enabled: created && AppConfig.isFeatureEnabled('collabInvites'),
+          lockedMessage:
+              'Once saved, collaborators can be invited here so curation stays in context.',
+          accentColor: accent,
         ),
       ],
     );
   }
 
-  Widget _buildArtworkSelectionSection(AppLocalizations l10n, Color accent) {
-    final artworkProvider = context.watch<ArtworkProvider>();
-    final allArtworks = artworkProvider.artworks;
+  Widget _buildArtworkSelectionSection(
+    AppLocalizations l10n,
+    Color accent,
+    String walletAddress,
+    List<Artwork> allArtworks,
+  ) {
     final scheme = Theme.of(context).colorScheme;
 
     // Filter artworks by search query.
@@ -519,6 +540,36 @@ class _CollectionCreatorState extends State<CollectionCreator> {
         ),
 
         const CreatorFieldSpacing(),
+
+        if (walletAddress.isEmpty) ...[
+          CreatorInfoBox(
+            text:
+                'Connect a wallet to load and curate your artwork library inside this collection creator.',
+            icon: Icons.account_balance_wallet_outlined,
+            accentColor: accent,
+          ),
+          const CreatorFieldSpacing(),
+        ] else if (allArtworks.isEmpty) ...[
+          CreatorInfoBox(
+            text: _artworkLibraryLoadRequested
+                ? 'Your artwork library is still loading. If the backend is slow, you can keep editing the collection basics and come back here.'
+                : 'Load your artwork library to select pieces for this collection. This keeps the first open lighter and avoids unnecessary API calls.',
+            icon: Icons.collections_bookmark_outlined,
+            accentColor: accent,
+          ),
+          const CreatorFieldSpacing(),
+          OutlinedButton.icon(
+            onPressed: _artworksLoading
+                ? null
+                : () => unawaited(_loadArtworksForWallet(walletAddress)),
+            icon: Icon(_artworksLoading
+                ? Icons.hourglass_bottom_outlined
+                : Icons.download_outlined),
+            label: Text(
+              _artworksLoading ? 'Loading library…' : 'Load artwork library',
+            ),
+          ),
+        ],
 
         // Selected artworks chips
         if (_selectedArtworkIds.isNotEmpty) ...[
@@ -550,13 +601,12 @@ class _CollectionCreatorState extends State<CollectionCreator> {
           const CreatorFieldSpacing(),
         ],
 
-        // Artworks list
         if (_artworksLoading)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: KubusSpacing.md),
             child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
           )
-        else if (filtered.isEmpty)
+        else if (allArtworks.isNotEmpty && filtered.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: KubusSpacing.md),
             child: Center(
@@ -568,100 +618,320 @@ class _CollectionCreatorState extends State<CollectionCreator> {
               ),
             ),
           )
-        else
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 240),
-            child: ListView.separated(
-              shrinkWrap: true,
-              itemCount: filtered.length,
-              separatorBuilder: (_, __) =>
-                  Divider(height: 1, color: scheme.outline.withValues(alpha: 0.12)),
-              itemBuilder: (_, index) {
-                final artwork = filtered[index];
-                final isSelected = _selectedArtworkIds.contains(artwork.id);
-                final dpr = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
-                final thumbCacheSize = (40 * dpr).clamp(64.0, 256.0).round();
+        else if (allArtworks.isNotEmpty)
+          ...[
+            const CreatorFieldSpacing(),
+            _buildArtworkGallery(filtered, accent),
+          ],
+      ],
+    );
+  }
 
-                return ListTile(
-                  key: ValueKey<String>(artwork.id),
-                  dense: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: KubusSpacing.sm,
-                    vertical: KubusSpacing.xxs,
-                  ),
-                  leading: ClipRRect(
-                    borderRadius: BorderRadius.circular(KubusRadius.sm),
-                    child: SizedBox(
-                      width: 40,
-                      height: 40,
-                      child: KubusCachedImage(
-                        imageUrl: artwork.imageUrl,
-                        fit: BoxFit.cover,
-                        cacheWidth: thumbCacheSize,
-                        cacheHeight: thumbCacheSize,
-                        maxDisplayWidth: thumbCacheSize,
-                        cacheVersion: KubusCachedImage.versionTokenFromDate(
-                          artwork.updatedAt ?? artwork.createdAt,
-                        ),
-                        iconSize: 20,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: scheme.surfaceContainerHighest,
-                          child: Icon(
-                            Icons.image_outlined,
-                            size: 20,
-                            color: scheme.onSurface.withValues(alpha: 0.3),
-                          ),
+  Widget _buildArtworkGallery(List<Artwork> artworks, Color accent) {
+    final scheme = Theme.of(context).colorScheme;
+
+    if (artworks.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= 720;
+        final columns = constraints.maxWidth >= 1100
+            ? 3
+            : (constraints.maxWidth >= 760 ? 2 : 1);
+
+        if (!isWide) {
+          return Column(
+            children: artworks
+                .map((artwork) => Padding(
+                      padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
+                      child: _buildArtworkSelectionCard(
+                        artwork: artwork,
+                        accent: accent,
+                        scheme: scheme,
+                        compact: true,
+                      ),
+                    ))
+                .toList(growable: false),
+          );
+        }
+
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: artworks.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            mainAxisExtent: 260,
+            crossAxisSpacing: KubusSpacing.md,
+            mainAxisSpacing: KubusSpacing.md,
+          ),
+          itemBuilder: (context, index) {
+            return _buildArtworkSelectionCard(
+              artwork: artworks[index],
+              accent: accent,
+              scheme: scheme,
+              compact: false,
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildArtworkSelectionCard({
+    required Artwork artwork,
+    required Color accent,
+    required ColorScheme scheme,
+    required bool compact,
+  }) {
+    final isSelected = _selectedArtworkIds.contains(artwork.id);
+    final dpr = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
+    final thumbCacheSize = compact
+        ? (72 * dpr).clamp(96.0, 320.0).round()
+        : (180 * dpr).clamp(180.0, 640.0).round();
+
+    return LiquidGlassCard(
+      borderRadius: BorderRadius.circular(KubusRadius.lg),
+      backgroundColor: isSelected
+          ? accent.withValues(alpha: 0.10)
+          : scheme.surface.withValues(alpha: 0.72),
+      showBorder: true,
+      onTap: _isSubmitting
+          ? null
+          : () {
+              setState(() {
+                if (isSelected) {
+                  _selectedArtworkIds.remove(artwork.id);
+                } else {
+                  _selectedArtworkIds.add(artwork.id);
+                }
+              });
+            },
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _isSubmitting
+              ? null
+              : () {
+                  setState(() {
+                    if (isSelected) {
+                      _selectedArtworkIds.remove(artwork.id);
+                    } else {
+                      _selectedArtworkIds.add(artwork.id);
+                    }
+                  });
+                },
+          borderRadius: BorderRadius.circular(KubusRadius.lg),
+          child: Padding(
+            padding: const EdgeInsets.all(KubusSpacing.md),
+            child: compact
+                ? Row(
+                    children: [
+                      _buildArtworkThumb(artwork, thumbCacheSize, accent, scheme),
+                      const SizedBox(width: KubusSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    artwork.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: KubusTextStyles.detailCardTitle,
+                                  ),
+                                ),
+                                Checkbox(
+                                  value: isSelected,
+                                  activeColor: accent,
+                                  onChanged: _isSubmitting
+                                      ? null
+                                      : (checked) {
+                                          setState(() {
+                                            if (checked == true) {
+                                              _selectedArtworkIds.add(artwork.id);
+                                            } else {
+                                              _selectedArtworkIds.remove(artwork.id);
+                                            }
+                                          });
+                                        },
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: KubusSpacing.xs),
+                            ArtworkCreatorByline(
+                              artwork: artwork,
+                              includeByPrefix: false,
+                              showUsername: false,
+                              linkToProfile: false,
+                              maxLines: 2,
+                              style: KubusTextStyles.detailCaption.copyWith(
+                                color: scheme.onSurface.withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(KubusRadius.md),
+                            child: SizedBox(
+                              height: 150,
+                              width: double.infinity,
+                              child: KubusCachedImage(
+                                imageUrl: artwork.imageUrl,
+                                fit: BoxFit.cover,
+                                cacheWidth: thumbCacheSize,
+                                cacheHeight: thumbCacheSize,
+                                maxDisplayWidth: thumbCacheSize,
+                                cacheVersion:
+                                    KubusCachedImage.versionTokenFromDate(
+                                  artwork.updatedAt ?? artwork.createdAt,
+                                ),
+                                iconSize: 28,
+                                errorBuilder: (_, __, ___) => Container(
+                                  color: scheme.surfaceContainerHighest,
+                                  child: Icon(
+                                    Icons.image_outlined,
+                                    size: 28,
+                                    color:
+                                        scheme.onSurface.withValues(alpha: 0.3),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: scheme.surface.withValues(alpha: 0.82),
+                                borderRadius:
+                                    BorderRadius.circular(KubusRadius.xl),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? accent
+                                      : scheme.outline.withValues(alpha: 0.12),
+                                ),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: KubusSpacing.sm,
+                                  vertical: KubusSpacing.xs,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      isSelected
+                                          ? Icons.check_circle
+                                          : Icons.add_circle_outline,
+                                      size: 16,
+                                      color: isSelected ? accent : scheme.onSurface,
+                                    ),
+                                    const SizedBox(width: KubusSpacing.xs),
+                                    Text(
+                                      isSelected ? 'Selected' : 'Add',
+                                      style: KubusTextStyles.detailLabel.copyWith(
+                                        color: isSelected ? accent : scheme.onSurface,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: KubusSpacing.sm),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              artwork.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: KubusTextStyles.detailCardTitle,
+                            ),
+                          ),
+                          Checkbox(
+                            value: isSelected,
+                            activeColor: accent,
+                            onChanged: _isSubmitting
+                                ? null
+                                : (checked) {
+                                    setState(() {
+                                      if (checked == true) {
+                                        _selectedArtworkIds.add(artwork.id);
+                                      } else {
+                                        _selectedArtworkIds.remove(artwork.id);
+                                      }
+                                    });
+                                  },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: KubusSpacing.xxs),
+                      ArtworkCreatorByline(
+                        artwork: artwork,
+                        includeByPrefix: false,
+                        showUsername: false,
+                        linkToProfile: false,
+                        maxLines: 2,
+                        style: KubusTextStyles.detailCaption.copyWith(
+                          color: scheme.onSurface.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ],
                   ),
-                  title: Text(
-                    artwork.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: KubusTextStyles.detailLabel,
-                  ),
-                  subtitle: ArtworkCreatorByline(
-                    artwork: artwork,
-                    includeByPrefix: false,
-                    showUsername: false,
-                    linkToProfile: false,
-                    maxLines: 1,
-                    style: KubusTextStyles.detailCaption.copyWith(
-                      color: scheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-                  trailing: Checkbox(
-                    value: isSelected,
-                    activeColor: accent,
-                    onChanged: _isSubmitting
-                        ? null
-                        : (checked) {
-                            setState(() {
-                              if (checked == true) {
-                                _selectedArtworkIds.add(artwork.id);
-                              } else {
-                                _selectedArtworkIds.remove(artwork.id);
-                              }
-                            });
-                          },
-                  ),
-                  onTap: _isSubmitting
-                      ? null
-                      : () {
-                          setState(() {
-                            if (isSelected) {
-                              _selectedArtworkIds.remove(artwork.id);
-                            } else {
-                              _selectedArtworkIds.add(artwork.id);
-                            }
-                          });
-                        },
-                );
-              },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildArtworkThumb(
+    Artwork artwork,
+    int cacheWidth,
+    Color accent,
+    ColorScheme scheme,
+  ) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(KubusRadius.md),
+      child: SizedBox(
+        width: 74,
+        height: 74,
+        child: KubusCachedImage(
+          imageUrl: artwork.imageUrl,
+          fit: BoxFit.cover,
+          cacheWidth: cacheWidth,
+          cacheHeight: cacheWidth,
+          maxDisplayWidth: cacheWidth,
+          cacheVersion: KubusCachedImage.versionTokenFromDate(
+            artwork.updatedAt ?? artwork.createdAt,
+          ),
+          iconSize: 24,
+          errorBuilder: (_, __, ___) => Container(
+            color: scheme.surfaceContainerHighest,
+            child: Icon(
+              Icons.image_outlined,
+              size: 24,
+              color: scheme.onSurface.withValues(alpha: 0.3),
             ),
           ),
-      ],
+        ),
+      ),
     );
   }
 }

@@ -10,9 +10,9 @@ import '../../config/config.dart';
 import '../../models/exhibition.dart';
 import '../../providers/exhibitions_provider.dart';
 import '../../utils/design_tokens.dart';
+import '../../utils/kubus_color_roles.dart';
 import 'exhibition_detail_screen.dart';
 import '../desktop/desktop_shell.dart';
-import '../../widgets/collaboration_panel.dart';
 import '../../widgets/creator/creator_kit.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
@@ -256,6 +256,7 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
     );
 
     if (widget.embedded) {
+      final accent = KubusColorRoles.of(context).web3InstitutionAccent;
       return DesktopCreatorShell(
         title: l10n.exhibitionCreatorAppBarTitle,
         subtitle: _createdExhibition == null
@@ -266,6 +267,7 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
           label: _createdExhibition == null ? 'Draft' : 'Saved',
           color: _createdExhibition == null ? scheme.primary : scheme.tertiary,
         ),
+        sidebarAccentColor: accent,
         mainContent: formBody,
         sidebar: _buildDesktopSidebar(l10n, scheme),
       );
@@ -287,6 +289,7 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
     final isPublic = widget.forceDraftOnly ? false : _published;
     final collabEnabled = AppConfig.isFeatureEnabled('collabInvites') &&
         createdId.isNotEmpty;
+    final accent = KubusColorRoles.of(context).web3InstitutionAccent;
 
     final readyItems = <DesktopCreatorReadinessItem>[
       DesktopCreatorReadinessItem(
@@ -328,6 +331,7 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
           title: 'Status',
           subtitle: created == null ? 'Draft in progress' : 'Saved exhibition',
           icon: created == null ? Icons.edit_outlined : Icons.museum_outlined,
+          accentColor: accent,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -361,13 +365,18 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
           title: 'Readiness',
           subtitle: 'A quick sanity check before saving.',
           icon: Icons.fact_check_outlined,
-          child: DesktopCreatorReadinessChecklist(items: readyItems),
+          accentColor: accent,
+          child: DesktopCreatorReadinessChecklist(
+            items: readyItems,
+            accentColor: accent,
+          ),
         ),
         const SizedBox(height: KubusSpacing.md),
         DesktopCreatorSidebarSection(
           title: 'Quick actions',
           subtitle: 'Stay inside the creator while you work.',
           icon: Icons.flash_on_outlined,
+          accentColor: accent,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -403,23 +412,17 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
           ),
         ),
         const SizedBox(height: KubusSpacing.md),
-        DesktopCreatorSidebarSection(
+        DesktopCreatorCollaborationSection(
           title: 'Collaboration',
           subtitle: created != null
               ? 'Invite co-curators without leaving the workspace.'
               : 'Save once to unlock collaboration.',
-          icon: Icons.group_add_outlined,
-          child: collabEnabled
-              ? CollaborationPanel(
-                  entityType: 'exhibitions',
-                  entityId: createdId,
-                )
-              : Text(
-                  'Once saved, collaborators can be invited here so curation stays in context.',
-                  style: KubusTextStyles.detailCaption.copyWith(
-                    color: scheme.onSurface.withValues(alpha: 0.72),
-                  ),
-                ),
+          entityType: 'exhibitions',
+          entityId: createdId,
+          enabled: collabEnabled,
+          lockedMessage:
+              'Once saved, collaborators can be invited here so curation stays in context.',
+          accentColor: accent,
         ),
       ],
     );

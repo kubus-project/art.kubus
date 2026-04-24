@@ -54,6 +54,18 @@ class _DesktopInstitutionHubScreenState
   bool _hasFetchedReviewForWallet = false;
   String _lastReviewWallet = '';
 
+  void _openEventWorkspace() {
+    DesktopShellScope.of(context)?.pushScreen(
+      const EventCreator(embedded: true),
+    );
+  }
+
+  void _openExhibitionWorkspace() {
+    DesktopShellScope.of(context)?.pushScreen(
+      const ExhibitionCreatorScreen(embedded: true),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -253,6 +265,7 @@ class _DesktopInstitutionHubScreenState
         verification.isPendingFor(DaoRoleType.artist);
     final canSelfServeInstitutionPromotion =
         isApprovedInstitution && !hasArtistBadge && !hasConflictingArtistReview;
+    final roles = KubusColorRoles.of(context);
     final sidebarStyle = KubusGlassStyle.resolve(
       context,
       surfaceType: KubusGlassSurfaceType.sidebarBackground,
@@ -373,33 +386,26 @@ class _DesktopInstitutionHubScreenState
               ),
             if (section == DesktopInstitutionSection.create &&
                 isApprovedInstitution &&
-                showCreateActions &&
-                AppConfig.isFeatureEnabled('events'))
-              KubusActionSidebarTile(
-                title: l10n.desktopInstitutionCreateEventTitle,
-                subtitle: l10n.desktopInstitutionCreateEventSubtitle,
-                icon: Icons.event_outlined,
-                semantic: KubusActionSemantic.create,
-                onTap: () {
-                  DesktopShellScope.of(context)?.pushScreen(
-                    const EventCreator(embedded: true),
-                  );
-                },
-              ),
-            if (section == DesktopInstitutionSection.create &&
-                isApprovedInstitution &&
-                showCreateActions &&
-                showExhibitions)
-              KubusActionSidebarTile(
-                title: l10n.exhibitionCreatorAppBarTitle,
-                subtitle: l10n.desktopInstitutionCreateExhibitionSubtitle,
-                icon: Icons.museum_outlined,
-                semantic: KubusActionSemantic.publish,
-                onTap: () {
-                  DesktopShellScope.of(context)?.pushScreen(
-                    const ExhibitionCreatorScreen(embedded: true),
-                  );
-                },
+                showCreateActions)
+              _buildCreatorWorkspaceLaunchCard(
+                title: l10n.desktopArtistStudioQuickActionsTitle,
+                subtitle:
+                    'Launch institution creator workspaces as dedicated desktop flows.',
+                accent: roles.web3InstitutionAccent,
+                children: [
+                  if (AppConfig.isFeatureEnabled('events'))
+                    FilledButton.tonalIcon(
+                      onPressed: _openEventWorkspace,
+                      icon: const Icon(Icons.event_outlined),
+                      label: Text(l10n.desktopInstitutionCreateEventTitle),
+                    ),
+                  if (showExhibitions)
+                    FilledButton.tonalIcon(
+                      onPressed: _openExhibitionWorkspace,
+                      icon: const Icon(Icons.museum_outlined),
+                      label: Text(l10n.exhibitionCreatorAppBarTitle),
+                    ),
+                ],
               ),
             if (section == DesktopInstitutionSection.create &&
                 isApprovedInstitution &&
@@ -450,9 +456,7 @@ class _DesktopInstitutionHubScreenState
                         embedded: true,
                         canCreate: true,
                         onCreateExhibition: () {
-                          DesktopShellScope.of(context)?.pushScreen(
-                            const ExhibitionCreatorScreen(embedded: true),
-                          );
+                          _openExhibitionWorkspace();
                         },
                         onOpenExhibition: (exhibition) {
                           DesktopShellScope.of(context)?.pushScreen(
@@ -521,6 +525,53 @@ class _DesktopInstitutionHubScreenState
               const SizedBox(height: sectionHeaderGap),
               _buildUpcomingEvents(themeProvider),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCreatorWorkspaceLaunchCard({
+    required String title,
+    required String subtitle,
+    required Color accent,
+    required List<Widget> children,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    if (children.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: KubusSpacing.md),
+      child: LiquidGlassCard(
+        padding: const EdgeInsets.all(KubusSpacing.md),
+        borderRadius: BorderRadius.circular(KubusRadius.lg),
+        backgroundColor: accent.withValues(alpha: 0.06),
+        showBorder: true,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: KubusTextStyles.sectionTitle.copyWith(
+                color: scheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: KubusSpacing.xs),
+            Text(
+              subtitle,
+              style: KubusTextStyles.actionTileSubtitle.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+            const SizedBox(height: KubusSpacing.md),
+            ...children
+                .map((child) => Padding(
+                      padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
+                      child: SizedBox(width: double.infinity, child: child),
+                    ))
+                .toList(growable: false),
           ],
         ),
       ),

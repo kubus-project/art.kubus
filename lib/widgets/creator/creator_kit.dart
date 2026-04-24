@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import '../../utils/design_tokens.dart';
+import '../collaboration_panel.dart';
 import '../glass_components.dart';
 
 /// Shared building blocks for all creator / editor / manager screens.
@@ -942,6 +943,7 @@ class DesktopCreatorShell extends StatelessWidget {
   final double paneGap;
   final EdgeInsetsGeometry contentPadding;
   final EdgeInsetsGeometry sidebarPadding;
+  final Color? sidebarAccentColor;
 
   const DesktopCreatorShell({
     super.key,
@@ -959,6 +961,7 @@ class DesktopCreatorShell extends StatelessWidget {
     this.paneGap = KubusSpacing.lg,
     this.contentPadding = const EdgeInsets.all(KubusSpacing.lg),
     this.sidebarPadding = const EdgeInsets.all(KubusSpacing.lg),
+    this.sidebarAccentColor,
   });
 
   @override
@@ -1095,7 +1098,30 @@ class DesktopCreatorShell extends StatelessWidget {
               );
 
               final sidebarSurface = buildSurface(
-                child: sidebar,
+                child: sidebarAccentColor == null
+                    ? sidebar
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Container(
+                            height: 4,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  sidebarAccentColor!.withValues(alpha: 0.95),
+                                  sidebarAccentColor!.withValues(alpha: 0.32),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: KubusSpacing.sm),
+                              child: sidebar,
+                            ),
+                          ),
+                        ],
+                      ),
                 padding: sidebarPadding,
                 blurSigma: panelStyle.blurSigma,
                 fallbackMinOpacity: panelStyle.fallbackMinOpacity,
@@ -1151,19 +1177,25 @@ class DesktopCreatorReadinessItem {
 /// A reusable checklist for creator readiness / completeness in desktop sidebars.
 class DesktopCreatorReadinessChecklist extends StatelessWidget {
   final List<DesktopCreatorReadinessItem> items;
+  final Color? accentColor;
 
-  const DesktopCreatorReadinessChecklist({super.key, required this.items});
+  const DesktopCreatorReadinessChecklist({
+    super.key,
+    required this.items,
+    this.accentColor,
+  });
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final accent = accentColor ?? scheme.primary;
     if (items.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: items.map((item) {
-        final accent = item.complete
-            ? scheme.primary
+        final itemAccent = item.complete
+            ? accent
             : scheme.onSurface.withValues(alpha: 0.55);
         return Padding(
           padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
@@ -1174,7 +1206,7 @@ class DesktopCreatorReadinessChecklist extends StatelessWidget {
                 width: KubusHeaderMetrics.actionHitArea - KubusSpacing.xs,
                 height: KubusHeaderMetrics.actionHitArea - KubusSpacing.xs,
                 decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.14),
+                  color: itemAccent.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(KubusRadius.md),
                 ),
                 child: Icon(
@@ -1183,7 +1215,7 @@ class DesktopCreatorReadinessChecklist extends StatelessWidget {
                           ? Icons.check_rounded
                           : Icons.radio_button_unchecked),
                   size: 18,
-                  color: accent,
+                  color: itemAccent,
                 ),
               ),
               const SizedBox(width: KubusSpacing.sm),
@@ -1225,6 +1257,7 @@ class DesktopCreatorSidebarSection extends StatelessWidget {
   final Widget child;
   final IconData? icon;
   final Widget? trailing;
+  final Color? accentColor;
 
   const DesktopCreatorSidebarSection({
     super.key,
@@ -1233,15 +1266,19 @@ class DesktopCreatorSidebarSection extends StatelessWidget {
     this.subtitle,
     this.icon,
     this.trailing,
+    this.accentColor,
   });
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final accent = accentColor ?? scheme.primary;
 
     return LiquidGlassCard(
       padding: const EdgeInsets.all(KubusSpacing.md),
       borderRadius: BorderRadius.circular(KubusRadius.lg),
+      showBorder: true,
+      backgroundColor: accent.withValues(alpha: 0.04),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1253,10 +1290,10 @@ class DesktopCreatorSidebarSection extends StatelessWidget {
                   width: KubusHeaderMetrics.actionHitArea - KubusSpacing.xxs,
                   height: KubusHeaderMetrics.actionHitArea - KubusSpacing.xxs,
                   decoration: BoxDecoration(
-                    color: scheme.primary.withValues(alpha: 0.12),
+                    color: accent.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(KubusRadius.md),
                   ),
-                  child: Icon(icon, color: scheme.primary, size: 18),
+                  child: Icon(icon, color: accent, size: 18),
                 ),
                 const SizedBox(width: KubusSpacing.sm),
               ],
@@ -1292,6 +1329,55 @@ class DesktopCreatorSidebarSection extends StatelessWidget {
           child,
         ],
       ),
+    );
+  }
+}
+
+/// A truth-preserving collaboration block for creator sidebars.
+///
+/// If the entity is not persisted yet, this shows an explicit save-first state
+/// instead of a broken or fake invite panel.
+class DesktopCreatorCollaborationSection extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String entityType;
+  final String entityId;
+  final bool enabled;
+  final String lockedMessage;
+  final String? myRole;
+  final Color? accentColor;
+
+  const DesktopCreatorCollaborationSection({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.entityType,
+    required this.entityId,
+    required this.enabled,
+    required this.lockedMessage,
+    this.myRole,
+    this.accentColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = accentColor ?? Theme.of(context).colorScheme.primary;
+    return DesktopCreatorSidebarSection(
+      title: title,
+      subtitle: subtitle,
+      icon: Icons.group_add_outlined,
+      accentColor: accent,
+      child: enabled && entityId.trim().isNotEmpty
+          ? CollaborationPanel(
+              entityType: entityType,
+              entityId: entityId,
+              myRole: myRole,
+            )
+          : CreatorInfoBox(
+              text: lockedMessage,
+              icon: Icons.lock_outline,
+              accentColor: accent,
+            ),
     );
   }
 }
