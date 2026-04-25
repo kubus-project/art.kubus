@@ -36,6 +36,7 @@ import '../../config/config.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import '../../widgets/common/subject_options_sheet.dart';
 import '../../widgets/glass_components.dart';
 import '../../widgets/common/keyboard_inset_padding.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -803,70 +804,15 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         ),
         if (canManage) ...[
           const SizedBox(height: DetailSpacing.md),
-          Row(
-            children: [
-              Expanded(
-                child: DetailActionButton(
-                  icon: Icons.edit_outlined,
-                  label: l10n.commonEdit,
-                  onPressed: () => openArtworkEditor(
-                    context,
-                    artwork.id,
-                    source: 'art_detail',
-                  ),
-                ),
-              ),
-              const SizedBox(width: DetailSpacing.md),
-              Expanded(
-                child: DetailActionButton(
-                  icon: artwork.isPublic
-                      ? Icons.visibility_off
-                      : Icons.publish_outlined,
-                  label: artwork.isPublic
-                      ? l10n.commonUnpublish
-                      : l10n.commonPublish,
-                  backgroundColor:
-                      scheme.primaryContainer.withValues(alpha: 0.35),
-                  foregroundColor: scheme.primary,
-                  onPressed: () async {
-                    if (!canManage) return;
-                    final profileProvider = context.read<ProfileProvider>();
-                    final walletProvider = context.read<WalletProvider>();
-                    final canProceed =
-                        await WalletActionGuard.ensureSignerAccess(
-                      context: context,
-                      profileProvider: profileProvider,
-                      walletProvider: walletProvider,
-                    );
-                    if (!mounted || !canProceed) {
-                      return;
-                    }
-                    final messenger = ScaffoldMessenger.of(context);
-                    final provider = context.read<ArtworkProvider>();
-                    try {
-                      final updated = artwork.isPublic
-                          ? await provider.unpublishArtwork(artwork.id)
-                          : await provider.publishArtwork(artwork.id);
-                      if (!mounted) return;
-                      messenger.showKubusSnackBar(
-                        SnackBar(
-                          content: Text(
-                            updated != null
-                                ? l10n.commonSavedToast
-                                : l10n.commonActionFailedToast,
-                          ),
-                        ),
-                      );
-                    } catch (_) {
-                      if (!mounted) return;
-                      messenger.showKubusSnackBar(
-                        SnackBar(content: Text(l10n.commonActionFailedToast)),
-                      );
-                    }
-                  },
-                ),
-              ),
-            ],
+          DetailActionButton(
+            icon: Icons.more_horiz,
+            label: l10n.commonActions,
+            backgroundColor: scheme.primaryContainer.withValues(alpha: 0.35),
+            foregroundColor: scheme.primary,
+            onPressed: () => _showArtworkOptions(
+              artwork,
+              canManage: canManage,
+            ),
           ),
         ],
         _buildAttendanceConfirmSection(artwork),
@@ -962,6 +908,151 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           ),
       ],
     );
+  }
+
+  Future<void> _showArtworkOptions(
+    Artwork artwork, {
+    required bool canManage,
+  }) async {
+    final l10n = AppLocalizations.of(context)!;
+    await showSubjectOptionsSheet(
+      context: context,
+      title: artwork.title.isNotEmpty ? artwork.title : l10n.commonUntitled,
+      subtitle: l10n.artistGalleryTitle,
+      actions: [
+        if (canManage)
+          SubjectOptionsAction(
+            id: 'edit',
+            icon: Icons.edit_outlined,
+            label: l10n.commonEdit,
+            onSelected: () => openArtworkEditor(
+              context,
+              artwork.id,
+              source: 'art_detail',
+            ),
+          ),
+        SubjectOptionsAction(
+          id: 'share',
+          icon: Icons.share_outlined,
+          label: l10n.commonShare,
+          onSelected: () {
+            ShareService().showShareSheet(
+              context,
+              target: ShareTarget.artwork(
+                artworkId: artwork.id,
+                title: artwork.title,
+              ),
+              sourceScreen: 'art_detail',
+            );
+          },
+        ),
+        if (canManage)
+          SubjectOptionsAction(
+            id: artwork.isPublic ? 'unpublish' : 'publish',
+            icon: artwork.isPublic
+                ? Icons.visibility_off_outlined
+                : Icons.publish_outlined,
+            label: artwork.isPublic ? l10n.commonUnpublish : l10n.commonPublish,
+            onSelected: () => _toggleArtworkPublication(artwork),
+          ),
+        if (canManage)
+          SubjectOptionsAction(
+            id: 'delete',
+            icon: Icons.delete_outline,
+            label: l10n.commonDelete,
+            isDestructive: true,
+            onSelected: () => _deleteArtwork(artwork),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _toggleArtworkPublication(Artwork artwork) async {
+    final l10n = AppLocalizations.of(context)!;
+    final profileProvider = context.read<ProfileProvider>();
+    final walletProvider = context.read<WalletProvider>();
+    final canProceed = await WalletActionGuard.ensureSignerAccess(
+      context: context,
+      profileProvider: profileProvider,
+      walletProvider: walletProvider,
+    );
+    if (!mounted || !canProceed) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final provider = context.read<ArtworkProvider>();
+    try {
+      final updated = artwork.isPublic
+          ? await provider.unpublishArtwork(artwork.id)
+          : await provider.publishArtwork(artwork.id);
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(
+            updated != null ? l10n.commonSavedToast : l10n.commonActionFailedToast,
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.commonActionFailedToast)),
+      );
+    }
+  }
+
+  Future<void> _deleteArtwork(Artwork artwork) async {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final confirmed = await showKubusDialog<bool>(
+      context: context,
+      builder: (dialogContext) => KubusAlertDialog(
+        backgroundColor: scheme.surfaceContainerHighest,
+        title: Text(l10n.artistGalleryDeleteArtworkTitle),
+        content: Text(l10n.artistGalleryDeleteConfirmBody(artwork.title)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.commonCancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: scheme.error),
+            child: Text(l10n.commonDelete),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    final profileProvider = context.read<ProfileProvider>();
+    final walletProvider = context.read<WalletProvider>();
+    final canProceed = await WalletActionGuard.ensureSignerAccess(
+      context: context,
+      profileProvider: profileProvider,
+      walletProvider: walletProvider,
+    );
+    if (!mounted || !canProceed) return;
+
+    try {
+      final deleted = await BackendApiService().deleteArtwork(artwork.id);
+      if (!mounted) return;
+      if (!deleted) {
+        ScaffoldMessenger.of(context).showKubusSnackBar(
+          SnackBar(content: Text(l10n.commonActionFailedToast)),
+        );
+        return;
+      }
+      context.read<ArtworkProvider>().removeArtwork(artwork.id);
+      Navigator.of(context).maybePop();
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(l10n.artistGalleryDeletedToast(artwork.title))),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(l10n.commonActionFailedToast)),
+      );
+    }
   }
 
   Future<void> _openStreetArtClaimsForMarkerId(String markerId) async {
@@ -1366,6 +1457,168 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     return widgets;
   }
 
+  Future<void> _showCommentOptions({
+    required ArtworkComment comment,
+    required ArtworkProvider provider,
+  }) async {
+    final l10n = AppLocalizations.of(context)!;
+    await showSubjectOptionsSheet(
+      context: context,
+      title: comment.userName,
+      subtitle: l10n.commonComments,
+      actions: [
+        SubjectOptionsAction(
+          id: 'edit',
+          icon: Icons.edit_outlined,
+          label: l10n.commonEdit,
+          onSelected: () => _editComment(
+            comment: comment,
+            provider: provider,
+          ),
+        ),
+        SubjectOptionsAction(
+          id: 'delete',
+          icon: Icons.delete_outline,
+          label: l10n.commonDelete,
+          isDestructive: true,
+          onSelected: () => _deleteComment(
+            comment: comment,
+            provider: provider,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _editComment({
+    required ArtworkComment comment,
+    required ArtworkProvider provider,
+  }) async {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final messenger = ScaffoldMessenger.of(context);
+    final controller = TextEditingController(text: comment.content);
+    bool saving = false;
+
+    await showKubusDialog<void>(
+      context: context,
+      barrierDismissible: !saving,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return KubusAlertDialog(
+              title: Text(l10n.commentEditTitle),
+              content: TextField(
+                controller: controller,
+                maxLines: null,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: l10n.postDetailWriteCommentHint,
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed:
+                      saving ? null : () => Navigator.of(dialogContext).pop(),
+                  child: Text(l10n.commonCancel),
+                ),
+                FilledButton(
+                  onPressed: saving
+                      ? null
+                      : () async {
+                          final next = controller.text.trim();
+                          if (next.isEmpty) return;
+                          setDialogState(() => saving = true);
+                          try {
+                            await provider.editArtworkComment(
+                              artworkId: widget.artworkId,
+                              commentId: comment.id,
+                              content: next,
+                            );
+                            if (!mounted || !dialogContext.mounted) return;
+                            Navigator.of(dialogContext).pop();
+                            messenger.showKubusSnackBar(
+                              SnackBar(content: Text(l10n.commentUpdatedToast)),
+                            );
+                          } catch (_) {
+                            if (!mounted) return;
+                            messenger.showKubusSnackBar(
+                              SnackBar(
+                                content: Text(l10n.commentEditFailedToast),
+                                backgroundColor: scheme.errorContainer,
+                              ),
+                            );
+                          } finally {
+                            if (dialogContext.mounted) {
+                              setDialogState(() => saving = false);
+                            }
+                          }
+                        },
+                  child: Text(l10n.commonSave),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    controller.dispose();
+  }
+
+  Future<void> _deleteComment({
+    required ArtworkComment comment,
+    required ArtworkProvider provider,
+  }) async {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final messenger = ScaffoldMessenger.of(context);
+
+    final confirmed = await showKubusDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return KubusAlertDialog(
+          title: Text(l10n.commentDeleteConfirmTitle),
+          content: Text(l10n.commentDeleteConfirmMessage),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l10n.commonCancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: FilledButton.styleFrom(
+                backgroundColor: scheme.error,
+                foregroundColor: scheme.onError,
+              ),
+              child: Text(l10n.commonDelete),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+    try {
+      await provider.deleteArtworkComment(
+        artworkId: widget.artworkId,
+        commentId: comment.id,
+      );
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.commentDeletedToast)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(l10n.commentDeleteFailedToast),
+          backgroundColor: scheme.errorContainer,
+        ),
+      );
+    }
+  }
+
   Widget _buildCommentItem({
     required Artwork artwork,
     required ArtworkComment comment,
@@ -1429,155 +1682,13 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                   ),
                 ),
                 if (canModify)
-                  PopupMenuButton<String>(
+                  IconButton(
                     tooltip: l10n.commonMore,
-                    onSelected: (value) async {
-                      if (value == 'edit') {
-                        final navigator = Navigator.of(context);
-                        final messenger = ScaffoldMessenger.of(context);
-                        final controller =
-                            TextEditingController(text: comment.content);
-                        bool saving = false;
-
-                        await showKubusDialog<void>(
-                          context: context,
-                          barrierDismissible: !saving,
-                          builder: (dialogContext) {
-                            return StatefulBuilder(
-                              builder: (context, setDialogState) {
-                                return KubusAlertDialog(
-                                  title: Text(l10n.commentEditTitle),
-                                  content: TextField(
-                                    controller: controller,
-                                    maxLines: null,
-                                    autofocus: true,
-                                    decoration: InputDecoration(
-                                      hintText: l10n.postDetailWriteCommentHint,
-                                    ),
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: saving
-                                          ? null
-                                          : () =>
-                                              Navigator.of(dialogContext).pop(),
-                                      child: Text(l10n.commonCancel),
-                                    ),
-                                    FilledButton(
-                                      onPressed: saving
-                                          ? null
-                                          : () async {
-                                              final next =
-                                                  controller.text.trim();
-                                              if (next.isEmpty) return;
-                                              setDialogState(
-                                                  () => saving = true);
-                                              try {
-                                                await provider
-                                                    .editArtworkComment(
-                                                  artworkId: widget.artworkId,
-                                                  commentId: comment.id,
-                                                  content: next,
-                                                );
-                                                if (!mounted) return;
-                                                if (!dialogContext.mounted) {
-                                                  return;
-                                                }
-                                                Navigator.of(dialogContext)
-                                                    .pop();
-                                                messenger.showKubusSnackBar(
-                                                  SnackBar(
-                                                      content: Text(l10n
-                                                          .commentUpdatedToast)),
-                                                );
-                                              } catch (_) {
-                                                if (!mounted) return;
-                                                messenger.showKubusSnackBar(
-                                                  SnackBar(
-                                                    content: Text(l10n
-                                                        .commentEditFailedToast),
-                                                    backgroundColor:
-                                                        scheme.errorContainer,
-                                                  ),
-                                                );
-                                              } finally {
-                                                if (dialogContext.mounted) {
-                                                  setDialogState(
-                                                      () => saving = false);
-                                                }
-                                              }
-                                            },
-                                      child: Text(l10n.commonSave),
-                                    ),
-                                  ],
-                                );
-                              },
-                            );
-                          },
-                        );
-
-                        controller.dispose();
-                        if (!mounted) return;
-                        navigator; // keep reference (no-op)
-                      } else if (value == 'delete') {
-                        final messenger = ScaffoldMessenger.of(context);
-                        final confirmed = await showKubusDialog<bool>(
-                          context: context,
-                          builder: (dialogContext) {
-                            return KubusAlertDialog(
-                              title: Text(l10n.commentDeleteConfirmTitle),
-                              content: Text(l10n.commentDeleteConfirmMessage),
-                              actions: [
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.of(dialogContext).pop(false),
-                                  child: Text(l10n.commonCancel),
-                                ),
-                                FilledButton(
-                                  onPressed: () =>
-                                      Navigator.of(dialogContext).pop(true),
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: scheme.error,
-                                    foregroundColor: scheme.onError,
-                                  ),
-                                  child: Text(l10n.commonDelete),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-
-                        if (confirmed != true) return;
-                        try {
-                          await provider.deleteArtworkComment(
-                            artworkId: widget.artworkId,
-                            commentId: comment.id,
-                          );
-                          if (!mounted) return;
-                          messenger.showKubusSnackBar(
-                            SnackBar(content: Text(l10n.commentDeletedToast)),
-                          );
-                        } catch (_) {
-                          if (!mounted) return;
-                          messenger.showKubusSnackBar(
-                            SnackBar(
-                              content: Text(l10n.commentDeleteFailedToast),
-                              backgroundColor: scheme.errorContainer,
-                            ),
-                          );
-                        }
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      PopupMenuItem(
-                        value: 'edit',
-                        child: Text(l10n.commonEdit),
-                      ),
-                      PopupMenuItem(
-                        value: 'delete',
-                        child: Text(l10n.commonDelete),
-                      ),
-                    ],
+                    onPressed: () => _showCommentOptions(
+                      comment: comment,
+                      provider: provider,
+                    ),
+                    icon: const Icon(Icons.more_horiz),
                   ),
                 IconButton(
                   onPressed: () =>

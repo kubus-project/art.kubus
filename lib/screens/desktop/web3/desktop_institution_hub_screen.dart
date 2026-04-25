@@ -53,6 +53,7 @@ class _DesktopInstitutionHubScreenState
   bool _reviewLoading = false;
   bool _hasFetchedReviewForWallet = false;
   String _lastReviewWallet = '';
+  String _lastStatsWallet = '';
 
   void _openEventWorkspace() {
     DesktopShellScope.of(context)?.pushScreen(
@@ -89,6 +90,28 @@ class _DesktopInstitutionHubScreenState
 
     if (wallet.isNotEmpty) {
       _loadInstitutionReviewStatus(forceRefresh: true);
+    }
+
+    final statsWalletChanged = wallet != _lastStatsWallet;
+    if (wallet.isEmpty) {
+      _lastStatsWallet = '';
+    } else if (statsWalletChanged) {
+      _lastStatsWallet = wallet;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final statsProvider = context.read<StatsProvider>();
+        unawaited(statsProvider.ensureSnapshot(
+          entityType: 'user',
+          entityId: wallet,
+          metrics: const <String>[
+            'eventsHosted',
+            'visitorsReceived',
+            'exhibitionArtworks',
+            'achievementTokensTotal',
+          ],
+          scope: 'public',
+        ));
+      });
     }
   }
 
@@ -770,15 +793,6 @@ class _DesktopInstitutionHubScreenState
       'exhibitionArtworks',
       'achievementTokensTotal',
     ];
-
-    if (wallet.isNotEmpty) {
-      unawaited(statsProvider.ensureSnapshot(
-        entityType: 'user',
-        entityId: wallet,
-        metrics: metrics,
-        scope: 'public',
-      ));
-    }
 
     final snapshot = wallet.isEmpty
         ? null

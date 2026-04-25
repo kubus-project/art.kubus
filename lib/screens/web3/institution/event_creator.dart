@@ -1040,7 +1040,9 @@ class _EventCreatorState extends State<EventCreator>
           if (_currentStep > 0) const SizedBox(width: KubusSpacing.md),
           Expanded(
             child: ElevatedButton(
-              onPressed: _currentStep < 3 ? _nextStep : _createEvent,
+              onPressed: _submitting
+                  ? null
+                  : (_currentStep < 3 ? _nextStep : _createEvent),
               style: ElevatedButton.styleFrom(
                 backgroundColor: accent,
                 foregroundColor: scheme.onPrimary,
@@ -1050,7 +1052,9 @@ class _EventCreatorState extends State<EventCreator>
                 ),
               ),
               child: Text(
-                _currentStep < 3 ? l10n.commonNext : l10n.commonCreate,
+                _currentStep < 3
+                    ? l10n.commonNext
+                    : (_isEditing ? l10n.commonSave : l10n.commonCreate),
                 style: KubusTextStyles.detailButton.copyWith(
                   color: scheme.onSurface,
                 ),
@@ -1198,27 +1202,28 @@ class _EventCreatorState extends State<EventCreator>
       }
 
       if (!mounted) return;
+      final shellScope = DesktopShellScope.of(context);
       setState(() {
         _createdEvent = event;
       });
       final l10n = AppLocalizations.of(context)!;
       showKubusDialog(
         context: context,
-        builder: (context) => KubusAlertDialog(
+        builder: (dialogContext) => KubusAlertDialog(
           backgroundColor:
-              Theme.of(context).colorScheme.surfaceContainerHighest,
+              Theme.of(dialogContext).colorScheme.surfaceContainerHighest,
           title: Text(
             _isEditing
                 ? l10n.eventCreatorEventUpdatedTitle
                 : l10n.eventCreatorEventCreatedTitle,
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+            style: TextStyle(color: Theme.of(dialogContext).colorScheme.onSurface),
           ),
           content: Text(
             _isEditing
                 ? l10n.eventCreatorEventUpdatedBody
                 : l10n.eventCreatorEventCreatedBody,
             style: TextStyle(
-                color: Theme.of(context)
+                color: Theme.of(dialogContext)
                     .colorScheme
                     .onSurface
                     .withValues(alpha: 0.75)),
@@ -1226,9 +1231,13 @@ class _EventCreatorState extends State<EventCreator>
           actions: [
             ElevatedButton(
               onPressed: () {
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
                 if (_isEditing) {
-                  Navigator.pop(context);
+                  if (widget.embedded) {
+                    shellScope?.popScreen();
+                  } else {
+                    Navigator.of(context).pop();
+                  }
                 } else if (!widget.embedded) {
                   _resetForm();
                 }

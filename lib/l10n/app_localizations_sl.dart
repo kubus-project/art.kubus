@@ -424,6 +424,105 @@ class AppLocalizationsSl extends AppLocalizations {
   String get exhibitionCreatorCreateFailedWithError => 'Ustvarjanje razstave ni uspelo. Poskusi znova.';
 
   @override
+  String get exhibitionCreatorSavedInfoBox => 'Razstava je shranjena. Sodelovanje je na voljo v stranski vrstici, podrobnosti pa lahko še naprej urejaš spodaj.';
+
+  @override
+  String get exhibitionCreatorShellDraftSubtitle => 'Uredi razstavo, nato jo shrani za odklep sodelovanja.';
+
+  @override
+  String get exhibitionCreatorShellSavedSubtitle => 'Razstava je shranjena. Nadaljuj z urejanjem ali odpri podrobnosti iz stranske vrstice.';
+
+  @override
+  String get exhibitionCreatorReadyBasicsLabel => 'Osnove izpolnjene';
+
+  @override
+  String get exhibitionCreatorReadyBasicsDescription => 'Naslov, opis in lokacija so izpolnjeni.';
+
+  @override
+  String get exhibitionCreatorReadyDatesLabel => 'Datumski razpon nastavljen';
+
+  @override
+  String get exhibitionCreatorReadyDatesComplete => 'Razstava ima datum začetka in konca.';
+
+  @override
+  String get exhibitionCreatorReadyDatesPending => 'Pred shranjevanjem nastavi oba datuma.';
+
+  @override
+  String get exhibitionCreatorReadyCoverLabel => 'Naslovna slika dodana';
+
+  @override
+  String get exhibitionCreatorReadyCoverComplete => 'Naslovna slika je pripravljena.';
+
+  @override
+  String get exhibitionCreatorReadyCoverPending => 'Neobvezno, vendar izboljša predstavitev.';
+
+  @override
+  String get exhibitionCreatorReadyVisibilityLabel => 'Vidnost izbrana';
+
+  @override
+  String get exhibitionCreatorReadyVisibilityPublic => 'Javna razstava bo vidna vsem.';
+
+  @override
+  String get exhibitionCreatorReadyVisibilityPrivate => 'Zasebna razstava ostane omejena.';
+
+  @override
+  String get exhibitionCreatorStatusDraftSubtitle => 'Osnutek v pripravi';
+
+  @override
+  String get exhibitionCreatorStatusSavedSubtitle => 'Shranjena razstava';
+
+  @override
+  String get exhibitionCreatorSummaryIdLabel => 'ID razstave';
+
+  @override
+  String get exhibitionCreatorSummaryNotCreatedYet => 'Še ni ustvarjena';
+
+  @override
+  String get exhibitionCreatorSummaryScheduleLabel => 'Termin';
+
+  @override
+  String get exhibitionCreatorSummaryScheduleReady => 'Pripravljeno';
+
+  @override
+  String get exhibitionCreatorSummaryScheduleIncomplete => 'Nepopolno';
+
+  @override
+  String get exhibitionCreatorSummaryVisibilityLabel => 'Vidnost';
+
+  @override
+  String get exhibitionCreatorReadinessTitle => 'Pripravljenost';
+
+  @override
+  String get exhibitionCreatorReadinessSubtitle => 'Hiter pregled pred shranjevanjem.';
+
+  @override
+  String get exhibitionCreatorQuickActionsTitle => 'Hitra dejanja';
+
+  @override
+  String get exhibitionCreatorQuickActionsSubtitle => 'Med delom ostani znotraj ustvarjalnika.';
+
+  @override
+  String get exhibitionCreatorQuickActionSave => 'Shrani razstavo';
+
+  @override
+  String get exhibitionCreatorQuickActionUpdate => 'Posodobi razstavo';
+
+  @override
+  String get exhibitionCreatorQuickActionOpen => 'Odpri razstavo';
+
+  @override
+  String get exhibitionCreatorCollaborationTitle => 'Sodelovanje';
+
+  @override
+  String get exhibitionCreatorCollaborationReadySubtitle => 'Povabi sokuratorje, ne da zapustiš delovni prostor.';
+
+  @override
+  String get exhibitionCreatorCollaborationLockedSubtitle => 'Za odklep sodelovanja najprej shrani.';
+
+  @override
+  String get exhibitionCreatorCollaborationLockedMessage => 'Po shranjevanju lahko tukaj povabiš sodelavce, da kuriranje ostane v kontekstu.';
+
+  @override
   String get lockAppLockedTitle => 'Aplikacija je zaklenjena';
 
   @override

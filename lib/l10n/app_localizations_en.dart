@@ -424,6 +424,105 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionCreatorCreateFailedWithError => 'Failed to create exhibition. Please try again.';
 
   @override
+  String get exhibitionCreatorSavedInfoBox => 'Exhibition saved. Collaboration is available from the sidebar, and you can keep refining the details below.';
+
+  @override
+  String get exhibitionCreatorShellDraftSubtitle => 'Curate the exhibition, then save it to unlock collaboration.';
+
+  @override
+  String get exhibitionCreatorShellSavedSubtitle => 'Exhibition saved. Keep refining or open the detail view from the sidebar.';
+
+  @override
+  String get exhibitionCreatorReadyBasicsLabel => 'Basics complete';
+
+  @override
+  String get exhibitionCreatorReadyBasicsDescription => 'Title, description, and location are filled in.';
+
+  @override
+  String get exhibitionCreatorReadyDatesLabel => 'Date range set';
+
+  @override
+  String get exhibitionCreatorReadyDatesComplete => 'The exhibition has a start and end date.';
+
+  @override
+  String get exhibitionCreatorReadyDatesPending => 'Set both dates before saving.';
+
+  @override
+  String get exhibitionCreatorReadyCoverLabel => 'Cover image added';
+
+  @override
+  String get exhibitionCreatorReadyCoverComplete => 'Cover image is ready.';
+
+  @override
+  String get exhibitionCreatorReadyCoverPending => 'Optional, but it improves the showcase.';
+
+  @override
+  String get exhibitionCreatorReadyVisibilityLabel => 'Visibility chosen';
+
+  @override
+  String get exhibitionCreatorReadyVisibilityPublic => 'Public exhibition will be discoverable.';
+
+  @override
+  String get exhibitionCreatorReadyVisibilityPrivate => 'Private exhibitions stay restricted.';
+
+  @override
+  String get exhibitionCreatorStatusDraftSubtitle => 'Draft in progress';
+
+  @override
+  String get exhibitionCreatorStatusSavedSubtitle => 'Saved exhibition';
+
+  @override
+  String get exhibitionCreatorSummaryIdLabel => 'Exhibition ID';
+
+  @override
+  String get exhibitionCreatorSummaryNotCreatedYet => 'Not created yet';
+
+  @override
+  String get exhibitionCreatorSummaryScheduleLabel => 'Schedule';
+
+  @override
+  String get exhibitionCreatorSummaryScheduleReady => 'Ready';
+
+  @override
+  String get exhibitionCreatorSummaryScheduleIncomplete => 'Incomplete';
+
+  @override
+  String get exhibitionCreatorSummaryVisibilityLabel => 'Visibility';
+
+  @override
+  String get exhibitionCreatorReadinessTitle => 'Readiness';
+
+  @override
+  String get exhibitionCreatorReadinessSubtitle => 'A quick sanity check before saving.';
+
+  @override
+  String get exhibitionCreatorQuickActionsTitle => 'Quick actions';
+
+  @override
+  String get exhibitionCreatorQuickActionsSubtitle => 'Stay inside the creator while you work.';
+
+  @override
+  String get exhibitionCreatorQuickActionSave => 'Save exhibition';
+
+  @override
+  String get exhibitionCreatorQuickActionUpdate => 'Update exhibition';
+
+  @override
+  String get exhibitionCreatorQuickActionOpen => 'Open exhibition';
+
+  @override
+  String get exhibitionCreatorCollaborationTitle => 'Collaboration';
+
+  @override
+  String get exhibitionCreatorCollaborationReadySubtitle => 'Invite co-curators without leaving the workspace.';
+
+  @override
+  String get exhibitionCreatorCollaborationLockedSubtitle => 'Save once to unlock collaboration.';
+
+  @override
+  String get exhibitionCreatorCollaborationLockedMessage => 'Once saved, collaborators can be invited here so curation stays in context.';
+
+  @override
   String get lockAppLockedTitle => 'App locked';
 
   @override

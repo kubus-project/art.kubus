@@ -112,6 +112,36 @@ class _CollectionCreatorState extends State<CollectionCreator> {
     });
   }
 
+  String? _extractCreatedCollectionId(dynamic payload) {
+    if (payload is Map<String, dynamic>) {
+      for (final key in const <String>['id', 'collectionId', 'collection_id']) {
+        final raw = payload[key]?.toString();
+        final value = raw == null ? null : raw.trim();
+        if (value != null && value.isNotEmpty) {
+          return value;
+        }
+      }
+
+      for (final nested in payload.values) {
+        final nestedId = _extractCreatedCollectionId(nested);
+        if (nestedId != null && nestedId.isNotEmpty) {
+          return nestedId;
+        }
+      }
+    } else if (payload is Map) {
+      return _extractCreatedCollectionId(Map<String, dynamic>.from(payload));
+    } else if (payload is List) {
+      for (final item in payload) {
+        final nestedId = _extractCreatedCollectionId(item);
+        if (nestedId != null && nestedId.isNotEmpty) {
+          return nestedId;
+        }
+      }
+    }
+
+    return null;
+  }
+
   Future<void> _pickCoverImage() async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
@@ -174,7 +204,7 @@ class _CollectionCreatorState extends State<CollectionCreator> {
         thumbnailUrl: thumbnailUrl,
       );
 
-      final id = (created['id'] ?? created['collectionId'] ?? created['collection_id'])?.toString();
+      final id = _extractCreatedCollectionId(created);
       if (!mounted) return;
 
       if (id == null || id.isEmpty) {
@@ -200,9 +230,7 @@ class _CollectionCreatorState extends State<CollectionCreator> {
 
       if (widget.embedded) {
         setState(() => _createdCollectionId = id);
-        messenger.showKubusSnackBar(
-          const SnackBar(content: Text('Collection saved successfully.')),
-        );
+        messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonSavedToast)));
         return;
       }
 

@@ -132,7 +132,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
       padding: EdgeInsets.zero,
       children: [
         DesktopCreatorSidebarSection(
-          title: l10n.collectionSettingsBasicInfo,
+          title: l10n.collectionCreatorReadinessTitle,
           subtitle: l10n.commonEdit,
           icon: Icons.fact_check_outlined,
           child: DesktopCreatorReadinessChecklist(
@@ -141,7 +141,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
         ),
         const SizedBox(height: KubusSpacing.md),
         DesktopCreatorSidebarSection(
-          title: l10n.collectionDetailManage,
+          title: l10n.commonActions,
           subtitle: l10n.commonSave,
           icon: Icons.save_outlined,
           child: Column(
@@ -646,7 +646,7 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
       final shellScope = DesktopShellScope.of(context);
       return DesktopCreatorShell(
         title: art.title.isNotEmpty ? art.title : l10n.commonEdit,
-        subtitle: l10n.collectionSettingsBasicInfo,
+        subtitle: l10n.exhibitionCreatorBasicsTitle,
         onBack: shellScope?.popScreen,
         backTooltip: l10n.commonBack,
         mainContent: content,

@@ -917,6 +917,204 @@ abstract class AppLocalizations {
   /// **'Failed to create exhibition. Please try again.'**
   String get exhibitionCreatorCreateFailedWithError;
 
+  /// No description provided for @exhibitionCreatorSavedInfoBox.
+  ///
+  /// In en, this message translates to:
+  /// **'Exhibition saved. Collaboration is available from the sidebar, and you can keep refining the details below.'**
+  String get exhibitionCreatorSavedInfoBox;
+
+  /// No description provided for @exhibitionCreatorShellDraftSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Curate the exhibition, then save it to unlock collaboration.'**
+  String get exhibitionCreatorShellDraftSubtitle;
+
+  /// No description provided for @exhibitionCreatorShellSavedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Exhibition saved. Keep refining or open the detail view from the sidebar.'**
+  String get exhibitionCreatorShellSavedSubtitle;
+
+  /// No description provided for @exhibitionCreatorReadyBasicsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Basics complete'**
+  String get exhibitionCreatorReadyBasicsLabel;
+
+  /// No description provided for @exhibitionCreatorReadyBasicsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Title, description, and location are filled in.'**
+  String get exhibitionCreatorReadyBasicsDescription;
+
+  /// No description provided for @exhibitionCreatorReadyDatesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Date range set'**
+  String get exhibitionCreatorReadyDatesLabel;
+
+  /// No description provided for @exhibitionCreatorReadyDatesComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'The exhibition has a start and end date.'**
+  String get exhibitionCreatorReadyDatesComplete;
+
+  /// No description provided for @exhibitionCreatorReadyDatesPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Set both dates before saving.'**
+  String get exhibitionCreatorReadyDatesPending;
+
+  /// No description provided for @exhibitionCreatorReadyCoverLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover image added'**
+  String get exhibitionCreatorReadyCoverLabel;
+
+  /// No description provided for @exhibitionCreatorReadyCoverComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover image is ready.'**
+  String get exhibitionCreatorReadyCoverComplete;
+
+  /// No description provided for @exhibitionCreatorReadyCoverPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional, but it improves the showcase.'**
+  String get exhibitionCreatorReadyCoverPending;
+
+  /// No description provided for @exhibitionCreatorReadyVisibilityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Visibility chosen'**
+  String get exhibitionCreatorReadyVisibilityLabel;
+
+  /// No description provided for @exhibitionCreatorReadyVisibilityPublic.
+  ///
+  /// In en, this message translates to:
+  /// **'Public exhibition will be discoverable.'**
+  String get exhibitionCreatorReadyVisibilityPublic;
+
+  /// No description provided for @exhibitionCreatorReadyVisibilityPrivate.
+  ///
+  /// In en, this message translates to:
+  /// **'Private exhibitions stay restricted.'**
+  String get exhibitionCreatorReadyVisibilityPrivate;
+
+  /// No description provided for @exhibitionCreatorStatusDraftSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft in progress'**
+  String get exhibitionCreatorStatusDraftSubtitle;
+
+  /// No description provided for @exhibitionCreatorStatusSavedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved exhibition'**
+  String get exhibitionCreatorStatusSavedSubtitle;
+
+  /// No description provided for @exhibitionCreatorSummaryIdLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Exhibition ID'**
+  String get exhibitionCreatorSummaryIdLabel;
+
+  /// No description provided for @exhibitionCreatorSummaryNotCreatedYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not created yet'**
+  String get exhibitionCreatorSummaryNotCreatedYet;
+
+  /// No description provided for @exhibitionCreatorSummaryScheduleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule'**
+  String get exhibitionCreatorSummaryScheduleLabel;
+
+  /// No description provided for @exhibitionCreatorSummaryScheduleReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready'**
+  String get exhibitionCreatorSummaryScheduleReady;
+
+  /// No description provided for @exhibitionCreatorSummaryScheduleIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Incomplete'**
+  String get exhibitionCreatorSummaryScheduleIncomplete;
+
+  /// No description provided for @exhibitionCreatorSummaryVisibilityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Visibility'**
+  String get exhibitionCreatorSummaryVisibilityLabel;
+
+  /// No description provided for @exhibitionCreatorReadinessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Readiness'**
+  String get exhibitionCreatorReadinessTitle;
+
+  /// No description provided for @exhibitionCreatorReadinessSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A quick sanity check before saving.'**
+  String get exhibitionCreatorReadinessSubtitle;
+
+  /// No description provided for @exhibitionCreatorQuickActionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick actions'**
+  String get exhibitionCreatorQuickActionsTitle;
+
+  /// No description provided for @exhibitionCreatorQuickActionsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Stay inside the creator while you work.'**
+  String get exhibitionCreatorQuickActionsSubtitle;
+
+  /// No description provided for @exhibitionCreatorQuickActionSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save exhibition'**
+  String get exhibitionCreatorQuickActionSave;
+
+  /// No description provided for @exhibitionCreatorQuickActionUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Update exhibition'**
+  String get exhibitionCreatorQuickActionUpdate;
+
+  /// No description provided for @exhibitionCreatorQuickActionOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open exhibition'**
+  String get exhibitionCreatorQuickActionOpen;
+
+  /// No description provided for @exhibitionCreatorCollaborationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Collaboration'**
+  String get exhibitionCreatorCollaborationTitle;
+
+  /// No description provided for @exhibitionCreatorCollaborationReadySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite co-curators without leaving the workspace.'**
+  String get exhibitionCreatorCollaborationReadySubtitle;
+
+  /// No description provided for @exhibitionCreatorCollaborationLockedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Save once to unlock collaboration.'**
+  String get exhibitionCreatorCollaborationLockedSubtitle;
+
+  /// No description provided for @exhibitionCreatorCollaborationLockedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Once saved, collaborators can be invited here so curation stays in context.'**
+  String get exhibitionCreatorCollaborationLockedMessage;
+
   /// No description provided for @lockAppLockedTitle.
   ///
   /// In en, this message translates to:

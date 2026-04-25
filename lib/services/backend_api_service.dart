@@ -4145,6 +4145,12 @@ class BackendApiService
             return parseArtworkFromBackendJson(payload);
           }
         }
+        try {
+          return await getArtwork(artworkId);
+        } catch (_) {
+          // Keep successful publish operations from surfacing a false failure
+          // when the backend returns an empty or non-standard success body.
+        }
         return null;
       }
       throw Exception(
@@ -4171,6 +4177,12 @@ class BackendApiService
           if (payload is Map<String, dynamic>) {
             return parseArtworkFromBackendJson(payload);
           }
+        }
+        try {
+          return await getArtwork(artworkId);
+        } catch (_) {
+          // Keep successful unpublish operations from surfacing a false failure
+          // when the backend returns an empty or non-standard success body.
         }
         return null;
       }

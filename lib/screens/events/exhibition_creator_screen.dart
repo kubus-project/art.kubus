@@ -134,8 +134,7 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
           children: [
             if (_createdExhibition != null) ...[
               CreatorInfoBox(
-                text:
-                    'Exhibition saved. Collaboration is available from the sidebar, and you can keep refining the details below.',
+                text: l10n.exhibitionCreatorSavedInfoBox,
                 icon: Icons.check_circle_outline,
                 accentColor: scheme.primary,
               ),
@@ -260,11 +259,13 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
       return DesktopCreatorShell(
         title: l10n.exhibitionCreatorAppBarTitle,
         subtitle: _createdExhibition == null
-            ? 'Curate the exhibition, then save it to unlock collaboration.'
-            : 'Exhibition saved. Keep refining or open the detail view from the sidebar.',
+            ? l10n.exhibitionCreatorShellDraftSubtitle
+            : l10n.exhibitionCreatorShellSavedSubtitle,
         onBack: shellScope?.popScreen,
         headerBadge: CreatorStatusBadge(
-          label: _createdExhibition == null ? 'Draft' : 'Saved',
+          label: _createdExhibition == null
+              ? l10n.commonDraft
+              : l10n.commonSavedToast,
           color: _createdExhibition == null ? scheme.primary : scheme.tertiary,
         ),
         sidebarAccentColor: accent,
@@ -293,32 +294,32 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
 
     final readyItems = <DesktopCreatorReadinessItem>[
       DesktopCreatorReadinessItem(
-        label: 'Basics complete',
-        description: 'Title, description, and location are filled in.',
+        label: l10n.exhibitionCreatorReadyBasicsLabel,
+        description: l10n.exhibitionCreatorReadyBasicsDescription,
         complete: hasBasics,
         icon: Icons.subject_outlined,
       ),
       DesktopCreatorReadinessItem(
-        label: 'Date range set',
+        label: l10n.exhibitionCreatorReadyDatesLabel,
         description: hasDates
-            ? 'The exhibition has a start and end date.'
-            : 'Set both dates before saving.',
+            ? l10n.exhibitionCreatorReadyDatesComplete
+            : l10n.exhibitionCreatorReadyDatesPending,
         complete: hasDates,
         icon: Icons.date_range_outlined,
       ),
       DesktopCreatorReadinessItem(
-        label: 'Cover image added',
+        label: l10n.exhibitionCreatorReadyCoverLabel,
         description: hasCover
-            ? 'Cover image is ready.'
-            : 'Optional, but it improves the showcase.',
+            ? l10n.exhibitionCreatorReadyCoverComplete
+            : l10n.exhibitionCreatorReadyCoverPending,
         complete: hasCover,
         icon: Icons.image_outlined,
       ),
       DesktopCreatorReadinessItem(
-        label: 'Visibility chosen',
+        label: l10n.exhibitionCreatorReadyVisibilityLabel,
         description: isPublic
-            ? 'Public exhibition will be discoverable.'
-            : 'Private exhibitions stay restricted.',
+            ? l10n.exhibitionCreatorReadyVisibilityPublic
+            : l10n.exhibitionCreatorReadyVisibilityPrivate,
         complete: true,
         icon: isPublic ? Icons.public_outlined : Icons.lock_outline,
       ),
@@ -328,33 +329,41 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
       padding: EdgeInsets.zero,
       children: [
         DesktopCreatorSidebarSection(
-          title: 'Status',
-          subtitle: created == null ? 'Draft in progress' : 'Saved exhibition',
+          title: l10n.commonStatus,
+          subtitle: created == null
+              ? l10n.exhibitionCreatorStatusDraftSubtitle
+              : l10n.exhibitionCreatorStatusSavedSubtitle,
           icon: created == null ? Icons.edit_outlined : Icons.museum_outlined,
           accentColor: accent,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CreatorStatusBadge(
-                label: created == null ? 'Draft' : 'Saved',
+                label: created == null
+                    ? l10n.commonDraft
+                    : l10n.commonSavedToast,
                 color: created == null ? scheme.primary : scheme.tertiary,
               ),
               const SizedBox(height: KubusSpacing.sm),
               DesktopCreatorSummaryRow(
-                label: 'Exhibition ID',
-                value: createdId.isNotEmpty ? createdId : 'Not created yet',
+                label: l10n.exhibitionCreatorSummaryIdLabel,
+                value: createdId.isNotEmpty
+                    ? createdId
+                    : l10n.exhibitionCreatorSummaryNotCreatedYet,
                 valueColor: createdId.isNotEmpty
                     ? scheme.onSurface
                     : scheme.onSurface.withValues(alpha: 0.6),
               ),
               DesktopCreatorSummaryRow(
-                label: 'Schedule',
-                value: hasDates ? 'Ready' : 'Incomplete',
+                label: l10n.exhibitionCreatorSummaryScheduleLabel,
+                value: hasDates
+                    ? l10n.exhibitionCreatorSummaryScheduleReady
+                    : l10n.exhibitionCreatorSummaryScheduleIncomplete,
                 icon: Icons.event_outlined,
               ),
               DesktopCreatorSummaryRow(
-                label: 'Visibility',
-                value: isPublic ? 'Public' : 'Private',
+                label: l10n.exhibitionCreatorSummaryVisibilityLabel,
+                value: isPublic ? l10n.commonPublic : l10n.commonPrivate,
                 icon: isPublic ? Icons.public_outlined : Icons.lock_outline,
               ),
             ],
@@ -362,8 +371,8 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
         ),
         const SizedBox(height: KubusSpacing.md),
         DesktopCreatorSidebarSection(
-          title: 'Readiness',
-          subtitle: 'A quick sanity check before saving.',
+          title: l10n.exhibitionCreatorReadinessTitle,
+          subtitle: l10n.exhibitionCreatorReadinessSubtitle,
           icon: Icons.fact_check_outlined,
           accentColor: accent,
           child: DesktopCreatorReadinessChecklist(
@@ -373,8 +382,8 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
         ),
         const SizedBox(height: KubusSpacing.md),
         DesktopCreatorSidebarSection(
-          title: 'Quick actions',
-          subtitle: 'Stay inside the creator while you work.',
+          title: l10n.exhibitionCreatorQuickActionsTitle,
+          subtitle: l10n.exhibitionCreatorQuickActionsSubtitle,
           icon: Icons.flash_on_outlined,
           accentColor: accent,
           child: Column(
@@ -386,8 +395,8 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
                     ? Icons.save_outlined
                     : Icons.refresh_outlined),
                 label: Text(created == null
-                    ? 'Save exhibition'
-                    : 'Update exhibition'),
+                    ? l10n.exhibitionCreatorQuickActionSave
+                    : l10n.exhibitionCreatorQuickActionUpdate),
               ),
               if (created != null) ...[
                 const SizedBox(height: KubusSpacing.sm),
@@ -405,7 +414,7 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
                     );
                   },
                   icon: const Icon(Icons.open_in_new_outlined),
-                  label: const Text('Open exhibition'),
+                  label: Text(l10n.exhibitionCreatorQuickActionOpen),
                 ),
               ],
             ],
@@ -413,15 +422,14 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
         ),
         const SizedBox(height: KubusSpacing.md),
         DesktopCreatorCollaborationSection(
-          title: 'Collaboration',
+          title: l10n.exhibitionCreatorCollaborationTitle,
           subtitle: created != null
-              ? 'Invite co-curators without leaving the workspace.'
-              : 'Save once to unlock collaboration.',
+              ? l10n.exhibitionCreatorCollaborationReadySubtitle
+              : l10n.exhibitionCreatorCollaborationLockedSubtitle,
           entityType: 'exhibitions',
           entityId: createdId,
           enabled: collabEnabled,
-          lockedMessage:
-              'Once saved, collaborators can be invited here so curation stays in context.',
+          lockedMessage: l10n.exhibitionCreatorCollaborationLockedMessage,
           accentColor: accent,
         ),
       ],
@@ -513,7 +521,7 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
           _createdExhibition = created;
         });
         messenger.showKubusSnackBar(
-          const SnackBar(content: Text('Exhibition saved successfully.')),
+          SnackBar(content: Text(l10n.commonSavedToast)),
         );
         return;
       }
