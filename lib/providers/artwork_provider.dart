@@ -263,8 +263,27 @@ class ArtworkProvider extends ChangeNotifier {
       final updated = await _backendApi.publishArtwork(artworkId);
       if (updated != null) {
         addOrUpdateArtwork(updated);
+        return updated;
       }
-      return updated;
+
+      // Backend returned null even though request succeeded (sparse/empty response).
+      // Try to refresh the artwork to verify the publish worked.
+      try {
+        final refreshed = await _backendApi.getArtwork(artworkId);
+        addOrUpdateArtwork(refreshed);
+        return refreshed;
+      } catch (_) {
+        // Refresh failed. Check if we have a cached artwork and update it optimistically.
+        final cached = getArtworkById(artworkId);
+        if (cached != null) {
+          // Return optimistically updated artwork (marked as public)
+          final optimistic = cached.copyWith(isPublic: true);
+          addOrUpdateArtwork(optimistic);
+          return optimistic;
+        }
+        // No cached artwork; backend likely succeeded but we can't verify
+        return null;
+      }
     } catch (e) {
       _setError('Failed to publish artwork: $e');
       return null;
@@ -280,8 +299,27 @@ class ArtworkProvider extends ChangeNotifier {
       final updated = await _backendApi.unpublishArtwork(artworkId);
       if (updated != null) {
         addOrUpdateArtwork(updated);
+        return updated;
       }
-      return updated;
+
+      // Backend returned null even though request succeeded (sparse/empty response).
+      // Try to refresh the artwork to verify the unpublish worked.
+      try {
+        final refreshed = await _backendApi.getArtwork(artworkId);
+        addOrUpdateArtwork(refreshed);
+        return refreshed;
+      } catch (_) {
+        // Refresh failed. Check if we have a cached artwork and update it optimistically.
+        final cached = getArtworkById(artworkId);
+        if (cached != null) {
+          // Return optimistically updated artwork (marked as not public)
+          final optimistic = cached.copyWith(isPublic: false);
+          addOrUpdateArtwork(optimistic);
+          return optimistic;
+        }
+        // No cached artwork; backend likely succeeded but we can't verify
+        return null;
+      }
     } catch (e) {
       _setError('Failed to unpublish artwork: $e');
       return null;

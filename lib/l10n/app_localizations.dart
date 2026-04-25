@@ -8987,6 +8987,78 @@ abstract class AppLocalizations {
   /// **'Once saved, collaborators can be invited here so curation stays in context.'**
   String get collectionCreatorCollaborationLockedMessage;
 
+  /// No description provided for @collectionCreatorSavedInfoBox.
+  ///
+  /// In en, this message translates to:
+  /// **'Collection saved. Collaboration is available from the sidebar, and you can keep refining the selection below.'**
+  String get collectionCreatorSavedInfoBox;
+
+  /// No description provided for @collectionCreatorConnectWalletLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect a wallet to load and curate your artwork library inside this collection creator.'**
+  String get collectionCreatorConnectWalletLabel;
+
+  /// No description provided for @collectionCreatorArtworkLibraryLoadingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your artwork library is still loading. If the backend is slow, you can keep editing the collection basics and come back here.'**
+  String get collectionCreatorArtworkLibraryLoadingLabel;
+
+  /// No description provided for @collectionCreatorArtworkLibraryPlaceholderLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Load your artwork library to select pieces for this collection. This keeps the first open lighter and avoids unnecessary API calls.'**
+  String get collectionCreatorArtworkLibraryPlaceholderLabel;
+
+  /// No description provided for @collectionCreatorLoadingLibraryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading library…'**
+  String get collectionCreatorLoadingLibraryLabel;
+
+  /// No description provided for @collectionCreatorLoadArtworkLibraryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Load artwork library'**
+  String get collectionCreatorLoadArtworkLibraryLabel;
+
+  /// No description provided for @collectionCreatorArtworkSelectedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected'**
+  String get collectionCreatorArtworkSelectedLabel;
+
+  /// No description provided for @collectionCreatorArtworkAddLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get collectionCreatorArtworkAddLabel;
+
+  /// No description provided for @collectionCreatorNoArtworksAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No artworks available'**
+  String get collectionCreatorNoArtworksAvailable;
+
+  /// No description provided for @collectionCreatorSearchArtworksLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get collectionCreatorSearchArtworksLabel;
+
+  /// No description provided for @collectionCreatorSearchArtworksHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search your artworks...'**
+  String get collectionCreatorSearchArtworksHint;
+
+  /// No description provided for @collectionCreatorAddArtworksTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Artworks'**
+  String get collectionCreatorAddArtworksTitle;
+
   /// No description provided for @collectionDetailLoadFailedMessage.
   ///
   /// In en, this message translates to:
@@ -18454,30 +18526,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Funds one focused development session (new feature / fixes / content updates).'**
   String get supportTier50Body;
-
-  /// No description provided for @collectionCreatorAddArtworksTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Add Artworks'**
-  String get collectionCreatorAddArtworksTitle;
-
-  /// No description provided for @collectionCreatorSearchArtworksLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Search'**
-  String get collectionCreatorSearchArtworksLabel;
-
-  /// No description provided for @collectionCreatorSearchArtworksHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Search your artworks...'**
-  String get collectionCreatorSearchArtworksHint;
-
-  /// No description provided for @collectionCreatorNoArtworksAvailable.
-  ///
-  /// In en, this message translates to:
-  /// **'No artworks available'**
-  String get collectionCreatorNoArtworksAvailable;
 
   /// No description provided for @commonChange.
   ///

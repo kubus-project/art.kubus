@@ -9,7 +9,6 @@ import 'dart:typed_data';
 import '../../../config/config.dart';
 import '../../../models/artwork.dart';
 import '../../art/collection_detail_screen.dart';
-import '../../../services/backend_api_service.dart';
 import '../../../providers/collections_provider.dart';
 import '../../../providers/artwork_provider.dart';
 import '../../../providers/profile_provider.dart';
@@ -112,36 +111,6 @@ class _CollectionCreatorState extends State<CollectionCreator> {
     });
   }
 
-  String? _extractCreatedCollectionId(dynamic payload) {
-    if (payload is Map<String, dynamic>) {
-      for (final key in const <String>['id', 'collectionId', 'collection_id']) {
-        final raw = payload[key]?.toString();
-        final value = raw == null ? null : raw.trim();
-        if (value != null && value.isNotEmpty) {
-          return value;
-        }
-      }
-
-      for (final nested in payload.values) {
-        final nestedId = _extractCreatedCollectionId(nested);
-        if (nestedId != null && nestedId.isNotEmpty) {
-          return nestedId;
-        }
-      }
-    } else if (payload is Map) {
-      return _extractCreatedCollectionId(Map<String, dynamic>.from(payload));
-    } else if (payload is List) {
-      for (final item in payload) {
-        final nestedId = _extractCreatedCollectionId(item);
-        if (nestedId != null && nestedId.isNotEmpty) {
-          return nestedId;
-        }
-      }
-    }
-
-    return null;
-  }
-
   Future<void> _pickCoverImage() async {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
@@ -170,6 +139,7 @@ class _CollectionCreatorState extends State<CollectionCreator> {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final collectionsProvider = context.read<CollectionsProvider>();
+    final profileProvider = context.read<ProfileProvider>();
 
     if (!_formKey.currentState!.validate()) {
       return;
@@ -194,50 +164,64 @@ class _CollectionCreatorState extends State<CollectionCreator> {
         }
       }
 
-      final api = BackendApiService();
-      final created = await api.createCollection(
+      // Create collection through provider with false-failure fallback handling
+      final createResult = await collectionsProvider.createCollection(
         name: _nameController.text.trim(),
         description: _descriptionController.text.trim().isEmpty
             ? null
             : _descriptionController.text.trim(),
         isPublic: _isPublic,
         thumbnailUrl: thumbnailUrl,
+        walletAddress: profileProvider.currentUser?.walletAddress,
       );
 
-      final id = _extractCreatedCollectionId(created);
       if (!mounted) return;
 
-      if (id == null || id.isEmpty) {
-        ScaffoldMessenger.of(context).showKubusSnackBar(
+      if (!createResult.success || createResult.collectionId == null) {
+        messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.collectionCreatorCreateFailed)),
         );
         return;
       }
 
+      final collectionId = createResult.collectionId!;
+
       // Add selected artworks to the newly created collection.
+      bool artworkAttachmentFailed = false;
       if (_selectedArtworkIds.isNotEmpty) {
         try {
           await collectionsProvider.addArtworks(
-            collectionId: id,
+            collectionId: collectionId,
             artworkIds: _selectedArtworkIds.toList(),
           );
         } catch (_) {
           // Non-fatal: collection was created, artworks may fail to attach.
+          artworkAttachmentFailed = true;
         }
       }
 
       if (!mounted) return;
 
+      // Show appropriate success message
+      String successMessage = l10n.commonSavedToast;
+      if (artworkAttachmentFailed) {
+        // Partial success: collection created but artworks failed
+        successMessage = l10n.collectionCreatorSavedInfoBox;
+      } else if (createResult.refreshRequired) {
+        // Collection created but needed refresh to resolve ID
+        successMessage = l10n.commonSavedToast;
+      }
+
       if (widget.embedded) {
-        setState(() => _createdCollectionId = id);
-        messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonSavedToast)));
+        setState(() => _createdCollectionId = collectionId);
+        messenger.showKubusSnackBar(SnackBar(content: Text(successMessage)));
         return;
       }
 
-      widget.onCreated?.call(id);
+      widget.onCreated?.call(collectionId);
 
       if (widget.onCreated == null) {
-        Navigator.of(context).pop(id);
+        Navigator.of(context).pop(collectionId);
       }
     } catch (e) {
       if (!mounted) return;
@@ -278,7 +262,7 @@ class _CollectionCreatorState extends State<CollectionCreator> {
             if (_createdCollectionId != null) ...[
               CreatorInfoBox(
                 text:
-                    'Collection saved. Collaboration is available from the sidebar, and you can keep refining the selection below.',
+                    l10n.collectionCreatorSavedInfoBox,
                 icon: Icons.check_circle_outline,
                 accentColor: studioAccent,
               ),
@@ -579,7 +563,7 @@ class _CollectionCreatorState extends State<CollectionCreator> {
         if (walletAddress.isEmpty) ...[
           CreatorInfoBox(
             text:
-                'Connect a wallet to load and curate your artwork library inside this collection creator.',
+                l10n.collectionCreatorConnectWalletLabel,
             icon: Icons.account_balance_wallet_outlined,
             accentColor: accent,
           ),
@@ -587,8 +571,8 @@ class _CollectionCreatorState extends State<CollectionCreator> {
         ] else if (allArtworks.isEmpty) ...[
           CreatorInfoBox(
             text: _artworkLibraryLoadRequested
-                ? 'Your artwork library is still loading. If the backend is slow, you can keep editing the collection basics and come back here.'
-                : 'Load your artwork library to select pieces for this collection. This keeps the first open lighter and avoids unnecessary API calls.',
+                ? l10n.collectionCreatorArtworkLibraryLoadingLabel
+                : l10n.collectionCreatorArtworkLibraryPlaceholderLabel,
             icon: Icons.collections_bookmark_outlined,
             accentColor: accent,
           ),
@@ -601,7 +585,7 @@ class _CollectionCreatorState extends State<CollectionCreator> {
                 ? Icons.hourglass_bottom_outlined
                 : Icons.download_outlined),
             label: Text(
-              _artworksLoading ? 'Loading library…' : 'Load artwork library',
+              _artworksLoading ? l10n.collectionCreatorLoadingLibraryLabel : l10n.collectionCreatorLoadArtworkLibraryLabel,
             ),
           ),
         ],
@@ -876,11 +860,19 @@ class _CollectionCreatorState extends State<CollectionCreator> {
                                       color: isSelected ? accent : scheme.onSurface,
                                     ),
                                     const SizedBox(width: KubusSpacing.xs),
-                                    Text(
-                                      isSelected ? 'Selected' : 'Add',
-                                      style: KubusTextStyles.detailLabel.copyWith(
-                                        color: isSelected ? accent : scheme.onSurface,
-                                      ),
+                                    Builder(
+                                      builder: (context) {
+                                        final l10nLocal = AppLocalizations.of(context)!;
+                                        final labelText = isSelected
+                                            ? l10nLocal.collectionCreatorArtworkSelectedLabel
+                                            : l10nLocal.collectionCreatorArtworkAddLabel;
+                                        return Text(
+                                          labelText,
+                                          style: KubusTextStyles.detailLabel.copyWith(
+                                            color: isSelected ? accent : scheme.onSurface,
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ],
                                 ),

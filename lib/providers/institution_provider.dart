@@ -402,12 +402,18 @@ class InstitutionProvider extends ChangeNotifier {
   }
 
   Future<void> createEvent(Event event) async {
+    // Events are persisted locally only. Backend endpoints for event management
+    // may not be available or fully implemented. Always treat event mutations
+    // as local-only unless explicitly wired to backend endpoints.
     _events.add(event);
     await _storage.saveEvents(_events);
     notifyListeners();
   }
 
   Future<void> updateEvent(Event event) async {
+    // Events are persisted locally only. Backend endpoints for event management
+    // may not be available or fully implemented. Always treat event mutations
+    // as local-only unless explicitly wired to backend endpoints.
     final index = _events.indexWhere((e) => e.id == event.id);
     if (index != -1) {
       _events[index] = event;
@@ -417,6 +423,9 @@ class InstitutionProvider extends ChangeNotifier {
   }
 
   Future<void> deleteEvent(String eventId) async {
+    // Events are persisted locally only. Backend endpoints for event management
+    // may not be available or fully implemented. Always treat event mutations
+    // as local-only unless explicitly wired to backend endpoints.
     _events.removeWhere((event) => event.id == eventId);
     if (_selectedEvent?.id == eventId) {
       _selectedEvent = null;

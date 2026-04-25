@@ -4643,6 +4643,42 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collectionCreatorCollaborationLockedMessage => 'Once saved, collaborators can be invited here so curation stays in context.';
 
   @override
+  String get collectionCreatorSavedInfoBox => 'Collection saved. Collaboration is available from the sidebar, and you can keep refining the selection below.';
+
+  @override
+  String get collectionCreatorConnectWalletLabel => 'Connect a wallet to load and curate your artwork library inside this collection creator.';
+
+  @override
+  String get collectionCreatorArtworkLibraryLoadingLabel => 'Your artwork library is still loading. If the backend is slow, you can keep editing the collection basics and come back here.';
+
+  @override
+  String get collectionCreatorArtworkLibraryPlaceholderLabel => 'Load your artwork library to select pieces for this collection. This keeps the first open lighter and avoids unnecessary API calls.';
+
+  @override
+  String get collectionCreatorLoadingLibraryLabel => 'Loading library…';
+
+  @override
+  String get collectionCreatorLoadArtworkLibraryLabel => 'Load artwork library';
+
+  @override
+  String get collectionCreatorArtworkSelectedLabel => 'Selected';
+
+  @override
+  String get collectionCreatorArtworkAddLabel => 'Add';
+
+  @override
+  String get collectionCreatorNoArtworksAvailable => 'No artworks available';
+
+  @override
+  String get collectionCreatorSearchArtworksLabel => 'Search';
+
+  @override
+  String get collectionCreatorSearchArtworksHint => 'Search your artworks...';
+
+  @override
+  String get collectionCreatorAddArtworksTitle => 'Add Artworks';
+
+  @override
   String get collectionDetailLoadFailedMessage => 'Failed to load collection details. Please try again.';
 
   @override
@@ -9693,18 +9729,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get supportTier50Body => 'Funds one focused development session (new feature / fixes / content updates).';
-
-  @override
-  String get collectionCreatorAddArtworksTitle => 'Add Artworks';
-
-  @override
-  String get collectionCreatorSearchArtworksLabel => 'Search';
-
-  @override
-  String get collectionCreatorSearchArtworksHint => 'Search your artworks...';
-
-  @override
-  String get collectionCreatorNoArtworksAvailable => 'No artworks available';
 
   @override
   String get commonChange => 'Change';

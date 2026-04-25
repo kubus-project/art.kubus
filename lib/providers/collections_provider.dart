@@ -140,11 +140,212 @@ class CollectionsProvider extends ChangeNotifier {
           'folder': 'collections/covers',
         },
       );
-      final url = result['uploadedUrl']?.toString();
-      return (url != null && url.trim().isNotEmpty) ? url.trim() : null;
+      return _extractUploadedUrl(result);
     } catch (e) {
       rethrow;
     }
+  }
+
+  /// Extract uploaded URL from common backend response shapes.
+  /// Supports: uploadedUrl, url, fileUrl, mediaUrl at various nesting levels.
+  String? _extractUploadedUrl(Map<String, dynamic> response) {
+    if (response.isEmpty) return null;
+
+    // Direct keys first
+    for (final key in const <String>['uploadedUrl', 'url', 'fileUrl', 'mediaUrl']) {
+      final value = response[key]?.toString().trim();
+      if (value != null && value.isNotEmpty) {
+        return value;
+      }
+    }
+
+    // Nested under 'data'
+    final data = response['data'];
+    if (data is Map<String, dynamic>) {
+      for (final key in const <String>['uploadedUrl', 'url', 'fileUrl', 'mediaUrl']) {
+        final value = data[key]?.toString().trim();
+        if (value != null && value.isNotEmpty) {
+          return value;
+        }
+      }
+    }
+
+    // Nested under 'result'
+    final result = response['result'];
+    if (result is Map<String, dynamic>) {
+      for (final key in const <String>['uploadedUrl', 'url', 'fileUrl', 'mediaUrl']) {
+        final value = result[key]?.toString().trim();
+        if (value != null && value.isNotEmpty) {
+          return value;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /// Create a collection with false-failure fallback handling.
+  ///
+  /// If backend returns success but no ID is in the response, this method
+  /// will refresh the collection list and attempt to match the new collection
+  /// by name and wallet address + recent timestamp.
+  Future<({bool success, String? collectionId, CollectionRecord? record, bool refreshRequired})>
+      createCollection({
+    required String name,
+    String? description,
+    bool isPublic = true,
+    String? thumbnailUrl,
+    String? walletAddress,
+  }) async {
+    final collectionName = name.trim();
+    if (collectionName.isEmpty) {
+      return (success: false, collectionId: null, record: null, refreshRequired: false);
+    }
+
+    try {
+      // Call backend API to create collection
+      final response = await _api.createCollection(
+        name: collectionName,
+        description: description,
+        isPublic: isPublic,
+        thumbnailUrl: thumbnailUrl,
+      );
+
+      // Try to extract ID directly from response
+      String? extractedId = _extractCollectionIdFromResponse(response);
+
+      // If we got an ID, try to fetch the full record
+      if (extractedId != null && extractedId.isNotEmpty) {
+        try {
+          final record = await _loadCollection(extractedId);
+          _upsertCollection(record);
+          notifyListeners();
+          return (
+            success: true,
+            collectionId: extractedId,
+            record: record,
+            refreshRequired: false,
+          );
+        } catch (_) {
+          // Backend returned ID but fetching failed, return what we have
+          return (
+            success: true,
+            collectionId: extractedId,
+            record: null,
+            refreshRequired: true,
+          );
+        }
+      }
+
+      // No ID in response - refresh collections and try to match by name
+      try {
+        await loadCollections(refresh: true, walletAddress: walletAddress);
+
+        // Look for a collection that matches by name and recent timestamp
+        final created = DateTime.now().subtract(const Duration(seconds: 30));
+        final matching = _collections.firstWhere(
+          (c) =>
+              c.name.trim().toLowerCase() == collectionName.toLowerCase() &&
+              (c.updatedAt ?? DateTime.now()).isAfter(created),
+          orElse: () => throw Exception('No matching collection found'),
+        );
+
+        _upsertCollection(matching);
+        notifyListeners();
+        return (
+          success: true,
+          collectionId: matching.id,
+          record: matching,
+          refreshRequired: true,
+        );
+      } catch (_) {
+        // Refresh attempt failed or no match found
+        // But backend likely succeeded (HTTP 200/201), so return partial success
+        return (
+          success: true,
+          collectionId: null,
+          record: null,
+          refreshRequired: true,
+        );
+      }
+    } catch (e) {
+      _listError = e.toString();
+      notifyListeners();
+      return (success: false, collectionId: null, record: null, refreshRequired: false);
+    }
+  }
+
+  /// Extract collection ID from common backend response shapes.
+  String? _extractCollectionIdFromResponse(dynamic payload) {
+    if (payload is Map<String, dynamic>) {
+      // Try direct keys first
+      for (final key in const <String>['id', 'collectionId', 'collection_id']) {
+        final raw = payload[key]?.toString();
+        final value = raw?.trim();
+        if (value != null && value.isNotEmpty) {
+          return value;
+        }
+      }
+
+      // Try nested under 'collection'
+      final collection = payload['collection'];
+      if (collection is Map<String, dynamic>) {
+        final id = collection['id']?.toString().trim();
+        if (id != null && id.isNotEmpty) {
+          return id;
+        }
+      }
+
+      // Try nested under 'data'
+      final data = payload['data'];
+      if (data is Map<String, dynamic>) {
+        for (final key in const <String>['id', 'collectionId', 'collection_id']) {
+          final raw = data[key]?.toString();
+          final value = raw?.trim();
+          if (value != null && value.isNotEmpty) {
+            return value;
+          }
+        }
+        final nestedCollection = data['collection'];
+        if (nestedCollection is Map<String, dynamic>) {
+          final id = nestedCollection['id']?.toString().trim();
+          if (id != null && id.isNotEmpty) {
+            return id;
+          }
+        }
+      }
+
+      // Try nested under 'result'
+      final result = payload['result'];
+      if (result is Map<String, dynamic>) {
+        for (final key in const <String>['id', 'collectionId', 'collection_id']) {
+          final raw = result[key]?.toString();
+          final value = raw?.trim();
+          if (value != null && value.isNotEmpty) {
+            return value;
+          }
+        }
+      }
+
+      // Recursive fallback for deeply nested structures
+      for (final nested in payload.values) {
+        final nestedId = _extractCollectionIdFromResponse(nested);
+        if (nestedId != null && nestedId.isNotEmpty) {
+          return nestedId;
+        }
+      }
+    } else if (payload is Map) {
+      return _extractCollectionIdFromResponse(Map<String, dynamic>.from(payload));
+    } else if (payload is List) {
+      for (final item in payload) {
+        final nestedId = _extractCollectionIdFromResponse(item);
+        if (nestedId != null && nestedId.isNotEmpty) {
+          return nestedId;
+        }
+      }
+    }
+
+    return null;
   }
 
   Future<CollectionRecord?> addArtwork({

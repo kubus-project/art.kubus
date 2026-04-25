@@ -765,12 +765,9 @@ class _EventManagerState extends State<EventManager>
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: scheme.error),
-            onPressed: () {
-              context.read<InstitutionProvider>().deleteEvent(event.id);
+            onPressed: () async {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showKubusSnackBar(
-                SnackBar(content: Text(l10n.eventManagerDeletedToast(event.title))),
-              );
+              await _performEventDelete(event);
             },
             child: Text(l10n.commonDelete,
                 style: TextStyle(color: scheme.onError)),
@@ -778,6 +775,27 @@ class _EventManagerState extends State<EventManager>
         ],
       ),
     );
+  }
+
+  Future<void> _performEventDelete(Event event) async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final provider = context.read<InstitutionProvider>();
+      await provider.deleteEvent(event.id);
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.eventManagerDeletedToast(event.title))),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(l10n.commonActionFailedToast),
+          backgroundColor: Theme.of(context).colorScheme.errorContainer,
+        ),
+      );
+    }
   }
 }
 

@@ -971,6 +971,9 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     final l10n = AppLocalizations.of(context)!;
     final profileProvider = context.read<ProfileProvider>();
     final walletProvider = context.read<WalletProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final provider = context.read<ArtworkProvider>();
+    
     final canProceed = await WalletActionGuard.ensureSignerAccess(
       context: context,
       profileProvider: profileProvider,
@@ -978,8 +981,6 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     );
     if (!mounted || !canProceed) return;
 
-    final messenger = ScaffoldMessenger.of(context);
-    final provider = context.read<ArtworkProvider>();
     try {
       final updated = artwork.isPublic
           ? await provider.unpublishArtwork(artwork.id)
@@ -1023,9 +1024,14 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       ),
     );
     if (confirmed != true) return;
+    if (!mounted) return;
 
     final profileProvider = context.read<ProfileProvider>();
     final walletProvider = context.read<WalletProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final artworkProvider = context.read<ArtworkProvider>();
+    
     final canProceed = await WalletActionGuard.ensureSignerAccess(
       context: context,
       profileProvider: profileProvider,
@@ -1037,19 +1043,19 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       final deleted = await BackendApiService().deleteArtwork(artwork.id);
       if (!mounted) return;
       if (!deleted) {
-        ScaffoldMessenger.of(context).showKubusSnackBar(
+        messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.commonActionFailedToast)),
         );
         return;
       }
-      context.read<ArtworkProvider>().removeArtwork(artwork.id);
-      Navigator.of(context).maybePop();
-      ScaffoldMessenger.of(context).showKubusSnackBar(
+      artworkProvider.removeArtwork(artwork.id);
+      navigator.maybePop();
+      messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.artistGalleryDeletedToast(artwork.title))),
       );
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showKubusSnackBar(
+      messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.commonActionFailedToast)),
       );
     }

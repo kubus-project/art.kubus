@@ -4657,6 +4657,42 @@ class AppLocalizationsSl extends AppLocalizations {
   String get collectionCreatorCollaborationLockedMessage => 'Ko je zbirka shranjena, lahko tukaj povabiš sodelavce, da kuriranje ostane v kontekstu.';
 
   @override
+  String get collectionCreatorSavedInfoBox => 'Collection saved. Collaboration is available from the sidebar, and you can keep refining the selection below.';
+
+  @override
+  String get collectionCreatorConnectWalletLabel => 'Poveži denarnico za nalaganje in kuratoziranje knjižnice umetnin v tem ustvarjalniku.';
+
+  @override
+  String get collectionCreatorArtworkLibraryLoadingLabel => 'Tvoja knjižnica umetnin se še naklanja. Če je backend počasen, lahko nadaljuješ s kuratoiranjem osnovnih podatkov zbirke in se vrneš sem senare.';
+
+  @override
+  String get collectionCreatorArtworkLibraryPlaceholderLabel => 'Naloži svojo knjižnico umetnin, da izabereš dela za to zbirko. To izboljša hitrost prvega odpiranja in izogniti se nepotrebnih klicev API-ja.';
+
+  @override
+  String get collectionCreatorLoadingLibraryLabel => 'Nalagam knjižnico…';
+
+  @override
+  String get collectionCreatorLoadArtworkLibraryLabel => 'Naloži knjižnico umetnin';
+
+  @override
+  String get collectionCreatorArtworkSelectedLabel => 'Izbrano';
+
+  @override
+  String get collectionCreatorArtworkAddLabel => 'Dodaj';
+
+  @override
+  String get collectionCreatorNoArtworksAvailable => 'Ni razpoložljivih umetnin';
+
+  @override
+  String get collectionCreatorSearchArtworksLabel => 'Iskanje';
+
+  @override
+  String get collectionCreatorSearchArtworksHint => 'Iskanje umetnin...';
+
+  @override
+  String get collectionCreatorAddArtworksTitle => 'Dodaj umetnine';
+
+  @override
   String get collectionDetailLoadFailedMessage => 'Nalaganje podrobnosti zbirke ni uspelo. Poskusi znova.';
 
   @override
@@ -9717,18 +9753,6 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get supportTier50Body => 'Financira eno osredotočeno razvojno sejo (nova funkcija / popravki / posodobitve vsebin).';
-
-  @override
-  String get collectionCreatorAddArtworksTitle => 'Dodaj umetnine';
-
-  @override
-  String get collectionCreatorSearchArtworksLabel => 'Iskanje';
-
-  @override
-  String get collectionCreatorSearchArtworksHint => 'Iskanje umetnin...';
-
-  @override
-  String get collectionCreatorNoArtworksAvailable => 'Ni razpoložljivih umetnin';
 
   @override
   String get commonChange => 'Spremeni';
