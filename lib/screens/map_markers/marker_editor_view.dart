@@ -26,6 +26,7 @@ import '../../utils/marker_subject_utils.dart';
 import '../../utils/maplibre_style_utils.dart';
 import '../../widgets/art_map_view.dart';
 import '../../widgets/creator/creator_kit.dart';
+import '../../widgets/common/subject_options_sheet.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 class MarkerEditorView extends StatefulWidget {
@@ -951,6 +952,27 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
     }
   }
 
+  Future<void> _showMarkerOptions() async {
+    final marker = widget.marker;
+    if (marker == null || marker.id.isEmpty) return;
+
+    final l10n = AppLocalizations.of(context)!;
+    await showSubjectOptionsSheet(
+      context: context,
+      title: marker.name.isNotEmpty ? marker.name : l10n.manageMarkersEditTitle,
+      subtitle: l10n.mapMarkerLayerArtwork,
+      actions: [
+        SubjectOptionsAction(
+          id: 'delete',
+          icon: Icons.delete_outline,
+          label: l10n.manageMarkersDeleteButton,
+          isDestructive: true,
+          onSelected: () => _delete(),
+        ),
+      ],
+    );
+  }
+
   Future<void> _delete() async {
     final marker = widget.marker;
     if (marker == null || marker.id.isEmpty) return;
@@ -1071,6 +1093,12 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                       .copyWith(color: scheme.onSurface),
                 ),
               ),
+              if (!widget.isNew)
+                IconButton(
+                  tooltip: l10n.commonActions,
+                  onPressed: _saving ? null : _showMarkerOptions,
+                  icon: const Icon(Icons.more_horiz),
+                ),
               if (widget.onClose != null)
                 IconButton(
                   tooltip: l10n.manageMarkersCloseTooltip,
@@ -1555,9 +1583,6 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
                         : l10n.manageMarkersSaveButton,
                     onPrimary: _saving ? null : _save,
                     primaryLoading: _saving,
-                    destructiveLabel:
-                        widget.isNew ? null : l10n.manageMarkersDeleteButton,
-                    onDestructive: _saving ? null : _delete,
                   ),
                 ],
               ),

@@ -11,6 +11,7 @@ import '../../models/exhibition.dart';
 import '../../providers/exhibitions_provider.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../../utils/creator_shell_navigation.dart';
 import 'exhibition_detail_screen.dart';
 import '../desktop/desktop_shell.dart';
 import '../../widgets/creator/creator_kit.dart';
@@ -20,12 +21,14 @@ class ExhibitionCreatorScreen extends StatefulWidget {
   /// When `true` the screen omits its own Scaffold / AppBar because the
   /// surrounding shell (e.g. [DesktopSubScreen]) already provides one.
   final bool embedded;
+  final Exhibition? initialExhibition;
   final bool forceDraftOnly;
   final VoidCallback? onCreated;
 
   const ExhibitionCreatorScreen({
     super.key,
     this.embedded = false,
+    this.initialExhibition,
     this.forceDraftOnly = false,
     this.onCreated,
   });
@@ -49,6 +52,9 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
 
   Uint8List? _coverBytes;
   String? _coverFileName;
+  bool _seededInitialExhibition = false;
+
+  bool get _isEditing => widget.initialExhibition != null;
 
   @override
   void dispose() {
@@ -56,6 +62,20 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
     _descriptionController.dispose();
     _locationController.dispose();
     super.dispose();
+  }
+
+  void _seedInitialExhibitionIfNeeded() {
+    if (_seededInitialExhibition) return;
+    final initial = widget.initialExhibition;
+    if (initial == null) return;
+
+    _seededInitialExhibition = true;
+    _titleController.text = initial.title;
+    _descriptionController.text = initial.description ?? '';
+    _locationController.text = initial.locationName ?? '';
+    _startsAt = initial.startsAt;
+    _endsAt = initial.endsAt;
+    _published = initial.isPublished;
   }
 
   Future<void> _pickCoverImage() async {
@@ -98,6 +118,7 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final shellScope = DesktopShellScope.of(context);
+    _seedInitialExhibitionIfNeeded();
 
     if (!AppConfig.isFeatureEnabled('exhibitions')) {
       final disabledBody = Center(
@@ -134,7 +155,9 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
           children: [
             if (_createdExhibition != null) ...[
               CreatorInfoBox(
-                text: l10n.exhibitionCreatorSavedInfoBox,
+                text: _isEditing
+                    ? l10n.exhibitionCreatorSavedInfoBox
+                    : l10n.exhibitionCreatorSavedInfoBox,
                 icon: Icons.check_circle_outline,
                 accentColor: scheme.primary,
               ),
@@ -245,8 +268,10 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
 
             // --- Create button ---
             CreatorFooterActions(
-              primaryLabel: l10n.commonCreate,
-              onPrimary: _submit,
+              primaryLabel: _isEditing
+                  ? l10n.exhibitionCreatorQuickActionUpdate
+                  : l10n.commonCreate,
+              onPrimary: _submitting ? null : _submit,
               primaryLoading: _submitting,
             ),
           ],
@@ -465,6 +490,7 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
     final provider = context.read<ExhibitionsProvider>();
+    final shellScope = DesktopShellScope.of(context);
 
     final title = _titleController.text.trim();
     final description = _descriptionController.text.trim();
@@ -507,10 +533,12 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
         if (coverUrl != null && coverUrl.isNotEmpty) 'coverUrl': coverUrl,
       };
 
-      final created = await provider.createExhibition(payload);
+      final Exhibition? saved = _isEditing
+          ? await provider.updateExhibition(widget.initialExhibition!.id, payload)
+          : await provider.createExhibition(payload);
       if (!mounted) return;
 
-      if (created == null) {
+      if (saved == null) {
         messenger.showKubusSnackBar(
             SnackBar(content: Text(l10n.exhibitionCreatorCreateFailed)));
         return;
@@ -518,11 +546,30 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
 
       if (widget.embedded) {
         setState(() {
-          _createdExhibition = created;
+          _createdExhibition = saved;
         });
         messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.commonSavedToast)),
         );
+
+        if (_isEditing) {
+          if (shellScope?.canPop ?? false) {
+            shellScope!.popScreen();
+          } else {
+            Navigator.of(context).maybePop();
+          }
+          return;
+        }
+
+        if (shellScope != null) {
+          await CreatorShellNavigation.openExhibitionDetailWorkspace(
+            context,
+            exhibitionId: saved.id,
+            initialExhibition: saved,
+            titleOverride: saved.title,
+            replace: true,
+          );
+        }
         return;
       }
 
@@ -531,13 +578,17 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
         return;
       }
 
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => ExhibitionDetailScreen(
-            exhibitionId: created.id,
-            initialExhibition: created,
-          ),
-        ),
+      if (_isEditing) {
+        Navigator.of(context).maybePop();
+        return;
+      }
+
+      await CreatorShellNavigation.openExhibitionDetailWorkspace(
+        context,
+        exhibitionId: saved.id,
+        initialExhibition: saved,
+        titleOverride: saved.title,
+        replace: true,
       );
     } catch (e) {
       if (!mounted) return;

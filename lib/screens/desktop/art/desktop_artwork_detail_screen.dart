@@ -21,6 +21,7 @@ import '../../../services/share/share_types.dart';
 import '../../../utils/artwork_media_resolver.dart';
 import '../../../features/map/shared/map_screen_shared_helpers.dart';
 import '../../../utils/design_tokens.dart';
+import '../../../utils/wallet_utils.dart';
 import '../../../widgets/artwork_gallery_view.dart';
 import '../../../widgets/artwork_creator_byline.dart';
 import '../../../widgets/inline_loading.dart';
@@ -465,11 +466,15 @@ class _DesktopArtworkDetailScreenState
     final scheme = Theme.of(context).colorScheme;
     final profileProvider = context.read<ProfileProvider>();
     final walletProvider = context.read<WalletProvider>();
-    final currentWallet = profileProvider.currentUser?.walletAddress ??
-        walletProvider.currentWalletAddress;
-    final isOwner = (currentWallet != null &&
-        (artwork.walletAddress ?? '').isNotEmpty &&
-        currentWallet.toLowerCase() == artwork.walletAddress!.toLowerCase());
+    final viewerWallet = WalletUtils.coalesce(
+      walletAddress: profileProvider.currentUser?.walletAddress,
+      wallet: walletProvider.currentWalletAddress,
+      userId: profileProvider.currentUser?.id,
+    );
+    final ownerWallet = WalletUtils.canonical(artwork.walletAddress);
+    final isOwner = viewerWallet.isNotEmpty &&
+      ownerWallet.isNotEmpty &&
+      WalletUtils.equals(viewerWallet, ownerWallet);
 
     String statusLabel() {
       switch (artwork.arStatus) {

@@ -26,10 +26,12 @@ import '../../widgets/collaboration_panel.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/detail/poap_detail_card.dart';
 import '../../utils/artwork_navigation.dart';
+import '../../utils/creator_shell_navigation.dart';
 import '../../utils/design_tokens.dart';
 import '../../config/config.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../widgets/promotion/promotion_builder_sheet.dart';
+import '../../widgets/common/subject_options_sheet.dart';
 
 class ExhibitionDetailScreen extends StatefulWidget {
   final String exhibitionId;
@@ -132,16 +134,9 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
 
   List<Widget> _buildHeaderActions(
     AppLocalizations l10n,
-    Exhibition ex, {
-    required bool canPromote,
-  }) {
+    Exhibition ex,
+  ) {
     return [
-      if (canPromote)
-        IconButton(
-          tooltip: l10n.exhibitionDetailPromoteTooltip,
-          onPressed: () => _openPromotionFlow(ex),
-          icon: const Icon(Icons.campaign_outlined),
-        ),
       IconButton(
         tooltip: l10n.commonShare,
         onPressed: () {
@@ -203,6 +198,110 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
         ),
       );
     }
+  }
+
+  Future<void> _deleteExhibition(Exhibition exhibition) async {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final provider = context.read<ExhibitionsProvider>();
+
+    final confirmed = await showKubusDialog<bool>(
+      context: context,
+      builder: (dialogContext) => KubusAlertDialog(
+        title: Text(l10n.commonDelete),
+        content: Text(l10n.collectionSettingsDeleteDialogContent(exhibition.title)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.commonCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: scheme.error),
+            child: Text(l10n.commonDelete),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await provider.deleteExhibition(exhibition.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(l10n.commonSavedToast)),
+      );
+      Navigator.of(context).maybePop();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(l10n.commonActionFailedToast)),
+      );
+    }
+  }
+
+  Future<void> _showExhibitionManagementActions(
+    Exhibition ex, {
+    required bool canManage,
+    required bool canPublish,
+    required bool canPromote,
+  }) async {
+    final l10n = AppLocalizations.of(context)!;
+    await showSubjectOptionsSheet(
+      context: context,
+      title: ex.title,
+      subtitle: l10n.commonActions,
+      actions: [
+        if (canManage)
+          SubjectOptionsAction(
+            id: 'edit',
+            icon: Icons.edit_outlined,
+            label: l10n.commonEdit,
+            onSelected: () => CreatorShellNavigation.openExhibitionCreatorWorkspace(
+              context,
+              initialExhibition: ex,
+            ),
+          ),
+        if (canManage)
+          SubjectOptionsAction(
+            id: 'change_cover',
+            icon: Icons.image_outlined,
+            label: l10n.commonChangeCover,
+            onSelected: () => _changeCover(ex),
+          ),
+        if (canManage)
+          SubjectOptionsAction(
+            id: 'link_artworks',
+            icon: Icons.link_outlined,
+            label: l10n.commonLink,
+            onSelected: () => _showLinkArtworksDialog(ex),
+          ),
+        if (canPublish)
+          SubjectOptionsAction(
+            id: ex.isPublished ? 'unpublish' : 'publish',
+            icon: ex.isPublished
+                ? Icons.visibility_off_outlined
+                : Icons.publish_outlined,
+            label: ex.isPublished ? l10n.commonUnpublish : l10n.commonPublish,
+            onSelected: () => _togglePublish(ex, !ex.isPublished),
+          ),
+        if (canPromote)
+          SubjectOptionsAction(
+            id: 'promote',
+            icon: Icons.campaign_outlined,
+            label: l10n.exhibitionDetailPromoteTooltip,
+            onSelected: () => _openPromotionFlow(ex),
+          ),
+        if (canManage)
+          SubjectOptionsAction(
+            id: 'delete',
+            icon: Icons.delete_outline,
+            label: l10n.commonDelete,
+            isDestructive: true,
+            onSelected: () => _deleteExhibition(ex),
+          ),
+      ],
+    );
   }
 
   Future<void> _claimExhibitionPoap() async {
@@ -736,10 +835,10 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
 
     final canManage = _canManageExhibition(ex.myRole);
     final canPublish = _canPublishExhibition(ex.myRole);
+    final canPromote = _canPromoteExhibition(ex);
     final headerActions = _buildHeaderActions(
       l10n,
       ex,
-      canPromote: _canPromoteExhibition(ex),
     );
 
     return Scaffold(
@@ -762,7 +861,23 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                   padding: const EdgeInsets.only(bottom: DetailSpacing.md),
                   child: Align(
                     alignment: Alignment.centerRight,
-                    child: Wrap(spacing: 4, children: headerActions),
+                    child: Wrap(
+                      spacing: 4,
+                      children: [
+                        ...headerActions,
+                        if (canManage || canPublish || canPromote)
+                          IconButton(
+                            tooltip: l10n.commonActions,
+                            onPressed: () => _showExhibitionManagementActions(
+                              ex,
+                              canManage: canManage,
+                              canPublish: canPublish,
+                              canPromote: canPromote,
+                            ),
+                            icon: const Icon(Icons.more_horiz),
+                          ),
+                      ],
+                    ),
                   ),
                 );
 
@@ -778,10 +893,6 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                           poap?.claimed == true ? null : _claimExhibitionPoap,
                       showAttendanceHint:
                           (widget.attendanceMarkerId ?? '').trim().isNotEmpty,
-                      canManage: canManage,
-                      canPublish: canPublish,
-                      onPublishChanged: (v) => _togglePublish(ex, v),
-                      onChangeCover: canManage ? () => _changeCover(ex) : null,
                     ),
                     _buildAttendanceConfirmSection(),
                   ],
@@ -794,14 +905,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                     children: [
                       SectionHeader(
                         title: l10n.exhibitionDetailArtworksTitle,
-                        trailing: canManage
-                            ? TextButton.icon(
-                                onPressed: () => _showLinkArtworksDialog(ex),
-                                icon: const Icon(Icons.add, size: 16),
-                                label: Text(l10n.commonAdd,
-                                    style: DetailTypography.button(context)),
-                              )
-                            : null,
+                        trailing: null,
                       ),
                       const SizedBox(height: DetailSpacing.sm),
                       Text(
@@ -980,10 +1084,6 @@ class _ExhibitionDetailsCard extends StatelessWidget {
     required this.isClaimingPoap,
     required this.onClaimPoap,
     required this.showAttendanceHint,
-    required this.canManage,
-    required this.canPublish,
-    required this.onPublishChanged,
-    required this.onChangeCover,
   });
 
   final Exhibition exhibition;
@@ -992,10 +1092,6 @@ class _ExhibitionDetailsCard extends StatelessWidget {
   final bool isClaimingPoap;
   final VoidCallback? onClaimPoap;
   final bool showAttendanceHint;
-  final bool canManage;
-  final bool canPublish;
-  final ValueChanged<bool> onPublishChanged;
-  final VoidCallback? onChangeCover;
 
   @override
   Widget build(BuildContext context) {
@@ -1109,16 +1205,7 @@ class _ExhibitionDetailsCard extends StatelessWidget {
             title: exhibition.title,
             kicker: l10n.commonExhibition,
             subtitle: hostLabel,
-            trailing: canManage && onChangeCover != null
-                ? TextButton.icon(
-                    onPressed: onChangeCover,
-                    icon: const Icon(Icons.image_outlined, size: 16),
-                    label: Text(
-                      l10n.commonChangeCover,
-                      style: DetailTypography.button(context),
-                    ),
-                  )
-                : null,
+            trailing: null,
           ),
           const SizedBox(height: DetailSpacing.md),
           if (coverUrl != null) ...[
@@ -1204,29 +1291,6 @@ class _ExhibitionDetailsCard extends StatelessWidget {
               onClaim: onClaimPoap,
               claimActionLabel: l10n.exhibitionDetailPoapClaimAction,
               claimingActionLabel: l10n.exhibitionDetailPoapClaimingAction,
-            ),
-          ],
-          if (canPublish) ...[
-            const SizedBox(height: DetailSpacing.lg),
-            DetailManagementSection(
-              title: l10n.exhibitionDetailManagementTitle,
-              initiallyExpanded: false,
-              child: SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                value: (exhibition.status ?? '').trim().toLowerCase() ==
-                    'published',
-                onChanged: onPublishChanged,
-                title: Text(
-                  l10n.commonPublish,
-                  style: DetailTypography.cardTitle(context),
-                ),
-                subtitle: Text(
-                  (exhibition.status ?? '').trim().toLowerCase() == 'published'
-                      ? l10n.commonPublished
-                      : l10n.commonDraft,
-                  style: DetailTypography.label(context),
-                ),
-              ),
             ),
           ],
         ],

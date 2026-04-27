@@ -6,10 +6,14 @@ import '../../config/config.dart';
 import '../../models/exhibition.dart';
 import '../../providers/exhibitions_provider.dart';
 import '../../providers/themeprovider.dart';
+import '../../services/share/share_service.dart';
+import '../../services/share/share_types.dart';
 import '../../utils/media_url_resolver.dart';
+import '../../utils/creator_shell_navigation.dart';
 import '../../utils/design_tokens.dart';
-import 'exhibition_creator_screen.dart';
-import 'exhibition_detail_screen.dart';
+import '../../widgets/common/subject_options_sheet.dart';
+import '../../widgets/glass_components.dart';
+import 'package:art_kubus/widgets/kubus_snackbar.dart';
 
 /// Lists user's exhibitions (as host or collaborator) with creation FAB.
 /// Can be embedded as a tab in Institution Hub or Artist Studio.
@@ -67,35 +71,178 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
     }
   }
 
-  void _openExhibition(Exhibition exhibition) {
+  Future<void> _openExhibition(Exhibition exhibition) async {
     final handler = widget.onOpenExhibition;
     if (handler != null) {
       handler(exhibition);
       return;
     }
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ExhibitionDetailScreen(
-          exhibitionId: exhibition.id,
-          initialExhibition: exhibition,
-        ),
-      ),
+
+    await CreatorShellNavigation.openExhibitionDetailWorkspace(
+      context,
+      exhibitionId: exhibition.id,
+      initialExhibition: exhibition,
+      titleOverride: exhibition.title,
     );
   }
 
-  void _createExhibition() {
+  Future<void> _createExhibition() async {
     final handler = widget.onCreateExhibition;
     if (handler != null) {
       handler();
       return;
     }
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const ExhibitionCreatorScreen()),
+
+    await CreatorShellNavigation.openExhibitionCreatorWorkspace(context);
+  }
+
+  bool _canManageExhibition(String? myRole) {
+    final role = (myRole ?? '').trim().toLowerCase();
+    if (role.isEmpty) return false;
+    return role == 'owner' ||
+        role == 'admin' ||
+        role == 'publisher' ||
+        role == 'editor' ||
+        role == 'curator' ||
+        role == 'host';
+  }
+
+  bool _canPublishExhibition(String? myRole) {
+    final role = (myRole ?? '').trim().toLowerCase();
+    if (role.isEmpty) return false;
+    return role == 'owner' || role == 'admin' || role == 'publisher';
+  }
+
+  Future<void> _togglePublish(Exhibition exhibition, bool publish) async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final provider = context.read<ExhibitionsProvider>();
+    final nextStatus = publish ? 'published' : 'draft';
+    if ((exhibition.status ?? '').trim().toLowerCase() == nextStatus) return;
+
+    try {
+      await provider.updateExhibition(
+        exhibition.id,
+        <String, dynamic>{'status': nextStatus},
+      );
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.commonSavedToast)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.commonActionFailedToast)),
+      );
+    }
+  }
+
+  Future<void> _deleteExhibition(Exhibition exhibition) async {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final provider = context.read<ExhibitionsProvider>();
+
+    final confirmed = await showKubusDialog<bool>(
+      context: context,
+      builder: (dialogContext) => KubusAlertDialog(
+        backgroundColor: scheme.surfaceContainerHighest,
+        title: Text(l10n.commonDelete),
+        content: Text(l10n.collectionSettingsDeleteDialogContent(exhibition.title)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.commonCancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: scheme.error),
+            child: Text(l10n.commonDelete),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await provider.deleteExhibition(exhibition.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(l10n.commonSavedToast)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(l10n.commonActionFailedToast)),
+      );
+    }
+  }
+
+  Future<void> _showExhibitionOptions(Exhibition exhibition) async {
+    final l10n = AppLocalizations.of(context)!;
+    final canManage = _canManageExhibition(exhibition.myRole);
+    final canPublish = _canPublishExhibition(exhibition.myRole);
+    await showSubjectOptionsSheet(
+      context: context,
+      title: exhibition.title,
+      subtitle: l10n.commonActions,
+      actions: [
+        SubjectOptionsAction(
+          id: 'open',
+          icon: Icons.visibility_outlined,
+          label: l10n.commonViewDetails,
+          onSelected: () => _openExhibition(exhibition),
+        ),
+        if (canManage)
+          SubjectOptionsAction(
+            id: 'edit',
+            icon: Icons.edit_outlined,
+            label: l10n.commonEdit,
+            onSelected: () => CreatorShellNavigation.openExhibitionCreatorWorkspace(
+              context,
+              initialExhibition: exhibition,
+            ),
+          ),
+        SubjectOptionsAction(
+          id: 'share',
+          icon: Icons.share_outlined,
+          label: l10n.commonShare,
+          onSelected: () {
+            ShareService().showShareSheet(
+              context,
+              target: ShareTarget.exhibition(
+                exhibitionId: exhibition.id,
+                title: exhibition.title,
+              ),
+              sourceScreen: 'exhibition_list',
+            );
+          },
+        ),
+        if (canPublish)
+          SubjectOptionsAction(
+            id: exhibition.isPublished ? 'unpublish' : 'publish',
+            icon: exhibition.isPublished
+                ? Icons.visibility_off_outlined
+                : Icons.publish_outlined,
+            label: exhibition.isPublished
+                ? l10n.commonUnpublish
+                : l10n.commonPublish,
+            onSelected: () => _togglePublish(exhibition, !exhibition.isPublished),
+          ),
+        if (canManage)
+          SubjectOptionsAction(
+            id: 'delete',
+            icon: Icons.delete_outline,
+            label: l10n.commonDelete,
+            isDestructive: true,
+            onSelected: () => _deleteExhibition(exhibition),
+          ),
+      ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (!AppConfig.isFeatureEnabled('exhibitions')) {
       return _buildDisabledState();
     }
@@ -108,11 +255,11 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Exhibitions',
+        title: Text(l10n.commonExhibition,
             style: KubusTypography.inter(fontWeight: FontWeight.w600)),
         actions: [
           IconButton(
-            tooltip: 'Refresh',
+            tooltip: l10n.commonRefresh,
             onPressed: _refresh,
             icon: const Icon(Icons.refresh),
           ),
@@ -123,7 +270,7 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
           ? FloatingActionButton.extended(
               onPressed: _createExhibition,
               icon: const Icon(Icons.add),
-              label: Text('Create',
+              label: Text(l10n.commonCreate,
                   style: KubusTypography.inter(fontWeight: FontWeight.w600)),
             )
           : null,
@@ -131,6 +278,7 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
   }
 
   Widget _buildDisabledState() {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
@@ -142,13 +290,13 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
                 size: 48, color: scheme.onSurface.withValues(alpha: 0.4)),
             const SizedBox(height: 16),
             Text(
-              'Exhibitions are not enabled',
+              l10n.exhibitionListDisabledTitle,
               style: KubusTypography.inter(
                   fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
-              'This feature is currently disabled.',
+              l10n.exhibitionListDisabledSubtitle,
               style: KubusTypography.inter(
                   color: scheme.onSurface.withValues(alpha: 0.7)),
               textAlign: TextAlign.center,
@@ -160,6 +308,7 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
   }
 
   Widget _buildContent() {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final themeProvider = Provider.of<ThemeProvider>(context);
 
@@ -189,9 +338,9 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
             unselectedLabelStyle: KubusTypography.inter(
                 fontWeight: FontWeight.w500, fontSize: 13),
             dividerColor: Colors.transparent,
-            tabs: const [
-              Tab(text: 'My Exhibitions'),
-              Tab(text: 'Collaborating'),
+            tabs: [
+              Tab(text: l10n.exhibitionListMyExhibitionsTab),
+              Tab(text: l10n.exhibitionListCollaboratingTab),
             ],
           ),
         ),
@@ -203,12 +352,14 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
             children: [
               _MyExhibitionsTab(
                 onTap: _openExhibition,
+                onOptions: _showExhibitionOptions,
                 onRefresh: _refresh,
                 canCreate: widget.canCreate,
                 onCreate: _createExhibition,
               ),
               _CollaboratingTab(
                 onTap: _openExhibition,
+                onOptions: _showExhibitionOptions,
                 onRefresh: _refresh,
               ),
             ],
@@ -219,6 +370,7 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
   }
 
   Widget _buildCreateHeader(ColorScheme scheme, ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       padding: const EdgeInsets.all(KubusSpacing.md),
@@ -257,7 +409,7 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Create Exhibition',
+                  l10n.exhibitionListCreateTitle,
                   style: KubusTypography.inter(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -266,7 +418,7 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Curate artworks and invite collaborators',
+                  l10n.exhibitionListCreateSubtitle,
                   style: KubusTypography.inter(
                     fontSize: 12,
                     color: scheme.onSurface.withValues(alpha: 0.6),
@@ -279,7 +431,7 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
           FilledButton.icon(
             onPressed: _createExhibition,
             icon: const Icon(Icons.add, size: 18),
-            label: Text('New',
+            label: Text(l10n.exhibitionListCreateNewButton,
                 style: KubusTypography.inter(fontWeight: FontWeight.w600)),
             style: FilledButton.styleFrom(
               backgroundColor: themeProvider.accentColor,
@@ -296,12 +448,14 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
 /// Shows exhibitions where user is the host/owner.
 class _MyExhibitionsTab extends StatelessWidget {
   final void Function(Exhibition) onTap;
+  final void Function(Exhibition) onOptions;
   final Future<void> Function() onRefresh;
   final bool canCreate;
-  final VoidCallback onCreate;
+  final Future<void> Function() onCreate;
 
   const _MyExhibitionsTab({
     required this.onTap,
+    required this.onOptions,
     required this.onRefresh,
     required this.canCreate,
     required this.onCreate,
@@ -309,6 +463,7 @@ class _MyExhibitionsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final provider = context.watch<ExhibitionsProvider>();
     final scheme = Theme.of(context).colorScheme;
 
@@ -324,11 +479,11 @@ class _MyExhibitionsTab extends StatelessWidget {
     if (myExhibitions.isEmpty) {
       return _EmptyExhibitionsState(
         icon: Icons.collections_bookmark_outlined,
-        title: 'No exhibitions yet',
+        title: l10n.exhibitionListEmptyMineTitle,
         subtitle: canCreate
-            ? 'Create your first exhibition to showcase artworks and invite collaborators.'
-            : 'Your hosted exhibitions will appear here.',
-        actionLabel: canCreate ? 'Create Exhibition' : null,
+            ? l10n.exhibitionListEmptyMineDescriptionCanCreate
+            : l10n.exhibitionListEmptyMineDescriptionReadonly,
+        actionLabel: canCreate ? l10n.exhibitionListCreateTitle : null,
         onAction: canCreate ? onCreate : null,
         onRefresh: onRefresh,
       );
@@ -344,7 +499,8 @@ class _MyExhibitionsTab extends StatelessWidget {
           return _ExhibitionCard(
             exhibition: exhibition,
             onTap: () => onTap(exhibition),
-            roleLabel: 'Host',
+            onOptions: () => onOptions(exhibition),
+            roleLabel: l10n.exhibitionListRoleHost,
           );
         },
       ),
@@ -360,15 +516,18 @@ class _MyExhibitionsTab extends StatelessWidget {
 /// Shows exhibitions where user is a collaborator (not host).
 class _CollaboratingTab extends StatelessWidget {
   final void Function(Exhibition) onTap;
+  final void Function(Exhibition) onOptions;
   final Future<void> Function() onRefresh;
 
   const _CollaboratingTab({
     required this.onTap,
+    required this.onOptions,
     required this.onRefresh,
   });
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final provider = context.watch<ExhibitionsProvider>();
     final scheme = Theme.of(context).colorScheme;
 
@@ -384,9 +543,8 @@ class _CollaboratingTab extends StatelessWidget {
     if (collaborating.isEmpty) {
       return _EmptyExhibitionsState(
         icon: Icons.group_outlined,
-        title: 'No collaborations yet',
-        subtitle:
-            'When someone invites you to collaborate on an exhibition, it will appear here.',
+        title: l10n.exhibitionListEmptyCollaboratingTitle,
+        subtitle: l10n.exhibitionListEmptyCollaboratingDescription,
         onRefresh: onRefresh,
       );
     }
@@ -401,7 +559,8 @@ class _CollaboratingTab extends StatelessWidget {
           return _ExhibitionCard(
             exhibition: exhibition,
             onTap: () => onTap(exhibition),
-            roleLabel: _labelForRole(exhibition.myRole),
+            onOptions: () => onOptions(exhibition),
+            roleLabel: _labelForRole(l10n, exhibition.myRole),
           );
         },
       ),
@@ -415,21 +574,21 @@ class _CollaboratingTab extends StatelessWidget {
     return r == 'curator' || r == 'editor' || r == 'publisher' || r == 'viewer';
   }
 
-  String _labelForRole(String? role) {
+  String _labelForRole(AppLocalizations l10n, String? role) {
     final r = (role ?? '').trim().toLowerCase();
     switch (r) {
       case 'curator':
-        return 'Curator';
+        return l10n.collabRoleCurator;
       case 'editor':
-        return 'Editor';
+        return l10n.collabRoleEditor;
       case 'publisher':
-        return 'Publisher';
+        return l10n.collabRolePublisher;
       case 'admin':
-        return 'Admin';
+        return l10n.collabRoleAdmin;
       case 'viewer':
-        return 'Viewer';
+        return l10n.collabRoleViewer;
       default:
-        return 'Collaborator';
+        return l10n.exhibitionListRoleCollaborator;
     }
   }
 }
@@ -437,11 +596,13 @@ class _CollaboratingTab extends StatelessWidget {
 class _ExhibitionCard extends StatelessWidget {
   final Exhibition exhibition;
   final VoidCallback onTap;
+  final VoidCallback onOptions;
   final String roleLabel;
 
   const _ExhibitionCard({
     required this.exhibition,
     required this.onTap,
+    required this.onOptions,
     required this.roleLabel,
   });
 
@@ -528,7 +689,7 @@ class _ExhibitionCard extends StatelessWidget {
                         Row(
                           children: [
                             _StatusChip(
-                              label: isPublished ? 'Published' : 'Draft',
+                              label: isPublished ? l10n.commonPublished : l10n.commonDraft,
                               color: isPublished
                                   ? const Color(0xFF4CAF50)
                                   : scheme.outline,
@@ -546,6 +707,11 @@ class _ExhibitionCard extends StatelessWidget {
                   Icon(
                     Icons.chevron_right,
                     color: scheme.onSurface.withValues(alpha: 0.4),
+                  ),
+                  IconButton(
+                    tooltip: l10n.commonActions,
+                    onPressed: onOptions,
+                    icon: const Icon(Icons.more_horiz),
                   ),
                 ],
               ),
@@ -739,7 +905,7 @@ class _EmptyExhibitionsState extends StatelessWidget {
               OutlinedButton.icon(
                 onPressed: onRefresh,
                 icon: const Icon(Icons.refresh),
-                label: Text('Refresh',
+                label: Text(AppLocalizations.of(context)!.commonRefresh,
                     style: KubusTypography.inter(fontWeight: FontWeight.w600)),
               ),
           ],

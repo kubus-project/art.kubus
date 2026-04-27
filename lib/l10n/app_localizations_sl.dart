@@ -6951,6 +6951,48 @@ class AppLocalizationsSl extends AppLocalizations {
   String get collabRoleAdmin => 'Administrator';
 
   @override
+  String get exhibitionListDisabledTitle => 'Razstave niso omogočene';
+
+  @override
+  String get exhibitionListDisabledSubtitle => 'Ta funkcionalnost je trenutno onemogočena.';
+
+  @override
+  String get exhibitionListMyExhibitionsTab => 'Moje razstave';
+
+  @override
+  String get exhibitionListCollaboratingTab => 'Sodelujem';
+
+  @override
+  String get exhibitionListCreateTitle => 'Ustvari razstavo';
+
+  @override
+  String get exhibitionListCreateSubtitle => 'Kuriraj umetnine in povabi sodelavce';
+
+  @override
+  String get exhibitionListCreateNewButton => 'Novo';
+
+  @override
+  String get exhibitionListEmptyMineTitle => 'Še ni razstav';
+
+  @override
+  String get exhibitionListEmptyMineDescriptionCanCreate => 'Ustvari svojo prvo razstavo in povabi sodelavce.';
+
+  @override
+  String get exhibitionListEmptyMineDescriptionReadonly => 'Tvoje gostujoče razstave se bodo prikazale tukaj.';
+
+  @override
+  String get exhibitionListRoleHost => 'Gostitelj';
+
+  @override
+  String get exhibitionListEmptyCollaboratingTitle => 'Še ni sodelovanj';
+
+  @override
+  String get exhibitionListEmptyCollaboratingDescription => 'Ko te nekdo povabi k sodelovanju pri razstavi, se bo prikazala tukaj.';
+
+  @override
+  String get exhibitionListRoleCollaborator => 'Sodelavec';
+
+  @override
   String get collabPanelNoInvitePermission => 'Nimaš dovoljenja za vabljenje sodelavcev.';
 
   @override

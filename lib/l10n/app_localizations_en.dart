@@ -4667,16 +4667,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collectionCreatorArtworkAddLabel => 'Add';
 
   @override
-  String get collectionCreatorNoArtworksAvailable => 'No artworks available';
+  String get collectionCreatorNoArtworksAvailable => 'No artworks available matching your search.';
 
   @override
   String get collectionCreatorSearchArtworksLabel => 'Search';
 
   @override
-  String get collectionCreatorSearchArtworksHint => 'Search your artworks...';
+  String get collectionCreatorSearchArtworksHint => 'Find artworks by title or description...';
 
   @override
-  String get collectionCreatorAddArtworksTitle => 'Add Artworks';
+  String get collectionCreatorAddArtworksTitle => 'Add artworks to your collection';
 
   @override
   String get collectionDetailLoadFailedMessage => 'Failed to load collection details. Please try again.';
@@ -6933,6 +6933,48 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get collabRoleAdmin => 'Admin';
+
+  @override
+  String get exhibitionListDisabledTitle => 'Exhibitions are not enabled';
+
+  @override
+  String get exhibitionListDisabledSubtitle => 'This feature is currently disabled.';
+
+  @override
+  String get exhibitionListMyExhibitionsTab => 'My Exhibitions';
+
+  @override
+  String get exhibitionListCollaboratingTab => 'Collaborating';
+
+  @override
+  String get exhibitionListCreateTitle => 'Create Exhibition';
+
+  @override
+  String get exhibitionListCreateSubtitle => 'Curate artworks and invite collaborators';
+
+  @override
+  String get exhibitionListCreateNewButton => 'New';
+
+  @override
+  String get exhibitionListEmptyMineTitle => 'No exhibitions yet';
+
+  @override
+  String get exhibitionListEmptyMineDescriptionCanCreate => 'Create your first exhibition to showcase artworks and invite collaborators.';
+
+  @override
+  String get exhibitionListEmptyMineDescriptionReadonly => 'Your hosted exhibitions will appear here.';
+
+  @override
+  String get exhibitionListRoleHost => 'Host';
+
+  @override
+  String get exhibitionListEmptyCollaboratingTitle => 'No collaborations yet';
+
+  @override
+  String get exhibitionListEmptyCollaboratingDescription => 'When someone invites you to collaborate on an exhibition, it will appear here.';
+
+  @override
+  String get exhibitionListRoleCollaborator => 'Collaborator';
 
   @override
   String get collabPanelNoInvitePermission => 'You do not have permission to invite collaborators.';

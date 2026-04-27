@@ -18,6 +18,7 @@ import '../../../models/promotion.dart';
 import '../../../models/user_persona.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/dao_role_verification.dart';
+import '../../../utils/creator_shell_navigation.dart';
 import '../../../utils/wallet_utils.dart';
 import '../components/desktop_widgets.dart';
 import '../desktop_shell.dart';
@@ -26,8 +27,6 @@ import '../../web3/institution/institution_hub.dart';
 import '../../web3/institution/event_creator.dart';
 import '../../web3/institution/event_manager.dart';
 import '../../web3/institution/institution_analytics.dart';
-import '../../events/exhibition_creator_screen.dart';
-import '../../events/exhibition_detail_screen.dart';
 import '../../events/exhibition_list_screen.dart';
 import '../../map_markers/manage_markers_screen.dart';
 import '../../../widgets/glass_components.dart';
@@ -62,9 +61,7 @@ class _DesktopInstitutionHubScreenState
   }
 
   void _openExhibitionWorkspace() {
-    DesktopShellScope.of(context)?.pushScreen(
-      const ExhibitionCreatorScreen(embedded: true),
-    );
+    unawaited(CreatorShellNavigation.openExhibitionCreatorWorkspace(context));
   }
 
   @override
@@ -481,14 +478,12 @@ class _DesktopInstitutionHubScreenState
                           _openExhibitionWorkspace();
                         },
                         onOpenExhibition: (exhibition) {
-                          DesktopShellScope.of(context)?.pushScreen(
-                            DesktopSubScreen(
-                              title: exhibition.title,
-                              child: ExhibitionDetailScreen(
-                                exhibitionId: exhibition.id,
-                                initialExhibition: exhibition,
-                                embedded: true,
-                              ),
+                          unawaited(
+                            CreatorShellNavigation.openExhibitionDetailWorkspace(
+                              context,
+                              exhibitionId: exhibition.id,
+                              initialExhibition: exhibition,
+                              titleOverride: exhibition.title,
                             ),
                           );
                         },

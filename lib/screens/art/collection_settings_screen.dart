@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/widgets/creator/creator_kit.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
+import 'package:art_kubus/widgets/common/subject_options_sheet.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -16,11 +18,11 @@ import '../../providers/collections_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
+import '../../utils/creator_shell_navigation.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/wallet_utils.dart';
 import '../desktop/desktop_shell.dart';
-import 'collection_detail_screen.dart';
 
 class CollectionSettingsScreen extends StatefulWidget {
   final int collectionIndex;
@@ -455,46 +457,49 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
         }
 
         final canEdit = _canEdit(collection);
-        final shareButton = IconButton(
-          tooltip: l10n.commonShare,
-          onPressed: () {
-            ShareService().showShareSheet(
-              context,
-              target: ShareTarget.collection(
-                collectionId: collection.id,
-                title: collection.name,
-              ),
-              sourceScreen: 'collection_settings',
-            );
-          },
-          icon: const Icon(Icons.share_outlined),
-        );
-
-        final openButton = IconButton(
-          tooltip: l10n.commonOpen,
-          onPressed: () {
-            final shellScope = DesktopShellScope.of(context);
-            if (shellScope != null) {
-              shellScope.pushSubScreen(
-                title: collection.name,
-                child: CollectionDetailScreen(
+        final subjectActions = <SubjectOptionsAction>[
+          SubjectOptionsAction(
+            id: 'open',
+            icon: Icons.open_in_new_outlined,
+            label: l10n.commonOpen,
+            onSelected: () {
+              unawaited(
+                CreatorShellNavigation.openCollectionDetailWorkspace(
+                  context,
                   collectionId: collection.id,
-                  embedded: true,
+                  collectionName: collection.name,
                 ),
               );
-              return;
-            }
-
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => CollectionDetailScreen(
+            },
+          ),
+          SubjectOptionsAction(
+            id: 'share',
+            icon: Icons.share_outlined,
+            label: l10n.commonShare,
+            onSelected: () {
+              ShareService().showShareSheet(
+                context,
+                target: ShareTarget.collection(
                   collectionId: collection.id,
-                  embedded: true,
+                  title: collection.name,
                 ),
-              ),
-            );
-          },
-          icon: const Icon(Icons.open_in_new_outlined),
+                sourceScreen: 'collection_settings',
+              );
+            },
+          ),
+          if (canEdit)
+            SubjectOptionsAction(
+              id: 'delete',
+              icon: Icons.delete_outline,
+              label: l10n.commonDelete,
+              isDestructive: true,
+              onSelected: () => _delete(collection),
+            ),
+        ];
+        final actionsButton = CreatorSubjectActionsButton(
+          title: collection.name,
+          subtitle: l10n.collectionSettingsTitle,
+          actions: subjectActions,
         );
 
         final body = _buildMainBody(context, collection, canEdit);
@@ -510,7 +515,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
               }
               Navigator.of(context).maybePop();
             },
-            actions: [shareButton, openButton],
+            actions: [actionsButton],
             headerBadge: CreatorStatusBadge(
               label: l10n.collectionCreatorStatusSavedSubtitle,
               color: Theme.of(context).colorScheme.primary,
@@ -523,7 +528,7 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
         return CreatorScaffold(
           title: l10n.collectionSettingsTitle,
           onBack: () => Navigator.of(context).maybePop(),
-          appBarActions: [shareButton, openButton],
+          appBarActions: [actionsButton],
           body: body,
         );
       },
@@ -707,8 +712,6 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
             primaryLoading: _saving,
             secondaryLabel: l10n.commonCancel,
             onSecondary: () => Navigator.of(context).maybePop(),
-            destructiveLabel: canEdit ? l10n.collectionSettingsDeleteButton : null,
-            onDestructive: canEdit ? () => _delete(collection) : null,
             accentColor: scheme.primary,
           ),
         ],
@@ -761,6 +764,51 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
             child: DesktopCreatorReadinessChecklist(items: readinessItems),
           ),
           const SizedBox(height: KubusSpacing.lg),
+          DesktopCreatorSubjectActionsSection(
+            title: l10n.collectionSettingsTitle,
+            subtitle: l10n.commonActions,
+            accentColor: scheme.primary,
+            actions: [
+              SubjectOptionsAction(
+                id: 'open',
+                icon: Icons.open_in_new_outlined,
+                label: l10n.commonOpen,
+                onSelected: () {
+                  unawaited(
+                    CreatorShellNavigation.openCollectionDetailWorkspace(
+                      context,
+                      collectionId: collection.id,
+                      collectionName: collection.name,
+                    ),
+                  );
+                },
+              ),
+              SubjectOptionsAction(
+                id: 'share',
+                icon: Icons.share_outlined,
+                label: l10n.commonShare,
+                onSelected: () {
+                  ShareService().showShareSheet(
+                    context,
+                    target: ShareTarget.collection(
+                      collectionId: collection.id,
+                      title: collection.name,
+                    ),
+                    sourceScreen: 'collection_settings',
+                  );
+                },
+              ),
+              if (canEdit)
+                SubjectOptionsAction(
+                  id: 'delete',
+                  icon: Icons.delete_outline,
+                  label: l10n.commonDelete,
+                  isDestructive: true,
+                  onSelected: () => _delete(collection),
+                ),
+            ],
+          ),
+          const SizedBox(height: KubusSpacing.lg),
           DesktopCreatorSidebarSection(
             title: l10n.collectionCreatorQuickActionsTitle,
             subtitle: l10n.collectionCreatorQuickActionsSubtitle,
@@ -784,33 +832,6 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
                   label: Text(canEdit
                       ? l10n.collectionCreatorQuickActionUpdate
                       : l10n.commonSave),
-                ),
-                const SizedBox(height: KubusSpacing.sm),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    final shellScope = DesktopShellScope.of(context);
-                    if (shellScope != null) {
-                      shellScope.pushSubScreen(
-                        title: collection.name,
-                        child: CollectionDetailScreen(
-                          collectionId: collection.id,
-                          embedded: true,
-                        ),
-                      );
-                      return;
-                    }
-
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => CollectionDetailScreen(
-                          collectionId: collection.id,
-                          embedded: true,
-                        ),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.open_in_new_outlined),
-                  label: Text(l10n.collectionCreatorQuickActionOpen),
                 ),
               ],
             ),

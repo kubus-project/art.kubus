@@ -132,18 +132,22 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Consumer3<ArtworkProvider, ProfileProvider, SavedItemsProvider>(
+    return Consumer4<ArtworkProvider, ProfileProvider, SavedItemsProvider,
+        WalletProvider>(
       builder: (context, artworkProvider, profileProvider, savedItemsProvider,
-          child) {
+          walletProvider, child) {
         final artwork = artworkProvider.getArtworkById(widget.artworkId);
         final isSignedIn = profileProvider.isSignedIn;
-        final viewerWallet =
-            (profileProvider.currentUser?.walletAddress ?? '').trim();
-        final artworkOwnerWallet =
-            WalletUtils.canonical(artwork?.walletAddress);
+        final viewerWallet = WalletUtils.coalesce(
+          walletAddress: profileProvider.currentUser?.walletAddress,
+          wallet: walletProvider.currentWalletAddress,
+          userId: profileProvider.currentUser?.id,
+        );
+        final artworkOwnerWallet = WalletUtils.canonical(artwork?.walletAddress);
         final isOwner = viewerWallet.isNotEmpty &&
             artworkOwnerWallet.isNotEmpty &&
             WalletUtils.equals(viewerWallet, artworkOwnerWallet);
+        final canManage = isSignedIn && isOwner;
 
         if (_artworkLoading) {
           return AnimatedGradientBackground(
@@ -278,7 +282,11 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                               const SizedBox(height: DetailSpacing.xl),
                               _buildSocialStats(artwork),
                               const SizedBox(height: DetailSpacing.xl),
-                              _buildActionButtons(artwork),
+                              _buildActionButtons(
+                                artwork,
+                                isOwner: isOwner,
+                                canManage: canManage,
+                              ),
                               const SizedBox(height: DetailSpacing.xl),
                               if (AppConfig.isFeatureEnabled('collabInvites') &&
                                   isSignedIn) ...[
@@ -735,17 +743,13 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     );
   }
 
-  Widget _buildActionButtons(Artwork artwork) {
+  Widget _buildActionButtons(
+    Artwork artwork, {
+    required bool isOwner,
+    required bool canManage,
+  }) {
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    final profileProvider = context.read<ProfileProvider>();
-    final walletProvider = context.read<WalletProvider>();
-    final currentWallet = profileProvider.currentUser?.walletAddress ??
-        walletProvider.currentWalletAddress;
-    final isOwner = (currentWallet != null &&
-        (artwork.walletAddress ?? '').isNotEmpty &&
-        currentWallet.toLowerCase() == artwork.walletAddress!.toLowerCase());
-    final canManage = profileProvider.isSignedIn && isOwner;
     final canMint = canManage &&
         AppConfig.isFeatureEnabled('web3') &&
         AppConfig.isFeatureEnabled('nftMinting');

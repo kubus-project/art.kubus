@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:art_kubus/models/artwork.dart';
 import 'package:art_kubus/utils/design_tokens.dart';
 import 'package:file_picker/file_picker.dart';
@@ -13,14 +15,19 @@ import '../../providers/app_refresh_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../services/backend_api_service.dart';
+import '../../services/share/share_service.dart';
+import '../../services/share/share_types.dart';
 import '../../utils/artwork_media_resolver.dart';
+import '../../utils/artwork_navigation.dart';
 import '../../utils/wallet_action_guard.dart';
 import '../../widgets/creator/creator_kit.dart';
 import '../../widgets/collaboration_panel.dart';
+import '../../widgets/common/subject_options_sheet.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/glass_components.dart';
 import '../desktop/desktop_shell.dart';
+import '../web3/artist/artwork_ar_manager_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
  
 
@@ -62,6 +69,177 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
 
   bool _isSaving = false;
   bool _arEnabled = false;
+
+  List<SubjectOptionsAction> _buildSubjectActions(Artwork artwork) {
+    final l10n = AppLocalizations.of(context)!;
+    return [
+      SubjectOptionsAction(
+        id: 'open',
+        icon: Icons.open_in_new_outlined,
+        label: l10n.commonOpen,
+        onSelected: () {
+          unawaited(
+            openArtwork(
+              context,
+              artwork.id,
+              source: 'artwork_edit',
+            ),
+          );
+        },
+      ),
+      SubjectOptionsAction(
+        id: 'share',
+        icon: Icons.share_outlined,
+        label: l10n.commonShare,
+        onSelected: () {
+          ShareService().showShareSheet(
+            context,
+            target: ShareTarget.artwork(
+              artworkId: artwork.id,
+              title: artwork.title,
+            ),
+            sourceScreen: 'artwork_edit',
+          );
+        },
+      ),
+      SubjectOptionsAction(
+        id: artwork.isPublic ? 'unpublish' : 'publish',
+        icon: artwork.isPublic
+            ? Icons.visibility_off_outlined
+            : Icons.publish_outlined,
+        label: artwork.isPublic ? l10n.commonUnpublish : l10n.commonPublish,
+        onSelected: () => _togglePublication(artwork),
+      ),
+      if (AppConfig.enableARViewer)
+        SubjectOptionsAction(
+          id: 'ar_manager',
+          icon: Icons.view_in_ar_outlined,
+          label: l10n.commonViewInAr,
+          onSelected: () => _openArManager(artwork),
+        ),
+      SubjectOptionsAction(
+        id: 'delete',
+        icon: Icons.delete_outline,
+        label: l10n.commonDelete,
+        isDestructive: true,
+        onSelected: () => _deleteArtwork(artwork),
+      ),
+    ];
+  }
+
+  Future<void> _openArManager(Artwork artwork) async {
+    final shellScope = DesktopShellScope.of(context);
+    if (shellScope != null && widget.embedded) {
+      shellScope.pushScreen(
+        DesktopSubScreen(
+          title: AppLocalizations.of(context)?.commonViewInAr ?? 'AR',
+          child: ArtworkArManagerScreen(artworkId: artwork.id),
+        ),
+      );
+      return;
+    }
+
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ArtworkArManagerScreen(artworkId: artwork.id),
+      ),
+    );
+  }
+
+  Future<void> _togglePublication(Artwork artwork) async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final provider = context.read<ArtworkProvider>();
+    final profileProvider = context.read<ProfileProvider>();
+    final walletProvider = context.read<WalletProvider>();
+
+    final canProceed = await WalletActionGuard.ensureSignerAccess(
+      context: context,
+      profileProvider: profileProvider,
+      walletProvider: walletProvider,
+    );
+    if (!mounted || !canProceed) return;
+
+    try {
+      final updated = artwork.isPublic
+          ? await provider.unpublishArtwork(artwork.id)
+          : await provider.publishArtwork(artwork.id);
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(
+          content: Text(
+            updated != null
+                ? l10n.commonSavedToast
+                : l10n.commonActionFailedToast,
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.commonActionFailedToast)),
+      );
+    }
+  }
+
+  Future<void> _deleteArtwork(Artwork artwork) async {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final profileProvider = context.read<ProfileProvider>();
+    final walletProvider = context.read<WalletProvider>();
+    final artworkProvider = context.read<ArtworkProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final confirmed = await showKubusDialog<bool>(
+      context: context,
+      builder: (dialogContext) => KubusAlertDialog(
+        backgroundColor: scheme.surfaceContainerHighest,
+        title: Text(l10n.artistGalleryDeleteArtworkTitle),
+        content: Text(l10n.artistGalleryDeleteConfirmBody(artwork.title)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.commonCancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: scheme.error),
+            child: Text(l10n.commonDelete),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    if (!mounted) return;
+
+    final canProceed = await WalletActionGuard.ensureSignerAccess(
+      context: context,
+      profileProvider: profileProvider,
+      walletProvider: walletProvider,
+    );
+    if (!mounted || !canProceed) return;
+
+    try {
+      final deleted = await BackendApiService().deleteArtwork(artwork.id);
+      if (!mounted) return;
+      if (!deleted) {
+        messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.commonActionFailedToast)),
+        );
+        return;
+      }
+      artworkProvider.removeArtwork(artwork.id);
+      navigator.maybePop();
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.artistGalleryDeletedToast(artwork.title))),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.commonActionFailedToast)),
+      );
+    }
+  }
 
   @override
   void initState() {
@@ -649,6 +827,13 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
         subtitle: l10n.exhibitionCreatorBasicsTitle,
         onBack: shellScope?.popScreen,
         backTooltip: l10n.commonBack,
+        actions: [
+          CreatorSubjectActionsButton(
+            title: art.title.isNotEmpty ? art.title : l10n.commonUntitled,
+            subtitle: l10n.commonActions,
+            actions: _buildSubjectActions(art),
+          ),
+        ],
         mainContent: content,
         sidebar: _buildDesktopSidebar(l10n, art),
       );
@@ -666,6 +851,12 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
           elevation: 0,
           title: Text(l10n.commonEdit),
           actions: [
+            if (art != null)
+              CreatorSubjectActionsButton(
+                title: art.title.isNotEmpty ? art.title : l10n.commonUntitled,
+                subtitle: l10n.commonActions,
+                actions: _buildSubjectActions(art),
+              ),
             IconButton(
               onPressed: _isSaving || _loading ? null : _save,
               icon: const Icon(Icons.check),

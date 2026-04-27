@@ -25,12 +25,12 @@ import '../../../models/dao.dart';
 import '../../../models/promotion.dart';
 import '../../../models/user_persona.dart';
 import '../../../utils/activity_navigation.dart';
+import '../../../utils/creator_shell_navigation.dart';
 import '../../../utils/dao_role_verification.dart';
 import '../../../utils/wallet_action_guard.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../collab/invites_inbox_screen.dart';
 import '../../events/exhibition_list_screen.dart';
-import '../../map_markers/manage_markers_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../../widgets/promotion/promotion_builder_sheet.dart';
 import '../../../widgets/notifications/kubus_notifications_sheet.dart';
@@ -268,10 +268,8 @@ class _InstitutionHubState extends State<InstitutionHub> {
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                   onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const ManageMarkersScreen(),
-                      ),
+                    unawaited(
+                      CreatorShellNavigation.openManageMarkersWorkspace(context),
                     );
                   },
                 ),

@@ -9038,7 +9038,7 @@ abstract class AppLocalizations {
   /// No description provided for @collectionCreatorNoArtworksAvailable.
   ///
   /// In en, this message translates to:
-  /// **'No artworks available'**
+  /// **'No artworks available matching your search.'**
   String get collectionCreatorNoArtworksAvailable;
 
   /// No description provided for @collectionCreatorSearchArtworksLabel.
@@ -9050,13 +9050,13 @@ abstract class AppLocalizations {
   /// No description provided for @collectionCreatorSearchArtworksHint.
   ///
   /// In en, this message translates to:
-  /// **'Search your artworks...'**
+  /// **'Find artworks by title or description...'**
   String get collectionCreatorSearchArtworksHint;
 
   /// No description provided for @collectionCreatorAddArtworksTitle.
   ///
   /// In en, this message translates to:
-  /// **'Add Artworks'**
+  /// **'Add artworks to your collection'**
   String get collectionCreatorAddArtworksTitle;
 
   /// No description provided for @collectionDetailLoadFailedMessage.
@@ -13294,6 +13294,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Admin'**
   String get collabRoleAdmin;
+
+  /// No description provided for @exhibitionListDisabledTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Exhibitions are not enabled'**
+  String get exhibitionListDisabledTitle;
+
+  /// No description provided for @exhibitionListDisabledSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This feature is currently disabled.'**
+  String get exhibitionListDisabledSubtitle;
+
+  /// No description provided for @exhibitionListMyExhibitionsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'My Exhibitions'**
+  String get exhibitionListMyExhibitionsTab;
+
+  /// No description provided for @exhibitionListCollaboratingTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Collaborating'**
+  String get exhibitionListCollaboratingTab;
+
+  /// No description provided for @exhibitionListCreateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Exhibition'**
+  String get exhibitionListCreateTitle;
+
+  /// No description provided for @exhibitionListCreateSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Curate artworks and invite collaborators'**
+  String get exhibitionListCreateSubtitle;
+
+  /// No description provided for @exhibitionListCreateNewButton.
+  ///
+  /// In en, this message translates to:
+  /// **'New'**
+  String get exhibitionListCreateNewButton;
+
+  /// No description provided for @exhibitionListEmptyMineTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No exhibitions yet'**
+  String get exhibitionListEmptyMineTitle;
+
+  /// No description provided for @exhibitionListEmptyMineDescriptionCanCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your first exhibition to showcase artworks and invite collaborators.'**
+  String get exhibitionListEmptyMineDescriptionCanCreate;
+
+  /// No description provided for @exhibitionListEmptyMineDescriptionReadonly.
+  ///
+  /// In en, this message translates to:
+  /// **'Your hosted exhibitions will appear here.'**
+  String get exhibitionListEmptyMineDescriptionReadonly;
+
+  /// No description provided for @exhibitionListRoleHost.
+  ///
+  /// In en, this message translates to:
+  /// **'Host'**
+  String get exhibitionListRoleHost;
+
+  /// No description provided for @exhibitionListEmptyCollaboratingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No collaborations yet'**
+  String get exhibitionListEmptyCollaboratingTitle;
+
+  /// No description provided for @exhibitionListEmptyCollaboratingDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'When someone invites you to collaborate on an exhibition, it will appear here.'**
+  String get exhibitionListEmptyCollaboratingDescription;
+
+  /// No description provided for @exhibitionListRoleCollaborator.
+  ///
+  /// In en, this message translates to:
+  /// **'Collaborator'**
+  String get exhibitionListRoleCollaborator;
 
   /// No description provided for @collabPanelNoInvitePermission.
   ///

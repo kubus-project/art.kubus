@@ -1,15 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
-import 'package:provider/provider.dart';
 
 import '../../../utils/design_tokens.dart';
 import '../../../utils/kubus_color_roles.dart';
-import '../../../providers/artwork_drafts_provider.dart';
-import '../../art/collection_detail_screen.dart';
-import '../../events/exhibition_creator_screen.dart';
-import '../../map_markers/manage_markers_screen.dart';
-import 'artwork_creator.dart';
-import 'collection_creator.dart';
+import '../../../utils/creator_shell_navigation.dart';
 import '../../../widgets/glass_components.dart';
 
 class ArtistStudioCreateScreen extends StatelessWidget {
@@ -56,20 +50,9 @@ class ArtistStudioCreateScreen extends StatelessWidget {
               onOpenArtworkCreator!();
               return;
             }
-            final navigator = Navigator.of(context);
-            final draftId = context.read<ArtworkDraftsProvider>().createDraft();
-            await navigator.push(
-              MaterialPageRoute(
-                builder: (_) => ArtworkCreator(
-                  draftId: draftId,
-                  onCreated: () {
-                    try {
-                      navigator.pop();
-                    } catch (_) {}
-                    onArtworkCreated?.call();
-                  },
-                ),
-              ),
+            await CreatorShellNavigation.openArtworkCreatorWorkspace(
+              context,
+              onCreated: onArtworkCreated,
             );
           },
         ),
@@ -84,25 +67,19 @@ class ArtistStudioCreateScreen extends StatelessWidget {
               onOpenCollectionCreator!();
               return;
             }
-            final navigator = Navigator.of(context);
-            final createdId = await navigator.push<String>(
-              MaterialPageRoute(
-                builder: (_) => CollectionCreator(
-                  onCreated: (id) {
-                    try {
-                      navigator.pop(id);
-                    } catch (_) {}
-                    onCollectionCreated?.call();
-                  },
-                ),
-              ),
+            String? createdId;
+            await CreatorShellNavigation.openCollectionCreatorWorkspace(
+              context,
+              onCreated: (id) {
+                createdId = id;
+                onCollectionCreated?.call();
+              },
             );
-            if (createdId != null && createdId.isNotEmpty && context.mounted) {
-              await navigator.push(
-                MaterialPageRoute(
-                  builder: (_) =>
-                      CollectionDetailScreen(collectionId: createdId),
-                ),
+            final collectionId = createdId;
+            if (collectionId != null && collectionId.isNotEmpty && context.mounted) {
+              await CreatorShellNavigation.openCollectionDetailWorkspace(
+                context,
+                collectionId: collectionId,
               );
             }
           },
@@ -118,11 +95,7 @@ class ArtistStudioCreateScreen extends StatelessWidget {
               onOpenExhibitionCreator!();
               return;
             }
-            final navigator = Navigator.of(context);
-            await navigator.push(
-              MaterialPageRoute(
-                  builder: (_) => const ExhibitionCreatorScreen()),
-            );
+            await CreatorShellNavigation.openExhibitionCreatorWorkspace(context);
           },
         ),
         const SizedBox(height: 12),
@@ -131,10 +104,8 @@ class ArtistStudioCreateScreen extends StatelessWidget {
           subtitle: l10n.manageMarkersCardSubtitle,
           icon: Icons.place_outlined,
           accent: studioAccent,
-          onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const ManageMarkersScreen()),
-            );
+          onTap: () async {
+            await CreatorShellNavigation.openManageMarkersWorkspace(context);
           },
         ),
       ],

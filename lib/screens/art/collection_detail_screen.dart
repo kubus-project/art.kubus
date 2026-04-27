@@ -10,17 +10,17 @@ import '../../providers/collections_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
+import '../../utils/creator_shell_navigation.dart';
 import '../../utils/artwork_navigation.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/wallet_utils.dart';
+import '../../widgets/creator/creator_kit.dart';
 import '../../widgets/common/subject_options_sheet.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../config/config.dart';
 import '../../utils/design_tokens.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
-import '../desktop/desktop_shell.dart';
-import 'collection_settings_screen.dart';
 
 class CollectionDetailScreen extends StatefulWidget {
   final String collectionId;
@@ -143,30 +143,11 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
   }
 
   Future<void> _openEditor(CollectionRecord collection) async {
-    final shellScope = DesktopShellScope.of(context);
-    if (shellScope != null) {
-      shellScope.pushScreen(
-        DesktopSubScreen(
-          title: AppLocalizations.of(context)!.collectionSettingsTitle,
-          child: CollectionSettingsScreen(
-            collectionId: collection.id,
-            collectionIndex: -1,
-            collectionName: collection.name,
-            embedded: true,
-          ),
-        ),
-      );
-      return;
-    }
-
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => CollectionSettingsScreen(
-          collectionId: collection.id,
-          collectionIndex: -1,
-          collectionName: collection.name,
-        ),
-      ),
+    await CreatorShellNavigation.openCollectionSettingsWorkspace(
+      context,
+      collectionId: collection.id,
+      collectionIndex: -1,
+      collectionName: collection.name,
     );
   }
 
@@ -344,24 +325,42 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                 elevation: 0,
                 foregroundColor: scheme.onSurface,
                 actions: [
-                  IconButton(
-                    tooltip: l10n.commonShare,
-                    onPressed: () {
-                      ShareService().showShareSheet(
-                        context,
-                        target: ShareTarget.collection(
-                            collectionId: widget.collectionId, title: name),
-                        sourceScreen: 'collection_detail',
-                      );
-                    },
-                    icon: const Icon(Icons.share_outlined),
+                  CreatorSubjectActionsButton(
+                    title: name,
+                    subtitle: l10n.collectionSettingsTitle,
+                    actions: [
+                      if (canEdit)
+                        SubjectOptionsAction(
+                          id: 'edit',
+                          icon: Icons.edit_outlined,
+                          label: l10n.commonEdit,
+                          onSelected: () => _openEditor(resolved),
+                        ),
+                      SubjectOptionsAction(
+                        id: 'share',
+                        icon: Icons.share_outlined,
+                        label: l10n.commonShare,
+                        onSelected: () {
+                          ShareService().showShareSheet(
+                            context,
+                            target: ShareTarget.collection(
+                              collectionId: widget.collectionId,
+                              title: name,
+                            ),
+                            sourceScreen: 'collection_detail',
+                          );
+                        },
+                      ),
+                      if (canEdit)
+                        SubjectOptionsAction(
+                          id: 'delete',
+                          icon: Icons.delete_outline,
+                          label: l10n.commonDelete,
+                          isDestructive: true,
+                          onSelected: () => _deleteCollection(resolved),
+                        ),
+                    ],
                   ),
-                  if (canEdit)
-                    IconButton(
-                      tooltip: l10n.commonEdit,
-                      onPressed: () => _openEditor(resolved),
-                      icon: const Icon(Icons.edit),
-                    ),
                 ],
                 flexibleSpace: FlexibleSpaceBar(
                   title: Text(
@@ -434,14 +433,7 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                     ],
                     SectionHeader(
                       title: l10n.collectionDetailArtworks,
-                      trailing: canEdit
-                          ? TextButton.icon(
-                              onPressed: () => _openEditor(resolved),
-                              icon: const Icon(Icons.edit, size: 16),
-                              label: Text(l10n.collectionDetailManage,
-                                  style: DetailTypography.button(context)),
-                            )
-                          : null,
+                      trailing: null,
                     ),
                     const SizedBox(height: DetailSpacing.md),
                     if ((error ?? '').isNotEmpty && collection != null)

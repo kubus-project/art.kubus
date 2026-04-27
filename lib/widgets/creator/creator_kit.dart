@@ -1,9 +1,11 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import '../../utils/design_tokens.dart';
 import '../collaboration_panel.dart';
 import '../glass_components.dart';
+import '../common/subject_options_sheet.dart';
 
 /// Shared building blocks for all creator / editor / manager screens.
 ///
@@ -215,6 +217,9 @@ class CreatorFooterActions extends StatelessWidget {
   final VoidCallback? onSecondary;
 
   /// Optional destructive action (e.g. "Delete").
+  ///
+  /// Deprecated: subject-level destructive actions should live in the
+  /// canonical bottom-sheet action menu instead of being rendered inline.
   final String? destructiveLabel;
   final VoidCallback? onDestructive;
 
@@ -229,6 +234,7 @@ class CreatorFooterActions extends StatelessWidget {
     this.secondaryLabel,
     this.onSecondary,
     this.destructiveLabel,
+    @Deprecated('Use the subject options bottom sheet instead.')
     this.onDestructive,
     this.accentColor,
   });
@@ -408,6 +414,80 @@ class CreatorTextField extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Icon button trigger that opens the canonical subject-options sheet.
+class CreatorSubjectActionsButton extends StatelessWidget {
+  final String title;
+  final String? subtitle;
+  final List<SubjectOptionsAction> actions;
+  final String? tooltip;
+
+  const CreatorSubjectActionsButton({
+    super.key,
+    required this.title,
+    required this.actions,
+    this.subtitle,
+    this.tooltip,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return IconButton(
+      tooltip: tooltip ?? l10n.commonActions,
+      icon: const Icon(Icons.more_horiz),
+      onPressed: () => showSubjectOptionsSheet(
+        context: context,
+        title: title,
+        subtitle: subtitle,
+        actions: actions,
+      ),
+    );
+  }
+}
+
+/// Desktop sidebar block that surfaces subject actions through the canonical
+/// bottom sheet instead of inline destructive buttons.
+class DesktopCreatorSubjectActionsSection extends StatelessWidget {
+  final String title;
+  final String? subtitle;
+  final List<SubjectOptionsAction> actions;
+  final Color? accentColor;
+
+  const DesktopCreatorSubjectActionsSection({
+    super.key,
+    required this.title,
+    required this.actions,
+    this.subtitle,
+    this.accentColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+
+    return DesktopCreatorSidebarSection(
+      title: title,
+      subtitle: subtitle ?? l10n.commonActions,
+      icon: Icons.more_horiz,
+      accentColor: accentColor ?? scheme.primary,
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: () => showSubjectOptionsSheet(
+            context: context,
+            title: title,
+            subtitle: subtitle,
+            actions: actions,
+          ),
+          icon: const Icon(Icons.more_horiz),
+          label: Text(l10n.commonActions),
+        ),
+      ),
     );
   }
 }
