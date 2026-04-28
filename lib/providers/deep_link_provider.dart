@@ -33,8 +33,8 @@ class DeepLinkProvider extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    final inBuildPhase =
-        phase == SchedulerPhase.persistentCallbacks || phase == SchedulerPhase.midFrameMicrotasks;
+    final inBuildPhase = phase == SchedulerPhase.persistentCallbacks ||
+        phase == SchedulerPhase.midFrameMicrotasks;
     if (!inBuildPhase) {
       notifyListeners();
       return;
@@ -55,6 +55,7 @@ class DeepLinkProvider extends ChangeNotifier {
 
   String? _signatureFor(ShareDeepLinkTarget? target) {
     if (target == null) return null;
-    return const ShareDeepLinkCodec().canonicalPathForTarget(target);
+    return const ShareDeepLinkCodec()
+        .canonicalPathForTarget(target, includeProofTokens: false);
   }
 }

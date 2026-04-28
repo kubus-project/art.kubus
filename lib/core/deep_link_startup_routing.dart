@@ -30,7 +30,8 @@ class DeepLinkStartupRouting {
 
     final preferredShellRoute =
         pending.type == ShareEntityType.marker ? '/map' : '/main';
-    final canonicalPath = _codec.canonicalPathForTarget(pending);
+    final canonicalPath =
+        _codec.canonicalPathForTarget(pending, includeProofTokens: false);
 
     if (shouldShowSignIn) {
       return DeepLinkStartupDecision(

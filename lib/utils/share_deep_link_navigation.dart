@@ -70,8 +70,8 @@ class ShareDeepLinkNavigation {
     if (ensureShell && tabs == null) {
       final navigator = Navigator.of(context);
       final shellEntry = ShellRoutes.internalShellEntryForTarget(target);
-      final canonicalPath =
-          const ShareDeepLinkCodec().canonicalPathForTarget(target);
+      final canonicalPath = const ShareDeepLinkCodec()
+          .canonicalPathForTarget(target, includeProofTokens: false);
       final shellBuilder = ShellRoutes.builders[shellEntry] ??
           ShellRoutes.builders[ShellRoutes.main]!;
 

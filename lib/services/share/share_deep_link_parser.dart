@@ -223,7 +223,10 @@ class ShareDeepLinkCodec {
     );
   }
 
-  String canonicalPathForTarget(ShareDeepLinkTarget target) {
+  String canonicalPathForTarget(
+    ShareDeepLinkTarget target, {
+    bool includeProofTokens = true,
+  }) {
     final basePath = canonicalPathFor(target.type, target.id);
     if (target.isClaimReadyExhibition) {
       final query = <String, String>{'handoff': 'claim-ready'};
@@ -231,13 +234,15 @@ class ShareDeepLinkCodec {
       if (markerId.isNotEmpty) {
         query['attendanceMarkerId'] = markerId;
       }
-      final claimProofToken = (target.claimProofToken ?? '').trim();
-      if (claimProofToken.isNotEmpty) {
-        query['claimProofToken'] = claimProofToken;
-      }
-      final handoffToken = (target.handoffToken ?? '').trim();
-      if (handoffToken.isNotEmpty) {
-        query['handoffToken'] = handoffToken;
+      if (includeProofTokens) {
+        final claimProofToken = (target.claimProofToken ?? '').trim();
+        if (claimProofToken.isNotEmpty) {
+          query['claimProofToken'] = claimProofToken;
+        }
+        final handoffToken = (target.handoffToken ?? '').trim();
+        if (handoffToken.isNotEmpty) {
+          query['handoffToken'] = handoffToken;
+        }
       }
       final proofSource = (target.proofSource ?? '').trim();
       if (proofSource.isNotEmpty) {

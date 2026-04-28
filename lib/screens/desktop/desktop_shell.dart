@@ -641,9 +641,9 @@ class _DesktopShellState extends State<DesktopShell>
     final isProfileSelected =
         _screenStack.isNotEmpty && _screenStack.last is ProfileScreen;
     final isNotificationsSelected =
-      _functionsPanel == DesktopFunctionsPanel.notifications;
+        _functionsPanel == DesktopFunctionsPanel.notifications;
     final isSettingsSelected =
-      _screenStack.isNotEmpty && _screenStack.last is DesktopSettingsScreen;
+        _screenStack.isNotEmpty && _screenStack.last is DesktopSettingsScreen;
     final isCollabInvitesSelected = _isInvitesScreenActive();
 
     final isCompact = DesktopBreakpoints.isCompact(context);
@@ -771,10 +771,10 @@ class _DesktopShellState extends State<DesktopShell>
                                       expandAnimation: _navExpandAnimation,
                                       onToggleExpand: _toggleNavigation,
                                       isProfileSelected: isProfileSelected,
-                                        isNotificationsSelected:
+                                      isNotificationsSelected:
                                           isNotificationsSelected,
-                                        isSettingsSelected: isSettingsSelected,
-                                        isCollabInvitesSelected:
+                                      isSettingsSelected: isSettingsSelected,
+                                      isCollabInvitesSelected:
                                           isCollabInvitesSelected,
                                       onProfileTap: () =>
                                           _showProfileMenu(context),
@@ -914,7 +914,8 @@ class _DesktopShellState extends State<DesktopShell>
     })();
     if (pending == null) return;
 
-    final signature = const ShareDeepLinkCodec().canonicalPathForTarget(pending);
+    final signature = const ShareDeepLinkCodec()
+        .canonicalPathForTarget(pending, includeProofTokens: false);
     final now = DateTime.now();
     final lastAt = _lastDeepLinkHandledAt;
     if (_lastDeepLinkSignature == signature &&
