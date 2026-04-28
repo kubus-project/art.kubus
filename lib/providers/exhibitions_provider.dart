@@ -361,11 +361,46 @@ class ExhibitionsProvider extends ChangeNotifier {
     }
   }
 
-  Future<ExhibitionPoapStatus?> claimExhibitionPoap(String exhibitionId) async {
+  Future<Map<String, dynamic>?> createScanClaimProof({
+    required String exhibitionId,
+    required String markerId,
+    required String proofSource,
+    required String handoffToken,
+  }) async {
+    try {
+      final response = await _api.createScanClaimProof(
+        markerId: markerId,
+        subjectType: 'exhibition',
+        subjectId: exhibitionId,
+        proofSource: proofSource,
+        handoffToken: handoffToken,
+      );
+      final payload = response['data'];
+      if (payload is Map<String, dynamic>) return payload;
+      if (payload is Map) return Map<String, dynamic>.from(payload);
+      return null;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<ExhibitionPoapStatus?> claimExhibitionPoap(
+    String exhibitionId, {
+    String? attendanceMarkerId,
+    String? claimProofToken,
+    String? proofSource,
+  }) async {
     _setLoading(true);
     _error = null;
     try {
-      final status = await _api.claimExhibitionPoap(exhibitionId);
+      final status = await _api.claimExhibitionPoap(
+        exhibitionId,
+        attendanceMarkerId: attendanceMarkerId,
+        claimProofToken: claimProofToken,
+        proofSource: proofSource,
+      );
       if (status != null) {
         _poapByExhibitionId[exhibitionId] = status;
         notifyListeners();

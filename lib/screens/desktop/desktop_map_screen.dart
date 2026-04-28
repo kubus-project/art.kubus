@@ -2254,6 +2254,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     ),
                 ],
               ),
+              _buildArtworkPoapPanel(artwork),
               const SizedBox(height: KubusSpacing.lg),
               DetailActionsSection(
                 title: l10n.commonActions,
@@ -2404,6 +2405,68 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
   }
 
+  Widget _buildArtworkPoapPanel(Artwork artwork) {
+    final l10n = AppLocalizations.of(context)!;
+    final metadataPoap = artwork.metadata?['poap'];
+    final poapMeta = metadataPoap is Map
+        ? Map<String, dynamic>.from(metadataPoap)
+        : const <String, dynamic>{};
+
+    final enabled = artwork.poapEnabled ||
+        artwork.poapMode != ArtworkPoapMode.none ||
+        poapMeta['enabled'] == true ||
+        poapMeta['poapEnabled'] == true ||
+        poapMeta['poap_enabled'] == true;
+    final eventId = (artwork.poapEventId ??
+            poapMeta['eventId'] ??
+            poapMeta['poapEventId'] ??
+            poapMeta['event_id'])
+        ?.toString()
+        .trim();
+    final claimUrl = (artwork.poapClaimUrl ??
+            poapMeta['claimUrl'] ??
+            poapMeta['poapClaimUrl'] ??
+            poapMeta['claim_url'])
+        ?.toString()
+        .trim();
+    final hasReference = (eventId != null && eventId.isNotEmpty) ||
+        (claimUrl != null && claimUrl.isNotEmpty);
+    if (!enabled && !hasReference) return const SizedBox.shrink();
+
+    final rewardAmount = artwork.poapRewardAmount ??
+        (poapMeta['rewardAmount'] is num
+            ? (poapMeta['rewardAmount'] as num).toInt()
+            : int.tryParse(
+                (poapMeta['poapRewardAmount'] ?? '').toString(),
+              ));
+
+    return Padding(
+      padding: const EdgeInsets.only(top: KubusSpacing.lg),
+      child: PoapDetailCard(
+        title: l10n.exhibitionDetailPoapTitle,
+        description: (artwork.poapDescription ?? poapMeta['description'])
+                    ?.toString()
+                    .trim()
+                    .isNotEmpty ==
+                true
+            ? (artwork.poapDescription ?? poapMeta['description']).toString()
+            : l10n.exhibitionDetailPoapDescription,
+        code: eventId,
+        iconUrl: artwork.poapImageUrl ?? poapMeta['imageUrl']?.toString(),
+        rewardLabel: rewardAmount != null && rewardAmount > 0
+            ? '+$rewardAmount KUB8'
+            : null,
+        stateLabel: l10n.exhibitionDetailPoapNotClaimedStatus,
+        eligibilityLabel: l10n.exhibitionDetailPoapEligibilityVisitRequired,
+        eligibilityHint: l10n.exhibitionDetailPoapAttendanceHint,
+        isClaimed: false,
+        canClaim: false,
+        claimActionLabel: l10n.exhibitionDetailPoapClaimAction,
+        claimingActionLabel: l10n.exhibitionDetailPoapClaimingAction,
+      ),
+    );
+  }
+
   Widget _buildExhibitionDetailPanel(
       ThemeProvider themeProvider, AppAnimationTheme animationTheme) {
     // Guard against null to prevent race condition between check and access.
@@ -2433,7 +2496,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         ? exhibition.locationName!.trim()
         : null;
     final coverUrl = MediaUrlResolver.resolve(exhibition.coverUrl);
-    final poap = context.watch<ExhibitionsProvider>().poapStatusFor(exhibition.id);
+    final poap =
+        context.watch<ExhibitionsProvider>().poapStatusFor(exhibition.id);
 
     List<DetailContextItem> buildPoapContextItems() {
       final items = <DetailContextItem>[];
@@ -2489,7 +2553,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     String? poapEligibilityHint() {
       if (poap == null || poap.claimed) return null;
-      if (poap.canClaim) return l10n.exhibitionDetailPoapEligibilityClaimReadyHint;
+      if (poap.canClaim) {
+        return l10n.exhibitionDetailPoapEligibilityClaimReadyHint;
+      }
       switch ((poap.eligibilityReason ?? '').trim().toLowerCase()) {
         case 'sign_in_required':
           return l10n.exhibitionDetailPoapSignedOutHint;
@@ -2625,10 +2691,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   stateLabel: poap.claimed
                       ? l10n.exhibitionDetailPoapClaimedStatus
                       : l10n.exhibitionDetailPoapNotClaimedStatus,
-                    eligibilityLabel: poapEligibilityLabel(),
-                    eligibilityHint: poapEligibilityHint(),
+                  eligibilityLabel: poapEligibilityLabel(),
+                  eligibilityHint: poapEligibilityHint(),
                   signedOutHint: null,
-                    contextItems: buildPoapContextItems(),
+                  contextItems: buildPoapContextItems(),
                   isClaimed: poap.claimed,
                   canClaim: !poap.claimed && poap.canClaim,
                   isClaiming: _isClaimingSelectedExhibitionPoap,
@@ -2802,11 +2868,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 kicker: l10n.mapMarkerSubjectTypeEvent,
                 subtitle: event.host == null
                     ? null
-                  : l10n.exhibitionDetailHostedBy(
-                    event.host!.displayName ??
-                      event.host!.username ??
-                      l10n.commonUnknown,
-                    ),
+                    : l10n.exhibitionDetailHostedBy(
+                        event.host!.displayName ??
+                            event.host!.username ??
+                            l10n.commonUnknown,
+                      ),
               ),
               const SizedBox(height: KubusSpacing.md),
               DetailMetadataBlock(
@@ -2821,7 +2887,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     ),
                   DetailMetaItem(
                     icon: Icons.collections_outlined,
-                    label: l10n.eventDetailLinkedExhibitionsSummary(exhibitionsCount),
+                    label: l10n
+                        .eventDetailLinkedExhibitionsSummary(exhibitionsCount),
                   ),
                   if ((event.status ?? '').trim().isNotEmpty)
                     DetailMetaItem(
@@ -4682,7 +4749,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     });
 
     try {
-      final status = await exhibitionsProvider.claimExhibitionPoap(exhibitionId);
+      final status =
+          await exhibitionsProvider.claimExhibitionPoap(exhibitionId);
       if (!mounted) return;
       if (status == null) {
         messenger.showKubusSnackBar(

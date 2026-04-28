@@ -125,6 +125,9 @@ class ShareDeepLinkNavigation {
                   exhibitionId: target.id,
                   attendanceMarkerId: target.attendanceMarkerId,
                   autoClaimPoap: target.isClaimReadyExhibition,
+                  claimProofToken: target.claimProofToken,
+                  handoffToken: target.handoffToken,
+                  proofSource: target.proofSource,
                 )));
         if (!context.mounted) return;
         _maybePromptDeferredOnboarding(context);
@@ -208,6 +211,9 @@ class ShareDeepLinkNavigation {
               exhibitionId: target.id,
               attendanceMarkerId: target.attendanceMarkerId,
               autoClaimPoap: target.isClaimReadyExhibition,
+              claimProofToken: target.claimProofToken,
+              handoffToken: target.handoffToken,
+              proofSource: target.proofSource,
             ),
           ),
         );

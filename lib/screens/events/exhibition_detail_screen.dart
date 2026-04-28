@@ -38,6 +38,9 @@ class ExhibitionDetailScreen extends StatefulWidget {
   final Exhibition? initialExhibition;
   final String? attendanceMarkerId;
   final bool autoClaimPoap;
+  final String? claimProofToken;
+  final String? handoffToken;
+  final String? proofSource;
   final bool embedded;
 
   const ExhibitionDetailScreen({
@@ -46,6 +49,9 @@ class ExhibitionDetailScreen extends StatefulWidget {
     this.initialExhibition,
     this.attendanceMarkerId,
     this.autoClaimPoap = false,
+    this.claimProofToken,
+    this.handoffToken,
+    this.proofSource,
     this.embedded = false,
   });
 
@@ -57,6 +63,13 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
   String? _prefetchedAttendanceMarkerId;
   bool _isClaimingPoap = false;
   bool _autoClaimAttempted = false;
+  bool _scanProofExchangeAttempted = false;
+  String? _claimProofToken;
+
+  String get _effectiveProofSource {
+    final source = (widget.proofSource ?? '').trim();
+    return source.isNotEmpty ? source : 'system_camera_deeplink';
+  }
 
   @override
   void initState() {
@@ -85,16 +98,57 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     if (!widget.autoClaimPoap || _autoClaimAttempted) return;
 
     final markerId = (widget.attendanceMarkerId ?? '').trim();
-    if (markerId.isEmpty) return;
+    final existingProof =
+        (_claimProofToken ?? widget.claimProofToken ?? '').trim();
+    final handoff = (widget.handoffToken ?? '').trim();
+    if (markerId.isEmpty && existingProof.isEmpty && handoff.isEmpty) return;
 
     final provider = context.read<ExhibitionsProvider>();
     final currentPoap = provider.poapStatusFor(widget.exhibitionId);
-    if (currentPoap == null || currentPoap.claimed || !currentPoap.canClaim) {
+    if (currentPoap == null || currentPoap.claimed) {
+      return;
+    }
+    final hasProofContext = existingProof.isNotEmpty || handoff.isNotEmpty;
+    if (!currentPoap.canClaim && !hasProofContext) {
       return;
     }
 
     _autoClaimAttempted = true;
     await _claimExhibitionPoap();
+  }
+
+  Future<String?> _ensureClaimProofToken() async {
+    final current = (_claimProofToken ?? widget.claimProofToken ?? '').trim();
+    if (current.isNotEmpty) {
+      _claimProofToken = current;
+      return current;
+    }
+
+    final handoff = (widget.handoffToken ?? '').trim();
+    final markerId = (widget.attendanceMarkerId ?? '').trim();
+    if (handoff.isEmpty || markerId.isEmpty || _scanProofExchangeAttempted) {
+      return null;
+    }
+
+    _scanProofExchangeAttempted = true;
+    final provider = context.read<ExhibitionsProvider>();
+    final payload = await provider.createScanClaimProof(
+      exhibitionId: widget.exhibitionId,
+      markerId: markerId,
+      proofSource: _effectiveProofSource,
+      handoffToken: handoff,
+    );
+    final token = (payload?['claimProofToken'] ??
+            payload?['scanProofToken'] ??
+            payload?['claim_proof_token'] ??
+            payload?['scan_proof_token'])
+        ?.toString()
+        .trim();
+    if (token != null && token.isNotEmpty) {
+      _claimProofToken = token;
+      return token;
+    }
+    return null;
   }
 
   bool _canManageExhibition(String? myRole) {
@@ -209,7 +263,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
         title: Text(l10n.commonDelete),
-        content: Text(l10n.collectionSettingsDeleteDialogContent(exhibition.title)),
+        content:
+            Text(l10n.collectionSettingsDeleteDialogContent(exhibition.title)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -257,7 +312,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
             id: 'edit',
             icon: Icons.edit_outlined,
             label: l10n.commonEdit,
-            onSelected: () => CreatorShellNavigation.openExhibitionCreatorWorkspace(
+            onSelected: () =>
+                CreatorShellNavigation.openExhibitionCreatorWorkspace(
               context,
               initialExhibition: ex,
             ),
@@ -320,7 +376,15 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     });
 
     try {
-      final status = await provider.claimExhibitionPoap(widget.exhibitionId);
+      final proofToken = await _ensureClaimProofToken();
+      if (!mounted) return;
+
+      final status = await provider.claimExhibitionPoap(
+        widget.exhibitionId,
+        attendanceMarkerId: widget.attendanceMarkerId,
+        claimProofToken: proofToken,
+        proofSource: proofToken == null ? null : _effectiveProofSource,
+      );
       if (!mounted) return;
 
       if (status == null) {
@@ -339,7 +403,10 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
 
       messenger.showKubusSnackBar(
         SnackBar(
-          content: Text(l10n.exhibitionDetailPoapClaimSuccessToast,
+          content: Text(
+              status.eligibilityReason == 'already_claimed'
+                  ? l10n.scanProofAlreadyClaimedToast
+                  : l10n.exhibitionDetailPoapClaimSuccessToast,
               style: KubusTypography.inter()),
           behavior: SnackBarBehavior.floating,
         ),
@@ -353,10 +420,18 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
         if (raw.isNotEmpty) {
           final decoded = jsonDecode(raw);
           if (decoded is Map<String, dynamic>) {
+            final details = decoded['details'];
+            final code =
+                details is Map ? (details['code'] ?? '').toString().trim() : '';
+            if (code == 'scan_proof_expired' ||
+                code == 'scan_handoff_expired' ||
+                code == 'scan_handoff_consumed') {
+              backendMessage = l10n.scanProofExpiredToast;
+            }
             final msg = (decoded['error'] ?? decoded['message'] ?? '')
                 .toString()
                 .trim();
-            if (msg.isNotEmpty) backendMessage = msg;
+            if (backendMessage == null && msg.isNotEmpty) backendMessage = msg;
           }
         }
       } catch (_) {
@@ -771,14 +846,13 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
         tone: KubusSnackBarTone.success,
       );
 
-      final subject = result.subject;
-      final subjectType = (subject?['subjectType'] ?? '').toString().trim().toLowerCase();
-      final subjectId = (subject?['subjectId'] ?? '').toString().trim();
-      final currentPoap = context.read<ExhibitionsProvider>().poapStatusFor(widget.exhibitionId);
-      if (subjectType == 'exhibition' &&
-          subjectId.isNotEmpty &&
-          subjectId == widget.exhibitionId &&
-          currentPoap?.claimed != true) {
+      final exhibitionsProvider = context.read<ExhibitionsProvider>();
+      final refreshedPoap = await exhibitionsProvider.fetchExhibitionPoap(
+        widget.exhibitionId,
+        force: true,
+      );
+      if (!mounted) return;
+      if (refreshedPoap?.claimed != true && refreshedPoap?.canClaim == true) {
         unawaited(_claimExhibitionPoap());
       }
     } on BackendApiRequestException catch (e) {
@@ -1192,7 +1266,9 @@ class _ExhibitionDetailsCard extends StatelessWidget {
         case 'marker_attendance_required':
           return l10n.exhibitionDetailPoapEligibilityAttendanceHint;
         default:
-          return showAttendanceHint ? l10n.exhibitionDetailPoapAttendanceHint : null;
+          return showAttendanceHint
+              ? l10n.exhibitionDetailPoapAttendanceHint
+              : null;
       }
     }
 
@@ -1280,11 +1356,11 @@ class _ExhibitionDetailsCard extends StatelessWidget {
               stateLabel: poap!.claimed
                   ? l10n.exhibitionDetailPoapClaimedStatus
                   : l10n.exhibitionDetailPoapNotClaimedStatus,
-                eligibilityLabel: poapEligibilityLabel(),
-                eligibilityHint: poapEligibilityHint(),
-                signedOutHint:
+              eligibilityLabel: poapEligibilityLabel(),
+              eligibilityHint: poapEligibilityHint(),
+              signedOutHint:
                   isSignedIn ? null : l10n.exhibitionDetailPoapSignedOutHint,
-                contextItems: buildPoapContextItems(),
+              contextItems: buildPoapContextItems(),
               isClaimed: poap!.claimed,
               canClaim: !poap!.claimed && poap!.canClaim && isSignedIn,
               isClaiming: isClaimingPoap,

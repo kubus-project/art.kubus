@@ -23,8 +23,8 @@ class CollectiblesProvider with ChangeNotifier {
   // Getters
   List<CollectibleSeries> get allSeries =>
       List.unmodifiable(_buildCanonicalSeries());
-  List<Collectible> get allCollectibles =>
-      List.unmodifiable(_applyWalletCollectibleIndex(_buildCanonicalCollectibles()));
+  List<Collectible> get allCollectibles => List.unmodifiable(
+      _applyWalletCollectibleIndex(_buildCanonicalCollectibles()));
   bool get isLoading => _isLoading;
   String? get error => _error;
   List<MarketplaceArtworkEntry> get marketplaceEntries =>
@@ -154,13 +154,11 @@ class CollectiblesProvider with ChangeNotifier {
     final artwork = _artworkProvider?.getArtworkById(artworkId);
     if (artwork == null) return null;
 
-    final linkedCollectibles = allCollectibles
-        .where((candidate) {
-          final candidateArtworkId = _resolveArtworkIdForCollectible(candidate);
-          return candidateArtworkId == artworkId &&
-              candidate.status != CollectibleStatus.burned;
-        })
-        .toList(growable: false);
+    final linkedCollectibles = allCollectibles.where((candidate) {
+      final candidateArtworkId = _resolveArtworkIdForCollectible(candidate);
+      return candidateArtworkId == artworkId &&
+          candidate.status != CollectibleStatus.burned;
+    }).toList(growable: false);
 
     final series = getSeriesByArtworkId(artworkId);
 
@@ -215,9 +213,9 @@ class CollectiblesProvider with ChangeNotifier {
     final normalized = _canonicalWallet(ownerAddress);
     if (normalized.isEmpty) return const <Collectible>[];
     return allCollectibles
-      .where((collectible) =>
-        _canonicalWallet(collectible.ownerAddress) == normalized)
-      .toList(growable: false);
+        .where((collectible) =>
+            _canonicalWallet(collectible.ownerAddress) == normalized)
+        .toList(growable: false);
   }
 
   // Get collectibles for sale
@@ -411,17 +409,17 @@ class CollectiblesProvider with ChangeNotifier {
     final canonicalCollectibles = _buildCanonicalCollectibles();
     final entries = <MarketplaceArtworkEntry>[];
     for (final artwork in artworkProvider.artworks) {
-      if (!artwork.isActive || !artwork.isPublic || !_hasBackendMintedProof(artwork)) {
+      if (!artwork.isActive ||
+          !artwork.isPublic ||
+          !_hasBackendMintedProof(artwork)) {
         continue;
       }
 
       final series = getSeriesByArtworkId(artwork.id);
-      final linkedCollectibles = canonicalCollectibles
-          .where((candidate) {
-            final candidateArtworkId = _resolveArtworkIdForCollectible(candidate);
-            return candidateArtworkId == artwork.id;
-          })
-          .toList(growable: false);
+      final linkedCollectibles = canonicalCollectibles.where((candidate) {
+        final candidateArtworkId = _resolveArtworkIdForCollectible(candidate);
+        return candidateArtworkId == artwork.id;
+      }).toList(growable: false);
 
       entries.add(
         _createMarketplaceEntry(
@@ -532,12 +530,16 @@ class CollectiblesProvider with ChangeNotifier {
           seriesId: _seriesIdForArtwork(artwork.id),
           tokenId: '1',
           ownerAddress: walletAddress,
-          status:
-              artwork.isForSale ? CollectibleStatus.listed : CollectibleStatus.minted,
+          status: artwork.isForSale
+              ? CollectibleStatus.listed
+              : CollectibleStatus.minted,
           mintedAt: mintedAt,
-          currentListingPrice:
-              artwork.isForSale && artwork.price != null ? '${artwork.price}' : null,
-          listedAt: artwork.isForSale ? (artwork.updatedAt ?? artwork.createdAt) : null,
+          currentListingPrice: artwork.isForSale && artwork.price != null
+              ? '${artwork.price}'
+              : null,
+          listedAt: artwork.isForSale
+              ? (artwork.updatedAt ?? artwork.createdAt)
+              : null,
           properties: {
             'artwork_id': artwork.id,
             'mint_address': artwork.nftMintAddress,
@@ -565,7 +567,8 @@ class CollectiblesProvider with ChangeNotifier {
     return collectibles;
   }
 
-  List<Collectible> _applyWalletCollectibleIndex(List<Collectible> collectibles) {
+  List<Collectible> _applyWalletCollectibleIndex(
+      List<Collectible> collectibles) {
     if (_walletCollectibleIndex.isEmpty) return collectibles;
 
     final overrides = <String, Map<String, dynamic>>{};
@@ -590,8 +593,11 @@ class CollectiblesProvider with ChangeNotifier {
     Collectible collectible,
     Map<String, dynamic> record,
   ) {
-    final ownershipState = _mapOrNull(record['ownershipState']) ??
-        _mapOrNull(record['ownership_state']);
+    final ownershipState = _normalizeOwnershipState(
+      record['ownershipState'] ?? record['ownership_state'],
+    );
+    final ownershipEvidence = _mapOrNull(record['ownershipEvidence']) ??
+        _mapOrNull(record['ownership_evidence']);
     final provenance = _mapOrNull(record['provenance']) ??
         _mapOrNull(record['provenanceContext']);
 
@@ -599,15 +605,21 @@ class CollectiblesProvider with ChangeNotifier {
       ..addAll({
         if (record['artworkId'] != null) 'artwork_id': record['artworkId'],
         if (record['artwork_id'] != null) 'artwork_id': record['artwork_id'],
-        if (record['mintAddress'] != null) 'mint_address': record['mintAddress'],
-        if (record['mint_address'] != null) 'mint_address': record['mint_address'],
-        if (record['metadataUri'] != null) 'metadata_uri': record['metadataUri'],
-        if (record['metadata_uri'] != null) 'metadata_uri': record['metadata_uri'],
+        if (record['mintAddress'] != null)
+          'mint_address': record['mintAddress'],
+        if (record['mint_address'] != null)
+          'mint_address': record['mint_address'],
+        if (record['metadataUri'] != null)
+          'metadata_uri': record['metadataUri'],
+        if (record['metadata_uri'] != null)
+          'metadata_uri': record['metadata_uri'],
         if (ownershipState != null) 'ownership_state': ownershipState,
+        if (ownershipEvidence != null) 'ownership_evidence': ownershipEvidence,
         if (provenance != null) 'provenance': provenance,
       });
 
-    final status = _parseCollectibleStatus(record['status']) ?? collectible.status;
+    final status =
+        _parseCollectibleStatus(record['status']) ?? collectible.status;
     final mintedAt = _parseDateTime(record['mintedAt']) ??
         _parseDateTime(record['minted_at']) ??
         collectible.mintedAt;
@@ -620,21 +632,27 @@ class CollectiblesProvider with ChangeNotifier {
     final lastTransferAt = _parseDateTime(record['lastTransferAt']) ??
         _parseDateTime(record['last_transfer_at']) ??
         collectible.lastTransferAt;
-    final currentListingPrice =
-        (record['currentListingPrice'] ?? record['current_listing_price'] ?? collectible.currentListingPrice)
-            ?.toString();
+    final currentListingPrice = (record['currentListingPrice'] ??
+            record['current_listing_price'] ??
+            collectible.currentListingPrice)
+        ?.toString();
 
     return collectible.copyWith(
-      ownerAddress: (record['ownerAddress'] ?? record['owner_address'] ?? collectible.ownerAddress)
+      ownerAddress: (record['ownerAddress'] ??
+              record['owner_address'] ??
+              collectible.ownerAddress)
           .toString(),
       status: status,
       mintedAt: mintedAt,
       currentListingPrice: currentListingPrice,
       listedAt: listedAt,
       properties: mergedProperties,
-      transactionHash: (record['transactionHash'] ?? record['transaction_hash'] ?? collectible.transactionHash)
+      transactionHash: (record['transactionHash'] ??
+              record['transaction_hash'] ??
+              collectible.transactionHash)
           ?.toString(),
-      lastSalePrice: _parseNullableDouble(record['lastSalePrice'] ?? record['last_sale_price']) ??
+      lastSalePrice: _parseNullableDouble(
+              record['lastSalePrice'] ?? record['last_sale_price']) ??
           collectible.lastSalePrice,
       lastSaleAt: lastSaleAt,
       lastTransferAt: lastTransferAt,
@@ -655,11 +673,28 @@ class CollectiblesProvider with ChangeNotifier {
     return null;
   }
 
+  Map<String, dynamic>? _normalizeOwnershipState(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) return Map<String, dynamic>.from(value);
+    final status = value?.toString().trim();
+    if (status == null || status.isEmpty) return null;
+    return {
+      'status': status,
+      'currentOwnerVerified': status == 'verified_onchain_owner',
+      'transferHistoryIndexed': status == 'verified_onchain_owner' ||
+          status == 'indexed_owner_unverified_transfer_history',
+    };
+  }
+
   String? _resolveCollectibleIdFromIndexRecord(Map<String, dynamic> record) {
-    final collectibleId = (record['collectibleId'] ?? record['collectible_id'] ?? '').toString().trim();
+    final collectibleId =
+        (record['collectibleId'] ?? record['collectible_id'] ?? '')
+            .toString()
+            .trim();
     if (collectibleId.isNotEmpty) return collectibleId;
 
-    final artworkId = (record['artworkId'] ?? record['artwork_id'] ?? '').toString().trim();
+    final artworkId =
+        (record['artworkId'] ?? record['artwork_id'] ?? '').toString().trim();
     if (artworkId.isNotEmpty) {
       return _collectibleIdForArtwork(artworkId);
     }
@@ -708,7 +743,8 @@ class CollectiblesProvider with ChangeNotifier {
   }
 
   String? _resolveArtworkIdForCollectible(Collectible collectible) {
-    final rawFromProps = collectible.properties['artwork_id']?.toString().trim();
+    final rawFromProps =
+        collectible.properties['artwork_id']?.toString().trim();
     if (rawFromProps != null && rawFromProps.isNotEmpty) {
       return rawFromProps;
     }

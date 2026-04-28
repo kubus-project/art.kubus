@@ -22229,6 +22229,36 @@ abstract class AppLocalizations {
   /// **'Unable to claim badge right now.'**
   String get exhibitionDetailPoapClaimFailedToast;
 
+  /// No description provided for @scanProofDetectedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan detected.'**
+  String get scanProofDetectedToast;
+
+  /// No description provided for @scanProofVerifiedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Proof verified.'**
+  String get scanProofVerifiedToast;
+
+  /// No description provided for @scanProofClaimingToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Claiming visit proof.'**
+  String get scanProofClaimingToast;
+
+  /// No description provided for @scanProofAlreadyClaimedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit proof already claimed.'**
+  String get scanProofAlreadyClaimedToast;
+
+  /// No description provided for @scanProofExpiredToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Proof expired. Scan again.'**
+  String get scanProofExpiredToast;
+
   /// No description provided for @exhibitionDetailPoapAttendanceHint.
   ///
   /// In en, this message translates to:

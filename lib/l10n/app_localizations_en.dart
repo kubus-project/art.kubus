@@ -11752,6 +11752,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionDetailPoapClaimFailedToast => 'Unable to claim badge right now.';
 
   @override
+  String get scanProofDetectedToast => 'Scan detected.';
+
+  @override
+  String get scanProofVerifiedToast => 'Proof verified.';
+
+  @override
+  String get scanProofClaimingToast => 'Claiming visit proof.';
+
+  @override
+  String get scanProofAlreadyClaimedToast => 'Visit proof already claimed.';
+
+  @override
+  String get scanProofExpiredToast => 'Proof expired. Scan again.';
+
+  @override
   String get exhibitionDetailPoapAttendanceHint => 'Attendance verification appears below for live events.';
 
   @override

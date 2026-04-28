@@ -1881,9 +1881,6 @@ class BackendApiService
     );
   }
 
-
-
-
   void _throwIfIpfsFallbackUnavailable(String featureLabel) =>
       _backendApiThrowIfIpfsFallbackUnavailable(this, featureLabel);
 
@@ -1967,7 +1964,6 @@ class BackendApiService
         ) ??
         decoded;
   }
-
 
   bool? _tryBoolValue(dynamic value) => _backendApiTryBoolValue(value);
 
@@ -2581,7 +2577,8 @@ class BackendApiService
 
   /// Get wallet-scoped collectible ownership index
   /// GET /api/profiles/:walletAddress/collectibles
-  Future<Map<String, dynamic>> getWalletCollectibleIndex(String walletAddress) =>
+  Future<Map<String, dynamic>> getWalletCollectibleIndex(
+          String walletAddress) =>
       _backendApiGetWalletCollectibleIndex(this, walletAddress);
 
   /// Fetch multiple profiles in a single batch call
@@ -3771,13 +3768,15 @@ class BackendApiService
     try {
       await _ensureAuthBeforeRequest(walletAddress: walletAddress);
 
-      final uri = Uri.parse('$baseUrl/api/attestations/attendance/challenge').replace(
+      final uri =
+          Uri.parse('$baseUrl/api/attestations/attendance/challenge').replace(
         queryParameters: <String, String>{'markerId': markerId.trim()},
       );
-        final response = await _get(uri, headers: _getHeaders());
+      final response = await _get(uri, headers: _getHeaders());
       if (response.statusCode == 404 || response.statusCode == 400) {
         final fallbackUri = Uri.parse('$baseUrl/api/attendance/challenge')
-            .replace(queryParameters: <String, String>{'markerId': markerId.trim()});
+            .replace(
+                queryParameters: <String, String>{'markerId': markerId.trim()});
         final fallback = await _get(fallbackUri, headers: _getHeaders());
         if (fallback.statusCode == 200) {
           return jsonDecode(fallback.body) as Map<String, dynamic>;
@@ -3799,6 +3798,44 @@ class BackendApiService
     } catch (e) {
       AppConfig.debugPrint(
           'BackendApiService.getAttendanceChallenge failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Exchange a signed scan handoff token for a short-lived claim proof.
+  /// POST /api/attestations/scan-proofs
+  Future<Map<String, dynamic>> createScanClaimProof({
+    required String markerId,
+    required String subjectType,
+    required String subjectId,
+    required String proofSource,
+    required String handoffToken,
+    String? walletAddress,
+  }) async {
+    try {
+      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
+      final uri = Uri.parse('$baseUrl/api/attestations/scan-proofs');
+      final response = await _post(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode({
+          'markerId': markerId.trim(),
+          'subjectType': subjectType.trim(),
+          'subjectId': subjectId.trim(),
+          'proofSource': proofSource.trim(),
+          'handoffToken': handoffToken.trim(),
+        }),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: uri.path,
+        body: response.body,
+      );
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.createScanClaimProof failed: $e');
       rethrow;
     }
   }
@@ -3876,7 +3913,7 @@ class BackendApiService
           'limit': '$safeLimit',
         },
       );
-        final response = await _get(uri, headers: _getHeaders());
+      final response = await _get(uri, headers: _getHeaders());
       if (response.statusCode != 200) {
         throw BackendApiRequestException(
           statusCode: response.statusCode,
@@ -3903,13 +3940,27 @@ class BackendApiService
   /// Claim an exhibition participation attestation (POAP-backed when configured).
   /// POST /api/attestations/exhibitions/:id/claim
   Future<UnifiedAttestation?> claimExhibitionAttestation(
-    String exhibitionId,
-  ) async {
+    String exhibitionId, {
+    String? attendanceMarkerId,
+    String? claimProofToken,
+    String? proofSource,
+  }) async {
     try {
       await _ensureAuthBeforeRequest();
-      final uri =
-          Uri.parse('$baseUrl/api/attestations/exhibitions/$exhibitionId/claim');
-      final response = await _post(uri, headers: _getHeaders());
+      final uri = Uri.parse(
+          '$baseUrl/api/attestations/exhibitions/$exhibitionId/claim');
+      final response = await _post(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode({
+          if ((attendanceMarkerId ?? '').trim().isNotEmpty)
+            'attendanceMarkerId': attendanceMarkerId!.trim(),
+          if ((claimProofToken ?? '').trim().isNotEmpty)
+            'claimProofToken': claimProofToken!.trim(),
+          if ((proofSource ?? '').trim().isNotEmpty)
+            'proofSource': proofSource!.trim(),
+        }),
+      );
       if (response.statusCode != 200) {
         throw BackendApiRequestException(
           statusCode: response.statusCode,
@@ -7460,12 +7511,28 @@ class BackendApiService
 
   /// Claim exhibition POAP
   /// POST /api/exhibitions/:id/poap/claim
-  Future<ExhibitionPoapStatus?> claimExhibitionPoap(String exhibitionId) async {
+  Future<ExhibitionPoapStatus?> claimExhibitionPoap(
+    String exhibitionId, {
+    String? attendanceMarkerId,
+    String? claimProofToken,
+    String? proofSource,
+  }) async {
     try {
       await _ensureAuthBeforeRequest();
       final uri =
           Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/poap/claim');
-      final response = await _post(uri, headers: _getHeaders());
+      final response = await _post(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode({
+          if ((attendanceMarkerId ?? '').trim().isNotEmpty)
+            'attendanceMarkerId': attendanceMarkerId!.trim(),
+          if ((claimProofToken ?? '').trim().isNotEmpty)
+            'claimProofToken': claimProofToken!.trim(),
+          if ((proofSource ?? '').trim().isNotEmpty)
+            'proofSource': proofSource!.trim(),
+        }),
+      );
       final decoded =
           response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (_isSuccessStatus(response.statusCode)) {
@@ -7477,8 +7544,11 @@ class BackendApiService
         }
         return null;
       }
-      throw Exception(
-          'Failed to claim exhibition POAP: ${response.statusCode} ${response.body}');
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: uri.path,
+        body: response.body,
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.claimExhibitionPoap failed: $e');
       rethrow;
@@ -8810,7 +8880,8 @@ Artwork parseArtworkFromBackendJson(Map<String, dynamic> json) {
         json['publicManifestCid'] ?? json['public_manifest_cid']);
     addMeta('publicRecordCid',
         json['publicRecordCid'] ?? json['public_record_cid']);
-    addMeta('publicRegistry', json['publicRegistry'] ?? json['public_registry']);
+    addMeta(
+        'publicRegistry', json['publicRegistry'] ?? json['public_registry']);
     addMeta('cidRegistry', json['cidRegistry'] ?? json['cid_registry']);
     addMeta('poap', json['poap']);
     addMeta('promotion', json['promotion']);

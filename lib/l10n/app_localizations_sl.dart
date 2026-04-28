@@ -11790,6 +11790,21 @@ class AppLocalizationsSl extends AppLocalizations {
   String get exhibitionDetailPoapClaimFailedToast => 'Značka trenutno ni mogoče prevzeti.';
 
   @override
+  String get scanProofDetectedToast => 'Zaznan je sken.';
+
+  @override
+  String get scanProofVerifiedToast => 'Dokaz je preverjen.';
+
+  @override
+  String get scanProofClaimingToast => 'Prevzemam dokaz obiska.';
+
+  @override
+  String get scanProofAlreadyClaimedToast => 'Dokaz obiska je že prevzet.';
+
+  @override
+  String get scanProofExpiredToast => 'Dokaz je potekel. Skeniraj znova.';
+
+  @override
   String get exhibitionDetailPoapAttendanceHint => 'Preverjanje prisotnosti je spodaj na voljo za dogodke v živo.';
 
   @override

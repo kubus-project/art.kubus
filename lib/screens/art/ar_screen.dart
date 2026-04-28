@@ -11,6 +11,7 @@ import '../../utils/design_tokens.dart';
 import 'package:provider/provider.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
+import '../../services/share/share_deep_link_parser.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:vector_math/vector_math_64.dart' as vector;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,6 +19,7 @@ import '../../models/map_marker_subject.dart';
 import '../../providers/artwork_provider.dart';
 import '../../providers/dao_provider.dart';
 import '../../providers/institution_provider.dart';
+import '../../providers/exhibitions_provider.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/platform_provider.dart';
 import '../../providers/saved_items_provider.dart';
@@ -296,6 +298,67 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     }
   }
 
+  Future<void> _openScannedDeepLink(ShareDeepLinkTarget target) async {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+
+    messenger.showKubusSnackBar(
+      SnackBar(content: Text(l10n.scanProofDetectedToast)),
+      tone: KubusSnackBarTone.neutral,
+    );
+
+    var nextTarget = target;
+    final markerId = (target.attendanceMarkerId ?? '').trim();
+    final handoffToken = (target.handoffToken ?? '').trim();
+    final existingProof = (target.claimProofToken ?? '').trim();
+    if (target.isClaimReadyExhibition &&
+        markerId.isNotEmpty &&
+        handoffToken.isNotEmpty &&
+        existingProof.isEmpty) {
+      try {
+        final payload =
+            await context.read<ExhibitionsProvider>().createScanClaimProof(
+                  exhibitionId: target.id,
+                  markerId: markerId,
+                  proofSource: 'ar',
+                  handoffToken: handoffToken,
+                );
+        if (!mounted) return;
+        final token = (payload?['claimProofToken'] ??
+                payload?['scanProofToken'] ??
+                payload?['claim_proof_token'] ??
+                payload?['scan_proof_token'])
+            ?.toString()
+            .trim();
+        if (token == null || token.isEmpty) {
+          messenger.showKubusSnackBar(
+            SnackBar(content: Text(l10n.scanProofExpiredToast)),
+            tone: KubusSnackBarTone.warning,
+          );
+          return;
+        }
+        nextTarget = target.copyWith(
+          claimProofToken: token,
+          proofSource: 'ar',
+        );
+        messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.scanProofVerifiedToast)),
+          tone: KubusSnackBarTone.success,
+        );
+      } catch (_) {
+        if (!mounted) return;
+        messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.scanProofExpiredToast)),
+          tone: KubusSnackBarTone.warning,
+        );
+        return;
+      }
+    }
+
+    await ShareDeepLinkNavigation.open(context, nextTarget);
+  }
+
   @override
   void dispose() {
     _animationController.dispose();
@@ -330,23 +393,12 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             if (_isARReady)
               _currentMode == 'scan'
                   ? ARMarkerScanner(
-                        onDeepLinkFound: (target) {
-                          if (!mounted) return;
-                          final l10n = AppLocalizations.of(context)!;
-                          if (target.isClaimReadyExhibition) {
-                            ScaffoldMessenger.of(context).showKubusSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  l10n.exhibitionDetailPoapEligibilityClaimReadyHint,
-                                ),
-                              ),
-                              tone: KubusSnackBarTone.success,
-                            );
-                          }
-                          unawaited(
-                            ShareDeepLinkNavigation.open(context, target),
-                          );
-                        },
+                      onDeepLinkFound: (target) {
+                        if (!mounted) return;
+                        unawaited(
+                          _openScannedDeepLink(target),
+                        );
+                      },
                       onArtworkFound: (artworkData) async {
                         setState(() {
                           // Store scanned artwork
