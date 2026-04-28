@@ -3802,6 +3802,43 @@ class BackendApiService
     }
   }
 
+  /// Issue a short-lived scan handoff token for marker QR/AR payloads.
+  /// POST /api/attestations/scan-handoffs
+  Future<Map<String, dynamic>> createScanHandoffToken({
+    required String markerId,
+    required String subjectType,
+    required String subjectId,
+    required String proofSource,
+    String? walletAddress,
+  }) async {
+    try {
+      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
+      final uri = Uri.parse('$baseUrl/api/attestations/scan-handoffs');
+      final response = await _post(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode({
+          'markerId': markerId.trim(),
+          'subjectType': subjectType.trim(),
+          'subjectId': subjectId.trim(),
+          'proofSource': proofSource.trim(),
+        }),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: uri.path,
+        body: response.body,
+      );
+    } catch (e) {
+      AppConfig.debugPrint(
+          'BackendApiService.createScanHandoffToken failed: $e');
+      rethrow;
+    }
+  }
+
   /// Exchange a signed scan handoff token for a short-lived claim proof.
   /// POST /api/attestations/scan-proofs
   Future<Map<String, dynamic>> createScanClaimProof({

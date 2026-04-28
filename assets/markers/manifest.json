@@ -1,0 +1,5258 @@
+{
+  "generatedAt": "2026-04-28T13:15:46.022404Z",
+  "pixelRatio": 4.0,
+  "items": [
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_artwork_subtle_l_std",
+      "markerType": "artwork",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_artwork_subtle_sel_l_std",
+      "markerType": "artwork",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_artwork_subtle_l_pro",
+      "markerType": "artwork",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_artwork_subtle_sel_l_pro",
+      "markerType": "artwork",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_artwork_active_l_std",
+      "markerType": "artwork",
+      "tier": "active",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_artwork_active_sel_l_std",
+      "markerType": "artwork",
+      "tier": "active",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_artwork_active_l_pro",
+      "markerType": "artwork",
+      "tier": "active",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_artwork_active_sel_l_pro",
+      "markerType": "artwork",
+      "tier": "active",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_artwork_featured_l_std",
+      "markerType": "artwork",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_artwork_featured_sel_l_std",
+      "markerType": "artwork",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_artwork_featured_l_pro",
+      "markerType": "artwork",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_artwork_featured_sel_l_pro",
+      "markerType": "artwork",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_artwork_legendary_l_std",
+      "markerType": "artwork",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_artwork_legendary_sel_l_std",
+      "markerType": "artwork",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_artwork_legendary_l_pro",
+      "markerType": "artwork",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_artwork_legendary_sel_l_pro",
+      "markerType": "artwork",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_streetArt_subtle_l_std",
+      "markerType": "streetArt",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_streetArt_subtle_sel_l_std",
+      "markerType": "streetArt",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_streetArt_subtle_l_pro",
+      "markerType": "streetArt",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_streetArt_subtle_sel_l_pro",
+      "markerType": "streetArt",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_streetArt_active_l_std",
+      "markerType": "streetArt",
+      "tier": "active",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_streetArt_active_sel_l_std",
+      "markerType": "streetArt",
+      "tier": "active",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_streetArt_active_l_pro",
+      "markerType": "streetArt",
+      "tier": "active",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_streetArt_active_sel_l_pro",
+      "markerType": "streetArt",
+      "tier": "active",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_streetArt_featured_l_std",
+      "markerType": "streetArt",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_streetArt_featured_sel_l_std",
+      "markerType": "streetArt",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_streetArt_featured_l_pro",
+      "markerType": "streetArt",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_streetArt_featured_sel_l_pro",
+      "markerType": "streetArt",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_streetArt_legendary_l_std",
+      "markerType": "streetArt",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_streetArt_legendary_sel_l_std",
+      "markerType": "streetArt",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_streetArt_legendary_l_pro",
+      "markerType": "streetArt",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_streetArt_legendary_sel_l_pro",
+      "markerType": "streetArt",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_institution_subtle_l_std",
+      "markerType": "institution",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_institution_subtle_sel_l_std",
+      "markerType": "institution",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_institution_subtle_l_pro",
+      "markerType": "institution",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_institution_subtle_sel_l_pro",
+      "markerType": "institution",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_institution_active_l_std",
+      "markerType": "institution",
+      "tier": "active",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_institution_active_sel_l_std",
+      "markerType": "institution",
+      "tier": "active",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_institution_active_l_pro",
+      "markerType": "institution",
+      "tier": "active",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_institution_active_sel_l_pro",
+      "markerType": "institution",
+      "tier": "active",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_institution_featured_l_std",
+      "markerType": "institution",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_institution_featured_sel_l_std",
+      "markerType": "institution",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_institution_featured_l_pro",
+      "markerType": "institution",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_institution_featured_sel_l_pro",
+      "markerType": "institution",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_institution_legendary_l_std",
+      "markerType": "institution",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_institution_legendary_sel_l_std",
+      "markerType": "institution",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_institution_legendary_l_pro",
+      "markerType": "institution",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_institution_legendary_sel_l_pro",
+      "markerType": "institution",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_event_subtle_l_std",
+      "markerType": "event",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_event_subtle_sel_l_std",
+      "markerType": "event",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_event_subtle_l_pro",
+      "markerType": "event",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_event_subtle_sel_l_pro",
+      "markerType": "event",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_event_active_l_std",
+      "markerType": "event",
+      "tier": "active",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_event_active_sel_l_std",
+      "markerType": "event",
+      "tier": "active",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_event_active_l_pro",
+      "markerType": "event",
+      "tier": "active",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_event_active_sel_l_pro",
+      "markerType": "event",
+      "tier": "active",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_event_featured_l_std",
+      "markerType": "event",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_event_featured_sel_l_std",
+      "markerType": "event",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_event_featured_l_pro",
+      "markerType": "event",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_event_featured_sel_l_pro",
+      "markerType": "event",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_event_legendary_l_std",
+      "markerType": "event",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_event_legendary_sel_l_std",
+      "markerType": "event",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_event_legendary_l_pro",
+      "markerType": "event",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_event_legendary_sel_l_pro",
+      "markerType": "event",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_residency_subtle_l_std",
+      "markerType": "residency",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_residency_subtle_sel_l_std",
+      "markerType": "residency",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_residency_subtle_l_pro",
+      "markerType": "residency",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_residency_subtle_sel_l_pro",
+      "markerType": "residency",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_residency_active_l_std",
+      "markerType": "residency",
+      "tier": "active",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_residency_active_sel_l_std",
+      "markerType": "residency",
+      "tier": "active",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_residency_active_l_pro",
+      "markerType": "residency",
+      "tier": "active",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_residency_active_sel_l_pro",
+      "markerType": "residency",
+      "tier": "active",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_residency_featured_l_std",
+      "markerType": "residency",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_residency_featured_sel_l_std",
+      "markerType": "residency",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_residency_featured_l_pro",
+      "markerType": "residency",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_residency_featured_sel_l_pro",
+      "markerType": "residency",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_residency_legendary_l_std",
+      "markerType": "residency",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_residency_legendary_sel_l_std",
+      "markerType": "residency",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_residency_legendary_l_pro",
+      "markerType": "residency",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_residency_legendary_sel_l_pro",
+      "markerType": "residency",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_drop_subtle_l_std",
+      "markerType": "drop",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_drop_subtle_sel_l_std",
+      "markerType": "drop",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_drop_subtle_l_pro",
+      "markerType": "drop",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_drop_subtle_sel_l_pro",
+      "markerType": "drop",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_drop_active_l_std",
+      "markerType": "drop",
+      "tier": "active",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_drop_active_sel_l_std",
+      "markerType": "drop",
+      "tier": "active",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_drop_active_l_pro",
+      "markerType": "drop",
+      "tier": "active",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_drop_active_sel_l_pro",
+      "markerType": "drop",
+      "tier": "active",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_drop_featured_l_std",
+      "markerType": "drop",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_drop_featured_sel_l_std",
+      "markerType": "drop",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_drop_featured_l_pro",
+      "markerType": "drop",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_drop_featured_sel_l_pro",
+      "markerType": "drop",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_drop_legendary_l_std",
+      "markerType": "drop",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_drop_legendary_sel_l_std",
+      "markerType": "drop",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_drop_legendary_l_pro",
+      "markerType": "drop",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_drop_legendary_sel_l_pro",
+      "markerType": "drop",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_experience_subtle_l_std",
+      "markerType": "experience",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_experience_subtle_sel_l_std",
+      "markerType": "experience",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_experience_subtle_l_pro",
+      "markerType": "experience",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_experience_subtle_sel_l_pro",
+      "markerType": "experience",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_experience_active_l_std",
+      "markerType": "experience",
+      "tier": "active",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_experience_active_sel_l_std",
+      "markerType": "experience",
+      "tier": "active",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_experience_active_l_pro",
+      "markerType": "experience",
+      "tier": "active",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_experience_active_sel_l_pro",
+      "markerType": "experience",
+      "tier": "active",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_experience_featured_l_std",
+      "markerType": "experience",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_experience_featured_sel_l_std",
+      "markerType": "experience",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_experience_featured_l_pro",
+      "markerType": "experience",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_experience_featured_sel_l_pro",
+      "markerType": "experience",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_experience_legendary_l_std",
+      "markerType": "experience",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_experience_legendary_sel_l_std",
+      "markerType": "experience",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_experience_legendary_l_pro",
+      "markerType": "experience",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_experience_legendary_sel_l_pro",
+      "markerType": "experience",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_other_subtle_l_std",
+      "markerType": "other",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_other_subtle_sel_l_std",
+      "markerType": "other",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_other_subtle_l_pro",
+      "markerType": "other",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_other_subtle_sel_l_pro",
+      "markerType": "other",
+      "tier": "subtle",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_other_active_l_std",
+      "markerType": "other",
+      "tier": "active",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_other_active_sel_l_std",
+      "markerType": "other",
+      "tier": "active",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_other_active_l_pro",
+      "markerType": "other",
+      "tier": "active",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_other_active_sel_l_pro",
+      "markerType": "other",
+      "tier": "active",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_other_featured_l_std",
+      "markerType": "other",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_other_featured_sel_l_std",
+      "markerType": "other",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_other_featured_l_pro",
+      "markerType": "other",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_other_featured_sel_l_pro",
+      "markerType": "other",
+      "tier": "featured",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_other_legendary_l_std",
+      "markerType": "other",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_other_legendary_sel_l_std",
+      "markerType": "other",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_other_legendary_l_pro",
+      "markerType": "other",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_other_legendary_sel_l_pro",
+      "markerType": "other",
+      "tier": "legendary",
+      "theme": "light",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_artwork_subtle_d_std",
+      "markerType": "artwork",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_artwork_subtle_sel_d_std",
+      "markerType": "artwork",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_artwork_subtle_d_pro",
+      "markerType": "artwork",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_artwork_subtle_sel_d_pro",
+      "markerType": "artwork",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_artwork_active_d_std",
+      "markerType": "artwork",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_artwork_active_sel_d_std",
+      "markerType": "artwork",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_artwork_active_d_pro",
+      "markerType": "artwork",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_artwork_active_sel_d_pro",
+      "markerType": "artwork",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_artwork_featured_d_std",
+      "markerType": "artwork",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_artwork_featured_sel_d_std",
+      "markerType": "artwork",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_artwork_featured_d_pro",
+      "markerType": "artwork",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_artwork_featured_sel_d_pro",
+      "markerType": "artwork",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_artwork_legendary_d_std",
+      "markerType": "artwork",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_artwork_legendary_sel_d_std",
+      "markerType": "artwork",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_artwork_legendary_d_pro",
+      "markerType": "artwork",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_artwork_legendary_sel_d_pro",
+      "markerType": "artwork",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_streetArt_subtle_d_std",
+      "markerType": "streetArt",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_streetArt_subtle_sel_d_std",
+      "markerType": "streetArt",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_streetArt_subtle_d_pro",
+      "markerType": "streetArt",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_streetArt_subtle_sel_d_pro",
+      "markerType": "streetArt",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_streetArt_active_d_std",
+      "markerType": "streetArt",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_streetArt_active_sel_d_std",
+      "markerType": "streetArt",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_streetArt_active_d_pro",
+      "markerType": "streetArt",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_streetArt_active_sel_d_pro",
+      "markerType": "streetArt",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_streetArt_featured_d_std",
+      "markerType": "streetArt",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_streetArt_featured_sel_d_std",
+      "markerType": "streetArt",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_streetArt_featured_d_pro",
+      "markerType": "streetArt",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_streetArt_featured_sel_d_pro",
+      "markerType": "streetArt",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_streetArt_legendary_d_std",
+      "markerType": "streetArt",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_streetArt_legendary_sel_d_std",
+      "markerType": "streetArt",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_streetArt_legendary_d_pro",
+      "markerType": "streetArt",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_streetArt_legendary_sel_d_pro",
+      "markerType": "streetArt",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_institution_subtle_d_std",
+      "markerType": "institution",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_institution_subtle_sel_d_std",
+      "markerType": "institution",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_institution_subtle_d_pro",
+      "markerType": "institution",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_institution_subtle_sel_d_pro",
+      "markerType": "institution",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_institution_active_d_std",
+      "markerType": "institution",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_institution_active_sel_d_std",
+      "markerType": "institution",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_institution_active_d_pro",
+      "markerType": "institution",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_institution_active_sel_d_pro",
+      "markerType": "institution",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_institution_featured_d_std",
+      "markerType": "institution",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_institution_featured_sel_d_std",
+      "markerType": "institution",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_institution_featured_d_pro",
+      "markerType": "institution",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_institution_featured_sel_d_pro",
+      "markerType": "institution",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_institution_legendary_d_std",
+      "markerType": "institution",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_institution_legendary_sel_d_std",
+      "markerType": "institution",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_institution_legendary_d_pro",
+      "markerType": "institution",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_institution_legendary_sel_d_pro",
+      "markerType": "institution",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_event_subtle_d_std",
+      "markerType": "event",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_event_subtle_sel_d_std",
+      "markerType": "event",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_event_subtle_d_pro",
+      "markerType": "event",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_event_subtle_sel_d_pro",
+      "markerType": "event",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_event_active_d_std",
+      "markerType": "event",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_event_active_sel_d_std",
+      "markerType": "event",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_event_active_d_pro",
+      "markerType": "event",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_event_active_sel_d_pro",
+      "markerType": "event",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_event_featured_d_std",
+      "markerType": "event",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_event_featured_sel_d_std",
+      "markerType": "event",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_event_featured_d_pro",
+      "markerType": "event",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_event_featured_sel_d_pro",
+      "markerType": "event",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_event_legendary_d_std",
+      "markerType": "event",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_event_legendary_sel_d_std",
+      "markerType": "event",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_event_legendary_d_pro",
+      "markerType": "event",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_event_legendary_sel_d_pro",
+      "markerType": "event",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_residency_subtle_d_std",
+      "markerType": "residency",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_residency_subtle_sel_d_std",
+      "markerType": "residency",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_residency_subtle_d_pro",
+      "markerType": "residency",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_residency_subtle_sel_d_pro",
+      "markerType": "residency",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_residency_active_d_std",
+      "markerType": "residency",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_residency_active_sel_d_std",
+      "markerType": "residency",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_residency_active_d_pro",
+      "markerType": "residency",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_residency_active_sel_d_pro",
+      "markerType": "residency",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_residency_featured_d_std",
+      "markerType": "residency",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_residency_featured_sel_d_std",
+      "markerType": "residency",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_residency_featured_d_pro",
+      "markerType": "residency",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_residency_featured_sel_d_pro",
+      "markerType": "residency",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_residency_legendary_d_std",
+      "markerType": "residency",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_residency_legendary_sel_d_std",
+      "markerType": "residency",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_residency_legendary_d_pro",
+      "markerType": "residency",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_residency_legendary_sel_d_pro",
+      "markerType": "residency",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_drop_subtle_d_std",
+      "markerType": "drop",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_drop_subtle_sel_d_std",
+      "markerType": "drop",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_drop_subtle_d_pro",
+      "markerType": "drop",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_drop_subtle_sel_d_pro",
+      "markerType": "drop",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_drop_active_d_std",
+      "markerType": "drop",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_drop_active_sel_d_std",
+      "markerType": "drop",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_drop_active_d_pro",
+      "markerType": "drop",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_drop_active_sel_d_pro",
+      "markerType": "drop",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_drop_featured_d_std",
+      "markerType": "drop",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_drop_featured_sel_d_std",
+      "markerType": "drop",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_drop_featured_d_pro",
+      "markerType": "drop",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_drop_featured_sel_d_pro",
+      "markerType": "drop",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_drop_legendary_d_std",
+      "markerType": "drop",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_drop_legendary_sel_d_std",
+      "markerType": "drop",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_drop_legendary_d_pro",
+      "markerType": "drop",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_drop_legendary_sel_d_pro",
+      "markerType": "drop",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_experience_subtle_d_std",
+      "markerType": "experience",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_experience_subtle_sel_d_std",
+      "markerType": "experience",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_experience_subtle_d_pro",
+      "markerType": "experience",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_experience_subtle_sel_d_pro",
+      "markerType": "experience",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_experience_active_d_std",
+      "markerType": "experience",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_experience_active_sel_d_std",
+      "markerType": "experience",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_experience_active_d_pro",
+      "markerType": "experience",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_experience_active_sel_d_pro",
+      "markerType": "experience",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_experience_featured_d_std",
+      "markerType": "experience",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_experience_featured_sel_d_std",
+      "markerType": "experience",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_experience_featured_d_pro",
+      "markerType": "experience",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_experience_featured_sel_d_pro",
+      "markerType": "experience",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_experience_legendary_d_std",
+      "markerType": "experience",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_experience_legendary_sel_d_std",
+      "markerType": "experience",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_experience_legendary_d_pro",
+      "markerType": "experience",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_experience_legendary_sel_d_pro",
+      "markerType": "experience",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_other_subtle_d_std",
+      "markerType": "other",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_other_subtle_sel_d_std",
+      "markerType": "other",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_other_subtle_d_pro",
+      "markerType": "other",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_other_subtle_sel_d_pro",
+      "markerType": "other",
+      "tier": "subtle",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_other_active_d_std",
+      "markerType": "other",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_other_active_sel_d_std",
+      "markerType": "other",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_other_active_d_pro",
+      "markerType": "other",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_other_active_sel_d_pro",
+      "markerType": "other",
+      "tier": "active",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_other_featured_d_std",
+      "markerType": "other",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_other_featured_sel_d_std",
+      "markerType": "other",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_other_featured_d_pro",
+      "markerType": "other",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_other_featured_sel_d_pro",
+      "markerType": "other",
+      "tier": "featured",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_other_legendary_d_std",
+      "markerType": "other",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_other_legendary_sel_d_std",
+      "markerType": "other",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": false,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "base",
+      "iconId": "mk_other_legendary_d_pro",
+      "markerType": "other",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "marker",
+      "state": "selected",
+      "iconId": "mk_other_legendary_sel_d_pro",
+      "markerType": "other",
+      "tier": "legendary",
+      "theme": "dark",
+      "promoted": true,
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_artwork_2_l",
+      "markerType": "artwork",
+      "count": 2,
+      "label": "2",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_artwork_3_l",
+      "markerType": "artwork",
+      "count": 3,
+      "label": "3",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_artwork_4_l",
+      "markerType": "artwork",
+      "count": 4,
+      "label": "4",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_artwork_5_l",
+      "markerType": "artwork",
+      "count": 5,
+      "label": "5",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_artwork_10_l",
+      "markerType": "artwork",
+      "count": 10,
+      "label": "10",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_artwork_25_l",
+      "markerType": "artwork",
+      "count": 25,
+      "label": "25",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_artwork_99_l",
+      "markerType": "artwork",
+      "count": 99,
+      "label": "99",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_artwork_99+_l",
+      "markerType": "artwork",
+      "count": 100,
+      "label": "99+",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_streetArt_2_l",
+      "markerType": "streetArt",
+      "count": 2,
+      "label": "2",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_streetArt_3_l",
+      "markerType": "streetArt",
+      "count": 3,
+      "label": "3",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_streetArt_4_l",
+      "markerType": "streetArt",
+      "count": 4,
+      "label": "4",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_streetArt_5_l",
+      "markerType": "streetArt",
+      "count": 5,
+      "label": "5",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_streetArt_10_l",
+      "markerType": "streetArt",
+      "count": 10,
+      "label": "10",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_streetArt_25_l",
+      "markerType": "streetArt",
+      "count": 25,
+      "label": "25",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_streetArt_99_l",
+      "markerType": "streetArt",
+      "count": 99,
+      "label": "99",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_streetArt_99+_l",
+      "markerType": "streetArt",
+      "count": 100,
+      "label": "99+",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_institution_2_l",
+      "markerType": "institution",
+      "count": 2,
+      "label": "2",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_institution_3_l",
+      "markerType": "institution",
+      "count": 3,
+      "label": "3",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_institution_4_l",
+      "markerType": "institution",
+      "count": 4,
+      "label": "4",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_institution_5_l",
+      "markerType": "institution",
+      "count": 5,
+      "label": "5",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_institution_10_l",
+      "markerType": "institution",
+      "count": 10,
+      "label": "10",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_institution_25_l",
+      "markerType": "institution",
+      "count": 25,
+      "label": "25",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_institution_99_l",
+      "markerType": "institution",
+      "count": 99,
+      "label": "99",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_institution_99+_l",
+      "markerType": "institution",
+      "count": 100,
+      "label": "99+",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_event_2_l",
+      "markerType": "event",
+      "count": 2,
+      "label": "2",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_event_3_l",
+      "markerType": "event",
+      "count": 3,
+      "label": "3",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_event_4_l",
+      "markerType": "event",
+      "count": 4,
+      "label": "4",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_event_5_l",
+      "markerType": "event",
+      "count": 5,
+      "label": "5",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_event_10_l",
+      "markerType": "event",
+      "count": 10,
+      "label": "10",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_event_25_l",
+      "markerType": "event",
+      "count": 25,
+      "label": "25",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_event_99_l",
+      "markerType": "event",
+      "count": 99,
+      "label": "99",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_event_99+_l",
+      "markerType": "event",
+      "count": 100,
+      "label": "99+",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_residency_2_l",
+      "markerType": "residency",
+      "count": 2,
+      "label": "2",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_residency_3_l",
+      "markerType": "residency",
+      "count": 3,
+      "label": "3",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_residency_4_l",
+      "markerType": "residency",
+      "count": 4,
+      "label": "4",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_residency_5_l",
+      "markerType": "residency",
+      "count": 5,
+      "label": "5",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_residency_10_l",
+      "markerType": "residency",
+      "count": 10,
+      "label": "10",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_residency_25_l",
+      "markerType": "residency",
+      "count": 25,
+      "label": "25",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_residency_99_l",
+      "markerType": "residency",
+      "count": 99,
+      "label": "99",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_residency_99+_l",
+      "markerType": "residency",
+      "count": 100,
+      "label": "99+",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_drop_2_l",
+      "markerType": "drop",
+      "count": 2,
+      "label": "2",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_drop_3_l",
+      "markerType": "drop",
+      "count": 3,
+      "label": "3",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_drop_4_l",
+      "markerType": "drop",
+      "count": 4,
+      "label": "4",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_drop_5_l",
+      "markerType": "drop",
+      "count": 5,
+      "label": "5",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_drop_10_l",
+      "markerType": "drop",
+      "count": 10,
+      "label": "10",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_drop_25_l",
+      "markerType": "drop",
+      "count": 25,
+      "label": "25",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_drop_99_l",
+      "markerType": "drop",
+      "count": 99,
+      "label": "99",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_drop_99+_l",
+      "markerType": "drop",
+      "count": 100,
+      "label": "99+",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_experience_2_l",
+      "markerType": "experience",
+      "count": 2,
+      "label": "2",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_experience_3_l",
+      "markerType": "experience",
+      "count": 3,
+      "label": "3",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_experience_4_l",
+      "markerType": "experience",
+      "count": 4,
+      "label": "4",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_experience_5_l",
+      "markerType": "experience",
+      "count": 5,
+      "label": "5",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_experience_10_l",
+      "markerType": "experience",
+      "count": 10,
+      "label": "10",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_experience_25_l",
+      "markerType": "experience",
+      "count": 25,
+      "label": "25",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_experience_99_l",
+      "markerType": "experience",
+      "count": 99,
+      "label": "99",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_experience_99+_l",
+      "markerType": "experience",
+      "count": 100,
+      "label": "99+",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_other_2_l",
+      "markerType": "other",
+      "count": 2,
+      "label": "2",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_other_3_l",
+      "markerType": "other",
+      "count": 3,
+      "label": "3",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_other_4_l",
+      "markerType": "other",
+      "count": 4,
+      "label": "4",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_other_5_l",
+      "markerType": "other",
+      "count": 5,
+      "label": "5",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_other_10_l",
+      "markerType": "other",
+      "count": 10,
+      "label": "10",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_other_25_l",
+      "markerType": "other",
+      "count": 25,
+      "label": "25",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_other_99_l",
+      "markerType": "other",
+      "count": 99,
+      "label": "99",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_other_99+_l",
+      "markerType": "other",
+      "count": 100,
+      "label": "99+",
+      "theme": "light",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_artwork_2_d",
+      "markerType": "artwork",
+      "count": 2,
+      "label": "2",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_artwork_3_d",
+      "markerType": "artwork",
+      "count": 3,
+      "label": "3",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_artwork_4_d",
+      "markerType": "artwork",
+      "count": 4,
+      "label": "4",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_artwork_5_d",
+      "markerType": "artwork",
+      "count": 5,
+      "label": "5",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_artwork_10_d",
+      "markerType": "artwork",
+      "count": 10,
+      "label": "10",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_artwork_25_d",
+      "markerType": "artwork",
+      "count": 25,
+      "label": "25",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_artwork_99_d",
+      "markerType": "artwork",
+      "count": 99,
+      "label": "99",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_artwork_99+_d",
+      "markerType": "artwork",
+      "count": 100,
+      "label": "99+",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_streetArt_2_d",
+      "markerType": "streetArt",
+      "count": 2,
+      "label": "2",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_streetArt_3_d",
+      "markerType": "streetArt",
+      "count": 3,
+      "label": "3",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_streetArt_4_d",
+      "markerType": "streetArt",
+      "count": 4,
+      "label": "4",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_streetArt_5_d",
+      "markerType": "streetArt",
+      "count": 5,
+      "label": "5",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_streetArt_10_d",
+      "markerType": "streetArt",
+      "count": 10,
+      "label": "10",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_streetArt_25_d",
+      "markerType": "streetArt",
+      "count": 25,
+      "label": "25",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_streetArt_99_d",
+      "markerType": "streetArt",
+      "count": 99,
+      "label": "99",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_streetArt_99+_d",
+      "markerType": "streetArt",
+      "count": 100,
+      "label": "99+",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_institution_2_d",
+      "markerType": "institution",
+      "count": 2,
+      "label": "2",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_institution_3_d",
+      "markerType": "institution",
+      "count": 3,
+      "label": "3",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_institution_4_d",
+      "markerType": "institution",
+      "count": 4,
+      "label": "4",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_institution_5_d",
+      "markerType": "institution",
+      "count": 5,
+      "label": "5",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_institution_10_d",
+      "markerType": "institution",
+      "count": 10,
+      "label": "10",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_institution_25_d",
+      "markerType": "institution",
+      "count": 25,
+      "label": "25",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_institution_99_d",
+      "markerType": "institution",
+      "count": 99,
+      "label": "99",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_institution_99+_d",
+      "markerType": "institution",
+      "count": 100,
+      "label": "99+",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_event_2_d",
+      "markerType": "event",
+      "count": 2,
+      "label": "2",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_event_3_d",
+      "markerType": "event",
+      "count": 3,
+      "label": "3",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_event_4_d",
+      "markerType": "event",
+      "count": 4,
+      "label": "4",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_event_5_d",
+      "markerType": "event",
+      "count": 5,
+      "label": "5",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_event_10_d",
+      "markerType": "event",
+      "count": 10,
+      "label": "10",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_event_25_d",
+      "markerType": "event",
+      "count": 25,
+      "label": "25",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_event_99_d",
+      "markerType": "event",
+      "count": 99,
+      "label": "99",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_event_99+_d",
+      "markerType": "event",
+      "count": 100,
+      "label": "99+",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_residency_2_d",
+      "markerType": "residency",
+      "count": 2,
+      "label": "2",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_residency_3_d",
+      "markerType": "residency",
+      "count": 3,
+      "label": "3",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_residency_4_d",
+      "markerType": "residency",
+      "count": 4,
+      "label": "4",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_residency_5_d",
+      "markerType": "residency",
+      "count": 5,
+      "label": "5",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_residency_10_d",
+      "markerType": "residency",
+      "count": 10,
+      "label": "10",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_residency_25_d",
+      "markerType": "residency",
+      "count": 25,
+      "label": "25",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_residency_99_d",
+      "markerType": "residency",
+      "count": 99,
+      "label": "99",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_residency_99+_d",
+      "markerType": "residency",
+      "count": 100,
+      "label": "99+",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_drop_2_d",
+      "markerType": "drop",
+      "count": 2,
+      "label": "2",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_drop_3_d",
+      "markerType": "drop",
+      "count": 3,
+      "label": "3",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_drop_4_d",
+      "markerType": "drop",
+      "count": 4,
+      "label": "4",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_drop_5_d",
+      "markerType": "drop",
+      "count": 5,
+      "label": "5",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_drop_10_d",
+      "markerType": "drop",
+      "count": 10,
+      "label": "10",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_drop_25_d",
+      "markerType": "drop",
+      "count": 25,
+      "label": "25",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_drop_99_d",
+      "markerType": "drop",
+      "count": 99,
+      "label": "99",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_drop_99+_d",
+      "markerType": "drop",
+      "count": 100,
+      "label": "99+",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_experience_2_d",
+      "markerType": "experience",
+      "count": 2,
+      "label": "2",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_experience_3_d",
+      "markerType": "experience",
+      "count": 3,
+      "label": "3",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_experience_4_d",
+      "markerType": "experience",
+      "count": 4,
+      "label": "4",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_experience_5_d",
+      "markerType": "experience",
+      "count": 5,
+      "label": "5",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_experience_10_d",
+      "markerType": "experience",
+      "count": 10,
+      "label": "10",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_experience_25_d",
+      "markerType": "experience",
+      "count": 25,
+      "label": "25",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_experience_99_d",
+      "markerType": "experience",
+      "count": 99,
+      "label": "99",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_experience_99+_d",
+      "markerType": "experience",
+      "count": 100,
+      "label": "99+",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_other_2_d",
+      "markerType": "other",
+      "count": 2,
+      "label": "2",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_other_3_d",
+      "markerType": "other",
+      "count": 3,
+      "label": "3",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_other_4_d",
+      "markerType": "other",
+      "count": 4,
+      "label": "4",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_other_5_d",
+      "markerType": "other",
+      "count": 5,
+      "label": "5",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_other_10_d",
+      "markerType": "other",
+      "count": 10,
+      "label": "10",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_other_25_d",
+      "markerType": "other",
+      "count": 25,
+      "label": "25",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_other_99_d",
+      "markerType": "other",
+      "count": 99,
+      "label": "99",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    },
+    {
+      "kind": "cluster",
+      "iconId": "cl_other_99+_d",
+      "markerType": "other",
+      "count": 100,
+      "label": "99+",
+      "theme": "dark",
+      "pixelRatio": 4.0,
+      "logicalSize": {
+        "w": 56.0,
+        "h": 56.0
+      }
+    }
+  ],
+  "notes": [
+    "SVGs embed PNG image data rendered by ArtMarkerCubeIconRenderer for visual parity with the app.",
+    "Cluster icons are exported for representative labels: 2,3,4,5,10,25,99,99+ (count=100). Runtime can generate more labels."
+  ]
+}

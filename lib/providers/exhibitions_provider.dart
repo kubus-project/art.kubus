@@ -386,6 +386,29 @@ class ExhibitionsProvider extends ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>?> createScanHandoffToken({
+    required String exhibitionId,
+    required String markerId,
+    required String proofSource,
+  }) async {
+    try {
+      final response = await _api.createScanHandoffToken(
+        markerId: markerId,
+        subjectType: 'exhibition',
+        subjectId: exhibitionId,
+        proofSource: proofSource,
+      );
+      final payload = response['data'];
+      if (payload is Map<String, dynamic>) return payload;
+      if (payload is Map) return Map<String, dynamic>.from(payload);
+      return null;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
+
   Future<ExhibitionPoapStatus?> claimExhibitionPoap(
     String exhibitionId, {
     String? attendanceMarkerId,

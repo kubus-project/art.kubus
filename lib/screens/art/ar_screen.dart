@@ -312,6 +312,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     final markerId = (target.attendanceMarkerId ?? '').trim();
     final handoffToken = (target.handoffToken ?? '').trim();
     final existingProof = (target.claimProofToken ?? '').trim();
+    final proofSource = (target.proofSource ?? '').trim().isNotEmpty
+        ? target.proofSource!.trim()
+        : 'ar';
     if (target.isClaimReadyExhibition &&
         markerId.isNotEmpty &&
         handoffToken.isNotEmpty &&
@@ -321,7 +324,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             await context.read<ExhibitionsProvider>().createScanClaimProof(
                   exhibitionId: target.id,
                   markerId: markerId,
-                  proofSource: 'ar',
+                  proofSource: proofSource,
                   handoffToken: handoffToken,
                 );
         if (!mounted) return;
@@ -340,7 +343,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         }
         nextTarget = target.copyWith(
           claimProofToken: token,
-          proofSource: 'ar',
+          proofSource: proofSource,
         );
         messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.scanProofVerifiedToast)),

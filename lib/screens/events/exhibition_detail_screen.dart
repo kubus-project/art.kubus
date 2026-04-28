@@ -427,11 +427,19 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                 code == 'scan_handoff_expired' ||
                 code == 'scan_handoff_consumed') {
               backendMessage = l10n.scanProofExpiredToast;
+            } else if (code == 'poap_in_person_proof_required') {
+              backendMessage =
+                  l10n.exhibitionDetailPoapEligibilityAttendanceHint;
+            } else if (code == 'marker_not_linked_to_exhibition') {
+              backendMessage =
+                  l10n.exhibitionDetailPoapEligibilityMarkerLinkHint;
+            } else if (code == 'exhibition_not_published') {
+              backendMessage =
+                  l10n.exhibitionDetailPoapEligibilityNotPublishedHint;
+            } else if (code.startsWith('scan_proof_') ||
+                code.startsWith('scan_handoff_')) {
+              backendMessage = l10n.scanProofExpiredToast;
             }
-            final msg = (decoded['error'] ?? decoded['message'] ?? '')
-                .toString()
-                .trim();
-            if (backendMessage == null && msg.isNotEmpty) backendMessage = msg;
           }
         }
       } catch (_) {
@@ -857,28 +865,13 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       }
     } on BackendApiRequestException catch (e) {
       if (!mounted) return;
-      String? backendMessage;
-      try {
-        final raw = (e.body ?? '').trim();
-        if (raw.isNotEmpty) {
-          final decoded = jsonDecode(raw);
-          if (decoded is Map<String, dynamic>) {
-            final msg = (decoded['error'] ?? decoded['message'] ?? '')
-                .toString()
-                .trim();
-            if (msg.isNotEmpty) backendMessage = msg;
-          }
-        }
-      } catch (_) {
-        // ignore
-      }
+      final message = e.statusCode == 403
+          ? l10n.exhibitionDetailAttendanceMoveCloserHint
+          : l10n.exhibitionDetailAttendanceUnableToConfirmToast;
 
       messenger.showKubusSnackBar(
         SnackBar(
-          content: Text(
-            backendMessage ??
-                l10n.exhibitionDetailAttendanceUnableToConfirmToast,
-          ),
+          content: Text(message),
         ),
         tone: KubusSnackBarTone.error,
       );

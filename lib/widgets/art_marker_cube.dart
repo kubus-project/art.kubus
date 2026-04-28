@@ -121,6 +121,7 @@ class _ClusterPngCacheKey {
     required this.isDark,
     required this.shadowColorValue,
     required this.pixelRatioKey,
+    required this.labelStyleKey,
   });
 
   final int baseColorValue;
@@ -128,6 +129,7 @@ class _ClusterPngCacheKey {
   final bool isDark;
   final int shadowColorValue;
   final int pixelRatioKey;
+  final int labelStyleKey;
 
   @override
   bool operator ==(Object other) {
@@ -137,7 +139,8 @@ class _ClusterPngCacheKey {
             other.label == label &&
             other.isDark == isDark &&
             other.shadowColorValue == shadowColorValue &&
-            other.pixelRatioKey == pixelRatioKey);
+            other.pixelRatioKey == pixelRatioKey &&
+            other.labelStyleKey == labelStyleKey);
   }
 
   @override
@@ -147,6 +150,7 @@ class _ClusterPngCacheKey {
         isDark,
         shadowColorValue,
         pixelRatioKey,
+      labelStyleKey,
       );
 }
 
@@ -691,6 +695,7 @@ class ArtMarkerCubeIconRenderer {
     required bool isDark,
     double cubeSize = 54,
     double pixelRatio = 2.0,
+    TextStyle? labelStyleOverride,
   }) async {
     final style = CubeMarkerStyle.fromScheme(
       scheme: scheme,
@@ -707,6 +712,7 @@ class ArtMarkerCubeIconRenderer {
       isDark: isDark,
       shadowColorValue: scheme.shadow.toARGB32(),
       pixelRatioKey: _pixelRatioKey(pixelRatio),
+      labelStyleKey: _clusterLabelStyleKey(labelStyleOverride),
     );
 
     return _cachedFuture<_ClusterPngCacheKey>(
@@ -714,11 +720,10 @@ class ArtMarkerCubeIconRenderer {
       key: key,
       maxEntries: _maxClusterCacheEntries,
       render: () async {
-      final palette =
+        final palette =
           _CubePalette.fromBase(baseColor, edgeColor: style.edgeColor);
-      final labelStyle = KubusTextStyles.badgeCount.copyWith(
-        color: iconForeground,
-      );
+        final labelStyle = (labelStyleOverride ?? KubusTextStyles.badgeCount)
+          .copyWith(color: iconForeground);
 
       return _renderFlatClusterPng(
         label: label,
@@ -731,6 +736,19 @@ class ArtMarkerCubeIconRenderer {
         pixelRatio: pixelRatio,
       );
     },
+    );
+  }
+
+  static int _clusterLabelStyleKey(TextStyle? style) {
+    if (style == null) return 0;
+    return Object.hash(
+      style.fontFamily,
+      Object.hashAll(style.fontFamilyFallback ?? const <String>[]),
+      style.fontSize,
+      style.fontWeight?.value,
+      style.fontStyle?.index,
+      style.letterSpacing,
+      style.height,
     );
   }
 
