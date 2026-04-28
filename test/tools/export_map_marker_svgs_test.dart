@@ -1,8 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'dart:typed_data';
-
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -55,8 +53,9 @@ void main() {
 
       // Debug aid: write a sample PNG into build/ so we can quickly inspect
       // glyph rendering after export without decoding base64 by hand.
-      final sampleSvg = await File('assets/markers/svg/mk_artwork_subtle_l_std.svg')
-          .readAsString();
+      final sampleSvg =
+          await File('assets/markers/svg/mk_artwork_subtle_l_std.svg')
+              .readAsString();
       final match = RegExp('href="data:image\\/png;base64,([^"]+)"')
           .firstMatch(sampleSvg);
       expect(match, isNotNull);

@@ -146,8 +146,9 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
         backgroundColor: scheme.surfaceContainerHighest,
-        title: Text(l10n.commonDelete),
-        content: Text(l10n.collectionSettingsDeleteDialogContent(exhibition.title)),
+        title: Text(l10n.exhibitionDetailDeleteDialogTitle),
+        content:
+            Text(l10n.exhibitionDetailDeleteDialogContent(exhibition.title)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -167,7 +168,7 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
       await provider.deleteExhibition(exhibition.id);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
-        SnackBar(content: Text(l10n.commonSavedToast)),
+        SnackBar(content: Text(l10n.exhibitionDetailDeletedToast)),
       );
     } catch (_) {
       if (!mounted) return;
@@ -197,7 +198,8 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
             id: 'edit',
             icon: Icons.edit_outlined,
             label: l10n.commonEdit,
-            onSelected: () => CreatorShellNavigation.openExhibitionCreatorWorkspace(
+            onSelected: () =>
+                CreatorShellNavigation.openExhibitionCreatorWorkspace(
               context,
               initialExhibition: exhibition,
             ),
@@ -226,7 +228,8 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
             label: exhibition.isPublished
                 ? l10n.commonUnpublish
                 : l10n.commonPublish,
-            onSelected: () => _togglePublish(exhibition, !exhibition.isPublished),
+            onSelected: () =>
+                _togglePublish(exhibition, !exhibition.isPublished),
           ),
         if (canManage)
           SubjectOptionsAction(
@@ -614,10 +617,12 @@ class _ExhibitionCard extends StatelessWidget {
 
     String? dateRange;
     if (exhibition.startsAt != null || exhibition.endsAt != null) {
-      final start =
-          exhibition.startsAt != null ? _fmtDate(exhibition.startsAt!) : null;
-      final end =
-          exhibition.endsAt != null ? _fmtDate(exhibition.endsAt!) : null;
+      final start = exhibition.startsAt != null
+          ? _fmtDate(context, exhibition.startsAt!)
+          : null;
+      final end = exhibition.endsAt != null
+          ? _fmtDate(context, exhibition.endsAt!)
+          : null;
       dateRange = [start, end].whereType<String>().join(' – ');
       if (dateRange.trim().isEmpty) dateRange = null;
     }
@@ -689,7 +694,9 @@ class _ExhibitionCard extends StatelessWidget {
                         Row(
                           children: [
                             _StatusChip(
-                              label: isPublished ? l10n.commonPublished : l10n.commonDraft,
+                              label: isPublished
+                                  ? l10n.commonPublished
+                                  : l10n.commonDraft,
                               color: isPublished
                                   ? const Color(0xFF4CAF50)
                                   : scheme.outline,
@@ -791,23 +798,8 @@ class _ExhibitionCard extends StatelessWidget {
     );
   }
 
-  String _fmtDate(DateTime dt) {
-    final d = dt.toLocal();
-    final months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ];
-    return '${months[d.month - 1]} ${d.day}, ${d.year}';
+  String _fmtDate(BuildContext context, DateTime dt) {
+    return MaterialLocalizations.of(context).formatShortDate(dt.toLocal());
   }
 }
 

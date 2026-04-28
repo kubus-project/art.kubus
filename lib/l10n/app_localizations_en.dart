@@ -401,6 +401,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exhibitionDetailLinkArtworksFailedToast => 'Failed to link artworks. Please try again.';
 
   @override
+  String get exhibitionDetailDeleteDialogTitle => 'Delete exhibition?';
+
+  @override
+  String exhibitionDetailDeleteDialogContent(Object title) {
+    return 'Exhibition \"$title\" will be deleted. This action cannot be undone.';
+  }
+
+  @override
+  String get exhibitionDetailDeletedToast => 'Exhibition deleted.';
+
+  @override
   String exhibitionDetailStatusRowLabel(Object status) {
     return 'Status: $status';
   }
@@ -4644,6 +4655,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get collectionCreatorSavedInfoBox => 'Collection saved. Collaboration is available from the sidebar, and you can keep refining the selection below.';
+
+  @override
+  String get collectionCreatorPartialSuccessToast => 'The collection may have been created, but it could not be resolved locally yet. Refresh your collections before adding artworks.';
+
+  @override
+  String get collectionCreatorPartialSuccessInfoBox => 'The server accepted the collection, but no collection ID was returned. Check your collections or refresh before attaching artworks.';
+
+  @override
+  String get collectionCreatorPartialSuccessArtworkAttachmentInfo => 'Selected artworks were not attached because the collection ID is not available yet.';
 
   @override
   String get collectionCreatorConnectWalletLabel => 'Connect a wallet to load and curate your artwork library inside this collection creator.';

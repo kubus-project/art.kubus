@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -12,7 +13,6 @@ import '../../providers/exhibitions_provider.dart';
 import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/creator_shell_navigation.dart';
-import 'exhibition_detail_screen.dart';
 import '../desktop/desktop_shell.dart';
 import '../../widgets/creator/creator_kit.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
@@ -313,8 +313,8 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
         _descriptionController.text.trim().isNotEmpty;
     final hasDates = _startsAt != null && _endsAt != null;
     final isPublic = widget.forceDraftOnly ? false : _published;
-    final collabEnabled = AppConfig.isFeatureEnabled('collabInvites') &&
-        createdId.isNotEmpty;
+    final collabEnabled =
+        AppConfig.isFeatureEnabled('collabInvites') && createdId.isNotEmpty;
     final accent = KubusColorRoles.of(context).web3InstitutionAccent;
 
     final readyItems = <DesktopCreatorReadinessItem>[
@@ -364,9 +364,8 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CreatorStatusBadge(
-                label: created == null
-                    ? l10n.commonDraft
-                    : l10n.commonSavedToast,
+                label:
+                    created == null ? l10n.commonDraft : l10n.commonSavedToast,
                 color: created == null ? scheme.primary : scheme.tertiary,
               ),
               const SizedBox(height: KubusSpacing.sm),
@@ -427,14 +426,12 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
                 const SizedBox(height: KubusSpacing.sm),
                 OutlinedButton.icon(
                   onPressed: () {
-                    DesktopShellScope.of(context)?.pushScreen(
-                      DesktopSubScreen(
-                        title: l10n.exhibitionCreatorAppBarTitle,
-                        child: ExhibitionDetailScreen(
-                          exhibitionId: createdId,
-                          initialExhibition: created,
-                          embedded: true,
-                        ),
+                    unawaited(
+                      CreatorShellNavigation.openExhibitionDetailWorkspace(
+                        context,
+                        exhibitionId: createdId,
+                        initialExhibition: created,
+                        titleOverride: created.title,
                       ),
                     );
                   },
@@ -534,7 +531,8 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
       };
 
       final Exhibition? saved = _isEditing
-          ? await provider.updateExhibition(widget.initialExhibition!.id, payload)
+          ? await provider.updateExhibition(
+              widget.initialExhibition!.id, payload)
           : await provider.createExhibition(payload);
       if (!mounted) return;
 

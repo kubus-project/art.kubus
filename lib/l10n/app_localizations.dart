@@ -875,6 +875,24 @@ abstract class AppLocalizations {
   /// **'Failed to link artworks. Please try again.'**
   String get exhibitionDetailLinkArtworksFailedToast;
 
+  /// No description provided for @exhibitionDetailDeleteDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete exhibition?'**
+  String get exhibitionDetailDeleteDialogTitle;
+
+  /// No description provided for @exhibitionDetailDeleteDialogContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Exhibition \"{title}\" will be deleted. This action cannot be undone.'**
+  String exhibitionDetailDeleteDialogContent(Object title);
+
+  /// No description provided for @exhibitionDetailDeletedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Exhibition deleted.'**
+  String get exhibitionDetailDeletedToast;
+
   /// No description provided for @exhibitionDetailStatusRowLabel.
   ///
   /// In en, this message translates to:
@@ -8992,6 +9010,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Collection saved. Collaboration is available from the sidebar, and you can keep refining the selection below.'**
   String get collectionCreatorSavedInfoBox;
+
+  /// No description provided for @collectionCreatorPartialSuccessToast.
+  ///
+  /// In en, this message translates to:
+  /// **'The collection may have been created, but it could not be resolved locally yet. Refresh your collections before adding artworks.'**
+  String get collectionCreatorPartialSuccessToast;
+
+  /// No description provided for @collectionCreatorPartialSuccessInfoBox.
+  ///
+  /// In en, this message translates to:
+  /// **'The server accepted the collection, but no collection ID was returned. Check your collections or refresh before attaching artworks.'**
+  String get collectionCreatorPartialSuccessInfoBox;
+
+  /// No description provided for @collectionCreatorPartialSuccessArtworkAttachmentInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected artworks were not attached because the collection ID is not available yet.'**
+  String get collectionCreatorPartialSuccessArtworkAttachmentInfo;
 
   /// No description provided for @collectionCreatorConnectWalletLabel.
   ///

@@ -39,7 +39,8 @@ class CollectionSettingsScreen extends StatefulWidget {
   });
 
   @override
-  State<CollectionSettingsScreen> createState() => _CollectionSettingsScreenState();
+  State<CollectionSettingsScreen> createState() =>
+      _CollectionSettingsScreenState();
 }
 
 class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
@@ -94,20 +95,20 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
       return provider.collections[index];
     }
 
-    final byName = provider.collections.where((item) => item.name.trim() == widget.collectionName.trim());
+    final byName = provider.collections
+        .where((item) => item.name.trim() == widget.collectionName.trim());
     if (byName.isNotEmpty) {
       return byName.first;
     }
 
-    return targetId.isNotEmpty
-        ? provider.getCollectionById(targetId)
-        : null;
+    return targetId.isNotEmpty ? provider.getCollectionById(targetId) : null;
   }
 
   bool _canEdit(CollectionRecord? collection) {
     if (collection == null) return false;
     final wallet = context.read<WalletProvider>().currentWalletAddress ?? '';
-    return wallet.isNotEmpty && WalletUtils.equals(wallet, collection.walletAddress);
+    return wallet.isNotEmpty &&
+        WalletUtils.equals(wallet, collection.walletAddress);
   }
 
   Future<void> _pickCover() async {
@@ -203,7 +204,8 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
       builder: (dialogContext) => KubusAlertDialog(
         backgroundColor: scheme.surfaceContainerHighest,
         title: Text(l10n.collectionSettingsDeleteDialogTitle),
-        content: Text(l10n.collectionSettingsDeleteDialogContent(collection.name)),
+        content:
+            Text(l10n.collectionSettingsDeleteDialogContent(collection.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -242,16 +244,17 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
     try {
       final collectionsProvider = context.read<CollectionsProvider>();
       await collectionsProvider.removeArtwork(
-            collectionId: collection.id,
-            artworkId: artwork.id,
-          );
+        collectionId: collection.id,
+        artworkId: artwork.id,
+      );
       if (!mounted) return;
     } catch (_) {
       if (!mounted) return;
       messenger.showKubusSnackBar(
         SnackBar(
           content: Text(
-            AppLocalizations.of(context)!.collectionDetailRemoveArtworkFailedToast,
+            AppLocalizations.of(context)!
+                .collectionDetailRemoveArtworkFailedToast,
           ),
         ),
       );
@@ -263,7 +266,8 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final collectionsProvider = context.read<CollectionsProvider>();
-    final walletAddress = context.read<WalletProvider>().currentWalletAddress ?? '';
+    final walletAddress =
+        context.read<WalletProvider>().currentWalletAddress ?? '';
     if (walletAddress.trim().isEmpty) {
       messenger.showKubusSnackBar(
         SnackBar(content: Text(l10n.collectionDetailNoArtworksYet)),
@@ -314,7 +318,8 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
                   itemBuilder: (context, index) {
                     final art = available[index];
                     final checked = selectedIds.contains(art.id);
-                    final imageUrl = MediaUrlResolver.resolveDisplayUrl(art.imageUrl);
+                    final imageUrl =
+                        MediaUrlResolver.resolveDisplayUrl(art.imageUrl);
                     return CheckboxListTile(
                       value: checked,
                       onChanged: (v) {
@@ -337,7 +342,9 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
                         child: Container(
                           width: 44,
                           height: 44,
-                          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
                           child: imageUrl == null
                               ? Icon(Icons.image_outlined,
                                   color: Theme.of(context)
@@ -385,9 +392,9 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
 
     try {
       await collectionsProvider.addArtworks(
-            collectionId: collection.id,
-            artworkIds: selectedIds.toList(),
-          );
+        collectionId: collection.id,
+        artworkIds: selectedIds.toList(),
+      );
     } catch (_) {
       if (!mounted) return;
       messenger.showKubusSnackBar(
@@ -611,7 +618,8 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
                                 child: Icon(
                                   Icons.broken_image_outlined,
                                   size: 52,
-                                  color: scheme.onSurface.withValues(alpha: 0.38),
+                                  color:
+                                      scheme.onSurface.withValues(alpha: 0.38),
                                 ),
                               ),
                             )),
@@ -658,14 +666,17 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
                 children: [
                   Expanded(
                     child: Text(
-                      l10n.collectionCreatorReadySelectionComplete(artworkCount),
+                      l10n.collectionCreatorReadySelectionComplete(
+                          artworkCount),
                       style: KubusTextStyles.detailCaption.copyWith(
                         color: scheme.onSurface.withValues(alpha: 0.72),
                       ),
                     ),
                   ),
                   FilledButton.icon(
-                    onPressed: canEdit ? () => _showAddArtworksDialog(collection) : null,
+                    onPressed: canEdit
+                        ? () => _showAddArtworksDialog(collection)
+                        : null,
                     icon: _loadingArtworks
                         ? SizedBox(
                             width: 16,
@@ -691,11 +702,14 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
                   children: collection.artworks
                       .map(
                         (artwork) => Padding(
-                          padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
+                          padding:
+                              const EdgeInsets.only(bottom: KubusSpacing.sm),
                           child: _CollectionArtworkTile(
                             artwork: artwork,
                             canEdit: canEdit,
-                            onRemove: canEdit ? () => _removeArtwork(collection, artwork) : null,
+                            onRemove: canEdit
+                                ? () => _removeArtwork(collection, artwork)
+                                : null,
                           ),
                         ),
                       )
@@ -738,7 +752,8 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
         description: _pickedCoverBytes != null
             ? l10n.collectionCreatorReadyCoverComplete
             : l10n.collectionCreatorReadyCoverPending,
-        complete: _pickedCoverBytes != null || (collection.thumbnailUrl ?? '').trim().isNotEmpty,
+        complete: _pickedCoverBytes != null ||
+            (collection.thumbnailUrl ?? '').trim().isNotEmpty,
         icon: Icons.image_outlined,
       ),
       DesktopCreatorReadinessItem(
@@ -890,33 +905,11 @@ class _CollectionSettingsScreenState extends State<CollectionSettingsScreen> {
                 icon: Icons.lock_outline,
               ),
             ),
-          if (canEdit) ...[
-            const SizedBox(height: KubusSpacing.lg),
-            DesktopCreatorSidebarSection(
-              title: l10n.collectionSettingsDangerZone,
-              subtitle: l10n.collectionSettingsDeleteWarning,
-              icon: Icons.warning_amber_outlined,
-              accentColor: scheme.error,
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton.tonalIcon(
-                  style: FilledButton.styleFrom(
-                    foregroundColor: scheme.error,
-                    backgroundColor: scheme.error.withValues(alpha: 0.08),
-                  ),
-                  onPressed: () => _delete(collection),
-                  icon: const Icon(Icons.delete_outline),
-                  label: Text(l10n.collectionSettingsDeleteButton),
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     );
   }
 }
-
 
 class _CollectionArtworkTile extends StatelessWidget {
   final CollectionArtworkRecord artwork;

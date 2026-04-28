@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -7,15 +9,14 @@ import '../../../models/institution.dart';
 import '../../../providers/institution_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/web3provider.dart';
-import '../../desktop/desktop_shell.dart';
 import '../../../utils/design_tokens.dart';
+import '../../../utils/creator_shell_navigation.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/creator/creator_kit.dart';
 import '../../../widgets/common/subject_options_sheet.dart';
-import 'event_creator.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/widgets/glass_components.dart';
 
@@ -177,13 +178,13 @@ class _EventManagerState extends State<EventManager>
         children: [
           Expanded(
               child: _buildStatItem(
-                l10n.eventManagerStatTotalEvents, totalEvents.toString())),
+                  l10n.eventManagerStatTotalEvents, totalEvents.toString())),
           Expanded(
               child: _buildStatItem(
-                l10n.eventManagerStatActiveNow, activeEvents.toString())),
+                  l10n.eventManagerStatActiveNow, activeEvents.toString())),
           Expanded(
               child: _buildStatItem(l10n.eventManagerStatRegistrations,
-                totalRegistrations.toString())),
+                  totalRegistrations.toString())),
         ],
       ),
     );
@@ -531,7 +532,8 @@ class _EventManagerState extends State<EventManager>
       final diff = event.startDate.difference(now);
       if (diff.inHours >= 0 && diff.inHours <= 48) {
         alerts.add({
-          'message': l10n.eventManagerStartsSoonAlert(event.title, diff.inHours),
+          'message':
+              l10n.eventManagerStartsSoonAlert(event.title, diff.inHours),
           'time': l10n.eventManagerSoonLabel,
         });
       }
@@ -668,20 +670,11 @@ class _EventManagerState extends State<EventManager>
   }
 
   void _editEvent(Event event) {
-    final shellScope = DesktopShellScope.of(context);
-    if (shellScope != null) {
-      shellScope.pushScreen(
-        EventCreator(
-          initialEvent: event,
-          embedded: true,
-        ),
-      );
-      return;
-    }
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => EventCreator(initialEvent: event)),
+    unawaited(
+      CreatorShellNavigation.openEventCreatorWorkspace(
+        context,
+        initialEvent: event,
+      ),
     );
   }
 

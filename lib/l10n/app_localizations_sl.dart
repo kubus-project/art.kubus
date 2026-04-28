@@ -401,6 +401,17 @@ class AppLocalizationsSl extends AppLocalizations {
   String get exhibitionDetailLinkArtworksFailedToast => 'Povezovanje umetnin ni uspelo. Poskusi znova.';
 
   @override
+  String get exhibitionDetailDeleteDialogTitle => 'Izbrišem razstavo?';
+
+  @override
+  String exhibitionDetailDeleteDialogContent(Object title) {
+    return 'Razstava »$title« bo izbrisana. Tega dejanja ni mogoče razveljaviti.';
+  }
+
+  @override
+  String get exhibitionDetailDeletedToast => 'Razstava je izbrisana.';
+
+  @override
   String exhibitionDetailStatusRowLabel(Object status) {
     return 'Stanje: $status';
   }
@@ -4657,16 +4668,25 @@ class AppLocalizationsSl extends AppLocalizations {
   String get collectionCreatorCollaborationLockedMessage => 'Ko je zbirka shranjena, lahko tukaj povabiš sodelavce, da kuriranje ostane v kontekstu.';
 
   @override
-  String get collectionCreatorSavedInfoBox => 'Collection saved. Collaboration is available from the sidebar, and you can keep refining the selection below.';
+  String get collectionCreatorSavedInfoBox => 'Zbirka je shranjena. Sodelovanje je na voljo v stranski vrstici, izbor pa lahko še naprej urejaš spodaj.';
+
+  @override
+  String get collectionCreatorPartialSuccessToast => 'Zbirka je bila morda ustvarjena, vendar je aplikacija še ne more lokalno razrešiti. Pred dodajanjem del osveži zbirke.';
+
+  @override
+  String get collectionCreatorPartialSuccessInfoBox => 'Strežnik je zbirko sprejel, vendar ni vrnil ID-ja zbirke. Pred pripenjanjem umetnin preveri zbirke ali jih osveži.';
+
+  @override
+  String get collectionCreatorPartialSuccessArtworkAttachmentInfo => 'Izbrane umetnine niso bile pripete, ker ID zbirke še ni na voljo.';
 
   @override
   String get collectionCreatorConnectWalletLabel => 'Poveži denarnico za nalaganje in kuratoziranje knjižnice umetnin v tem ustvarjalniku.';
 
   @override
-  String get collectionCreatorArtworkLibraryLoadingLabel => 'Tvoja knjižnica umetnin se še naklanja. Če je backend počasen, lahko nadaljuješ s kuratoiranjem osnovnih podatkov zbirke in se vrneš sem senare.';
+  String get collectionCreatorArtworkLibraryLoadingLabel => 'Tvoja knjižnica umetnin se še nalaga. Če je zaledje počasno, lahko nadaljuješ z urejanjem osnovnih podatkov zbirke in se sem vrneš pozneje.';
 
   @override
-  String get collectionCreatorArtworkLibraryPlaceholderLabel => 'Naloži svojo knjižnico umetnin, da izabereš dela za to zbirko. To izboljša hitrost prvega odpiranja in izogniti se nepotrebnih klicev API-ja.';
+  String get collectionCreatorArtworkLibraryPlaceholderLabel => 'Naloži svojo knjižnico umetnin, da izbereš dela za to zbirko. Tako je prvo odpiranje hitrejše in brez nepotrebnih klicev API-ja.';
 
   @override
   String get collectionCreatorLoadingLibraryLabel => 'Nalagam knjižnico…';

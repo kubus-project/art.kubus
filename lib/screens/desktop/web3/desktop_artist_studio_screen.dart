@@ -4,7 +4,6 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'dart:async';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/profile_provider.dart';
-import '../../../providers/artwork_drafts_provider.dart';
 import '../../../providers/dao_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../providers/collab_provider.dart';
@@ -24,12 +23,9 @@ import '../components/desktop_widgets.dart';
 import '../desktop_shell.dart';
 import '../../collab/invites_inbox_screen.dart';
 import '../../web3/artist/artist_studio.dart';
-import '../../web3/artist/artwork_creator.dart';
 import '../../web3/artist/artist_portfolio_screen.dart';
 import '../../web3/artist/artist_analytics.dart';
-import '../../web3/artist/collection_creator.dart';
 import '../../events/exhibition_list_screen.dart';
-import '../../map_markers/manage_markers_screen.dart';
 import '../../../widgets/glass_components.dart';
 import '../../../widgets/kubus_action_sidebar.dart';
 import '../../../widgets/promotion/promotion_builder_sheet.dart';
@@ -56,20 +52,11 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
   String _lastStatsWallet = '';
 
   void _openArtworkWorkspace() {
-    final shellScope = DesktopShellScope.of(context);
-    if (shellScope == null) return;
-    final draftId = context.read<ArtworkDraftsProvider>().createDraft();
-    shellScope.pushScreen(
-      ArtworkCreator(draftId: draftId, showAppBar: false, embedded: true),
-    );
+    unawaited(CreatorShellNavigation.openArtworkCreatorWorkspace(context));
   }
 
   void _openCollectionWorkspace() {
-    final shellScope = DesktopShellScope.of(context);
-    if (shellScope == null) return;
-    shellScope.pushScreen(
-      const CollectionCreator(embedded: true),
-    );
+    unawaited(CreatorShellNavigation.openCollectionCreatorWorkspace(context));
   }
 
   void _openExhibitionWorkspace() {
@@ -421,11 +408,8 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                 icon: Icons.place_outlined,
                 semantic: KubusActionSemantic.manage,
                 onTap: () {
-                  DesktopShellScope.of(context)?.pushScreen(
-                    DesktopSubScreen(
-                      title: l10n.manageMarkersTitle,
-                      child: const ManageMarkersScreen(embedded: true),
-                    ),
+                  unawaited(
+                    CreatorShellNavigation.openManageMarkersWorkspace(context),
                   );
                 },
               ),
@@ -468,7 +452,8 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                         },
                         onOpenExhibition: (exhibition) {
                           unawaited(
-                            CreatorShellNavigation.openExhibitionDetailWorkspace(
+                            CreatorShellNavigation
+                                .openExhibitionDetailWorkspace(
                               context,
                               exhibitionId: exhibition.id,
                               initialExhibition: exhibition,
@@ -566,12 +551,10 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
               ),
             ),
             const SizedBox(height: KubusSpacing.md),
-            ...children
-                .map((child) => Padding(
-                      padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
-                      child: SizedBox(width: double.infinity, child: child),
-                    ))
-                ,
+            ...children.map((child) => Padding(
+                  padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
+                  child: SizedBox(width: double.infinity, child: child),
+                )),
           ],
         ),
       ),

@@ -24,11 +24,9 @@ import '../components/desktop_widgets.dart';
 import '../desktop_shell.dart';
 import '../../collab/invites_inbox_screen.dart';
 import '../../web3/institution/institution_hub.dart';
-import '../../web3/institution/event_creator.dart';
 import '../../web3/institution/event_manager.dart';
 import '../../web3/institution/institution_analytics.dart';
 import '../../events/exhibition_list_screen.dart';
-import '../../map_markers/manage_markers_screen.dart';
 import '../../../widgets/glass_components.dart';
 import '../../../widgets/kubus_action_sidebar.dart';
 import '../../../widgets/kubus_snackbar.dart';
@@ -55,9 +53,7 @@ class _DesktopInstitutionHubScreenState
   String _lastStatsWallet = '';
 
   void _openEventWorkspace() {
-    DesktopShellScope.of(context)?.pushScreen(
-      const EventCreator(embedded: true),
-    );
+    unawaited(CreatorShellNavigation.openEventCreatorWorkspace(context));
   }
 
   void _openExhibitionWorkspace() {
@@ -435,11 +431,8 @@ class _DesktopInstitutionHubScreenState
                 icon: Icons.place_outlined,
                 semantic: KubusActionSemantic.manage,
                 onTap: () {
-                  DesktopShellScope.of(context)?.pushScreen(
-                    DesktopSubScreen(
-                      title: l10n.manageMarkersTitle,
-                      child: const ManageMarkersScreen(embedded: true),
-                    ),
+                  unawaited(
+                    CreatorShellNavigation.openManageMarkersWorkspace(context),
                   );
                 },
               ),
@@ -479,7 +472,8 @@ class _DesktopInstitutionHubScreenState
                         },
                         onOpenExhibition: (exhibition) {
                           unawaited(
-                            CreatorShellNavigation.openExhibitionDetailWorkspace(
+                            CreatorShellNavigation
+                                .openExhibitionDetailWorkspace(
                               context,
                               exhibitionId: exhibition.id,
                               initialExhibition: exhibition,
@@ -583,11 +577,10 @@ class _DesktopInstitutionHubScreenState
               ),
             ),
             const SizedBox(height: KubusSpacing.md),
-            ...children
-                .map((child) => Padding(
-                      padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
-                      child: SizedBox(width: double.infinity, child: child),
-                    )),
+            ...children.map((child) => Padding(
+                  padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
+                  child: SizedBox(width: double.infinity, child: child),
+                )),
           ],
         ),
       ),
@@ -672,8 +665,8 @@ class _DesktopInstitutionHubScreenState
       context: context,
       entityType: PromotionEntityType.institution,
       entityId: entityId,
-      entityLabel:
-          profile?.displayName ?? AppLocalizations.of(context)!.navigationScreenInstitutionHub,
+      entityLabel: profile?.displayName ??
+          AppLocalizations.of(context)!.navigationScreenInstitutionHub,
     );
   }
 
@@ -707,7 +700,8 @@ class _DesktopInstitutionHubScreenState
       statusColor = roles.positiveAction;
       statusIcon = Icons.verified;
       statusText = l10n.profileEditVerifiedInstitutionTitle;
-      statusDescription = l10n.desktopInstitutionVerificationApprovedDescription;
+      statusDescription =
+          l10n.desktopInstitutionVerificationApprovedDescription;
     } else if (isPending) {
       statusColor = roles.warningAction;
       statusIcon = Icons.pending;

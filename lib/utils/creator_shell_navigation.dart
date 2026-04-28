@@ -25,13 +25,14 @@ class CreatorShellNavigation {
     VoidCallback? onCreated,
   }) async {
     final shellScope = DesktopShellScope.of(context);
-    final isDesktop = DesktopBreakpoints.isDesktop(context);
+    final isDesktop =
+        shellScope != null || DesktopBreakpoints.isDesktop(context);
     final draftId = context.read<ArtworkDraftsProvider>().createDraft();
     final screen = ArtworkCreator(
       draftId: draftId,
       onCreated: onCreated,
       embedded: isDesktop,
-      showAppBar: false,
+      showAppBar: !isDesktop,
     );
 
     if (shellScope != null) {
@@ -49,7 +50,8 @@ class CreatorShellNavigation {
     void Function(String collectionId)? onCreated,
   }) async {
     final shellScope = DesktopShellScope.of(context);
-    final isDesktop = DesktopBreakpoints.isDesktop(context);
+    final isDesktop =
+        shellScope != null || DesktopBreakpoints.isDesktop(context);
     final screen = CollectionCreator(
       onCreated: onCreated,
       embedded: isDesktop,
@@ -72,7 +74,8 @@ class CreatorShellNavigation {
     int collectionIndex = -1,
   }) async {
     final shellScope = DesktopShellScope.of(context);
-    final isDesktop = DesktopBreakpoints.isDesktop(context);
+    final isDesktop =
+        shellScope != null || DesktopBreakpoints.isDesktop(context);
     final screen = CollectionSettingsScreen(
       collectionId: collectionId,
       collectionIndex: collectionIndex,
@@ -93,14 +96,13 @@ class CreatorShellNavigation {
   static Future<void> openArtworkEditorWorkspace(
     BuildContext context, {
     required String artworkId,
-    String? source,
-    String? attendanceMarkerId,
   }) async {
     final id = artworkId.trim();
     if (id.isEmpty) return;
 
     final shellScope = DesktopShellScope.of(context);
-    final isDesktop = DesktopBreakpoints.isDesktop(context);
+    final isDesktop =
+        shellScope != null || DesktopBreakpoints.isDesktop(context);
     final navigator = Navigator.of(context);
     final provider = context.read<ArtworkProvider>();
     try {
@@ -131,7 +133,8 @@ class CreatorShellNavigation {
     VoidCallback? onCreated,
   }) async {
     final shellScope = DesktopShellScope.of(context);
-    final isDesktop = DesktopBreakpoints.isDesktop(context);
+    final isDesktop =
+        shellScope != null || DesktopBreakpoints.isDesktop(context);
     final screen = ExhibitionCreatorScreen(
       initialExhibition: initialExhibition,
       onCreated: onCreated,
@@ -156,7 +159,8 @@ class CreatorShellNavigation {
     bool replace = false,
   }) async {
     final shellScope = DesktopShellScope.of(context);
-    final isDesktop = DesktopBreakpoints.isDesktop(context);
+    final isDesktop =
+        shellScope != null || DesktopBreakpoints.isDesktop(context);
     final l10n = AppLocalizations.of(context);
     final title = _textOrFallback(
       titleOverride ?? initialExhibition?.title,
@@ -216,7 +220,7 @@ class CreatorShellNavigation {
     );
     final screen = CollectionDetailScreen(
       collectionId: collectionId,
-      embedded: true,
+      embedded: isDesktop,
     );
 
     if (shellScope != null) {
@@ -246,10 +250,10 @@ class CreatorShellNavigation {
   static Future<void> openEventCreatorWorkspace(
     BuildContext context, {
     Event? initialEvent,
-    VoidCallback? onCreated,
   }) async {
     final shellScope = DesktopShellScope.of(context);
-    final isDesktop = DesktopBreakpoints.isDesktop(context);
+    final isDesktop =
+        shellScope != null || DesktopBreakpoints.isDesktop(context);
     final screen = EventCreator(
       initialEvent: initialEvent,
       embedded: isDesktop,
@@ -270,8 +274,9 @@ class CreatorShellNavigation {
   ) async {
     final l10n = AppLocalizations.of(context);
     final shellScope = DesktopShellScope.of(context);
-    final isDesktop = DesktopBreakpoints.isDesktop(context);
-    final screen = const ManageMarkersScreen(embedded: true);
+    final isDesktop =
+        shellScope != null || DesktopBreakpoints.isDesktop(context);
+    final screen = ManageMarkersScreen(embedded: isDesktop);
     final title = l10n?.manageMarkersTitle ?? 'Markers';
 
     if (shellScope != null) {

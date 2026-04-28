@@ -2,11 +2,13 @@ import 'package:flutter/foundation.dart';
 
 import '../models/collection_record.dart';
 import '../services/backend_api_service.dart';
+import '../utils/wallet_utils.dart';
 
 class CollectionsProvider extends ChangeNotifier {
   final BackendApiService _api;
 
-  CollectionsProvider({BackendApiService? api}) : _api = api ?? BackendApiService();
+  CollectionsProvider({BackendApiService? api})
+      : _api = api ?? BackendApiService();
 
   final List<CollectionRecord> _collections = <CollectionRecord>[];
   bool _listLoading = false;
@@ -23,6 +25,18 @@ class CollectionsProvider extends ChangeNotifier {
   String? get listError => _listError;
 
   CollectionRecord? getCollectionById(String id) => _byId[id.trim()];
+
+  CollectionRecord? findLikelyCollectionByNameAndWallet({
+    required String name,
+    String? walletAddress,
+    DateTime? createdAfter,
+  }) {
+    return _findLikelyCreatedCollection(
+      name: name,
+      walletAddress: walletAddress,
+      createdAfter: createdAfter,
+    );
+  }
 
   bool isLoading(String id) => _loadingIds.contains(id.trim());
 
@@ -62,7 +76,8 @@ class CollectionsProvider extends ChangeNotifier {
     }
   }
 
-  Future<CollectionRecord?> fetchCollection(String id, {bool force = false}) async {
+  Future<CollectionRecord?> fetchCollection(String id,
+      {bool force = false}) async {
     final collectionId = id.trim();
     if (collectionId.isEmpty) return null;
     if (!force && _byId.containsKey(collectionId)) return _byId[collectionId];
@@ -152,7 +167,12 @@ class CollectionsProvider extends ChangeNotifier {
     if (response.isEmpty) return null;
 
     // Direct keys first
-    for (final key in const <String>['uploadedUrl', 'url', 'fileUrl', 'mediaUrl']) {
+    for (final key in const <String>[
+      'uploadedUrl',
+      'url',
+      'fileUrl',
+      'mediaUrl'
+    ]) {
       final value = response[key]?.toString().trim();
       if (value != null && value.isNotEmpty) {
         return value;
@@ -162,7 +182,12 @@ class CollectionsProvider extends ChangeNotifier {
     // Nested under 'data'
     final data = response['data'];
     if (data is Map<String, dynamic>) {
-      for (final key in const <String>['uploadedUrl', 'url', 'fileUrl', 'mediaUrl']) {
+      for (final key in const <String>[
+        'uploadedUrl',
+        'url',
+        'fileUrl',
+        'mediaUrl'
+      ]) {
         final value = data[key]?.toString().trim();
         if (value != null && value.isNotEmpty) {
           return value;
@@ -173,7 +198,12 @@ class CollectionsProvider extends ChangeNotifier {
     // Nested under 'result'
     final result = response['result'];
     if (result is Map<String, dynamic>) {
-      for (final key in const <String>['uploadedUrl', 'url', 'fileUrl', 'mediaUrl']) {
+      for (final key in const <String>[
+        'uploadedUrl',
+        'url',
+        'fileUrl',
+        'mediaUrl'
+      ]) {
         final value = result[key]?.toString().trim();
         if (value != null && value.isNotEmpty) {
           return value;
@@ -189,8 +219,13 @@ class CollectionsProvider extends ChangeNotifier {
   /// If backend returns success but no ID is in the response, this method
   /// will refresh the collection list and attempt to match the new collection
   /// by name and wallet address + recent timestamp.
-  Future<({bool success, String? collectionId, CollectionRecord? record, bool refreshRequired})>
-      createCollection({
+  Future<
+      ({
+        bool success,
+        String? collectionId,
+        CollectionRecord? record,
+        bool refreshRequired
+      })> createCollection({
     required String name,
     String? description,
     bool isPublic = true,
@@ -199,11 +234,17 @@ class CollectionsProvider extends ChangeNotifier {
   }) async {
     final collectionName = name.trim();
     if (collectionName.isEmpty) {
-      return (success: false, collectionId: null, record: null, refreshRequired: false);
+      return (
+        success: false,
+        collectionId: null,
+        record: null,
+        refreshRequired: false
+      );
     }
 
     try {
       // Call backend API to create collection
+      final requestStartedAt = DateTime.now().toUtc();
       final response = await _api.createCollection(
         name: collectionName,
         description: description,
@@ -241,14 +282,19 @@ class CollectionsProvider extends ChangeNotifier {
       try {
         await loadCollections(refresh: true, walletAddress: walletAddress);
 
-        // Look for a collection that matches by name and recent timestamp
-        final created = DateTime.now().subtract(const Duration(seconds: 30));
-        final matching = _collections.firstWhere(
-          (c) =>
-              c.name.trim().toLowerCase() == collectionName.toLowerCase() &&
-              (c.updatedAt ?? DateTime.now()).isAfter(created),
-          orElse: () => throw Exception('No matching collection found'),
+        final matching = _findLikelyCreatedCollection(
+          name: collectionName,
+          walletAddress: walletAddress,
+          createdAfter: requestStartedAt.subtract(const Duration(seconds: 5)),
         );
+        if (matching == null) {
+          return (
+            success: true,
+            collectionId: null,
+            record: null,
+            refreshRequired: true,
+          );
+        }
 
         _upsertCollection(matching);
         notifyListeners();
@@ -271,8 +317,65 @@ class CollectionsProvider extends ChangeNotifier {
     } catch (e) {
       _listError = e.toString();
       notifyListeners();
-      return (success: false, collectionId: null, record: null, refreshRequired: false);
+      return (
+        success: false,
+        collectionId: null,
+        record: null,
+        refreshRequired: false
+      );
     }
+  }
+
+  CollectionRecord? _findLikelyCreatedCollection({
+    required String name,
+    String? walletAddress,
+    DateTime? createdAfter,
+  }) {
+    final normalizedName = _normalizeCollectionName(name);
+    if (normalizedName.isEmpty) return null;
+    final normalizedWallet = WalletUtils.canonical(walletAddress ?? '');
+
+    final candidates = _collections.where((collection) {
+      if (_normalizeCollectionName(collection.name) != normalizedName) {
+        return false;
+      }
+      if (normalizedWallet.isEmpty) return true;
+      return WalletUtils.equals(collection.walletAddress, normalizedWallet);
+    }).toList(growable: false);
+    if (candidates.isEmpty) return null;
+
+    DateTime? realTimestamp(CollectionRecord collection) {
+      final updated = collection.updatedAt;
+      final created = collection.createdAt;
+      if (updated == null) return created;
+      if (created == null) return updated;
+      return updated.isAfter(created) ? updated : created;
+    }
+
+    final threshold = createdAfter?.toUtc();
+    final timestamped = candidates
+        .map((collection) =>
+            (collection: collection, timestamp: realTimestamp(collection)))
+        .where((entry) {
+      final timestamp = entry.timestamp;
+      if (timestamp == null) return false;
+      return threshold == null || !timestamp.toUtc().isBefore(threshold);
+    }).toList(growable: false)
+      ..sort((a, b) => b.timestamp!.compareTo(a.timestamp!));
+
+    if (timestamped.isNotEmpty) return timestamped.first.collection;
+
+    final everyCandidateHasNoTimestamp =
+        candidates.every((collection) => realTimestamp(collection) == null);
+    if (normalizedWallet.isNotEmpty && everyCandidateHasNoTimestamp) {
+      return candidates.first;
+    }
+
+    return null;
+  }
+
+  String _normalizeCollectionName(String value) {
+    return value.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
   }
 
   /// Extract collection ID from common backend response shapes.
@@ -299,7 +402,11 @@ class CollectionsProvider extends ChangeNotifier {
       // Try nested under 'data'
       final data = payload['data'];
       if (data is Map<String, dynamic>) {
-        for (final key in const <String>['id', 'collectionId', 'collection_id']) {
+        for (final key in const <String>[
+          'id',
+          'collectionId',
+          'collection_id'
+        ]) {
           final raw = data[key]?.toString();
           final value = raw?.trim();
           if (value != null && value.isNotEmpty) {
@@ -318,7 +425,11 @@ class CollectionsProvider extends ChangeNotifier {
       // Try nested under 'result'
       final result = payload['result'];
       if (result is Map<String, dynamic>) {
-        for (final key in const <String>['id', 'collectionId', 'collection_id']) {
+        for (final key in const <String>[
+          'id',
+          'collectionId',
+          'collection_id'
+        ]) {
           final raw = result[key]?.toString();
           final value = raw?.trim();
           if (value != null && value.isNotEmpty) {
@@ -335,7 +446,8 @@ class CollectionsProvider extends ChangeNotifier {
         }
       }
     } else if (payload is Map) {
-      return _extractCollectionIdFromResponse(Map<String, dynamic>.from(payload));
+      return _extractCollectionIdFromResponse(
+          Map<String, dynamic>.from(payload));
     } else if (payload is List) {
       for (final item in payload) {
         final nestedId = _extractCollectionIdFromResponse(item);
@@ -381,7 +493,11 @@ class CollectionsProvider extends ChangeNotifier {
     required List<String> artworkIds,
   }) async {
     final id = collectionId.trim();
-    final unique = artworkIds.map((e) => e.trim()).where((e) => e.isNotEmpty).toSet().toList();
+    final unique = artworkIds
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toSet()
+        .toList();
     if (id.isEmpty || unique.isEmpty) return null;
 
     final previous = _byId[id];
@@ -401,7 +517,7 @@ class CollectionsProvider extends ChangeNotifier {
         record = _bumpArtworkCount(previous, unique.length);
       }
       _upsertCollection(record);
-          notifyListeners();
+      notifyListeners();
       return record;
     } catch (e) {
       _errorsById[id] = e.toString();
@@ -434,7 +550,7 @@ class CollectionsProvider extends ChangeNotifier {
         record = _removeArtworkLocally(previous, artworkId);
       }
       _upsertCollection(record);
-          notifyListeners();
+      notifyListeners();
       return record;
     } catch (e) {
       _errorsById[id] = e.toString();
@@ -495,12 +611,12 @@ class CollectionsProvider extends ChangeNotifier {
         );
 
     return base.copyWith(
-      name: parsed.name.isNotEmpty
-          ? parsed.name
-          : (name ?? base.name),
+      name: parsed.name.isNotEmpty ? parsed.name : (name ?? base.name),
       description: parsed.description ?? description ?? base.description,
-      isPublic: parsed.id.isNotEmpty ? parsed.isPublic : (isPublic ?? base.isPublic),
-      artworkCount: parsed.artworkCount != 0 ? parsed.artworkCount : base.artworkCount,
+      isPublic:
+          parsed.id.isNotEmpty ? parsed.isPublic : (isPublic ?? base.isPublic),
+      artworkCount:
+          parsed.artworkCount != 0 ? parsed.artworkCount : base.artworkCount,
       thumbnailUrl: parsed.thumbnailUrl ?? thumbnailUrl ?? base.thumbnailUrl,
       artworks: parsed.artworks.isNotEmpty ? parsed.artworks : base.artworks,
       updatedAt: parsed.updatedAt ?? DateTime.now(),
@@ -522,7 +638,8 @@ class CollectionsProvider extends ChangeNotifier {
     );
   }
 
-  CollectionRecord _removeArtworkLocally(CollectionRecord? previous, String artworkId) {
+  CollectionRecord _removeArtworkLocally(
+      CollectionRecord? previous, String artworkId) {
     final base = previous ??
         const CollectionRecord(
           id: '',

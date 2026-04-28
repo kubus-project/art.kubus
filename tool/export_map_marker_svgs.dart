@@ -42,7 +42,7 @@ Future<void> main(List<String> args) async {
   final options = _ExportOptions.parse(args);
 
   final outDir = Directory(options.outDir);
-  final svgDir = Directory(p.join(outDir.path, 'svg'));
+  final svgDir = Directory(PathJoin.join(outDir.path, 'svg'));
 
   if (!svgDir.existsSync()) {
     svgDir.createSync(recursive: true);
@@ -118,7 +118,10 @@ Future<void> main(List<String> args) async {
             'theme': isDark ? 'dark' : 'light',
             'promoted': promoted,
             'pixelRatio': options.pixelRatio,
-            'logicalSize': <String, Object?>{'w': CubeMarkerTokens.pngWidth, 'h': CubeMarkerTokens.pngWidth},
+            'logicalSize': <String, Object?>{
+              'w': CubeMarkerTokens.pngWidth,
+              'h': CubeMarkerTokens.pngWidth
+            },
           });
 
           // Selected icon (force glow).
@@ -147,7 +150,10 @@ Future<void> main(List<String> args) async {
             'theme': isDark ? 'dark' : 'light',
             'promoted': promoted,
             'pixelRatio': options.pixelRatio,
-            'logicalSize': <String, Object?>{'w': CubeMarkerTokens.pngWidth, 'h': CubeMarkerTokens.pngWidth},
+            'logicalSize': <String, Object?>{
+              'w': CubeMarkerTokens.pngWidth,
+              'h': CubeMarkerTokens.pngWidth
+            },
           });
         }
       }
@@ -207,27 +213,30 @@ Future<void> main(List<String> args) async {
           'label': label,
           'theme': isDark ? 'dark' : 'light',
           'pixelRatio': options.pixelRatio,
-          'logicalSize': <String, Object?>{'w': CubeMarkerTokens.pngWidth, 'h': CubeMarkerTokens.pngWidth},
+          'logicalSize': <String, Object?>{
+            'w': CubeMarkerTokens.pngWidth,
+            'h': CubeMarkerTokens.pngWidth
+          },
         });
       }
     }
   }
 
-  final manifestFile = File(p.join(outDir.path, 'manifest.json'));
+  final manifestFile = File(PathJoin.join(outDir.path, 'manifest.json'));
   final encoder = const JsonEncoder.withIndent('  ');
   await manifestFile.writeAsString(
     '${encoder.convert(<String, Object?>{
-      'generatedAt': DateTime.now().toUtc().toIso8601String(),
-      'pixelRatio': options.pixelRatio,
-      'items': exportItems,
-      'notes': <String>[
-        'SVGs embed PNG image data rendered by ArtMarkerCubeIconRenderer for visual parity with the app.',
-        'Cluster icons are exported for representative labels: 2,3,4,5,10,25,99,99+ (count=100). Runtime can generate more labels.',
-      ],
-    })}\n',
+          'generatedAt': DateTime.now().toUtc().toIso8601String(),
+          'pixelRatio': options.pixelRatio,
+          'items': exportItems,
+          'notes': <String>[
+            'SVGs embed PNG image data rendered by ArtMarkerCubeIconRenderer for visual parity with the app.',
+            'Cluster icons are exported for representative labels: 2,3,4,5,10,25,99,99+ (count=100). Runtime can generate more labels.',
+          ],
+        })}\n',
   );
 
-  final readmeFile = File(p.join(outDir.path, 'README.md'));
+  final readmeFile = File(PathJoin.join(outDir.path, 'README.md'));
   await readmeFile.writeAsString(_readmeText(pixelRatio: options.pixelRatio));
 
   stdout.writeln(
@@ -254,7 +263,7 @@ Future<void> _writeMarkerSvg({
     pngBase64: pngBase64,
   );
 
-  final file = File(p.join(svgDir.path, '$iconId.svg'));
+  final file = File(PathJoin.join(svgDir.path, '$iconId.svg'));
   await file.writeAsString(svg);
 }
 
@@ -310,7 +319,7 @@ class _ExportOptions {
 }
 
 /// Minimal path join helper (avoids bringing in extra deps in a tool script).
-class p {
+class PathJoin {
   static String join(String a, String b) {
     if (a.isEmpty) return b;
     if (b.isEmpty) return a;

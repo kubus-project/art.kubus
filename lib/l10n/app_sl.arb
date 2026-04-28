@@ -141,6 +141,14 @@
   "exhibitionDetailAddArtworksDialogTitle": "Dodaj umetnine",
   "exhibitionDetailArtworksLinkedToast": "Umetnine so povezane z razstavo.",
   "exhibitionDetailLinkArtworksFailedToast": "Povezovanje umetnin ni uspelo. Poskusi znova.",
+  "exhibitionDetailDeleteDialogTitle": "Izbrišem razstavo?",
+  "exhibitionDetailDeleteDialogContent": "Razstava »{title}« bo izbrisana. Tega dejanja ni mogoče razveljaviti.",
+  "@exhibitionDetailDeleteDialogContent": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "exhibitionDetailDeletedToast": "Razstava je izbrisana.",
   "exhibitionDetailStatusRowLabel": "Stanje: {status}",
   "@exhibitionDetailStatusRowLabel": {
     "placeholders": {
@@ -1946,9 +1954,13 @@
   "collectionCreatorCollaborationReadySubtitle": "Povabi sokuratorje brez zapuščanja delovnega prostora.",
   "collectionCreatorCollaborationLockedSubtitle": "Za odklep sodelovanja najprej shrani.",
   "collectionCreatorCollaborationLockedMessage": "Ko je zbirka shranjena, lahko tukaj povabiš sodelavce, da kuriranje ostane v kontekstu.",
+  "collectionCreatorSavedInfoBox": "Zbirka je shranjena. Sodelovanje je na voljo v stranski vrstici, izbor pa lahko še naprej urejaš spodaj.",
+  "collectionCreatorPartialSuccessToast": "Zbirka je bila morda ustvarjena, vendar je aplikacija še ne more lokalno razrešiti. Pred dodajanjem del osveži zbirke.",
+  "collectionCreatorPartialSuccessInfoBox": "Strežnik je zbirko sprejel, vendar ni vrnil ID-ja zbirke. Pred pripenjanjem umetnin preveri zbirke ali jih osveži.",
+  "collectionCreatorPartialSuccessArtworkAttachmentInfo": "Izbrane umetnine niso bile pripete, ker ID zbirke še ni na voljo.",
   "collectionCreatorConnectWalletLabel": "Poveži denarnico za nalaganje in kuratoziranje knjižnice umetnin v tem ustvarjalniku.",
-  "collectionCreatorArtworkLibraryLoadingLabel": "Tvoja knjižnica umetnin se še naklanja. Če je backend počasen, lahko nadaljuješ s kuratoiranjem osnovnih podatkov zbirke in se vrneš sem senare.",
-  "collectionCreatorArtworkLibraryPlaceholderLabel": "Naloži svojo knjižnico umetnin, da izabereš dela za to zbirko. To izboljša hitrost prvega odpiranja in izogniti se nepotrebnih klicev API-ja.",
+  "collectionCreatorArtworkLibraryLoadingLabel": "Tvoja knjižnica umetnin se še nalaga. Če je zaledje počasno, lahko nadaljuješ z urejanjem osnovnih podatkov zbirke in se sem vrneš pozneje.",
+  "collectionCreatorArtworkLibraryPlaceholderLabel": "Naloži svojo knjižnico umetnin, da izbereš dela za to zbirko. Tako je prvo odpiranje hitrejše in brez nepotrebnih klicev API-ja.",
   "collectionCreatorLoadingLibraryLabel": "Nalagam knjižnico…",
   "collectionCreatorLoadArtworkLibraryLabel": "Naloži knjižnico umetnin",
   "collectionCreatorArtworkSelectedLabel": "Izbrano",

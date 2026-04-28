@@ -15,6 +15,7 @@ import '../../providers/collab_provider.dart';
 import '../../providers/exhibitions_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../screens/collab/invites_inbox_screen.dart';
+import '../../screens/desktop/desktop_shell.dart';
 import '../../services/backend_api_service.dart'
     show BackendApiRequestException;
 import '../../services/share/share_service.dart';
@@ -192,22 +193,18 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
   ) {
     return [
       IconButton(
-        tooltip: l10n.commonShare,
-        onPressed: () {
-          ShareService().showShareSheet(
-            context,
-            target: ShareTarget.exhibition(
-              exhibitionId: widget.exhibitionId,
-              title: ex.title,
-            ),
-            sourceScreen: 'exhibition_detail',
-          );
-        },
-        icon: const Icon(Icons.share_outlined),
-      ),
-      IconButton(
         tooltip: l10n.exhibitionDetailInvitesTooltip,
         onPressed: () {
+          final shellScope = DesktopShellScope.of(context);
+          if (shellScope != null) {
+            shellScope.pushScreen(
+              DesktopSubScreen(
+                title: l10n.exhibitionDetailInvitesTooltip,
+                child: const InvitesInboxScreen(embedded: true),
+              ),
+            );
+            return;
+          }
           Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const InvitesInboxScreen()),
           );
@@ -262,9 +259,9 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     final confirmed = await showKubusDialog<bool>(
       context: context,
       builder: (dialogContext) => KubusAlertDialog(
-        title: Text(l10n.commonDelete),
+        title: Text(l10n.exhibitionDetailDeleteDialogTitle),
         content:
-            Text(l10n.collectionSettingsDeleteDialogContent(exhibition.title)),
+            Text(l10n.exhibitionDetailDeleteDialogContent(exhibition.title)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -284,7 +281,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       await provider.deleteExhibition(exhibition.id);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
-        SnackBar(content: Text(l10n.commonSavedToast)),
+        SnackBar(content: Text(l10n.exhibitionDetailDeletedToast)),
       );
       Navigator.of(context).maybePop();
     } catch (_) {
@@ -307,6 +304,21 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       title: ex.title,
       subtitle: l10n.commonActions,
       actions: [
+        SubjectOptionsAction(
+          id: 'share',
+          icon: Icons.share_outlined,
+          label: l10n.commonShare,
+          onSelected: () {
+            ShareService().showShareSheet(
+              context,
+              target: ShareTarget.exhibition(
+                exhibitionId: widget.exhibitionId,
+                title: ex.title,
+              ),
+              sourceScreen: 'exhibition_detail',
+            );
+          },
+        ),
         if (canManage)
           SubjectOptionsAction(
             id: 'edit',
@@ -932,17 +944,16 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                       spacing: 4,
                       children: [
                         ...headerActions,
-                        if (canManage || canPublish || canPromote)
-                          IconButton(
-                            tooltip: l10n.commonActions,
-                            onPressed: () => _showExhibitionManagementActions(
-                              ex,
-                              canManage: canManage,
-                              canPublish: canPublish,
-                              canPromote: canPromote,
-                            ),
-                            icon: const Icon(Icons.more_horiz),
+                        IconButton(
+                          tooltip: l10n.commonActions,
+                          onPressed: () => _showExhibitionManagementActions(
+                            ex,
+                            canManage: canManage,
+                            canPublish: canPublish,
+                            canPromote: canPromote,
                           ),
+                          icon: const Icon(Icons.more_horiz),
+                        ),
                       ],
                     ),
                   ),

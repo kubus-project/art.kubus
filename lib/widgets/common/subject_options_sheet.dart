@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../utils/design_tokens.dart';
+import '../common/keyboard_inset_padding.dart';
 import '../common/kubus_glass_icon_button.dart';
 import '../common/kubus_screen_header.dart';
 import '../glass_components.dart';
@@ -10,6 +11,7 @@ class SubjectOptionsAction {
   final IconData icon;
   final String label;
   final bool isDestructive;
+  final bool enabled;
   final VoidCallback onSelected;
 
   const SubjectOptionsAction({
@@ -18,6 +20,7 @@ class SubjectOptionsAction {
     required this.label,
     required this.onSelected,
     this.isDestructive = false,
+    this.enabled = true,
   });
 }
 
@@ -32,22 +35,37 @@ Future<void> showSubjectOptionsSheet({
   final theme = Theme.of(context);
   final scheme = theme.colorScheme;
 
-  Widget optionTile(SubjectOptionsAction action) {
-    final color = action.isDestructive ? scheme.error : scheme.onSurface;
+  Widget optionTile(
+    BuildContext sheetContext,
+    SubjectOptionsAction action,
+  ) {
+    final enabled = action.enabled;
+    final baseColor = action.isDestructive ? scheme.error : scheme.onSurface;
+    final color =
+        enabled ? baseColor : scheme.onSurface.withValues(alpha: 0.38);
     return ListTile(
-      contentPadding: EdgeInsets.zero,
+      enabled: enabled,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: KubusSpacing.sm,
+        vertical: KubusSpacing.xxs,
+      ),
       leading: Icon(action.icon, color: color),
       title: Text(
         action.label,
         style: KubusTypography.textTheme.bodyLarge?.copyWith(
           color: color,
-          fontWeight: FontWeight.w600,
+          fontWeight: enabled ? FontWeight.w600 : FontWeight.w500,
         ),
       ),
-      onTap: () {
-        Navigator.pop(context);
-        action.onSelected();
-      },
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(KubusRadius.md),
+      ),
+      onTap: enabled
+          ? () {
+              Navigator.of(sheetContext).pop();
+              action.onSelected();
+            }
+          : null,
     );
   }
 
@@ -55,36 +73,113 @@ Future<void> showSubjectOptionsSheet({
     context: context,
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
-    builder: (sheetContext) => BackdropGlassSheet(
-      showBorder: false,
-      padding: EdgeInsets.zero,
-      backgroundColor: theme.colorScheme.surface,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          KubusSheetHeader(
-            title: title,
-            subtitle: subtitle,
-            trailing: KubusGlassIconButton(
-              icon: Icons.close,
-              tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
-              onPressed: () => Navigator.pop(sheetContext),
+    useSafeArea: false,
+    builder: (sheetContext) {
+      final media = MediaQuery.of(sheetContext);
+      final isWide = media.size.width >= 720;
+      final bottomInset = media.viewInsets.bottom;
+      final sheetBackground = scheme.surfaceContainerHighest.withValues(
+        alpha: theme.brightness == Brightness.dark ? 0.82 : 0.92,
+      );
+
+      Widget sheetChrome({
+        required Widget child,
+      }) {
+        return SafeArea(
+          top: false,
+          child: KeyboardInsetPadding(
+            child: LiquidGlassPanel(
+              margin: EdgeInsets.zero,
+              showBorder: true,
+              blurSigma: KubusGlassEffects.blurSigmaHeavy,
+              fallbackMinOpacity: KubusGlassEffects.fallbackOpaqueOpacity,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(KubusRadius.xl),
+              ),
+              padding: EdgeInsets.zero,
+              backgroundColor: sheetBackground,
+              child: child,
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              KubusSpacing.lg,
-              KubusSpacing.none,
-              KubusSpacing.lg,
-              KubusSpacing.lg,
+        );
+      }
+
+      Widget sheetContent({
+        ScrollController? scrollController,
+        bool shrinkWrap = false,
+      }) {
+        return Column(
+          mainAxisSize: shrinkWrap ? MainAxisSize.min : MainAxisSize.max,
+          children: [
+            KubusSheetHeader(
+              title: title,
+              subtitle: subtitle,
+              showHandle: true,
+              trailing: KubusGlassIconButton(
+                icon: Icons.close,
+                tooltip:
+                    MaterialLocalizations.of(sheetContext).closeButtonTooltip,
+                onPressed: () => Navigator.of(sheetContext).pop(),
+              ),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: actions.map(optionTile).toList(growable: false),
+            Flexible(
+              fit: shrinkWrap ? FlexFit.loose : FlexFit.tight,
+              child: ListView.separated(
+                controller: scrollController,
+                shrinkWrap: shrinkWrap,
+                padding: const EdgeInsets.fromLTRB(
+                  KubusSpacing.md,
+                  KubusSpacing.none,
+                  KubusSpacing.md,
+                  KubusSpacing.lg,
+                ),
+                itemCount: actions.length,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: KubusSpacing.xxs),
+                itemBuilder: (_, index) =>
+                    optionTile(sheetContext, actions[index]),
+              ),
+            ),
+          ],
+        );
+      }
+
+      if (isWide) {
+        return Padding(
+          padding: EdgeInsets.only(bottom: bottomInset),
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: 560,
+                maxHeight: media.size.height * 0.82,
+              ),
+              child: sheetChrome(
+                child: sheetContent(
+                  shrinkWrap: true,
+                ),
+              ),
             ),
           ),
-        ],
-      ),
-    ),
+        );
+      }
+
+      final estimatedInitialSize =
+          (0.34 + actions.length * 0.065).clamp(0.42, 0.72).toDouble();
+      return Padding(
+        padding: EdgeInsets.only(bottom: bottomInset),
+        child: DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: estimatedInitialSize,
+          minChildSize: 0.32,
+          maxChildSize: 0.92,
+          builder: (sheetContext, scrollController) {
+            return sheetChrome(
+              child: sheetContent(scrollController: scrollController),
+            );
+          },
+        ),
+      );
+    },
   );
 }

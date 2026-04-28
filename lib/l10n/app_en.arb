@@ -141,6 +141,14 @@
   "exhibitionDetailAddArtworksDialogTitle": "Add artworks",
   "exhibitionDetailArtworksLinkedToast": "Artworks linked to exhibition.",
   "exhibitionDetailLinkArtworksFailedToast": "Failed to link artworks. Please try again.",
+  "exhibitionDetailDeleteDialogTitle": "Delete exhibition?",
+  "exhibitionDetailDeleteDialogContent": "Exhibition \"{title}\" will be deleted. This action cannot be undone.",
+  "@exhibitionDetailDeleteDialogContent": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "exhibitionDetailDeletedToast": "Exhibition deleted.",
   "exhibitionDetailStatusRowLabel": "Status: {status}",
   "@exhibitionDetailStatusRowLabel": {
     "placeholders": {
@@ -1986,6 +1994,9 @@
   "collectionCreatorCollaborationLockedSubtitle": "Save once to unlock collaboration.",
   "collectionCreatorCollaborationLockedMessage": "Once saved, collaborators can be invited here so curation stays in context.",
   "collectionCreatorSavedInfoBox": "Collection saved. Collaboration is available from the sidebar, and you can keep refining the selection below.",
+  "collectionCreatorPartialSuccessToast": "The collection may have been created, but it could not be resolved locally yet. Refresh your collections before adding artworks.",
+  "collectionCreatorPartialSuccessInfoBox": "The server accepted the collection, but no collection ID was returned. Check your collections or refresh before attaching artworks.",
+  "collectionCreatorPartialSuccessArtworkAttachmentInfo": "Selected artworks were not attached because the collection ID is not available yet.",
   "collectionCreatorConnectWalletLabel": "Connect a wallet to load and curate your artwork library inside this collection creator.",
   "collectionCreatorArtworkLibraryLoadingLabel": "Your artwork library is still loading. If the backend is slow, you can keep editing the collection basics and come back here.",
   "collectionCreatorArtworkLibraryPlaceholderLabel": "Load your artwork library to select pieces for this collection. This keeps the first open lighter and avoids unnecessary API calls.",

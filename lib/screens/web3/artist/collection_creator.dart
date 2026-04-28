@@ -8,12 +8,12 @@ import 'dart:typed_data';
 
 import '../../../config/config.dart';
 import '../../../models/artwork.dart';
-import '../../art/collection_detail_screen.dart';
 import '../../../providers/collections_provider.dart';
 import '../../../providers/artwork_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../widgets/disk_cached_artwork_image.dart';
+import '../../../utils/creator_shell_navigation.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/design_tokens.dart';
 import '../../../utils/wallet_utils.dart';
@@ -58,6 +58,7 @@ class _CollectionCreatorState extends State<CollectionCreator> {
   bool _artworkLibraryLoadRequested = false;
   String _lastPrefetchedArtworkSignature = '';
   String? _createdCollectionId;
+  bool _partialSuccessWithoutId = false;
 
   @override
   void dispose() {
@@ -93,7 +94,7 @@ class _CollectionCreatorState extends State<CollectionCreator> {
     if (artworks.isEmpty) return;
     final signature = artworks
         .take(8)
-      .map((artwork) => (artwork.imageUrl ?? '').trim())
+        .map((artwork) => (artwork.imageUrl ?? '').trim())
         .where((url) => url.isNotEmpty)
         .join('|');
     if (signature.isEmpty || signature == _lastPrefetchedArtworkSignature) {
@@ -140,6 +141,7 @@ class _CollectionCreatorState extends State<CollectionCreator> {
     final messenger = ScaffoldMessenger.of(context);
     final collectionsProvider = context.read<CollectionsProvider>();
     final profileProvider = context.read<ProfileProvider>();
+    final web3Provider = context.read<Web3Provider>();
 
     if (!_formKey.currentState!.validate()) {
       return;
@@ -165,6 +167,7 @@ class _CollectionCreatorState extends State<CollectionCreator> {
       }
 
       // Create collection through provider with false-failure fallback handling
+      final createStartedAt = DateTime.now().toUtc();
       final createResult = await collectionsProvider.createCollection(
         name: _nameController.text.trim(),
         description: _descriptionController.text.trim().isEmpty
@@ -172,14 +175,46 @@ class _CollectionCreatorState extends State<CollectionCreator> {
             : _descriptionController.text.trim(),
         isPublic: _isPublic,
         thumbnailUrl: thumbnailUrl,
-        walletAddress: profileProvider.currentUser?.walletAddress,
+        walletAddress: WalletUtils.coalesce(
+          walletAddress: profileProvider.currentUser?.walletAddress,
+          wallet: web3Provider.walletAddress,
+        ),
       );
 
       if (!mounted) return;
 
-      if (!createResult.success || createResult.collectionId == null) {
+      if (!createResult.success) {
         messenger.showKubusSnackBar(
           SnackBar(content: Text(l10n.collectionCreatorCreateFailed)),
+        );
+        return;
+      }
+
+      if (createResult.collectionId == null) {
+        final walletAddress = WalletUtils.coalesce(
+          walletAddress: profileProvider.currentUser?.walletAddress,
+          wallet: web3Provider.walletAddress,
+        );
+        if (createResult.refreshRequired) {
+          await collectionsProvider.loadCollections(
+            refresh: true,
+            walletAddress: walletAddress,
+          );
+          if (!mounted) return;
+        }
+        final likelyCollection =
+            collectionsProvider.findLikelyCollectionByNameAndWallet(
+          name: _nameController.text.trim(),
+          walletAddress: walletAddress,
+          createdAfter: createStartedAt.subtract(const Duration(seconds: 5)),
+        );
+        setState(() {
+          _createdCollectionId = likelyCollection?.id;
+          _partialSuccessWithoutId = true;
+        });
+        messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.collectionCreatorPartialSuccessToast)),
+          tone: KubusSnackBarTone.warning,
         );
         return;
       }
@@ -213,7 +248,10 @@ class _CollectionCreatorState extends State<CollectionCreator> {
       }
 
       if (widget.embedded) {
-        setState(() => _createdCollectionId = collectionId);
+        setState(() {
+          _createdCollectionId = collectionId;
+          _partialSuccessWithoutId = false;
+        });
         messenger.showKubusSnackBar(SnackBar(content: Text(successMessage)));
         return;
       }
@@ -256,97 +294,109 @@ class _CollectionCreatorState extends State<CollectionCreator> {
       key: _formKey,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(
-          KubusSpacing.md, KubusSpacing.md, KubusSpacing.md, KubusSpacing.lg,
+          KubusSpacing.md,
+          KubusSpacing.md,
+          KubusSpacing.md,
+          KubusSpacing.lg,
         ),
         children: [
-            if (_createdCollectionId != null) ...[
-              CreatorInfoBox(
-                text:
-                    l10n.collectionCreatorSavedInfoBox,
-                icon: Icons.check_circle_outline,
-                accentColor: studioAccent,
-              ),
-              const CreatorSectionSpacing(),
-            ],
-            // --- Basics section ---
-            CreatorSection(
-              title: l10n.collectionSettingsBasicInfo,
-              children: [
-                CreatorTextField(
-                  controller: _nameController,
-                  label: l10n.collectionSettingsName,
-                  hint: l10n.collectionSettingsNameHint,
-                  textInputAction: TextInputAction.next,
-                  accentColor: studioAccent,
-                  validator: (value) {
-                    final v = (value ?? '').trim();
-                    if (v.isEmpty) return l10n.collectionCreatorNameRequiredError;
-                    return null;
-                  },
-                ),
-                const CreatorFieldSpacing(),
-                CreatorTextField(
-                  controller: _descriptionController,
-                  label: l10n.collectionSettingsDescriptionLabel,
-                  hint: l10n.collectionSettingsDescriptionHint,
-                  maxLines: 4,
-                  textInputAction: TextInputAction.newline,
-                  accentColor: studioAccent,
-                ),
-              ],
+          if (_partialSuccessWithoutId) ...[
+            CreatorInfoBox(
+              text: _selectedArtworkIds.isEmpty
+                  ? l10n.collectionCreatorPartialSuccessInfoBox
+                  : '${l10n.collectionCreatorPartialSuccessInfoBox} ${l10n.collectionCreatorPartialSuccessArtworkAttachmentInfo}',
+              icon: Icons.info_outline,
+              accentColor: Theme.of(context).colorScheme.tertiary,
             ),
-
             const CreatorSectionSpacing(),
-
-            // --- Cover Image section ---
-            CreatorSection(
-              title: l10n.commonCoverImage,
-              children: [
-                CreatorCoverImagePicker(
-                  imageBytes: _coverBytes,
-                  uploadLabel: l10n.commonUpload,
-                  changeLabel: l10n.commonChangeCover,
-                  removeTooltip: l10n.commonRemove,
-                  onPick: _pickCoverImage,
-                  onRemove: () => setState(() {
-                    _coverBytes = null;
-                    _coverFileName = null;
-                  }),
-                  enabled: !_isSubmitting,
-                ),
-              ],
-            ),
-
-            const CreatorSectionSpacing(),
-
-            // --- Add existing artworks section ---
-            _buildArtworkSelectionSection(
-              l10n,
-              studioAccent,
-              walletAddress,
-              allArtworks,
-            ),
-
-            const CreatorSectionSpacing(),
-
-            // --- Visibility toggle ---
-            CreatorSwitchTile(
-              title: l10n.collectionSettingsPublic,
-              subtitle: l10n.collectionSettingsPublicSubtitle,
-              value: _isPublic,
-              onChanged: _isSubmitting ? null : (v) => setState(() => _isPublic = v),
-              activeColor: studioAccent,
-            ),
-
-            const CreatorSectionSpacing(),
-
-            // --- Create button ---
-            CreatorFooterActions(
-              primaryLabel: l10n.commonCreate,
-              onPrimary: _submit,
-              primaryLoading: _isSubmitting,
+          ] else if (_createdCollectionId != null) ...[
+            CreatorInfoBox(
+              text: l10n.collectionCreatorSavedInfoBox,
+              icon: Icons.check_circle_outline,
               accentColor: studioAccent,
             ),
+            const CreatorSectionSpacing(),
+          ],
+          // --- Basics section ---
+          CreatorSection(
+            title: l10n.collectionSettingsBasicInfo,
+            children: [
+              CreatorTextField(
+                controller: _nameController,
+                label: l10n.collectionSettingsName,
+                hint: l10n.collectionSettingsNameHint,
+                textInputAction: TextInputAction.next,
+                accentColor: studioAccent,
+                validator: (value) {
+                  final v = (value ?? '').trim();
+                  if (v.isEmpty) return l10n.collectionCreatorNameRequiredError;
+                  return null;
+                },
+              ),
+              const CreatorFieldSpacing(),
+              CreatorTextField(
+                controller: _descriptionController,
+                label: l10n.collectionSettingsDescriptionLabel,
+                hint: l10n.collectionSettingsDescriptionHint,
+                maxLines: 4,
+                textInputAction: TextInputAction.newline,
+                accentColor: studioAccent,
+              ),
+            ],
+          ),
+
+          const CreatorSectionSpacing(),
+
+          // --- Cover Image section ---
+          CreatorSection(
+            title: l10n.commonCoverImage,
+            children: [
+              CreatorCoverImagePicker(
+                imageBytes: _coverBytes,
+                uploadLabel: l10n.commonUpload,
+                changeLabel: l10n.commonChangeCover,
+                removeTooltip: l10n.commonRemove,
+                onPick: _pickCoverImage,
+                onRemove: () => setState(() {
+                  _coverBytes = null;
+                  _coverFileName = null;
+                }),
+                enabled: !_isSubmitting,
+              ),
+            ],
+          ),
+
+          const CreatorSectionSpacing(),
+
+          // --- Add existing artworks section ---
+          _buildArtworkSelectionSection(
+            l10n,
+            studioAccent,
+            walletAddress,
+            allArtworks,
+          ),
+
+          const CreatorSectionSpacing(),
+
+          // --- Visibility toggle ---
+          CreatorSwitchTile(
+            title: l10n.collectionSettingsPublic,
+            subtitle: l10n.collectionSettingsPublicSubtitle,
+            value: _isPublic,
+            onChanged:
+                _isSubmitting ? null : (v) => setState(() => _isPublic = v),
+            activeColor: studioAccent,
+          ),
+
+          const CreatorSectionSpacing(),
+
+          // --- Create button ---
+          CreatorFooterActions(
+            primaryLabel: l10n.commonCreate,
+            onPrimary: _submit,
+            primaryLoading: _isSubmitting,
+            accentColor: studioAccent,
+          ),
         ],
       ),
     );
@@ -362,7 +412,9 @@ class _CollectionCreatorState extends State<CollectionCreator> {
           label: _createdCollectionId == null
               ? l10n.commonDraft
               : l10n.commonSavedToast,
-          color: _createdCollectionId == null ? studioAccent : Theme.of(context).colorScheme.primary,
+          color: _createdCollectionId == null
+              ? studioAccent
+              : Theme.of(context).colorScheme.primary,
         ),
         sidebarAccentColor: studioAccent,
         mainContent: formBody,
@@ -449,7 +501,9 @@ class _CollectionCreatorState extends State<CollectionCreator> {
                 value: created
                     ? createdId
                     : l10n.collectionCreatorSummaryNotCreatedYet,
-                valueColor: created ? scheme.onSurface : scheme.onSurface.withValues(alpha: 0.6),
+                valueColor: created
+                    ? scheme.onSurface
+                    : scheme.onSurface.withValues(alpha: 0.6),
               ),
               DesktopCreatorSummaryRow(
                 label: l10n.collectionCreatorSummarySelectedArtworksLabel,
@@ -486,7 +540,8 @@ class _CollectionCreatorState extends State<CollectionCreator> {
             children: [
               ElevatedButton.icon(
                 onPressed: _isSubmitting ? null : _submit,
-                icon: Icon(created ? Icons.refresh_outlined : Icons.save_outlined),
+                icon: Icon(
+                    created ? Icons.refresh_outlined : Icons.save_outlined),
                 label: Text(created
                     ? l10n.collectionCreatorQuickActionUpdate
                     : l10n.collectionCreatorQuickActionSave),
@@ -496,13 +551,11 @@ class _CollectionCreatorState extends State<CollectionCreator> {
                 OutlinedButton.icon(
                   onPressed: () {
                     if (createdId.isEmpty) return;
-                    DesktopShellScope.of(context)?.pushScreen(
-                      DesktopSubScreen(
-                        title: l10n.collectionCreatorTitle,
-                        child: CollectionDetailScreen(
-                          collectionId: createdId,
-                          embedded: true,
-                        ),
+                    unawaited(
+                      CreatorShellNavigation.openCollectionDetailWorkspace(
+                        context,
+                        collectionId: createdId,
+                        collectionName: _nameController.text.trim(),
                       ),
                     );
                   },
@@ -562,8 +615,7 @@ class _CollectionCreatorState extends State<CollectionCreator> {
 
         if (walletAddress.isEmpty) ...[
           CreatorInfoBox(
-            text:
-                l10n.collectionCreatorConnectWalletLabel,
+            text: l10n.collectionCreatorConnectWalletLabel,
             icon: Icons.account_balance_wallet_outlined,
             accentColor: accent,
           ),
@@ -585,7 +637,9 @@ class _CollectionCreatorState extends State<CollectionCreator> {
                 ? Icons.hourglass_bottom_outlined
                 : Icons.download_outlined),
             label: Text(
-              _artworksLoading ? l10n.collectionCreatorLoadingLibraryLabel : l10n.collectionCreatorLoadArtworkLibraryLabel,
+              _artworksLoading
+                  ? l10n.collectionCreatorLoadingLibraryLabel
+                  : l10n.collectionCreatorLoadArtworkLibraryLabel,
             ),
           ),
         ],
@@ -637,11 +691,10 @@ class _CollectionCreatorState extends State<CollectionCreator> {
               ),
             ),
           )
-        else if (allArtworks.isNotEmpty)
-          ...[
-            const CreatorFieldSpacing(),
-            _buildArtworkGallery(filtered, accent),
-          ],
+        else if (allArtworks.isNotEmpty) ...[
+          const CreatorFieldSpacing(),
+          _buildArtworkGallery(filtered, accent),
+        ],
       ],
     );
   }
@@ -748,7 +801,8 @@ class _CollectionCreatorState extends State<CollectionCreator> {
             child: compact
                 ? Row(
                     children: [
-                      _buildArtworkThumb(artwork, thumbCacheSize, accent, scheme),
+                      _buildArtworkThumb(
+                          artwork, thumbCacheSize, accent, scheme),
                       const SizedBox(width: KubusSpacing.md),
                       Expanded(
                         child: Column(
@@ -772,9 +826,11 @@ class _CollectionCreatorState extends State<CollectionCreator> {
                                       : (checked) {
                                           setState(() {
                                             if (checked == true) {
-                                              _selectedArtworkIds.add(artwork.id);
+                                              _selectedArtworkIds
+                                                  .add(artwork.id);
                                             } else {
-                                              _selectedArtworkIds.remove(artwork.id);
+                                              _selectedArtworkIds
+                                                  .remove(artwork.id);
                                             }
                                           });
                                         },
@@ -857,19 +913,27 @@ class _CollectionCreatorState extends State<CollectionCreator> {
                                           ? Icons.check_circle
                                           : Icons.add_circle_outline,
                                       size: 16,
-                                      color: isSelected ? accent : scheme.onSurface,
+                                      color: isSelected
+                                          ? accent
+                                          : scheme.onSurface,
                                     ),
                                     const SizedBox(width: KubusSpacing.xs),
                                     Builder(
                                       builder: (context) {
-                                        final l10nLocal = AppLocalizations.of(context)!;
+                                        final l10nLocal =
+                                            AppLocalizations.of(context)!;
                                         final labelText = isSelected
-                                            ? l10nLocal.collectionCreatorArtworkSelectedLabel
-                                            : l10nLocal.collectionCreatorArtworkAddLabel;
+                                            ? l10nLocal
+                                                .collectionCreatorArtworkSelectedLabel
+                                            : l10nLocal
+                                                .collectionCreatorArtworkAddLabel;
                                         return Text(
                                           labelText,
-                                          style: KubusTextStyles.detailLabel.copyWith(
-                                            color: isSelected ? accent : scheme.onSurface,
+                                          style: KubusTextStyles.detailLabel
+                                              .copyWith(
+                                            color: isSelected
+                                                ? accent
+                                                : scheme.onSurface,
                                           ),
                                         );
                                       },
