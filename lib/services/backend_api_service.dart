@@ -41,6 +41,7 @@ part 'backend_api_service_auth_transport.dart';
 part 'backend_api_service_domain_transports.dart';
 part 'backend_api_service_recovery_transport.dart';
 part 'backend_api_service_public_object_transport.dart';
+part 'backend_api_service_availability_transport.dart';
 part 'backend_api_service_signed_action_transport.dart';
 part 'backend_api_service_dao_transport.dart';
 part 'backend_api_service_wallet_settlement_transport.dart';
