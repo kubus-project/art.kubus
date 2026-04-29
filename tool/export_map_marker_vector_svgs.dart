@@ -15,12 +15,26 @@ import 'dart:convert';
 const _repoRawBase =
     'https://raw.githubusercontent.com/google/material-design-icons/main/';
 
-final Map<String, String> _iconSources = {
-  // key -> repo relative path
-  'artist_studio_palette': 'src/image/palette/materialicons/24px.svg',
-  'community_people': 'src/social/people/materialicons/24px.svg',
-  'governance_gavel': 'src/action/gavel/materialicons/24px.svg',
-  'institution_museum': 'src/maps/museum/materialicons/24px.svg',
+final Map<String, List<String>> _iconSources = {
+  // key -> list of candidate paths (first successful match wins)
+  'artist_studio_palette': [
+    'src/image/palette/materialicons/24px.svg',
+  ],
+  'community_people': [
+    'src/social/people/materialicons/24px.svg',
+  ],
+  'governance_gavel': [
+    // Try outlined variants and other governance icons
+    'src/action/gavel/materialiconsoutlined/24px.svg',
+    'src/action/gavel/materialiconssharp/24px.svg',
+    'src/action/gavel/materialicons/24px.svg',
+    'src/action/how_to_vote/materialicons/24px.svg',
+    'src/action/how_to_vote/materialiconsoutlined/24px.svg',
+    'src/action/how_to_vote/materialiconssharp/24px.svg',
+  ],
+  'institution_museum': [
+    'src/maps/museum/materialicons/24px.svg',
+  ],
 };
 
 void main(List<String> args) async {
@@ -29,24 +43,34 @@ void main(List<String> args) async {
 
   for (final entry in _iconSources.entries) {
     final name = entry.key;
-    final relPath = entry.value;
-    final url = '$_repoRawBase$relPath';
-    stdout.writeln('Fetching $url');
+    final candidates = entry.value;
+    var success = false;
 
-    try {
-      final svgText = await _httpGetUtf8(url);
-      final paths = _extractPathData(svgText);
-      if (paths.isEmpty) {
-        stderr.writeln('No <path d="..."> found in $url — skipping $name');
-        continue;
+    for (final relPath in candidates) {
+      final url = '$_repoRawBase$relPath';
+      stdout.writeln('Fetching $url');
+
+      try {
+        final svgText = await _httpGetUtf8(url);
+        final paths = _extractPathData(svgText);
+        if (paths.isEmpty) {
+          stdout.writeln('  No usable paths found; trying next candidate...');
+          continue;
+        }
+
+        final composed = _composeMarkerSvg(paths, name);
+        final outFile = File('${outDir.path}/mk_${name}_vector.svg');
+        outFile.writeAsStringSync(composed, flush: true);
+        stdout.writeln('  ✓ Wrote ${outFile.path}');
+        success = true;
+        break;
+      } catch (e) {
+        stdout.writeln('  Failed: $e; trying next candidate...');
       }
+    }
 
-      final composed = _composeMarkerSvg(paths, name);
-      final outFile = File('${outDir.path}/mk_${name}_vector.svg');
-      outFile.writeAsStringSync(composed, flush: true);
-      stdout.writeln('Wrote ${outFile.path}');
-    } catch (e) {
-      stderr.writeln('Failed to fetch or write $name: $e');
+    if (!success) {
+      stderr.writeln('✗ Could not generate vector for $name');
     }
   }
 
@@ -71,7 +95,21 @@ Future<String> _httpGetUtf8(String url) async {
 List<String> _extractPathData(String svgText) {
   // Very small, forgiving parser: capture all path d="..." attributes.
   final reg = RegExp(r'<path[^>]*d="([^"]+)"', multiLine: true);
-  return reg.allMatches(svgText).map((m) => m.group(1)!).toList(growable: false);
+  final allPaths = reg.allMatches(svgText).map((m) => m.group(1)!).toList(growable: false);
+
+  // Filter out common background/viewBox rectangles that render as white squares:
+  // - Paths that match the 24x24 viewBox boundary (M0 0... h24 v24 H0 Z variations)
+  return allPaths.where((p) {
+    final trimmed = p.replaceAll(RegExp(r'\s+'), ' ').toLowerCase().trim();
+    // Skip empty, whitespace-only, or viewBox background paths
+    if (trimmed.isEmpty) return false;
+    if (trimmed == 'm0 0h24v24h0z' || trimmed == 'm0 0h24v24h0v0z') return false;
+    // Also skip paths that are just the viewBox frame (start at origin, match 24x24)
+    if (RegExp(r'^m0\s*0[^m]*[hv]\s*24[^m]*[hv]\s*24[^m]*[hv]\s*0').hasMatch(trimmed)) {
+      return false;
+    }
+    return true;
+  }).toList(growable: false);
 }
 
 String _composeMarkerSvg(List<String> paths, String name) {

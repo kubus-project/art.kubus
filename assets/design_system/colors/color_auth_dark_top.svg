@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="200" height="120">
+  <!-- Color swatch background -->
+  <rect width="200" height="84" fill="#05070A"/>
+  <!-- Name and hex on white background -->
+  <rect y="84" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <!-- Color name -->
+  <text x="8" y="102" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Auth Dark Top</text>
+  <!-- Hex code -->
+  <text x="8" y="116" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#05070A</text>
+</svg>

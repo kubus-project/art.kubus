@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1096 1512" width="1096" height="1512">
+  <!-- Background -->
+  <rect width="1096" height="1512" fill="#FFFFFF"/>
+  <!-- Primary -->
+  <rect x="16" y="16" width="200" height="84" fill="#00838F"/>
+  <rect x="16" y="100" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="24" y="118" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Primary</text>
+  <text x="24" y="132" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#00838F</text>
+  <!-- Primary Variant Light -->
+  <rect x="232" y="16" width="200" height="84" fill="#0097A7"/>
+  <rect x="232" y="100" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="240" y="118" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Primary Variant Light</text>
+  <text x="240" y="132" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#0097A7</text>
+  <!-- Primary Variant Dark -->
+  <rect x="448" y="16" width="200" height="84" fill="#00ACC1"/>
+  <rect x="448" y="100" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="456" y="118" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Primary Variant Dark</text>
+  <text x="456" y="132" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#00ACC1</text>
+  <!-- Glass Light -->
+  <rect x="664" y="16" width="200" height="84" fill="#FFFFFF"/>
+  <rect x="664" y="100" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="672" y="118" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Glass Light</text>
+  <text x="672" y="132" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#FFFFFF</text>
+  <!-- Glass Dark -->
+  <rect x="880" y="16" width="200" height="84" fill="#1A1A1A"/>
+  <rect x="880" y="100" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="888" y="118" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Glass Dark</text>
+  <text x="888" y="132" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#1A1A1A</text>
+  <!-- Glass Border Light -->
+  <rect x="16" y="152" width="200" height="84" fill="#FFFFFF"/>
+  <rect x="16" y="236" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="24" y="254" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Glass Border Light</text>
+  <text x="24" y="268" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#FFFFFF</text>
+  <!-- Glass Border Dark -->
+  <rect x="232" y="152" width="200" height="84" fill="#000000"/>
+  <rect x="232" y="236" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="240" y="254" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Glass Border Dark</text>
+  <text x="240" y="268" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#000000</text>
+  <!-- Secondary -->
+  <rect x="448" y="152" width="200" height="84" fill="#00838F"/>
+  <rect x="448" y="236" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="456" y="254" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Secondary</text>
+  <text x="456" y="268" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#00838F</text>
+  <!-- Accent Orange Dark -->
+  <rect x="664" y="152" width="200" height="84" fill="#FF9800"/>
+  <rect x="664" y="236" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="672" y="254" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Accent Orange Dark</text>
+  <text x="672" y="268" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#FF9800</text>
+  <!-- Accent Orange Light -->
+  <rect x="880" y="152" width="200" height="84" fill="#FB8C00"/>
+  <rect x="880" y="236" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="888" y="254" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Accent Orange Light</text>
+  <text x="888" y="268" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#FB8C00</text>
+  <!-- Accent Teal Dark -->
+  <rect x="16" y="288" width="200" height="84" fill="#4ECDC4"/>
+  <rect x="16" y="372" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="24" y="390" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Accent Teal Dark</text>
+  <text x="24" y="404" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#4ECDC4</text>
+  <!-- Accent Teal Light -->
+  <rect x="232" y="288" width="200" height="84" fill="#00897B"/>
+  <rect x="232" y="372" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="240" y="390" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Accent Teal Light</text>
+  <text x="240" y="404" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#00897B</text>
+  <!-- Achievement Gold Dark -->
+  <rect x="448" y="288" width="200" height="84" fill="#FFD700"/>
+  <rect x="448" y="372" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="456" y="390" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Achievement Gold Dark</text>
+  <text x="456" y="404" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#FFD700</text>
+  <!-- Achievement Gold Light -->
+  <rect x="664" y="288" width="200" height="84" fill="#FFC107"/>
+  <rect x="664" y="372" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="672" y="390" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Achievement Gold Light</text>
+  <text x="672" y="404" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#FFC107</text>
+  <!-- Accent Blue -->
+  <rect x="880" y="288" width="200" height="84" fill="#2979FF"/>
+  <rect x="880" y="372" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="888" y="390" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Accent Blue</text>
+  <text x="888" y="404" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#2979FF</text>
+  <!-- Error (Red 600) -->
+  <rect x="16" y="424" width="200" height="84" fill="#E53935"/>
+  <rect x="16" y="508" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="24" y="526" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Error (Red 600)</text>
+  <text x="24" y="540" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#E53935</text>
+  <!-- Error Dark (Coral Red) -->
+  <rect x="232" y="424" width="200" height="84" fill="#FF6B6B"/>
+  <rect x="232" y="508" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="240" y="526" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Error Dark (Coral Red)</text>
+  <text x="240" y="540" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#FF6B6B</text>
+  <!-- Success (Green 600) -->
+  <rect x="448" y="424" width="200" height="84" fill="#43A047"/>
+  <rect x="448" y="508" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="456" y="526" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Success (Green 600)</text>
+  <text x="456" y="540" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#43A047</text>
+  <!-- Success Dark (Green 500) -->
+  <rect x="664" y="424" width="200" height="84" fill="#4CAF50"/>
+  <rect x="664" y="508" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="672" y="526" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Success Dark (Green 500)</text>
+  <text x="672" y="540" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#4CAF50</text>
+  <!-- Warning (Amber 700) -->
+  <rect x="880" y="424" width="200" height="84" fill="#FFA000"/>
+  <rect x="880" y="508" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="888" y="526" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Warning (Amber 700)</text>
+  <text x="888" y="540" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#FFA000</text>
+  <!-- Warning Dark (Amber 600) -->
+  <rect x="16" y="560" width="200" height="84" fill="#FFB300"/>
+  <rect x="16" y="644" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="24" y="662" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Warning Dark (Amber 600)</text>
+  <text x="24" y="676" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#FFB300</text>
+  <!-- Background Light -->
+  <rect x="232" y="560" width="200" height="84" fill="#F8F9FA"/>
+  <rect x="232" y="644" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="240" y="662" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Background Light</text>
+  <text x="240" y="676" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#F8F9FA</text>
+  <!-- Background Dark -->
+  <rect x="448" y="560" width="200" height="84" fill="#0A0A0A"/>
+  <rect x="448" y="644" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="456" y="662" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Background Dark</text>
+  <text x="456" y="676" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#0A0A0A</text>
+  <!-- Surface Light -->
+  <rect x="664" y="560" width="200" height="84" fill="#FFFFFF"/>
+  <rect x="664" y="644" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="672" y="662" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Surface Light</text>
+  <text x="672" y="676" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#FFFFFF</text>
+  <!-- Surface Dark -->
+  <rect x="880" y="560" width="200" height="84" fill="#1A1A1A"/>
+  <rect x="880" y="644" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="888" y="662" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Surface Dark</text>
+  <text x="888" y="676" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#1A1A1A</text>
+  <!-- Outline Light -->
+  <rect x="16" y="696" width="200" height="84" fill="#E0E0E0"/>
+  <rect x="16" y="780" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="24" y="798" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Outline Light</text>
+  <text x="24" y="812" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#E0E0E0</text>
+  <!-- Outline Dark -->
+  <rect x="232" y="696" width="200" height="84" fill="#424242"/>
+  <rect x="232" y="780" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="240" y="798" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Outline Dark</text>
+  <text x="240" y="812" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#424242</text>
+  <!-- Text Primary Light -->
+  <rect x="448" y="696" width="200" height="84" fill="#000000"/>
+  <rect x="448" y="780" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="456" y="798" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Text Primary Light</text>
+  <text x="456" y="812" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#000000</text>
+  <!-- Text Primary Dark -->
+  <rect x="664" y="696" width="200" height="84" fill="#FFFFFF"/>
+  <rect x="664" y="780" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="672" y="798" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Text Primary Dark</text>
+  <text x="672" y="812" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#FFFFFF</text>
+  <!-- Text Secondary Light -->
+  <rect x="880" y="696" width="200" height="84" fill="#757575"/>
+  <rect x="880" y="780" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="888" y="798" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Text Secondary Light</text>
+  <text x="888" y="812" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#757575</text>
+  <!-- Text Secondary Dark -->
+  <rect x="16" y="832" width="200" height="84" fill="#B0B0B0"/>
+  <rect x="16" y="916" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="24" y="934" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Text Secondary Dark</text>
+  <text x="24" y="948" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#B0B0B0</text>
+  <!-- Stat Teal -->
+  <rect x="232" y="832" width="200" height="84" fill="#4ECDC4"/>
+  <rect x="232" y="916" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="240" y="934" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Stat Teal</text>
+  <text x="240" y="948" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#4ECDC4</text>
+  <!-- Stat Coral -->
+  <rect x="448" y="832" width="200" height="84" fill="#FF6B6B"/>
+  <rect x="448" y="916" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="456" y="934" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Stat Coral</text>
+  <text x="456" y="948" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#FF6B6B</text>
+  <!-- Stat Green -->
+  <rect x="664" y="832" width="200" height="84" fill="#4CAF50"/>
+  <rect x="664" y="916" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="672" y="934" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Stat Green</text>
+  <text x="672" y="948" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#4CAF50</text>
+  <!-- Stat Amber -->
+  <rect x="880" y="832" width="200" height="84" fill="#FFB300"/>
+  <rect x="880" y="916" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="888" y="934" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Stat Amber</text>
+  <text x="888" y="948" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#FFB300</text>
+  <!-- Stat Purple -->
+  <rect x="16" y="968" width="200" height="84" fill="#00ACC1"/>
+  <rect x="16" y="1052" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="24" y="1070" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Stat Purple</text>
+  <text x="24" y="1084" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#00ACC1</text>
+  <!-- Stat Blue -->
+  <rect x="232" y="968" width="200" height="84" fill="#2979FF"/>
+  <rect x="232" y="1052" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="240" y="1070" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Stat Blue</text>
+  <text x="240" y="1084" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#2979FF</text>
+  <!-- Like Action -->
+  <rect x="448" y="968" width="200" height="84" fill="#E53935"/>
+  <rect x="448" y="1052" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="456" y="1070" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Like Action</text>
+  <text x="456" y="1084" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#E53935</text>
+  <!-- Positive Action -->
+  <rect x="664" y="968" width="200" height="84" fill="#43A047"/>
+  <rect x="664" y="1052" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="672" y="1070" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Positive Action</text>
+  <text x="672" y="1084" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#43A047</text>
+  <!-- Negative Action -->
+  <rect x="880" y="968" width="200" height="84" fill="#E53935"/>
+  <rect x="880" y="1052" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="888" y="1070" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Negative Action</text>
+  <text x="888" y="1084" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#E53935</text>
+  <!-- Locked Feature -->
+  <rect x="16" y="1104" width="200" height="84" fill="#FB8C00"/>
+  <rect x="16" y="1188" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="24" y="1206" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Locked Feature</text>
+  <text x="24" y="1220" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#FB8C00</text>
+  <!-- Artist Studio Red -->
+  <rect x="232" y="1104" width="200" height="84" fill="#E53935"/>
+  <rect x="232" y="1188" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="240" y="1206" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Artist Studio Red</text>
+  <text x="240" y="1220" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#E53935</text>
+  <!-- DAO Green -->
+  <rect x="448" y="1104" width="200" height="84" fill="#43A047"/>
+  <rect x="448" y="1188" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="456" y="1206" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">DAO Green</text>
+  <text x="456" y="1220" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#43A047</text>
+  <!-- Institution Blue -->
+  <rect x="664" y="1104" width="200" height="84" fill="#2979FF"/>
+  <rect x="664" y="1188" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="672" y="1206" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Institution Blue</text>
+  <text x="672" y="1220" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#2979FF</text>
+  <!-- Marketplace Orange -->
+  <rect x="880" y="1104" width="200" height="84" fill="#FB8C00"/>
+  <rect x="880" y="1188" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="888" y="1206" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Marketplace Orange</text>
+  <text x="888" y="1220" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#FB8C00</text>
+  <!-- Dark Background Top -->
+  <rect x="16" y="1240" width="200" height="84" fill="#05070A"/>
+  <rect x="16" y="1324" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="24" y="1342" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Dark Background Top</text>
+  <text x="24" y="1356" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#05070A</text>
+  <!-- Dark Background Bottom -->
+  <rect x="232" y="1240" width="200" height="84" fill="#0B1D33"/>
+  <rect x="232" y="1324" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="240" y="1342" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Dark Background Bottom</text>
+  <text x="240" y="1356" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#0B1D33</text>
+  <!-- Auth Dark Top -->
+  <rect x="448" y="1240" width="200" height="84" fill="#05070A"/>
+  <rect x="448" y="1324" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="456" y="1342" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Auth Dark Top</text>
+  <text x="456" y="1356" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#05070A</text>
+  <!-- Auth Dark Bottom -->
+  <rect x="664" y="1240" width="200" height="84" fill="#102A43"/>
+  <rect x="664" y="1324" width="200" height="36" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1"/>
+  <text x="672" y="1342" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#000000" text-anchor="start">Auth Dark Bottom</text>
+  <text x="672" y="1356" font-family="monospace" font-size="12" fill="#666666" text-anchor="start">#102A43</text>
+</svg>

@@ -1,0 +1,50 @@
+Name,Hex Code,ARGB,Light Contrast,Dark Contrast
+"Primary",#00838F,0xFF00838F,3.72,5.65
+"Primary Variant Light",#0097A7,0xFF0097A7,2.98,7.04
+"Primary Variant Dark",#00ACC1,0xFF00ACC1,2.42,8.69
+"Glass Light",#FFFFFF,0x99FFFFFF,1.00,21.00
+"Glass Dark",#1A1A1A,0xCC1A1A1A,14.56,1.44
+"Glass Border Light",#FFFFFF,0x40FFFFFF,1.00,21.00
+"Glass Border Dark",#000000,0x40000000,21.00,1.00
+"Secondary",#00838F,0xCC00838F,3.72,5.65
+"Accent Orange Dark",#FF9800,0xFFFF9800,1.96,10.70
+"Accent Orange Light",#FB8C00,0xFFFB8C00,2.14,9.82
+"Accent Teal Dark",#4ECDC4,0xFF4ECDC4,1.77,11.86
+"Accent Teal Light",#00897B,0xFF00897B,3.57,5.88
+"Achievement Gold Dark",#FFD700,0xFFFFD700,1.34,15.62
+"Achievement Gold Light",#FFC107,0xFFFFC107,1.53,13.73
+"Accent Blue",#2979FF,0xFF2979FF,3.37,6.23
+"Error (Red 600)",#E53935,0xFFE53935,3.78,5.56
+"Error Dark (Coral Red)",#FF6B6B,0xFFFF6B6B,2.49,8.44
+"Success (Green 600)",#43A047,0xFF43A047,2.79,7.52
+"Success Dark (Green 500)",#4CAF50,0xFF4CAF50,2.41,8.71
+"Warning (Amber 700)",#FFA000,0xFFFFA000,1.87,11.24
+"Warning Dark (Amber 600)",#FFB300,0xFFFFB300,1.66,12.62
+"Background Light",#F8F9FA,0xFFF8F9FA,1.04,20.10
+"Background Dark",#0A0A0A,0xFF0A0A0A,19.80,1.06
+"Surface Light",#FFFFFF,0xFFFFFFFF,1.00,21.00
+"Surface Dark",#1A1A1A,0xFF1A1A1A,14.56,1.44
+"Outline Light",#E0E0E0,0xFFE0E0E0,1.26,16.66
+"Outline Dark",#424242,0xFF424242,7.58,2.77
+"Text Primary Light",#000000,0xFF000000,21.00,1.00
+"Text Primary Dark",#FFFFFF,0xFFFFFFFF,1.00,21.00
+"Text Secondary Light",#757575,0xFF757575,3.66,5.74
+"Text Secondary Dark",#B0B0B0,0xFFB0B0B0,1.91,10.98
+"Stat Teal",#4ECDC4,0xFF4ECDC4,1.77,11.86
+"Stat Coral",#FF6B6B,0xFFFF6B6B,2.49,8.44
+"Stat Green",#4CAF50,0xFF4CAF50,2.41,8.71
+"Stat Amber",#FFB300,0xFFFFB300,1.66,12.62
+"Stat Purple",#00ACC1,0xFF00ACC1,2.42,8.69
+"Stat Blue",#2979FF,0xFF2979FF,3.37,6.23
+"Like Action",#E53935,0xFFE53935,3.78,5.56
+"Positive Action",#43A047,0xFF43A047,2.79,7.52
+"Negative Action",#E53935,0xFFE53935,3.78,5.56
+"Locked Feature",#FB8C00,0xFFFB8C00,2.14,9.82
+"Artist Studio Red",#E53935,0xFFE53935,3.78,5.56
+"DAO Green",#43A047,0xFF43A047,2.79,7.52
+"Institution Blue",#2979FF,0xFF2979FF,3.37,6.23
+"Marketplace Orange",#FB8C00,0xFFFB8C00,2.14,9.82
+"Dark Background Top",#05070A,0xFF05070A,20.17,1.04
+"Dark Background Bottom",#0B1D33,0xFF0B1D33,14.12,1.49
+"Auth Dark Top",#05070A,0xFF05070A,20.17,1.04
+"Auth Dark Bottom",#102A43,0xFF102A43,11.64,1.80
