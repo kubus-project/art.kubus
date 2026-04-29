@@ -149,14 +149,24 @@ class AvailabilityOperatorProvider extends ChangeNotifier {
     required String token,
     required String walletAddress,
   }) {
+    final apiBaseUrl = AppConfig.baseApiUrl.trim().replaceAll(RegExp(r'/+$'), '');
     return [
-      'KUBUS_API_BASE_URL=${AppConfig.baseApiUrl}',
+      'KUBUS_API_BASE_URL=$apiBaseUrl',
       'KUBUS_OPERATOR_TOKEN=$token',
       'KUBUS_OPERATOR_WALLET=$walletAddress',
       'KUBUS_NODE_LABEL=kubus-availability-node-1',
-      'KUBUS_NODE_ENDPOINT_URL=http://localhost:8080',
+      'KUBUS_NODE_ENDPOINT_URL=http://127.0.0.1:8080',
       'IPFS_RPC_URL=http://kubo:5001',
       'IPFS_GATEWAY_URL=http://127.0.0.1:8080',
+      'LOCAL_STATE_PATH=/var/lib/kubus-node/state.json',
+      'LOG_LEVEL=info',
+      'HEARTBEAT_INTERVAL_MS=60000',
+      'CID_SYNC_INTERVAL_MS=300000',
+      'COMMITMENT_INTERVAL_MS=900000',
+      'STATUS_INTERVAL_MS=120000',
+      'MAX_PINNED_CIDS=100',
+      'CID_CLASS_FILTERS=hot,warm',
+      'NODE_ENV=production',
     ].join('\n');
   }
 

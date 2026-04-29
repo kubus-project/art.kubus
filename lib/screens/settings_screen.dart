@@ -1351,8 +1351,8 @@ class _SettingsScreenState extends State<SettingsScreen>
         ),
         if (AppConfig.isFeatureEnabled('availabilityNodes'))
           _buildSettingsTile(
-            _availabilityNodeTileTitle(context),
-            _availabilityNodeTileSubtitle(context),
+            _availabilityNodeNavTitle(context),
+            _availabilityNodeNavSubtitle(context),
             Icons.dns_outlined,
             onTap: () =>
                 Navigator.of(context).pushNamed('/wallet/availability-node'),
@@ -1394,12 +1394,12 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  String _availabilityNodeTileTitle(BuildContext context) {
-    return AppLocalizations.of(context)!.availabilityNodeTitle;
+  String _availabilityNodeNavTitle(BuildContext context) {
+    return AppLocalizations.of(context)!.availabilityNodeNavTitle;
   }
 
-  String _availabilityNodeTileSubtitle(BuildContext context) {
-    return AppLocalizations.of(context)!.availabilityNodeSubtitle;
+  String _availabilityNodeNavSubtitle(BuildContext context) {
+    return AppLocalizations.of(context)!.availabilityNodeNavSubtitle;
   }
 
   Widget _buildSecuritySection(AppLocalizations l10n) {

@@ -850,8 +850,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                     if (AppConfig.isFeatureEnabled('availabilityNodes')) ...[
                       const Divider(height: 32),
                       _buildSettingsRow(
-                        _availabilityNodeTileTitle(context),
-                        _availabilityNodeTileSubtitle(context),
+                        _availabilityNodeNavTitle(context),
+                        _availabilityNodeNavSubtitle(context),
                         Icons.dns_outlined,
                         onTap: () => Navigator.of(context)
                             .pushNamed('/wallet/availability-node'),
@@ -899,12 +899,12 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     );
   }
 
-  String _availabilityNodeTileTitle(BuildContext context) {
-    return AppLocalizations.of(context)!.availabilityNodeTitle;
+  String _availabilityNodeNavTitle(BuildContext context) {
+    return AppLocalizations.of(context)!.availabilityNodeNavTitle;
   }
 
-  String _availabilityNodeTileSubtitle(BuildContext context) {
-    return AppLocalizations.of(context)!.availabilityNodeSubtitle;
+  String _availabilityNodeNavSubtitle(BuildContext context) {
+    return AppLocalizations.of(context)!.availabilityNodeNavSubtitle;
   }
 
   void _showRecoveryWarning() {

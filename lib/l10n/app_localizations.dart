@@ -10511,6 +10511,18 @@ abstract class AppLocalizations {
   /// **'Availability Node'**
   String get availabilityNodeTitle;
 
+  /// No description provided for @availabilityNodeNavTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Availability Node'**
+  String get availabilityNodeNavTitle;
+
+  /// No description provided for @availabilityNodeNavSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create and manage scoped node operator tokens.'**
+  String get availabilityNodeNavSubtitle;
+
   /// No description provided for @availabilityNodeSubtitle.
   ///
   /// In en, this message translates to:
@@ -10594,6 +10606,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'expires'**
   String get availabilityNodeExpiresLabel;
+
+  /// No description provided for @availabilityNodeLastUsedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'last used'**
+  String get availabilityNodeLastUsedLabel;
 
   /// No description provided for @availabilityNodeCreatedTitle.
   ///

@@ -5441,6 +5441,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get availabilityNodeTitle => 'Availability Node';
 
   @override
+  String get availabilityNodeNavTitle => 'Availability Node';
+
+  @override
+  String get availabilityNodeNavSubtitle => 'Create and manage scoped node operator tokens.';
+
+  @override
   String get availabilityNodeSubtitle => 'Create and manage scoped node operator tokens.';
 
   @override
@@ -5483,6 +5489,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get availabilityNodeExpiresLabel => 'expires';
+
+  @override
+  String get availabilityNodeLastUsedLabel => 'last used';
 
   @override
   String get availabilityNodeCreatedTitle => 'Operator token created';

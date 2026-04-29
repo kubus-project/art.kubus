@@ -137,8 +137,11 @@ class _AvailabilityNodeOperatorBodyState
                     const SizedBox(height: KubusSpacing.md),
                     _CodeBlock(text: created.token),
                     const SizedBox(height: KubusSpacing.md),
-                    Text(l10n.availabilityNodeEnvSnippetLabel),
-                    const SizedBox(height: KubusSpacing.sm),
+                    Text(
+                      l10n.availabilityNodeEnvSnippetLabel,
+                      style: Theme.of(dialogContext).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: KubusSpacing.md),
                     _CodeBlock(text: snippet),
                   ],
                 ),
@@ -290,7 +293,7 @@ class _AvailabilityNodeOperatorBodyState
                       ),
                       title: Text(token.label.isEmpty ? token.tokenPrefix : token.label),
                       subtitle: Text(
-                        '${token.tokenPrefix} - ${token.status} - ${l10n.availabilityNodeExpiresLabel}: ${_formatDate(token.expiresAt)}',
+                        _buildTokenSubtitle(token),
                       ),
                       trailing: token.status == 'active'
                           ? IconButton(
@@ -314,6 +317,20 @@ class _AvailabilityNodeOperatorBodyState
   String _formatDate(DateTime? date) {
     if (date == null) return '-';
     return date.toLocal().toIso8601String().split('.').first;
+  }
+
+  String _buildTokenSubtitle(AvailabilityOperatorTokenRecord token) {
+    final parts = <String>[
+      token.tokenPrefix,
+      token.status,
+      '${l10n.availabilityNodeExpiresLabel}: ${_formatDate(token.expiresAt)}',
+    ];
+    if (token.lastUsedAt != null) {
+      parts.add(
+        '${l10n.availabilityNodeLastUsedLabel}: ${_formatDate(token.lastUsedAt)}',
+      );
+    }
+    return parts.join(' - ');
   }
 }
 
@@ -339,6 +356,14 @@ class _InfoPanel extends StatelessWidget {
             Text('${l10n.availabilityNodeWalletLabel}: ${wallet.isEmpty ? '-' : wallet}'),
             const SizedBox(height: KubusSpacing.sm),
             Text(l10n.availabilityNodeSecurityNote),
+            if (wallet.isEmpty) ...[
+              const SizedBox(height: KubusSpacing.md),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).pushNamed('/connect-wallet'),
+                icon: const Icon(Icons.account_balance_wallet_outlined),
+                label: Text(l10n.authConnectWalletButton),
+              ),
+            ],
           ],
         ),
       ),

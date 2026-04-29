@@ -1458,8 +1458,8 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             enabled: canTransact,
           ),
         _buildQuickActionTile(
-          l10n.availabilityNodeTitle,
-          l10n.availabilityNodeSubtitle,
+          l10n.availabilityNodeNavTitle,
+          l10n.availabilityNodeNavSubtitle,
           Icons.dns_outlined,
           roles.statTeal,
           () => Navigator.of(context).pushNamed('/wallet/availability-node'),

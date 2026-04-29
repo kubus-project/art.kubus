@@ -700,8 +700,8 @@ class _WalletHomeState extends State<WalletHome> {
           SizedBox(
             width: actionWidth,
             child: KubusWalletActionCard(
-              title: l10n.availabilityNodeTitle,
-              subtitle: l10n.availabilityNodeSubtitle,
+              title: l10n.availabilityNodeNavTitle,
+              subtitle: l10n.availabilityNodeNavSubtitle,
               icon: Icons.dns_outlined,
               color: roles.statTeal,
               onTap: () =>

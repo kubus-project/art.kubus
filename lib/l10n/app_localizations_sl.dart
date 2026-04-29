@@ -5455,6 +5455,12 @@ class AppLocalizationsSl extends AppLocalizations {
   String get availabilityNodeTitle => 'Vozlišče razpoložljivosti';
 
   @override
+  String get availabilityNodeNavTitle => 'Kubus vozlišče';
+
+  @override
+  String get availabilityNodeNavSubtitle => 'Ustvari in upravljaj operatorske tokene za svoje vozlišče.';
+
+  @override
   String get availabilityNodeSubtitle => 'Ustvari in upravljaj omejene operatorske žetone za vozlišče.';
 
   @override
@@ -5497,6 +5503,9 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get availabilityNodeExpiresLabel => 'poteče';
+
+  @override
+  String get availabilityNodeLastUsedLabel => 'nazadnje uporabljen';
 
   @override
   String get availabilityNodeCreatedTitle => 'Operatorski žeton je ustvarjen';
