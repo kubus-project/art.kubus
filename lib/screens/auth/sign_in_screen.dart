@@ -7,15 +7,13 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/config.dart';
-import '../../models/user_persona.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/security_gate_provider.dart';
 import '../../providers/wallet_provider.dart';
-import '../../screens/onboarding/onboarding_flow_screen.dart';
+import '../../services/auth_redirect_controller.dart';
 import '../../services/auth_onboarding_service.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/google_auth_service.dart';
-import '../../services/onboarding_state_service.dart';
 import '../../services/security/post_auth_security_setup_service.dart';
 import '../../services/telemetry/telemetry_service.dart';
 import '../../services/wallet_session_sync_service.dart';
@@ -28,10 +26,8 @@ import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/auth_google_wallet.dart';
 import '../../utils/keyboard_inset_resolver.dart';
-import '../../utils/wallet_backup_status.dart';
 import '../../utils/wallet_utils.dart';
 import '../web3/wallet/connectwallet_screen.dart';
-import '../desktop/desktop_shell.dart';
 import '../community/profile_edit_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../widgets/wallet_backup_prompts.dart';
@@ -202,75 +198,17 @@ class _SignInScreenState extends State<SignInScreen> {
   }) async {
     if (widget.embedded || widget.onAuthSuccess != null) return false;
 
-    final normalizedWalletAddress = (walletAddress ?? '').trim();
-    final flowScopeKey = OnboardingStateService.buildAuthOnboardingScopeKey(
-      walletAddress:
-          normalizedWalletAddress.isEmpty ? null : normalizedWalletAddress,
+    return const AuthRedirectController().routeAfterAuth(
+      context: context,
+      prefs: prefs,
+      profileProvider: profileProvider,
+      walletProvider: walletProvider,
+      walletAddress: walletAddress,
       userId: (prefs.getString('user_id') ?? '').trim(),
-    );
-    final requiresWalletBackup =
-        AppConfig.isFeatureEnabled('walletBackupOnboarding')
-            ? (() async {
-                final backupStatus = await WalletBackupStatusResolver.resolve(
-                  walletProvider: walletProvider,
-                  walletAddress: walletAddress,
-                  refreshRemote: true,
-                );
-                final recoveryPhraseComplete =
-                    !backupStatus.mnemonicBackupRequired;
-                final encryptedBackupComplete =
-                    !AppConfig.isFeatureEnabled('encryptedWalletBackup') ||
-                        backupStatus
-                            .encryptedBackupRequirementSatisfiedForGating;
-                return !(recoveryPhraseComplete && encryptedBackupComplete);
-              })()
-            : Future<bool>.value(false);
-    final requiresWalletBackupResolved = await requiresWalletBackup;
-    final resumeState =
-        await AuthOnboardingService.resolveStructuredOnboardingResume(
-      prefs: prefs,
-      hasPendingAuthOnboarding:
-          OnboardingStateService.hasPendingAuthOnboardingSync(
-        prefs,
-        scopeKey: flowScopeKey,
-      ),
-      hasAuthenticatedSession: true,
-      hasHydratedProfile: profileProvider.hasHydratedProfile,
-      requiresWalletBackup: requiresWalletBackupResolved,
-      heuristicNextStepId: profileProvider.nextStructuredOnboardingStepId,
-      persona: profileProvider.userPersona?.storageValue,
       payload: payload,
-      flowScopeKey: flowScopeKey,
+      redirectRoute: widget.redirectRoute,
+      redirectArguments: widget.redirectArguments,
     );
-    final nextStepId = resumeState.nextStepId;
-
-    if (!resumeState.requiresStructuredOnboarding ||
-        nextStepId == null ||
-        nextStepId.isEmpty) {
-      await OnboardingStateService.clearPendingAuthOnboarding(
-        prefs: prefs,
-        scopeKey: flowScopeKey,
-      );
-      return false;
-    }
-
-    await OnboardingStateService.markAuthOnboardingPending(
-      prefs: prefs,
-      scopeKey: flowScopeKey,
-    );
-    if (!mounted) return true;
-
-    final isDesktop = DesktopBreakpoints.isDesktop(context);
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => OnboardingFlowScreen(
-          forceDesktop: isDesktop,
-          initialStepId: nextStepId,
-        ),
-        settings: const RouteSettings(name: '/onboarding'),
-      ),
-    );
-    return true;
   }
 
   Future<void> _handleAuthSuccess(
@@ -1046,7 +984,8 @@ class _SignInScreenState extends State<SignInScreen> {
                 color: colorScheme.outlineVariant.withValues(alpha: 0.2),
               ),
             ),
-            padding: EdgeInsets.all(compactLayout ? KubusSpacing.sm : KubusSpacing.md),
+            padding: EdgeInsets.all(
+                compactLayout ? KubusSpacing.sm : KubusSpacing.md),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -1070,12 +1009,14 @@ class _SignInScreenState extends State<SignInScreen> {
                         _setGoogleAuthDiagnostics('web_auth_event');
                         try {
                           unawaited(
-                            TelemetryService().trackSignInAttempt(method: 'google'),
+                            TelemetryService()
+                                .trackSignInAttempt(method: 'google'),
                           );
                           await _completeGoogleSignIn(googleResult);
                           _setGoogleAuthDiagnostics('success');
                           unawaited(
-                            TelemetryService().trackSignInSuccess(method: 'google'),
+                            TelemetryService()
+                                .trackSignInSuccess(method: 'google'),
                           );
                         } catch (error) {
                           _setGoogleAuthDiagnostics(
@@ -1090,7 +1031,8 @@ class _SignInScreenState extends State<SignInScreen> {
                           );
                           if (mounted) {
                             ScaffoldMessenger.of(context).showKubusSnackBar(
-                              SnackBar(content: Text(l10n.authGoogleSignInFailed)),
+                              SnackBar(
+                                  content: Text(l10n.authGoogleSignInFailed)),
                             );
                           }
                         } finally {

@@ -24,6 +24,43 @@ class ArtworkDraftGalleryItem {
   });
 }
 
+class DraftCollaborationInvite {
+  final String invitedIdentifier;
+  final String? displayName;
+  final String? username;
+  final String? avatarUrl;
+  final String role;
+
+  const DraftCollaborationInvite({
+    required this.invitedIdentifier,
+    this.displayName,
+    this.username,
+    this.avatarUrl,
+    required this.role,
+  });
+
+  String get identityKey {
+    final normalized = invitedIdentifier.trim().toLowerCase();
+    return normalized.startsWith('@') ? normalized.substring(1) : normalized;
+  }
+
+  DraftCollaborationInvite copyWith({
+    String? invitedIdentifier,
+    String? displayName,
+    String? username,
+    String? avatarUrl,
+    String? role,
+  }) {
+    return DraftCollaborationInvite(
+      invitedIdentifier: invitedIdentifier ?? this.invitedIdentifier,
+      displayName: displayName ?? this.displayName,
+      username: username ?? this.username,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      role: role ?? this.role,
+    );
+  }
+}
+
 class ArtworkDraftState {
   String title = '';
   String description = '';
@@ -71,6 +108,9 @@ class ArtworkDraftState {
   bool isSubmitting = false;
   double uploadProgress = 0;
   String? submitError;
+
+  final List<DraftCollaborationInvite> collaborationInvites =
+      <DraftCollaborationInvite>[];
 }
 
 class ArtworkDraftsProvider extends ChangeNotifier {
@@ -79,7 +119,8 @@ class ArtworkDraftsProvider extends ChangeNotifier {
   final Map<String, Map<String, dynamic>> _feeCache = {};
   final Map<String, DateTime> _feeCacheUpdatedAt = {};
 
-  ArtworkDraftsProvider({BackendApiService? api}) : _api = api ?? BackendApiService();
+  ArtworkDraftsProvider({BackendApiService? api})
+      : _api = api ?? BackendApiService();
 
   String createDraft() {
     final now = DateTime.now().microsecondsSinceEpoch;
@@ -232,17 +273,26 @@ class ArtworkDraftsProvider extends ChangeNotifier {
     if (poapTitle != null) draft.poapTitle = poapTitle;
     if (poapDescription != null) draft.poapDescription = poapDescription;
     if (poapClaimDurationDays != null) {
-      draft.poapClaimDurationDays = poapClaimDurationDays < 1 ? 1 : poapClaimDurationDays;
+      draft.poapClaimDurationDays =
+          poapClaimDurationDays < 1 ? 1 : poapClaimDurationDays;
     }
     if (poapRewardAmount != null) draft.poapRewardAmount = poapRewardAmount;
     draft.poapValidFrom = poapValidFrom ?? draft.poapValidFrom;
     draft.poapValidTo = poapValidTo ?? draft.poapValidTo;
     if (arEnabled != null) draft.arEnabled = arEnabled;
-    if (mintNftAfterPublish != null) draft.mintNftAfterPublish = mintNftAfterPublish;
+    if (mintNftAfterPublish != null) {
+      draft.mintNftAfterPublish = mintNftAfterPublish;
+    }
     if (nftSeriesName != null) draft.nftSeriesName = nftSeriesName;
-    if (nftSeriesDescription != null) draft.nftSeriesDescription = nftSeriesDescription;
-    if (nftTotalSupply != null && nftTotalSupply >= 1) draft.nftTotalSupply = nftTotalSupply;
-    if (nftMintPrice != null && nftMintPrice >= 0) draft.nftMintPrice = nftMintPrice;
+    if (nftSeriesDescription != null) {
+      draft.nftSeriesDescription = nftSeriesDescription;
+    }
+    if (nftTotalSupply != null && nftTotalSupply >= 1) {
+      draft.nftTotalSupply = nftTotalSupply;
+    }
+    if (nftMintPrice != null && nftMintPrice >= 0) {
+      draft.nftMintPrice = nftMintPrice;
+    }
     if (nftRoyaltyPercent != null) {
       draft.nftRoyaltyPercent = nftRoyaltyPercent.clamp(0, 100).toDouble();
     }
@@ -275,13 +325,89 @@ class ArtworkDraftsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void addDraftCollaborationInvite({
+    required String draftId,
+    required DraftCollaborationInvite invite,
+  }) {
+    final draft = _drafts[draftId];
+    if (draft == null) return;
+    final identityKey = invite.identityKey;
+    if (identityKey.isEmpty) return;
+    final role = _normalizeCollabRole(invite.role);
+    final next = invite.copyWith(
+      invitedIdentifier:
+          invite.invitedIdentifier.trim().replaceFirst(RegExp(r'^@+'), ''),
+      role: role,
+    );
+    final existingIndex = draft.collaborationInvites
+        .indexWhere((item) => item.identityKey == identityKey);
+    if (existingIndex >= 0) {
+      draft.collaborationInvites[existingIndex] = next;
+    } else {
+      draft.collaborationInvites.add(next);
+    }
+    notifyListeners();
+  }
+
+  void updateDraftCollaborationInviteRole({
+    required String draftId,
+    required String invitedIdentifier,
+    required String role,
+  }) {
+    final draft = _drafts[draftId];
+    if (draft == null) return;
+    final identityKey = invitedIdentifier.trim().toLowerCase();
+    if (identityKey.isEmpty) return;
+    final index = draft.collaborationInvites
+        .indexWhere((item) => item.identityKey == identityKey);
+    if (index < 0) return;
+    draft.collaborationInvites[index] = draft.collaborationInvites[index]
+        .copyWith(role: _normalizeCollabRole(role));
+    notifyListeners();
+  }
+
+  void removeDraftCollaborationInvite({
+    required String draftId,
+    required String invitedIdentifier,
+  }) {
+    final draft = _drafts[draftId];
+    if (draft == null) return;
+    final identityKey = invitedIdentifier.trim().toLowerCase();
+    if (identityKey.isEmpty) return;
+    draft.collaborationInvites
+        .removeWhere((item) => item.identityKey == identityKey);
+    notifyListeners();
+  }
+
+  void clearDraftCollaborationInvites(String draftId) {
+    final draft = _drafts[draftId];
+    if (draft == null || draft.collaborationInvites.isEmpty) return;
+    draft.collaborationInvites.clear();
+    notifyListeners();
+  }
+
+  String _normalizeCollabRole(String raw) {
+    switch (raw.trim().toLowerCase()) {
+      case 'admin':
+      case 'publisher':
+      case 'editor':
+      case 'curator':
+      case 'viewer':
+        return raw.trim().toLowerCase();
+      default:
+        return 'viewer';
+    }
+  }
+
   Future<Map<String, dynamic>?> estimatePoapFees(ArtworkPoapMode mode) async {
     if (mode == ArtworkPoapMode.none) return null;
-    final action = mode == ArtworkPoapMode.kubusPoap ? 'kubus_poap_create' : 'poap_claim';
+    final action =
+        mode == ArtworkPoapMode.kubusPoap ? 'kubus_poap_create' : 'poap_claim';
     final cacheKey = 'fees:none:$action';
     final now = DateTime.now();
     final cachedAt = _feeCacheUpdatedAt[cacheKey];
-    if (cachedAt != null && now.difference(cachedAt) < const Duration(minutes: 10)) {
+    if (cachedAt != null &&
+        now.difference(cachedAt) < const Duration(minutes: 10)) {
       return _feeCache[cacheKey];
     }
 
@@ -331,19 +457,21 @@ class ArtworkDraftsProvider extends ChangeNotifier {
       draft.uploadProgress = 0.05;
       notifyListeners();
 
-      final coverUpload = await _api.uploadFile(
-        fileBytes: coverBytes,
-        fileName: draft.coverFileName ?? 'artwork_cover.png',
-        fileType: 'image',
-        metadata: {
-          'source': 'artwork_creator',
-          'folder': 'artworks/covers',
-        },
-        walletAddress: wallet,
-      ).timeout(const Duration(minutes: 3));
+      final coverUpload = await _api
+          .uploadFile(
+            fileBytes: coverBytes,
+            fileName: draft.coverFileName ?? 'artwork_cover.png',
+            fileType: 'image',
+            metadata: {
+              'source': 'artwork_creator',
+              'folder': 'artworks/covers',
+            },
+            walletAddress: wallet,
+          )
+          .timeout(const Duration(minutes: 3));
 
-      final coverUrl = coverUpload['uploadedUrl'] as String?
-          ?? coverUpload['data']?['url'] as String?;
+      final coverUrl = coverUpload['uploadedUrl'] as String? ??
+          coverUpload['data']?['url'] as String?;
       if (coverUrl == null || coverUrl.trim().isEmpty) {
         draft.submitError = 'Failed to upload cover image.';
         return null;
@@ -358,22 +486,25 @@ class ArtworkDraftsProvider extends ChangeNotifier {
         draft.uploadProgress = baseProgress;
         notifyListeners();
 
-        final uploaded = await _api.uploadFile(
-          fileBytes: item.bytes,
-          fileName: item.fileName,
-          fileType: 'image',
-          metadata: {
-            'source': 'artwork_creator',
-            'folder': 'artworks/gallery',
-            'index': i.toString(),
-          },
-          walletAddress: wallet,
-        ).timeout(const Duration(minutes: 3));
+        final uploaded = await _api
+            .uploadFile(
+              fileBytes: item.bytes,
+              fileName: item.fileName,
+              fileType: 'image',
+              metadata: {
+                'source': 'artwork_creator',
+                'folder': 'artworks/gallery',
+                'index': i.toString(),
+              },
+              walletAddress: wallet,
+            )
+            .timeout(const Duration(minutes: 3));
 
-        final url = uploaded['uploadedUrl'] as String?
-            ?? uploaded['data']?['url'] as String?;
+        final url = uploaded['uploadedUrl'] as String? ??
+            uploaded['data']?['url'] as String?;
         if (url == null || url.trim().isEmpty) {
-          draft.submitError = 'Failed to upload a gallery image. Please try again.';
+          draft.submitError =
+              'Failed to upload a gallery image. Please try again.';
           return null;
         }
         galleryUrls.add(url);
@@ -414,7 +545,8 @@ class ArtworkDraftsProvider extends ChangeNotifier {
         }
       }
 
-      if (poapMode == ArtworkPoapMode.kubusPoap && !AppConfig.isFeatureEnabled('attendance')) {
+      if (poapMode == ArtworkPoapMode.kubusPoap &&
+          !AppConfig.isFeatureEnabled('attendance')) {
         draft.submitError = 'Attendance rewards are currently unavailable.';
         return null;
       }
@@ -423,7 +555,8 @@ class ArtworkDraftsProvider extends ChangeNotifier {
       final lng = draft.locationEnabled ? draft.longitude : null;
       if (draft.locationEnabled && (lat != null || lng != null)) {
         if (lat == null || lng == null) {
-          draft.submitError = 'Please provide both latitude and longitude (or leave both empty).';
+          draft.submitError =
+              'Please provide both latitude and longitude (or leave both empty).';
           return null;
         }
         if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
@@ -433,7 +566,9 @@ class ArtworkDraftsProvider extends ChangeNotifier {
       }
 
       final locationName = draft.locationEnabled
-          ? (draft.locationName?.trim().isNotEmpty == true ? draft.locationName!.trim() : null)
+          ? (draft.locationName?.trim().isNotEmpty == true
+              ? draft.locationName!.trim()
+              : null)
           : null;
 
       String? poapImageUrl;
@@ -443,20 +578,23 @@ class ArtworkDraftsProvider extends ChangeNotifier {
         if (poapBytes != null && poapBytes.isNotEmpty) {
           draft.uploadProgress = max(draft.uploadProgress, 0.90);
           notifyListeners();
-          final uploaded = await _api.uploadFile(
-            fileBytes: poapBytes,
-            fileName: draft.poapImageFileName ?? 'poap_badge.png',
-            fileType: 'image',
-            metadata: {
-              'source': 'artwork_creator',
-              'folder': 'poap/images',
-            },
-            walletAddress: wallet,
-          ).timeout(const Duration(minutes: 3));
-          poapImageUrl = uploaded['uploadedUrl'] as String?
-              ?? uploaded['data']?['url'] as String?;
+          final uploaded = await _api
+              .uploadFile(
+                fileBytes: poapBytes,
+                fileName: draft.poapImageFileName ?? 'poap_badge.png',
+                fileType: 'image',
+                metadata: {
+                  'source': 'artwork_creator',
+                  'folder': 'poap/images',
+                },
+                walletAddress: wallet,
+              )
+              .timeout(const Duration(minutes: 3));
+          poapImageUrl = uploaded['uploadedUrl'] as String? ??
+              uploaded['data']?['url'] as String?;
           if (poapImageUrl == null || poapImageUrl.trim().isEmpty) {
-            draft.submitError = 'Failed to upload POAP image. Please try again.';
+            draft.submitError =
+                'Failed to upload POAP image. Please try again.';
             return null;
           }
         } else {
@@ -472,8 +610,11 @@ class ArtworkDraftsProvider extends ChangeNotifier {
         poapValidTo ??= poapValidFrom.add(Duration(days: claimDays));
       }
 
-      final poapTitle = draft.poapTitle.trim().isNotEmpty ? draft.poapTitle.trim() : title;
-      final poapDescription = draft.poapDescription.trim().isNotEmpty ? draft.poapDescription.trim() : description;
+      final poapTitle =
+          draft.poapTitle.trim().isNotEmpty ? draft.poapTitle.trim() : title;
+      final poapDescription = draft.poapDescription.trim().isNotEmpty
+          ? draft.poapDescription.trim()
+          : description;
 
       draft.uploadProgress = max(draft.uploadProgress, 0.95);
       notifyListeners();
@@ -492,8 +633,10 @@ class ArtworkDraftsProvider extends ChangeNotifier {
         // AR model is managed separately; do not attach model here.
         poapMode: poapMode,
         poapEnabled: poapMode != ArtworkPoapMode.none,
-        poapEventId: poapMode == ArtworkPoapMode.existingPoap ? poapEventId : null,
-        poapClaimUrl: poapMode == ArtworkPoapMode.existingPoap ? poapClaimUrl : null,
+        poapEventId:
+            poapMode == ArtworkPoapMode.existingPoap ? poapEventId : null,
+        poapClaimUrl:
+            poapMode == ArtworkPoapMode.existingPoap ? poapClaimUrl : null,
         poapTitle: wantsPoap ? poapTitle : null,
         poapDescription: wantsPoap ? poapDescription : null,
         poapImageUrl: poapImageUrl,

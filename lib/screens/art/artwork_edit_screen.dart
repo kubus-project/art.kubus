@@ -12,14 +12,14 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../config/config.dart';
 import '../../providers/artwork_provider.dart';
 import '../../providers/app_refresh_provider.dart';
+import '../../providers/collab_provider.dart';
 import '../../providers/profile_provider.dart';
-import '../../providers/wallet_provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/artwork_navigation.dart';
-import '../../utils/wallet_action_guard.dart';
+import '../../utils/wallet_utils.dart';
 import '../../widgets/creator/creator_kit.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/common/subject_options_sheet.dart';
@@ -29,7 +29,6 @@ import '../../widgets/glass_components.dart';
 import '../desktop/desktop_shell.dart';
 import '../web3/artist/artwork_ar_manager_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
- 
 
 class ArtworkEditScreen extends StatefulWidget {
   final String artworkId;
@@ -72,6 +71,10 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
 
   List<SubjectOptionsAction> _buildSubjectActions(Artwork artwork) {
     final l10n = AppLocalizations.of(context)!;
+    final myRole = _resolveCurrentCollabRole(artwork);
+    final canEdit = _canEditArtwork(myRole);
+    final canPublish = _canPublishArtwork(myRole);
+    final canDelete = _canDeleteArtwork(myRole);
     return [
       SubjectOptionsAction(
         id: 'open',
@@ -102,14 +105,15 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
           );
         },
       ),
-      SubjectOptionsAction(
-        id: artwork.isPublic ? 'unpublish' : 'publish',
-        icon: artwork.isPublic
-            ? Icons.visibility_off_outlined
-            : Icons.publish_outlined,
-        label: artwork.isPublic ? l10n.commonUnpublish : l10n.commonPublish,
-        onSelected: () => _togglePublication(artwork),
-      ),
+      if (canPublish)
+        SubjectOptionsAction(
+          id: artwork.isPublic ? 'unpublish' : 'publish',
+          icon: artwork.isPublic
+              ? Icons.visibility_off_outlined
+              : Icons.publish_outlined,
+          label: artwork.isPublic ? l10n.commonUnpublish : l10n.commonPublish,
+          onSelected: () => _togglePublication(artwork),
+        ),
       if (AppConfig.enableARViewer)
         SubjectOptionsAction(
           id: 'ar_manager',
@@ -117,15 +121,66 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
           label: l10n.commonViewInAr,
           onSelected: () => _openArManager(artwork),
         ),
-      SubjectOptionsAction(
-        id: 'delete',
-        icon: Icons.delete_outline,
-        label: l10n.commonDelete,
-        isDestructive: true,
-        onSelected: () => _deleteArtwork(artwork),
-      ),
+      if (canEdit && canDelete)
+        SubjectOptionsAction(
+          id: 'delete',
+          icon: Icons.delete_outline,
+          label: l10n.commonDelete,
+          isDestructive: true,
+          onSelected: () => _deleteArtwork(artwork),
+        ),
     ];
   }
+
+  int? _roleRank(String? role) {
+    switch ((role ?? '').trim().toLowerCase()) {
+      case 'owner':
+      case 'creator':
+      case 'author':
+        return 5;
+      case 'admin':
+        return 4;
+      case 'publisher':
+        return 3;
+      case 'editor':
+        return 2;
+      case 'curator':
+        return 1;
+      case 'viewer':
+        return 0;
+      default:
+        return null;
+    }
+  }
+
+  String? _resolveCurrentCollabRole(Artwork artwork) {
+    final profile = context.read<ProfileProvider>();
+    final viewerWallet = WalletUtils.canonical(
+      profile.currentUser?.walletAddress,
+    );
+    if (viewerWallet.isNotEmpty &&
+        WalletUtils.equals(viewerWallet, artwork.walletAddress)) {
+      return 'owner';
+    }
+
+    final members =
+        context.read<CollabProvider>().collaboratorsFor('artwork', artwork.id);
+    for (final member in members) {
+      final memberWallet = WalletUtils.canonical(member.user?.walletAddress);
+      if (memberWallet.isNotEmpty &&
+          WalletUtils.equals(memberWallet, viewerWallet)) {
+        return member.role;
+      }
+      if (WalletUtils.equals(member.userId, viewerWallet)) {
+        return member.role;
+      }
+    }
+    return null;
+  }
+
+  bool _canEditArtwork(String? role) => (_roleRank(role) ?? -1) >= 2;
+  bool _canPublishArtwork(String? role) => (_roleRank(role) ?? -1) >= 3;
+  bool _canDeleteArtwork(String? role) => (_roleRank(role) ?? -1) >= 4;
 
   Future<void> _openArManager(Artwork artwork) async {
     final shellScope = DesktopShellScope.of(context);
@@ -151,14 +206,24 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final provider = context.read<ArtworkProvider>();
     final profileProvider = context.read<ProfileProvider>();
-    final walletProvider = context.read<WalletProvider>();
-
-    final canProceed = await WalletActionGuard.ensureSignerAccess(
-      context: context,
-      profileProvider: profileProvider,
-      walletProvider: walletProvider,
-    );
-    if (!mounted || !canProceed) return;
+    if (profileProvider.isSignedIn != true) {
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.communityCommentAuthRequiredToast)),
+      );
+      return;
+    }
+    if (!_canPublishArtwork(_resolveCurrentCollabRole(artwork))) {
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.commonActionFailedToast)),
+      );
+      return;
+    }
+    if (!_canEditArtwork(_resolveCurrentCollabRole(artwork))) {
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.commonActionFailedToast)),
+      );
+      return;
+    }
 
     try {
       final updated = artwork.isPublic
@@ -185,8 +250,6 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
   Future<void> _deleteArtwork(Artwork artwork) async {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final profileProvider = context.read<ProfileProvider>();
-    final walletProvider = context.read<WalletProvider>();
     final artworkProvider = context.read<ArtworkProvider>();
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
@@ -211,13 +274,18 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     );
     if (confirmed != true) return;
     if (!mounted) return;
-
-    final canProceed = await WalletActionGuard.ensureSignerAccess(
-      context: context,
-      profileProvider: profileProvider,
-      walletProvider: walletProvider,
-    );
-    if (!mounted || !canProceed) return;
+    if (context.read<ProfileProvider>().isSignedIn != true) {
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.communityCommentAuthRequiredToast)),
+      );
+      return;
+    }
+    if (!_canDeleteArtwork(_resolveCurrentCollabRole(artwork))) {
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.commonActionFailedToast)),
+      );
+      return;
+    }
 
     try {
       final deleted = await BackendApiService().deleteArtwork(artwork.id);
@@ -326,7 +394,10 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               FilledButton.icon(
-                onPressed: _isSaving ? null : _save,
+                onPressed: _isSaving ||
+                        !_canEditArtwork(_resolveCurrentCollabRole(art))
+                    ? null
+                    : _save,
                 icon: _isSaving
                     ? const SizedBox(
                         width: 18,
@@ -340,18 +411,33 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
               Text(
                 l10n.collectionSettingsCollaboration,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: scheme.onSurface.withValues(alpha: 0.68),
-                ),
+                      color: scheme.onSurface.withValues(alpha: 0.68),
+                    ),
               ),
             ],
           ),
         ),
+        if (AppConfig.isFeatureEnabled('collabInvites')) ...[
+          const SizedBox(height: KubusSpacing.md),
+          DesktopCreatorCollaborationSection(
+            title: l10n.collectionSettingsCollaboration,
+            subtitle: l10n.collabPanelInviteHint,
+            entityType: 'artwork',
+            entityId: art.id,
+            enabled: true,
+            lockedMessage: l10n.collabPanelLoadFailed,
+            myRole: _resolveCurrentCollabRole(art),
+          ),
+        ],
       ],
     );
   }
 
   Future<void> _load() async {
     final provider = context.read<ArtworkProvider>();
+    final collabProvider = AppConfig.isFeatureEnabled('collabInvites')
+        ? context.read<CollabProvider>()
+        : null;
     final l10n = AppLocalizations.of(context);
     final id = widget.artworkId.trim();
     if (id.isEmpty) {
@@ -364,6 +450,16 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
 
     try {
       await provider.fetchArtworkIfNeeded(id);
+      if (collabProvider != null) {
+        unawaited(
+          collabProvider.loadCollaborators(
+            'artwork',
+            id,
+            refresh: true,
+            showLoadingIndicator: false,
+          ),
+        );
+      }
     } catch (_) {
       // Surface a friendly error; provider already logs in debug.
       _error = l10n?.artDetailLoadFailedMessage;
@@ -377,7 +473,8 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
 
   void _seedFromArtworkIfReady() {
     if (_seeded) return;
-    final artwork = context.read<ArtworkProvider>().getArtworkById(widget.artworkId);
+    final artwork =
+        context.read<ArtworkProvider>().getArtworkById(widget.artworkId);
     if (artwork == null) return;
 
     _titleController.text = artwork.title;
@@ -405,7 +502,9 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
         type: FileType.image,
         withData: true,
       );
-      final file = (result != null && result.files.isNotEmpty) ? result.files.first : null;
+      final file = (result != null && result.files.isNotEmpty)
+          ? result.files.first
+          : null;
       final bytes = file?.bytes;
       if (file == null || bytes == null) return;
       setState(() {
@@ -428,7 +527,9 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
         allowedExtensions: ['glb', 'gltf', 'usdz', 'zip'],
         withData: true,
       );
-      final file = (result != null && result.files.isNotEmpty) ? result.files.first : null;
+      final file = (result != null && result.files.isNotEmpty)
+          ? result.files.first
+          : null;
       final bytes = file?.bytes;
       if (file == null || bytes == null) return;
       setState(() {
@@ -450,26 +551,25 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final provider = context.read<ArtworkProvider>();
     final profileProvider = context.read<ProfileProvider>();
-    final walletProvider = context.read<WalletProvider>();
     final artwork = provider.getArtworkById(widget.artworkId);
     if (artwork == null) {
-      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonSomethingWentWrong)));
+      messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.commonSomethingWentWrong)));
       return;
     }
 
-    final canProceed = await WalletActionGuard.ensureSignerAccess(
-      context: context,
-      profileProvider: profileProvider,
-      walletProvider: walletProvider,
-    );
-    if (!mounted || !canProceed) {
+    if (profileProvider.isSignedIn != true) {
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(l10n.communityCommentAuthRequiredToast)),
+      );
       return;
     }
 
     final title = _titleController.text.trim();
     final description = _descriptionController.text.trim();
     if (title.isEmpty || description.isEmpty) {
-      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));
+      messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.commonActionFailedToast)));
       return;
     }
 
@@ -477,7 +577,9 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
 
     final updates = <String, dynamic>{};
     if (title != artwork.title) updates['title'] = title;
-    if (description != artwork.description) updates['description'] = description;
+    if (description != artwork.description) {
+      updates['description'] = description;
+    }
 
     final category = _categoryController.text.trim();
     if (category.isNotEmpty && category != artwork.category) {
@@ -511,9 +613,11 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     }
 
     final nextPriceRaw = _priceController.text.trim();
-    final nextPrice = nextPriceRaw.isEmpty ? null : double.tryParse(nextPriceRaw);
+    final nextPrice =
+        nextPriceRaw.isEmpty ? null : double.tryParse(nextPriceRaw);
     if (nextPriceRaw.isNotEmpty && nextPrice == null) {
-      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));
+      messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.commonActionFailedToast)));
       setState(() => _isSaving = false);
       return;
     }
@@ -522,9 +626,11 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     }
 
     final nextArScaleRaw = _arScaleController.text.trim();
-    final nextArScale = nextArScaleRaw.isEmpty ? null : double.tryParse(nextArScaleRaw);
+    final nextArScale =
+        nextArScaleRaw.isEmpty ? null : double.tryParse(nextArScaleRaw);
     if (nextArScaleRaw.isNotEmpty && nextArScale == null) {
-      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));
+      messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.commonActionFailedToast)));
       setState(() => _isSaving = false);
       return;
     }
@@ -542,10 +648,15 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
           fileBytes: _nextCoverBytes!,
           fileName: _nextCoverName ?? 'artwork_cover.jpg',
           fileType: 'image',
-          metadata: const {'uploadFolder': 'artworks/covers', 'source': 'artwork_edit'},
+          metadata: const {
+            'uploadFolder': 'artworks/covers',
+            'source': 'artwork_edit'
+          },
         );
-        final coverUrl = (upload['uploadedUrl'] as String?) ?? (upload['data']?['url'] as String?);
-        final coverCid = (upload['cid'] as String?) ?? (upload['data']?['cid'] as String?);
+        final coverUrl = (upload['uploadedUrl'] as String?) ??
+            (upload['data']?['url'] as String?);
+        final coverCid =
+            (upload['cid'] as String?) ?? (upload['data']?['cid'] as String?);
         if (coverUrl != null && coverUrl.isNotEmpty) {
           updates['imageUrl'] = coverUrl;
         }
@@ -559,10 +670,15 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
           fileBytes: _nextModelBytes!,
           fileName: _nextModelName ?? 'ar_model.glb',
           fileType: 'model',
-          metadata: const {'uploadFolder': 'ar/models', 'source': 'artwork_edit'},
+          metadata: const {
+            'uploadFolder': 'ar/models',
+            'source': 'artwork_edit'
+          },
         );
-        final modelUrl = (upload['uploadedUrl'] as String?) ?? (upload['data']?['url'] as String?);
-        final modelCid = (upload['cid'] as String?) ?? (upload['data']?['cid'] as String?);
+        final modelUrl = (upload['uploadedUrl'] as String?) ??
+            (upload['data']?['url'] as String?);
+        final modelCid =
+            (upload['cid'] as String?) ?? (upload['data']?['cid'] as String?);
         if (modelUrl != null && modelUrl.isNotEmpty) {
           updates['model3DURL'] = modelUrl;
         }
@@ -574,7 +690,8 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
       final updated = await provider.updateArtwork(widget.artworkId, updates);
       if (!mounted) return;
 
-      final resolved = updated ?? await provider.refreshArtwork(widget.artworkId);
+      final resolved =
+          updated ?? await provider.refreshArtwork(widget.artworkId);
       if (!mounted) return;
 
       if (resolved == null) {
@@ -586,11 +703,13 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
       }
 
       context.read<AppRefreshProvider>().triggerPortfolio();
-      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonSavedToast)));
+      messenger
+          .showKubusSnackBar(SnackBar(content: Text(l10n.commonSavedToast)));
       Navigator.of(context).pop();
     } catch (_) {
       if (!mounted) return;
-      messenger.showKubusSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));
+      messenger.showKubusSnackBar(
+          SnackBar(content: Text(l10n.commonActionFailedToast)));
       setState(() => _isSaving = false);
     }
   }
@@ -601,206 +720,233 @@ class _ArtworkEditScreenState extends State<ArtworkEditScreen> {
     final scheme = Theme.of(context).colorScheme;
 
     final provider = context.watch<ArtworkProvider>();
+    if (AppConfig.isFeatureEnabled('collabInvites')) {
+      context.watch<CollabProvider>();
+    }
     final artwork = provider.getArtworkById(widget.artworkId);
     _seedFromArtworkIfReady();
 
     final art = artwork;
-    final coverUrl = art == null ? null : ArtworkMediaResolver.resolveCover(artwork: art);
+    final coverUrl =
+        art == null ? null : ArtworkMediaResolver.resolveCover(artwork: art);
 
     final Widget? body = art == null
         ? null
         : ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             children: [
-        DetailCard(
-          padding: const EdgeInsets.all(DetailSpacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      l10n.commonCoverImage,
-                      style: DetailTypography.sectionTitle(context),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: _isSaving ? null : _pickCover,
-                    icon: const Icon(Icons.image_outlined),
-                    tooltip: l10n.commonEdit,
-                  ),
-                ],
-              ),
-              const SizedBox(height: DetailSpacing.md),
-              AspectRatio(
-                aspectRatio: 16 / 9,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(DetailRadius.md),
-                  child: _nextCoverBytes != null
-                      ? Image.memory(_nextCoverBytes!, fit: BoxFit.cover)
-                      : (coverUrl != null && coverUrl.isNotEmpty)
-                          ? Image.network(
-                              coverUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
-                                color: scheme.surfaceContainerHighest,
-                                child: Icon(Icons.image_not_supported, color: scheme.outline),
-                              ),
-                            )
-                          : Container(
-                              color: scheme.surfaceContainerHighest,
-                              child: Icon(Icons.image_outlined, color: scheme.outline),
-                            ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: DetailSpacing.lg),
-        TextField(
-          controller: _titleController,
-          enabled: !_isSaving,
-          decoration: InputDecoration(labelText: l10n.commonTitle),
-        ),
-        const SizedBox(height: DetailSpacing.md),
-        TextField(
-          controller: _descriptionController,
-          enabled: !_isSaving,
-          maxLines: 5,
-          decoration: InputDecoration(labelText: l10n.commonDescription),
-        ),
-        const SizedBox(height: DetailSpacing.md),
-        TextField(
-          controller: _categoryController,
-          enabled: !_isSaving,
-          decoration: InputDecoration(labelText: l10n.mapMarkerDialogCategoryLabel),
-        ),
-        const SizedBox(height: DetailSpacing.md),
-        TextField(
-          controller: _tagsController,
-          enabled: !_isSaving,
-          decoration: InputDecoration(hintText: l10n.communitySearchSheetHintTags),
-        ),
-        const SizedBox(height: DetailSpacing.lg),
-        DetailCard(
-          padding: const EdgeInsets.all(DetailSpacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(l10n.commonPrice, style: DetailTypography.sectionTitle(context)),
-              const SizedBox(height: DetailSpacing.sm),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _priceController,
-                      enabled: !_isSaving,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(labelText: l10n.commonPrice),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: DetailSpacing.lg),
-        DetailCard(
-          padding: const EdgeInsets.all(DetailSpacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(l10n.exhibitionCreatorLocationLabel, style: DetailTypography.sectionTitle(context)),
-              const SizedBox(height: DetailSpacing.md),
-              TextField(
-                controller: _locationNameController,
-                enabled: !_isSaving,
-                decoration: InputDecoration(labelText: l10n.exhibitionCreatorLocationLabel),
-              ),
-              const SizedBox(height: DetailSpacing.md),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _latitudeController,
-                      enabled: !_isSaving,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(labelText: l10n.mapMarkerDialogLatitudeLabel),
-                    ),
-                  ),
-                  const SizedBox(width: DetailSpacing.md),
-                  Expanded(
-                    child: TextField(
-                      controller: _longitudeController,
-                      enabled: !_isSaving,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(labelText: l10n.mapMarkerDialogLongitudeLabel),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: DetailSpacing.lg),
-        if (AppConfig.enableARViewer) ...[
-          DetailCard(
-            padding: const EdgeInsets.all(DetailSpacing.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+              DetailCard(
+                padding: const EdgeInsets.all(DetailSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(l10n.mapArReadyChipLabel, style: DetailTypography.sectionTitle(context)),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            l10n.commonCoverImage,
+                            style: DetailTypography.sectionTitle(context),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: _isSaving ? null : _pickCover,
+                          icon: const Icon(Icons.image_outlined),
+                          tooltip: l10n.commonEdit,
+                        ),
+                      ],
                     ),
-                    Switch(
-                      value: _arEnabled,
-                      onChanged: _isSaving ? null : (v) => setState(() => _arEnabled = v),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: DetailSpacing.sm),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _arScaleController,
-                        enabled: !_isSaving,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(labelText: l10n.arDetailScaleLabel),
+                    const SizedBox(height: DetailSpacing.md),
+                    AspectRatio(
+                      aspectRatio: 16 / 9,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(DetailRadius.md),
+                        child: _nextCoverBytes != null
+                            ? Image.memory(_nextCoverBytes!, fit: BoxFit.cover)
+                            : (coverUrl != null && coverUrl.isNotEmpty)
+                                ? Image.network(
+                                    coverUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Container(
+                                      color: scheme.surfaceContainerHighest,
+                                      child: Icon(Icons.image_not_supported,
+                                          color: scheme.outline),
+                                    ),
+                                  )
+                                : Container(
+                                    color: scheme.surfaceContainerHighest,
+                                    child: Icon(Icons.image_outlined,
+                                        color: scheme.outline),
+                                  ),
                       ),
                     ),
-                    const SizedBox(width: DetailSpacing.md),
-                    IconButton(
-                      onPressed: _isSaving || !_arEnabled ? null : _pickModel,
-                      icon: const Icon(Icons.upload_file),
-                      tooltip: l10n.commonEdit,
+                  ],
+                ),
+              ),
+              const SizedBox(height: DetailSpacing.lg),
+              TextField(
+                controller: _titleController,
+                enabled: !_isSaving,
+                decoration: InputDecoration(labelText: l10n.commonTitle),
+              ),
+              const SizedBox(height: DetailSpacing.md),
+              TextField(
+                controller: _descriptionController,
+                enabled: !_isSaving,
+                maxLines: 5,
+                decoration: InputDecoration(labelText: l10n.commonDescription),
+              ),
+              const SizedBox(height: DetailSpacing.md),
+              TextField(
+                controller: _categoryController,
+                enabled: !_isSaving,
+                decoration: InputDecoration(
+                    labelText: l10n.mapMarkerDialogCategoryLabel),
+              ),
+              const SizedBox(height: DetailSpacing.md),
+              TextField(
+                controller: _tagsController,
+                enabled: !_isSaving,
+                decoration: InputDecoration(
+                    hintText: l10n.communitySearchSheetHintTags),
+              ),
+              const SizedBox(height: DetailSpacing.lg),
+              DetailCard(
+                padding: const EdgeInsets.all(DetailSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(l10n.commonPrice,
+                        style: DetailTypography.sectionTitle(context)),
+                    const SizedBox(height: DetailSpacing.sm),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _priceController,
+                            enabled: !_isSaving,
+                            keyboardType: TextInputType.number,
+                            decoration:
+                                InputDecoration(labelText: l10n.commonPrice),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
+              ),
+              const SizedBox(height: DetailSpacing.lg),
+              DetailCard(
+                padding: const EdgeInsets.all(DetailSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(l10n.exhibitionCreatorLocationLabel,
+                        style: DetailTypography.sectionTitle(context)),
+                    const SizedBox(height: DetailSpacing.md),
+                    TextField(
+                      controller: _locationNameController,
+                      enabled: !_isSaving,
+                      decoration: InputDecoration(
+                          labelText: l10n.exhibitionCreatorLocationLabel),
+                    ),
+                    const SizedBox(height: DetailSpacing.md),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _latitudeController,
+                            enabled: !_isSaving,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                                labelText: l10n.mapMarkerDialogLatitudeLabel),
+                          ),
+                        ),
+                        const SizedBox(width: DetailSpacing.md),
+                        Expanded(
+                          child: TextField(
+                            controller: _longitudeController,
+                            enabled: !_isSaving,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                                labelText: l10n.mapMarkerDialogLongitudeLabel),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: DetailSpacing.lg),
+              if (AppConfig.enableARViewer) ...[
+                DetailCard(
+                  padding: const EdgeInsets.all(DetailSpacing.md),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(l10n.mapArReadyChipLabel,
+                                style: DetailTypography.sectionTitle(context)),
+                          ),
+                          Switch(
+                            value: _arEnabled,
+                            onChanged: _isSaving
+                                ? null
+                                : (v) => setState(() => _arEnabled = v),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: DetailSpacing.sm),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _arScaleController,
+                              enabled: !_isSaving,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                  labelText: l10n.arDetailScaleLabel),
+                            ),
+                          ),
+                          const SizedBox(width: DetailSpacing.md),
+                          IconButton(
+                            onPressed:
+                                _isSaving || !_arEnabled ? null : _pickModel,
+                            icon: const Icon(Icons.upload_file),
+                            tooltip: l10n.commonEdit,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: DetailSpacing.lg),
               ],
-            ),
-          ),
-          const SizedBox(height: DetailSpacing.lg),
-        ],
-        if (AppConfig.isFeatureEnabled('collabInvites')) ...[
-          CollaborationPanel(entityType: 'artworks', entityId: art.id),
-          const SizedBox(height: DetailSpacing.lg),
-        ],
-        if (!widget.embedded)
-          FilledButton.icon(
-            onPressed: _isSaving ? null : _save,
-            icon: _isSaving
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: InlineLoading(tileSize: 6),
-                  )
-                : const Icon(Icons.save),
-            label: Text(l10n.commonSave),
-          ),
+              if (!widget.embedded &&
+                  AppConfig.isFeatureEnabled('collabInvites')) ...[
+                CollaborationPanel(
+                  entityType: 'artwork',
+                  entityId: art.id,
+                  myRole: _resolveCurrentCollabRole(art),
+                ),
+                const SizedBox(height: DetailSpacing.lg),
+              ],
+              if (!widget.embedded)
+                FilledButton.icon(
+                  onPressed: _isSaving ||
+                          !_canEditArtwork(_resolveCurrentCollabRole(art))
+                      ? null
+                      : _save,
+                  icon: _isSaving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: InlineLoading(tileSize: 6),
+                        )
+                      : const Icon(Icons.save),
+                  label: Text(l10n.commonSave),
+                ),
             ],
           );
 

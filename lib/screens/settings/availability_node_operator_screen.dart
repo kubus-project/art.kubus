@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../providers/availability_operator_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/wallet_provider.dart';
+import '../../l10n/app_localizations.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/design_tokens.dart';
 import '../../widgets/glass_components.dart';
@@ -33,13 +34,12 @@ class _AvailabilityNodeOperatorBody extends StatefulWidget {
 
 class _AvailabilityNodeOperatorBodyState
     extends State<_AvailabilityNodeOperatorBody> {
-  final TextEditingController _labelController =
-      TextEditingController(text: 'Home server node');
+  final TextEditingController _labelController = TextEditingController();
   int _expiresInDays = 90;
   String? _loadedWallet;
+  bool _initializedDefaultLabel = false;
 
-  _AvailabilityNodeCopy get copy =>
-      _AvailabilityNodeCopy.forLocale(Localizations.localeOf(context));
+  AppLocalizations get l10n => AppLocalizations.of(context)!;
 
   @override
   void dispose() {
@@ -50,6 +50,13 @@ class _AvailabilityNodeOperatorBodyState
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (!_initializedDefaultLabel && _labelController.text.trim().isEmpty) {
+      _labelController.text = l10n.availabilityNodeDefaultLabel;
+      _labelController.selection = TextSelection.collapsed(
+        offset: _labelController.text.length,
+      );
+      _initializedDefaultLabel = true;
+    }
     final wallet = _resolveWallet(listen: true);
     if (wallet.isNotEmpty && wallet != _loadedWallet) {
       _loadedWallet = wallet;
@@ -85,10 +92,9 @@ class _AvailabilityNodeOperatorBodyState
 
   Future<void> _createToken() async {
     final wallet = _resolveWallet();
-    final strings = copy;
     if (wallet.isEmpty) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(strings.connectWallet)));
+          .showSnackBar(SnackBar(content: Text(l10n.availabilityNodeConnectWalletToast)));
       return;
     }
 
@@ -99,7 +105,7 @@ class _AvailabilityNodeOperatorBodyState
     if (!mounted) return;
     if (!signed) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(strings.signingRequired)),
+        SnackBar(content: Text(l10n.availabilityNodeSigningRequiredToast)),
       );
       return;
     }
@@ -119,7 +125,7 @@ class _AvailabilityNodeOperatorBodyState
               .read<AvailabilityOperatorProvider>()
               .buildEnvSnippet(token: created.token, walletAddress: wallet);
           return AlertDialog(
-            title: Text(strings.createdTitle),
+            title: Text(l10n.availabilityNodeCreatedTitle),
             content: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 640),
               child: SingleChildScrollView(
@@ -127,11 +133,11 @@ class _AvailabilityNodeOperatorBodyState
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(strings.createdBody),
+                    Text(l10n.availabilityNodeCreatedBody),
                     const SizedBox(height: KubusSpacing.md),
                     _CodeBlock(text: created.token),
                     const SizedBox(height: KubusSpacing.md),
-                    Text(strings.envSnippet),
+                    Text(l10n.availabilityNodeEnvSnippetLabel),
                     const SizedBox(height: KubusSpacing.sm),
                     _CodeBlock(text: snippet),
                   ],
@@ -141,18 +147,24 @@ class _AvailabilityNodeOperatorBodyState
             actions: [
               TextButton.icon(
                 onPressed: () => unawaited(
-                  _copyText(created.token, strings.tokenCopied),
+                  _copyText(
+                    created.token,
+                    l10n.availabilityNodeTokenCopiedToast,
+                  ),
                 ),
                 icon: const Icon(Icons.copy),
-                label: Text(strings.copyToken),
+                label: Text(l10n.availabilityNodeCopyTokenButton),
               ),
               FilledButton.icon(
                 onPressed: () {
-                  unawaited(_copyText(snippet, strings.snippetCopied));
+                  unawaited(_copyText(
+                    snippet,
+                    l10n.availabilityNodeSnippetCopiedToast,
+                  ));
                   Navigator.of(dialogContext).pop();
                 },
                 icon: const Icon(Icons.content_paste),
-                label: Text(strings.copySnippet),
+                label: Text(l10n.availabilityNodeCopySnippetButton),
               ),
             ],
           );
@@ -163,27 +175,26 @@ class _AvailabilityNodeOperatorBodyState
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${strings.createFailed}: $e')),
+        SnackBar(content: Text('${l10n.availabilityNodeCreateFailedToast}: $e')),
       );
     }
   }
 
   Future<void> _revokeToken(AvailabilityOperatorTokenRecord token) async {
     final wallet = _resolveWallet();
-    final strings = copy;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(strings.revokeTitle),
-        content: Text(strings.revokeBody(token.label)),
+        title: Text(l10n.availabilityNodeRevokeTitle),
+        content: Text(l10n.availabilityNodeRevokeBody(token.label)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text(strings.cancel),
+            child: Text(l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text(strings.revoke),
+            child: Text(l10n.commonDelete),
           ),
         ],
       ),
@@ -197,18 +208,17 @@ class _AvailabilityNodeOperatorBodyState
 
   @override
   Widget build(BuildContext context) {
-    final strings = copy;
     final wallet = _resolveWallet(listen: true);
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: Text(strings.title)),
+      appBar: AppBar(title: Text(l10n.availabilityNodeTitle)),
       body: Consumer<AvailabilityOperatorProvider>(
         builder: (context, provider, _) {
           return ListView(
             padding: const EdgeInsets.all(KubusSpacing.lg),
             children: [
-              _InfoPanel(wallet: wallet, copy: strings),
+              _InfoPanel(wallet: wallet),
               const SizedBox(height: KubusSpacing.lg),
               GlassSurface(
                 child: Padding(
@@ -216,21 +226,23 @@ class _AvailabilityNodeOperatorBodyState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(strings.createTitle,
+                      Text(l10n.availabilityNodeCreateTitle,
                           style: Theme.of(context).textTheme.titleLarge),
                       const SizedBox(height: KubusSpacing.sm),
                       TextField(
                         controller: _labelController,
-                        decoration: InputDecoration(labelText: strings.label),
+                        decoration: InputDecoration(labelText: l10n.availabilityNodeLabel),
                       ),
                       const SizedBox(height: KubusSpacing.sm),
                       DropdownButtonFormField<int>(
                         initialValue: _expiresInDays,
-                        decoration: InputDecoration(labelText: strings.expiry),
+                        decoration: InputDecoration(labelText: l10n.availabilityNodeExpiry),
                         items: const [30, 90, 180, 365]
                             .map((days) => DropdownMenuItem<int>(
                                   value: days,
-                                  child: Text('$days days'),
+                                  child: Text(
+                                    l10n.availabilityNodeExpiryDaysOption(days),
+                                  ),
                                 ))
                             .toList(growable: false),
                         onChanged: provider.isLoading
@@ -249,19 +261,19 @@ class _AvailabilityNodeOperatorBodyState
                                     CircularProgressIndicator(strokeWidth: 2),
                               )
                             : const Icon(Icons.vpn_key_outlined),
-                        label: Text(strings.createButton),
+                        label: Text(l10n.commonCreate),
                       ),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: KubusSpacing.lg),
-              Text(strings.existingTokens,
+              Text(l10n.availabilityNodeExistingTokensTitle,
                   style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: KubusSpacing.sm),
               if (provider.tokens.isEmpty)
                 Text(
-                  strings.empty,
+                  l10n.availabilityNodeEmptyState,
                   style: TextStyle(color: scheme.onSurfaceVariant),
                 )
               else
@@ -278,11 +290,11 @@ class _AvailabilityNodeOperatorBodyState
                       ),
                       title: Text(token.label.isEmpty ? token.tokenPrefix : token.label),
                       subtitle: Text(
-                        '${token.tokenPrefix} - ${token.status} - ${strings.expires}: ${_formatDate(token.expiresAt)}',
+                        '${token.tokenPrefix} - ${token.status} - ${l10n.availabilityNodeExpiresLabel}: ${_formatDate(token.expiresAt)}',
                       ),
                       trailing: token.status == 'active'
                           ? IconButton(
-                              tooltip: strings.revoke,
+                              tooltip: l10n.commonDelete,
                               onPressed: provider.isLoading
                                   ? null
                                   : () => unawaited(_revokeToken(token)),
@@ -306,27 +318,27 @@ class _AvailabilityNodeOperatorBodyState
 }
 
 class _InfoPanel extends StatelessWidget {
-  const _InfoPanel({required this.wallet, required this.copy});
+  const _InfoPanel({required this.wallet});
 
   final String wallet;
-  final _AvailabilityNodeCopy copy;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return GlassSurface(
       child: Padding(
         padding: const EdgeInsets.all(KubusSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(copy.whatIsNode,
+            Text(l10n.availabilityNodeWhatIsTitle,
                 style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: KubusSpacing.sm),
-            Text(copy.description),
+            Text(l10n.availabilityNodeIntro),
             const SizedBox(height: KubusSpacing.md),
-            Text('${copy.operatorWallet}: ${wallet.isEmpty ? '-' : wallet}'),
+            Text('${l10n.availabilityNodeWalletLabel}: ${wallet.isEmpty ? '-' : wallet}'),
             const SizedBox(height: KubusSpacing.sm),
-            Text(copy.securityNote),
+            Text(l10n.availabilityNodeSecurityNote),
           ],
         ),
       ),
@@ -353,132 +365,6 @@ class _CodeBlock extends StatelessWidget {
         text,
         style: const TextStyle(fontFamily: 'monospace'),
       ),
-    );
-  }
-}
-
-class _AvailabilityNodeCopy {
-  const _AvailabilityNodeCopy({
-    required this.title,
-    required this.whatIsNode,
-    required this.description,
-    required this.operatorWallet,
-    required this.securityNote,
-    required this.createTitle,
-    required this.label,
-    required this.expiry,
-    required this.createButton,
-    required this.createdTitle,
-    required this.createdBody,
-    required this.envSnippet,
-    required this.copyToken,
-    required this.copySnippet,
-    required this.tokenCopied,
-    required this.snippetCopied,
-    required this.existingTokens,
-    required this.empty,
-    required this.expires,
-    required this.revoke,
-    required this.revokeTitle,
-    required this.cancel,
-    required this.connectWallet,
-    required this.signingRequired,
-    required this.createFailed,
-  });
-
-  final String title;
-  final String whatIsNode;
-  final String description;
-  final String operatorWallet;
-  final String securityNote;
-  final String createTitle;
-  final String label;
-  final String expiry;
-  final String createButton;
-  final String createdTitle;
-  final String createdBody;
-  final String envSnippet;
-  final String copyToken;
-  final String copySnippet;
-  final String tokenCopied;
-  final String snippetCopied;
-  final String existingTokens;
-  final String empty;
-  final String expires;
-  final String revoke;
-  final String revokeTitle;
-  final String cancel;
-  final String connectWallet;
-  final String signingRequired;
-  final String createFailed;
-
-  String revokeBody(String label) =>
-      'Revoke ${label.isEmpty ? 'this token' : label}? The node using it will stop authenticating.';
-
-  static _AvailabilityNodeCopy forLocale(Locale locale) {
-    if (locale.languageCode == 'sl') {
-      return const _AvailabilityNodeCopy(
-        title: 'Availability Node',
-        whatIsNode: 'Kubus Availability Node',
-        description:
-            'Vozlisce hrani kanonicne javne CID-e, posilja heartbeat in oddaja commitment zapise. Ne upravlja tvoje denarnice in ne more porabiti sredstev.',
-        operatorWallet: 'Operatorska denarnica',
-        securityNote:
-            'Token shrani kot geslo. Prikazan je samo enkrat in ga lahko kadarkoli preklices.',
-        createTitle: 'Ustvari operatorski token',
-        label: 'Oznaka',
-        expiry: 'Veljavnost',
-        createButton: 'Ustvari token',
-        createdTitle: 'Token je ustvarjen',
-        createdBody:
-            'Kopiraj ga zdaj. Po zaprtju tega okna celoten token ne bo vec prikazan.',
-        envSnippet: '.env izsek za kubus-node',
-        copyToken: 'Kopiraj token',
-        copySnippet: 'Kopiraj .env',
-        tokenCopied: 'Token je kopiran',
-        snippetCopied: '.env izsek je kopiran',
-        existingTokens: 'Obstojeci tokeni',
-        empty: 'Za to denarnico ni operatorskih tokenov.',
-        expires: 'potece',
-        revoke: 'Preklici',
-        revokeTitle: 'Preklici token',
-        cancel: 'Preklic',
-        connectWallet: 'Najprej povezi denarnico.',
-        signingRequired:
-            'Za ustvarjanje operatorskega tokena je potreben podpis denarnice.',
-        createFailed: 'Tokena ni bilo mogoce ustvariti',
-      );
-    }
-    return const _AvailabilityNodeCopy(
-      title: 'Availability Node',
-      whatIsNode: 'Kubus Availability Node',
-      description:
-          'A node stores canonical public CIDs, sends heartbeats, and submits commitments. It does not control your wallet or spend funds.',
-      operatorWallet: 'Operator wallet',
-      securityNote:
-          'Store this token like a password. It is shown once and can be revoked at any time.',
-      createTitle: 'Create operator token',
-      label: 'Label',
-      expiry: 'Expiry',
-      createButton: 'Create token',
-      createdTitle: 'Token created',
-      createdBody:
-          'Copy it now. The full token will not be shown again after this dialog closes.',
-      envSnippet: '.env snippet for kubus-node',
-      copyToken: 'Copy token',
-      copySnippet: 'Copy .env',
-      tokenCopied: 'Token copied',
-      snippetCopied: '.env snippet copied',
-      existingTokens: 'Existing tokens',
-      empty: 'No operator tokens for this wallet yet.',
-      expires: 'expires',
-      revoke: 'Revoke',
-      revokeTitle: 'Revoke token',
-      cancel: 'Cancel',
-      connectWallet: 'Connect a wallet first.',
-      signingRequired:
-          'Wallet-signed authority is required to create an operator token.',
-      createFailed: 'Failed to create token',
     );
   }
 }

@@ -5201,6 +5201,43 @@
   "walletHomeDesktopNftsSubtitle": "Odpri zbirateljske predmete in dela, vezana na račun",
   "walletHomeDesktopRailSubtitle": "Stanje seje, dejavnost in ključna stanja ostanejo vidna med delom.",
   "walletHomeSecureWalletAction": "Zaščiti denarnico",
+  "availabilityNodeTitle": "Vozlišče razpoložljivosti",
+  "availabilityNodeSubtitle": "Ustvari in upravljaj omejene operatorske žetone za vozlišče.",
+  "availabilityNodeWhatIsTitle": "Kaj to naredi",
+  "availabilityNodeIntro": "Ta žeton omogoča, da se vozlišče registrira, pošilja srčni utrip, ustvarja zaveze do CID-jev in bere stanje nagrad. Ne nadzira tvoje denarnice in ne porablja sredstev.",
+  "availabilityNodeDescription": "Vozlišča razpoložljivosti zaupanja vrednim operaterjem omogočajo poročanje o razpoložljivosti z lastne infrastrukture.",
+  "availabilityNodeWalletLabel": "Operatorska denarnica",
+  "availabilityNodeSecurityNote": "Shrani ga kot geslo. Kadarkoli ga lahko prekličeš.",
+  "availabilityNodeCreateTitle": "Ustvari operatorski žeton",
+  "availabilityNodeDefaultLabel": "Domače strežniško vozlišče",
+  "availabilityNodeLabel": "Oznaka žetona",
+  "availabilityNodeExpiry": "Poteče",
+  "availabilityNodeExpiryDaysOption": "{days} dni",
+  "@availabilityNodeExpiryDaysOption": {
+    "placeholders": {
+      "days": {}
+    }
+  },
+  "availabilityNodeExistingTokensTitle": "Obstoječi žetoni",
+  "availabilityNodeEmptyState": "Še ni operatorskih žetonov.",
+  "availabilityNodeExpiresLabel": "poteče",
+  "availabilityNodeCreatedTitle": "Operatorski žeton je ustvarjen",
+  "availabilityNodeCreatedBody": "Žeton kopiraj zdaj. Pozneje ga ne boš mogel videti.",
+  "availabilityNodeEnvSnippetLabel": "Delček .env",
+  "availabilityNodeCopyTokenButton": "Kopiraj žeton",
+  "availabilityNodeCopySnippetButton": "Kopiraj delček .env",
+  "availabilityNodeTokenCopiedToast": "Operatorski žeton kopiran",
+  "availabilityNodeSnippetCopiedToast": "Delček .env kopiran",
+  "availabilityNodeCreateFailedToast": "Ustvarjanje operatorskega žetona ni uspelo",
+  "availabilityNodeConnectWalletToast": "Najprej poveži denarnico",
+  "availabilityNodeSigningRequiredToast": "Za ustvarjanje operatorskega žetona je potrebna seja s podpisom denarnice.",
+  "availabilityNodeRevokeTitle": "Prekličem žeton?",
+  "availabilityNodeRevokeBody": "Prekličem \"{label}\"? Ta žeton bo takoj prenehal delovati.",
+  "@availabilityNodeRevokeBody": {
+    "placeholders": {
+      "label": {}
+    }
+  },
   "walletHomeSecurityTitle": "Zaščiti svojo denarnico",
   "walletHomeSecuritySubtitle": "Varnostna kopija, dostop do denarnice in stanje obnove so zbrani tukaj.",
   "receiveTokenSidebarShareTitle": "Deli podatke za prejem",

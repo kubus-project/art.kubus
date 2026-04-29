@@ -150,7 +150,7 @@ class AvailabilityOperatorProvider extends ChangeNotifier {
     required String walletAddress,
   }) {
     return [
-      'KUBUS_API_BASE_URL=https://bapi.kubus.site',
+      'KUBUS_API_BASE_URL=${AppConfig.baseApiUrl}',
       'KUBUS_OPERATOR_TOKEN=$token',
       'KUBUS_OPERATOR_WALLET=$walletAddress',
       'KUBUS_NODE_LABEL=kubus-availability-node-1',

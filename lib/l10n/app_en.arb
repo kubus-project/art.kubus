@@ -2343,6 +2343,43 @@
   "walletHomeDesktopNftsSubtitle": "Open collectibles and account-linked pieces",
   "walletHomeDesktopRailSubtitle": "Session status, activity mix, and balances stay visible while you work.",
   "walletHomeSecureWalletAction": "Secure wallet",
+  "availabilityNodeTitle": "Availability Node",
+  "availabilityNodeSubtitle": "Create and manage scoped node operator tokens.",
+  "availabilityNodeWhatIsTitle": "What this does",
+  "availabilityNodeIntro": "This token lets your node register, send heartbeats, commit to CIDs, and read reward status. It does not control your wallet or spend funds.",
+  "availabilityNodeDescription": "Availability nodes let trusted operators report backend availability from their own infrastructure.",
+  "availabilityNodeWalletLabel": "Operator wallet",
+  "availabilityNodeSecurityNote": "Store it like a password. You can revoke it at any time.",
+  "availabilityNodeCreateTitle": "Create operator token",
+  "availabilityNodeDefaultLabel": "Home server node",
+  "availabilityNodeLabel": "Token label",
+  "availabilityNodeExpiry": "Expiry",
+  "availabilityNodeExpiryDaysOption": "{days} days",
+  "@availabilityNodeExpiryDaysOption": {
+    "placeholders": {
+      "days": {}
+    }
+  },
+  "availabilityNodeExistingTokensTitle": "Existing tokens",
+  "availabilityNodeEmptyState": "No operator tokens yet.",
+  "availabilityNodeExpiresLabel": "expires",
+  "availabilityNodeCreatedTitle": "Operator token created",
+  "availabilityNodeCreatedBody": "Copy the token now. You will not be able to see it again.",
+  "availabilityNodeEnvSnippetLabel": ".env snippet",
+  "availabilityNodeCopyTokenButton": "Copy token",
+  "availabilityNodeCopySnippetButton": "Copy .env snippet",
+  "availabilityNodeTokenCopiedToast": "Operator token copied",
+  "availabilityNodeSnippetCopiedToast": ".env snippet copied",
+  "availabilityNodeCreateFailedToast": "Failed to create operator token",
+  "availabilityNodeConnectWalletToast": "Connect a wallet first",
+  "availabilityNodeSigningRequiredToast": "A wallet-signed session is required to create an operator token.",
+  "availabilityNodeRevokeTitle": "Revoke token?",
+  "availabilityNodeRevokeBody": "Revoke \"{label}\"? This token will stop working immediately.",
+  "@availabilityNodeRevokeBody": {
+    "placeholders": {
+      "label": {}
+    }
+  },
   "walletHomeSecurityTitle": "Secure your wallet",
   "walletHomeSecuritySubtitle": "Backup, wallet access, and recovery status stay together here.",
   "walletHomeYourTokensTitle": "Your tokens",

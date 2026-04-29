@@ -14,6 +14,7 @@ import '../../../config/config.dart';
 import '../../../models/artwork.dart';
 import '../../../providers/app_refresh_provider.dart';
 import '../../../providers/artwork_drafts_provider.dart';
+import '../../../providers/collab_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/tile_providers.dart';
 import '../../../providers/web3provider.dart';
@@ -24,6 +25,7 @@ import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/maplibre_style_utils.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../widgets/art_map_view.dart';
+import '../../../widgets/draft_collaboration_invite_panel.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/creator/creator_kit.dart';
 import '../../desktop/desktop_shell.dart';
@@ -567,11 +569,76 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     }
     setState(() => _createdArtwork = created);
 
+    final inviteResult = await _dispatchDraftCollaborationInvites(
+      drafts: drafts,
+      draft: draft,
+      artworkId: created.id,
+    );
+    if (!mounted) return;
+
     if (mounted) {
       try {
         context.read<AppRefreshProvider>().triggerPortfolio();
       } catch (_) {}
     }
+
+    if (inviteResult != null) {
+      messenger.showKubusSnackBar(
+        SnackBar(content: Text(inviteResult)),
+      );
+    }
+  }
+
+  Future<String?> _dispatchDraftCollaborationInvites({
+    required ArtworkDraftsProvider drafts,
+    required ArtworkDraftState draft,
+    required String artworkId,
+  }) async {
+    if (!AppConfig.isFeatureEnabled('collabInvites')) return null;
+    final pending = List<DraftCollaborationInvite>.from(
+      draft.collaborationInvites,
+      growable: false,
+    );
+    if (pending.isEmpty) return null;
+
+    final collab = context.read<CollabProvider>();
+    var sent = 0;
+    var failed = 0;
+    for (final invite in pending) {
+      try {
+        await collab.inviteCollaborator(
+          entityType: 'artwork',
+          entityId: artworkId,
+          invitedIdentifier: invite.invitedIdentifier,
+          role: invite.role,
+        );
+        sent++;
+      } catch (_) {
+        failed++;
+      }
+    }
+
+    if (sent > 0) {
+      drafts.clearDraftCollaborationInvites(widget.draftId);
+      unawaited(collab.loadCollaborators(
+        'artwork',
+        artworkId,
+        refresh: true,
+        showLoadingIndicator: false,
+      ));
+    }
+
+    if (failed == 0) {
+      return sent == 1
+          ? 'Artwork created. 1 invite sent.'
+          : 'Artwork created. $sent invites sent.';
+    }
+    if (sent == 0) {
+      return failed == 1
+          ? 'Artwork created. 1 invite could not be sent.'
+          : 'Artwork created. $failed invites could not be sent.';
+    }
+    return 'Artwork created. $sent invite(s) sent, $failed failed.';
   }
 
   Future<void> _mintNftForCreated({
@@ -1392,6 +1459,27 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     );
   }
 
+  Widget _buildDraftCollaborationSection({
+    required ArtworkDraftsProvider drafts,
+    required ArtworkDraftState draft,
+    required Color accent,
+    bool compact = false,
+  }) {
+    if (!AppConfig.isFeatureEnabled('collabInvites')) {
+      return const SizedBox.shrink();
+    }
+
+    return DraftCollaborationInvitePanel(
+      draftId: widget.draftId,
+      invites: List<DraftCollaborationInvite>.unmodifiable(
+        draft.collaborationInvites,
+      ),
+      enabled: !draft.isSubmitting && _createdArtwork == null,
+      accentColor: accent,
+      compact: compact,
+    );
+  }
+
   Widget _buildPublishSection({
     required ArtworkDraftsProvider drafts,
     required ArtworkDraftState draft,
@@ -1428,6 +1516,15 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
             _buildReviewRow('Badge', draft.poapMode.apiValue),
             const CreatorFieldSpacing(height: KubusSpacing.sm),
             _buildReviewRow('AR', draft.arEnabled ? 'Enabled' : 'Off'),
+            if (AppConfig.isFeatureEnabled('collabInvites')) ...[
+              const CreatorFieldSpacing(height: KubusSpacing.sm),
+              _buildReviewRow(
+                'Collaborators',
+                draft.collaborationInvites.isEmpty
+                    ? 'None pending'
+                    : '${draft.collaborationInvites.length} pending',
+              ),
+            ],
           ],
         ),
         const CreatorSectionSpacing(),
@@ -1606,8 +1703,8 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
         artworkId.isNotEmpty &&
         draft.arEnabled;
     final hasCover = draft.coverBytes != null;
-    final hasBasicInfo = draft.title.trim().isNotEmpty &&
-        draft.description.trim().isNotEmpty;
+    final hasBasicInfo =
+        draft.title.trim().isNotEmpty && draft.description.trim().isNotEmpty;
     final hasLocation = _isLocationEnabled(draft)
         ? (_latController.text.trim().isNotEmpty &&
             _lngController.text.trim().isNotEmpty)
@@ -1688,9 +1785,8 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                 value: widget.forceDraftOnly
                     ? 'Draft only'
                     : (draft.isPublic ? 'Public' : 'Private'),
-                icon: draft.isPublic
-                    ? Icons.public_outlined
-                    : Icons.lock_outline,
+                icon:
+                    draft.isPublic ? Icons.public_outlined : Icons.lock_outline,
               ),
               DesktopCreatorSummaryRow(
                 label: 'Media',
@@ -1723,7 +1819,9 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               ElevatedButton.icon(
-                onPressed: draft.isSubmitting ? null : () => unawaited(_publishDraft(drafts)),
+                onPressed: draft.isSubmitting
+                    ? null
+                    : () => unawaited(_publishDraft(drafts)),
                 icon: Icon(persistedArtwork == null
                     ? Icons.save_outlined
                     : Icons.publish_outlined),
@@ -1739,13 +1837,15 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                         if (id == null || id.isEmpty) return;
                         await Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (_) => ArtworkArManagerScreen(artworkId: id),
+                            builder: (_) =>
+                                ArtworkArManagerScreen(artworkId: id),
                           ),
                         );
                       }
                     : null,
                 icon: const Icon(Icons.qr_code_2_outlined),
-                label: Text(canUseAr ? 'Open AR setup' : 'Save first to unlock AR'),
+                label: Text(
+                    canUseAr ? 'Open AR setup' : 'Save first to unlock AR'),
               ),
             ],
           ),
@@ -1753,14 +1853,24 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
         const SizedBox(height: KubusSpacing.md),
         DesktopCreatorCollaborationSection(
           title: 'Collaboration',
-          subtitle: canUseCollab
-              ? 'Invite collaborators without leaving the creator.'
-              : 'Unlock after the first save.',
+          subtitle: _createdArtwork == null
+              ? 'Queue invites before publishing.'
+              : (canUseCollab
+                  ? 'Manage collaborators without leaving the creator.'
+                  : 'Collaboration is unavailable.'),
           entityType: 'artwork',
           entityId: artworkId,
           enabled: canUseCollab,
           lockedMessage:
               'Once the artwork is saved, collaborators can be invited here without leaving the creator.',
+          draftPanel: _createdArtwork == null
+              ? _buildDraftCollaborationSection(
+                  drafts: drafts,
+                  draft: draft,
+                  accent: accent,
+                  compact: true,
+                )
+              : null,
           accentColor: accent,
         ),
         const SizedBox(height: KubusSpacing.md),
@@ -1856,6 +1966,10 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                 _buildMediaSection(
                     drafts: drafts, draft: draft, accent: accent),
                 const CreatorSectionSpacing(),
+                _buildDraftCollaborationSection(
+                    drafts: drafts, draft: draft, accent: accent),
+                if (AppConfig.isFeatureEnabled('collabInvites'))
+                  const CreatorSectionSpacing(),
                 _buildOptionalSection(
                     drafts: drafts, draft: draft, accent: accent),
                 const CreatorSectionSpacing(),
@@ -1881,7 +1995,9 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                   : (_createdArtwork!.isPublic ? 'Live' : 'Saved draft'),
               color: _createdArtwork == null
                   ? accent
-                  : (_createdArtwork!.isPublic ? scheme.primary : scheme.tertiary),
+                  : (_createdArtwork!.isPublic
+                      ? scheme.primary
+                      : scheme.tertiary),
             ),
             sidebarAccentColor: accent,
             actions: [
@@ -1892,7 +2008,8 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                     if (artworkId == null || artworkId.isEmpty) return;
                     await Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => ArtworkArManagerScreen(artworkId: artworkId),
+                        builder: (_) =>
+                            ArtworkArManagerScreen(artworkId: artworkId),
                       ),
                     );
                   },

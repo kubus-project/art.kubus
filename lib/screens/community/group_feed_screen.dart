@@ -15,10 +15,10 @@ import '../../providers/app_mode_provider.dart';
 import '../../providers/community_subject_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/community_hub_provider.dart';
-import '../../providers/saved_items_provider.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../services/backend_api_service.dart';
+import '../../services/community_post_save_controller.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/community_subject_navigation.dart';
 import '../../utils/media_url_resolver.dart';
@@ -837,19 +837,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
 
   Future<void> _toggleBookmark(CommunityPost post) async {
     final l10n = AppLocalizations.of(context)!;
-    final savedItemsProvider =
-        Provider.of<SavedItemsProvider>(context, listen: false);
     try {
-      await CommunityService.toggleBookmark(post);
-      await savedItemsProvider.setPostSaved(
-        post.id,
-        post.isBookmarked,
-        title: post.content,
-        subtitle: post.authorName,
-        imageUrl: post.imageUrl,
-        authorId: post.authorWallet ?? post.authorId,
-        authorName: post.authorName,
-      );
+      await CommunityPostSaveController.toggle(context, post);
       if (!mounted) return;
       setState(() {});
       ScaffoldMessenger.of(context).showKubusSnackBar(

@@ -158,8 +158,7 @@ class CreatorSection extends StatelessWidget {
           ),
         ),
         LiquidGlassCard(
-          padding: padding ??
-              const EdgeInsets.all(KubusSpacing.md),
+          padding: padding ?? const EdgeInsets.all(KubusSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: children,
@@ -192,8 +191,7 @@ class CreatorSectionSpacing extends StatelessWidget {
   const CreatorSectionSpacing({super.key});
 
   @override
-  Widget build(BuildContext context) =>
-      const SizedBox(height: KubusSpacing.lg);
+  Widget build(BuildContext context) => const SizedBox(height: KubusSpacing.lg);
 }
 
 // ---------------------------------------------------------------------------
@@ -273,8 +271,7 @@ class CreatorFooterActions extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: accent,
                 foregroundColor: scheme.onPrimary,
-                padding:
-                    const EdgeInsets.symmetric(vertical: KubusSpacing.md),
+                padding: const EdgeInsets.symmetric(vertical: KubusSpacing.md),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(KubusRadius.md),
                 ),
@@ -307,8 +304,7 @@ class CreatorFooterActions extends StatelessWidget {
                 side: BorderSide(
                   color: scheme.error.withValues(alpha: 0.5),
                 ),
-                padding:
-                    const EdgeInsets.symmetric(vertical: KubusSpacing.md),
+                padding: const EdgeInsets.symmetric(vertical: KubusSpacing.md),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(KubusRadius.md),
                 ),
@@ -752,7 +748,8 @@ class CreatorDateField extends StatelessWidget {
               child: GestureDetector(
                 onTap: onPick,
                 child: Container(
-                  padding: const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
+                  padding:
+                      const EdgeInsets.all(KubusSpacing.sm + KubusSpacing.xs),
                   decoration: BoxDecoration(
                     color: scheme.onSurface.withValues(alpha: 0.04),
                     borderRadius: BorderRadius.circular(KubusRadius.md),
@@ -1196,7 +1193,8 @@ class DesktopCreatorShell extends StatelessWidget {
                           ),
                           Expanded(
                             child: Padding(
-                              padding: const EdgeInsets.only(top: KubusSpacing.sm),
+                              padding:
+                                  const EdgeInsets.only(top: KubusSpacing.sm),
                               child: sidebar,
                             ),
                           ),
@@ -1274,9 +1272,8 @@ class DesktopCreatorReadinessChecklist extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: items.map((item) {
-        final itemAccent = item.complete
-            ? accent
-            : scheme.onSurface.withValues(alpha: 0.55);
+        final itemAccent =
+            item.complete ? accent : scheme.onSurface.withValues(alpha: 0.55);
         return Padding(
           padding: const EdgeInsets.only(bottom: KubusSpacing.sm),
           child: Row(
@@ -1425,6 +1422,7 @@ class DesktopCreatorCollaborationSection extends StatelessWidget {
   final bool enabled;
   final String lockedMessage;
   final String? myRole;
+  final Widget? draftPanel;
   final Color? accentColor;
 
   const DesktopCreatorCollaborationSection({
@@ -1436,6 +1434,7 @@ class DesktopCreatorCollaborationSection extends StatelessWidget {
     required this.enabled,
     required this.lockedMessage,
     this.myRole,
+    this.draftPanel,
     this.accentColor,
   });
 
@@ -1447,17 +1446,18 @@ class DesktopCreatorCollaborationSection extends StatelessWidget {
       subtitle: subtitle,
       icon: Icons.group_add_outlined,
       accentColor: accent,
-      child: enabled && entityId.trim().isNotEmpty
-          ? CollaborationPanel(
-              entityType: entityType,
-              entityId: entityId,
-              myRole: myRole,
-            )
-          : CreatorInfoBox(
-              text: lockedMessage,
-              icon: Icons.lock_outline,
-              accentColor: accent,
-            ),
+      child: draftPanel ??
+          (enabled && entityId.trim().isNotEmpty
+              ? CollaborationPanel(
+                  entityType: entityType,
+                  entityId: entityId,
+                  myRole: myRole,
+                )
+              : CreatorInfoBox(
+                  text: lockedMessage,
+                  icon: Icons.lock_outline,
+                  accentColor: accent,
+                )),
     );
   }
 }

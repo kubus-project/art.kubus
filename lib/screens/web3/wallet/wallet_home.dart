@@ -24,6 +24,7 @@ import '../../../utils/app_color_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../widgets/kubus_action_sidebar.dart';
 import '../../../widgets/wallet/kubus_wallet_shell.dart';
+import '../../../widgets/wallet/wallet_action_controller.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import 'package:art_kubus/utils/wallet_reconnect_action.dart';
 
@@ -672,79 +673,42 @@ class _WalletHomeState extends State<WalletHome> {
                 ? (constraints.maxWidth - KubusSpacing.md) / 2
                 : constraints.maxWidth;
 
+        final configs = WalletActionController.buildPrimaryActions(
+          l10n: l10n,
+          roles: roles,
+          authority: authority,
+          onSend: () => _openSendScreen(walletProvider, canTransact),
+          onReceive: _openReceiveScreen,
+          onSwap: () => _openSwapScreen(walletProvider, canTransact),
+          onSecureWallet: _openBackupProtection,
+          onRestoreSigner: () => _handleReadOnlyReconnect(walletProvider),
+          onNfts: _openNftGallery,
+          includeNfts: true,
+          swapEnabled: swapEnabled,
+        );
+
         final actions = <Widget>[
-          SizedBox(
-            width: actionWidth,
-            child: KubusWalletActionCard(
-              title: l10n.walletHomeSendAction,
-              subtitle: l10n.walletHomeDesktopSendSubtitle,
-              icon: Icons.arrow_upward_rounded,
-              color: roles.negativeAction,
-              onTap: () => _openSendScreen(walletProvider, canTransact),
-              enabled: canTransact,
-              disabledReason: l10n.walletSessionSignerMissing,
-              minHeight: isCompact ? 132 : 150,
-            ),
-          ),
-          SizedBox(
-            width: actionWidth,
-            child: KubusWalletActionCard(
-              title: l10n.walletHomeReceiveAction,
-              subtitle: l10n.walletHomeDesktopReceiveSubtitle,
-              icon: Icons.arrow_downward_rounded,
-              color: roles.statBlue,
-              onTap: _openReceiveScreen,
-              minHeight: isCompact ? 132 : 150,
-            ),
-          ),
-          if (swapEnabled)
-            SizedBox(
+          ...configs.map(
+            (config) => SizedBox(
               width: actionWidth,
-              child: KubusWalletActionCard(
-                title: l10n.walletHomeSwapAction,
-                subtitle: l10n.walletHomeDesktopSwapSubtitle,
-                icon: Icons.swap_horiz_rounded,
-                color: roles.positiveAction,
-                onTap: () => _openSwapScreen(walletProvider, canTransact),
-                enabled: canTransact,
-                disabledReason: l10n.walletSessionSignerMissing,
+              child: KubusWalletActionCard.fromConfig(
+                config: config,
                 minHeight: isCompact ? 132 : 150,
               ),
             ),
-          SizedBox(
-            width: actionWidth,
-            child: KubusWalletActionCard(
-              title: l10n.walletHomeActionNfts,
-              subtitle: l10n.walletHomeDesktopNftsSubtitle,
-              icon: Icons.collections_outlined,
-              color: roles.statAmber,
-              onTap: _openNftGallery,
-              minHeight: isCompact ? 132 : 150,
-            ),
           ),
           SizedBox(
             width: actionWidth,
             child: KubusWalletActionCard(
-              title: l10n.walletHomeSecureWalletAction,
-              subtitle: l10n.walletHomeSecuritySubtitle,
-              icon: Icons.shield_outlined,
-              color: roles.warningAction,
-              onTap: _openBackupProtection,
+              title: l10n.availabilityNodeTitle,
+              subtitle: l10n.availabilityNodeSubtitle,
+              icon: Icons.dns_outlined,
+              color: roles.statTeal,
+              onTap: () =>
+                  Navigator.of(context).pushNamed('/wallet/availability-node'),
               minHeight: isCompact ? 132 : 150,
             ),
           ),
-          if (authority.canRestoreFromEncryptedBackup)
-            SizedBox(
-              width: actionWidth,
-              child: KubusWalletActionCard(
-                title: l10n.walletSecurityRestoreSignerAction,
-                subtitle: l10n.walletSecuritySignerRestoreAvailableValue,
-                icon: Icons.login_outlined,
-                color: roles.positiveAction,
-                onTap: () => _handleReadOnlyReconnect(walletProvider),
-                minHeight: isCompact ? 132 : 150,
-              ),
-            ),
         ];
 
         return Wrap(

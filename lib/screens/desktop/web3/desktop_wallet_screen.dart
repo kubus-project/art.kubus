@@ -25,6 +25,8 @@ import '../../../widgets/common/kubus_screen_header.dart';
 import '../../../widgets/wallet_custody_status_panel.dart';
 import '../../../widgets/wallet_transaction_card.dart';
 import '../../../widgets/attestation_badge_panel.dart';
+import '../../../widgets/wallet/kubus_wallet_shell.dart';
+import '../../../widgets/wallet/wallet_action_controller.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../web3/wallet/wallet_backup_protection_screen.dart';
 
@@ -656,12 +658,25 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     WalletProvider walletProvider,
   ) {
     final l10n = AppLocalizations.of(context)!;
-    final canTransact = walletProvider.canTransact;
     final roles = KubusColorRoles.of(context);
     final swapEnabled = AppConfig.isFeatureEnabled('tokenSwap');
+    final configs = WalletActionController.buildPrimaryActions(
+      l10n: l10n,
+      roles: roles,
+      authority: walletProvider.authority,
+      onSend: _openSendScreen,
+      onReceive: _openReceiveScreen,
+      onSwap: _openSwapScreen,
+      onSecureWallet: _openBackupProtection,
+      onRestoreSigner: () => WalletReconnectAction.handleReadOnlyReconnect(
+        context: context,
+        walletProvider: walletProvider,
+      ),
+      swapEnabled: swapEnabled,
+    );
     return LayoutBuilder(
       builder: (context, constraints) {
-        final actionCount = swapEnabled ? 5 : 4;
+        final actionCount = configs.length;
         final tileWidth = constraints.maxWidth >= 980
             ? (constraints.maxWidth - (DetailSpacing.md * (actionCount - 1))) /
                 actionCount
@@ -670,154 +685,19 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
         return Wrap(
           spacing: DetailSpacing.md,
           runSpacing: DetailSpacing.md,
-          children: [
-            SizedBox(
-              width: resolvedTileWidth,
-              child: _buildActionButton(
-                l10n.walletHomeSendAction,
-                l10n.walletHomeDesktopSendSubtitle,
-                Icons.arrow_upward,
-                roles.negativeAction,
-                _openSendScreen,
-                enabled: canTransact,
-              ),
-            ),
-            SizedBox(
-              width: resolvedTileWidth,
-              child: _buildActionButton(
-                l10n.walletHomeReceiveAction,
-                l10n.walletHomeDesktopReceiveSubtitle,
-                Icons.arrow_downward,
-                roles.statBlue,
-                _openReceiveScreen,
-              ),
-            ),
-            if (swapEnabled)
-              SizedBox(
-                width: resolvedTileWidth,
-                child: _buildActionButton(
-                  l10n.walletHomeSwapAction,
-                  l10n.walletHomeDesktopSwapSubtitle,
-                  Icons.swap_horiz,
-                  roles.positiveAction,
-                  _openSwapScreen,
-                  enabled: canTransact,
-                ),
-              ),
-            SizedBox(
-              width: resolvedTileWidth,
-              child: _buildActionButton(
-                l10n.walletHomeSecureWalletAction,
-                l10n.walletHomeSecuritySubtitle,
-                Icons.shield_outlined,
-                roles.warningAction,
-                _openBackupProtection,
-              ),
-            ),
-            if (walletProvider.authority.canRestoreFromEncryptedBackup)
-              SizedBox(
-                width: resolvedTileWidth,
-                child: _buildActionButton(
-                  l10n.walletSecurityRestoreSignerAction,
-                  l10n.walletSecuritySignerRestoreAvailableValue,
-                  Icons.login_outlined,
-                  roles.positiveAction,
-                  () => WalletReconnectAction.handleReadOnlyReconnect(
-                    context: context,
-                    walletProvider: walletProvider,
+          children: configs
+              .map(
+                (config) => SizedBox(
+                  width: resolvedTileWidth,
+                  child: KubusWalletActionCard.fromConfig(
+                    config: config,
+                    minHeight: 138,
                   ),
                 ),
-              ),
-          ],
+              )
+              .toList(growable: false),
         );
       },
-    );
-  }
-
-  Widget _buildActionButton(
-    String label,
-    String subtitle,
-    IconData icon,
-    Color color,
-    VoidCallback onTap, {
-    bool enabled = true,
-  }) {
-    return DesktopCard(
-      onTap: enabled ? onTap : null,
-      child: Stack(
-        children: [
-          Positioned(
-            right: -10,
-            top: -10,
-            child: Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: color.withValues(alpha: enabled ? 0.12 : 0.04),
-              ),
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.all(DetailSpacing.lg),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 122),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: enabled ? 0.14 : 0.06),
-                      borderRadius: BorderRadius.circular(DetailRadius.md),
-                    ),
-                    child: Icon(
-                      icon,
-                      color: enabled
-                          ? color
-                          : Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.35),
-                    ),
-                  ),
-                  SizedBox(height: DetailSpacing.md),
-                  Text(
-                    label,
-                    style: DetailTypography.cardTitle(context).copyWith(
-                      color: enabled
-                          ? Theme.of(context).colorScheme.onSurface
-                          : Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.45),
-                    ),
-                  ),
-                  SizedBox(height: DetailSpacing.xs),
-                  Text(
-                    subtitle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: DetailTypography.caption(context).copyWith(
-                      color: enabled
-                          ? Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.6)
-                          : Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.4),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -1577,6 +1457,13 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             _openSwapScreen,
             enabled: canTransact,
           ),
+        _buildQuickActionTile(
+          l10n.availabilityNodeTitle,
+          l10n.availabilityNodeSubtitle,
+          Icons.dns_outlined,
+          roles.statTeal,
+          () => Navigator.of(context).pushNamed('/wallet/availability-node'),
+        ),
         _buildQuickActionTile(
           l10n.walletHomeSecureWalletAction,
           l10n.walletHomeSecuritySubtitle,

@@ -5452,6 +5452,91 @@ class AppLocalizationsSl extends AppLocalizations {
   String get walletHomeSecureWalletAction => 'Zaščiti denarnico';
 
   @override
+  String get availabilityNodeTitle => 'Vozlišče razpoložljivosti';
+
+  @override
+  String get availabilityNodeSubtitle => 'Ustvari in upravljaj omejene operatorske žetone za vozlišče.';
+
+  @override
+  String get availabilityNodeWhatIsTitle => 'Kaj to naredi';
+
+  @override
+  String get availabilityNodeIntro => 'Ta žeton omogoča, da se vozlišče registrira, pošilja srčni utrip, ustvarja zaveze do CID-jev in bere stanje nagrad. Ne nadzira tvoje denarnice in ne porablja sredstev.';
+
+  @override
+  String get availabilityNodeDescription => 'Vozlišča razpoložljivosti zaupanja vrednim operaterjem omogočajo poročanje o razpoložljivosti z lastne infrastrukture.';
+
+  @override
+  String get availabilityNodeWalletLabel => 'Operatorska denarnica';
+
+  @override
+  String get availabilityNodeSecurityNote => 'Shrani ga kot geslo. Kadarkoli ga lahko prekličeš.';
+
+  @override
+  String get availabilityNodeCreateTitle => 'Ustvari operatorski žeton';
+
+  @override
+  String get availabilityNodeDefaultLabel => 'Domače strežniško vozlišče';
+
+  @override
+  String get availabilityNodeLabel => 'Oznaka žetona';
+
+  @override
+  String get availabilityNodeExpiry => 'Poteče';
+
+  @override
+  String availabilityNodeExpiryDaysOption(Object days) {
+    return '$days dni';
+  }
+
+  @override
+  String get availabilityNodeExistingTokensTitle => 'Obstoječi žetoni';
+
+  @override
+  String get availabilityNodeEmptyState => 'Še ni operatorskih žetonov.';
+
+  @override
+  String get availabilityNodeExpiresLabel => 'poteče';
+
+  @override
+  String get availabilityNodeCreatedTitle => 'Operatorski žeton je ustvarjen';
+
+  @override
+  String get availabilityNodeCreatedBody => 'Žeton kopiraj zdaj. Pozneje ga ne boš mogel videti.';
+
+  @override
+  String get availabilityNodeEnvSnippetLabel => 'Delček .env';
+
+  @override
+  String get availabilityNodeCopyTokenButton => 'Kopiraj žeton';
+
+  @override
+  String get availabilityNodeCopySnippetButton => 'Kopiraj delček .env';
+
+  @override
+  String get availabilityNodeTokenCopiedToast => 'Operatorski žeton kopiran';
+
+  @override
+  String get availabilityNodeSnippetCopiedToast => 'Delček .env kopiran';
+
+  @override
+  String get availabilityNodeCreateFailedToast => 'Ustvarjanje operatorskega žetona ni uspelo';
+
+  @override
+  String get availabilityNodeConnectWalletToast => 'Najprej poveži denarnico';
+
+  @override
+  String get availabilityNodeSigningRequiredToast => 'Za ustvarjanje operatorskega žetona je potrebna seja s podpisom denarnice.';
+
+  @override
+  String get availabilityNodeRevokeTitle => 'Prekličem žeton?';
+
+  @override
+  String availabilityNodeRevokeBody(Object label) {
+    return 'Prekličem \"$label\"? Ta žeton bo takoj prenehal delovati.';
+  }
+
+  @override
   String get walletHomeSecurityTitle => 'Zaščiti svojo denarnico';
 
   @override

@@ -14,6 +14,7 @@ import '../../community/community_interactions.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/common/keyboard_inset_padding.dart';
 import '../../services/backend_api_service.dart';
+import '../../services/community_post_save_controller.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../providers/app_refresh_provider.dart';
@@ -159,10 +160,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       _error = null;
     });
     try {
+      final savedItemsProvider = context.read<SavedItemsProvider>();
       final post = await BackendApiService().getCommunityPostById(id);
       try {
         await CommunityService.loadSavedInteractions(
           [post],
+          savedItemsProvider: savedItemsProvider,
         );
       } catch (_) {}
       if (mounted) {
@@ -1632,17 +1635,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     final post = _post;
     if (!mounted || post == null) return;
     try {
-      await CommunityService.toggleBookmark(post);
-      if (!mounted) return;
-      await context.read<SavedItemsProvider>().setPostSaved(
-            post.id,
-            post.isBookmarked,
-            title: post.content,
-            subtitle: post.authorName,
-            imageUrl: post.imageUrl,
-            authorId: post.authorWallet ?? post.authorId,
-            authorName: post.authorName,
-          );
+      await CommunityPostSaveController.toggle(context, post);
       if (!mounted) return;
       setState(() {});
     } catch (_) {

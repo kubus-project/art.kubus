@@ -10505,6 +10505,168 @@ abstract class AppLocalizations {
   /// **'Secure wallet'**
   String get walletHomeSecureWalletAction;
 
+  /// No description provided for @availabilityNodeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Availability Node'**
+  String get availabilityNodeTitle;
+
+  /// No description provided for @availabilityNodeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create and manage scoped node operator tokens.'**
+  String get availabilityNodeSubtitle;
+
+  /// No description provided for @availabilityNodeWhatIsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What this does'**
+  String get availabilityNodeWhatIsTitle;
+
+  /// No description provided for @availabilityNodeIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'This token lets your node register, send heartbeats, commit to CIDs, and read reward status. It does not control your wallet or spend funds.'**
+  String get availabilityNodeIntro;
+
+  /// No description provided for @availabilityNodeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Availability nodes let trusted operators report backend availability from their own infrastructure.'**
+  String get availabilityNodeDescription;
+
+  /// No description provided for @availabilityNodeWalletLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Operator wallet'**
+  String get availabilityNodeWalletLabel;
+
+  /// No description provided for @availabilityNodeSecurityNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Store it like a password. You can revoke it at any time.'**
+  String get availabilityNodeSecurityNote;
+
+  /// No description provided for @availabilityNodeCreateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create operator token'**
+  String get availabilityNodeCreateTitle;
+
+  /// No description provided for @availabilityNodeDefaultLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Home server node'**
+  String get availabilityNodeDefaultLabel;
+
+  /// No description provided for @availabilityNodeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Token label'**
+  String get availabilityNodeLabel;
+
+  /// No description provided for @availabilityNodeExpiry.
+  ///
+  /// In en, this message translates to:
+  /// **'Expiry'**
+  String get availabilityNodeExpiry;
+
+  /// No description provided for @availabilityNodeExpiryDaysOption.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days'**
+  String availabilityNodeExpiryDaysOption(Object days);
+
+  /// No description provided for @availabilityNodeExistingTokensTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Existing tokens'**
+  String get availabilityNodeExistingTokensTitle;
+
+  /// No description provided for @availabilityNodeEmptyState.
+  ///
+  /// In en, this message translates to:
+  /// **'No operator tokens yet.'**
+  String get availabilityNodeEmptyState;
+
+  /// No description provided for @availabilityNodeExpiresLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'expires'**
+  String get availabilityNodeExpiresLabel;
+
+  /// No description provided for @availabilityNodeCreatedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Operator token created'**
+  String get availabilityNodeCreatedTitle;
+
+  /// No description provided for @availabilityNodeCreatedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy the token now. You will not be able to see it again.'**
+  String get availabilityNodeCreatedBody;
+
+  /// No description provided for @availabilityNodeEnvSnippetLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'.env snippet'**
+  String get availabilityNodeEnvSnippetLabel;
+
+  /// No description provided for @availabilityNodeCopyTokenButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy token'**
+  String get availabilityNodeCopyTokenButton;
+
+  /// No description provided for @availabilityNodeCopySnippetButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy .env snippet'**
+  String get availabilityNodeCopySnippetButton;
+
+  /// No description provided for @availabilityNodeTokenCopiedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Operator token copied'**
+  String get availabilityNodeTokenCopiedToast;
+
+  /// No description provided for @availabilityNodeSnippetCopiedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'.env snippet copied'**
+  String get availabilityNodeSnippetCopiedToast;
+
+  /// No description provided for @availabilityNodeCreateFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to create operator token'**
+  String get availabilityNodeCreateFailedToast;
+
+  /// No description provided for @availabilityNodeConnectWalletToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect a wallet first'**
+  String get availabilityNodeConnectWalletToast;
+
+  /// No description provided for @availabilityNodeSigningRequiredToast.
+  ///
+  /// In en, this message translates to:
+  /// **'A wallet-signed session is required to create an operator token.'**
+  String get availabilityNodeSigningRequiredToast;
+
+  /// No description provided for @availabilityNodeRevokeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoke token?'**
+  String get availabilityNodeRevokeTitle;
+
+  /// No description provided for @availabilityNodeRevokeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoke \"{label}\"? This token will stop working immediately.'**
+  String availabilityNodeRevokeBody(Object label);
+
   /// No description provided for @walletHomeSecurityTitle.
   ///
   /// In en, this message translates to:

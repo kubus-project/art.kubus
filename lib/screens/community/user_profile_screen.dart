@@ -26,6 +26,7 @@ import '../../providers/stats_provider.dart';
 import '../../providers/app_refresh_provider.dart';
 import '../../providers/artwork_provider.dart';
 import '../../providers/community_interactions_provider.dart';
+import '../../providers/saved_items_provider.dart';
 import '../../core/conversation_navigator.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/user_activity_status_line.dart';
@@ -175,8 +176,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       if (_posts.isNotEmpty) {
         final interactionsProvider =
             context.read<CommunityInteractionsProvider>();
+        final savedItemsProvider = context.read<SavedItemsProvider>();
         await CommunityService.loadSavedInteractions(
           _posts,
+          savedItemsProvider: savedItemsProvider,
         );
         await interactionsProvider.refreshPostStates(_posts, force: true);
         if (!mounted) return;
@@ -352,12 +355,14 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     });
 
     try {
+      final savedItemsProvider = context.read<SavedItemsProvider>();
       const pageSize = 20;
       final posts = await BackendApiService().getCommunityPosts(
           page: _currentPage, limit: pageSize, authorWallet: user!.id);
       try {
         await CommunityService.loadSavedInteractions(
           posts,
+          savedItemsProvider: savedItemsProvider,
         );
         interactionsProvider.hydratePostsFromServer(posts);
       } catch (_) {}
@@ -393,12 +398,14 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     });
 
     try {
+      final savedItemsProvider = context.read<SavedItemsProvider>();
       const pageSize = 20;
       final more = await BackendApiService().getCommunityPosts(
           page: _currentPage, limit: pageSize, authorWallet: user!.id);
       try {
         await CommunityService.loadSavedInteractions(
           more,
+          savedItemsProvider: savedItemsProvider,
         );
         interactionsProvider.hydratePostsFromServer(more);
       } catch (_) {}

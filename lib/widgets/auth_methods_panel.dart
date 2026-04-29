@@ -1,12 +1,10 @@
 import 'dart:async';
 import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
-import 'package:art_kubus/models/user_persona.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
 import 'package:art_kubus/providers/security_gate_provider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
-import 'package:art_kubus/screens/desktop/desktop_shell.dart';
-import 'package:art_kubus/screens/onboarding/onboarding_flow_screen.dart';
+import 'package:art_kubus/services/auth_redirect_controller.dart';
 import 'package:art_kubus/services/auth_onboarding_service.dart';
 import 'package:art_kubus/services/backend_api_service.dart';
 import 'package:art_kubus/services/google_auth_service.dart';
@@ -118,63 +116,16 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
   }) async {
     if (widget.embedded || widget.onAuthSuccess != null) return false;
 
-    final normalizedWalletAddress = (walletAddress ?? '').trim();
-    final flowScopeKey = OnboardingStateService.buildAuthOnboardingScopeKey(
-      walletAddress:
-          normalizedWalletAddress.isEmpty ? null : normalizedWalletAddress,
+    return const AuthRedirectController().routeAfterAuth(
+      context: context,
+      prefs: prefs,
+      profileProvider: profileProvider,
+      walletProvider: walletProvider,
+      walletAddress: walletAddress,
       userId: (prefs.getString('user_id') ?? '').trim(),
-    );
-    final requiresWalletBackup =
-        AppConfig.isFeatureEnabled('walletBackupOnboarding')
-            ? await walletProvider.isMnemonicBackupRequired(
-                walletAddress: walletAddress,
-              )
-            : false;
-    final resumeState =
-        await AuthOnboardingService.resolveStructuredOnboardingResume(
-      prefs: prefs,
-      hasPendingAuthOnboarding:
-          OnboardingStateService.hasPendingAuthOnboardingSync(
-        prefs,
-        scopeKey: flowScopeKey,
-      ),
-      hasAuthenticatedSession: true,
-      hasHydratedProfile: profileProvider.hasHydratedProfile,
-      requiresWalletBackup: requiresWalletBackup,
-      heuristicNextStepId: profileProvider.nextStructuredOnboardingStepId,
-      persona: profileProvider.userPersona?.storageValue,
       payload: payload,
-      flowScopeKey: flowScopeKey,
+      replaceStack: true,
     );
-    final nextStepId = resumeState.nextStepId;
-
-    if (!resumeState.requiresStructuredOnboarding ||
-        nextStepId == null ||
-        nextStepId.isEmpty) {
-      await OnboardingStateService.clearPendingAuthOnboarding(
-        prefs: prefs,
-        scopeKey: flowScopeKey,
-      );
-      return false;
-    }
-
-    await OnboardingStateService.markAuthOnboardingPending(
-      prefs: prefs,
-      scopeKey: flowScopeKey,
-    );
-    if (!mounted) return true;
-
-    final isDesktop = DesktopBreakpoints.isDesktop(context);
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => OnboardingFlowScreen(
-          forceDesktop: isDesktop,
-          initialStepId: nextStepId,
-        ),
-        settings: const RouteSettings(name: '/onboarding'),
-      ),
-    );
-    return true;
   }
 
   Future<void> _handleAuthSuccess(

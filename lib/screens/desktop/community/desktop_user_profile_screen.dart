@@ -27,6 +27,7 @@ import '../../../providers/stats_provider.dart';
 import '../../../providers/app_refresh_provider.dart';
 import '../../../providers/artwork_provider.dart';
 import '../../../providers/community_interactions_provider.dart';
+import '../../../providers/saved_items_provider.dart';
 import '../../../core/conversation_navigator.dart';
 import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/user_activity_status_line.dart';
@@ -217,7 +218,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       if (_posts.isNotEmpty) {
         final interactionsProvider =
             context.read<CommunityInteractionsProvider>();
-        await CommunityService.loadSavedInteractions(_posts);
+        final savedItemsProvider = context.read<SavedItemsProvider>();
+        await CommunityService.loadSavedInteractions(
+          _posts,
+          savedItemsProvider: savedItemsProvider,
+        );
         await interactionsProvider.refreshPostStates(_posts, force: true);
         if (!mounted) return;
         setState(() {});
@@ -1851,6 +1856,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
     try {
       const pageSize = 20;
+      final savedItemsProvider = context.read<SavedItemsProvider>();
       final posts = await BackendApiService().getCommunityPosts(
         page: _currentPage,
         limit: pageSize,
@@ -1858,7 +1864,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       );
 
       try {
-        await CommunityService.loadSavedInteractions(posts);
+        await CommunityService.loadSavedInteractions(
+          posts,
+          savedItemsProvider: savedItemsProvider,
+        );
         if (mounted) {
           context
               .read<CommunityInteractionsProvider>()
@@ -1898,6 +1907,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
 
     try {
       const pageSize = 20;
+      final savedItemsProvider = context.read<SavedItemsProvider>();
       final more = await BackendApiService().getCommunityPosts(
         page: _currentPage,
         limit: pageSize,
@@ -1905,7 +1915,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       );
 
       try {
-        await CommunityService.loadSavedInteractions(more);
+        await CommunityService.loadSavedInteractions(
+          more,
+          savedItemsProvider: savedItemsProvider,
+        );
         if (mounted) {
           context
               .read<CommunityInteractionsProvider>()

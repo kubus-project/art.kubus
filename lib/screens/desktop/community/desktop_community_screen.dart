@@ -24,6 +24,7 @@ import '../../../models/conversation.dart';
 import '../../../models/promotion.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../services/block_list_service.dart';
+import '../../../services/community_post_save_controller.dart';
 import '../../../services/user_service.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart' as share_types;
@@ -2841,7 +2842,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
     try {
-      await CommunityService.toggleBookmark(post);
+      await CommunityPostSaveController.toggle(context, post);
       if (!mounted) return;
       setState(() {});
       messenger.showKubusSnackBar(

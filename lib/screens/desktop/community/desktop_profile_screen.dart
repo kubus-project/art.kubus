@@ -2143,14 +2143,19 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Future<List<CommunityPost>> _loadUserPosts({String? walletOverride}) async {
     final wallet = walletOverride ?? await _resolveCurrentWallet();
+    if (!mounted) return [];
     if (wallet == null || wallet.isEmpty) return [];
     try {
+      final savedItemsProvider = context.read<SavedItemsProvider>();
       final posts = await BackendApiService().getCommunityPosts(
         page: 1,
         limit: 50,
         authorWallet: wallet,
       );
-      await CommunityService.loadSavedInteractions(posts);
+      await CommunityService.loadSavedInteractions(
+        posts,
+        savedItemsProvider: savedItemsProvider,
+      );
       if (mounted) {
         context
             .read<CommunityInteractionsProvider>()

@@ -79,6 +79,7 @@ import 'screens/art/ar_screen.dart';
 import 'screens/art/art_detail_screen.dart';
 import 'screens/desktop/art/desktop_artwork_detail_screen.dart';
 import 'screens/desktop/desktop_shell.dart';
+import 'screens/settings/availability_node_operator_screen.dart';
 import 'screens/desktop/web3/desktop_connect_wallet_screen.dart';
 import 'screens/web3/wallet/connectwallet_screen.dart';
 import 'screens/web3/promotions/promotion_checkout_return_screen.dart';
@@ -883,6 +884,10 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
         '/connect-wallet': (context) => DesktopBreakpoints.isDesktop(context)
             ? const DesktopConnectWalletScreen()
             : const ConnectWallet(),
+        '/wallet/availability-node': (context) =>
+            const AvailabilityNodeOperatorScreen(),
+        '/settings/availability-node': (context) =>
+            const AvailabilityNodeOperatorScreen(),
         '/wallet_connect': (context) => DesktopBreakpoints.isDesktop(context)
             ? const DesktopConnectWalletScreen()
             : const ConnectWallet(),

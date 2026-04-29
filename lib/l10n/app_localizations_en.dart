@@ -5438,6 +5438,91 @@ class AppLocalizationsEn extends AppLocalizations {
   String get walletHomeSecureWalletAction => 'Secure wallet';
 
   @override
+  String get availabilityNodeTitle => 'Availability Node';
+
+  @override
+  String get availabilityNodeSubtitle => 'Create and manage scoped node operator tokens.';
+
+  @override
+  String get availabilityNodeWhatIsTitle => 'What this does';
+
+  @override
+  String get availabilityNodeIntro => 'This token lets your node register, send heartbeats, commit to CIDs, and read reward status. It does not control your wallet or spend funds.';
+
+  @override
+  String get availabilityNodeDescription => 'Availability nodes let trusted operators report backend availability from their own infrastructure.';
+
+  @override
+  String get availabilityNodeWalletLabel => 'Operator wallet';
+
+  @override
+  String get availabilityNodeSecurityNote => 'Store it like a password. You can revoke it at any time.';
+
+  @override
+  String get availabilityNodeCreateTitle => 'Create operator token';
+
+  @override
+  String get availabilityNodeDefaultLabel => 'Home server node';
+
+  @override
+  String get availabilityNodeLabel => 'Token label';
+
+  @override
+  String get availabilityNodeExpiry => 'Expiry';
+
+  @override
+  String availabilityNodeExpiryDaysOption(Object days) {
+    return '$days days';
+  }
+
+  @override
+  String get availabilityNodeExistingTokensTitle => 'Existing tokens';
+
+  @override
+  String get availabilityNodeEmptyState => 'No operator tokens yet.';
+
+  @override
+  String get availabilityNodeExpiresLabel => 'expires';
+
+  @override
+  String get availabilityNodeCreatedTitle => 'Operator token created';
+
+  @override
+  String get availabilityNodeCreatedBody => 'Copy the token now. You will not be able to see it again.';
+
+  @override
+  String get availabilityNodeEnvSnippetLabel => '.env snippet';
+
+  @override
+  String get availabilityNodeCopyTokenButton => 'Copy token';
+
+  @override
+  String get availabilityNodeCopySnippetButton => 'Copy .env snippet';
+
+  @override
+  String get availabilityNodeTokenCopiedToast => 'Operator token copied';
+
+  @override
+  String get availabilityNodeSnippetCopiedToast => '.env snippet copied';
+
+  @override
+  String get availabilityNodeCreateFailedToast => 'Failed to create operator token';
+
+  @override
+  String get availabilityNodeConnectWalletToast => 'Connect a wallet first';
+
+  @override
+  String get availabilityNodeSigningRequiredToast => 'A wallet-signed session is required to create an operator token.';
+
+  @override
+  String get availabilityNodeRevokeTitle => 'Revoke token?';
+
+  @override
+  String availabilityNodeRevokeBody(Object label) {
+    return 'Revoke \"$label\"? This token will stop working immediately.';
+  }
+
+  @override
   String get walletHomeSecurityTitle => 'Secure your wallet';
 
   @override

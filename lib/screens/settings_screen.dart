@@ -40,7 +40,6 @@ import '../widgets/avatar_widget.dart';
 import '../widgets/empty_state_card.dart';
 import '../widgets/support/support_ticket_dialog.dart';
 import 'web3/wallet/wallet_backup_protection_screen.dart';
-import 'settings/availability_node_operator_screen.dart';
 import '../utils/app_animations.dart';
 import '../../config/config.dart';
 import '../utils/map_performance_debug.dart';
@@ -1355,11 +1354,8 @@ class _SettingsScreenState extends State<SettingsScreen>
             _availabilityNodeTileTitle(context),
             _availabilityNodeTileSubtitle(context),
             Icons.dns_outlined,
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const AvailabilityNodeOperatorScreen(),
-              ),
-            ),
+            onTap: () =>
+                Navigator.of(context).pushNamed('/wallet/availability-node'),
           ),
         _buildSettingsTile(
           l10n.settingsBackupSettingsTileTitle,
@@ -1399,15 +1395,11 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   String _availabilityNodeTileTitle(BuildContext context) {
-    return Localizations.localeOf(context).languageCode == 'sl'
-        ? 'Availability Node'
-        : 'Availability Node';
+    return AppLocalizations.of(context)!.availabilityNodeTitle;
   }
 
   String _availabilityNodeTileSubtitle(BuildContext context) {
-    return Localizations.localeOf(context).languageCode == 'sl'
-        ? 'Ustvari ali preklici omejene operatorske tokene'
-        : 'Create and revoke scoped node operator tokens';
+    return AppLocalizations.of(context)!.availabilityNodeSubtitle;
   }
 
   Widget _buildSecuritySection(AppLocalizations l10n) {

@@ -41,6 +41,7 @@ import '../../providers/community_interactions_provider.dart';
 import '../../providers/community_subject_provider.dart';
 import '../../models/community_group.dart';
 import '../../services/backend_api_service.dart';
+import '../../services/community_post_save_controller.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart' as share_types;
 import '../../services/block_list_service.dart';
@@ -361,6 +362,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     final backendApi = BackendApiService();
     final subjectProvider =
         Provider.of<CommunitySubjectProvider>(context, listen: false);
+    final savedItemsProvider = context.read<SavedItemsProvider>();
     final posts = await backendApi.getCommunityPosts(
       page: 1,
       limit: 50,
@@ -370,6 +372,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     );
     await CommunityService.loadSavedInteractions(
       posts,
+      savedItemsProvider: savedItemsProvider,
     );
     if (mounted) {
       subjectProvider.primeFromPosts(posts);
@@ -1110,8 +1113,10 @@ class _CommunityScreenState extends State<CommunityScreen>
       }
 
       if (_communityPosts.isNotEmpty) {
+        final savedItemsProvider = context.read<SavedItemsProvider>();
         await CommunityService.loadSavedInteractions(
           _communityPosts,
+          savedItemsProvider: savedItemsProvider,
         );
         if (!mounted) return;
         setState(() {});
@@ -5105,20 +5110,8 @@ class _CommunityScreenState extends State<CommunityScreen>
     if (index >= _communityPosts.length) return;
 
     final post = _communityPosts[index];
-    final savedItemsProvider =
-        Provider.of<SavedItemsProvider>(context, listen: false);
-
     try {
-      await CommunityService.toggleBookmark(post);
-      await savedItemsProvider.setPostSaved(
-        post.id,
-        post.isBookmarked,
-        title: post.content,
-        subtitle: post.authorName,
-        imageUrl: post.imageUrl,
-        authorId: post.authorWallet ?? post.authorId,
-        authorName: post.authorName,
-      );
+      await CommunityPostSaveController.toggle(context, post);
       if (!mounted) return;
 
       final l10n = AppLocalizations.of(context)!;

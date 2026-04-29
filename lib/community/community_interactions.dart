@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/config.dart';
 import '../models/community_group.dart';
 import '../models/community_subject.dart';
+import '../providers/saved_items_provider.dart';
 import '../models/promotion.dart';
 import '../services/backend_api_service.dart';
 import '../services/user_action_logger.dart';
@@ -695,14 +696,15 @@ class CommunityService {
   // Load saved interactions
   static Future<void> loadSavedInteractions(
     List<CommunityPost> posts,
+    {SavedItemsProvider? savedItemsProvider}
   ) async {
     final prefs = await SharedPreferences.getInstance();
-    final bookmarkedPosts = prefs.getStringList(_bookmarksKey) ?? [];
     final followedUsers = prefs.getStringList(_followsKey) ?? [];
 
     for (final post in posts) {
-      // Load bookmarks
-      post.isBookmarked = bookmarkedPosts.contains(post.id);
+      if (savedItemsProvider != null) {
+        post.isBookmarked = savedItemsProvider.isPostSaved(post.id);
+      }
 
       // Load follows
       post.isFollowing = followedUsers.contains(post.authorId);
