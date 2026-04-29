@@ -426,6 +426,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
         artworkId: draft.artwork?.id,
         subjectType: draft.subjectType,
         subjectId: draft.subjectId,
+        subjects: draft.subjects,
       );
 
       if (!mounted) return;
@@ -563,6 +564,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
 
     final previewValue = preview;
     final bool hasSubject = previewValue != null;
+    final subjectCount = draft.subjects.length;
     final String label;
     final String title;
     final IconData subjectIcon;
@@ -573,9 +575,10 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
       subjectIcon = Icons.link;
       imageUrl = null;
     } else {
-      label = l10n.communitySubjectLinkedLabel(
+      final linkedLabel = l10n.communitySubjectLinkedLabel(
         _subjectTypeLabel(l10n, previewValue.ref.normalizedType),
       );
+      label = subjectCount > 1 ? '$linkedLabel +${subjectCount - 1}' : linkedLabel;
       title = previewValue.title;
       subjectIcon = _subjectTypeIcon(previewValue.ref.normalizedType);
       imageUrl = previewValue.imageUrl;
@@ -838,7 +841,15 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
         Provider.of<SavedItemsProvider>(context, listen: false);
     try {
       await CommunityService.toggleBookmark(post);
-      await savedItemsProvider.setPostSaved(post.id, post.isBookmarked);
+      await savedItemsProvider.setPostSaved(
+        post.id,
+        post.isBookmarked,
+        title: post.content,
+        subtitle: post.authorName,
+        imageUrl: post.imageUrl,
+        authorId: post.authorWallet ?? post.authorId,
+        authorName: post.authorName,
+      );
       if (!mounted) return;
       setState(() {});
       ScaffoldMessenger.of(context).showKubusSnackBar(

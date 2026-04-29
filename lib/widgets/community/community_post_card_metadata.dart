@@ -24,27 +24,42 @@ class _PostMetadataSection extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context);
     final subjectProvider = context.watch<CommunitySubjectProvider>();
-    final subjectRef = _resolveSubjectRef(post);
-    CommunitySubjectPreview? subjectPreview;
-    if (subjectRef != null) {
-      subjectPreview = subjectProvider.previewFor(subjectRef);
-      if (subjectPreview == null && post.artwork != null) {
-        subjectPreview = CommunitySubjectPreview(
+    final subjectRefs = _resolveSubjectRefs(post);
+    final subjectPreviews = <CommunitySubjectPreview>[];
+    for (final subjectRef in subjectRefs) {
+      var preview = subjectProvider.previewFor(subjectRef);
+      if (preview == null && (subjectRef.title ?? '').trim().isNotEmpty) {
+        preview = CommunitySubjectPreview(
+          ref: subjectRef,
+          title: subjectRef.title!.trim(),
+          subtitle: subjectRef.subtitle ?? subjectRef.ownerName,
+          imageUrl: MediaUrlResolver.resolve(subjectRef.imageUrl) ??
+              subjectRef.imageUrl,
+        );
+      }
+      if (preview == null &&
+          subjectRef.normalizedType == 'artwork' &&
+          post.artwork != null) {
+        preview = CommunitySubjectPreview(
           ref: subjectRef,
           title: post.artwork!.title,
           imageUrl: MediaUrlResolver.resolve(post.artwork!.imageUrl) ??
               post.artwork!.imageUrl,
         );
       }
+      if (preview != null) {
+        subjectPreviews.add(preview);
+      } else {
+        subjectPreviews.add(CommunitySubjectPreview(
+          ref: subjectRef,
+          title: _subjectTypeLabel(context, subjectRef.normalizedType, l10n),
+        ));
+      }
     }
-    final resolvedPreview = subjectPreview;
-    final subjectTypeLabel = resolvedPreview != null
-        ? _subjectTypeLabel(context, resolvedPreview.ref.normalizedType, l10n)
-        : null;
     final hasMetadata = post.tags.isNotEmpty ||
         post.mentions.isNotEmpty ||
         post.location != null ||
-        resolvedPreview != null ||
+        subjectPreviews.isNotEmpty ||
         post.group != null;
     if (!hasMetadata) return const SizedBox.shrink();
 
@@ -164,88 +179,20 @@ class _PostMetadataSection extends StatelessWidget {
             ),
           ),
         ],
-        if (resolvedPreview != null) ...[
+        if (subjectPreviews.isNotEmpty) ...[
           const SizedBox(height: KubusSpacing.md),
-          GestureDetector(
-            onTap: onOpenSubject == null
-                ? null
-                : () => onOpenSubject!(resolvedPreview),
-            child: Container(
-              padding: const EdgeInsets.all(KubusSpacing.md),
-              decoration: BoxDecoration(
-                color: scheme.primaryContainer,
-                borderRadius: BorderRadius.circular(KubusRadius.md),
-                border:
-                    Border.all(color: scheme.outline.withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: accentColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(
-                          KubusRadius.sm + KubusSpacing.xxs),
-                    ),
-                    child: resolvedPreview.imageUrl != null
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(
-                              KubusRadius.sm + KubusSpacing.xxs,
-                            ),
-                            child: Image.network(
-                              MediaUrlResolver.resolveDisplayUrl(
-                                    resolvedPreview.imageUrl,
-                                  ) ??
-                                  resolvedPreview.imageUrl!,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Icon(
-                                _subjectTypeIcon(
-                                    resolvedPreview.ref.normalizedType),
-                                color: accentColor,
-                                size: 22,
-                              ),
-                            ),
-                          )
-                        : Icon(
-                            _subjectTypeIcon(
-                                resolvedPreview.ref.normalizedType),
-                            color: accentColor,
-                            size: 22,
-                          ),
-                  ),
-                  const SizedBox(width: KubusSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          resolvedPreview.title,
-                          style: KubusTextStyles.navMetaLabel.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: scheme.onSurface,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          l10n?.communitySubjectLinkedLabel(
-                                  subjectTypeLabel ?? '') ??
-                              'Linked',
-                          style: KubusTextStyles.compactBadge.copyWith(
-                            color: scheme.onSurface.withValues(alpha: 0.6),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    Icons.chevron_right,
-                    size: 20,
-                    color: scheme.onSurface.withValues(alpha: 0.4),
-                  ),
-                ],
-              ),
-            ),
+          Wrap(
+            spacing: KubusSpacing.sm,
+            runSpacing: KubusSpacing.sm,
+            children: subjectPreviews
+                .map((preview) => _SubjectPreviewChip(
+                      preview: preview,
+                      accentColor: accentColor,
+                      onTap: onOpenSubject == null
+                          ? null
+                          : () => onOpenSubject!(preview),
+                    ))
+                .toList(growable: false),
           ),
         ],
         if (post.group != null) ...[
@@ -286,6 +233,109 @@ class _PostMetadataSection extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+class _SubjectPreviewChip extends StatelessWidget {
+  const _SubjectPreviewChip({
+    required this.preview,
+    required this.accentColor,
+    this.onTap,
+  });
+
+  final CommunitySubjectPreview preview;
+  final Color accentColor;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
+    final subjectTypeLabel =
+        _subjectTypeLabel(context, preview.ref.normalizedType, l10n);
+    final imageUrl = preview.imageUrl;
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 280),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(KubusSpacing.sm),
+          decoration: BoxDecoration(
+            color: scheme.primaryContainer.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(KubusRadius.md),
+            border: Border.all(color: scheme.outline.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: accentColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(KubusRadius.sm),
+                ),
+                child: imageUrl != null && imageUrl.isNotEmpty
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(KubusRadius.sm),
+                        child: Image.network(
+                          MediaUrlResolver.resolveDisplayUrl(imageUrl) ??
+                              imageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Icon(
+                            _subjectTypeIcon(preview.ref.normalizedType),
+                            color: accentColor,
+                            size: 18,
+                          ),
+                        ),
+                      )
+                    : Icon(
+                        _subjectTypeIcon(preview.ref.normalizedType),
+                        color: accentColor,
+                        size: 18,
+                      ),
+              ),
+              const SizedBox(width: KubusSpacing.sm),
+              Flexible(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      preview.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: KubusTextStyles.navMetaLabel.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                    Text(
+                      l10n?.communitySubjectLinkedLabel(subjectTypeLabel) ??
+                          subjectTypeLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: KubusTextStyles.compactBadge.copyWith(
+                        color: scheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (onTap != null) ...[
+                const SizedBox(width: KubusSpacing.xs),
+                Icon(
+                  Icons.chevron_right,
+                  size: 18,
+                  color: scheme.onSurface.withValues(alpha: 0.4),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

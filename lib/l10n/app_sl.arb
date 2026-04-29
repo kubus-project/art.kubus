@@ -5086,6 +5086,11 @@
   "savedItemsCollectionLabel": "zbirke",
   "savedItemsExhibitionLabel": "razstave",
   "savedItemsPostLabel": "objave",
+  "savedItemsArtistLabel": "umetniki",
+  "savedItemsInstitutionLabel": "institucije",
+  "savedItemsGroupLabel": "skupine",
+  "savedItemsMarkerLabel": "označevalci",
+  "savedItemsLoadMoreButton": "Naloži več",
   "savedItemsSummarySubtitleEmpty": "Dodaj umetnine, dogodke, zbirke, razstave in objave, da ostanejo tukaj.",
   "savedItemsSummarySubtitleLastSaved": "Zadnje shranjeno {timestamp}",
   "@savedItemsSummarySubtitleLastSaved": {

@@ -29,18 +29,30 @@ class CommunitySubjectProvider extends ChangeNotifier {
     bool seeded = false;
     final refs = <CommunitySubjectRef>[];
     for (final post in posts) {
-      final ref = _subjectRefFromPost(post);
-      if (ref == null) continue;
-      refs.add(ref);
-      if (ref.normalizedType == 'artwork' && post.artwork != null) {
+      final postRefs = _subjectRefsFromPost(post);
+      for (final ref in postRefs) {
+        refs.add(ref);
         final key = ref.key;
-        if (!_cache.containsKey(key)) {
+        final title = (ref.title ?? '').trim();
+        if (title.isNotEmpty && !_cache.containsKey(key)) {
           _cache[key] = CommunitySubjectPreview(
             ref: ref,
-            title: post.artwork!.title,
-            imageUrl: MediaUrlResolver.resolve(post.artwork!.imageUrl) ?? post.artwork!.imageUrl,
+            title: title,
+            subtitle: ref.subtitle ?? ref.ownerName,
+            imageUrl: MediaUrlResolver.resolve(ref.imageUrl) ?? ref.imageUrl,
           );
           seeded = true;
+        }
+        if (ref.normalizedType == 'artwork' && post.artwork != null) {
+          if (!_cache.containsKey(key)) {
+            _cache[key] = CommunitySubjectPreview(
+              ref: ref,
+              title: post.artwork!.title,
+              imageUrl: MediaUrlResolver.resolve(post.artwork!.imageUrl) ??
+                  post.artwork!.imageUrl,
+            );
+            seeded = true;
+          }
         }
       }
     }
@@ -119,15 +131,22 @@ class CommunitySubjectProvider extends ChangeNotifier {
     }
   }
 
-  CommunitySubjectRef? _subjectRefFromPost(CommunityPost post) {
+  List<CommunitySubjectRef> _subjectRefsFromPost(CommunityPost post) {
+    if (post.subjects.isNotEmpty) {
+      return post.subjects
+          .where((ref) => ref.normalizedType.isNotEmpty && ref.id.isNotEmpty)
+          .toList(growable: false);
+    }
     final type = (post.subjectType ?? '').trim();
     final id = (post.subjectId ?? '').trim();
     if (type.isNotEmpty && id.isNotEmpty) {
-      return CommunitySubjectRef(type: type, id: id);
+      return <CommunitySubjectRef>[CommunitySubjectRef(type: type, id: id)];
     }
     if (post.artwork != null) {
-      return CommunitySubjectRef(type: 'artwork', id: post.artwork!.id);
+      return <CommunitySubjectRef>[
+        CommunitySubjectRef(type: 'artwork', id: post.artwork!.id),
+      ];
     }
-    return null;
+    return const <CommunitySubjectRef>[];
   }
 }

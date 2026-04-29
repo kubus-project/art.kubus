@@ -1,15 +1,52 @@
 class CommunitySubjectRef {
   final String type;
   final String id;
+  final String? title;
+  final String? subtitle;
+  final String? imageUrl;
+  final String? ownerName;
 
   const CommunitySubjectRef({
     required this.type,
     required this.id,
+    this.title,
+    this.subtitle,
+    this.imageUrl,
+    this.ownerName,
   });
 
   String get normalizedType => type.trim().toLowerCase();
 
   String get key => '$normalizedType::$id';
+
+  factory CommunitySubjectRef.fromJson(Map<String, dynamic> json) {
+    return CommunitySubjectRef(
+      type: (json['type'] ?? json['subjectType'] ?? json['subject_type'] ?? '')
+          .toString()
+          .trim(),
+      id: (json['id'] ?? json['subjectId'] ?? json['subject_id'] ?? '')
+          .toString()
+          .trim(),
+      title: _nullableString(json['title']),
+      subtitle: _nullableString(json['subtitle']),
+      imageUrl: _nullableString(json['imageUrl'] ?? json['image_url']),
+      ownerName: _nullableString(json['ownerName'] ?? json['owner_name']),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'type': normalizedType,
+        'id': id,
+        if (title != null) 'title': title,
+        if (subtitle != null) 'subtitle': subtitle,
+        if (imageUrl != null) 'imageUrl': imageUrl,
+        if (ownerName != null) 'ownerName': ownerName,
+      };
+}
+
+String? _nullableString(Object? value) {
+  final text = value?.toString().trim();
+  return text == null || text.isEmpty ? null : text;
 }
 
 class CommunitySubjectPreview {

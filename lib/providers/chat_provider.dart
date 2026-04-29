@@ -465,6 +465,7 @@ class ChatProvider extends ChangeNotifier {
   StreamSubscription<Map<String, dynamic>>? _eventBusProfilesSub;
   String? _currentWallet;
   String? _openConversationId;
+  DateTime? _openConversationStartedAt;
   Timer? _pollTimer;
   Duration? _pollIntervalCurrent;
   Timer? _subscriptionMonitorTimer;
@@ -1049,6 +1050,7 @@ class ChatProvider extends ChangeNotifier {
   void _upsertConversationMetadataForMessage(
     String conversationId,
     ChatMessage message,
+    {bool force = false}
   ) {
     final convId = conversationId.trim();
     if (convId.isEmpty) return;
@@ -1057,7 +1059,8 @@ class ChatProvider extends ChangeNotifier {
 
     final existing = _conversations[index];
     final lastAt = existing.lastMessageAt;
-    final shouldUpdateTimestamp = lastAt == null ||
+    final shouldUpdateTimestamp = force ||
+        lastAt == null ||
         message.createdAt.isAfter(lastAt) ||
         message.createdAt.isAtSameMomentAs(lastAt);
 
@@ -1093,97 +1096,74 @@ class ChatProvider extends ChangeNotifier {
 
   void _onMessageReceived(Map<String, dynamic> data) {
     try {
-      final convId = ((data['conversationId'] ?? data['conversation_id']) ?? '')
-          .toString();
-      final msgJson = Map<String, dynamic>.from(data);
-      final msg = ChatMessage.fromJson(msgJson);
-      // Normalize keys to lowercase so lookups are stable across sockets and stores
-      // If messages already fetched for this conversation, insert. Otherwise, fetch messages first so UI has proper history
-      if (_messages.containsKey(convId)) {
-        // Create a new list instance instead of mutating in-place so listeners
-        // receive a new reference and UI can detect and re-render changes.
-        final existing = _messages[convId] ?? <ChatMessage>[];
-
-        // Check if message already exists (prevents duplicate when sender receives their own socket event)
-        final alreadyExists = existing.any((m) => m.id == msg.id);
-        if (alreadyExists) {
-          debugPrint(
-              'ChatProvider: Message ${msg.id} already exists in conv $convId, skipping duplicate');
-          return;
-        }
-
-        if (_openConversationId != null && _openConversationId == convId) {
-          // Insert the message into a fresh list
-          final newList = <ChatMessage>[msg, ...existing];
-          _cacheMessages(convId, newList);
-          // Optimistically mark this message as read locally
-          markMessageReadLocal(convId, msg.id);
-          // Ensure conversation unread count is zero while open
-          _unreadCounts[convId] = 0;
-          // Inform server about per-message read (fire-and-forget, no extra local adjustments)
-          _sendMarkMessageReadToServer(convId, msg.id);
-          _safeNotifyListeners();
-        } else {
-          _cacheMessages(convId, <ChatMessage>[msg, ...existing]);
-        }
-      } else {
-        // Fetch messages in background, don't block socket handling
-        debugPrint(
-            'ChatProvider: Messages for conv $convId unknown locally, fetching');
-        // Mark as fetching with empty list to avoid duplicate fetches
-        _cacheMessages(convId, const <ChatMessage>[]);
-        _api.fetchMessages(convId).then((resp) {
-          if (resp['success'] == true) {
-            final items = (resp['data'] as List<dynamic>?) ?? [];
-            final list = items
-                .map((i) => ChatMessage.fromJson(i as Map<String, dynamic>))
-                .toList();
-            // Use the fetched list as the canonical list instance
-            final fetched = list;
-            // Insert incoming message at top if absent
-            if (!fetched.any((m) => m.id == msg.id)) {
-              fetched.insert(0, msg);
-              // If this conversation is currently open, mark it read and mark this message read
-              if (_openConversationId != null &&
-                  _openConversationId == convId) {
-                markMessageReadLocal(convId, msg.id);
-                _unreadCounts[convId] = 0;
-                _sendMarkMessageReadToServer(convId, msg.id);
-              }
-            }
-            _cacheMessages(convId, fetched);
-            _safeNotifyListeners();
-            debugPrint(
-                'ChatProvider: Fetched ${_messages[convId]?.length ?? 0} messages for conv $convId after socket event');
-          }
-        }).catchError((e) {
-          debugPrint(
-              'ChatProvider: Background fetchMessages failed for conv $convId: $e');
-        });
-      }
-      _upsertConversationMetadataForMessage(convId, msg);
-      // Only increment unread count when the conversation is not currently open
-      if (!(_openConversationId != null && _openConversationId == convId)) {
-        _unreadCounts[convId] = (_unreadCounts[convId] ?? 0) + 1;
-      }
+      final payload = data['message'] is Map
+          ? Map<String, dynamic>.from(data['message'] as Map)
+          : Map<String, dynamic>.from(data);
+      final msg = ChatMessage.fromJson(payload);
+      final convId = (payload['conversationId'] ??
+              payload['conversation_id'] ??
+              data['conversationId'] ??
+              data['conversation_id'] ??
+              msg.conversationId)
+          .toString()
+          .trim();
       if (convId.isEmpty) {
         debugPrint(
-            'ChatProvider._onMessageReceived: WARNING: conversationId is empty; rawData=$data');
+            'ChatProvider._onMessageReceived: missing conversation id; rawData=$data');
+        return;
       }
+      final msgJson = <String, dynamic>{
+        ...payload,
+        'conversationId': convId,
+      };
+      final normalizedMsg = msg.conversationId == convId
+          ? msg
+          : ChatMessage.fromJson(msgJson);
+      final existing = _messages[convId] ?? const <ChatMessage>[];
+      final next = <ChatMessage>[];
+      var inserted = false;
+      for (final current in existing) {
+        final clientTempId = current.data?['clientTempId']?.toString();
+        final incomingClientTempId = normalizedMsg.data?['clientTempId']?.toString();
+        if (current.id == normalizedMsg.id ||
+            (clientTempId != null &&
+                clientTempId.isNotEmpty &&
+                clientTempId == incomingClientTempId)) {
+          if (!inserted) {
+            next.add(normalizedMsg);
+            inserted = true;
+          }
+        } else {
+          next.add(current);
+        }
+      }
+      if (!inserted) next.add(normalizedMsg);
+      next.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      _cacheMessages(convId, next);
+
+      final isOpen = _openConversationId == convId;
+      if (isOpen) {
+        _unreadCounts[convId] = 0;
+        markMessageReadLocal(convId, normalizedMsg.id);
+        _sendMarkMessageReadToServer(convId, normalizedMsg.id);
+      } else if (!existing.any((message) => message.id == normalizedMsg.id)) {
+        _unreadCounts[convId] = (_unreadCounts[convId] ?? 0) + 1;
+      }
+      _upsertConversationMetadataForMessage(convId, normalizedMsg);
       // Trigger an OS/local notification for incoming messages when the conversation
       // is not open. PushNotificationService will no-op if permission not granted.
       try {
-        if (!(_openConversationId != null && _openConversationId == convId)) {
-          final senderWallet = msg.senderWallet;
+        if (!isOpen) {
+          final senderWallet = normalizedMsg.senderWallet;
           final authorName = (_userCache[senderWallet]?.name) ??
               (senderWallet.length > 10
                   ? '${senderWallet.substring(0, 10)}...'
                   : senderWallet);
-          final content = msg.message.toString();
+          final content = normalizedMsg.message.toString();
           // Fire-and-forget: service early-returns when permission is not granted
           PushNotificationService()
               .showCommunityNotification(
-            postId: msg.id,
+            postId: normalizedMsg.id,
             authorName: authorName,
             content: content,
           )
@@ -1196,7 +1176,7 @@ class ChatProvider extends ChangeNotifier {
             'ChatProvider: Failed to show local notification for incoming message: $e');
       }
       debugPrint(
-          'ChatProvider: _onMessageReceived: convId=$convId, msgId=${msg.id}, messagesInConv=${_messages[convId]?.length ?? 0}, unread=${_unreadCounts[convId]}');
+          'ChatProvider: _onMessageReceived: convId=$convId, msgId=${normalizedMsg.id}, messagesInConv=${_messages[convId]?.length ?? 0}, unread=${_unreadCounts[convId]}');
       // Report whether this conversation is known locally
       final convIdx = _conversations.indexWhere((c) => c.id == convId);
       debugPrint(
@@ -1363,24 +1343,70 @@ class ChatProvider extends ChangeNotifier {
 
   Future<void> sendMessage(String conversationId, String message,
       {Map<String, dynamic>? data, String? replyToId}) async {
-    final result = await _api.sendMessage(conversationId, message,
-        data: data, replyToId: replyToId);
-    // Also append locally
-    final msg = ChatMessage.fromJson(result['data']);
     final nid = conversationId;
-    final existing = _messages.putIfAbsent(nid, () => <ChatMessage>[]);
-    final alreadyExists = existing.any((m) => m.id == msg.id);
-    if (alreadyExists) {
-      debugPrint(
-          'ChatProvider.sendMessage: Message ${msg.id} already present in conv $nid, skipping duplicate insert');
-      return;
-    }
-    final newList = <ChatMessage>[msg, ...existing];
-    _cacheMessages(nid, newList);
-    _upsertConversationMetadataForMessage(nid, msg);
-    debugPrint(
-        'ChatProvider.sendMessage: Added message ${msg.id} to conv $nid, total messages: ${newList.length}');
+    final tempId = 'temp-${DateTime.now().microsecondsSinceEpoch}';
+    final optimisticData = <String, dynamic>{
+      ...?data,
+      'clientTempId': tempId,
+      'sendStatus': 'sending',
+    };
+    final tempMessage = ChatMessage(
+      id: tempId,
+      conversationId: nid,
+      senderWallet: _currentWallet ?? '',
+      message: message,
+      data: optimisticData,
+      createdAt: DateTime.now(),
+      readByCurrent: true,
+    );
+    final existing = _messages[nid] ?? const <ChatMessage>[];
+    _cacheMessages(nid, <ChatMessage>[tempMessage, ...existing]);
+    _upsertConversationMetadataForMessage(nid, tempMessage);
     _safeNotifyListeners(force: true);
+
+    try {
+      final result = await _api.sendMessage(
+        conversationId,
+        message,
+        data: optimisticData,
+        replyToId: replyToId,
+      );
+      final msg = ChatMessage.fromJson(result['data']);
+      final current = _messages[nid] ?? const <ChatMessage>[];
+      final replaced = <ChatMessage>[];
+      var inserted = false;
+      for (final item in current) {
+        if (item.id == tempId || item.id == msg.id) {
+          if (!inserted) {
+            replaced.add(msg);
+            inserted = true;
+          }
+        } else {
+          replaced.add(item);
+        }
+      }
+      if (!inserted) replaced.insert(0, msg);
+      replaced.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      _cacheMessages(nid, replaced);
+      _upsertConversationMetadataForMessage(nid, msg, force: true);
+      _safeNotifyListeners(force: true);
+    } catch (e) {
+      final current = _messages[nid] ?? const <ChatMessage>[];
+      _cacheMessages(
+        nid,
+        current
+            .map((item) => item.id == tempId
+                ? item.copyWith(data: {
+                    ...?item.data,
+                    'sendStatus': 'failed',
+                    'error': e.toString(),
+                  })
+                : item)
+            .toList(growable: false),
+      );
+      _safeNotifyListeners(force: true);
+      rethrow;
+    }
   }
 
   Future<List<Map<String, dynamic>>> listConversations() async {

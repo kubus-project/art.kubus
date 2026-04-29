@@ -1649,9 +1649,11 @@ class _ConversationScreenState extends State<ConversationScreen> {
   Widget _buildMessagesList() {
     final profile = Provider.of<ProfileProvider>(context);
     final myWallet = profile.currentUser?.walletAddress ?? '';
+    final sourceMessages =
+        _chatProvider.messages[widget.conversation.id] ?? _messages;
     // Ensure chronological order (oldest -> newest)
     // Chronological list oldest -> newest
-    final chrono = List<ChatMessage>.from(_messages);
+    final chrono = List<ChatMessage>.from(sourceMessages);
     chrono.sort((a, b) => a.createdAt.compareTo(b.createdAt));
     // For display we want newest messages anchored at the bottom. Build a reversed
     // view list so index 0 corresponds to the newest visible message when the
@@ -1704,12 +1706,14 @@ class _ConversationScreenState extends State<ConversationScreen> {
   
   Widget _buildMessageItem(ChatMessage message, bool isMe, bool showAvatar,
       {int? chronoIndex, int? chronoLength}) {
+    final sourceMessages =
+        _chatProvider.messages[widget.conversation.id] ?? _messages;
     final bool isFirst = (chronoIndex != null && chronoLength != null)
         ? chronoIndex == 0
-        : (_messages.isNotEmpty ? message == _messages.first : false);
+        : (sourceMessages.isNotEmpty ? message == sourceMessages.first : false);
     final bool isLast = (chronoIndex != null && chronoLength != null)
         ? chronoIndex == (chronoLength - 1)
-        : (_messages.isNotEmpty ? message == _messages.last : false);
+        : (sourceMessages.isNotEmpty ? message == sourceMessages.last : false);
 
     String? avatarUrl;
     String? displayName;
@@ -2419,8 +2423,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final availableHeight = MediaQuery.of(context).size.height -
         (kToolbarHeight + MediaQuery.of(context).padding.top);
 
-    for (var i = 0; i < _messages.length; i++) {
-      final message = _messages[i];
+    final sourceMessages =
+        _chatProvider.messages[widget.conversation.id] ?? _messages;
+    for (var i = 0; i < sourceMessages.length; i++) {
+      final message = sourceMessages[i];
       final key = _messageKeys[message.id];
       if (key == null) continue;
       final ctx = key.currentContext;

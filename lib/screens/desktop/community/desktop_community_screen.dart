@@ -5556,6 +5556,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           artworkId: draft.artwork?.id,
           subjectType: draft.subjectType,
           subjectId: draft.subjectId,
+          subjects: draft.subjects,
           tags: draft.tags,
           mentions: draft.mentions,
           location: location,
@@ -5570,6 +5571,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           artworkId: draft.artwork?.id,
           subjectType: draft.subjectType,
           subjectId: draft.subjectId,
+          subjects: draft.subjects,
           tags: draft.tags,
           mentions: draft.mentions,
           location: location,
@@ -6989,11 +6991,16 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           subjectRef == null ? null : subjectProvider.previewFor(subjectRef),
     );
     final hasSubject = previewValue != null;
+    final subjectCount = hub.draft.subjects.length;
     final label = previewValue == null
         ? l10n.communitySubjectSelectPrompt
-        : l10n.communitySubjectLinkedLabel(
-            communitySubjectTypeLabel(l10n, previewValue.ref.normalizedType),
-          );
+        : subjectCount > 1
+            ? '${l10n.communitySubjectLinkedLabel(
+                communitySubjectTypeLabel(l10n, previewValue.ref.normalizedType),
+              )} +${subjectCount - 1}'
+            : l10n.communitySubjectLinkedLabel(
+                communitySubjectTypeLabel(l10n, previewValue.ref.normalizedType),
+              );
     final title = previewValue?.title ?? l10n.communitySubjectSelectTitle;
     final subjectIcon = previewValue == null
         ? Icons.link
@@ -7385,6 +7392,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           artworkId: draft.artwork?.id,
           subjectType: draft.subjectType,
           subjectId: draft.subjectId,
+          subjects: draft.subjects,
           tags: draft.tags,
           mentions: draft.mentions,
           location: location,
@@ -7399,6 +7407,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           artworkId: draft.artwork?.id,
           subjectType: draft.subjectType,
           subjectId: draft.subjectId,
+          subjects: draft.subjects,
           tags: draft.tags,
           mentions: draft.mentions,
           location: location,

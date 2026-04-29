@@ -3603,11 +3603,16 @@ class _CommunityScreenState extends State<CommunityScreen>
           subjectRef == null ? null : subjectProvider.previewFor(subjectRef),
     );
     final hasSubject = previewValue != null;
+    final subjectCount = draft.subjects.length;
     final label = previewValue == null
         ? l10n.communitySubjectSelectPrompt
-        : l10n.communitySubjectLinkedLabel(
-            communitySubjectTypeLabel(l10n, previewValue.ref.normalizedType),
-          );
+        : subjectCount > 1
+            ? '${l10n.communitySubjectLinkedLabel(
+                communitySubjectTypeLabel(l10n, previewValue.ref.normalizedType),
+              )} +${subjectCount - 1}'
+            : l10n.communitySubjectLinkedLabel(
+                communitySubjectTypeLabel(l10n, previewValue.ref.normalizedType),
+              );
     final title = previewValue?.title ?? l10n.communitySubjectSelectTitle;
     final subjectIcon = previewValue == null
         ? Icons.link
@@ -4800,6 +4805,7 @@ class _CommunityScreenState extends State<CommunityScreen>
         artworkId: artworkId,
         subjectType: subjectType,
         subjectId: subjectId,
+        subjects: draft.subjects,
         postType: postType,
         category: category,
         tags: tags,
@@ -4819,6 +4825,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       artworkId: artworkId,
       subjectType: subjectType,
       subjectId: subjectId,
+      subjects: draft.subjects,
       postType: postType,
       category: category,
       tags: tags,
@@ -4917,6 +4924,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     final createdId = (createdPost.subjectId ?? '').trim();
     final draftType = (draft.subjectType ?? '').trim();
     final draftId = (draft.subjectId ?? '').trim();
+    final draftSubjects = draft.subjects;
 
     var resolved = createdPost;
     final needsType = createdType.isEmpty;
@@ -4925,10 +4933,13 @@ class _CommunityScreenState extends State<CommunityScreen>
       resolved = resolved.copyWith(
         subjectType: needsType ? draftType : createdType,
         subjectId: needsId ? draftId : createdId,
+        subjects: createdPost.subjects.isEmpty ? draftSubjects : createdPost.subjects,
         artwork: (draftType == 'artwork' && draft.artwork != null)
             ? draft.artwork
             : resolved.artwork,
       );
+    } else if (createdPost.subjects.isEmpty && draftSubjects.isNotEmpty) {
+      resolved = resolved.copyWith(subjects: draftSubjects);
     } else if (createdType == 'artwork' &&
         resolved.artwork == null &&
         draft.artwork != null &&
@@ -5099,7 +5110,15 @@ class _CommunityScreenState extends State<CommunityScreen>
 
     try {
       await CommunityService.toggleBookmark(post);
-      await savedItemsProvider.setPostSaved(post.id, post.isBookmarked);
+      await savedItemsProvider.setPostSaved(
+        post.id,
+        post.isBookmarked,
+        title: post.content,
+        subtitle: post.authorName,
+        imageUrl: post.imageUrl,
+        authorId: post.authorWallet ?? post.authorId,
+        authorName: post.authorName,
+      );
       if (!mounted) return;
 
       final l10n = AppLocalizations.of(context)!;

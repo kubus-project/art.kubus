@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/config.dart';
 import '../models/community_group.dart';
+import '../models/community_subject.dart';
 import '../models/promotion.dart';
 import '../services/backend_api_service.dart';
 import '../services/user_action_logger.dart';
@@ -28,6 +29,7 @@ class CommunityPost {
   final CommunityArtworkReference? artwork;
   final String? subjectType;
   final String? subjectId;
+  final List<CommunitySubjectRef> subjects;
   final double? distanceKm;
   final String? postType; // 'post', 'repost', 'shared_post'
   final String? originalPostId; // If this is a repost
@@ -66,6 +68,7 @@ class CommunityPost {
     this.artwork,
     this.subjectType,
     this.subjectId,
+    this.subjects = const <CommunitySubjectRef>[],
     this.distanceKm,
     this.postType,
     this.originalPostId,
@@ -108,6 +111,7 @@ class CommunityPost {
     CommunityArtworkReference? artwork,
     String? subjectType,
     String? subjectId,
+    List<CommunitySubjectRef>? subjects,
     double? distanceKm,
     String? imageUrl,
     bool? authorIsArtist,
@@ -136,6 +140,7 @@ class CommunityPost {
       artwork: artwork ?? this.artwork,
       subjectType: subjectType ?? this.subjectType,
       subjectId: subjectId ?? this.subjectId,
+      subjects: subjects ?? this.subjects,
       distanceKm: distanceKm ?? this.distanceKm,
       postType: postType,
       originalPostId: originalPostId,
@@ -754,18 +759,12 @@ class CommunityService {
   // Bookmark/Unbookmark post
   static Future<void> toggleBookmark(CommunityPost post,
       {bool trackUserAction = true}) async {
-    final prefs = await SharedPreferences.getInstance();
-    final bookmarkedPosts = prefs.getStringList(_bookmarksKey) ?? [];
     final backendApi = BackendApiService();
     final wasBookmarked = post.isBookmarked;
 
     if (post.isBookmarked) {
-      // Remove bookmark
-      bookmarkedPosts.remove(post.id);
       post.isBookmarked = false;
     } else {
-      // Add bookmark
-      bookmarkedPosts.add(post.id);
       post.isBookmarked = true;
       if (trackUserAction) {
         UserActionLogger.logPostSave(
@@ -775,8 +774,6 @@ class CommunityService {
         );
       }
     }
-
-    await prefs.setStringList(_bookmarksKey, bookmarkedPosts);
 
     if (AppConfig.enableDebugPrints) {
       debugPrint(
@@ -790,10 +787,12 @@ class CommunityService {
         await backendApi.bookmarkPost(post.id);
       }
     } catch (e) {
+      post.isBookmarked = wasBookmarked;
       if (AppConfig.enableDebugPrints) {
         debugPrint(
-            'CommunityService.toggleBookmark: backend sync failed, keeping local state: $e');
+            'CommunityService.toggleBookmark: backend sync failed, reverted optimistic state: $e');
       }
+      rethrow;
     }
   }
 

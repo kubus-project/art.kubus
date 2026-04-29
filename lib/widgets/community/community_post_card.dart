@@ -580,16 +580,23 @@ String _formatCategoryLabel(String category) {
   }
 }
 
-CommunitySubjectRef? _resolveSubjectRef(CommunityPost post) {
+List<CommunitySubjectRef> _resolveSubjectRefs(CommunityPost post) {
+  if (post.subjects.isNotEmpty) {
+    return post.subjects
+        .where((ref) => ref.normalizedType.isNotEmpty && ref.id.isNotEmpty)
+        .toList(growable: false);
+  }
   final type = (post.subjectType ?? '').trim();
   final id = (post.subjectId ?? '').trim();
   if (type.isNotEmpty && id.isNotEmpty) {
-    return CommunitySubjectRef(type: type, id: id);
+    return <CommunitySubjectRef>[CommunitySubjectRef(type: type, id: id)];
   }
   if (post.artwork != null) {
-    return CommunitySubjectRef(type: 'artwork', id: post.artwork!.id);
+    return <CommunitySubjectRef>[
+      CommunitySubjectRef(type: 'artwork', id: post.artwork!.id),
+    ];
   }
-  return null;
+  return const <CommunitySubjectRef>[];
 }
 
 String _subjectTypeLabel(
@@ -620,6 +627,14 @@ IconData _subjectTypeIcon(String type) {
       return Icons.collections_bookmark_outlined;
     case 'institution':
       return Icons.apartment_outlined;
+    case 'artist':
+      return Icons.palette_outlined;
+    case 'group':
+      return Icons.groups_2_outlined;
+    case 'event':
+      return Icons.event_outlined;
+    case 'marker':
+      return Icons.place_outlined;
     default:
       return Icons.info_outline;
   }

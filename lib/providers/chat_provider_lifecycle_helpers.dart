@@ -10,6 +10,7 @@ const Duration _chatSubscriptionMonitorBackgroundInterval =
     Duration(minutes: 4);
 
 const Duration _chatConversationPollActiveInterval = Duration(seconds: 18);
+const Duration _chatConversationPollInitialFallbackInterval = Duration(seconds: 3);
 const Duration _chatConversationPollPassiveInterval = Duration(seconds: 45);
 
 bool _chatProviderIsForeground(ChatProvider provider) {
@@ -63,9 +64,16 @@ Duration? _chatProviderComputeConversationPollingInterval(
       provider._socket.isSubscribedToConversation(conversationId);
   if (hasHealthySocket) return null;
 
-  return _chatProviderIsChatSurfaceActive(provider)
-      ? _chatConversationPollActiveInterval
-      : _chatConversationPollPassiveInterval;
+  if (_chatProviderIsChatSurfaceActive(provider)) {
+    final openedAt = provider._openConversationStartedAt;
+    if (openedAt != null &&
+        DateTime.now().difference(openedAt) < const Duration(seconds: 60)) {
+      return _chatConversationPollInitialFallbackInterval;
+    }
+    return _chatConversationPollActiveInterval;
+  }
+
+  return _chatConversationPollPassiveInterval;
 }
 
 void _chatProviderEvaluateSubscriptionMonitor(
@@ -407,6 +415,7 @@ Future<void> _chatProviderOpenConversation(
 ) async {
   final nid = conversationId;
   provider._openConversationId = nid;
+  provider._openConversationStartedAt = DateTime.now();
   try {
     try {
       final ok = await provider._socket.subscribeConversation(nid);
@@ -451,6 +460,7 @@ Future<void> _chatProviderCloseConversation(
   }
   if (provider._openConversationId != null && provider._openConversationId == nid) {
     provider._openConversationId = null;
+    provider._openConversationStartedAt = null;
   }
   try {
     _chatProviderEvaluateConversationPolling(provider, forceRestart: true);

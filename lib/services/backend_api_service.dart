@@ -14,6 +14,8 @@ import '../models/artwork_comment.dart';
 import '../models/community_group.dart';
 import '../models/event.dart';
 import '../models/exhibition.dart';
+import '../models/community_subject.dart';
+import '../models/saved_item.dart';
 import '../models/attestation.dart';
 import '../models/collab_member.dart';
 import '../models/collab_invite.dart';
@@ -2376,6 +2378,95 @@ class BackendApiService
           'BackendApiService.updateMyEmailPreferences failed: $e');
       rethrow;
     }
+  }
+
+  Future<SavedItemsPage> getSavedItems({
+    SavedItemType? type,
+    int limit = 50,
+    String? cursor,
+  }) async {
+    final uri = Uri.parse('$baseUrl/api/saved').replace(
+      queryParameters: <String, String>{
+        'limit': limit.clamp(1, 100).toString(),
+        if (type != null) 'type': type.storageKey,
+        if ((cursor ?? '').trim().isNotEmpty) 'cursor': cursor!.trim(),
+      },
+    );
+    final response = await _get(uri, headers: _getHeaders());
+    if (!_isSuccessStatus(response.statusCode)) {
+      throw BackendApiRequestException(
+          statusCode: response.statusCode, path: uri.path, body: response.body);
+    }
+    final decoded = jsonDecode(response.body);
+    final rawItems = decoded is Map
+        ? (decoded['items'] ?? decoded['data'] ?? const <dynamic>[])
+        : const <dynamic>[];
+    final items = rawItems is List
+        ? rawItems
+            .whereType<Map>()
+            .map((entry) =>
+                SavedItemRecord.fromJson(Map<String, dynamic>.from(entry)))
+            .where((record) => record.id.isNotEmpty)
+            .toList(growable: false)
+        : const <SavedItemRecord>[];
+    return SavedItemsPage(
+      items: items,
+      nextCursor: decoded is Map ? decoded['nextCursor']?.toString() : null,
+    );
+  }
+
+  Future<SavedItemRecord> saveSavedItem(SavedItemRecord item) async {
+    final uri = Uri.parse('$baseUrl/api/saved');
+    final response = await _post(
+      uri,
+      headers: _getHeaders(),
+      body: jsonEncode(item.toJson()),
+    );
+    if (!_isSuccessStatus(response.statusCode)) {
+      throw BackendApiRequestException(
+          statusCode: response.statusCode, path: uri.path, body: response.body);
+    }
+    final decoded = jsonDecode(response.body);
+    final payload = decoded is Map ? (decoded['item'] ?? decoded['data']) : null;
+    return payload is Map
+        ? SavedItemRecord.fromJson(Map<String, dynamic>.from(payload))
+        : item;
+  }
+
+  Future<void> deleteSavedItem(SavedItemType type, String id) async {
+    final uri = Uri.parse(
+      '$baseUrl/api/saved/${Uri.encodeComponent(type.storageKey)}/${Uri.encodeComponent(id)}',
+    );
+    final response = await _delete(uri, headers: _getHeaders());
+    if (!_isSuccessStatus(response.statusCode)) {
+      throw BackendApiRequestException(
+          statusCode: response.statusCode, path: uri.path, body: response.body);
+    }
+  }
+
+  Future<Map<String, bool>> getSavedBatchStatus(
+      Iterable<SavedItemRecord> items) async {
+    final uri = Uri.parse('$baseUrl/api/saved/batch-status');
+    final response = await _post(
+      uri,
+      headers: _getHeaders(),
+      body: jsonEncode({
+        'items': [
+          for (final item in items)
+            {'type': item.type.storageKey, 'id': item.id},
+        ],
+      }),
+    );
+    if (!_isSuccessStatus(response.statusCode)) {
+      throw BackendApiRequestException(
+          statusCode: response.statusCode, path: uri.path, body: response.body);
+    }
+    final decoded = jsonDecode(response.body);
+    final raw = decoded is Map ? (decoded['status'] ?? decoded['data']) : null;
+    if (raw is! Map) return const <String, bool>{};
+    return {
+      for (final entry in raw.entries) entry.key.toString(): entry.value == true,
+    };
   }
 
   // ==================== Chat / Messaging Helpers (wrappers used by providers) ====================
@@ -5221,6 +5312,7 @@ class BackendApiService
     String? artworkId,
     String? subjectType,
     String? subjectId,
+    List<CommunitySubjectRef>? subjects,
     String? postType,
     String category = 'post',
     List<String>? tags,
@@ -5248,6 +5340,7 @@ class BackendApiService
         artworkId: artworkId,
         subjectType: subjectType,
         subjectId: subjectId,
+        subjects: subjects,
         postType: postType,
         tags: tags,
         mentions: mentions,
@@ -5677,6 +5770,7 @@ class BackendApiService
     String? artworkId,
     String? subjectType,
     String? subjectId,
+    List<CommunitySubjectRef>? subjects,
     String? postType,
     String category = 'post',
     List<String>? tags,
@@ -5707,6 +5801,7 @@ class BackendApiService
         artworkId: artworkId,
         subjectType: subjectType,
         subjectId: subjectId,
+        subjects: subjects,
         postType: postType,
         tags: tags,
         mentions: mentions,
@@ -9365,6 +9460,7 @@ Map<String, dynamic> _buildCommunityPostPayload({
   String? artworkId,
   String? subjectType,
   String? subjectId,
+  List<CommunitySubjectRef>? subjects,
   String? postType,
   List<String>? tags,
   List<String>? mentions,
@@ -9381,6 +9477,7 @@ Map<String, dynamic> _buildCommunityPostPayload({
     artworkId: artworkId,
     subjectType: subjectType,
     subjectId: subjectId,
+    subjects: subjects,
     postType: postType,
     tags: tags,
     mentions: mentions,

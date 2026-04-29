@@ -411,11 +411,6 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                     children: [
                       _buildNetworkSelector(themeProvider, walletProvider),
                       _buildHeaderActionButton(
-                        icon: Icons.shield_outlined,
-                        label: l10n.walletHomeSecureWalletAction,
-                        onPressed: _openBackupProtection,
-                      ),
-                      _buildHeaderActionButton(
                         icon: Icons.refresh,
                         label: l10n.commonRefresh,
                         onPressed: () async {
@@ -449,20 +444,6 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                     ),
                     _buildCopyAddressChip(walletAddress),
                   ],
-                ),
-                SizedBox(height: DetailSpacing.md),
-                WalletCustodyStatusPanel(
-                  authority: authority,
-                  compact: true,
-                  onRestoreSigner: authority.canRestoreFromEncryptedBackup
-                      ? () => WalletReconnectAction.handleReadOnlyReconnect(
-                            context: context,
-                            walletProvider: walletProvider,
-                          )
-                      : null,
-                  onConnectExternalWallet: !authority.canTransact
-                      ? () => Navigator.of(context).pushNamed('/connect-wallet')
-                      : null,
                 ),
               ],
             ],
@@ -680,7 +661,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     final swapEnabled = AppConfig.isFeatureEnabled('tokenSwap');
     return LayoutBuilder(
       builder: (context, constraints) {
-        final actionCount = swapEnabled ? 3 : 2;
+        final actionCount = swapEnabled ? 5 : 4;
         final tileWidth = constraints.maxWidth >= 980
             ? (constraints.maxWidth - (DetailSpacing.md * (actionCount - 1))) /
                 actionCount
@@ -721,6 +702,30 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                   roles.positiveAction,
                   _openSwapScreen,
                   enabled: canTransact,
+                ),
+              ),
+            SizedBox(
+              width: resolvedTileWidth,
+              child: _buildActionButton(
+                l10n.walletHomeSecureWalletAction,
+                l10n.walletHomeSecuritySubtitle,
+                Icons.shield_outlined,
+                roles.warningAction,
+                _openBackupProtection,
+              ),
+            ),
+            if (walletProvider.authority.canRestoreFromEncryptedBackup)
+              SizedBox(
+                width: resolvedTileWidth,
+                child: _buildActionButton(
+                  l10n.walletSecurityRestoreSignerAction,
+                  l10n.walletSecuritySignerRestoreAvailableValue,
+                  Icons.login_outlined,
+                  roles.positiveAction,
+                  () => WalletReconnectAction.handleReadOnlyReconnect(
+                    context: context,
+                    walletProvider: walletProvider,
+                  ),
                 ),
               ),
           ],
@@ -1530,6 +1535,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     final l10n = AppLocalizations.of(context)!;
     final walletProvider = Provider.of<WalletProvider>(context);
     final canTransact = walletProvider.canTransact;
+    final authority = walletProvider.authority;
     final roles = KubusColorRoles.of(context);
     final swapEnabled = AppConfig.isFeatureEnabled('tokenSwap');
     final recentTransactions = walletProvider.transactions.take(5).toList();
@@ -1570,6 +1576,24 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             roles.positiveAction,
             _openSwapScreen,
             enabled: canTransact,
+          ),
+        _buildQuickActionTile(
+          l10n.walletHomeSecureWalletAction,
+          l10n.walletHomeSecuritySubtitle,
+          Icons.shield_outlined,
+          roles.warningAction,
+          _openBackupProtection,
+        ),
+        if (authority.canRestoreFromEncryptedBackup)
+          _buildQuickActionTile(
+            l10n.walletSecurityRestoreSignerAction,
+            l10n.walletSecuritySignerRestoreAvailableValue,
+            Icons.login_outlined,
+            roles.positiveAction,
+            () => WalletReconnectAction.handleReadOnlyReconnect(
+              context: context,
+              walletProvider: walletProvider,
+            ),
           ),
         SizedBox(height: DetailSpacing.xxl),
         Text(
@@ -1658,30 +1682,6 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                     ? () => Navigator.of(context).pushNamed('/connect-wallet')
                     : null,
               ),
-              SizedBox(height: DetailSpacing.lg),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: _openBackupProtection,
-                  icon: const Icon(Icons.shield_outlined),
-                  label: Text(l10n.walletHomeSecureWalletAction),
-                ),
-              ),
-              if (authority.canRestoreFromEncryptedBackup) ...[
-                SizedBox(height: DetailSpacing.md),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () =>
-                        WalletReconnectAction.handleReadOnlyReconnect(
-                      context: context,
-                      walletProvider: walletProvider,
-                    ),
-                    icon: const Icon(Icons.login_outlined),
-                    label: Text(l10n.walletSecurityRestoreSignerAction),
-                  ),
-                ),
-              ],
             ],
           ),
         ),

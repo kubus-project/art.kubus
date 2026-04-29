@@ -36,6 +36,8 @@ import '../community/profile_edit_screen.dart';
 import 'package:art_kubus/widgets/kubus_snackbar.dart';
 import '../../widgets/wallet_backup_prompts.dart';
 
+enum _AuthOrigin { emailPassword, google }
+
 class SignInScreen extends StatefulWidget {
   const SignInScreen({
     super.key,
@@ -271,7 +273,10 @@ class _SignInScreenState extends State<SignInScreen> {
     return true;
   }
 
-  Future<void> _handleAuthSuccess(Map<String, dynamic> payload) async {
+  Future<void> _handleAuthSuccess(
+    Map<String, dynamic> payload, {
+    _AuthOrigin origin = _AuthOrigin.emailPassword,
+  }) async {
     final l10n = AppLocalizations.of(context)!;
     final redirectRoute = widget.redirectRoute?.trim();
     final isModalReauth = widget.onAuthSuccess != null && !widget.embedded;
@@ -380,7 +385,7 @@ class _SignInScreenState extends State<SignInScreen> {
       if (!mounted) return;
     }
 
-    if (!isModalReauth) {
+    if (!isModalReauth && origin != _AuthOrigin.google) {
       await maybeShowGooglePasswordUpgradePrompt(context, payload);
       if (!mounted) return;
     }
@@ -616,7 +621,7 @@ class _SignInScreenState extends State<SignInScreen> {
     try {
       final api = BackendApiService();
       final result = await api.loginWithEmail(email: email, password: password);
-      await _handleAuthSuccess(result);
+      await _handleAuthSuccess(result, origin: _AuthOrigin.emailPassword);
       unawaited(TelemetryService().trackSignInSuccess(method: 'email'));
     } catch (e) {
       unawaited(TelemetryService().trackSignInFailure(
@@ -776,7 +781,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
     if (!mounted) return;
     _setGoogleAuthDiagnostics('profile_hydration');
-    await _handleAuthSuccess(result);
+    await _handleAuthSuccess(result, origin: _AuthOrigin.google);
     _setGoogleAuthDiagnostics('success');
   }
 
@@ -849,7 +854,7 @@ class _SignInScreenState extends State<SignInScreen> {
       if (!mounted) return;
 
       if (routeResult is Map<String, dynamic>) {
-        await _handleAuthSuccess(routeResult);
+        await _handleAuthSuccess(routeResult, origin: _AuthOrigin.google);
         return;
       }
 
@@ -859,7 +864,7 @@ class _SignInScreenState extends State<SignInScreen> {
       final hydratedPayload = await _resolveAuthPayloadFromCurrentSession();
       if (!mounted) return;
       if (hydratedPayload != null) {
-        await _handleAuthSuccess(hydratedPayload);
+        await _handleAuthSuccess(hydratedPayload, origin: _AuthOrigin.google);
       }
     } finally {
       _walletFlowOpening = false;

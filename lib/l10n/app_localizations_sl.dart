@@ -4151,6 +4151,21 @@ class AppLocalizationsSl extends AppLocalizations {
   String get savedItemsPostLabel => 'objave';
 
   @override
+  String get savedItemsArtistLabel => 'umetniki';
+
+  @override
+  String get savedItemsInstitutionLabel => 'institucije';
+
+  @override
+  String get savedItemsGroupLabel => 'skupine';
+
+  @override
+  String get savedItemsMarkerLabel => 'označevalci';
+
+  @override
+  String get savedItemsLoadMoreButton => 'Naloži več';
+
+  @override
   String get messagesTitle => 'Sporočila';
 
   @override

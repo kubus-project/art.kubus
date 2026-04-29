@@ -16,7 +16,6 @@ import '../../providers/collections_provider.dart';
 import '../../providers/events_provider.dart';
 import '../../providers/exhibitions_provider.dart';
 import '../../providers/saved_items_provider.dart';
-import '../../services/backend_api_service.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/artwork_navigation.dart';
@@ -48,43 +47,24 @@ class SavedItemsScreen extends StatefulWidget {
 class _SavedItemsScreenState extends State<SavedItemsScreen> {
   final Set<SavedItemType> _expandedTypes =
       Set<SavedItemType>.from(SavedItemType.values);
-  Future<List<CommunityPost>>? _postsFuture;
+  final Map<SavedItemType, int> _visibleLimitByType = {
+    for (final type in SavedItemType.values) type: 50,
+  };
   bool _prefetching = false;
 
   @override
   void initState() {
     super.initState();
-    _postsFuture = _loadPosts();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       unawaited(_prefetchMissingEntities());
     });
   }
 
-  Future<List<CommunityPost>> _loadPosts() {
-    return BackendApiService().getCommunityPosts(limit: 100);
-  }
-
   Future<void> _refresh() async {
     final savedProvider = context.read<SavedItemsProvider>();
-    final postsFuture = _loadPosts();
-
-    if (mounted) {
-      setState(() {
-        _postsFuture = postsFuture;
-      });
-    } else {
-      _postsFuture = postsFuture;
-    }
-
     await savedProvider.reloadFromDisk();
     await _prefetchMissingEntities();
-
-    try {
-      await postsFuture;
-    } catch (_) {
-      // The section will render placeholders if posts cannot be loaded.
-    }
   }
 
   Future<void> _prefetchMissingEntities() async {
@@ -163,13 +143,27 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
 
   bool _isExpanded(SavedItemType type) => _expandedTypes.contains(type);
 
+  int _visibleLimit(SavedItemType type) => _visibleLimitByType[type] ?? 50;
+
+  Future<void> _loadMore(SavedItemsProvider savedProvider, SavedItemType type) async {
+    await savedProvider.loadMore(type);
+    if (!mounted) return;
+    setState(() {
+      _visibleLimitByType[type] = _visibleLimit(type) + 50;
+    });
+  }
+
   Color _accentForType(SavedItemType type) {
     return switch (type) {
       SavedItemType.artwork => AppColorUtils.tealAccent,
       SavedItemType.event => AppColorUtils.blueAccent,
       SavedItemType.collection => AppColorUtils.orangeAccent,
       SavedItemType.exhibition => AppColorUtils.amberAccent,
-      SavedItemType.post => AppColorUtils.cyanAccent,
+      SavedItemType.communityPost => AppColorUtils.cyanAccent,
+      SavedItemType.artist => AppColorUtils.pinkAccent,
+      SavedItemType.institution => AppColorUtils.blueAccent,
+      SavedItemType.group => AppColorUtils.greenAccent,
+      SavedItemType.marker => AppColorUtils.coralAccent,
     };
   }
 
@@ -179,7 +173,11 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
       SavedItemType.event => l10n.savedItemsEventLabel,
       SavedItemType.collection => l10n.savedItemsCollectionLabel,
       SavedItemType.exhibition => l10n.savedItemsExhibitionLabel,
-      SavedItemType.post => l10n.savedItemsPostLabel,
+      SavedItemType.communityPost => l10n.savedItemsPostLabel,
+      SavedItemType.artist => l10n.savedItemsArtistLabel,
+      SavedItemType.institution => l10n.savedItemsInstitutionLabel,
+      SavedItemType.group => l10n.savedItemsGroupLabel,
+      SavedItemType.marker => l10n.savedItemsMarkerLabel,
     };
   }
 
@@ -319,17 +317,93 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
               const SizedBox(height: KubusSpacing.md),
               _SavedItemsSection(
                 title: l10n.savedItemsSectionTitle(
-                  _localizedTypeLabel(l10n, SavedItemType.post),
+                  _localizedTypeLabel(l10n, SavedItemType.communityPost),
                 ),
                 icon: Icons.forum_outlined,
-                accent: _accentForType(SavedItemType.post),
-                expanded: _isExpanded(SavedItemType.post),
-                onToggle: () => _toggleSection(SavedItemType.post),
+                accent: _accentForType(SavedItemType.communityPost),
+                expanded: _isExpanded(SavedItemType.communityPost),
+                onToggle: () => _toggleSection(SavedItemType.communityPost),
                 count: savedProvider.savedPostsCount,
                 child: _buildPostSection(
                   context: context,
                   l10n: l10n,
                   savedProvider: savedProvider,
+                ),
+              ),
+              const SizedBox(height: KubusSpacing.md),
+              _SavedItemsSection(
+                title: l10n.savedItemsSectionTitle(
+                  _localizedTypeLabel(l10n, SavedItemType.artist),
+                ),
+                icon: Icons.palette_outlined,
+                accent: _accentForType(SavedItemType.artist),
+                expanded: _isExpanded(SavedItemType.artist),
+                onToggle: () => _toggleSection(SavedItemType.artist),
+                count: savedProvider.savedArtistsCount,
+                child: _buildSnapshotSection(
+                  context: context,
+                  l10n: l10n,
+                  savedProvider: savedProvider,
+                  type: SavedItemType.artist,
+                  records: savedProvider.savedArtistItems,
+                  icon: Icons.palette_outlined,
+                ),
+              ),
+              const SizedBox(height: KubusSpacing.md),
+              _SavedItemsSection(
+                title: l10n.savedItemsSectionTitle(
+                  _localizedTypeLabel(l10n, SavedItemType.institution),
+                ),
+                icon: Icons.apartment_outlined,
+                accent: _accentForType(SavedItemType.institution),
+                expanded: _isExpanded(SavedItemType.institution),
+                onToggle: () => _toggleSection(SavedItemType.institution),
+                count: savedProvider.savedInstitutionsCount,
+                child: _buildSnapshotSection(
+                  context: context,
+                  l10n: l10n,
+                  savedProvider: savedProvider,
+                  type: SavedItemType.institution,
+                  records: savedProvider.savedInstitutionItems,
+                  icon: Icons.apartment_outlined,
+                ),
+              ),
+              const SizedBox(height: KubusSpacing.md),
+              _SavedItemsSection(
+                title: l10n.savedItemsSectionTitle(
+                  _localizedTypeLabel(l10n, SavedItemType.group),
+                ),
+                icon: Icons.groups_2_outlined,
+                accent: _accentForType(SavedItemType.group),
+                expanded: _isExpanded(SavedItemType.group),
+                onToggle: () => _toggleSection(SavedItemType.group),
+                count: savedProvider.savedGroupsCount,
+                child: _buildSnapshotSection(
+                  context: context,
+                  l10n: l10n,
+                  savedProvider: savedProvider,
+                  type: SavedItemType.group,
+                  records: savedProvider.savedGroupItems,
+                  icon: Icons.groups_2_outlined,
+                ),
+              ),
+              const SizedBox(height: KubusSpacing.md),
+              _SavedItemsSection(
+                title: l10n.savedItemsSectionTitle(
+                  _localizedTypeLabel(l10n, SavedItemType.marker),
+                ),
+                icon: Icons.place_outlined,
+                accent: _accentForType(SavedItemType.marker),
+                expanded: _isExpanded(SavedItemType.marker),
+                onToggle: () => _toggleSection(SavedItemType.marker),
+                count: savedProvider.savedMarkersCount,
+                child: _buildSnapshotSection(
+                  context: context,
+                  l10n: l10n,
+                  savedProvider: savedProvider,
+                  type: SavedItemType.marker,
+                  records: savedProvider.savedMarkerItems,
+                  icon: Icons.place_outlined,
                 ),
               ),
             ],
@@ -356,26 +430,33 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
       );
     }
 
-    return Column(
+    final visibleRecords = records.take(_visibleLimit(SavedItemType.artwork)).toList();
+    return _buildTileGrid(
+      context: context,
       children: [
-        for (var i = 0; i < records.length; i++) ...[
+        for (final record in visibleRecords)
           _ArtworkSavedTile(
             l10n: l10n,
-            record: records[i],
-            artwork: artworkProvider.getArtworkById(records[i].id),
+            record: record,
+            artwork: artworkProvider.getArtworkById(record.id),
             accent: AppColorUtils.tealAccent,
             onTap: () => openArtwork(
               context,
-              records[i].id,
+              record.id,
               source: 'saved_items',
             ),
             onRemove: () => _confirmRemoveSavedItem(
-              record: records[i],
+              record: record,
             ),
           ),
-          if (i != records.length - 1) const SizedBox(height: KubusSpacing.md),
-        ],
       ],
+      footer: _buildLoadMoreButton(
+        l10n: l10n,
+        savedProvider: savedProvider,
+        type: SavedItemType.artwork,
+        totalVisible: visibleRecords.length,
+        totalKnown: records.length,
+      ),
     );
   }
 
@@ -396,36 +477,43 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
       );
     }
 
-    return Column(
+    final visibleRecords = records.take(_visibleLimit(SavedItemType.event)).toList();
+    return _buildTileGrid(
+      context: context,
       children: [
-        for (var i = 0; i < records.length; i++) ...[
+        for (final record in visibleRecords)
           _EventSavedTile(
             l10n: l10n,
-            record: records[i],
+            record: record,
             event: eventsProvider.events
-                .where((event) => event.id == records[i].id)
+                .where((event) => event.id == record.id)
                 .firstOrNull,
             accent: AppColorUtils.blueAccent,
             onTap: () {
               final event = eventsProvider.events
-                  .where((event) => event.id == records[i].id)
+                  .where((event) => event.id == record.id)
                   .firstOrNull;
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => EventDetailScreen(
-                    eventId: records[i].id,
+                    eventId: record.id,
                     initialEvent: event,
                   ),
                 ),
               );
             },
             onRemove: () => _confirmRemoveSavedItem(
-              record: records[i],
+              record: record,
             ),
           ),
-          if (i != records.length - 1) const SizedBox(height: KubusSpacing.md),
-        ],
       ],
+      footer: _buildLoadMoreButton(
+        l10n: l10n,
+        savedProvider: savedProvider,
+        type: SavedItemType.event,
+        totalVisible: visibleRecords.length,
+        totalKnown: records.length,
+      ),
     );
   }
 
@@ -446,30 +534,38 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
       );
     }
 
-    return Column(
+    final visibleRecords =
+        records.take(_visibleLimit(SavedItemType.collection)).toList();
+    return _buildTileGrid(
+      context: context,
       children: [
-        for (var i = 0; i < records.length; i++) ...[
+        for (final record in visibleRecords)
           _CollectionSavedTile(
             l10n: l10n,
-            record: records[i],
-            collection: collectionsProvider.getCollectionById(records[i].id),
+            record: record,
+            collection: collectionsProvider.getCollectionById(record.id),
             accent: AppColorUtils.orangeAccent,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => CollectionDetailScreen(
-                    collectionId: records[i].id,
+                    collectionId: record.id,
                   ),
                 ),
               );
             },
             onRemove: () => _confirmRemoveSavedItem(
-              record: records[i],
+              record: record,
             ),
           ),
-          if (i != records.length - 1) const SizedBox(height: KubusSpacing.md),
-        ],
       ],
+      footer: _buildLoadMoreButton(
+        l10n: l10n,
+        savedProvider: savedProvider,
+        type: SavedItemType.collection,
+        totalVisible: visibleRecords.length,
+        totalKnown: records.length,
+      ),
     );
   }
 
@@ -490,36 +586,44 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
       );
     }
 
-    return Column(
+    final visibleRecords =
+        records.take(_visibleLimit(SavedItemType.exhibition)).toList();
+    return _buildTileGrid(
+      context: context,
       children: [
-        for (var i = 0; i < records.length; i++) ...[
+        for (final record in visibleRecords)
           _ExhibitionSavedTile(
             l10n: l10n,
-            record: records[i],
+            record: record,
             exhibition: exhibitionsProvider.exhibitions
-                .where((exhibition) => exhibition.id == records[i].id)
+                .where((exhibition) => exhibition.id == record.id)
                 .firstOrNull,
             accent: AppColorUtils.amberAccent,
             onTap: () {
               final exhibition = exhibitionsProvider.exhibitions
-                  .where((exhibition) => exhibition.id == records[i].id)
+                  .where((exhibition) => exhibition.id == record.id)
                   .firstOrNull;
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => ExhibitionDetailScreen(
-                    exhibitionId: records[i].id,
+                    exhibitionId: record.id,
                     initialExhibition: exhibition,
                   ),
                 ),
               );
             },
             onRemove: () => _confirmRemoveSavedItem(
-              record: records[i],
+              record: record,
             ),
           ),
-          if (i != records.length - 1) const SizedBox(height: KubusSpacing.md),
-        ],
       ],
+      footer: _buildLoadMoreButton(
+        l10n: l10n,
+        savedProvider: savedProvider,
+        type: SavedItemType.exhibition,
+        totalVisible: visibleRecords.length,
+        totalKnown: records.length,
+      ),
     );
   }
 
@@ -539,45 +643,143 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
       );
     }
 
-    final future = _postsFuture ?? _loadPosts();
-
-    return FutureBuilder<List<CommunityPost>>(
-      future: future,
-      builder: (context, snapshot) {
-        final posts = snapshot.data ?? const <CommunityPost>[];
-        final byId = <String, CommunityPost>{
-          for (final post in posts) post.id: post,
-        };
-
-        return Column(
-          children: [
-            for (var i = 0; i < records.length; i++) ...[
-              _PostSavedTile(
-                l10n: l10n,
-                record: records[i],
-                post: byId[records[i].id],
-                accent: AppColorUtils.cyanAccent,
-                onTap: () {
-                  final post = byId[records[i].id];
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => post != null
-                          ? PostDetailScreen(post: post)
-                          : PostDetailScreen(postId: records[i].id),
-                    ),
-                  );
-                },
-                onRemove: () => _confirmRemoveSavedItem(
-                  record: records[i],
+    final visibleRecords =
+        records.take(_visibleLimit(SavedItemType.communityPost)).toList();
+    return _buildTileGrid(
+      context: context,
+      children: [
+        for (final record in visibleRecords)
+          _PostSavedTile(
+            l10n: l10n,
+            record: record,
+            post: null,
+            accent: AppColorUtils.cyanAccent,
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => PostDetailScreen(postId: record.id),
                 ),
-              ),
-              if (i != records.length - 1)
-                const SizedBox(height: KubusSpacing.md),
+              );
+            },
+            onRemove: () => _confirmRemoveSavedItem(
+              record: record,
+            ),
+          ),
+      ],
+      footer: _buildLoadMoreButton(
+        l10n: l10n,
+        savedProvider: savedProvider,
+        type: SavedItemType.communityPost,
+        totalVisible: visibleRecords.length,
+        totalKnown: records.length,
+      ),
+    );
+  }
+
+  Widget _buildSnapshotSection({
+    required BuildContext context,
+    required AppLocalizations l10n,
+    required SavedItemsProvider savedProvider,
+    required SavedItemType type,
+    required List<SavedItemRecord> records,
+    required IconData icon,
+  }) {
+    final accent = _accentForType(type);
+    if (records.isEmpty) {
+      return _buildEmptySection(
+        context: context,
+        l10n: l10n,
+        itemTypeLabel: _localizedTypeLabel(l10n, type),
+        icon: icon,
+        accent: accent,
+      );
+    }
+
+    final visibleRecords = records.take(_visibleLimit(type)).toList();
+    return _buildTileGrid(
+      context: context,
+      children: [
+        for (final record in visibleRecords)
+          _SnapshotSavedTile(
+            l10n: l10n,
+            record: record,
+            accent: accent,
+            icon: icon,
+            typeLabel: _localizedTypeLabel(l10n, type),
+            onTap: () => _openSnapshotRecord(record),
+            onRemove: () => _confirmRemoveSavedItem(record: record),
+          ),
+      ],
+      footer: _buildLoadMoreButton(
+        l10n: l10n,
+        savedProvider: savedProvider,
+        type: type,
+        totalVisible: visibleRecords.length,
+        totalKnown: records.length,
+      ),
+    );
+  }
+
+  Widget _buildTileGrid({
+    required BuildContext context,
+    required List<Widget> children,
+    Widget? footer,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 980
+            ? 3
+            : constraints.maxWidth >= 620
+                ? 2
+                : 2;
+        final spacing = KubusSpacing.md;
+        final itemWidth =
+            (constraints.maxWidth - spacing * (columns - 1)) / columns;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Wrap(
+              spacing: spacing,
+              runSpacing: spacing,
+              children: [
+                for (final child in children)
+                  SizedBox(width: itemWidth, child: child),
+              ],
+            ),
+            if (footer != null) ...[
+              const SizedBox(height: KubusSpacing.md),
+              Align(alignment: Alignment.center, child: footer),
             ],
           ],
         );
       },
     );
+  }
+
+  Widget? _buildLoadMoreButton({
+    required AppLocalizations l10n,
+    required SavedItemsProvider savedProvider,
+    required SavedItemType type,
+    required int totalVisible,
+    required int totalKnown,
+  }) {
+    if (totalVisible >= totalKnown && !savedProvider.hasMore(type)) {
+      return null;
+    }
+    return OutlinedButton.icon(
+      onPressed:
+          savedProvider.isSyncing ? null : () => _loadMore(savedProvider, type),
+      icon: const Icon(Icons.expand_more),
+      label: Text(l10n.savedItemsLoadMoreButton),
+    );
+  }
+
+  void _openSnapshotRecord(SavedItemRecord record) {
+    if (record.type == SavedItemType.communityPost) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => PostDetailScreen(postId: record.id)),
+      );
+    }
   }
 
   Widget _buildEmptySection({
@@ -640,17 +842,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
     SavedItemRecord record,
   ) async {
     try {
-      if (record.type == SavedItemType.artwork) {
-        await savedProvider.removeArtwork(record.id);
-      } else if (record.type == SavedItemType.event) {
-        await savedProvider.removeEvent(record.id);
-      } else if (record.type == SavedItemType.collection) {
-        await savedProvider.removeCollection(record.id);
-      } else if (record.type == SavedItemType.exhibition) {
-        await savedProvider.removeExhibition(record.id);
-      } else {
-        await savedProvider.removePost(record.id);
-      }
+      await savedProvider.removeItem(record.type, record.id);
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showKubusSnackBar(
@@ -1556,12 +1748,13 @@ class _PostSavedTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = MediaUrlResolver.resolveDisplayUrl(post?.imageUrl);
-    final title = post != null
-        ? ((post!.authorName).trim().isNotEmpty
+    final imageUrl =
+        MediaUrlResolver.resolveDisplayUrl(post?.imageUrl ?? record.imageUrl);
+    final title = (record.title ?? '').trim().isNotEmpty
+        ? record.title!.trim()
+        : post != null && post!.authorName.trim().isNotEmpty
             ? post!.authorName.trim()
-            : l10n.savedItemsPlaceholderTitle)
-        : l10n.savedItemsPlaceholderTitle;
+            : l10n.savedItemsPlaceholderTitle;
     final subtitle = _subtitle(post);
 
     return _SavedItemTile(
@@ -1583,6 +1776,8 @@ class _PostSavedTile extends StatelessWidget {
   }
 
   String _subtitle(CommunityPost? post) {
+    final snapshotSubtitle = (record.subtitle ?? '').trim();
+    if (snapshotSubtitle.isNotEmpty) return snapshotSubtitle;
     if (post == null) {
       return l10n.savedItemsPlaceholderDescription;
     }
@@ -1590,6 +1785,60 @@ class _PostSavedTile extends StatelessWidget {
     if (content.isEmpty) return l10n.commonPost;
     if (content.length <= 96) return content;
     return '${content.substring(0, 93).trimRight()}…';
+  }
+
+  String _formatSavedAt(BuildContext context, DateTime timestamp) {
+    final l10n = AppLocalizations.of(context)!;
+    final format = DateFormat.yMMMd(l10n.localeName).add_jm();
+    return format.format(timestamp.toLocal());
+  }
+}
+
+class _SnapshotSavedTile extends StatelessWidget {
+  const _SnapshotSavedTile({
+    required this.l10n,
+    required this.record,
+    required this.accent,
+    required this.icon,
+    required this.typeLabel,
+    required this.onTap,
+    required this.onRemove,
+  });
+
+  final AppLocalizations l10n;
+  final SavedItemRecord record;
+  final Color accent;
+  final IconData icon;
+  final String typeLabel;
+  final VoidCallback onTap;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = (record.title ?? '').trim().isNotEmpty
+        ? record.title!.trim()
+        : l10n.savedItemsPlaceholderTitle;
+    final subtitle = (record.subtitle ?? '').trim().isNotEmpty
+        ? record.subtitle!.trim()
+        : typeLabel;
+    final imageUrl = MediaUrlResolver.resolveDisplayUrl(record.imageUrl);
+
+    return _SavedItemTile(
+      l10n: l10n,
+      title: title,
+      subtitle: subtitle,
+      savedAt: _formatSavedAt(context, record.savedAt),
+      accent: accent,
+      onTap: onTap,
+      onRemove: onRemove,
+      leadingBuilder: (size) => _MediaThumbnail(
+        accent: accent,
+        imageUrl: imageUrl,
+        icon: icon,
+        avatarLabel: title,
+        size: size,
+      ),
+    );
   }
 
   String _formatSavedAt(BuildContext context, DateTime timestamp) {

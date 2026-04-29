@@ -4141,6 +4141,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get savedItemsPostLabel => 'posts';
 
   @override
+  String get savedItemsArtistLabel => 'artists';
+
+  @override
+  String get savedItemsInstitutionLabel => 'institutions';
+
+  @override
+  String get savedItemsGroupLabel => 'groups';
+
+  @override
+  String get savedItemsMarkerLabel => 'markers';
+
+  @override
+  String get savedItemsLoadMoreButton => 'Load more';
+
+  @override
   String get messagesTitle => 'Messages';
 
   @override

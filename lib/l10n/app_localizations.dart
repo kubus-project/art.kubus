@@ -8087,6 +8087,36 @@ abstract class AppLocalizations {
   /// **'posts'**
   String get savedItemsPostLabel;
 
+  /// No description provided for @savedItemsArtistLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'artists'**
+  String get savedItemsArtistLabel;
+
+  /// No description provided for @savedItemsInstitutionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'institutions'**
+  String get savedItemsInstitutionLabel;
+
+  /// No description provided for @savedItemsGroupLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'groups'**
+  String get savedItemsGroupLabel;
+
+  /// No description provided for @savedItemsMarkerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'markers'**
+  String get savedItemsMarkerLabel;
+
+  /// No description provided for @savedItemsLoadMoreButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Load more'**
+  String get savedItemsLoadMoreButton;
+
   /// No description provided for @messagesTitle.
   ///
   /// In en, this message translates to:

@@ -4,6 +4,44 @@ import '../../utils/design_tokens.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../glass_components.dart';
 
+enum WalletActionType {
+  send,
+  receive,
+  swap,
+  secureWallet,
+  restoreSigner,
+  connectExternalWallet,
+  createLocalWallet,
+  importWallet,
+  copyAddress,
+  refresh,
+  nfts,
+}
+
+class WalletActionConfig {
+  const WalletActionConfig({
+    required this.type,
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.run,
+    this.enabled = true,
+    this.loading = false,
+    this.disabledReason,
+  });
+
+  final WalletActionType type;
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final VoidCallback run;
+  final bool enabled;
+  final bool loading;
+  final String? disabledReason;
+}
+
 class KubusWalletResponsiveShell extends StatelessWidget {
   const KubusWalletResponsiveShell({
     super.key,
@@ -238,8 +276,29 @@ class KubusWalletActionCard extends StatelessWidget {
     required this.color,
     required this.onTap,
     this.enabled = true,
+    this.loading = false,
+    this.disabledReason,
     this.minHeight = 144,
   });
+
+  factory KubusWalletActionCard.fromConfig({
+    Key? key,
+    required WalletActionConfig config,
+    double minHeight = 144,
+  }) {
+    return KubusWalletActionCard(
+      key: key,
+      title: config.title,
+      subtitle: config.subtitle,
+      icon: config.icon,
+      color: config.color,
+      onTap: config.run,
+      enabled: config.enabled,
+      loading: config.loading,
+      disabledReason: config.disabledReason,
+      minHeight: minHeight,
+    );
+  }
 
   final String title;
   final String subtitle;
@@ -247,6 +306,8 @@ class KubusWalletActionCard extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
   final bool enabled;
+  final bool loading;
+  final String? disabledReason;
   final double minHeight;
 
   @override
@@ -257,7 +318,7 @@ class KubusWalletActionCard extends StatelessWidget {
 
     return LiquidGlassCard(
       padding: EdgeInsets.zero,
-      onTap: enabled ? onTap : null,
+      onTap: enabled && !loading ? onTap : null,
       child: Container(
         constraints: BoxConstraints(minHeight: minHeight),
         decoration: BoxDecoration(
@@ -286,11 +347,20 @@ class KubusWalletActionCard extends StatelessWidget {
                   color: effectiveColor.withValues(alpha: enabled ? 0.18 : 0.1),
                   borderRadius: BorderRadius.circular(KubusRadius.lg),
                 ),
-                child: Icon(
-                  icon,
-                  color: effectiveColor,
-                  size: KubusChromeMetrics.heroIcon,
-                ),
+                child: loading
+                    ? SizedBox(
+                        width: KubusChromeMetrics.heroIcon,
+                        height: KubusChromeMetrics.heroIcon,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: effectiveColor,
+                        ),
+                      )
+                    : Icon(
+                        icon,
+                        color: effectiveColor,
+                        size: KubusChromeMetrics.heroIcon,
+                      ),
               ),
               const Spacer(),
               Text(
@@ -304,7 +374,9 @@ class KubusWalletActionCard extends StatelessWidget {
               ),
               const SizedBox(height: KubusSpacing.xs),
               Text(
-                subtitle,
+                !enabled && (disabledReason ?? '').trim().isNotEmpty
+                    ? disabledReason!.trim()
+                    : subtitle,
                 style: KubusTextStyles.detailBody.copyWith(
                   color: enabled
                       ? scheme.onSurface.withValues(alpha: 0.68)

@@ -190,19 +190,6 @@ class _WalletHomeState extends State<WalletHome> {
                   ),
                 ),
                 actions: [
-                  TextButton.icon(
-                    onPressed: _openBackupProtection,
-                    icon: Icon(
-                      Icons.shield_outlined,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                    label: Text(
-                      l10n.walletHomeSecureWalletAction,
-                      style: KubusTextStyles.detailButton.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                  ),
                   IconButton(
                     icon: Icon(Icons.settings,
                         color: Theme.of(context).colorScheme.onSurface),
@@ -249,6 +236,7 @@ class _WalletHomeState extends State<WalletHome> {
                     subtitle: l10n.walletHomeQuickActionsSubtitle,
                     child: _buildQuickActionsGrid(
                       walletProvider: walletProvider,
+                      authority: authority,
                       canTransact: canTransact,
                       isCompact: isCompact,
                       roles: roles,
@@ -666,6 +654,7 @@ class _WalletHomeState extends State<WalletHome> {
 
   Widget _buildQuickActionsGrid({
     required WalletProvider walletProvider,
+    required WalletAuthoritySnapshot authority,
     required bool canTransact,
     required bool isCompact,
     required KubusColorRoles roles,
@@ -693,6 +682,7 @@ class _WalletHomeState extends State<WalletHome> {
               color: roles.negativeAction,
               onTap: () => _openSendScreen(walletProvider, canTransact),
               enabled: canTransact,
+              disabledReason: l10n.walletSessionSignerMissing,
               minHeight: isCompact ? 132 : 150,
             ),
           ),
@@ -717,6 +707,7 @@ class _WalletHomeState extends State<WalletHome> {
                 color: roles.positiveAction,
                 onTap: () => _openSwapScreen(walletProvider, canTransact),
                 enabled: canTransact,
+                disabledReason: l10n.walletSessionSignerMissing,
                 minHeight: isCompact ? 132 : 150,
               ),
             ),
@@ -731,6 +722,29 @@ class _WalletHomeState extends State<WalletHome> {
               minHeight: isCompact ? 132 : 150,
             ),
           ),
+          SizedBox(
+            width: actionWidth,
+            child: KubusWalletActionCard(
+              title: l10n.walletHomeSecureWalletAction,
+              subtitle: l10n.walletHomeSecuritySubtitle,
+              icon: Icons.shield_outlined,
+              color: roles.warningAction,
+              onTap: _openBackupProtection,
+              minHeight: isCompact ? 132 : 150,
+            ),
+          ),
+          if (authority.canRestoreFromEncryptedBackup)
+            SizedBox(
+              width: actionWidth,
+              child: KubusWalletActionCard(
+                title: l10n.walletSecurityRestoreSignerAction,
+                subtitle: l10n.walletSecuritySignerRestoreAvailableValue,
+                icon: Icons.login_outlined,
+                color: roles.positiveAction,
+                onTap: () => _handleReadOnlyReconnect(walletProvider),
+                minHeight: isCompact ? 132 : 150,
+              ),
+            ),
         ];
 
         return Wrap(
@@ -909,26 +923,6 @@ class _WalletHomeState extends State<WalletHome> {
                   .onSurface
                   .withValues(alpha: 0.72),
             ),
-          ),
-          const SizedBox(height: KubusSpacing.md),
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: _openBackupProtection,
-                  icon: const Icon(Icons.shield_outlined),
-                  label: Text(l10n.walletHomeSecureWalletAction),
-                ),
-              ),
-              if (authority.canRestoreFromEncryptedBackup) ...<Widget>[
-                const SizedBox(width: KubusSpacing.md),
-                OutlinedButton.icon(
-                  onPressed: () => _handleReadOnlyReconnect(walletProvider),
-                  icon: const Icon(Icons.login_outlined),
-                  label: Text(l10n.walletSecurityRestoreSignerAction),
-                ),
-              ],
-            ],
           ),
         ],
       ),

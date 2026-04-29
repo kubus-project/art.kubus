@@ -169,6 +169,9 @@ IconData communitySubjectTypeIcon(String type) {
 }
 
 CommunitySubjectRef? communityDraftSubjectRef(CommunityPostDraft draft) {
+  if (draft.subjects.isNotEmpty) {
+    return draft.subjects.first;
+  }
   final type = (draft.subjectType ?? '').trim();
   final id = (draft.subjectId ?? '').trim();
   if (type.isEmpty || id.isEmpty) {
@@ -183,6 +186,18 @@ CommunitySubjectPreview? resolveCommunityDraftSubjectPreview({
 }) {
   if (providerPreview != null) {
     return providerPreview;
+  }
+
+  if (draft.subjects.isNotEmpty) {
+    final first = draft.subjects.first;
+    if ((first.title ?? '').trim().isNotEmpty) {
+      return CommunitySubjectPreview(
+        ref: first,
+        title: first.title!.trim(),
+        subtitle: first.subtitle,
+        imageUrl: MediaUrlResolver.resolve(first.imageUrl) ?? first.imageUrl,
+      );
+    }
   }
 
   final artwork = draft.artwork;

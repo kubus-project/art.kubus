@@ -20,6 +20,7 @@ import '../../providers/app_refresh_provider.dart';
 import '../../providers/community_comments_provider.dart';
 import '../../providers/community_interactions_provider.dart';
 import '../../providers/community_subject_provider.dart';
+import '../../providers/saved_items_provider.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../widgets/empty_state_card.dart';
@@ -1633,9 +1634,22 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     try {
       await CommunityService.toggleBookmark(post);
       if (!mounted) return;
+      await context.read<SavedItemsProvider>().setPostSaved(
+            post.id,
+            post.isBookmarked,
+            title: post.content,
+            subtitle: post.authorName,
+            imageUrl: post.imageUrl,
+            authorId: post.authorWallet ?? post.authorId,
+            authorName: post.authorName,
+          );
+      if (!mounted) return;
       setState(() {});
     } catch (_) {
-      // Bookmark is local-first; failure is non-fatal.
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showKubusSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context)!.communityBookmarkUpdateFailedToast)),
+      );
     }
   }
 

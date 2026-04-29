@@ -30,6 +30,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+enum _AuthOrigin { emailPassword, google }
+
 class AuthMethodsPanel extends StatefulWidget {
   const AuthMethodsPanel({
     super.key,
@@ -175,7 +177,10 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     return true;
   }
 
-  Future<void> _handleAuthSuccess(Map<String, dynamic> payload) async {
+  Future<void> _handleAuthSuccess(
+    Map<String, dynamic> payload, {
+    _AuthOrigin origin = _AuthOrigin.emailPassword,
+  }) async {
     final l10n = AppLocalizations.of(context)!;
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
@@ -275,8 +280,10 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       }
     }
     if (!mounted) return;
-    await maybeShowGooglePasswordUpgradePrompt(context, payload);
-    if (!mounted) return;
+    if (origin != _AuthOrigin.google) {
+      await maybeShowGooglePasswordUpgradePrompt(context, payload);
+      if (!mounted) return;
+    }
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
     if (await _maybeRouteToStructuredOnboarding(
@@ -661,7 +668,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         walletAddress: _signerBackedWalletForGoogleAuth(),
         createSignerBackedWallet: _createSignerBackedWallet,
       );
-      await _handleAuthSuccess(result);
+      await _handleAuthSuccess(result, origin: _AuthOrigin.google);
       unawaited(TelemetryService().trackSignUpSuccess(method: 'google'));
     } catch (e) {
       widget.onError?.call(e);
@@ -713,7 +720,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       if (!mounted) return;
 
       if (routeResult is Map<String, dynamic>) {
-        await _handleAuthSuccess(routeResult);
+        await _handleAuthSuccess(routeResult, origin: _AuthOrigin.google);
         return;
       }
 
@@ -722,7 +729,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
         final hydratedPayload = await _resolveAuthPayloadFromCurrentSession();
         if (!mounted) return;
         if (hydratedPayload != null) {
-          await _handleAuthSuccess(hydratedPayload);
+          await _handleAuthSuccess(hydratedPayload, origin: _AuthOrigin.google);
         }
       }
     } finally {
@@ -850,7 +857,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
             createSignerBackedWallet: _createSignerBackedWallet,
           );
           if (!mounted) return;
-          await _handleAuthSuccess(result);
+          await _handleAuthSuccess(result, origin: _AuthOrigin.google);
           unawaited(
             TelemetryService().trackSignUpSuccess(method: 'google'),
           );

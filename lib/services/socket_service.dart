@@ -687,7 +687,7 @@ class SocketService {
     final nid = conversationId;
     if (_subscribedConversations.contains(nid)) {
       _log('Already subscribed to conversation $nid');
-      return false;
+      return true;
     }
     final ok = await _awaitSubscriptionAck(
       room: 'conversation:$nid',

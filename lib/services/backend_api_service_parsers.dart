@@ -274,6 +274,7 @@ Map<String, dynamic> _backendApiBuildCommunityPostPayload({
   String? artworkId,
   String? subjectType,
   String? subjectId,
+  List<CommunitySubjectRef>? subjects,
   String? postType,
   List<String>? tags,
   List<String>? mentions,
@@ -292,6 +293,8 @@ Map<String, dynamic> _backendApiBuildCommunityPostPayload({
       'subjectType': subjectType.trim(),
     if (subjectId != null && subjectId.trim().isNotEmpty)
       'subjectId': subjectId.trim(),
+    if (subjects != null && subjects.isNotEmpty)
+      'subjects': subjects.map((subject) => subject.toJson()).toList(),
     if (postType != null) 'postType': postType,
     if (tags != null && tags.isNotEmpty) 'tags': tags,
     if (mentions != null && mentions.isNotEmpty) 'mentions': mentions,
@@ -542,6 +545,31 @@ CommunityPost _backendApiCommunityPostFromBackendJson(Map<String, dynamic> json)
         ? fallbackArtworkId?.trim()
         : artworkRef?.id;
   }
+  final rawSubjects = json['subjects'];
+  final subjects = rawSubjects is List
+      ? rawSubjects
+          .whereType<Map>()
+          .map((entry) => CommunitySubjectRef.fromJson(
+                Map<String, dynamic>.from(entry),
+              ))
+          .where((subject) => subject.type.isNotEmpty && subject.id.isNotEmpty)
+          .toList(growable: false)
+      : <CommunitySubjectRef>[];
+  final resolvedSubjects = subjects.isNotEmpty
+      ? subjects
+      : resolvedSubjectType != null &&
+              resolvedSubjectType.isNotEmpty &&
+              resolvedSubjectId != null &&
+              resolvedSubjectId.isNotEmpty
+          ? <CommunitySubjectRef>[
+              CommunitySubjectRef(
+                type: resolvedSubjectType,
+                id: resolvedSubjectId,
+                title: artworkRef?.title,
+                imageUrl: artworkRef?.imageUrl,
+              ),
+            ]
+          : const <CommunitySubjectRef>[];
 
   CommunityPost? originalPost;
   final originalPostPayload = json['originalPost'] ?? json['original_post'];
@@ -595,6 +623,7 @@ CommunityPost _backendApiCommunityPostFromBackendJson(Map<String, dynamic> json)
     artwork: artworkRef,
     subjectType: resolvedSubjectType,
     subjectId: resolvedSubjectId,
+    subjects: resolvedSubjects,
     distanceKm: (json['distanceKm'] as num?)?.toDouble() ??
         (json['distance_km'] as num?)?.toDouble(),
     postType: postTypeValue,

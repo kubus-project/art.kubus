@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../community/community_interactions.dart';
 import '../models/community_group.dart';
+import '../models/community_subject.dart';
 import '../services/backend_api_service.dart';
 import 'community_subject_provider.dart';
 
@@ -13,6 +14,7 @@ class CommunityPostDraft {
   final CommunityArtworkReference? artwork;
   final String? subjectType;
   final String? subjectId;
+  final List<CommunitySubjectRef> subjects;
   final CommunityLocation? location;
   final String? locationLabel;
 
@@ -24,6 +26,7 @@ class CommunityPostDraft {
     this.artwork,
     this.subjectType,
     this.subjectId,
+    this.subjects = const <CommunitySubjectRef>[],
     this.location,
     this.locationLabel,
   });
@@ -38,6 +41,7 @@ class CommunityPostDraft {
     bool clearArtwork = false,
     String? subjectType,
     String? subjectId,
+    List<CommunitySubjectRef>? subjects,
     bool clearSubject = false,
     CommunityLocation? location,
     bool clearLocation = false,
@@ -53,6 +57,11 @@ class CommunityPostDraft {
       artwork: clearArtwork ? null : (artwork ?? this.artwork),
       subjectType: clearSubject ? null : (subjectType ?? this.subjectType),
       subjectId: clearSubject ? null : (subjectId ?? this.subjectId),
+      subjects: clearSubject
+          ? const <CommunitySubjectRef>[]
+          : (subjects != null
+              ? List<CommunitySubjectRef>.from(subjects)
+              : List<CommunitySubjectRef>.from(this.subjects)),
       location: clearLocation ? null : (location ?? this.location),
       locationLabel: clearLocationLabel ? null : (locationLabel ?? this.locationLabel),
     );
@@ -236,6 +245,7 @@ class CommunityHubProvider extends ChangeNotifier {
     String? artworkId,
     String? subjectType,
     String? subjectId,
+    List<CommunitySubjectRef>? subjects,
     String? postType,
     String category = 'post',
     List<String>? tags,
@@ -252,6 +262,12 @@ class CommunityHubProvider extends ChangeNotifier {
       artworkId: artworkId,
       subjectType: subjectType,
       subjectId: subjectId,
+      subjects: subjects ??
+          (subjectType != null && subjectId != null
+              ? <CommunitySubjectRef>[
+                  CommunitySubjectRef(type: subjectType, id: subjectId),
+                ]
+              : null),
       postType: postType,
       category: category,
       tags: tags,
@@ -400,7 +416,32 @@ class CommunityHubProvider extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    _draft = _draft.copyWith(subjectType: nextType, subjectId: nextId, clearSubject: false);
+    final ref = CommunitySubjectRef(type: nextType, id: nextId);
+    final subjects = <CommunitySubjectRef>[..._draft.subjects];
+    final existingIndex = subjects.indexWhere((subject) => subject.key == ref.key);
+    if (existingIndex == -1) {
+      subjects.add(ref);
+    } else {
+      subjects[existingIndex] = ref;
+    }
+    _draft = _draft.copyWith(
+      subjectType: _draft.subjectType ?? nextType,
+      subjectId: _draft.subjectId ?? nextId,
+      subjects: subjects,
+      clearSubject: false,
+    );
+    notifyListeners();
+  }
+
+  void removeDraftSubject(CommunitySubjectRef ref) {
+    final subjects =
+        _draft.subjects.where((subject) => subject.key != ref.key).toList();
+    _draft = _draft.copyWith(
+      subjectType: subjects.isEmpty ? null : subjects.first.normalizedType,
+      subjectId: subjects.isEmpty ? null : subjects.first.id,
+      subjects: subjects,
+      clearSubject: subjects.isEmpty,
+    );
     notifyListeners();
   }
 
@@ -469,7 +510,14 @@ class CommunityHubProvider extends ChangeNotifier {
         nextSubjectType.isNotEmpty &&
         nextSubjectId != null &&
         nextSubjectId.isNotEmpty) {
-      _draft = _draft.copyWith(subjectType: nextSubjectType, subjectId: nextSubjectId, clearSubject: false);
+      _draft = _draft.copyWith(
+        subjectType: nextSubjectType,
+        subjectId: nextSubjectId,
+        subjects: <CommunitySubjectRef>[
+          CommunitySubjectRef(type: nextSubjectType, id: nextSubjectId),
+        ],
+        clearSubject: false,
+      );
     }
 
     _composerOpenNonce++;
