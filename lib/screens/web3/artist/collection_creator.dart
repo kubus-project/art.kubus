@@ -190,7 +190,8 @@ class _CollectionCreatorState extends State<CollectionCreator> {
         return;
       }
 
-      if (createResult.collectionId == null) {
+      var collectionId = createResult.collectionId;
+      if (collectionId == null) {
         final walletAddress = WalletUtils.coalesce(
           walletAddress: profileProvider.currentUser?.walletAddress,
           wallet: web3Provider.walletAddress,
@@ -208,8 +209,12 @@ class _CollectionCreatorState extends State<CollectionCreator> {
           walletAddress: walletAddress,
           createdAfter: createStartedAt.subtract(const Duration(seconds: 5)),
         );
+        collectionId = likelyCollection?.id;
+      }
+
+      if (collectionId == null) {
         setState(() {
-          _createdCollectionId = likelyCollection?.id;
+          _createdCollectionId = null;
           _partialSuccessWithoutId = true;
         });
         messenger.showKubusSnackBar(
@@ -218,8 +223,6 @@ class _CollectionCreatorState extends State<CollectionCreator> {
         );
         return;
       }
-
-      final collectionId = createResult.collectionId!;
 
       // Add selected artworks to the newly created collection.
       bool artworkAttachmentFailed = false;
@@ -241,7 +244,8 @@ class _CollectionCreatorState extends State<CollectionCreator> {
       String successMessage = l10n.commonSavedToast;
       if (artworkAttachmentFailed) {
         // Partial success: collection created but artworks failed
-        successMessage = l10n.collectionCreatorSavedInfoBox;
+        successMessage =
+            l10n.collectionCreatorPartialSuccessArtworkAttachmentFailedToast;
       } else if (createResult.refreshRequired) {
         // Collection created but needed refresh to resolve ID
         successMessage = l10n.commonSavedToast;
@@ -252,8 +256,18 @@ class _CollectionCreatorState extends State<CollectionCreator> {
           _createdCollectionId = collectionId;
           _partialSuccessWithoutId = false;
         });
-        messenger.showKubusSnackBar(SnackBar(content: Text(successMessage)));
+        messenger.showKubusSnackBar(
+          SnackBar(content: Text(successMessage)),
+          tone: artworkAttachmentFailed ? KubusSnackBarTone.warning : null,
+        );
         return;
+      }
+
+      if (artworkAttachmentFailed) {
+        messenger.showKubusSnackBar(
+          SnackBar(content: Text(successMessage)),
+          tone: KubusSnackBarTone.warning,
+        );
       }
 
       widget.onCreated?.call(collectionId);

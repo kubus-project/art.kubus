@@ -1958,6 +1958,7 @@
   "collectionCreatorPartialSuccessToast": "Zbirka je bila morda ustvarjena, vendar je aplikacija še ne more lokalno razrešiti. Pred dodajanjem del osveži zbirke.",
   "collectionCreatorPartialSuccessInfoBox": "Strežnik je zbirko sprejel, vendar ni vrnil ID-ja zbirke. Pred pripenjanjem umetnin preveri zbirke ali jih osveži.",
   "collectionCreatorPartialSuccessArtworkAttachmentInfo": "Izbrane umetnine niso bile pripete, ker ID zbirke še ni na voljo.",
+  "collectionCreatorPartialSuccessArtworkAttachmentFailedToast": "Zbirka je shranjena, vendar izbranih umetnin ni bilo mogoče pripeti. Odpri zbirko in jih poskusi dodati znova.",
   "collectionCreatorConnectWalletLabel": "Poveži denarnico za nalaganje in kuratoziranje knjižnice umetnin v tem ustvarjalniku.",
   "collectionCreatorArtworkLibraryLoadingLabel": "Tvoja knjižnica umetnin se še nalaga. Če je zaledje počasno, lahko nadaljuješ z urejanjem osnovnih podatkov zbirke in se sem vrneš pozneje.",
   "collectionCreatorArtworkLibraryPlaceholderLabel": "Naloži svojo knjižnico umetnin, da izbereš dela za to zbirko. Tako je prvo odpiranje hitrejše in brez nepotrebnih klicev API-ja.",

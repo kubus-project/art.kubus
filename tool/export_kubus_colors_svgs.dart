@@ -10,8 +10,6 @@ import 'dart:io';
 
 const double _swatchWidth = 200.0;
 const double _swatchHeight = 120.0;
-const double _labelFontSize = 14.0;
-const double _hexFontSize = 12.0;
 
 class ColorDefinition {
   final String name;
@@ -337,7 +335,7 @@ void main() async {
 }
 
 String _generateColorSwatch(ColorDefinition color) {
-  final isDark = _isColorDark(color);
+  _isColorDark(color);
 
   return '''<?xml version="1.0" encoding="utf-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="200" height="120">
@@ -445,9 +443,9 @@ ratios to ensure text readability when layering colors.
 If you update colors in `lib/utils/design_tokens.dart` (KubusColors), regenerate
 these SVGs:
 
-\`\`\`bash
+```bash
 dart run tool/export_kubus_colors_svgs.dart
-\`\`\`
+```
 
 ---
 

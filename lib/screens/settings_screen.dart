@@ -40,6 +40,7 @@ import '../widgets/avatar_widget.dart';
 import '../widgets/empty_state_card.dart';
 import '../widgets/support/support_ticket_dialog.dart';
 import 'web3/wallet/wallet_backup_protection_screen.dart';
+import 'settings/availability_node_operator_screen.dart';
 import '../utils/app_animations.dart';
 import '../../config/config.dart';
 import '../utils/map_performance_debug.dart';
@@ -1349,6 +1350,17 @@ class _SettingsScreenState extends State<SettingsScreen>
           Icons.history,
           onTap: () => _showTransactionHistoryDialog(),
         ),
+        if (AppConfig.isFeatureEnabled('availabilityNodes'))
+          _buildSettingsTile(
+            _availabilityNodeTileTitle(context),
+            _availabilityNodeTileSubtitle(context),
+            Icons.dns_outlined,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const AvailabilityNodeOperatorScreen(),
+              ),
+            ),
+          ),
         _buildSettingsTile(
           l10n.settingsBackupSettingsTileTitle,
           _walletBackupSummary(l10n),
@@ -1384,6 +1396,18 @@ class _SettingsScreenState extends State<SettingsScreen>
       ],
       sectionColor: AppColorUtils.amberAccent,
     );
+  }
+
+  String _availabilityNodeTileTitle(BuildContext context) {
+    return Localizations.localeOf(context).languageCode == 'sl'
+        ? 'Availability Node'
+        : 'Availability Node';
+  }
+
+  String _availabilityNodeTileSubtitle(BuildContext context) {
+    return Localizations.localeOf(context).languageCode == 'sl'
+        ? 'Ustvari ali preklici omejene operatorske tokene'
+        : 'Create and revoke scoped node operator tokens';
   }
 
   Widget _buildSecuritySection(AppLocalizations l10n) {

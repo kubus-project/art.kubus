@@ -4680,6 +4680,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get collectionCreatorPartialSuccessArtworkAttachmentInfo => 'Izbrane umetnine niso bile pripete, ker ID zbirke še ni na voljo.';
 
   @override
+  String get collectionCreatorPartialSuccessArtworkAttachmentFailedToast => 'Zbirka je shranjena, vendar izbranih umetnin ni bilo mogoče pripeti. Odpri zbirko in jih poskusi dodati znova.';
+
+  @override
   String get collectionCreatorConnectWalletLabel => 'Poveži denarnico za nalaganje in kuratoziranje knjižnice umetnin v tem ustvarjalniku.';
 
   @override

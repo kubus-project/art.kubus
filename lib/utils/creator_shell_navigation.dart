@@ -212,7 +212,8 @@ class CreatorShellNavigation {
     String? collectionName,
   }) async {
     final shellScope = DesktopShellScope.of(context);
-    final isDesktop = DesktopBreakpoints.isDesktop(context);
+    final isDesktop =
+        shellScope != null || DesktopBreakpoints.isDesktop(context);
     final l10n = AppLocalizations.of(context);
     final title = _textOrFallback(
       collectionName,

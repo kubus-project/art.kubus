@@ -4666,6 +4666,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collectionCreatorPartialSuccessArtworkAttachmentInfo => 'Selected artworks were not attached because the collection ID is not available yet.';
 
   @override
+  String get collectionCreatorPartialSuccessArtworkAttachmentFailedToast => 'Collection saved, but selected artworks could not be attached. Open the collection and try adding them again.';
+
+  @override
   String get collectionCreatorConnectWalletLabel => 'Connect a wallet to load and curate your artwork library inside this collection creator.';
 
   @override

@@ -1,6 +1,76 @@
 part of 'backend_api_service.dart';
 
 extension BackendApiAvailabilityNetworkAccess on BackendApiService {
+  Future<Map<String, dynamic>> createAvailabilityOperatorToken({
+    required String label,
+    required String walletAddress,
+    int expiresInDays = 90,
+    List<String>? scopes,
+  }) async {
+    final response = await _post(
+      Uri.parse('$baseUrl/api/availability/operator-tokens'),
+      headers: _getHeaders(),
+      body: jsonEncode(<String, dynamic>{
+        'label': label.trim(),
+        'walletAddress': walletAddress.trim(),
+        'expiresInDays': expiresInDays.clamp(1, 365),
+        if (scopes != null && scopes.isNotEmpty) 'scopes': scopes,
+      }),
+    );
+    if (!_isSuccessStatus(response.statusCode)) {
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: '/api/availability/operator-tokens',
+        body: response.body,
+      );
+    }
+    final payload = jsonDecode(response.body) as Map<String, dynamic>;
+    return _backendApiMapOrNull(payload['data']) ?? payload;
+  }
+
+  Future<List<Map<String, dynamic>>> listAvailabilityOperatorTokens({
+    String? walletAddress,
+  }) async {
+    final uri = Uri.parse('$baseUrl/api/availability/operator-tokens').replace(
+      queryParameters: <String, String>{
+        if (walletAddress != null && walletAddress.trim().isNotEmpty)
+          'walletAddress': walletAddress.trim(),
+      },
+    );
+    final response = await _fetchJson(
+      uri,
+      includeAuth: true,
+      allowOrbitFallback: false,
+    );
+    final data = _backendApiMapOrNull(response['data']);
+    return _backendApiDecodeMapList(data?['tokens']);
+  }
+
+  Future<Map<String, dynamic>> revokeAvailabilityOperatorToken(
+    String tokenId, {
+    String? reason,
+  }) async {
+    final response = await _delete(
+      Uri.parse(
+        '$baseUrl/api/availability/operator-tokens/${Uri.encodeComponent(tokenId)}',
+      ),
+      headers: _getHeaders(),
+      body: jsonEncode(<String, dynamic>{
+        if (reason != null && reason.trim().isNotEmpty)
+          'reason': reason.trim(),
+      }),
+    );
+    if (!_isSuccessStatus(response.statusCode)) {
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: '/api/availability/operator-tokens/$tokenId',
+        body: response.body,
+      );
+    }
+    final payload = jsonDecode(response.body) as Map<String, dynamic>;
+    return _backendApiMapOrNull(payload['data']) ?? payload;
+  }
+
   Future<Map<String, dynamic>?> getKub8UtilityModel() async {
     try {
       final uri = Uri.parse('$baseUrl/api/dao/kub8-utility');

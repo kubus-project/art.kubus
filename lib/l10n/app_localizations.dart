@@ -9029,6 +9029,12 @@ abstract class AppLocalizations {
   /// **'Selected artworks were not attached because the collection ID is not available yet.'**
   String get collectionCreatorPartialSuccessArtworkAttachmentInfo;
 
+  /// No description provided for @collectionCreatorPartialSuccessArtworkAttachmentFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Collection saved, but selected artworks could not be attached. Open the collection and try adding them again.'**
+  String get collectionCreatorPartialSuccessArtworkAttachmentFailedToast;
+
   /// No description provided for @collectionCreatorConnectWalletLabel.
   ///
   /// In en, this message translates to:

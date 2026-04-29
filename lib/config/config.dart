@@ -50,6 +50,7 @@ class AppConfig {
   static const bool enableEncryptedWalletBackup = true;
   static const bool enableWalletBackupPasskeyWeb = true;
   static const bool enableWalletSettlements = true;
+  static const bool enableAvailabilityNodes = true;
   /// Token swaps are intentionally disabled at the app surface for now.
   static const bool enableTokenSwap = false;
 
@@ -420,6 +421,8 @@ class AppConfig {
         return enableWalletBackupPasskeyWeb;
       case 'walletSettlements':
         return enableWalletSettlements;
+      case 'availabilityNodes':
+        return enableAvailabilityNodes;
       case 'tokenSwap':
         return enableTokenSwap;
       case 'marketplace':
@@ -525,8 +528,8 @@ class AppConfig {
 class AppInfo {
   static const String appName = 'art.kubus';
   static const String version = '0.5.12';
-  static const int buildNumber = 26042805;
-  static const String buildDate = '2026-04-28';
+  static const int buildNumber = 26042901;
+  static const String buildDate = '2026-04-29';
 
   /// Get full version string
   static String get fullVersion => '$version+$buildNumber';
