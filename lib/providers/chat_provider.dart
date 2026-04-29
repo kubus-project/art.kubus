@@ -485,6 +485,8 @@ class ChatProvider extends ChangeNotifier {
   DateTime? _lastUnauthorizedAt;
   final Duration _unauthCooldown = const Duration(seconds: 30);
   String _lastAuthSignature = '';
+  DateTime? _lastIncomingMessageAt;
+  String? _lastIncomingConversationId;
   final Map<String, int> _messageCacheTouchMs = {};
   final Map<String, int> _membersCacheTouchMs = {};
   final Map<String, int> _userCacheTouchMs = {};
@@ -577,6 +579,7 @@ class ChatProvider extends ChangeNotifier {
     }
     return cached;
   }
+
   bool get isAuthenticated => (_api.getAuthToken() ?? '').isNotEmpty;
   bool get _hasAuthToken => (_api.getAuthToken() ?? '').isNotEmpty;
   bool get _hasAuthContext =>
@@ -586,6 +589,8 @@ class ChatProvider extends ChangeNotifier {
         'hasAuthToken': _hasAuthToken,
         'currentWallet': _currentWallet,
         'openConversationId': _openConversationId,
+        'lastIncomingMessageAt': _lastIncomingMessageAt?.toIso8601String(),
+        'lastIncomingConversationId': _lastIncomingConversationId,
         'conversationCount': _conversations.length,
         'messageConversationCount': _messages.length,
         'cachedMemberLists': _membersCache.length,
@@ -598,6 +603,9 @@ class ChatProvider extends ChangeNotifier {
           'poll': _pollIntervalCurrent?.inSeconds,
           'subscriptionMonitor': _subscriptionMonitorIntervalCurrent?.inSeconds,
         },
+        'socketConnected': _socket.isConnected,
+        'subscribedConversationIdsCount':
+            _socket.subscribedConversationIds.length,
         'bindings': <String, bool>{
           'refreshProvider': _boundRefreshProvider != null,
           'refreshListener': _refreshListener != null,
@@ -606,6 +614,23 @@ class ChatProvider extends ChangeNotifier {
         },
         'socket': _socket.debugResourceSnapshot,
       };
+
+  @visibleForTesting
+  void handleIncomingMessageForTesting(Map<String, dynamic> data) {
+    _onMessageReceived(data);
+  }
+
+  @visibleForTesting
+  void setCurrentWalletForTesting(String? wallet) {
+    _currentWallet = wallet;
+  }
+
+  @visibleForTesting
+  void setOpenConversationForTesting(String? conversationId) {
+    final normalized = (conversationId ?? '').trim();
+    _openConversationId = normalized.isEmpty ? null : normalized;
+    _openConversationStartedAt = normalized.isEmpty ? null : DateTime.now();
+  }
 
   void _unbindRefreshProvider() {
     final provider = _boundRefreshProvider;
@@ -1048,10 +1073,8 @@ class ChatProvider extends ChangeNotifier {
   }
 
   void _upsertConversationMetadataForMessage(
-    String conversationId,
-    ChatMessage message,
-    {bool force = false}
-  ) {
+      String conversationId, ChatMessage message,
+      {bool force = false}) {
     final convId = conversationId.trim();
     if (convId.isEmpty) return;
     final index = _conversations.indexWhere((c) => c.id == convId);
@@ -1094,41 +1117,110 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
+  Map<String, dynamic> _extractIncomingMessagePayload(
+      Map<String, dynamic> data) {
+    final rawMessage = data['message'];
+    if (rawMessage is Map) {
+      return Map<String, dynamic>.from(rawMessage);
+    }
+
+    final rawData = data['data'];
+    if (rawData is Map) {
+      final nestedMessage = rawData['message'];
+      if (nestedMessage is Map) {
+        return Map<String, dynamic>.from(nestedMessage);
+      }
+      return Map<String, dynamic>.from(rawData);
+    }
+
+    final rawPayload = data['payload'];
+    if (rawPayload is Map) {
+      final nestedMessage = rawPayload['message'];
+      if (nestedMessage is Map) {
+        return Map<String, dynamic>.from(nestedMessage);
+      }
+      return Map<String, dynamic>.from(rawPayload);
+    }
+
+    return Map<String, dynamic>.from(data);
+  }
+
+  String _resolveIncomingConversationId(
+    Map<String, dynamic> data,
+    Map<String, dynamic> payload,
+    ChatMessage message,
+  ) {
+    final dataNode = data['data'];
+    final dataMap =
+        dataNode is Map ? Map<String, dynamic>.from(dataNode) : null;
+    final payloadNode = data['payload'];
+    final payloadMap =
+        payloadNode is Map ? Map<String, dynamic>.from(payloadNode) : null;
+
+    return (payload['conversationId'] ??
+            payload['conversation_id'] ??
+            data['conversationId'] ??
+            data['conversation_id'] ??
+            dataMap?['conversationId'] ??
+            dataMap?['conversation_id'] ??
+            payloadMap?['conversationId'] ??
+            payloadMap?['conversation_id'] ??
+            message.conversationId)
+        .toString()
+        .trim();
+  }
+
+  bool _matchesOptimisticMessage(
+    ChatMessage current,
+    ChatMessage incoming,
+  ) {
+    final clientTempId = current.data?['clientTempId']?.toString();
+    final incomingClientTempId = incoming.data?['clientTempId']?.toString();
+    if (clientTempId != null &&
+        clientTempId.isNotEmpty &&
+        clientTempId == incomingClientTempId) {
+      return true;
+    }
+
+    final isOptimistic = current.id.startsWith('temp-') ||
+        current.data?['sendStatus']?.toString() == 'sending';
+    if (!isOptimistic) return false;
+    if (!WalletUtils.equals(current.senderWallet, incoming.senderWallet)) {
+      return false;
+    }
+    if (current.message.trim() != incoming.message.trim()) return false;
+
+    final deltaSeconds =
+        current.createdAt.difference(incoming.createdAt).inSeconds.abs();
+    return deltaSeconds <= 120;
+  }
+
   void _onMessageReceived(Map<String, dynamic> data) {
     try {
-      final payload = data['message'] is Map
-          ? Map<String, dynamic>.from(data['message'] as Map)
-          : Map<String, dynamic>.from(data);
+      final payload = _extractIncomingMessagePayload(data);
       final msg = ChatMessage.fromJson(payload);
-      final convId = (payload['conversationId'] ??
-              payload['conversation_id'] ??
-              data['conversationId'] ??
-              data['conversation_id'] ??
-              msg.conversationId)
-          .toString()
-          .trim();
+      final convId = _resolveIncomingConversationId(data, payload, msg);
       if (convId.isEmpty) {
-        debugPrint(
-            'ChatProvider._onMessageReceived: missing conversation id; rawData=$data');
+        if (kDebugMode) {
+          debugPrint(
+              'ChatProvider._onMessageReceived: missing conversation id; rawData=$data');
+        }
         return;
       }
       final msgJson = <String, dynamic>{
         ...payload,
         'conversationId': convId,
       };
-      final normalizedMsg = msg.conversationId == convId
-          ? msg
-          : ChatMessage.fromJson(msgJson);
+      final normalizedMsg =
+          msg.conversationId == convId ? msg : ChatMessage.fromJson(msgJson);
       final existing = _messages[convId] ?? const <ChatMessage>[];
       final next = <ChatMessage>[];
       var inserted = false;
+      final alreadyHadServerMessage =
+          existing.any((message) => message.id == normalizedMsg.id);
       for (final current in existing) {
-        final clientTempId = current.data?['clientTempId']?.toString();
-        final incomingClientTempId = normalizedMsg.data?['clientTempId']?.toString();
         if (current.id == normalizedMsg.id ||
-            (clientTempId != null &&
-                clientTempId.isNotEmpty &&
-                clientTempId == incomingClientTempId)) {
+            _matchesOptimisticMessage(current, normalizedMsg)) {
           if (!inserted) {
             next.add(normalizedMsg);
             inserted = true;
@@ -1140,13 +1232,16 @@ class ChatProvider extends ChangeNotifier {
       if (!inserted) next.add(normalizedMsg);
       next.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       _cacheMessages(convId, next);
+      _lastIncomingMessageAt = DateTime.now();
+      _lastIncomingConversationId = convId;
 
       final isOpen = _openConversationId == convId;
       if (isOpen) {
         _unreadCounts[convId] = 0;
         markMessageReadLocal(convId, normalizedMsg.id);
         _sendMarkMessageReadToServer(convId, normalizedMsg.id);
-      } else if (!existing.any((message) => message.id == normalizedMsg.id)) {
+      } else if (!alreadyHadServerMessage &&
+          !WalletUtils.equals(normalizedMsg.senderWallet, _currentWallet)) {
         _unreadCounts[convId] = (_unreadCounts[convId] ?? 0) + 1;
       }
       _upsertConversationMetadataForMessage(convId, normalizedMsg);
@@ -1175,16 +1270,20 @@ class ChatProvider extends ChangeNotifier {
         debugPrint(
             'ChatProvider: Failed to show local notification for incoming message: $e');
       }
-      debugPrint(
-          'ChatProvider: _onMessageReceived: convId=$convId, msgId=${normalizedMsg.id}, messagesInConv=${_messages[convId]?.length ?? 0}, unread=${_unreadCounts[convId]}');
-      // Report whether this conversation is known locally
-      final convIdx = _conversations.indexWhere((c) => c.id == convId);
-      debugPrint(
-          'ChatProvider: conv known locally: ${convIdx >= 0}, convCount=${_conversations.length}, index=$convIdx');
+      if (kDebugMode) {
+        debugPrint(
+            'ChatProvider: _onMessageReceived: convId=$convId, msgId=${normalizedMsg.id}, messagesInConv=${_messages[convId]?.length ?? 0}, unread=${_unreadCounts[convId]}');
+        // Report whether this conversation is known locally.
+        final convIdx = _conversations.indexWhere((c) => c.id == convId);
+        debugPrint(
+            'ChatProvider: conv known locally: ${convIdx >= 0}, convCount=${_conversations.length}, index=$convIdx');
+      }
       // Force notify so unread badge updates are immediate in UI
       _safeNotifyListeners(force: true);
     } catch (e) {
-      debugPrint('ChatProvider: Error handling incoming message: $e');
+      if (kDebugMode) {
+        debugPrint('ChatProvider: Error handling incoming message: $e');
+      }
     }
   }
 

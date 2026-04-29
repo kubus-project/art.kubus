@@ -195,6 +195,7 @@ class _SignInScreenState extends State<SignInScreen> {
     required WalletProvider walletProvider,
     String? walletAddress,
     required Map<String, dynamic> payload,
+    required _AuthOrigin origin,
   }) async {
     if (widget.embedded || widget.onAuthSuccess != null) return false;
 
@@ -208,6 +209,9 @@ class _SignInScreenState extends State<SignInScreen> {
       payload: payload,
       redirectRoute: widget.redirectRoute,
       redirectArguments: widget.redirectArguments,
+      origin: origin == _AuthOrigin.google
+          ? AuthOrigin.google
+          : AuthOrigin.emailPassword,
     );
   }
 
@@ -351,6 +355,7 @@ class _SignInScreenState extends State<SignInScreen> {
           ? walletProvider.currentWalletAddress
           : normalizedWalletAddress,
       payload: payload,
+      origin: origin,
     )) {
       return;
     }

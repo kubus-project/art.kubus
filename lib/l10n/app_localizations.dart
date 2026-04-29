@@ -8825,6 +8825,102 @@ abstract class AppLocalizations {
   /// **'Upload media, set details, and publish.'**
   String get artistStudioCreateOptionArtworkSubtitle;
 
+  /// No description provided for @artworkCreatorInviteSentSingular.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork created. 1 invite sent.'**
+  String get artworkCreatorInviteSentSingular;
+
+  /// No description provided for @artworkCreatorInviteSentPlural.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork created. {count} invites sent.'**
+  String artworkCreatorInviteSentPlural(int count);
+
+  /// No description provided for @artworkCreatorInviteFailedSingular.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork created. 1 invite could not be sent.'**
+  String get artworkCreatorInviteFailedSingular;
+
+  /// No description provided for @artworkCreatorInviteFailedPlural.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork created. {count} invites could not be sent.'**
+  String artworkCreatorInviteFailedPlural(int count);
+
+  /// No description provided for @artworkCreatorInvitePartialResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Artwork created. {sent} invite(s) sent, {failed} failed.'**
+  String artworkCreatorInvitePartialResult(int sent, int failed);
+
+  /// No description provided for @artworkCreatorCollaborationQueuedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Queue invites before publishing.'**
+  String get artworkCreatorCollaborationQueuedSubtitle;
+
+  /// No description provided for @artworkCreatorCollaborationManageSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage collaborators without leaving the creator.'**
+  String get artworkCreatorCollaborationManageSubtitle;
+
+  /// No description provided for @artworkCreatorCollaborationUnavailableSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Collaboration is unavailable.'**
+  String get artworkCreatorCollaborationUnavailableSubtitle;
+
+  /// No description provided for @artworkCreatorCollaborationLockedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Once the artwork is saved, collaborators can be invited here without leaving the creator.'**
+  String get artworkCreatorCollaborationLockedMessage;
+
+  /// No description provided for @artworkCreatorOpenArSetup.
+  ///
+  /// In en, this message translates to:
+  /// **'Open AR setup'**
+  String get artworkCreatorOpenArSetup;
+
+  /// No description provided for @artworkCreatorSaveFirstToUnlockAr.
+  ///
+  /// In en, this message translates to:
+  /// **'Save first to unlock AR'**
+  String get artworkCreatorSaveFirstToUnlockAr;
+
+  /// No description provided for @artworkCreatorDraftSavedBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft saved'**
+  String get artworkCreatorDraftSavedBadge;
+
+  /// No description provided for @artworkCreatorSavedWorkspaceSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft saved. Collaboration and AR are available in-context.'**
+  String get artworkCreatorSavedWorkspaceSubtitle;
+
+  /// No description provided for @artworkCreatorArSetupAction.
+  ///
+  /// In en, this message translates to:
+  /// **'AR setup'**
+  String get artworkCreatorArSetupAction;
+
+  /// No description provided for @artworkCreatorShellDraftSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Compose the artwork, then unlock collaboration and AR from the sidebar.'**
+  String get artworkCreatorShellDraftSubtitle;
+
+  /// No description provided for @artworkCreatorLiveWorkspaceSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The artwork is live and can still be refined from this workspace.'**
+  String get artworkCreatorLiveWorkspaceSubtitle;
+
   /// No description provided for @artistStudioCreateOptionCollectionTitle.
   ///
   /// In en, this message translates to:

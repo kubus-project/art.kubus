@@ -4576,6 +4576,60 @@ class AppLocalizationsSl extends AppLocalizations {
   String get artistStudioCreateOptionArtworkSubtitle => 'Naloži medij, nastavi podrobnosti in objavi.';
 
   @override
+  String get artworkCreatorInviteSentSingular => 'Umetnina je ustvarjena. Poslano je 1 vabilo.';
+
+  @override
+  String artworkCreatorInviteSentPlural(int count) {
+    return 'Umetnina je ustvarjena. Poslanih je $count vabil.';
+  }
+
+  @override
+  String get artworkCreatorInviteFailedSingular => 'Umetnina je ustvarjena. 1 vabila ni bilo mogoče poslati.';
+
+  @override
+  String artworkCreatorInviteFailedPlural(int count) {
+    return 'Umetnina je ustvarjena. $count vabil ni bilo mogoče poslati.';
+  }
+
+  @override
+  String artworkCreatorInvitePartialResult(int sent, int failed) {
+    return 'Umetnina je ustvarjena. Poslanih: $sent, neuspelih: $failed.';
+  }
+
+  @override
+  String get artworkCreatorCollaborationQueuedSubtitle => 'Pripravi vabila pred objavo.';
+
+  @override
+  String get artworkCreatorCollaborationManageSubtitle => 'Upravljaj sodelavce, ne da zapustiš ustvarjalnik.';
+
+  @override
+  String get artworkCreatorCollaborationUnavailableSubtitle => 'Sodelovanje trenutno ni na voljo.';
+
+  @override
+  String get artworkCreatorCollaborationLockedMessage => 'Ko je umetnina shranjena, lahko tukaj povabiš sodelavce, ne da zapustiš ustvarjalnik.';
+
+  @override
+  String get artworkCreatorOpenArSetup => 'Odpri nastavitev AR';
+
+  @override
+  String get artworkCreatorSaveFirstToUnlockAr => 'Za odklep AR najprej shrani';
+
+  @override
+  String get artworkCreatorDraftSavedBadge => 'Osnutek shranjen';
+
+  @override
+  String get artworkCreatorSavedWorkspaceSubtitle => 'Osnutek je shranjen. Sodelovanje in AR sta na voljo v istem delovnem prostoru.';
+
+  @override
+  String get artworkCreatorArSetupAction => 'Nastavitev AR';
+
+  @override
+  String get artworkCreatorShellDraftSubtitle => 'Oblikuj umetnino in nato v stranski vrstici odkleni sodelovanje in AR.';
+
+  @override
+  String get artworkCreatorLiveWorkspaceSubtitle => 'Umetnina je objavljena, podrobnosti pa lahko še naprej urejaš v tem delovnem prostoru.';
+
+  @override
   String get artistStudioCreateOptionCollectionTitle => 'Ustvari zbirko';
 
   @override

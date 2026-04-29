@@ -93,4 +93,68 @@ void main() {
       isTrue,
     );
   });
+
+  test('incoming socket message inserts and increments unread when closed', () {
+    final provider = ChatProvider()
+      ..setCurrentWalletForTesting('wallet_me')
+      ..handleIncomingMessageForTesting({
+        'event': 'message:received',
+        'data': {
+          'message': {
+            'id': 'socket_msg_1',
+            'conversation_id': 'conv_socket',
+            'sender_wallet': 'wallet_other',
+            'message': 'hello from socket',
+            'created_at': '2025-01-02T12:00:00Z',
+          },
+        },
+      });
+
+    expect(provider.messages['conv_socket'], hasLength(1));
+    expect(provider.messages['conv_socket']!.single.id, 'socket_msg_1');
+    expect(provider.unreadCounts['conv_socket'], 1);
+    expect(
+      provider.debugResourceSnapshot['lastIncomingConversationId'],
+      'conv_socket',
+    );
+  });
+
+  test('duplicate socket and polling payloads appear once', () {
+    final provider = ChatProvider()..setCurrentWalletForTesting('wallet_me');
+    final payload = {
+      'conversationId': 'conv_dupe',
+      'message': {
+        'id': 'dupe_msg_1',
+        'conversationId': 'conv_dupe',
+        'senderWallet': 'wallet_other',
+        'message': 'same message',
+        'createdAt': '2025-01-02T12:00:00Z',
+      },
+    };
+
+    provider.handleIncomingMessageForTesting(payload);
+    provider.handleIncomingMessageForTesting(payload);
+
+    expect(provider.messages['conv_dupe'], hasLength(1));
+    expect(provider.unreadCounts['conv_dupe'], 1);
+  });
+
+  test('open conversation receives incoming message without unread increment',
+      () {
+    final provider = ChatProvider()
+      ..setCurrentWalletForTesting('wallet_me')
+      ..setOpenConversationForTesting('conv_open')
+      ..handleIncomingMessageForTesting({
+        'message': {
+          'id': 'open_msg_1',
+          'conversation_id': 'conv_open',
+          'sender_wallet': 'wallet_other',
+          'message': 'visible immediately',
+          'created_at': '2025-01-02T12:00:00Z',
+        },
+      });
+
+    expect(provider.messages['conv_open'], hasLength(1));
+    expect(provider.unreadCounts['conv_open'], 0);
+  });
 }

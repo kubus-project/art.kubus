@@ -501,7 +501,8 @@ class _WalletBackupProtectionScreenState
           : RefreshIndicator(
               onRefresh: _refresh,
               child: ListView(
-                padding: EdgeInsets.all(isWide ? KubusSpacing.xl : KubusSpacing.lg),
+                padding:
+                    EdgeInsets.all(isWide ? KubusSpacing.xl : KubusSpacing.lg),
                 children: <Widget>[
                   LiquidGlassCard(
                     padding: EdgeInsets.zero,
@@ -532,8 +533,8 @@ class _WalletBackupProtectionScreenState
                                     .textTheme
                                     .labelLarge
                                     ?.copyWith(
-                                      color:
-                                          scheme.onSurface.withValues(alpha: 0.72),
+                                      color: scheme.onSurface
+                                          .withValues(alpha: 0.72),
                                     ),
                               ),
                               const SizedBox(height: KubusSpacing.xs),
@@ -568,8 +569,10 @@ class _WalletBackupProtectionScreenState
                                   ),
                                   WalletStatusChip(
                                     label: authority.state ==
-                                            WalletAuthorityState.accountShellOnly
-                                        ? l10n.walletSessionStateAccountShellOnly
+                                            WalletAuthorityState
+                                                .accountShellOnly
+                                        ? l10n
+                                            .walletSessionStateAccountShellOnly
                                         : authority.state ==
                                                 WalletAuthorityState
                                                     .localSignerReady
@@ -609,8 +612,8 @@ class _WalletBackupProtectionScreenState
                                     .textTheme
                                     .bodyLarge
                                     ?.copyWith(
-                                      color:
-                                          scheme.onSurface.withValues(alpha: 0.88),
+                                      color: scheme.onSurface
+                                          .withValues(alpha: 0.88),
                                       fontWeight: FontWeight.w800,
                                       height: 1.35,
                                     ),
@@ -622,8 +625,8 @@ class _WalletBackupProtectionScreenState
                                     .textTheme
                                     .bodyMedium
                                     ?.copyWith(
-                                      color:
-                                          scheme.onSurface.withValues(alpha: 0.76),
+                                      color: scheme.onSurface
+                                          .withValues(alpha: 0.76),
                                       height: 1.45,
                                     ),
                               ),
@@ -631,7 +634,9 @@ class _WalletBackupProtectionScreenState
                                 const SizedBox(height: KubusSpacing.md),
                                 Text(
                                   l10n.walletBackupProtectionLastVerifiedLabel(
-                                    backup!.lastVerifiedAt!.toLocal().toString(),
+                                    backup!.lastVerifiedAt!
+                                        .toLocal()
+                                        .toString(),
                                   ),
                                   style: Theme.of(context)
                                       .textTheme
@@ -652,12 +657,6 @@ class _WalletBackupProtectionScreenState
                   WalletCustodyStatusPanel(
                     authority: authority,
                     compact: !isWide,
-                    onRestoreSigner: needsSignerRestore && hasEncryptedBackup
-                        ? _restoreSignerFromBackup
-                        : null,
-                    onConnectExternalWallet: !authority.canTransact
-                        ? () => Navigator.of(context).pushNamed('/connect-wallet')
-                        : null,
                   ),
                   const SizedBox(height: KubusSpacing.lg),
                   LiquidGlassCard(
@@ -726,7 +725,8 @@ class _WalletBackupProtectionScreenState
                             _buildStateRow(
                               context: context,
                               icon: Icons.visibility_outlined,
-                              label: l10n.walletBackupProtectionRevealRecoveryPhraseButton,
+                              label: l10n
+                                  .walletBackupProtectionRevealRecoveryPhraseButton,
                               value: _backupRequired
                                   ? l10n
                                       .walletBackupProtectionRecoveryPhraseHeadline

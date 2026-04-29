@@ -10,6 +10,13 @@ import '../screens/onboarding/onboarding_flow_screen.dart';
 import 'auth_onboarding_service.dart';
 import 'onboarding_state_service.dart';
 
+enum AuthOrigin {
+  emailPassword,
+  google,
+  wallet,
+  restoredSession,
+}
+
 enum AuthRedirectStage {
   authenticating,
   storingSession,
@@ -20,8 +27,97 @@ enum AuthRedirectStage {
   failed,
 }
 
+enum PostAuthRouteState {
+  authenticating,
+  storingSession,
+  ensuringWalletIdentity,
+  hydratingProfile,
+  initializingProviders,
+  checkingOnboarding,
+  onboardingRequired,
+  ready,
+  failed,
+}
+
+class PostAuthRedirectResult {
+  const PostAuthRedirectResult({
+    required this.state,
+    required this.routeName,
+    this.removeAuthStack = true,
+    this.arguments,
+    this.onboardingStepId,
+    this.error,
+  });
+
+  final PostAuthRouteState state;
+  final String routeName;
+  final bool removeAuthStack;
+  final Object? arguments;
+  final String? onboardingStepId;
+  final String? error;
+}
+
 class AuthRedirectController {
   const AuthRedirectController();
+
+  Future<PostAuthRedirectResult> resolvePostAuthRedirect({
+    required SharedPreferences prefs,
+    required Map<String, dynamic> payload,
+    required bool hasHydratedProfile,
+    required bool requiresWalletBackup,
+    String? walletAddress,
+    String? userId,
+    String? redirectRoute,
+    Object? redirectArguments,
+    String? heuristicNextStepId,
+    String? persona,
+    bool removeAuthStack = true,
+  }) async {
+    final targetWallet = (walletAddress ?? '').toString().trim();
+    final flowScopeKey = OnboardingStateService.buildAuthOnboardingScopeKey(
+      walletAddress: targetWallet.isEmpty ? null : targetWallet,
+      userId: userId,
+    );
+
+    final resumeState =
+        await AuthOnboardingService.resolveStructuredOnboardingResume(
+      prefs: prefs,
+      hasPendingAuthOnboarding:
+          OnboardingStateService.hasPendingAuthOnboardingSync(
+        prefs,
+        scopeKey: flowScopeKey,
+      ),
+      hasAuthenticatedSession: true,
+      hasHydratedProfile: hasHydratedProfile,
+      requiresWalletBackup: requiresWalletBackup,
+      heuristicNextStepId: heuristicNextStepId,
+      persona: persona,
+      payload: payload,
+      flowScopeKey: flowScopeKey,
+    );
+
+    final nextStepId = resumeState.nextStepId;
+    if (resumeState.requiresStructuredOnboarding &&
+        nextStepId != null &&
+        nextStepId.isNotEmpty) {
+      return PostAuthRedirectResult(
+        state: PostAuthRouteState.onboardingRequired,
+        routeName: '/onboarding',
+        removeAuthStack: removeAuthStack,
+        arguments: redirectArguments,
+        onboardingStepId: nextStepId,
+      );
+    }
+
+    return PostAuthRedirectResult(
+      state: PostAuthRouteState.ready,
+      routeName: (redirectRoute ?? '').trim().isEmpty
+          ? '/main'
+          : redirectRoute!.trim(),
+      removeAuthStack: removeAuthStack,
+      arguments: redirectArguments,
+    );
+  }
 
   Future<bool> routeAfterAuth({
     required BuildContext context,
@@ -34,6 +130,7 @@ class AuthRedirectController {
     String? redirectRoute,
     Object? redirectArguments,
     bool replaceStack = true,
+    AuthOrigin origin = AuthOrigin.emailPassword,
   }) async {
     final navigator = Navigator.of(context);
     final isDesktop = DesktopBreakpoints.isDesktop(context);
@@ -48,27 +145,22 @@ class AuthRedirectController {
     final requiresWalletBackup =
         AppConfig.isFeatureEnabled('walletBackupOnboarding') &&
             walletProvider.authority.mnemonicBackupRequired;
-    final resumeState =
-        await AuthOnboardingService.resolveStructuredOnboardingResume(
+    final result = await resolvePostAuthRedirect(
       prefs: prefs,
-      hasPendingAuthOnboarding:
-          OnboardingStateService.hasPendingAuthOnboardingSync(
-        prefs,
-        scopeKey: flowScopeKey,
-      ),
-      hasAuthenticatedSession: true,
+      payload: payload,
       hasHydratedProfile: profileProvider.profile != null,
       requiresWalletBackup: requiresWalletBackup,
+      walletAddress: targetWallet,
+      userId: userId,
+      redirectRoute: redirectRoute,
+      redirectArguments: redirectArguments,
       heuristicNextStepId: profileProvider.nextStructuredOnboardingStepId,
       persona: profileProvider.userPersona?.storageValue,
-      payload: payload,
-      flowScopeKey: flowScopeKey,
+      removeAuthStack: replaceStack,
     );
 
-    final nextStepId = resumeState.nextStepId;
-    if (resumeState.requiresStructuredOnboarding &&
-        nextStepId != null &&
-        nextStepId.isNotEmpty) {
+    if (result.state == PostAuthRouteState.onboardingRequired &&
+        (result.onboardingStepId ?? '').isNotEmpty) {
       await OnboardingStateService.markAuthOnboardingPending(
         prefs: prefs,
         scopeKey: flowScopeKey,
@@ -77,11 +169,11 @@ class AuthRedirectController {
       final route = MaterialPageRoute(
         builder: (_) => OnboardingFlowScreen(
           forceDesktop: isDesktop,
-          initialStepId: nextStepId,
+          initialStepId: result.onboardingStepId,
         ),
         settings: const RouteSettings(name: '/onboarding'),
       );
-      if (replaceStack) {
+      if (result.removeAuthStack) {
         navigator.pushAndRemoveUntil(route, (_) => false);
       } else {
         navigator.pushReplacement(route);
@@ -94,16 +186,17 @@ class AuthRedirectController {
       scopeKey: flowScopeKey,
     );
     if (!context.mounted) return true;
-    final routeName =
-        (redirectRoute ?? '').trim().isEmpty ? '/main' : redirectRoute!.trim();
-    if (replaceStack) {
+    if (result.removeAuthStack) {
       navigator.pushNamedAndRemoveUntil(
-        routeName,
+        result.routeName,
         (_) => false,
-        arguments: redirectArguments,
+        arguments: result.arguments,
       );
     } else {
-      navigator.pushReplacementNamed(routeName, arguments: redirectArguments);
+      navigator.pushReplacementNamed(
+        result.routeName,
+        arguments: result.arguments,
+      );
     }
     return true;
   }

@@ -672,6 +672,11 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
         context: context,
         walletProvider: walletProvider,
       ),
+      onConnectExternalWallet: () =>
+          Navigator.of(context).pushNamed('/connect-wallet'),
+      onCreateLocalWallet: () =>
+          Navigator.of(context).pushNamed('/connect-wallet'),
+      onImportWallet: () => Navigator.of(context).pushNamed('/import-wallet'),
       swapEnabled: swapEnabled,
     );
     return LayoutBuilder(
@@ -1414,74 +1419,15 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
   Widget _buildRightPanel(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
     final walletProvider = Provider.of<WalletProvider>(context);
-    final canTransact = walletProvider.canTransact;
-    final authority = walletProvider.authority;
-    final roles = KubusColorRoles.of(context);
-    final swapEnabled = AppConfig.isFeatureEnabled('tokenSwap');
     final recentTransactions = walletProvider.transactions.take(5).toList();
 
     return ListView(
       padding: EdgeInsets.all(DetailSpacing.xl),
       children: [
-        Text(
-          l10n.walletHomeQuickActionsTitle,
-          style: DetailTypography.sectionTitle(context),
-        ),
-        SizedBox(height: DetailSpacing.lg + DetailSpacing.xs),
         AttestationBadgePanel(
           title: l10n.desktopSettingsAchievementsTitle,
           compact: true,
         ),
-        SizedBox(height: DetailSpacing.lg),
-        _buildQuickActionTile(
-          l10n.walletHomeSendAction,
-          l10n.walletHomeDesktopSendSubtitle,
-          Icons.arrow_upward,
-          roles.negativeAction,
-          _openSendScreen,
-          enabled: canTransact,
-        ),
-        _buildQuickActionTile(
-          l10n.walletHomeReceiveAction,
-          l10n.walletHomeDesktopReceiveSubtitle,
-          Icons.arrow_downward,
-          roles.statBlue,
-          _openReceiveScreen,
-        ),
-        if (swapEnabled)
-          _buildQuickActionTile(
-            l10n.walletHomeSwapAction,
-            l10n.walletHomeDesktopSwapSubtitle,
-            Icons.swap_horiz,
-            roles.positiveAction,
-            _openSwapScreen,
-            enabled: canTransact,
-          ),
-        _buildQuickActionTile(
-          l10n.availabilityNodeNavTitle,
-          l10n.availabilityNodeNavSubtitle,
-          Icons.dns_outlined,
-          roles.statTeal,
-          () => Navigator.of(context).pushNamed('/wallet/availability-node'),
-        ),
-        _buildQuickActionTile(
-          l10n.walletHomeSecureWalletAction,
-          l10n.walletHomeSecuritySubtitle,
-          Icons.shield_outlined,
-          roles.warningAction,
-          _openBackupProtection,
-        ),
-        if (authority.canRestoreFromEncryptedBackup)
-          _buildQuickActionTile(
-            l10n.walletSecurityRestoreSignerAction,
-            l10n.walletSecuritySignerRestoreAvailableValue,
-            Icons.login_outlined,
-            roles.positiveAction,
-            () => WalletReconnectAction.handleReadOnlyReconnect(
-              context: context,
-              walletProvider: walletProvider,
-            ),
-          ),
         SizedBox(height: DetailSpacing.xxl),
         Text(
           l10n.walletHomeDesktopRecentActivityTitle,
@@ -1559,109 +1505,11 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
               WalletCustodyStatusPanel(
                 authority: authority,
                 compact: true,
-                onRestoreSigner: authority.canRestoreFromEncryptedBackup
-                    ? () => WalletReconnectAction.handleReadOnlyReconnect(
-                          context: context,
-                          walletProvider: walletProvider,
-                        )
-                    : null,
-                onConnectExternalWallet: !authority.canTransact
-                    ? () => Navigator.of(context).pushNamed('/connect-wallet')
-                    : null,
               ),
             ],
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildQuickActionTile(
-    String title,
-    String subtitle,
-    IconData icon,
-    Color color,
-    VoidCallback onTap, {
-    bool enabled = true,
-  }) {
-    return DesktopCard(
-      margin: EdgeInsets.only(bottom: DetailSpacing.md),
-      onTap: enabled ? onTap : null,
-      child: Stack(
-        children: [
-          Positioned(
-            right: -12,
-            top: -12,
-            child: Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: color.withValues(alpha: enabled ? 0.12 : 0.04),
-              ),
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.all(DetailSpacing.lg),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 126),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: enabled ? 0.14 : 0.06),
-                      borderRadius: BorderRadius.circular(DetailRadius.md),
-                    ),
-                    child: Icon(
-                      icon,
-                      color: enabled
-                          ? color
-                          : Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.35),
-                      size: 22,
-                    ),
-                  ),
-                  SizedBox(height: DetailSpacing.md),
-                  Text(
-                    title,
-                    style: DetailTypography.cardTitle(context).copyWith(
-                      color: enabled
-                          ? Theme.of(context).colorScheme.onSurface
-                          : Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.45),
-                    ),
-                  ),
-                  SizedBox(height: DetailSpacing.xs),
-                  Text(
-                    subtitle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: DetailTypography.caption(context).copyWith(
-                      color: enabled
-                          ? Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.6)
-                          : Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.4),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 

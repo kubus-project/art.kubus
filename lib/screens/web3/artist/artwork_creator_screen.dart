@@ -570,6 +570,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     setState(() => _createdArtwork = created);
 
     final inviteResult = await _dispatchDraftCollaborationInvites(
+      l10n: l10n,
       drafts: drafts,
       draft: draft,
       artworkId: created.id,
@@ -590,6 +591,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
   }
 
   Future<String?> _dispatchDraftCollaborationInvites({
+    required AppLocalizations l10n,
     required ArtworkDraftsProvider drafts,
     required ArtworkDraftState draft,
     required String artworkId,
@@ -630,15 +632,15 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
 
     if (failed == 0) {
       return sent == 1
-          ? 'Artwork created. 1 invite sent.'
-          : 'Artwork created. $sent invites sent.';
+          ? l10n.artworkCreatorInviteSentSingular
+          : l10n.artworkCreatorInviteSentPlural(sent);
     }
     if (sent == 0) {
       return failed == 1
-          ? 'Artwork created. 1 invite could not be sent.'
-          : 'Artwork created. $failed invites could not be sent.';
+          ? l10n.artworkCreatorInviteFailedSingular
+          : l10n.artworkCreatorInviteFailedPlural(failed);
     }
-    return 'Artwork created. $sent invite(s) sent, $failed failed.';
+    return l10n.artworkCreatorInvitePartialResult(sent, failed);
   }
 
   Future<void> _mintNftForCreated({
@@ -1691,6 +1693,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
     required ArtworkDraftsProvider drafts,
     required ArtworkDraftState draft,
     required Color accent,
+    required AppLocalizations l10n,
   }) {
     final scheme = Theme.of(context).colorScheme;
     final isSignedIn = context.read<ProfileProvider>().isSignedIn == true;
@@ -1845,24 +1848,26 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                     : null,
                 icon: const Icon(Icons.qr_code_2_outlined),
                 label: Text(
-                    canUseAr ? 'Open AR setup' : 'Save first to unlock AR'),
+                  canUseAr
+                      ? l10n.artworkCreatorOpenArSetup
+                      : l10n.artworkCreatorSaveFirstToUnlockAr,
+                ),
               ),
             ],
           ),
         ),
         const SizedBox(height: KubusSpacing.md),
         DesktopCreatorCollaborationSection(
-          title: 'Collaboration',
+          title: l10n.collectionSettingsCollaboration,
           subtitle: _createdArtwork == null
-              ? 'Queue invites before publishing.'
+              ? l10n.artworkCreatorCollaborationQueuedSubtitle
               : (canUseCollab
-                  ? 'Manage collaborators without leaving the creator.'
-                  : 'Collaboration is unavailable.'),
+                  ? l10n.artworkCreatorCollaborationManageSubtitle
+                  : l10n.artworkCreatorCollaborationUnavailableSubtitle),
           entityType: 'artwork',
           entityId: artworkId,
           enabled: canUseCollab,
-          lockedMessage:
-              'Once the artwork is saved, collaborators can be invited here without leaving the creator.',
+          lockedMessage: l10n.artworkCreatorCollaborationLockedMessage,
           draftPanel: _createdArtwork == null
               ? _buildDraftCollaborationSection(
                   drafts: drafts,
@@ -1984,15 +1989,17 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
           return DesktopCreatorShell(
             title: l10n.artistStudioCreateOptionArtworkTitle,
             subtitle: _createdArtwork == null
-                ? 'Compose the artwork, then unlock collaboration and AR from the sidebar.'
+                ? l10n.artworkCreatorShellDraftSubtitle
                 : (_createdArtwork!.isPublic
-                    ? 'The artwork is live and can still be refined from this workspace.'
-                    : 'Draft saved. Collaboration and AR are available in-context.'),
+                    ? l10n.artworkCreatorLiveWorkspaceSubtitle
+                    : l10n.artworkCreatorSavedWorkspaceSubtitle),
             onBack: shellScope?.popScreen,
             headerBadge: CreatorStatusBadge(
               label: _createdArtwork == null
-                  ? 'Draft'
-                  : (_createdArtwork!.isPublic ? 'Live' : 'Saved draft'),
+                  ? l10n.commonDraft
+                  : (_createdArtwork!.isPublic
+                      ? l10n.commonPublished
+                      : l10n.artworkCreatorDraftSavedBadge),
               color: _createdArtwork == null
                   ? accent
                   : (_createdArtwork!.isPublic
@@ -2014,7 +2021,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
                     );
                   },
                   icon: const Icon(Icons.qr_code_2_outlined),
-                  label: const Text('AR setup'),
+                  label: Text(l10n.artworkCreatorArSetupAction),
                 ),
             ],
             mainContent: formBody,
@@ -2022,6 +2029,7 @@ class _ArtworkCreatorScreenState extends State<ArtworkCreatorScreen> {
               drafts: drafts,
               draft: draft,
               accent: accent,
+              l10n: l10n,
             ),
           );
         }

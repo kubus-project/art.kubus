@@ -113,6 +113,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
     required WalletProvider walletProvider,
     String? walletAddress,
     required Map<String, dynamic> payload,
+    required _AuthOrigin origin,
   }) async {
     if (widget.embedded || widget.onAuthSuccess != null) return false;
 
@@ -125,6 +126,9 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
       userId: (prefs.getString('user_id') ?? '').trim(),
       payload: payload,
       replaceStack: true,
+      origin: origin == _AuthOrigin.google
+          ? AuthOrigin.google
+          : AuthOrigin.emailPassword,
     );
   }
 
@@ -245,6 +249,7 @@ class _AuthMethodsPanelState extends State<AuthMethodsPanel> {
           ? walletProvider.currentWalletAddress
           : normalizedWalletAddress,
       payload: payload,
+      origin: origin,
     )) {
       return;
     }

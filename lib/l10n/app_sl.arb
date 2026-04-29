@@ -1912,6 +1912,46 @@
   "artistStudioCreatePrompt": "Kaj želiš ustvariti?",
   "artistStudioCreateOptionArtworkTitle": "Ustvari umetnino",
   "artistStudioCreateOptionArtworkSubtitle": "Naloži medij, nastavi podrobnosti in objavi.",
+  "artworkCreatorInviteSentSingular": "Umetnina je ustvarjena. Poslano je 1 vabilo.",
+  "artworkCreatorInviteSentPlural": "Umetnina je ustvarjena. Poslanih je {count} vabil.",
+  "@artworkCreatorInviteSentPlural": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "artworkCreatorInviteFailedSingular": "Umetnina je ustvarjena. 1 vabila ni bilo mogoče poslati.",
+  "artworkCreatorInviteFailedPlural": "Umetnina je ustvarjena. {count} vabil ni bilo mogoče poslati.",
+  "@artworkCreatorInviteFailedPlural": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "artworkCreatorInvitePartialResult": "Umetnina je ustvarjena. Poslanih: {sent}, neuspelih: {failed}.",
+  "@artworkCreatorInvitePartialResult": {
+    "placeholders": {
+      "sent": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "artworkCreatorCollaborationQueuedSubtitle": "Pripravi vabila pred objavo.",
+  "artworkCreatorCollaborationManageSubtitle": "Upravljaj sodelavce, ne da zapustiš ustvarjalnik.",
+  "artworkCreatorCollaborationUnavailableSubtitle": "Sodelovanje trenutno ni na voljo.",
+  "artworkCreatorCollaborationLockedMessage": "Ko je umetnina shranjena, lahko tukaj povabiš sodelavce, ne da zapustiš ustvarjalnik.",
+  "artworkCreatorOpenArSetup": "Odpri nastavitev AR",
+  "artworkCreatorSaveFirstToUnlockAr": "Za odklep AR najprej shrani",
+  "artworkCreatorDraftSavedBadge": "Osnutek shranjen",
+  "artworkCreatorSavedWorkspaceSubtitle": "Osnutek je shranjen. Sodelovanje in AR sta na voljo v istem delovnem prostoru.",
+  "artworkCreatorArSetupAction": "Nastavitev AR",
+  "artworkCreatorShellDraftSubtitle": "Oblikuj umetnino in nato v stranski vrstici odkleni sodelovanje in AR.",
+  "artworkCreatorLiveWorkspaceSubtitle": "Umetnina je objavljena, podrobnosti pa lahko še naprej urejaš v tem delovnem prostoru.",
   "artistStudioCreateOptionCollectionTitle": "Ustvari zbirko",
   "artistStudioCreateOptionCollectionSubtitle": "Združi umetnine v zbirko.",
   "collectionCreatorTitle": "Ustvari zbirko",

@@ -287,13 +287,6 @@ class _WalletHomeState extends State<WalletHome> {
                   WalletCustodyStatusPanel(
                     authority: authority,
                     compact: true,
-                    onRestoreSigner: authority.canRestoreFromEncryptedBackup
-                        ? () => _handleReadOnlyReconnect(walletProvider)
-                        : null,
-                    onConnectExternalWallet: !authority.canTransact
-                        ? () =>
-                            Navigator.of(context).pushNamed('/connect-wallet')
-                        : null,
                   ),
                   const SizedBox(height: KubusSpacing.lg),
                   KubusWalletSectionCard(
@@ -682,6 +675,12 @@ class _WalletHomeState extends State<WalletHome> {
           onSwap: () => _openSwapScreen(walletProvider, canTransact),
           onSecureWallet: _openBackupProtection,
           onRestoreSigner: () => _handleReadOnlyReconnect(walletProvider),
+          onConnectExternalWallet: () =>
+              Navigator.of(context).pushNamed('/connect-wallet'),
+          onCreateLocalWallet: () =>
+              Navigator.of(context).pushNamed('/connect-wallet'),
+          onImportWallet: () =>
+              Navigator.of(context).pushNamed('/import-wallet'),
           onNfts: _openNftGallery,
           includeNfts: true,
           swapEnabled: swapEnabled,

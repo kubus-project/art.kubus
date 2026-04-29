@@ -4562,6 +4562,60 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artistStudioCreateOptionArtworkSubtitle => 'Upload media, set details, and publish.';
 
   @override
+  String get artworkCreatorInviteSentSingular => 'Artwork created. 1 invite sent.';
+
+  @override
+  String artworkCreatorInviteSentPlural(int count) {
+    return 'Artwork created. $count invites sent.';
+  }
+
+  @override
+  String get artworkCreatorInviteFailedSingular => 'Artwork created. 1 invite could not be sent.';
+
+  @override
+  String artworkCreatorInviteFailedPlural(int count) {
+    return 'Artwork created. $count invites could not be sent.';
+  }
+
+  @override
+  String artworkCreatorInvitePartialResult(int sent, int failed) {
+    return 'Artwork created. $sent invite(s) sent, $failed failed.';
+  }
+
+  @override
+  String get artworkCreatorCollaborationQueuedSubtitle => 'Queue invites before publishing.';
+
+  @override
+  String get artworkCreatorCollaborationManageSubtitle => 'Manage collaborators without leaving the creator.';
+
+  @override
+  String get artworkCreatorCollaborationUnavailableSubtitle => 'Collaboration is unavailable.';
+
+  @override
+  String get artworkCreatorCollaborationLockedMessage => 'Once the artwork is saved, collaborators can be invited here without leaving the creator.';
+
+  @override
+  String get artworkCreatorOpenArSetup => 'Open AR setup';
+
+  @override
+  String get artworkCreatorSaveFirstToUnlockAr => 'Save first to unlock AR';
+
+  @override
+  String get artworkCreatorDraftSavedBadge => 'Draft saved';
+
+  @override
+  String get artworkCreatorSavedWorkspaceSubtitle => 'Draft saved. Collaboration and AR are available in-context.';
+
+  @override
+  String get artworkCreatorArSetupAction => 'AR setup';
+
+  @override
+  String get artworkCreatorShellDraftSubtitle => 'Compose the artwork, then unlock collaboration and AR from the sidebar.';
+
+  @override
+  String get artworkCreatorLiveWorkspaceSubtitle => 'The artwork is live and can still be refined from this workspace.';
+
+  @override
   String get artistStudioCreateOptionCollectionTitle => 'Create collection';
 
   @override

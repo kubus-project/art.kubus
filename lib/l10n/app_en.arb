@@ -1956,6 +1956,46 @@
   "artistStudioCreatePrompt": "What would you like to create?",
   "artistStudioCreateOptionArtworkTitle": "Create artwork",
   "artistStudioCreateOptionArtworkSubtitle": "Upload media, set details, and publish.",
+  "artworkCreatorInviteSentSingular": "Artwork created. 1 invite sent.",
+  "artworkCreatorInviteSentPlural": "Artwork created. {count} invites sent.",
+  "@artworkCreatorInviteSentPlural": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "artworkCreatorInviteFailedSingular": "Artwork created. 1 invite could not be sent.",
+  "artworkCreatorInviteFailedPlural": "Artwork created. {count} invites could not be sent.",
+  "@artworkCreatorInviteFailedPlural": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "artworkCreatorInvitePartialResult": "Artwork created. {sent} invite(s) sent, {failed} failed.",
+  "@artworkCreatorInvitePartialResult": {
+    "placeholders": {
+      "sent": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "artworkCreatorCollaborationQueuedSubtitle": "Queue invites before publishing.",
+  "artworkCreatorCollaborationManageSubtitle": "Manage collaborators without leaving the creator.",
+  "artworkCreatorCollaborationUnavailableSubtitle": "Collaboration is unavailable.",
+  "artworkCreatorCollaborationLockedMessage": "Once the artwork is saved, collaborators can be invited here without leaving the creator.",
+  "artworkCreatorOpenArSetup": "Open AR setup",
+  "artworkCreatorSaveFirstToUnlockAr": "Save first to unlock AR",
+  "artworkCreatorDraftSavedBadge": "Draft saved",
+  "artworkCreatorSavedWorkspaceSubtitle": "Draft saved. Collaboration and AR are available in-context.",
+  "artworkCreatorArSetupAction": "AR setup",
+  "artworkCreatorShellDraftSubtitle": "Compose the artwork, then unlock collaboration and AR from the sidebar.",
+  "artworkCreatorLiveWorkspaceSubtitle": "The artwork is live and can still be refined from this workspace.",
   "artistStudioCreateOptionCollectionTitle": "Create collection",
   "artistStudioCreateOptionCollectionSubtitle": "Curate a set of artworks into a collection.",
   "collectionCreatorTitle": "Create collection",
