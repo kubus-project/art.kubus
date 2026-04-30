@@ -482,7 +482,33 @@ class _AppInitializerState extends State<AppInitializer> {
 
       if (hasPendingAuthOnboarding) {
         if (!hasValidSession) {
-          // Keep the pending flag until the user completes auth again.
+          // Route to onboarding immediately when pending auth onboarding without valid session.
+          // Infer initial step from pending verification email state.
+          String initialStepId = 'account';
+          final hasPendingVerificationEmail =
+              prefs.getBool('onboarding_pending_email_verification_v1') ?? false;
+          final pendingVerificationEmail =
+              prefs.getString('onboarding_verification_email_v3');
+          if (hasPendingVerificationEmail &&
+              (pendingVerificationEmail?.trim() ?? '').isNotEmpty) {
+            initialStepId = 'verifyEmail';
+          }
+
+          if (kDebugMode) {
+            debugPrint(
+                'AppInitializer: route -> OnboardingFlowScreen (pending auth, no session, initialStep=$initialStepId)');
+          }
+          _didNavigate = true;
+          navigator.pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => OnboardingFlowScreen(
+                forceDesktop: isDesktop,
+                initialStepId: initialStepId,
+              ),
+              settings: const RouteSettings(name: '/onboarding'),
+            ),
+          );
+          return;
         } else if (!pendingAuthOnboardingResume.requiresStructuredOnboarding ||
             pendingAuthOnboardingStepId == null ||
             pendingAuthOnboardingStepId.isEmpty) {

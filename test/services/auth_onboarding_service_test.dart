@@ -1,3 +1,4 @@
+import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/services/auth_onboarding_service.dart';
 import 'package:art_kubus/services/onboarding_state_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -147,4 +148,103 @@ void main() {
     expect(state.requiresStructuredOnboarding, isTrue);
     expect(state.nextStepId, 'accountPermissions');
   });
+
+  // Regression tests for email verification → sign-in → onboarding resume flow
+
+  test(
+      'REGRESSION: resumes onboarding when global onboarding incomplete and saved progress exists',
+      () async {
+    // Simulate: user started onboarding, didn't complete it, now has valid session.
+    final prefs = await seedProgress(
+      completedSteps: <String>{'account', 'role'},
+    );
+    // Global onboarding is incomplete
+    await prefs.setBool(PreferenceKeys.hasCompletedOnboarding, false);
+
+    final state = await AuthOnboardingService.resolveStructuredOnboardingResume(
+      prefs: prefs,
+      hasPendingAuthOnboarding: false,
+      hasAuthenticatedSession: true,
+      hasHydratedProfile: true,
+      requiresWalletBackup: false,
+      heuristicNextStepId: null,
+      persona: 'lover',
+      flowScopeKey: testScope,
+      payload: const <String, dynamic>{}, // No "new user" flag
+    );
+
+    expect(state.requiresStructuredOnboarding, isTrue);
+    expect(state.nextStepId, 'profile');
+  });
+
+  test(
+      'REGRESSION: resumes onboarding when global onboarding incomplete, authenticated, and profile hydrated',
+      () async {
+    // Simulate: user verified email, signed in, but global onboarding not finished.
+    final prefs = await SharedPreferences.getInstance();
+    // Global onboarding is incomplete (no saved progress either)
+    await prefs.setBool(PreferenceKeys.hasCompletedOnboarding, false);
+
+    final state = await AuthOnboardingService.resolveStructuredOnboardingResume(
+      prefs: prefs,
+      hasPendingAuthOnboarding: false,
+      hasAuthenticatedSession: true,
+      hasHydratedProfile: true,
+      requiresWalletBackup: false,
+      heuristicNextStepId: null,
+      persona: 'lover',
+      flowScopeKey: testScope,
+      payload: const <String, dynamic>{}, // Backend doesn't flag as new
+    );
+
+    expect(state.requiresStructuredOnboarding, isTrue);
+    expect(state.nextStepId, 'accountPermissions');
+  });
+
+  test(
+      'REGRESSION: does not resume when global onboarding complete and no pending flags',
+      () async {
+    // Simulate: returning user with completed onboarding
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(PreferenceKeys.hasCompletedOnboarding, true);
+
+    final state = await AuthOnboardingService.resolveStructuredOnboardingResume(
+      prefs: prefs,
+      hasPendingAuthOnboarding: false,
+      hasAuthenticatedSession: true,
+      hasHydratedProfile: true,
+      requiresWalletBackup: false,
+      heuristicNextStepId: null,
+      persona: 'lover',
+      flowScopeKey: testScope,
+      payload: const <String, dynamic>{},
+    );
+
+    expect(state.requiresStructuredOnboarding, isFalse);
+    expect(state.nextStepId, isNull);
+  });
+
+  test(
+      'REGRESSION: resumes when heuristic next step exists and global onboarding incomplete',
+      () async {
+    // Simulate: profile provider suggests next step even though backend doesn't signal new user
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(PreferenceKeys.hasCompletedOnboarding, false);
+
+    final state = await AuthOnboardingService.resolveStructuredOnboardingResume(
+      prefs: prefs,
+      hasPendingAuthOnboarding: false,
+      hasAuthenticatedSession: true,
+      hasHydratedProfile: true,
+      requiresWalletBackup: false,
+      heuristicNextStepId: 'daoReview',
+      persona: 'creator',
+      flowScopeKey: testScope,
+      payload: const <String, dynamic>{},
+    );
+
+    expect(state.requiresStructuredOnboarding, isTrue);
+    expect(state.nextStepId, 'daoReview');
+  });
 }
+

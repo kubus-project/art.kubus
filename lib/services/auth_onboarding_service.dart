@@ -69,12 +69,6 @@ class AuthOnboardingService {
   }) async {
     final payloadIsNewAccount =
         payload != null && payloadIndicatesNewAccount(payload);
-    final shouldResume = hasPendingAuthOnboarding || payloadIsNewAccount;
-    if (!shouldResume) {
-      return const StructuredOnboardingResumeState(
-        requiresStructuredOnboarding: false,
-      );
-    }
 
     final progress = await OnboardingStateService.loadFlowProgress(
       prefs: prefs,
@@ -98,6 +92,23 @@ class AuthOnboardingService {
     }
     final hasSavedProgress =
         completedSteps.isNotEmpty || deferredSteps.isNotEmpty;
+
+    final globalOnboardingCompleted =
+        prefs.getBool(PreferenceKeys.hasCompletedOnboarding) ?? false;
+
+    final shouldResume = hasPendingAuthOnboarding ||
+        payloadIsNewAccount ||
+        (!globalOnboardingCompleted && (hasSavedProgress ||
+            (hasAuthenticatedSession && hasHydratedProfile))) ||
+        (heuristicNextStepId != null &&
+            heuristicNextStepId.trim().isNotEmpty &&
+            isAccountStepId(heuristicNextStepId));
+
+    if (!shouldResume) {
+      return const StructuredOnboardingResumeState(
+        requiresStructuredOnboarding: false,
+      );
+    }
 
     final walletBackupOnboardingEnabled =
         AppConfig.isFeatureEnabled('walletBackupOnboarding');

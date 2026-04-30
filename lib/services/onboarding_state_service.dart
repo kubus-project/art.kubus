@@ -143,11 +143,63 @@ class OnboardingStateService {
     String? flowScopeKey,
   }) async {
     final p = prefs ?? await SharedPreferences.getInstance();
+    
+    // Try to load scoped progress first.
+    final normalizedScope = (flowScopeKey ?? '').trim();
+    final scopedVersionKey = _scopedKey(_onboardingVersionKey, flowScopeKey);
+    final scopedVersionExists = p.containsKey(scopedVersionKey);
+    
+    final scopedProgress = await _loadFlowProgressRaw(
+      prefs: p,
+      onboardingVersion: onboardingVersion,
+      flowScopeKey: flowScopeKey,
+    );
+
+    // If scoped progress exists (version key was explicitly set), return it.
+    if (normalizedScope.isNotEmpty && scopedVersionExists) {
+      return scopedProgress;
+    }
+
+    // If scoped is not set but we have a scope, try unscoped fallback.
+    if (normalizedScope.isNotEmpty && !scopedVersionExists) {
+      final unscopedProgress = await _loadFlowProgressRaw(
+        prefs: p,
+        onboardingVersion: onboardingVersion,
+        flowScopeKey: null,
+      );
+
+      // If unscoped progress exists, migrate it to scoped keys.
+      if (unscopedProgress.lastSeenVersion == onboardingVersion &&
+          (unscopedProgress.completedSteps.isNotEmpty ||
+              unscopedProgress.deferredSteps.isNotEmpty)) {
+        // Migrate unscoped progress to scoped keys.
+        await saveFlowProgress(
+          prefs: p,
+          onboardingVersion: onboardingVersion,
+          completedSteps: unscopedProgress.completedSteps,
+          deferredSteps: unscopedProgress.deferredSteps,
+          flowScopeKey: flowScopeKey,
+        );
+        return unscopedProgress;
+      }
+    }
+
+    // Return scoped progress (or unscoped if no scope key).
+    return scopedProgress;
+  }
+
+  /// Load progress from SharedPreferences without fallback/migration logic.
+  /// This is a raw loader used internally for both scoped and unscoped lookups.
+  static Future<OnboardingFlowProgress> _loadFlowProgressRaw({
+    required SharedPreferences prefs,
+    required int onboardingVersion,
+    String? flowScopeKey,
+  }) async {
     final versionKey = _scopedKey(_onboardingVersionKey, flowScopeKey);
     final completedKey =
         _scopedKey(_onboardingCompletedStepsKey, flowScopeKey);
     final deferredKey = _scopedKey(_onboardingDeferredStepsKey, flowScopeKey);
-    final seenVersion = p.getInt(versionKey) ?? 0;
+    final seenVersion = prefs.getInt(versionKey) ?? 0;
 
     if (seenVersion != onboardingVersion) {
       return OnboardingFlowProgress(
@@ -157,10 +209,10 @@ class OnboardingStateService {
       );
     }
 
-    final completed = (p.getStringList(completedKey) ?? const <String>[])
+    final completed = (prefs.getStringList(completedKey) ?? const <String>[])
         .where((value) => value.trim().isNotEmpty)
         .toSet();
-    final deferred = (p.getStringList(deferredKey) ?? const <String>[])
+    final deferred = (prefs.getStringList(deferredKey) ?? const <String>[])
         .where((value) => value.trim().isNotEmpty)
         .toSet();
 
