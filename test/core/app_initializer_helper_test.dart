@@ -30,6 +30,34 @@ void main() {
     expect(decision.onboardingInitialStepId, 'account');
   });
 
+  test('pending auth onboarding with valid session -> none (deferred to resolver)', () {
+    final decision = decideStartupRoute(
+      hasPendingAuthOnboarding: true,
+      hasValidSession: true,
+      hasPendingVerificationEmailFlag: false,
+      pendingVerificationEmail: null,
+      shouldSkipOnboarding: false,
+      shouldShowSignIn: false,
+    );
+
+    expect(decision.route, StartupRouteType.none);
+    expect(decision.onboardingInitialStepId, isNull);
+  });
+
+  test('pending verification flag true but empty email -> account', () {
+    final decision = decideStartupRoute(
+      hasPendingAuthOnboarding: true,
+      hasValidSession: false,
+      hasPendingVerificationEmailFlag: true,
+      pendingVerificationEmail: null,
+      shouldSkipOnboarding: false,
+      shouldShowSignIn: false,
+    );
+
+    expect(decision.route, StartupRouteType.onboarding);
+    expect(decision.onboardingInitialStepId, 'account');
+  });
+
   test('shouldSkipOnboarding + shouldShowSignIn -> signIn', () {
     final decision = decideStartupRoute(
       hasPendingAuthOnboarding: false,
@@ -56,3 +84,4 @@ void main() {
     expect(decision.route, StartupRouteType.main);
   });
 }
+

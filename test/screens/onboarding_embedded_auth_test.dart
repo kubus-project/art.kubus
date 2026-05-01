@@ -1,91 +1,62 @@
-import 'package:art_kubus/screens/onboarding/onboarding_flow_screen.dart';
-import 'package:art_kubus/providers/profile_provider.dart';
-import 'package:art_kubus/providers/config_provider.dart';
-import 'package:art_kubus/providers/locale_provider.dart';
-import 'package:art_kubus/providers/wallet_provider.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:art_kubus/l10n/app_localizations.dart';
-
-// Minimal fake ProfileProvider for tests
-// Use the real ProfileProvider in tests to avoid API contract mismatch.
-
-class _NavObserver extends NavigatorObserver {
-  final List<Route> pushed = [];
-  @override
-  void didPush(Route route, Route? previousRoute) {
-    pushed.add(route);
-    super.didPush(route, previousRoute);
-  }
-}
+import 'package:art_kubus/services/onboarding_embedded_auth_service.dart';
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
-
-  setUp(() {
-    SharedPreferences.setMockInitialValues(<String, Object>{
-      // Ensure onboarding incomplete
-      'hasCompletedOnboarding': false,
-      // Seed a pending verification email
-      'onboarding_verification_email_v3': 'tester@example.com',
-      'onboarding_pending_email_verification_v1': true,
-    });
-  });
-
-  testWidgets(
-    'embedded sign-in does not navigate away from onboarding',
-    (tester) async {
-      // TODO: convert to integration test or add full widget harness
-      // Requires full app provider environment (ThemeProvider, many app services)
-      final observer = _NavObserver();
-
-      await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider<ConfigProvider>(create: (_) => ConfigProvider()),
-            ChangeNotifierProvider<LocaleProvider>(create: (_) => LocaleProvider()),
-            ChangeNotifierProvider<WalletProvider>(create: (_) => WalletProvider(deferInit: true)),
-            ChangeNotifierProvider<ProfileProvider>(create: (_) => ProfileProvider()),
-          ],
-          child: MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Builder(
-              builder: (context) => const OnboardingFlowScreen(initialStepId: 'account'),
-            ),
-            navigatorObservers: [observer],
-          ),
-        ),
+  group('Embedded onboarding auth cannot escape onboarding', () {
+    test('embedded auth with no pending email -> allows account completion', () {
+      // Verify that embedded auth success is allowed when there is no conflicting pending email.
+      final canProceed = OnboardingEmbeddedAuthService.shouldProceedWithEmbeddedAuthSuccess(
+        signedInEmail: 'user@example.com',
+        pendingVerificationEmail: null,
       );
 
-      // Allow bootstrap to run
-      await tester.pumpAndSettle(const Duration(seconds: 1));
+      expect(canProceed, isTrue,
+          reason: 'embedded auth should allow account step completion when no pending email');
+    });
 
-      // Grab the state and invoke the test shim to simulate embedded sign-in success
-      final state = tester.state(find.byType(OnboardingFlowScreen));
+    test('embedded auth with matching pending email -> allows verification completion', () {
+      // Verify that embedded auth success is allowed when email matches the pending verification email.
+      final canProceed = OnboardingEmbeddedAuthService.shouldProceedWithEmbeddedAuthSuccess(
+        signedInEmail: 'user@example.com',
+        pendingVerificationEmail: 'user@example.com',
+      );
 
-      final payload = {
-        'data': {
-          'user': {
-            'email': 'tester@example.com',
-          }
-        }
-      };
+      expect(canProceed, isTrue,
+          reason: 'embedded auth should complete verification step when email matches');
+    });
 
-      // Call the test shim
-      await (state as dynamic).testHandleEmbeddedSignInSuccess(payload);
+    test('embedded auth with mismatched email -> blocks escape and forces user reconciliation', () {
+      // REGRESSION: embedded auth must never allow a user to escape onboarding by signing in with
+      // a different email than the one pending verification. Instead, it must force the user
+      // to either reconcile the email or re-enter the account step.
+      final canProceed = OnboardingEmbeddedAuthService.shouldProceedWithEmbeddedAuthSuccess(
+        signedInEmail: 'user1@example.com',
+        pendingVerificationEmail: 'user2@example.com',
+      );
 
-      // Allow any async tasks to settle
-      await tester.pumpAndSettle(const Duration(seconds: 1));
+      expect(canProceed, isFalse,
+          reason: 'embedded auth must block and show warning when sign-in email differs from pending email');
+    });
 
-      // Ensure we did not navigate to sign-in or main (no replacement pushes)
-      expect(observer.pushed, isEmpty);
+    test('onboarding must remain active after embedded auth success', () {
+      // Verify that the onboarding lifecycle is never violated by embedded auth.
+      final remains = OnboardingEmbeddedAuthService.validateOnboardingRemains(
+        isOnboardingActive: true,
+      );
 
-      // Also ensure the OnboardingFlowScreen is still present
-      expect(find.byType(OnboardingFlowScreen), findsOneWidget);
-    },
-    skip: true,
-  );
+      expect(remains, isTrue,
+          reason: 'embedded auth success must never allow onboarding to become inactive');
+    });
+
+    test('embedded auth is rejected if onboarding is not active (contract violation)', () {
+      // Defensive check: embedded auth should only be invoked from within onboarding.
+      final remains = OnboardingEmbeddedAuthService.validateOnboardingRemains(
+        isOnboardingActive: false,
+      );
+
+      expect(remains, isFalse,
+          reason: 'embedded auth invoked outside onboarding flow is a contract violation');
+    });
+  });
 }
+

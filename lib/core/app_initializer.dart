@@ -1,7 +1,4 @@
-// NOTE: use_build_context_synchronously lint handled per-instance; avoid file-level ignore
-
 import 'package:art_kubus/widgets/glass_components.dart';
-// NOTE: use_build_context_synchronously lint handled per-instance; avoid file-level ignore
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -30,6 +27,7 @@ import '../screens/onboarding/onboarding_flow_screen.dart';
 import '../screens/desktop/desktop_shell.dart';
 import '../widgets/app_loading.dart';
 import 'app_navigator.dart';
+import 'app_initializer_helper.dart';
 import 'deep_link_startup_routing.dart';
 import '../main_app.dart';
 import 'shell_entry_screen.dart';
@@ -481,35 +479,44 @@ class _AppInitializerState extends State<AppInitializer> {
       }
 
       if (hasPendingAuthOnboarding) {
-        if (!hasValidSession) {
-          // Route to onboarding immediately when pending auth onboarding without valid session.
-          // Infer initial step from pending verification email state.
-          String initialStepId = 'account';
-          final hasPendingVerificationEmail =
-              prefs.getBool('onboarding_pending_email_verification_v1') ?? false;
-          final pendingVerificationEmail =
-              prefs.getString('onboarding_verification_email_v3');
-          if (hasPendingVerificationEmail &&
-              (pendingVerificationEmail?.trim() ?? '').isNotEmpty) {
-            initialStepId = 'verifyEmail';
-          }
+        // Use the helper to decide if this is a no-session pending-auth case.
+        // The helper returns 'none' for valid-session cases (deferred to resolver below).
+        final hasPendingVerificationEmail =
+            prefs.getBool('onboarding_pending_email_verification_v1') ?? false;
+        final pendingVerificationEmail =
+            prefs.getString('onboarding_verification_email_v3');
 
+        final startupDecision = decideStartupRoute(
+          hasPendingAuthOnboarding: hasPendingAuthOnboarding,
+          hasValidSession: hasValidSession,
+          hasPendingVerificationEmailFlag: hasPendingVerificationEmail,
+          pendingVerificationEmail: pendingVerificationEmail,
+          shouldSkipOnboarding: false, // This branch runs before shouldSkipOnboarding
+          shouldShowSignIn: false,
+        );
+
+        if (startupDecision.route == StartupRouteType.onboarding) {
+          // Pending auth onboarding without valid session -> onboarding
           if (kDebugMode) {
             debugPrint(
-                'AppInitializer: route -> OnboardingFlowScreen (pending auth, no session, initialStep=$initialStepId)');
+                'AppInitializer: route -> OnboardingFlowScreen (pending auth, no session, initialStep=${startupDecision.onboardingInitialStepId})');
           }
           _didNavigate = true;
           navigator.pushReplacement(
             MaterialPageRoute(
               builder: (context) => OnboardingFlowScreen(
                 forceDesktop: isDesktop,
-                initialStepId: initialStepId,
+                initialStepId: startupDecision.onboardingInitialStepId,
               ),
               settings: const RouteSettings(name: '/onboarding'),
             ),
           );
           return;
-        } else if (!pendingAuthOnboardingResume.requiresStructuredOnboarding ||
+        }
+
+        // Helper returned 'none', meaning hasValidSession=true.
+        // Continue to structured resume logic below.
+        if (!pendingAuthOnboardingResume.requiresStructuredOnboarding ||
             pendingAuthOnboardingStepId == null ||
             pendingAuthOnboardingStepId.isEmpty) {
           await OnboardingStateService.clearPendingAuthOnboarding(
@@ -519,7 +526,7 @@ class _AppInitializerState extends State<AppInitializer> {
         } else {
           if (kDebugMode) {
             debugPrint(
-                'AppInitializer: route -> OnboardingFlowScreen (pending auth onboarding)');
+                'AppInitializer: route -> OnboardingFlowScreen (pending auth onboarding resume)');
           }
           _didNavigate = true;
           navigator.pushReplacement(
