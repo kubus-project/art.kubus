@@ -355,6 +355,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen>
     super.dispose();
   }
 
+  // Exposed for widget tests to invoke the embedded sign-in handler directly.
+  // Kept public and minimal to avoid changing production behavior.
+  Future<void> testHandleEmbeddedSignInSuccess(Map<String, dynamic> payload) async {
+    return _handleEmbeddedSignInSuccess(payload);
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed || !mounted) return;

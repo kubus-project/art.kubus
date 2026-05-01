@@ -146,8 +146,6 @@ class OnboardingStateService {
     
     // Try to load scoped progress first.
     final normalizedScope = (flowScopeKey ?? '').trim();
-    final scopedVersionKey = _scopedKey(_onboardingVersionKey, flowScopeKey);
-    final scopedVersionExists = p.containsKey(scopedVersionKey);
     
     final scopedProgress = await _loadFlowProgressRaw(
       prefs: p,
@@ -155,36 +153,39 @@ class OnboardingStateService {
       flowScopeKey: flowScopeKey,
     );
 
-    // If scoped progress exists (version key was explicitly set), return it.
-    if (normalizedScope.isNotEmpty && scopedVersionExists) {
+    // If no scope requested, return scopedProgress (which in this case is unscoped raw).
+    if (normalizedScope.isEmpty) {
       return scopedProgress;
     }
 
-    // If scoped is not set but we have a scope, try unscoped fallback.
-    if (normalizedScope.isNotEmpty && !scopedVersionExists) {
-      final unscopedProgress = await _loadFlowProgressRaw(
-        prefs: p,
-        onboardingVersion: onboardingVersion,
-        flowScopeKey: null,
-      );
-
-      // If unscoped progress exists, migrate it to scoped keys.
-      if (unscopedProgress.lastSeenVersion == onboardingVersion &&
-          (unscopedProgress.completedSteps.isNotEmpty ||
-              unscopedProgress.deferredSteps.isNotEmpty)) {
-        // Migrate unscoped progress to scoped keys.
-        await saveFlowProgress(
-          prefs: p,
-          onboardingVersion: onboardingVersion,
-          completedSteps: unscopedProgress.completedSteps,
-          deferredSteps: unscopedProgress.deferredSteps,
-          flowScopeKey: flowScopeKey,
-        );
-        return unscopedProgress;
-      }
+    // If scoped progress has real steps, prefer it.
+    if (scopedProgress.completedSteps.isNotEmpty ||
+        scopedProgress.deferredSteps.isNotEmpty) {
+      return scopedProgress;
     }
 
-    // Return scoped progress (or unscoped if no scope key).
+    // Scoped progress is empty (or version mismatch). Try unscoped fallback and migrate when appropriate.
+    final unscopedProgress = await _loadFlowProgressRaw(
+      prefs: p,
+      onboardingVersion: onboardingVersion,
+      flowScopeKey: null,
+    );
+
+    if (unscopedProgress.lastSeenVersion == onboardingVersion &&
+        (unscopedProgress.completedSteps.isNotEmpty ||
+            unscopedProgress.deferredSteps.isNotEmpty)) {
+      // Migrate unscoped progress to scoped keys and return it.
+      await saveFlowProgress(
+        prefs: p,
+        onboardingVersion: onboardingVersion,
+        completedSteps: unscopedProgress.completedSteps,
+        deferredSteps: unscopedProgress.deferredSteps,
+        flowScopeKey: flowScopeKey,
+      );
+      return unscopedProgress;
+    }
+
+    // Nothing to migrate — return the (empty) scopedProgress.
     return scopedProgress;
   }
 

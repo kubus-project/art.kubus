@@ -97,6 +97,50 @@ void main() {
   });
 
   test(
+      'REGRESSION: migrates unscoped progress when scoped exists but is empty',
+      () async {
+    final prefs = await SharedPreferences.getInstance();
+    final unsccopedCompletedSteps = <String>{'account', 'role'};
+    final unscopedDeferredSteps = <String>{'profile'};
+
+    // Create an explicit scoped entry with the correct version but EMPTY steps.
+    await OnboardingStateService.saveFlowProgress(
+      prefs: prefs,
+      onboardingVersion: testVersion,
+      completedSteps: const <String>{},
+      deferredSteps: const <String>{},
+      flowScopeKey: testScopeKey,
+    );
+
+    // Save unscoped progress (non-empty)
+    await OnboardingStateService.saveFlowProgress(
+      prefs: prefs,
+      onboardingVersion: testVersion,
+      completedSteps: unsccopedCompletedSteps,
+      deferredSteps: unscopedDeferredSteps,
+      flowScopeKey: null,
+    );
+
+    // Load with scope - should detect scoped is empty and migrate unscoped into scoped
+    final progress = await OnboardingStateService.loadFlowProgress(
+      prefs: prefs,
+      onboardingVersion: testVersion,
+      flowScopeKey: testScopeKey,
+    );
+
+    expect(progress.completedSteps, equals(unsccopedCompletedSteps));
+    expect(progress.deferredSteps, equals(unscopedDeferredSteps));
+
+    // Verify scoped keys now contain migrated data
+    final migrated = await OnboardingStateService.loadFlowProgress(
+      prefs: prefs,
+      onboardingVersion: testVersion,
+      flowScopeKey: testScopeKey,
+    );
+    expect(migrated.completedSteps, equals(unsccopedCompletedSteps));
+  });
+
+  test(
       'REGRESSION: prefers scoped progress over unscoped when both exist',
       () async {
     final prefs = await SharedPreferences.getInstance();
